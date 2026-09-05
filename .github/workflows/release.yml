@@ -1,0 +1,54 @@
+# 自动发布：推送 v* 标签 → 构建 → 桌面版打包 → 创建 GitHub Release 并上传
+# 用法：git tag v0.2.0 && git push origin v0.2.0
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # 1. Web 构建
+      - name: Install web deps & build
+        run: |
+          npm ci
+          npm run build
+
+      # 2. 桌面壳：安装 electron 依赖 + 复制构建产物 + 修正相对路径
+      - name: Package desktop app
+        working-directory: lmewexe
+        run: |
+          npm ci
+          if (Test-Path dist) { Remove-Item dist -Recurse -Force }
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item ..\dist\* dist -Recurse -Force
+          python fix_paths.py
+          npx electron-packager . "美食放置：食之契约" --platform=win32 --arch=x64 --out=release --overwrite --asar
+
+      # 3. 压缩 exe 目录为 zip
+      - name: Zip release
+        working-directory: lmewexe
+        run: Compress-Archive -Path "release\美食放置：食之契约-win32-x64" -DestinationPath release\美食放置：食之契约-win32-x64.zip -Force
+
+      # 4. 创建 Release 并上传资产
+      - name: Create release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          zip_base=$(ls -d lmewexe/release/*win32-x64.zip | head -1)
+          gh release create "${GITHUB_REF_NAME}" "lmewexe/release"          --title "${GITHUB_REF_NAME} — 美食放置：食之契约" \
+            --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食之契约.exe 即可游玩。源码与开发说明见仓库根目录。"
