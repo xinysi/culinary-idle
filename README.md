@@ -2,6 +2,10 @@
 
 Melvor Idle 风格的美食主题放置游戏。需求文档见 `美食放置：食之契约 — 游戏制作需求文档.md`。
 
+<img src="assets/72c4ab180fcb584c48c91800962659e9.png" width="1912" height="916" alt="image">
+
+<img src="assets/38f3a346ef8507848fc6461583424e3c.png" width="1920" height="922" alt="image">
+
 ## 环境说明
 
 本机没有全局 npm，工具链已内置在 `.toolchain/node/`（Node v22.13.0 官方发行版，含 npm 10）。
