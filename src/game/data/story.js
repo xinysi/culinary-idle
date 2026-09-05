@@ -1,0 +1,256 @@
+// 《食之契约》完整世界观与故事线 — 重写版
+// 线性七章：每章涉及全部功能系统（采集/制作/辅助/对决/首领/装备/强化/食灵/奥义/
+// 餐厅/装饰/公会/赛季/竞技场/卡牌/探索/签到/炼金/转生/图鉴/金币），
+// 每章 requirements 全达标 → 通过本章 → 解锁下一章。
+// requirements.kind 由 StoryView 映射为玩家实时进度。
+
+import { ITEMS } from './items.js'
+import { SPIRITS } from './spirits.js'
+import { AOJIS } from './aojis.js'
+
+export const STORY = [
+  // ── 序章 · 启程 ──
+  {
+    chapter: '序章 · 启程',
+    icon: '🌱',
+    requirements: [
+      { kind: 'gather', need: 50, label: '采集技艺总等级' },
+      { kind: 'craft', need: 60, label: '制作技艺总等级' },
+      { kind: 'combatWins', need: 10, label: '对决胜利' },
+      { kind: 'gear', need: 20, label: '装备图鉴' },
+      { kind: 'signin', need: 1, label: '每日签到' },
+    ],
+    parts: [
+      {
+        title: '觉醒之刻',
+        body: '你在古巷拾得半卷《食之契约》。契约低语：先选择第一个挂机目标——采摘、垂钓、狩猎、挖掘、农耕，五味自此入门（五大采集技艺并行练级，切页不中断）。记得每日签到，契约会以微薄之礼回应你的坚持。',
+        ties: ['gather', 'signin'],
+      },
+      {
+        title: '第一炉火',
+        body: '学以致用：烹饪第一份料理、烘焙磨出面粉、腌制/调酒/调料初试身手（六大制作技艺），再锻造一柄铜刀穿上——八槽位从此武装全身（武器/副手/身体/头盔/饰品×2/腿部/脚部）。',
+        ties: ['craft', 'gear'],
+      },
+      {
+        title: '初尝食斗',
+        body: '以食斗定高下：刀工克摆盘、摆盘克调味、调味克刀工（+15%）。打赢第一场对决，点亮首批图鉴——美食大陆开始记住你的名字。',
+        ties: ['combatWins'],
+      },
+    ],
+  },
+  // ── 第一章 · 扎根 ──
+  {
+    chapter: '第一章 · 扎根',
+    icon: '🏡',
+    requirements: [
+      { kind: 'totalLevel', need: 200, label: '总等级' },
+      { kind: 'gather', need: 100, label: '采集技艺总等级' },
+      { kind: 'craft', need: 120, label: '制作技艺总等级' },
+      { kind: 'support', need: 80, label: '辅助技艺总等级' },
+      { kind: 'explore', need: 10, label: '美食探索成功' },
+      { kind: 'gear', need: 40, label: '装备图鉴' },
+      { kind: 'restaurant', need: 2, label: '餐厅等级' },
+    ],
+    parts: [
+      {
+        title: '大地馈赠',
+        body: '五条采集线深入大陆各处：摘取果实香料、垂钓江河鲜、狩猎林间野味、挖掘根茎矿盐、耕耘四季作物（可施堆肥/沃肥：枯萎 3%→1%/0%，沃肥收获 +1）。食材有时令，高级食材 24 小时腐坏——学会保鲜与烹饪的时机。',
+        ties: ['gather'],
+      },
+      {
+        title: '匠心初成',
+        body: '六大制作渐入佳境（烹饪 110 谱、烘焙、腌制、调酒 99 谱、调料、锻造），辅助三法并行：保鲜对抗时光、探索秘境偷师（10 次成功）、食灵召唤初识万灵。总等级突破 200——你已是合格的料理人。',
+        ties: ['craft', 'support', 'explore', 'totalLevel'],
+      },
+      {
+        title: '食府之始',
+        body: '料理的归宿是食客：餐厅开张，菜单放上亲手烹制的料理，每小时金币入账（离线亦营业）。升级餐厅扩菜位，整理背包与仓库——积累，是经营的第一步。',
+        ties: ['restaurant', 'gear'],
+      },
+    ],
+  },
+  // ── 第二章 · 扬名 ──
+  {
+    chapter: '第二章 · 扬名',
+    icon: '⚔️',
+    requirements: [
+      { kind: 'combatWins', need: 50, label: '对决胜利' },
+      { kind: 'bosses', need: 5, label: '击败首领' },
+      { kind: 'regions', need: 4, label: '解锁对决区域' },
+      { kind: 'gear', need: 80, label: '装备图鉴' },
+      { kind: 'arena', need: 2, label: '竞技场最佳连胜' },
+      { kind: 'card', need: 2, label: '卡牌对战胜利' },
+    ],
+    parts: [
+      {
+        title: '食斗之名',
+        body: '五十场对决，你已闯过四大区域（十方区域共 220 对手）。持久战开启——胜利自动再战当前强敌，让经验与品鉴点在反复挥刀中沉淀。调味能量靠茶饮（23 种）与每回合回复支撑，摆盘弹药在杂货铺备足。',
+        ties: ['combatWins', 'regions'],
+      },
+      {
+        title: '星坠初集',
+        body: '二十八位守星首领守护食材星坠。你已击败其中五位——面条之王（L25）、火锅真君（L40，灼烧）、寿司之神（L55）……首领图鉴点亮，独有装备入手（锻造/首领遗物/季节馈赠，六品渐次铺开）。',
+        ties: ['bosses', 'gear'],
+      },
+      {
+        title: '竞技与卡牌',
+        body: '竞技场镜像每 30 分钟换一批挑战者——连胜即勋章（每 5 连胜开宝箱）。闲时与旅人玩卡牌对战（三局两胜，对手用你的卡池）——旅途不止刀光，也有棋逢对手。',
+        ties: ['arena', 'card'],
+      },
+    ],
+  },
+  // ── 第三章 · 入世 ──
+  {
+    chapter: '第三章 · 入世',
+    icon: '🏮',
+    requirements: [
+      { kind: 'guild', need: 1, label: '加入公会' },
+      { kind: 'restaurant', need: 4, label: '餐厅等级' },
+      { kind: 'decor', need: 20, label: '餐厅装饰' },
+      { kind: 'seasons', need: 1, label: '赛季领奖' },
+      { kind: 'gold', need: 5000, label: '累计金币' },
+      { kind: 'alchemy', need: 1, label: '珍馐阁/炼金体验' },
+    ],
+    parts: [
+      {
+        title: '结盟公会',
+        body: '独行难远。二十家公会向你敞开（炽焰厨师团战斗/鲜味联盟采集/甜点师公会制作……更强的需技艺等级与金币）。加入公会，接取每日任务，换取公会商店的稀有物资——甚至神话饰品。',
+        ties: ['guild'],
+      },
+      {
+        title: '食府之兴',
+        body: '餐厅升到 4 级，购置 20 种装饰（烛台、壁画、编钟……收入 +1%/个）。食客络绎不绝，金币滚滚——累计 5000 金币，你在美食大陆站稳了脚跟。',
+        ties: ['restaurant', 'decor', 'gold'],
+      },
+      {
+        title: '商道与季节',
+        body: '珍馐阁购得任何非装备之物应急（价值 ×2.2）；炼金将低阶食材融为高阶（208 配方，微亏省时）。恰逢首季食节开幕——做任务攒赛季点，领取第一份季节馈赠。',
+        ties: ['seasons', 'alchemy'],
+      },
+    ],
+  },
+  // ── 第四章 · 问道 ──
+  {
+    chapter: '第四章 · 问道',
+    icon: '✨',
+    requirements: [
+      { kind: 'spirits', need: 8, label: '食灵契约' },
+      { kind: 'aojis', need: 8, label: '奥义领悟' },
+      { kind: 'upgrades', need: 4, label: '强化装备' },
+      { kind: 'craft', need: 240, label: '制作技艺总等级' },
+      { kind: 'bosses', need: 15, label: '击败首领' },
+      { kind: 'collection', need: 30, label: '图鉴完成度(%)' },
+    ],
+    parts: [
+      {
+        title: '万灵契约',
+        body: '三十二位食灵（苹果精灵、葡萄精灵……）以契约材料缔结，最多两位出战，提供采摘/垂钓/农耕/对决加成。二十八道奥义（锋利之刃、海量知识……）以品鉴点为燃料——品鉴点耗尽则奥义消散，正如灵感需不断滋养。',
+        ties: ['spirits', 'aojis'],
+      },
+      {
+        title: '器之极',
+        body: '以铁矿盐矿为引强化装备（每级 +10%，上限 +5）——四件神兵在手，铜铁之器已成过往。制作技艺精进至 240，史诗/传说厨具渐次出炉。',
+        ties: ['upgrades', 'craft'],
+      },
+      {
+        title: '星坠过半',
+        body: '十五颗食材星坠尽收囊中——甜品女王、分子料理博士、中华一番（秒杀之刃）……图鉴完成度 30%，黑暗料理的阴影越来越近。',
+        ties: ['bosses', 'collection'],
+      },
+    ],
+  },
+  // ── 第五章 · 登峰 ──
+  {
+    chapter: '第五章 · 登峰',
+    icon: '🐉',
+    requirements: [
+      { kind: 'prestiges', need: 2, label: '转生次数' },
+      { kind: 'seasons', need: 3, label: '赛季领奖' },
+      { kind: 'arena', need: 6, label: '竞技场最佳连胜' },
+      { kind: 'decor', need: 50, label: '餐厅装饰' },
+      { kind: 'gear', need: 160, label: '装备图鉴' },
+      { kind: 'explore', need: 30, label: '美食探索成功' },
+      { kind: 'card', need: 6, label: '卡牌对战胜利' },
+    ],
+    parts: [
+      {
+        title: '轮回之始',
+        body: '任一技艺臻至 100 级，可转生轮回：等级归零，永久 +20% 经验，直至突破 120。两次轮回后，你触摸到了厨道的更深层——图鉴渐丰，玄铁/星辰神装开启。',
+        ties: ['prestiges', 'gear'],
+      },
+      {
+        title: '季节流转',
+        body: '三季食节领奖（每季 8 任务 → 10 档奖励 → 一套 8 件限定套装：焚天、燎原、裂空……）。装饰 50 种，餐厅已成一方名胜。竞技场 6 连胜——你的名字令镜像对手闻风丧胆。',
+        ties: ['seasons', 'decor', 'arena'],
+      },
+      {
+        title: '征途不止',
+        body: '探索 30 次秘境、卡牌 6 胜、装备图鉴 160——你已行遍大陆大半。黑暗料理王的剧毒之宴、初代食神的变体之躯，正在终局等待。',
+        ties: ['explore', 'card'],
+      },
+    ],
+  },
+  // ── 第六章 · 成神 ──
+  {
+    chapter: '第六章 · 成神',
+    icon: '👑',
+    requirements: [
+      { kind: 'collection', need: 60, label: '图鉴完成度(%)' },
+      { kind: 'bosses', need: 22, label: '击败首领' },
+      { kind: 'prestiges', need: 4, label: '转生次数' },
+      { kind: 'upgrades', need: 8, label: '强化装备' },
+      { kind: 'seasons', need: 5, label: '赛季领奖' },
+      { kind: 'gold', need: 100000, label: '累计金币' },
+    ],
+    parts: [
+      {
+        title: '终焉将至',
+        body: '二十二颗星坠在手，图鉴 60%——禁忌食神（L100，秒杀+三阶段）与混沌厨魔（L96）的阴影笼罩大陆。神话装备八件强化至 +5，属性 ×1.5，这是决战的底气。',
+        ties: ['bosses', 'collection', 'upgrades'],
+      },
+      {
+        title: '时空穿梭',
+        body: '四季轮回（转生 4 次）、五季食节领奖、累计金币十万——你已超越了"名厨"，成为传说的一部分。',
+        ties: ['prestiges', 'seasons', 'gold'],
+      },
+      {
+        title: '成神',
+        body: '击败禁忌食神，重铸厨神契约。此后是真正的自由：集齐 1275 件图鉴、九十余项成就、四十季套装，冲击全技能 120 级。传说终成现实：你，就是新一代厨神。',
+      },
+    ],
+  },
+  // ── 终章 · 厨神 ──
+  {
+    chapter: '终章 · 厨神',
+    icon: '🏆',
+    requirements: [
+      { kind: 'collection', need: 90, label: '图鉴完成度(%)' },
+      { kind: 'bosses', need: 26, label: '击败首领' },
+      { kind: 'prestiges', need: 6, label: '转生次数' },
+      { kind: 'upgrades', need: 12, label: '强化装备' },
+      { kind: 'seasons', need: 8, label: '赛季领奖' },
+      { kind: 'card', need: 15, label: '卡牌对战胜利' },
+      { kind: 'gold', need: 300000, label: '累计金币' },
+    ],
+    parts: [
+      {
+        title: '登神长阶',
+        body: '图鉴九成、击败二十六颗星坠首领、六次转生轮回、十二件装备强化至 +5——你已阅尽大陆的几乎一切风物。千万金币在指间流转，食神之名已无可争议。',
+        ties: ['collection', 'bosses', 'upgrades'],
+      },
+      {
+        title: '万法归一',
+        body: '八季食节领奖、十五场卡牌对决战无不胜——从初学的五味，到如今掌控百般技艺，你终于站上了厨道之巅。',
+        ties: ['seasons', 'card'],
+      },
+      {
+        title: '新的传说',
+        body: '契约尽数兑现。但美食大陆永无终点：全技能 120 级、全图鉴、全成就、四十季套装——传说仍在续写，而执笔之人，是你。',
+      },
+    ],
+  },
+]
+
+export function currentStoryChapter() {
+  return STORY
+}

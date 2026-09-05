@@ -1,0 +1,502 @@
+[
+  {
+    "id": "decor_candle",
+    "name": "🕯️ 烛台",
+    "price": 500
+  },
+  {
+    "id": "decor_table",
+    "name": "🪑 雕花桌",
+    "price": 1000
+  },
+  {
+    "id": "decor_painting",
+    "name": "🖼️ 壁画",
+    "price": 2000
+  },
+  {
+    "id": "decor_lamp",
+    "name": "💡 吊灯",
+    "price": 3500
+  },
+  {
+    "id": "decor_plant",
+    "name": "🪴 盆栽",
+    "price": 5000
+  },
+  {
+    "id": "decor_aquarium",
+    "name": "🐟 鱼缸",
+    "price": 8000
+  },
+  {
+    "id": "decor_wine",
+    "name": "🍷 酒架",
+    "price": 12000
+  },
+  {
+    "id": "decor_piano",
+    "name": "🎹 钢琴",
+    "price": 18000
+  },
+  {
+    "id": "decor_chandelier",
+    "name": "✨ 水晶吊灯",
+    "price": 30000
+  },
+  {
+    "id": "decor_trophy",
+    "name": "🏆 金奖杯",
+    "price": 50000
+  },
+  {
+    "id": "decor_11",
+    "name": "🏮 红灯笼",
+    "price": 12730
+  },
+  {
+    "id": "decor_12",
+    "name": "🪭 刺绣屏风",
+    "price": 14310
+  },
+  {
+    "id": "decor_13",
+    "name": "🧶 波斯地毯",
+    "price": 15950
+  },
+  {
+    "id": "decor_14",
+    "name": "🪔 檀木香炉",
+    "price": 17620
+  },
+  {
+    "id": "decor_15",
+    "name": "🍵 紫砂茶具",
+    "price": 19350
+  },
+  {
+    "id": "decor_16",
+    "name": "🏺 青花瓷瓶",
+    "price": 21110
+  },
+  {
+    "id": "decor_17",
+    "name": "🖌️ 山水字画",
+    "price": 22910
+  },
+  {
+    "id": "decor_18",
+    "name": "🎋 竹帘",
+    "price": 24750
+  },
+  {
+    "id": "decor_19",
+    "name": "🌸 花架",
+    "price": 26620
+  },
+  {
+    "id": "decor_20",
+    "name": "🪑 藤椅",
+    "price": 28530
+  },
+  {
+    "id": "decor_21",
+    "name": "🗿 木雕弥勒",
+    "price": 30470
+  },
+  {
+    "id": "decor_22",
+    "name": "💎 玉器摆件",
+    "price": 32450
+  },
+  {
+    "id": "decor_23",
+    "name": "🥉 铜器香炉",
+    "price": 34450
+  },
+  {
+    "id": "decor_24",
+    "name": "🥈 银器烛台",
+    "price": 36490
+  },
+  {
+    "id": "decor_25",
+    "name": "🕰️ 西洋座钟",
+    "price": 38560
+  },
+  {
+    "id": "decor_26",
+    "name": "🕯️ 壁灯",
+    "price": 40660
+  },
+  {
+    "id": "decor_27",
+    "name": "🧶 挂毯",
+    "price": 42780
+  },
+  {
+    "id": "decor_28",
+    "name": "🚪 珠帘",
+    "price": 44940
+  },
+  {
+    "id": "decor_29",
+    "name": "🦁 石狮摆件",
+    "price": 47120
+  },
+  {
+    "id": "decor_30",
+    "name": "🌊 假山水景",
+    "price": 49320
+  },
+  {
+    "id": "decor_31",
+    "name": "⛲ 迷你喷泉",
+    "price": 51550
+  },
+  {
+    "id": "decor_32",
+    "name": "🎭 戏曲面具",
+    "price": 53810
+  },
+  {
+    "id": "decor_33",
+    "name": "🪆 陶罐花瓶",
+    "price": 56100
+  },
+  {
+    "id": "decor_34",
+    "name": "🎶 编钟",
+    "price": 58400
+  },
+  {
+    "id": "decor_35",
+    "name": "🪕 古筝",
+    "price": 60730
+  },
+  {
+    "id": "decor_36",
+    "name": "🎻 琵琶",
+    "price": 63090
+  },
+  {
+    "id": "decor_37",
+    "name": "🪈 竹笛",
+    "price": 65460
+  },
+  {
+    "id": "decor_38",
+    "name": "♟️ 象棋盘",
+    "price": 67870
+  },
+  {
+    "id": "decor_39",
+    "name": "🖋️ 砚台",
+    "price": 70290
+  },
+  {
+    "id": "decor_40",
+    "name": "🪥 毛笔架",
+    "price": 72730
+  },
+  {
+    "id": "decor_41",
+    "name": "📚 古籍书架",
+    "price": 75200
+  },
+  {
+    "id": "decor_42",
+    "name": "🌷 干花束",
+    "price": 77680
+  },
+  {
+    "id": "decor_43",
+    "name": "🌿 仿真绿植",
+    "price": 80190
+  },
+  {
+    "id": "decor_44",
+    "name": "🎐 风铃",
+    "price": 82720
+  },
+  {
+    "id": "decor_45",
+    "name": "🔔 铜铃",
+    "price": 85270
+  },
+  {
+    "id": "decor_46",
+    "name": "🥇 金烛台",
+    "price": 87840
+  },
+  {
+    "id": "decor_47",
+    "name": "🥈 银烛台",
+    "price": 90420
+  },
+  {
+    "id": "decor_48",
+    "name": "🥉 铜烛台",
+    "price": 93030
+  },
+  {
+    "id": "decor_49",
+    "name": "🍽️ 瓷器餐具",
+    "price": 95660
+  },
+  {
+    "id": "decor_50",
+    "name": "🥄 银餐具",
+    "price": 98300
+  },
+  {
+    "id": "decor_51",
+    "name": "🥇 金餐具",
+    "price": 100960
+  },
+  {
+    "id": "decor_52",
+    "name": "🫖 紫砂壶",
+    "price": 103650
+  },
+  {
+    "id": "decor_53",
+    "name": "☕ 白瓷杯",
+    "price": 106350
+  },
+  {
+    "id": "decor_54",
+    "name": "🍵 茶盘",
+    "price": 109060
+  },
+  {
+    "id": "decor_55",
+    "name": "🍯 茶罐",
+    "price": 111800
+  },
+  {
+    "id": "decor_56",
+    "name": "🍶 酒壶",
+    "price": 114550
+  },
+  {
+    "id": "decor_57",
+    "name": "🥂 水晶酒杯",
+    "price": 117320
+  },
+  {
+    "id": "decor_58",
+    "name": "🍷 陶瓷酒杯",
+    "price": 120110
+  },
+  {
+    "id": "decor_59",
+    "name": "🛢️ 橡木酒桶",
+    "price": 122910
+  },
+  {
+    "id": "decor_60",
+    "name": "🧊 冰桶",
+    "price": 125740
+  },
+  {
+    "id": "decor_61",
+    "name": "🧻 餐巾架",
+    "price": 128570
+  },
+  {
+    "id": "decor_62",
+    "name": "🧂 盐罐",
+    "price": 131430
+  },
+  {
+    "id": "decor_63",
+    "name": "🌶️ 胡椒罐",
+    "price": 134300
+  },
+  {
+    "id": "decor_64",
+    "name": "🧴 调味架",
+    "price": 137180
+  },
+  {
+    "id": "decor_65",
+    "name": "🍰 甜品架",
+    "price": 140080
+  },
+  {
+    "id": "decor_66",
+    "name": "🎂 蛋糕展示柜",
+    "price": 143000
+  },
+  {
+    "id": "decor_67",
+    "name": "🛒 餐车",
+    "price": 145930
+  },
+  {
+    "id": "decor_68",
+    "name": "🔥 壁炉",
+    "price": 148880
+  },
+  {
+    "id": "decor_69",
+    "name": "🍞 烤炉",
+    "price": 151850
+  },
+  {
+    "id": "decor_70",
+    "name": "🍢 烧烤架",
+    "price": 154820
+  },
+  {
+    "id": "decor_71",
+    "name": "🍳 铁板烧台",
+    "price": 157820
+  },
+  {
+    "id": "decor_72",
+    "name": "♨️ 蒸笼架",
+    "price": 160830
+  },
+  {
+    "id": "decor_73",
+    "name": "🍲 砂锅",
+    "price": 163850
+  },
+  {
+    "id": "decor_74",
+    "name": "🥘 火锅桌",
+    "price": 166890
+  },
+  {
+    "id": "decor_75",
+    "name": "🫕 铜锅",
+    "price": 169940
+  },
+  {
+    "id": "decor_76",
+    "name": "🍳 铁锅",
+    "price": 173000
+  },
+  {
+    "id": "decor_77",
+    "name": "🪨 石锅",
+    "price": 176080
+  },
+  {
+    "id": "decor_78",
+    "name": "🪵 砧板架",
+    "price": 179180
+  },
+  {
+    "id": "decor_79",
+    "name": "🔪 刀具架",
+    "price": 182290
+  },
+  {
+    "id": "decor_80",
+    "name": "👨‍🍳 围裙架",
+    "price": 185410
+  },
+  {
+    "id": "decor_81",
+    "name": "🎩 厨师帽架",
+    "price": 188540
+  },
+  {
+    "id": "decor_82",
+    "name": "⏰ 挂钟",
+    "price": 191690
+  },
+  {
+    "id": "decor_83",
+    "name": "⏳ 沙漏",
+    "price": 194860
+  },
+  {
+    "id": "decor_84",
+    "name": "🏺 青花大罐",
+    "price": 198030
+  },
+  {
+    "id": "decor_85",
+    "name": "🌸 粉彩花瓶",
+    "price": 201220
+  },
+  {
+    "id": "decor_86",
+    "name": "🪡 刺绣屏风·彩",
+    "price": 204420
+  },
+  {
+    "id": "decor_87",
+    "name": "🎨 漆器屏风",
+    "price": 207640
+  },
+  {
+    "id": "decor_88",
+    "name": "🧵 丝质地毯",
+    "price": 210870
+  },
+  {
+    "id": "decor_89",
+    "name": "💎 琉璃吊灯",
+    "price": 214110
+  },
+  {
+    "id": "decor_90",
+    "name": "🟢 翡翠摆件",
+    "price": 217360
+  },
+  {
+    "id": "decor_91",
+    "name": "🌿 沉香香薰",
+    "price": 220630
+  },
+  {
+    "id": "decor_92",
+    "name": "🪵 檀香香薰",
+    "price": 223910
+  },
+  {
+    "id": "decor_93",
+    "name": "💠 琉璃烛台",
+    "price": 227200
+  },
+  {
+    "id": "decor_94",
+    "name": "🧘 玉佛雕像",
+    "price": 230510
+  },
+  {
+    "id": "decor_95",
+    "name": "🌟 金佛雕像",
+    "price": 233820
+  },
+  {
+    "id": "decor_96",
+    "name": "🎨 敦煌壁画",
+    "price": 237150
+  },
+  {
+    "id": "decor_97",
+    "name": "⛰️ 水墨山水画",
+    "price": 240490
+  },
+  {
+    "id": "decor_98",
+    "name": "📜 鎏金匾额",
+    "price": 243850
+  },
+  {
+    "id": "decor_99",
+    "name": "🏅 御赐金牌",
+    "price": 247210
+  },
+  {
+    "id": "decor_100",
+    "name": "🎖️ 至尊奖杯",
+    "price": 250590
+  }
+]

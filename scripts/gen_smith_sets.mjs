@@ -1,0 +1,152 @@
+// 生成“每套品质 8 槽、集中同一 5 级段”的锻造数据 → src/game/data/smithSetExt.js
+// 16 套既有品质按稀有度分配到 16 段；新增 Lv81-100 四段用“命名匹配的高端矿”四套（钨/锰/钒/萤）。
+// 材料等级：新增套用获取等级 ≤ 套段的高端矿（低套不用高材）；既有套沿用通用矿（允许高套用低材）。
+import { writeFileSync } from 'node:fs'
+import { SMITHING_RECIPES } from '../src/game/skills/CraftsmithingSkill.js'
+import { SMITHING_EXT } from '../src/game/data/expansion1.js'
+import { SMITHING_EXT2 } from '../src/game/data/expansion2.js'
+import { ITEMS } from '../src/game/data/items.js'
+
+const SLOT_CN = { weapon: '刀', offhand: '锅', body: '围裙', helmet: '厨师帽', amulet: '调味瓶', legs: '腿甲', boots: '靴子', ring: '戒指' }
+const OFFSET = { weapon: 0, offhand: 1, body: 2, helmet: 3, amulet: 2, legs: 3, boots: 4, ring: 4 }
+const SLOTS = ['weapon', 'offhand', 'body', 'helmet', 'amulet', 'legs', 'boots', 'ring']
+// 20 套：既有 1-3（铜/铁/青铜）沿用通用矿；钢→鎏金（段4-16）用各自同名矿（同名矿由 gen_smith_ores.mjs 生成，挖掘可得）；
+// 钨/锰/钒/萤（段17-20）用命名匹配的高端矿。矿石获取等级 ≤ 套段末。
+const ORE = {
+  tungsten: 'excavation_ext2_25', manganese: 'excavation_ext2_27', vanadium: 'excavation_ext2_28', fluorite: 'excavation_ext2_30',
+  // 钢→鎏金（段4-16）同名矿（smithOres.js）
+  steel: 'steelOre', silver: 'silverOre', mithril: 'mithrilOre', gold: 'goldOre', adamant: 'adamantOre', crystal: 'crystalOre',
+  darkiron: 'darkIronOre', coldiron: 'coldIronOre', meteorite: 'meteoriteOre', star: 'starOre', dragonscale: 'dragonScaleOre',
+  glass: 'glassOre', gilt: 'giltOre',
+}
+const SETS = [
+  ['铜', 1], ['铁', 2], ['青铜', 3],
+  ['钢', 4, ORE.steel], ['银', 5, ORE.silver], ['秘银', 6, ORE.mithril], ['金', 7, ORE.gold],
+  ['精金', 8, ORE.adamant], ['水晶', 9, ORE.crystal], ['玄铁', 10, ORE.darkiron], ['寒铁', 11, ORE.coldiron],
+  ['陨铁', 12, ORE.meteorite], ['星辰', 13, ORE.star], ['龙鳞', 14, ORE.dragonscale], ['琉璃', 15, ORE.glass],
+  ['鎏金', 16, ORE.gilt],
+  ['钨', 17, ORE.tungsten], ['锰', 18, ORE.manganese], ['钒', 19, ORE.vanadium], ['萤', 20, ORE.fluorite],
+]
+
+const raw = [...SMITHING_RECIPES, ...SMITHING_EXT, ...SMITHING_EXT2]
+const base = {}
+for (const r of raw) {
+  for (const [p] of SETS) if (r.name && r.name.startsWith(p)) { (base[p] ??= []).push(r); break }
+}
+
+const outRecipes = []
+const outItems = []
+// 品牌名牌（非 smith_ 生成件）不可重名；smith_ 旧件会被覆盖，不纳入
+const usedNames = new Set(Object.values(ITEMS).filter((i) => !String(i.id).startsWith('smith_')).map((i) => i.name))
+
+SETS.forEach(([prefix, seg, ore], idx) => {
+  const baseLv = (seg - 1) * 5 + 1
+  const existing = base[prefix] ?? []
+  const haveSlots = new Set(existing.map((r) => ITEMS[r.output?.itemId]?.slot))
+  const allSlots = new Set(SLOTS)
+  // 既有件：reqLevel 重设到段内（保留原材料；balance 后删低套高材）
+  for (const r of existing) {
+    const it = ITEMS[r.output?.itemId]
+    const slot = it?.slot
+    const lv = Math.min(baseLv + (OFFSET[slot] ?? 0), seg * 5)
+    // 灵果(spiritFruit)/松露(truffle) 是较高阶材料（约 90/60 级获取），低中段锻造装备不该用 → 从生成件材料移除，避免超纲
+    let ing = Object.fromEntries(Object.entries(r.ingredients ?? {}).filter(([k]) => k !== 'spiritFruit' && k !== 'truffle'))
+    // 钢→鎏金等套有同名矿：把通用铁矿石换成该套同名矿（保留盐矿/木材，数量不变）
+    if (ore) {
+      const ironQty = ing.ironOre
+      if (ironQty) {
+        delete ing.ironOre
+        ing[ore] = (ing[ore] ?? 0) + ironQty
+      }
+    }
+    outRecipes.push({ ...r, ingredients: ing, reqLevel: lv, id: `${prefix}-${slot}-${r.id}` })
+  }
+  // 补齐/全量生成缺失槽（新套无现有件 → 生成全部；命名=前缀+槽位名，无后缀）
+  const missing = [...allSlots].filter((s) => !haveSlots.has(s))
+  for (const slot of missing) {
+    const lv = Math.min(baseLv + (OFFSET[slot] ?? 0), seg * 5)
+    const itemId = `smith_${prefix}_${slot}`
+    let name = `${prefix}${SLOT_CN[slot]}`
+    if (usedNames.has(name)) name = `${prefix}${SLOT_CN[slot]}（锻）` // 兜底，应不触发
+    usedNames.add(name)
+    // 材料：新套用命名匹配高端矿；既有套补齐件用通用铁/盐矿（允许高套用低材）
+    const ingredients = ore
+      ? { [ore]: 2 + Math.floor(seg / 5), saltOre: 1 + Math.floor(seg / 6) }
+      : { ironOre: 2 + Math.floor(seg / 3), saltOre: 1 + Math.floor(seg / 6) }
+    outRecipes.push({
+      id: `smith_set_${prefix}_${slot}`,
+      name,
+      category: SLOT_CN[slot],
+      reqLevel: lv,
+      xp: 20 + seg * 8,
+      successChance: Math.max(0.6, 0.95 - seg * 0.01),
+      ingredients,
+      output: { itemId, qty: 1 },
+    })
+    const stats = slot === 'weapon' || slot === 'ring' ? { attack: 1 } : { defense: 1 }
+    outItems.push({
+      id: itemId, name, type: 'equipment', category: slot, tier: Math.ceil(seg * 0.6),
+      value: 30 + seg * 30, stackable: false, slot, quality: '神话', stats,
+    })
+  }
+})
+
+// ── 保留“不归套”的独立饰品/护符配方（名字不以套名开头，否则 gen 会丢失，如紫水晶戒指/锡护符）──
+// 同时为每种矿补齐“完整 8 槽”厨具套（刀/锅/砧板/围裙/厨师帽/护符/腿甲/靴子/戒指），沿用现有件命名。
+const orphanRaw = raw.filter((r) => !SETS.some(([p]) => r.name?.startsWith(p)))
+// 9 件成品槽：weapon/offhand(锅+砧板)/body/helmet/amulet(护符)/legs/boots/ring
+const INDIE_SLOTS = [
+  ['weapon', '刀', 'weapon'],
+  ['offhand', '锅', 'offhand'],
+  ['offhand', '砧板', 'offhand'],
+  ['body', '围裙', 'body'],
+  ['helmet', '厨师帽', 'helmet'],
+  ['amulet', '护符', 'amulet'],
+  ['legs', '腿甲', 'legs'],
+  ['boots', '靴子', 'boots'],
+  ['ring', '戒指', 'ring'],
+]
+const USED_IDS = new Set(Object.keys(ITEMS))
+for (const r of orphanRaw) {
+  const outIt = ITEMS[r.output?.itemId]
+  const existSlot = outIt?.slot ?? 'ring'
+  const quality = outIt?.quality ?? '精良'
+  // 保留原配方（物品已存在）
+  outRecipes.push({ ...r, id: `ext-${r.id}` })
+  const oreId = Object.keys(r.ingredients ?? {}).find((k) => k !== 'saltOre')
+  if (!oreId) continue
+  // 名字头（沿用现有件名词头：紫水晶/锡/石膏…）
+  const head = r.name.replace(/戒指$|护符$/, '')
+  const stem = r.output.itemId.replace(/Ring$|Amulet$/, '')
+  const lv = r.reqLevel
+  for (const [slotEn, slotCn, realSlot] of INDIE_SLOTS) {
+    // 该矿现有件已占的那槽（戒指/护符）跳过，其余补齐
+    if ((existSlot === 'amulet' && slotCn === '护符') || (existSlot === 'ring' && slotCn === '戒指')) continue
+    const suffix = slotCn === '砧板' ? 'Board' : slotCn === '锅' ? 'Pot' : slotEn[0].toUpperCase() + slotEn.slice(1)
+    const newItemId = `inip${stem}_${suffix}`
+    const newName = head + slotCn
+    if (usedNames.has(newName) || USED_IDS.has(newItemId)) { console.warn('跳过补槽（已存在/重名）', newName, newItemId); continue }
+    usedNames.add(newName)
+    USED_IDS.add(newItemId)
+    outRecipes.push({
+      id: `ext-${newItemId}`,
+      name: newName,
+      category: slotCn,
+      reqLevel: lv,
+      xp: r.xp,
+      successChance: r.successChance,
+      ingredients: { [oreId]: 2, saltOre: 1 },
+      output: { itemId: newItemId, qty: 1 },
+    })
+    outItems.push({
+      id: newItemId, name: newName, type: 'equipment', category: realSlot, tier: Math.max(1, Math.ceil(lv / 10)),
+      value: 30 + Math.ceil(lv / 10) * 30, stackable: false, slot: realSlot, quality,
+      stats: realSlot === 'weapon' || realSlot === 'offhand' || realSlot === 'ring' ? { attack: 1 } : { defense: 1 },
+    })
+  }
+}
+
+const recipesJs = `export const SMITHING_SET_RECIPES = ${JSON.stringify(outRecipes, null, 1)}\n`
+const itemsJs = `export const SMITHING_SET_ITEMS = ${JSON.stringify(outItems, null, 1)}\n`
+writeFileSync('src/game/data/smithSetExt.js', recipesJs + itemsJs, 'utf8')
+console.log(`配方=${outRecipes.length} 物品=${outItems.length}`)

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.toolchain/
+wuguan/
+.reasonix/
+playwork/
+lmewexe/release/
+*.local
+.DS_Store
+npm-debug.log*
