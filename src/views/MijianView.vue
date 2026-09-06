@@ -109,7 +109,7 @@ function typeLabel(id) {
         :class="{ active: activePool === p.id }"
         @click="activePool = p.id"
       >
-        <span class="pool-mini-icon">{{ p.icon }}<i v-if="p.tag" class="pool-mini-tag">{{ p.tag }}</i></span>
+        <span class="pool-mini-icon">{{ p.icon }}</span>
         <span class="pool-mini-name">{{ p.name }}</span>
         <span class="pool-mini-price">{{ p.price }} 金/抽</span>
       </button>
@@ -129,7 +129,12 @@ function typeLabel(id) {
         <em>{{ pool.desc }}</em>
       </div>
       <div v-if="isGearPool" class="pool-banner-pity">⭐ 保底 {{ pity.current }}/{{ pity.need }}</div>
-      <div v-else-if="isLimitedPool" class="pool-banner-pity">⏳ 限时轮换 {{ limitedRemaining }} · ⭐ 保底 {{ pity.limited }}/{{ pity.limitedNeed }}</div>
+      <template v-if="isLimitedPool">
+        <div class="pool-banner-pity pills">
+          <span class="pill">⏳ 剩 {{ limitedRemaining }}</span>
+          <span class="pill">⭐ 保底 {{ pity.limited }}/{{ pity.limitedNeed }}</span>
+        </div>
+      </template>
     </div>
 
     <!-- 抽卡操作台 -->
@@ -265,13 +270,19 @@ function typeLabel(id) {
 .pool-banner-pity {
   position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
   z-index: 2;
-  background: rgba(217, 138, 43, 0.12);
+  display: flex; gap: 6px;
+}
+.pool-banner-pity .pill {
+  background: rgba(255, 252, 246, 0.92);
   border: 1px solid rgba(217, 138, 43, 0.45);
   border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 11px; font-weight: 600;
-  color: #a06a12;
+  padding: 5px 12px;
+  font-size: 12px; font-weight: 700;
+  color: #8a5a12;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(150, 110, 70, 0.12);
 }
+:global([data-theme='dark']) .pool-banner-pity .pill { background: rgba(44, 31, 22, 0.92); color: #e8b45f; }
 :global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
 :global([data-theme='dark']) .pool-mini.active { background: #3a2a18; border-color: #d98a2b; }
 :global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
@@ -411,26 +422,25 @@ function typeLabel(id) {
 @media (max-width: 719px) {
   .gacha-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
 }
-</style>
+
 
 /* 装饰翼：按钮两则当前池精选图（静态低透明） */
 .gacha-wing { display: flex; gap: 8px; align-items: center; }
 .gacha-wing img { width: 40px; height: 40px; object-fit: contain; opacity: 0.45; }
 @media (max-width: 719px) { .gacha-wing { display: none; } }
 
-/* 百连按钮（次级紫蓝） */
+/* 百连按钮（黑金限定风） */
 .gacha-btn-bulk {
-  min-width: 210px;
-  font-size: 15px;
-  background: linear-gradient(135deg, #6a5acd, #4a3f9e);
-  box-shadow: 0 4px 14px rgba(74, 63, 158, 0.35);
+  min-width: 300px;
+  font-size: 16px;
+  color: #f2c96b;
+  border: 1px solid rgba(226, 169, 63, 0.65);
+  background: linear-gradient(120deg, #16130b, #4a3a10 50%, #16130b);
+  box-shadow: 0 0 18px rgba(226, 169, 63, 0.35);
 }
-/* 限时池角标 */
-.pool-mini-tag {
-  font-style: normal; font-size: 10px; font-weight: 800;
-  color: #fff; background: linear-gradient(135deg, #e2a93f, #c9761c);
-  border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 4px;
-}
+.gacha-btn-bulk:disabled { filter: grayscale(0.7) brightness(0.72); }
 @media (max-width: 719px) {
   .gacha-btn-bulk { min-width: 150px; padding: 12px 16px; }
 }
+
+</style>
