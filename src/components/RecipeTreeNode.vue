@@ -9,7 +9,7 @@ defineEmits(['jump'])
 
 <template>
   <li class="rt-node">
-    <div class="rt-row" :style="{ paddingLeft: (node.depth * 22) + 'px' }">
+    <div class="rt-row" :style="{ '--d': node.depth }">
       <!-- 第一行：名称 / 数量 / 持有 -->
       <div class="rt-line1">
         <span class="rt-name">{{ getItem(node.itemId)?.name ?? node.itemId }}</span>
