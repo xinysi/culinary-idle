@@ -3637,3 +3637,34 @@ html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item
 html[data-theme='dark'] .card, html[data-theme='dark'] .modal, html[data-theme='dark'] .gather-card { background: rgba(36, 26, 19, 0.92) !important; color: #ecdcc8 !important; }
 html[data-theme='dark'] .bag-detail, html[data-theme='dark'] .cold-pane, html[data-theme='dark'] .spirit-cell { background: rgba(36, 26, 19, 0.9) !important; color: #ecdcc8 !important; }
 html[data-theme='dark'] .plot-select, html[data-theme='dark'] input, html[data-theme='dark'] select { background: rgba(52, 38, 28, 0.95) !important; color: #f2e6d7 !important; }
+
+/* ── 深色主题 v5（2026-09-06）：补全遗漏变量（--bg-soft 等一律清零）+ 剩余白块 ── */
+html[data-theme='dark'] {
+  --bg-soft: #2c1f16;
+  --info: #6fa8dc;
+  --gold: #e0b64f;
+  --sidebar-bg: #241a13;
+  --scrollbar: #6b4f3a;
+  --lock-bg: #2e2118;
+  scrollbar-color: var(--scrollbar) rgba(0, 0, 0, 0);
+}
+html[data-theme='dark'] .quick-nav,
+html[data-theme='dark'] .story-reqs,
+html[data-theme='dark'] .cold-cap-row,
+html[data-theme='dark'] .guide-block,
+html[data-theme='dark'] .spirit-wall-col .pager-row,
+html[data-theme='dark'] .pager-row,
+html[data-theme='dark'] .pagination,
+html[data-theme='dark'] .gather-section-header,
+html[data-theme='dark'] .stats-col,
+html[data-theme='dark'] .menu-list {
+  background: rgba(44, 31, 22, 0.85) !important;
+  color: #e8dccb !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #6b4f3a; }
+html[data-theme='dark'] .guide-block { background: rgba(44, 31, 22, 0.7) !important; }
+html[data-theme='dark'] .spirit-wall-col .pager-row { background: rgba(44, 31, 22, 0.95) !important; }
+html[data-theme='dark'] .spirit-wall { background: transparent !important; }
+html[data-theme='dark'] .story-chapter, html[data-theme='dark'] .gather-section { background: rgba(36, 26, 19, 0.85) !important; }
+html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85) !important; }
