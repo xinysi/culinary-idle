@@ -108,7 +108,7 @@ function exchange(item) {
       </div>
     </header>
 
-    <div class="card">
+    <div class="card game-stage">
       <template v-if="quiz.length">
         <div class="trivia-progress">
           <span class="dim mono">第 {{ index + 1 }}/10 题</span>

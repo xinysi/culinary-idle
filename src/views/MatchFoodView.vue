@@ -80,7 +80,7 @@ resetDay()
       </div>
     </header>
 
-    <div class="card">
+    <div class="card game-stage">
       <div class="match-board">
         <div
           v-for="(c, i) in board"

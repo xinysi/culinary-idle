@@ -87,7 +87,7 @@ const streak = computed(() => player.minigames?.heat?.streak ?? 0)
       </div>
     </header>
 
-    <div class="card heat-stage">
+    <div class="card game-stage heat-stage">
       <div class="heat-track">
         <div class="heat-perfect" :style="zoneStyle"></div>
         <div class="heat-needle" :style="needleStyle"></div>

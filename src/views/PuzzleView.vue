@@ -105,7 +105,7 @@ const cells = computed(() => tiles.value)
       </div>
     </header>
 
-    <div class="card">
+    <div class="card game-stage">
       <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 正确顺序）</div>
       <div class="puzzle-board puzzle-goal">
         <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="puzzle-cell puzzle-goal-cell">

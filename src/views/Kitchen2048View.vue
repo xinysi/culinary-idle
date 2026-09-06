@@ -130,7 +130,7 @@ const rows = computed(() => grid.value)
       </div>
     </header>
 
-    <div class="card">
+    <div class="card game-stage">
       <div class="g2048-board">
         <div v-for="(row, r) in rows" :key="'r' + r" class="g2048-row">
           <div v-for="(v, c) in row" :key="c" class="g2048-cell" :class="'v' + v">
