@@ -486,6 +486,10 @@ function scrollToSection(label) {
 .queue-item .queue-paused { color: var(--bad-strong); font-size: 12px; font-weight: 700; }
 .queue-rm { margin-left: auto; }
 .queue-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.queue-btns .btn-primary { flex: 1 1 100%; } /* 主「制作」按钮独占整行 */
+@media (min-width: 480px) {
+  .queue-btns:not(:has(.btn-primary)) { justify-content: flex-start; }
+}
 /* 配方树「去做」后的卡片高亮闪烁 */
 @keyframes recipeFlash {
   0%, 100% { box-shadow: 0 0 0 rgba(217, 138, 43, 0); }
