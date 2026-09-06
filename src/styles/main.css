@@ -3879,7 +3879,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .g2048-board { max-width: 320px; margin: 0 auto; background: rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 6px; }
 .g2048-row { display: flex; gap: 6px; margin-bottom: 6px; }
 .g2048-row:last-child { margin-bottom: 0; }
-.g2048-cell { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; background: rgba(255, 252, 246, 0.75); }
+.g2048-cell { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; background: rgba(150, 110, 70, 0.22); } /* 空格底色可见，棋盘网格清晰 */
 .g2048-cell.v2 { background: #e8f3d9; } .g2048-cell.v4 { background: #d8ecb8; }
 .g2048-cell.v8 { background: #c8e39a; } .g2048-cell.v16 { background: #b6d98a; }
 .g2048-cell.v32 { background: #f6d9a8; } .g2048-cell.v64 { background: #f3c684; }
@@ -3941,6 +3941,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
   display: flex; align-items: center; justify-content: center;
   font-size: 26px;
   background: rgba(255, 251, 244, 0.92);
+  border: 1px solid rgba(150, 110, 70, 0.3);
   border: 1px solid rgba(150, 110, 70, 0.3);
   border-radius: 8px;
   cursor: pointer;
@@ -4057,8 +4058,8 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
   background: rgba(255, 252, 246, 0.72);
   border: 1px solid rgba(150, 110, 70, 0.35);
   border-radius: 14px;
-  height: 520px; /* 固定舞台框：不同小游戏切换时尺寸不变（2026-09-06，降高减少留白） */
-  min-height: 520px;
+  height: 620px; /* 固定舞台框：不同小游戏切换时尺寸不变（2026-09-06 实测微调） */
+  min-height: 620px;
   overflow-y: auto;
   padding: 12px 14px 16px;
   margin-bottom: 14px;
@@ -4068,12 +4069,15 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
 .mg-stage .skill-head { max-width: 920px; margin-left: auto; margin-right: auto; width: 100%; }
 .mg-stage .card { max-width: 920px; margin-left: auto; margin-right: auto; }
 .mg-stage .puzzle-goal-label, .mg-stage .puzzle-duo { max-width: 920px; margin-left: auto; margin-right: auto; }
-/* 主内容垂直居中：框内留白均匀，不悬空 */
-.mg-stage .game-main { display: flex; flex-direction: column; justify-content: center; }
+/* 主内容顶部流式布局（内容放大占满，底部空隙由框吸收） */
+.mg-stage .game-main { display: flow-root; }
 /* 大舞台内子游戏：恢复「主内容 + 右侧信息框」双列（2026-09-06 布局修好后请回信息框） */
 .mg-stage .game-layout { display: flex; }
 .mg-stage .game-side { display: flex; }
 .mg-stage .game-main { flex: 1 1 auto; min-width: 0; }
+/* 信息框移至内容下方横向两卡：主内容全宽，不再左右挤压（2026-09-06 1280 实测优化） */
+.mg-stage .game-layout { display: block; }
+.mg-stage .game-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-top: 10px; }
 .mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .mg-stage-title { font-size: 15px; font-weight: 800; color: var(--primary-strong); }
 .mg-welcome { text-align: center; padding: 60px 0 40px; }
@@ -4124,9 +4128,10 @@ html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
 .mg-stage .game-main .g2048-cell { font-size: 26px; }
 .mg-stage .game-main .match-board { max-width: 420px; }
 .mg-stage .game-main .match-cell { font-size: 30px; }
-.mg-stage .puzzle-duo { flex-direction: column; align-items: center; } /* 主区窄：双图改竖列大图 */
-.mg-stage .puzzle-board, .mg-stage .puzzle-goal { max-width: 400px; width: 100%; }
-.mg-stage .puzzle-cell { font-size: 34px; }
+.mg-stage .puzzle-duo { flex-direction: row; align-items: flex-start; flex-wrap: wrap; } /* 双图并排 */
+.mg-stage .puzzle-board, .mg-stage .puzzle-goal { max-width: 340px; width: 100%; }
+.mg-stage .puzzle-cell { font-size: 28px; }
+.mg-stage .puzzle-num { font-size: 9px; }
 .mg-stage .trivia-q { font-size: 20px; }
 .mg-stage .trivia-opts { max-width: 100%; }
 .mg-stage .trivia-opt { padding: 10px 12px; font-size: 14px; }
