@@ -4083,8 +4083,8 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
   display: flex; flex-direction: column; justify-content: space-around; gap: 6px;
 }
 .mg-stage .game-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-top: 10px; flex-shrink: 0; }
-/* 火候条弹性吸收剩余高度 */
-.mg-stage .heat-track { height: auto; flex: 1 1 auto; min-height: 60px; max-height: 130px; }
+/* 核心元素弹性占满（2026-09-06 终版：flex:1 吃满剩余空间，绝不空洞） */
+.mg-stage .heat-track { height: auto; flex: 1 1 auto; min-height: 70px; }
 .mg-stage .heat-actions { flex-shrink: 0; }
 .mg-stage .heat-verdict { margin-top: 0; }
 .mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -4133,21 +4133,28 @@ html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
 .mg-stage .heat-actions .btn { min-width: 170px; font-size: 16px; padding: 10px 26px; }
 .mg-stage .heat-actions { gap: 12px; }
 .mg-stage .heat-verdict { font-size: 15px; }
-.mg-stage .game-main .g2048-board { max-width: 400px; }
+.mg-stage .game-main .g2048-board {
+  max-width: 400px; width: 100%;
+  flex: 1 1 auto; min-height: 250px; max-height: 300px;
+  display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 6px;
+}
+.mg-stage .game-main .g2048-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
 .mg-stage .game-main .g2048-cell { font-size: 26px; }
-.mg-stage .game-main .match-board { max-width: 420px; }
+.mg-stage .game-main .g2048-cell { font-size: 26px; }
+.mg-stage .game-main .match-board { max-width: 420px; width: 100%; flex: 1 1 auto; min-height: 260px; max-height: 340px; }
 .mg-stage .game-main .match-cell { font-size: 30px; }
-.mg-stage .puzzle-duo { flex-direction: row; align-items: flex-start; flex-wrap: wrap; } /* 双图并排 */
+.mg-stage .puzzle-duo { flex-direction: row; align-items: stretch; flex-wrap: wrap; flex: 1 1 auto; min-height: 260px; max-height: 340px; align-content: center; } /* 双图并排、弹性占满 */
 .mg-stage .puzzle-board, .mg-stage .puzzle-goal { max-width: 340px; width: 100%; }
 .mg-stage .puzzle-cell { font-size: 28px; }
 .mg-stage .puzzle-num { font-size: 9px; }
 .mg-stage .trivia-q { font-size: 20px; }
-.mg-stage .trivia-opts { max-width: 100%; }
+.mg-stage .trivia-opts { max-width: 100%; flex: 1 1 auto; align-content: center; grid-auto-rows: minmax(42px, 1fr); }
 .mg-stage .trivia-opt { padding: 10px 12px; font-size: 14px; }
 .mg-stage .trivia-progress { max-width: 100%; }
-.mg-stage .rush-bowls { font-size: 64px; }
+.mg-stage .rush-counter { flex: 1 1 auto; flex-direction: column; justify-content: center; gap: 2px; }
+.mg-stage .rush-bowls { font-size: 88px; }
 .mg-stage .rush-btn { min-width: 260px; padding: 14px 30px; font-size: 20px; }
-.mg-stage .rush-counter { font-size: 16px; }
+ .mg-stage .rush-counter .dim { font-size: 15px; }
 .mg-stage .rush-tiers { gap: 12px; }
 
 /* 讲堂兑换居中（2026-09-06 实测） */
