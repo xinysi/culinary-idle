@@ -15,6 +15,7 @@ import EncounterModal from './components/EncounterModal.vue'
 import NewbieGuide from './components/NewbieGuide.vue'
 import OfflineReportModal from './components/OfflineReportModal.vue'
 import ShareCardModal from './components/ShareCardModal.vue'
+import MarketEventsModal from './components/MarketEventsModal.vue'
 import { useUiStore } from './stores/ui.js'
 import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
@@ -53,8 +54,9 @@ const seasonDot = computed(() => {
   if (!se || !st) return false
   return (se.tiers ?? []).some((t, i) => !st.claimed.includes(i) && st.points >= t.points)
 })
-// 夜市狂潮窗口（2026-09-06 限时活动：12-20 点）
-const marketOn = computed(() => player.marketOn?.() ?? false)
+// 限时窗口活动（2026-09-06）：多枚呼吸徽章，点击查看轮换时间表
+const marketEvents = computed(() => player.activeMarketEvents?.() ?? [])
+const marketBoost = computed(() => player.marketBoost?.() ?? {})
 
 // ── 顶部导航分页（2026-09-06）：主功能按钮分 3 页，翻页浏览；右侧功能组固定 ──
 // 每页按钮：{ label, view, onClick, dot? }；view 用于激活高亮与自动跳页
@@ -194,7 +196,14 @@ onMounted(() => {
           </template>
           <span class="top-nav-spacer"></span>
           <div class="top-nav-right">
-            <span v-if="marketOn" class="top-nav-market" title="每日 12:00-20:00：餐厅收入 ×2、对决经验 ×1.5">🌙 夜市 ×2</span>
+            <button
+              v-for="ev in marketEvents"
+              :key="ev.id"
+              class="top-nav-market"
+              :title="`${ev.desc}（点击查看全活动轮换时间表）`"
+              @click="ui.showMarketModal = true"
+            >{{ ev.icon }} {{ ev.name }} ×{{ Object.values(ev.effect)[0] }}</button>
+            <button class="top-nav-market top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰</button>
             <button class="top-nav-btn top-nav-pager" title="上一页" @click="navPage(-1)">‹</button>
             <span class="top-nav-pagenum mono">{{ ui.topNavPage + 1 }}/{{ TOP_PAGES.length }}</span>
             <button class="top-nav-btn top-nav-pager" title="下一页" @click="navPage(1)">›</button>
@@ -263,6 +272,7 @@ onMounted(() => {
     <SearchModal v-if="ui.showSearch" />
     <EncounterModal />
     <ShareCardModal />
+    <MarketEventsModal />
     <OfflineReportModal />
 
     <!-- 移动端：技能抽屉 + 底部导航（§9.3 单栏布局） -->
