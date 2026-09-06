@@ -144,7 +144,9 @@ const rows = computed(() => grid.value)
   box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18), inset 0 2px 10px rgba(93, 64, 55, 0.12);
 }
 .g2048-cell2 {
-  border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;
+  position: relative; aspect-ratio: 1; /* 与美食拼图同款：宽=列宽 → 高=宽，正方形 */
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; font-size: 24px;
   background: rgba(255, 251, 244, 0.6);
 }
 .g2048-cell2.v2 { background: #e8f3d9; } .g2048-cell2.v4 { background: #d8ecb8; }
