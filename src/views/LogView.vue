@@ -42,7 +42,7 @@ const aPage = ref(1)
 const itemPage = ref(1)
 const seasonPage = ref(1)
 const quirkPage = ref(1)
-const PAGE = { quest: 24, achieve: 24, items: 28, season: 20, quirk: 24, cards: 40 } // 6/6/7/5/6/8 列 × 4 行
+const PAGE = { quest: 24, achieve: 24, items: 28, season: 20, quirk: 24, cards: 13 } // 卡牌 13 张/页
 
 const player = usePlayerStore()
 const ui = useUiStore()
