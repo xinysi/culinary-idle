@@ -152,7 +152,7 @@ const cells = computed(() => tiles.value)
 .pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
 .pz-board {
-  width: 340px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+  width: 500px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
   padding: 8px; border-radius: 14px;
   background: rgba(150, 110, 70, 0.16);
   border: 1px solid rgba(150, 110, 70, 0.3);
@@ -161,7 +161,7 @@ const cells = computed(() => tiles.value)
 .pz-cell {
   position: relative; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  padding: 4px; border-radius: 8px; cursor: pointer; user-select: none;
+  padding: 9px; border-radius: 8px; cursor: pointer; user-select: none;
   background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
 }
 .pz-img { width: 100%; height: 100%; object-fit: contain; } /* 图片固定尺寸：格内撑满按比例居中 */
@@ -170,7 +170,7 @@ const cells = computed(() => tiles.value)
 .pz-goal-num { font-size: 20px; color: rgba(90, 62, 40, 0.55); }
 .pz-goal-cell { background: rgba(255, 251, 244, 0.5); }
 .pz-cell.empty { background: transparent; border-color: transparent; cursor: default; }
-.pz-num { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.pz-num { position: absolute; right: 6px; bottom: 4px; font-size: 13px; color: var(--muted); font-family: var(--mono); font-weight: 700; }
 .pz-keys { display: flex; justify-content: center; }
 .pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
 .pz-done { font-weight: 800; color: var(--good-strong); }
