@@ -115,7 +115,7 @@ resetDay()
 .mf-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .mf-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .mf-board {
-  width: min(420px, 92%);
+  width: min(640px, 96%);
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
   padding: 14px; border-radius: 18px;
   background: rgba(150, 110, 70, 0.16);
