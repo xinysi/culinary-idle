@@ -1,6 +1,6 @@
 <script setup>
 // 厨心 2048（2026-09-06 顶部第三页）：4×4 滑动合并食材→满汉全席，分数兑金币（每 1024 分 +20 金，单局上限 200 金）
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 

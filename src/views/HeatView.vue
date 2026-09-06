@@ -42,6 +42,7 @@ function strike() {
   if (d <= PERFECT_W / 2) type = 'perfect'
   else if (d <= PERFECT_W) type = 'good'
   verdict.value = { type, at: ph.value }
+  if (type !== 'miss') stop() // 定火后指针停住，防连点重复判定（2026-09-06）
   const mg = player.minigames.heat
   if (type === 'perfect') {
     mg.streak = (mg.streak ?? 0) + 1
