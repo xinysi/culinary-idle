@@ -338,23 +338,8 @@ function typeLabel(id) {
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(150, 110, 70, 0.12);
 }
-:global([data-theme='dark']) .pool-banner-pity .pill { background: rgba(44, 31, 22, 0.92); color: #e8b45f; }
-:global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
-:global([data-theme='dark']) .pool-mini-name { color: rgb(var(--pc2)); }
-:global([data-theme='dark']) .pool-mini-price { color: rgba(var(--pc2), 0.65); }
-:global([data-theme='dark']) .pool-mini.active {
-  background:
-    linear-gradient(135deg, rgba(var(--pc1), 0.28), rgba(var(--pc2), 0.32)),
-    #3a2a18;
-  border-color: rgb(var(--pc2));
-}
-:global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
-:global([data-theme='dark']) .pool-banner-fade {
-  background: linear-gradient(90deg, rgba(40, 29, 21, 0.96) 0%, rgba(40, 29, 21, 0) 16%, rgba(40, 29, 21, 0) 84%, rgba(40, 29, 21, 0.96) 100%) !important;
-}
-:global([data-theme='dark']) .pool-banner-title { background: rgba(40, 29, 21, 0.9); }
-:global([data-theme='dark']) .pool-banner-pity { color: #e8b45f; }
 
+@keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mijian-bg-track { animation: none; } }
 
@@ -415,25 +400,7 @@ function typeLabel(id) {
   font-size: 1.2em;
   text-shadow: 0 1px 2px rgba(var(--tsh2, 249, 212, 35), 0.3);
 }
-:global([data-theme='dark']) .mijian-view .season-pts-card {
-  background:
-    linear-gradient(135deg, rgba(var(--tsh1, 217, 138, 43), 0.14), rgba(var(--tsh2, 232, 180, 95), 0.1)),
-    rgba(40, 29, 21, 0.85);
-}
-:global([data-theme='dark']) .mijian-view .season-pts-card .dim { color: rgba(var(--tsh2, 232, 220, 203), 0.85); }
-:global([data-theme='dark']) .mijian-view .season-pts-card strong { color: rgb(var(--tsh2, 232, 180, 95)); }
-:global([data-theme='dark']) .pool-banner-title b { color: rgb(var(--tsh2, 232, 180, 95)); }
-:global([data-theme='dark']) .pool-banner-pity .pill { color: rgb(var(--tsh2, 232, 180, 95)); border-color: rgba(var(--tsh2, 232, 180, 95), 0.55); }
-:global([data-theme='dark']) .gacha-hold {
-  color: rgb(var(--tsh2, 232, 220, 203));
-  background:
-    linear-gradient(135deg, rgba(var(--tsh1, 217, 138, 43), 0.13), rgba(var(--tsh2, 232, 180, 95), 0.1)),
-    rgba(40, 29, 21, 0.85);
-}
 
-/* ── 抽卡操作台（gacha 按钮：主 CTA 大+金渐变+脉动光；次级小一号深红） ── */
-.gacha-hold { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
-.gacha-btns { display: flex; gap: 18px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
 .gacha-btn {
   position: relative; overflow: hidden; cursor: pointer;
   border: none; border-radius: 16px;
@@ -600,11 +567,11 @@ function typeLabel(id) {
 .gacha-history-row { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
 .gacha-hist-rare { color: #d98a2b; font-weight: 700; }
 
-:global([data-theme='dark']) .mijian-carousel { background: rgba(40, 29, 21, 0.96); }
-:global([data-theme='dark']) .mijian-bg-track img { opacity: 0.85; }
-:global([data-theme='dark']) .gacha-front { background: #2a1d15; color: #f2e6d7; border-color: #4d3a2b; }
-:global([data-theme='dark']) .gacha-front-sub { color: #bfa98f; }
-:global([data-theme='dark']) .gacha-back { background: linear-gradient(150deg, #7a4a30, #3a2418); }
+
+
+
+
+
 @media (max-width: 719px) {
   .gacha-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
 }
@@ -659,13 +626,6 @@ function typeLabel(id) {
 .sim-btn-10 { min-width: 300px; } /* 对齐上方「十连」 */
 .sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
-:global([data-theme='dark']) .gacha-sim .sim-btn {
-  --sh1: 150, 178, 163;
-  --sh2: 175, 196, 184;
-  --shd: 70, 88, 106;
-  background: linear-gradient(135deg, #a9c4b4, #46586a);
-  box-shadow: 0 3px 10px rgba(83, 105, 118, 0.45);
-}
 
 
 
