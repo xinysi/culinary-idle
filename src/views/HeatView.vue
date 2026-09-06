@@ -44,6 +44,8 @@ function strike() {
   verdict.value = { type, at: ph.value }
   if (type !== 'miss') stop() // 定火后指针停住，防连点重复判定（2026-09-06）
   const mg = player.minigames.heat
+  // 最近定火记录（2026-09-06 充实舞台内容）
+  mg.history = [...(mg.history ?? []), type].slice(-10)
   if (type === 'perfect') {
     mg.streak = (mg.streak ?? 0) + 1
     mg.bestStreak = Math.max(mg.bestStreak ?? 0, mg.streak)
@@ -115,6 +117,13 @@ const streak = computed(() => player.minigames?.heat?.streak ?? 0)
             <div class="game-side-row"><span>当前连击</span><b class="mono">{{ streak || 0 }}</b></div>
             <div class="game-side-row"><span>最佳连击</span><b class="mono">{{ player.minigames?.heat?.bestStreak ?? 0 }}</b></div>
             <div class="game-side-row"><span>下次奖励</span><b class="mono">再 {{ 5 - ((streak || 0) % 5) }} 连 +50 金</b></div>
+          </div>
+          <div class="game-side-card">
+            <h4>🔥 最近定火</h4>
+            <div class="mg-history">
+              <span v-for="(h, i) in (player.minigames?.heat?.history ?? [])" :key="i" class="mg-hist-dot" :class="h">{{ h === 'perfect' ? '●' : h === 'good' ? '◐' : '○' }}</span>
+              <span v-if="!(player.minigames?.heat?.history ?? []).length" class="dim">（暂无记录，开始挑战吧）</span>
+            </div>
           </div>
         </div>
       </div>

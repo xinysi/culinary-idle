@@ -4058,8 +4058,9 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
   background: rgba(255, 252, 246, 0.72);
   border: 1px solid rgba(150, 110, 70, 0.35);
   border-radius: 14px;
-  height: 620px; /* 固定舞台框：不同小游戏切换时尺寸不变（2026-09-06 实测微调） */
-  min-height: 620px;
+  height: auto; /* 内容自适应：不再留大片空洞（2026-09-06 终版：min 高度兜底，无固定上限） */
+  min-height: 500px;
+  max-height: 720px;
   overflow-y: auto;
   padding: 12px 14px 16px;
   margin-bottom: 14px;
@@ -4144,3 +4145,10 @@ html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
 /* 讲堂兑换居中（2026-09-06 实测） */
 .mg-stage .trivia-exchange { text-align: center; }
 .mg-stage .trivia-exchange-opts { justify-content: center; }
+
+/* 火候炉最近记录（2026-09-06） */
+.mg-history { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.mg-hist-dot { font-size: 16px; }
+.mg-hist-dot.perfect { color: var(--good-strong); }
+.mg-hist-dot.good { color: var(--warn-strong); }
+.mg-hist-dot.miss { color: var(--bad-strong); }
