@@ -43,14 +43,19 @@ test.describe('游戏全流程', () => {
     // 顶部导航分 3 页（2026-09-06）：点击目标按钮前先翻到所在页（最多翻 2 次）
     // 统计/图鉴/攻略已固定到右侧图标钮（title 定位）；其余在翻页页中
     const iconMenus = [['统计', '📊'], ['图鉴', '📖'], ['攻略', '🗺️']]
-    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛']
+    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛', '火候炉', '美食讲堂', '厨心2048', '大胃王']
     for (const m of menus) {
-      try {
-        await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 2000 })
-      } catch {
-        await page.locator('.top-nav-pager').nth(1).click() // 下一页
-        await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 2000 })
+      let clicked = false
+      for (let p = 0; p < 3 && !clicked; p++) {
+        try {
+          await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 1500 })
+          clicked = true
+        } catch {
+          await page.locator('.top-nav-pager').nth(1).click() // 翻下一页再试
+          await page.waitForTimeout(200)
+        }
       }
+      if (!clicked) throw new Error('菜单未找到: ' + m)
       await page.waitForTimeout(400)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
