@@ -37,6 +37,10 @@ const GuideView = defineAsyncComponent(() => import('./views/GuideView.vue'))
 const TowerView = defineAsyncComponent(() => import('./views/TowerView.vue'))
 const FestView = defineAsyncComponent(() => import('./views/FestView.vue'))
 const MijianView = defineAsyncComponent(() => import('./views/MijianView.vue'))
+const HeatView = defineAsyncComponent(() => import('./views/HeatView.vue'))
+const TriviaView = defineAsyncComponent(() => import('./views/TriviaView.vue'))
+const Kitchen2048View = defineAsyncComponent(() => import('./views/Kitchen2048View.vue'))
+const FoodRushView = defineAsyncComponent(() => import('./views/FoodRushView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -85,6 +89,12 @@ const TOP_PAGES = [
     { label: '🛒商店', view: 'shop', onClick: () => ui.setView('shop') },
     { label: '🍽️珍馐阁', view: 'deluxe', onClick: () => ui.setView('deluxe') },
     { label: '🧪炼金', view: 'alchemy', onClick: () => ui.setView('alchemy') },
+  ],
+  [
+    { label: '🔥火候炉', view: 'heat', onClick: () => ui.setView('heat') },
+    { label: '📚美食讲堂', view: 'trivia', onClick: () => ui.setView('trivia') },
+    { label: '🧩厨心2048', view: 'kitchen2048', onClick: () => ui.setView('kitchen2048') },
+    { label: '🍖大胃王', view: 'foodrush', onClick: () => ui.setView('foodrush') },
   ],
 ]
 function navPage(dir) {
@@ -236,6 +246,10 @@ onMounted(() => {
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />
+          <HeatView v-else-if="ui.activeView === 'heat'" />
+          <TriviaView v-else-if="ui.activeView === 'trivia'" />
+          <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />
+          <FoodRushView v-else-if="ui.activeView === 'foodrush'" />
           <StatsView v-else-if="ui.activeView === 'stats'" />
           <LogView v-else-if="ui.activeView === 'log'" />
           <RestaurantView v-else-if="ui.activeView === 'restaurant'" />

@@ -3860,3 +3860,40 @@ html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(6, minmax(0, 1f
 html[data-scale='110'] .grid-n-6 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 html[data-scale='110'] .grid-n-5 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+/* 第三页小游戏（2026-09-06）：火候炉 / 美食讲堂 / 厨心2048 / 大胃王 */
+.heat-stage { margin-top: 10px; }
+.heat-track { position: relative; height: 26px; border-radius: 999px; background: rgba(150, 110, 70, 0.18); overflow: hidden; margin-bottom: 12px; }
+.heat-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(90deg, rgba(230, 172, 72, 0.25), rgba(255, 200, 80, 0.55), rgba(230, 172, 72, 0.25)); }
+.heat-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #d95a38; border-radius: 2px; box-shadow: 0 0 8px rgba(217, 90, 56, 0.8); }
+.heat-actions { display: flex; gap: 10px; align-items: center; justify-content: center; }
+.heat-verdict { margin-top: 10px; font-weight: 800; text-align: center; border-radius: 8px; padding: 8px; }
+.heat-verdict.perfect { background: rgba(87, 168, 97, 0.16); color: var(--good-strong); }
+.heat-verdict.miss { background: rgba(217, 75, 63, 0.12); color: var(--bad-strong); }
+.trivia-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.trivia-q { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.trivia-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.trivia-opt { min-width: 120px; }
+.trivia-right { background: rgba(87, 168, 97, 0.18) !important; color: var(--good-strong) !important; }
+.trivia-wrong { background: rgba(217, 75, 63, 0.18) !important; color: var(--bad-strong) !important; }
+.g2048-board { max-width: 320px; margin: 0 auto; background: rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 6px; }
+.g2048-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.g2048-row:last-child { margin-bottom: 0; }
+.g2048-cell { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; background: rgba(255, 252, 246, 0.75); }
+.g2048-cell.v2 { background: #e8f3d9; } .g2048-cell.v4 { background: #d8ecb8; }
+.g2048-cell.v8 { background: #c8e39a; } .g2048-cell.v16 { background: #b6d98a; }
+.g2048-cell.v32 { background: #f6d9a8; } .g2048-cell.v64 { background: #f3c684; }
+.g2048-cell.v128 { background: #efb669; } .g2048-cell.v256 { background: #e8a24e; }
+.g2048-cell.v512 { background: #dd8f3c; } .g2048-cell.v1024 { background: #e0704a; }
+.g2048-cell.v2048, .g2048-cell.v4096 { background: #d95a38; color: #fff; }
+.g2048-controls { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.rush-stage { text-align: center; }
+.rush-counter { display: flex; gap: 14px; align-items: baseline; justify-content: center; font-size: 15px; }
+.rush-bowls { font-size: 44px; font-weight: 800; color: var(--primary-strong); }
+.rush-tiers { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+.rush-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(150, 110, 70, 0.14); color: var(--muted); }
+.rush-tier.on { background: rgba(87, 168, 97, 0.2); color: var(--good-strong); font-weight: 700; }
+.rush-play { margin: 12px 0; }
+.rush-btn { min-width: 220px; font-size: 18px; }
+.rush-eat { animation: rushPop 0.18s ease; }
+@keyframes rushPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
