@@ -162,6 +162,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 reset()
 
 const rows = computed(() => tiles.value)
+const slots = computed(() => Array.from({ length: SIZE.value * SIZE.value }))
 function posStyle(t) {
   const cell = CELL.value
   return {
@@ -186,6 +187,9 @@ function posStyle(t) {
     </div>
 
     <div class="g2048-board2">
+      <div class="g2048-slots" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
+        <div v-for="(x, i) in slots" :key="i" class="g2048-slot"></div>
+      </div>
       <div
         v-for="t in tiles"
         :key="t.id"
@@ -216,10 +220,19 @@ function posStyle(t) {
 .g2048-board2 {
   position: relative; /* 方块绝对定位容器 */
   width: 380px; height: 380px;
-  background: rgba(150, 110, 70, 0.18);
+  background: rgba(150, 110, 70, 0.3);
   border: 2px solid rgba(150, 110, 70, 0.35);
   border-radius: 18px;
   box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18), inset 0 2px 10px rgba(93, 64, 55, 0.12);
+}
+.g2048-slots {
+  position: absolute; inset: 12px;
+  display: grid; gap: 8px;
+}
+.g2048-slot {
+  border-radius: 10px;
+  background: rgba(255, 251, 244, 0.55);
+  border: 1px solid rgba(150, 110, 70, 0.25);
 }
 .g2048-cell2 {
   position: absolute;
