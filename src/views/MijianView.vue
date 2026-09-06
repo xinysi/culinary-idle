@@ -360,14 +360,14 @@ function typeLabel(id) {
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  --sh1: 22, 160, 133;  /* 流光光带：青绿原色系 */
-  --sh2: 244, 208, 63;  /* 光带中心：金黄亮端 */
-  --shd: 12, 106, 88;   /* 流光暗斑：深青绿 */
+  --sh1: 211, 148, 122; /* 流光光带：玫瑰金原色系 */
+  --sh2: 235, 181, 148; /* 光带中心：粉金亮端 */
+  --shd: 143, 79, 88;   /* 流光暗斑：玫瑰深 */
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, rgb(22, 160, 133), rgb(244, 208, 63));
+  background: linear-gradient(135deg, #b76e79, #e0a980);
 
-  box-shadow: 0 4px 14px rgba(22, 160, 133, 0.4);
+  box-shadow: 0 4px 14px rgba(183, 110, 121, 0.4);
 }
 .gacha-btn-tag {
   font-style: normal; font-size: 11px; font-weight: 800;
