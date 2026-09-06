@@ -170,7 +170,7 @@ const cells = computed(() => tiles.value)
 .pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
 .pz-board {
-  width: 500px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  width: 450px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
   padding: 8px; border-radius: 14px;
   background: rgba(150, 110, 70, 0.16);
   border: 1px solid rgba(150, 110, 70, 0.3);
