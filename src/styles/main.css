@@ -3742,3 +3742,21 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
 .order-row .order-name { font-weight: 700; min-width: 72px; }
 .order-row .order-dish { font-size: 13px; }
 .order-row .order-urgent { color: var(--bad-strong); font-weight: 700; }
+
+/* 配方导航树（2026-09-06） */
+.tree-modal { max-width: 560px; width: 92vw; }
+.tree-body { max-height: 60vh; overflow-y: auto; }
+.rt-list, .rt-children { list-style: none; margin: 0; padding: 0; }
+.rt-children { margin-top: 2px; }
+.rt-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.rt-row:hover { background: rgba(150, 110, 70, 0.08); }
+.rt-name { font-weight: 600; }
+.rt-qty { color: var(--gold); font-weight: 700; }
+.rt-src { font-size: 11px; color: var(--muted); }
+.rt-src-craft { color: var(--primary-strong); }
+html[data-theme='dark'] .rt-row:hover { background: rgba(255, 255, 255, 0.06); }

@@ -9,6 +9,7 @@ import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
 import QuantityModal from '../components/QuantityModal.vue'
 import ItemImg from '../components/ItemImg.vue'
+import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -194,6 +195,12 @@ function queueAdd(r, qty) {
   const res = props.instance.enqueue(r, qty)
   if (res.ok) ui.pushLog(`「${r.name}」×${qty} 已加入制作队列（每 3 秒自动制作 1 次）`, 'info')
   else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
+}
+
+// ── 配方导航树（2026-09-06）──
+const treeRecipe = ref(null)
+function openTree(r) {
+  treeRecipe.value = { ...r, skillId: props.instance.id }
 }
 
 // ── 卡片式分段（按 reqLevel 每 5 级一段，可折叠）──
@@ -406,6 +413,7 @@ function scrollToSection(label) {
               <div class="queue-btns">
                 <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>
                 <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 10)" title="加入制作队列 ×10（材料不足自动暂停）">⏳×10</button>
+                <button class="btn btn-sm" @click="openTree(r)" title="展开配方材料链（来源/持有/跳转）">🌳</button>
                 <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
                   {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
                 </button>
@@ -424,6 +432,7 @@ function scrollToSection(label) {
       @close="craftTarget = null"
       @confirm="doCraftBatch"
     />
+    <RecipeTreeModal v-if="treeRecipe" :recipe="treeRecipe" :player="player" @close="treeRecipe = null" />
   </div>
 </template>
 
