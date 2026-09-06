@@ -41,6 +41,8 @@ const HeatView = defineAsyncComponent(() => import('./views/HeatView.vue'))
 const TriviaView = defineAsyncComponent(() => import('./views/TriviaView.vue'))
 const Kitchen2048View = defineAsyncComponent(() => import('./views/Kitchen2048View.vue'))
 const FoodRushView = defineAsyncComponent(() => import('./views/FoodRushView.vue'))
+const PuzzleView = defineAsyncComponent(() => import('./views/PuzzleView.vue'))
+const MatchFoodView = defineAsyncComponent(() => import('./views/MatchFoodView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -95,6 +97,8 @@ const TOP_PAGES = [
     { label: '📚美食讲堂', view: 'trivia', onClick: () => ui.setView('trivia') },
     { label: '🧩厨心2048', view: 'kitchen2048', onClick: () => ui.setView('kitchen2048') },
     { label: '🍖大胃王', view: 'foodrush', onClick: () => ui.setView('foodrush') },
+    { label: '🧩美食拼图', view: 'puzzle', onClick: () => ui.setView('puzzle') },
+    { label: '🀄食材连连看', view: 'matchfood', onClick: () => ui.setView('matchfood') },
   ],
 ]
 function navPage(dir) {
@@ -250,6 +254,8 @@ onMounted(() => {
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />
           <FoodRushView v-else-if="ui.activeView === 'foodrush'" />
+          <PuzzleView v-else-if="ui.activeView === 'puzzle'" />
+          <MatchFoodView v-else-if="ui.activeView === 'matchfood'" />
           <StatsView v-else-if="ui.activeView === 'stats'" />
           <LogView v-else-if="ui.activeView === 'log'" />
           <RestaurantView v-else-if="ui.activeView === 'restaurant'" />

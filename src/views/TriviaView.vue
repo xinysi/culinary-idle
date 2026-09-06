@@ -77,6 +77,21 @@ function settle() {
   }
 }
 const pct = computed(() => quiz.value.length ? Math.round((correctCount.value / 10) * 100) : 0)
+
+// 徽章兑换（2026-09-06）：1 徽章 → 能量饼干 ×1 或 金币 600；2 徽章 → 金币 1500
+const EXCHANGES = [
+  { id: 'biscuit', label: '🎁 能量饼干 ×1', cost: 1 },
+  { id: 'gold600', label: '💰 金币 600', cost: 1 },
+  { id: 'gold1500', label: '💰 金币 1500', cost: 2 },
+]
+function exchange(item) {
+  const m = player.minigames.trivia
+  if ((m.badges ?? 0) < item.cost) return
+  m.badges -= item.cost
+  if (item.id === 'biscuit') player.gainItem('energyBiscuit', 1)
+  else player.gainGold(item.id === 'gold600' ? 600 : 1500)
+  ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
+}
 </script>
 
 <template>
@@ -118,6 +133,15 @@ const pct = computed(() => quiz.value.length ? Math.round((correctCount.value / 
         <p class="dim" style="margin: 6px 0">本周是否已答：<b>{{ mg.week === weekKey() && mg.answered > 0 ? '✅ 已答（下周重置）' : '未开始' }}</b></p>
         <button class="btn btn-sm btn-primary" @click="newQuiz()">开始本周竞答（10 题）</button>
       </template>
+      <div class="trivia-exchange">
+        <h4>🏅 徽章兑换</h4>
+        <div class="trivia-exchange-opts">
+          <button v-for="it in EXCHANGES" :key="it.id" class="btn btn-sm" :disabled="(mg.badges ?? 0) < it.cost" @click="exchange(it)">
+            {{ it.label }}（{{ it.cost }} 徽章）
+          </button>
+        </div>
+        <span class="dim">剩余徽章：<b class="mono">{{ mg.badges ?? 0 }}</b> · 每周答对 ≥8 题 +1 枚</span>
+      </div>
     </div>
   </div>
 </template>

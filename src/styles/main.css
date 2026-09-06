@@ -3897,3 +3897,56 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .rush-btn { min-width: 220px; font-size: 18px; }
 .rush-eat { animation: rushPop 0.18s ease; }
 @keyframes rushPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
+
+/* 讲堂兑换（2026-09-06） */
+.trivia-exchange { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.trivia-exchange-opts { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+
+/* 大胃王暴食（2026-09-06） */
+.rush-eat.rush-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f) !important; color: #ffe; animation: rushPop 0.2s ease infinite; }
+
+/* 每日美食拼图（2026-09-06） */
+.puzzle-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 300px;
+  margin: 0 auto;
+  background: rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 6px;
+}
+.puzzle-cell {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  background: rgba(255, 251, 244, 0.92);
+  border: 1px solid rgba(150, 110, 70, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.puzzle-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+
+/* 食材连连看（2026-09-06） */
+.match-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.match-cell {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  background: rgba(255, 251, 244, 0.92);
+  border: 1px solid rgba(150, 110, 70, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s ease;
+}
+.match-cell:hover { transform: scale(1.05); }
+.match-cell.selected { border-color: var(--gold); box-shadow: 0 0 8px rgba(168, 120, 11, 0.5); }
+.match-cell.cleared { background: rgba(87, 168, 97, 0.1); border-color: transparent; cursor: default; }

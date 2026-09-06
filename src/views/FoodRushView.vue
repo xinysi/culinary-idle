@@ -12,6 +12,11 @@ const REMAIN = ref(60)
 const bowls = ref(0)
 const done = ref(false)
 let timerId = null
+// 暴食（2026-09-06）：连点间隔 <1.2s 累计连击，10 连触发暴食 → 3 秒内每口双倍
+let combo = 0
+let lastEat = 0
+const raging = ref(false)
+let rageUntil = 0
 
 const TIERS = [
   { need: 120, gold: 40, label: '120 碗' },
@@ -31,7 +36,16 @@ function start() {
 }
 function eat() {
   if (!RUNNING.value) return
-  bowls.value++
+  const now = performance.now()
+  if (now - lastEat < 1200) combo++
+  else combo = 1
+  lastEat = now
+  if (combo >= 10 && !raging.value) {
+    raging.value = true
+    rageUntil = now + 3000
+  }
+  if (rageUntil && now > rageUntil) raging.value = false
+  bowls.value += raging.value ? 2 : 1
 }
 function finish() {
   if (!RUNNING.value) return
@@ -64,7 +78,7 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
     <header class="skill-head">
       <div>
         <h2>🍖 大胃王挑战</h2>
-        <p class="dim">60 秒内疯狂点「干饭」喂饱大胃王！每日结算一次奖励（取最高档）：120 碗 +40 金 / 200 碗 +60 金 / 300 碗 +100 金。</p>
+        <p class="dim">60 秒内疯狂点「干饭」喂饱大胃王！每日结算一次奖励（取最高档）：120 碗 +40 金 / 200 碗 +60 金 / 300 碗 +100 金。连续点击可触发<b>暴食</b>：10 连击后 3 秒每口 ×2！</p>
       </div>
       <div class="skill-head-right">
         <span class="badge badge-on">🏆 {{ mg.best ?? 0 }} 碗</span>
@@ -84,7 +98,9 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
       </div>
       <div class="rush-play">
         <button v-if="!RUNNING" class="btn btn-primary rush-btn" @click="start">🍖 开始挑战（60 秒）</button>
-        <button v-else class="btn btn-primary rush-btn rush-eat" @click="eat">🍚 干饭！</button>
+        <button v-else class="btn btn-primary rush-btn rush-eat" :class="{ 'rush-rage': raging }" @click="eat">
+          {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
+        </button>
       </div>
       <div v-if="done" class="heat-verdict" :class="{ perfect: nextTier, miss: !nextTier }">
         {{ nextTier ? `🍖 达成 ${nextTier.label}！奖励已结算` : '💪 惜败！差一点就达标了' }}

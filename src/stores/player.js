@@ -186,9 +186,11 @@ const defaultState = () => ({
       trivia: { week: '', answered: 0, correct: 0, badges: 0 },
       kitchen2048: { best: 0 },
       foodrush: { day: 0, best: 0, rewarded: 0 },
+      puzzle: { day: '', done: 0 },
+      matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
+    settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
   })
 
@@ -453,7 +455,7 @@ export const usePlayerStore = defineStore('player', {
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
         gearMods: saved.gearMods ?? {}, // 装备词条：{ slot: { itemId, mods } }
         orders: saved.orders ?? { list: [], nextAt: 0 }, // 食客订单
-        minigames: saved.minigames ?? { heat: { day: 0, streak: 0, bestStreak: 0 }, trivia: { week: '', answered: 0, correct: 0, badges: 0 }, kitchen2048: { best: 0 }, foodrush: { day: 0, best: 0, rewarded: 0 } },
+        minigames: saved.minigames ?? { heat: { day: 0, streak: 0, bestStreak: 0 }, trivia: { week: '', answered: 0, correct: 0, badges: 0 }, kitchen2048: { best: 0 }, foodrush: { day: 0, best: 0, rewarded: 0 }, puzzle: { day: '', done: 0 }, matchfood: { day: '', buffed: 0 } },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
       // 食灵阁迁移（2026-09-06）：旧档背包内的食灵物品移入独立食灵阁（不占背包格）
