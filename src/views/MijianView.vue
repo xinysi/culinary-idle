@@ -175,15 +175,15 @@ function typeLabel(id) {
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
       <div class="gacha-btns">
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
-          <span class="gacha-btn-top">🎴 十连抽卡 <i class="gacha-btn-tag">10连</i></span>
+          <span class="gacha-btn-top">🎴 十连撷珍 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
         </button>
         <button class="gacha-btn gacha-btn-sub" :disabled="drawing || player.gold < pool.price" @click="draw(1)">
-          <span class="gacha-btn-top">🎴 单抽</span>
+          <span class="gacha-btn-top">🎴 单次撷取</span>
           <span class="gacha-btn-price">{{ pool.price }} 金</span>
         </button>
         <button class="gacha-btn gacha-btn-bulk" :disabled="drawing || player.gold < pool.price * 100" @click="draw(100)">
-          <span class="gacha-btn-top">🎴 百连抽卡 <i class="gacha-btn-tag">100连</i></span>
+          <span class="gacha-btn-top">🎴 百连觅馐 <i class="gacha-btn-tag">100连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 100 }} 金</span>
         </button>
       </div>
@@ -356,14 +356,14 @@ function typeLabel(id) {
 .gacha-btn-main {
   min-width: 300px;
   font-size: 19px;
-  background: linear-gradient(135deg, #e2a93f, #c9761c);
+  background: linear-gradient(135deg, #ffc247, #e69b28);
   box-shadow: 0 0 22px rgba(226, 169, 63, 0.5);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, #d95a38, #b8442a);
+  background: linear-gradient(135deg, #f27c45, #d85c2c);
   box-shadow: 0 4px 14px rgba(184, 68, 42, 0.35);
 }
 .gacha-btn-tag {
@@ -473,9 +473,9 @@ function typeLabel(id) {
 .gacha-btn-bulk {
   min-width: 300px;
   font-size: 16px;
-  color: #f2c96b;
+  color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
-  background: linear-gradient(120deg, #16130b, #4a3a10 50%, #16130b);
+  background: linear-gradient(120deg, #704828, #a06836);
   box-shadow: 0 0 18px rgba(226, 169, 63, 0.35);
 }
 .gacha-btn-bulk:disabled { filter: grayscale(0.7) brightness(0.72); }
@@ -493,7 +493,7 @@ function typeLabel(id) {
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
   border: none; border-radius: 12px;
-  background: linear-gradient(135deg, #9ad97a, #5fa542);
+  background: linear-gradient(135deg, #72b864, #589c4b);
   box-shadow: 0 3px 10px rgba(95, 165, 66, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
@@ -510,7 +510,7 @@ function typeLabel(id) {
 .sim-btn-10 { min-width: 300px; } /* 对齐上方「十连」 */
 .sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
-:global([data-theme='dark']) .gacha-sim .sim-btn { background: linear-gradient(135deg, #6fae52, #4c8a3c); box-shadow: 0 3px 10px rgba(76, 138, 60, 0.4); }
+:global([data-theme='dark']) .gacha-sim .sim-btn { background: linear-gradient(135deg, #5f9c50, #4a7f3e); box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4); }
 @keyframes simSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
 
 </style>
