@@ -31,10 +31,7 @@ const current = computed(() => GAMES.find((g) => g.id === active.value) ?? null)
     <!-- 上方：超级大舞台框（默认欢迎 / 点入口后加载对应游戏） -->
     <div class="mg-stage">
       <template v-if="activeComp">
-        <div class="mg-stage-head">
-          <span class="mg-stage-title">{{ current.emoji }} {{ current.name }}</span>
-          <button class="btn btn-sm" @click="active = null">✕ 关闭（回大厅）</button>
-        </div>
+        <button class="btn btn-sm mg-stage-close" @click="active = null">✕ 关闭（回大厅）</button>
         <component :is="activeComp" />
       </template>
       <template v-else>
