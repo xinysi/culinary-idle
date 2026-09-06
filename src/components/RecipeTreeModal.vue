@@ -3,7 +3,6 @@
 import { computed } from 'vue'
 import { getItem } from '../game/data/items.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
-import { useUiStore } from '../stores/ui.js'
 import RecipeTreeNode from './RecipeTreeNode.vue'
 
 const props = defineProps({
@@ -30,7 +29,7 @@ function buildTree(itemId, qty, depth, seen) {
   const entry = recipeIndex().get(itemId)
   const node = { itemId, qty, depth, recipe: null, children: [] }
   if (depth > 4 || seen.has(itemId) || !entry) return node
-  node.recipe = { name: entry.recipe.name, skillId: entry.skillId }
+  node.recipe = { name: entry.recipe.name, skillId: entry.skillId, recipeId: entry.recipe.id, reqLevel: entry.recipe.reqLevel, isSelf: depth === 0 }
   const seen2 = new Set(seen)
   seen2.add(itemId)
   for (const [mid, mqty] of Object.entries(entry.recipe.ingredients)) {
@@ -44,10 +43,8 @@ const root = computed(() => {
   return buildTree(props.recipe.output.itemId, 1, 0, new Set())
 })
 
-function jump(skillId) {
-  props.player.setActiveSkill(skillId)
-  useUiStore().setView('skill')
-  emit('close')
+function jump(nav) {
+  emit('jump', nav)
 }
 </script>
 
