@@ -161,7 +161,7 @@ function typeLabel(id) {
         <b>{{ pool.name }}</b>
         <em>{{ pool.desc }}</em>
       </div>
-      <div v-if="isGearPool" class="pool-banner-pity">⭐ 保底 {{ pity.current }}/{{ pity.need }}</div>
+      <div v-if="isGearPool" class="pool-banner-pity"><span class="pill">⭐ 保底 {{ pity.current }}/{{ pity.need }}</span></div>
       <template v-if="isLimitedPool">
         <div class="pool-banner-pity pills">
           <span class="pill">⏳ 剩 {{ limitedRemaining }}</span>
