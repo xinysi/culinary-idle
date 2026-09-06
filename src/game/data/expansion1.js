@@ -264,7 +264,7 @@ export const EXPANSION_ITEMS = {
  },
  "foraging_ext_27": {
   "id": "foraging_ext_27",
-  "name": "芹菜",
+  "name": "旱芹",
   "type": "ingredient",
   "category": "vegetable",
   "tier": 9,
@@ -1314,7 +1314,7 @@ export const EXPANSION_ITEMS = {
  },
  "cooking_ext_11": {
   "id": "cooking_ext_11",
-  "name": "剁椒鱼头",
+  "name": "剁椒鱼尾",
   "type": "food",
   "category": "主菜",
   "tier": 4,
@@ -1468,7 +1468,7 @@ export const EXPANSION_ITEMS = {
  },
  "cooking_ext_25": {
   "id": "cooking_ext_25",
-  "name": "蒜蓉西兰花",
+  "name": "蒜蓉炒西兰花",
   "type": "food",
   "category": "主菜",
   "tier": 9,
@@ -2328,7 +2328,7 @@ export const EXPANSION_ITEMS = {
  },
  "brewing_ext_05": {
   "id": "brewing_ext_05",
-  "name": "猕猴桃汁",
+  "name": "鲜榨猕猴桃汁",
   "type": "drink",
   "category": "juice",
   "tier": 2,
@@ -2339,7 +2339,7 @@ export const EXPANSION_ITEMS = {
  },
  "brewing_ext_06": {
   "id": "brewing_ext_06",
-  "name": "蓝莓汁",
+  "name": "鲜榨蓝莓汁",
   "type": "drink",
   "category": "juice",
   "tier": 2,
@@ -2350,7 +2350,7 @@ export const EXPANSION_ITEMS = {
  },
  "brewing_ext_07": {
   "id": "brewing_ext_07",
-  "name": "樱桃汁",
+  "name": "鲜榨樱桃汁",
   "type": "drink",
   "category": "juice",
   "tier": 3,
@@ -2383,7 +2383,7 @@ export const EXPANSION_ITEMS = {
  },
  "brewing_ext_10": {
   "id": "brewing_ext_10",
-  "name": "柚子茶",
+  "name": "蜜柚茶",
   "type": "drink",
   "category": "tea",
   "tier": 4,
@@ -2427,7 +2427,7 @@ export const EXPANSION_ITEMS = {
  },
  "brewing_ext_14": {
   "id": "brewing_ext_14",
-  "name": "薄荷茶",
+  "name": "薄荷凉茶",
   "type": "drink",
   "category": "tea",
   "tier": 5,
@@ -4387,7 +4387,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "cooking_rec_11",
-   "name": "剁椒鱼头",
+   "name": "剁椒鱼尾",
    "category": "主菜",
    "reqLevel": 34,
    "xp": 476,
@@ -4626,7 +4626,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "cooking_rec_25",
-   "name": "蒜蓉西兰花",
+   "name": "蒜蓉炒西兰花",
    "category": "主菜",
    "reqLevel": 82,
    "xp": 1148,
@@ -5770,7 +5770,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "brewing_rec_05",
-   "name": "猕猴桃汁",
+   "name": "鲜榨猕猴桃汁",
    "category": "果汁",
    "reqLevel": 14,
    "xp": 196,
@@ -5786,7 +5786,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "brewing_rec_06",
-   "name": "蓝莓汁",
+   "name": "鲜榨蓝莓汁",
    "category": "果汁",
    "reqLevel": 17,
    "xp": 238,
@@ -5802,7 +5802,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "brewing_rec_07",
-   "name": "樱桃汁",
+   "name": "鲜榨樱桃汁",
    "category": "果汁",
    "reqLevel": 21,
    "xp": 294,
@@ -5850,7 +5850,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "brewing_rec_10",
-   "name": "柚子茶",
+   "name": "蜜柚茶",
    "category": "茶饮",
    "reqLevel": 31,
    "xp": 434,
@@ -5914,7 +5914,7 @@ export const PRODUCTION_EXT = {
   },
   {
    "id": "brewing_rec_14",
-   "name": "薄荷茶",
+   "name": "薄荷凉茶",
    "category": "茶饮",
    "reqLevel": 44,
    "xp": 616,

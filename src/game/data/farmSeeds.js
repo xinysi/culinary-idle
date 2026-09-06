@@ -1743,7 +1743,7 @@ export const FARM_SEEDS = {
  },
  "foraging_ext_27Seed": {
   "id": "foraging_ext_27Seed",
-  "name": "芹菜种子",
+  "name": "旱芹种子",
   "type": "seed",
   "category": "种植产物",
   "tier": 9,
