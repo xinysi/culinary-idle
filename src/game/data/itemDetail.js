@@ -15,6 +15,8 @@ export const CATEGORY_LABEL = {
   spice: '调料', spirit: '食灵', supply: '补给', tea: '茶饮', vegetable: '蔬菜', weapon: '武器', wine: '酒类',
   flower: '花卉', herb: '香草', dairy: '乳品', drinkBase: '饮品基底', legume: '豆类', spicePlant: '香料植物',
   '种植产物': '种植产物',
+  // 全物品图鉴审计（2026-09-06）补齐的类别标签（仅展示层映射）
+  '主菜': '主菜', '甜点': '甜点', '汤品': '汤品', '主食': '主食',
 }
 export const SLOT_LABEL = { weapon: '武器', offhand: '副手', body: '身体', helmet: '头盔', amulet: '饰品1', ring: '饰品2', legs: '腿部', boots: '脚部' }
 const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击率', hpBonus: '品鉴值加成', speedBonus: '攻速提升' }

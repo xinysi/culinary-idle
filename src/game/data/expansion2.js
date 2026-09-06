@@ -1269,7 +1269,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "cooking_ext2_07": {
   "id": "cooking_ext2_07",
-  "name": "鱼香肉丝",
+  "name": "家常鱼香肉丝",
   "type": "food",
   "category": "主菜",
   "tier": 3,
@@ -1346,7 +1346,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "cooking_ext2_14": {
   "id": "cooking_ext2_14",
-  "name": "油焖大虾",
+  "name": "蒜香油焖大虾",
   "type": "food",
   "category": "主菜",
   "tier": 5,
@@ -2223,7 +2223,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "preserving_ext2_25": {
   "id": "preserving_ext2_25",
-  "name": "腊肉",
+  "name": "烟熏腊肉",
   "type": "ingredient",
   "category": "pickled",
   "tier": 9,
@@ -2426,7 +2426,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "brewing_ext2_14": {
   "id": "brewing_ext2_14",
-  "name": "苏打水",
+  "name": "柠檬苏打水",
   "type": "drink",
   "category": "tea",
   "tier": 5,
@@ -2503,7 +2503,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "brewing_ext2_21": {
   "id": "brewing_ext2_21",
-  "name": "苹果酒",
+  "name": "青苹果酒",
   "type": "drink",
   "category": "wine",
   "tier": 7,
@@ -2547,7 +2547,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "brewing_ext2_25": {
   "id": "brewing_ext2_25",
-  "name": "芒果酒",
+  "name": "金芒酒",
   "type": "drink",
   "category": "wine",
   "tier": 9,
@@ -2663,7 +2663,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "spiceMixing_ext2_06": {
   "id": "spiceMixing_ext2_06",
-  "name": "蒜蓉酱",
+  "name": "金银蒜蓉酱",
   "type": "spice",
   "category": "pickled",
   "tier": 2,
@@ -2793,7 +2793,7 @@ export const EXPANSION_ITEMS2 = {
  },
  "spiceMixing_ext2_19": {
   "id": "spiceMixing_ext2_19",
-  "name": "五香粉",
+  "name": "卤味五香粉",
   "type": "spice",
   "category": "pickled",
   "tier": 7,
@@ -4851,7 +4851,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "cooking_rec2_07",
-   "name": "鱼香肉丝",
+   "name": "家常鱼香肉丝",
    "category": "主菜",
    "reqLevel": 21,
    "xp": 294,
@@ -4970,7 +4970,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "cooking_rec2_14",
-   "name": "油焖大虾",
+   "name": "蒜香油焖大虾",
    "category": "主菜",
    "reqLevel": 44,
    "xp": 616,
@@ -6129,7 +6129,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "preserving_rec2_25",
-   "name": "腊肉",
+   "name": "烟熏腊肉",
    "category": "pickled",
    "reqLevel": 82,
    "xp": 1148,
@@ -6439,7 +6439,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "brewing_rec2_14",
-   "name": "苏打水",
+   "name": "柠檬苏打水",
    "category": "饮品",
    "reqLevel": 44,
    "xp": 616,
@@ -6554,7 +6554,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "brewing_rec2_21",
-   "name": "苹果酒",
+   "name": "青苹果酒",
    "category": "酒类",
    "reqLevel": 68,
    "xp": 952,
@@ -6622,7 +6622,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "brewing_rec2_25",
-   "name": "芒果酒",
+   "name": "金芒酒",
    "category": "酒类",
    "reqLevel": 82,
    "xp": 1148,
@@ -7064,7 +7064,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "spiceMixing_rec2_06",
-   "name": "蒜蓉酱",
+   "name": "金银蒜蓉酱",
    "category": "pickled",
    "reqLevel": 17,
    "xp": 238,
@@ -7273,7 +7273,7 @@ export const PRODUCTION_EXT2 = {
   },
   {
    "id": "spiceMixing_rec2_19",
-   "name": "五香粉",
+   "name": "卤味五香粉",
    "category": "pickled",
    "reqLevel": 61,
    "xp": 854,
