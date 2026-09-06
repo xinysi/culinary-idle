@@ -9,6 +9,13 @@ import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
 import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
+import {
+  cardPoolFrom,
+  cardColor as cardColorFor,
+  cardStrength as cardStrengthOf,
+  simulateBattle,
+  settleBattle,
+} from '../game/data/cardBattle.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { SEASONS } from '../game/data/seasons.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
@@ -163,68 +170,23 @@ function seasonClaimed(s) {
   return player.seasons?.[s.id]?.claimed?.length ?? 0
 }
 
-// ── 图鉴卡牌化（§13）──
-const showBattle = ref(true) // 卡牌对战分类：进入即直接展示对战面板（2026-09-06）
+// ── 图鉴卡牌化（§13，2026-09-06 重构：逻辑在 game/data/cardBattle.js，本处仅薄壳）──
 const selectedCards = ref([])
 const battleResult = ref(null)
-
-function cardColor(id) {
-  const it = getItem(id)
-  if (!it) return 'var(--border)'
-  if (it.quality === '神话') return 'var(--bad-strong)'
-  if (it.quality === '传说') return 'var(--warn-strong)'
-  if (it.type === 'equipment') return '#7b1fa2'
-  if (it.tier >= 8) return 'var(--bad-strong)'
-  if (it.tier >= 5) return 'var(--warn-strong)'
-  if (it.tier >= 3) return 'var(--info)'
-  return 'var(--muted)'
-}
-// 卡牌收藏池：已收集的料理/装备（一次过滤+排序；模板不再内联重算）
-const cardPool = computed(() =>
-  Object.keys(player.collected)
-    .filter((id) => { const it = getItem(id); return it && (it.type === 'food' || it.type === 'equipment') })
-    .sort()
-)
+const cardPool = computed(() => cardPoolFrom(player.collected))
+function cardColor(id) { return cardColorFor(id) }
+function cardStrengthText(id) { return Math.round(cardStrengthOf(id)) }
 function toggleCard(id) {
   const i = selectedCards.value.indexOf(id)
   if (i >= 0) selectedCards.value.splice(i, 1)
   else if (selectedCards.value.length < 3) selectedCards.value.push(id)
 }
-function cardStrength(id) {
-  const it = getItem(id)
-  return (it.heal ?? 0) + it.value * 0.5 + it.tier * 3
-}
+function clearSelection() { selectedCards.value = [] }
 function doCardBattle() {
   if (!selectedCards.value.length) return
-  // AI 从玩家已收集的料理卡池随机抽 3 张（公平对局）；不足 3 张时用全料理池补足，保证 3 局满员
-  let aiPool = Object.keys(player.collected).filter((id) => ITEMS[id]?.type === 'food')
-  if (aiPool.length < 3) {
-    aiPool = [...aiPool, ...Object.keys(ITEMS).filter((id) => ITEMS[id]?.type === 'food')]
-  }
-  const ai = [...aiPool].sort(() => Math.random() - 0.5).slice(0, 3)
-  let wins = 0
-  const rounds = []
-  for (let i = 0; i < 3; i++) {
-    const mine = selectedCards.value[i] ?? null
-    const theirs = ai[i] ?? null
-    const ms = mine ? cardStrength(mine) : 0
-    const ts = theirs ? cardStrength(theirs) : 0
-    rounds.push({ mine, theirs, ms, ts, win: ms > ts })
-    if (ms > ts) wins++
-  }
-  const won = wins >= 2
-  if (won) {
-    player.gainGold(50)
-    const isFirst = (player.stats.cardBattle.wins ?? 0) === 0
-    player.stats.cardBattle.wins++
-    if (isFirst) {
-      player.gainItem('energyBiscuit', 1)
-      ui.pushLog('🎉 卡牌对战首胜：额外获得能量饼干 ×1）', 'gain')
-    }
-  } else {
-    player.stats.cardBattle.losses++
-  }
-  battleResult.value = { won, rounds }
+  const result = simulateBattle(selectedCards.value, player.collected)
+  settleBattle(player, result)
+  battleResult.value = result
   selectedCards.value = []
 }
 
@@ -898,37 +860,54 @@ function scrollToTalesSeries(series) {
         </template>
       </template>
 
-      <!-- 卡牌对战（§13）：图鉴页直属分类（2026-09-06）-->
+      <!-- 卡牌对战（§13）：图鉴页直属分类（2026-09-06 重构排版）-->
       <template v-else-if="tab === 'cards'">
-          <h3 style="margin-top: 6px">
-            卡牌收藏（获得过的料理、装备）· 点选 3 张组成卡组
-          </h3>
+          <div class="card-battle-head">
+            <h3 style="margin: 0">🂡 卡牌对战</h3>
+            <span class="dim">卡池 {{ cardPool.length }} 张 · 已选 <b class="mono cb-count">{{ selectedCards.length }}</b>/3 · 战绩 {{ player.stats.cardBattle?.wins ?? 0 }}胜 {{ player.stats.cardBattle?.losses ?? 0 }}负</span>
+            <button v-if="selectedCards.length" class="btn btn-sm" @click="clearSelection">清空选卡</button>
+          </div>
+          <p class="dim" style="margin: 4px 0 8px">从已收集的料理/装备中<span style="color: var(--primary-strong); font-weight: 700">点选 3 张</span>组成卡组，与 AI 的三张料理卡对决（3 局 2 胜制）：胜 +50 金币，首胜额外 +能量饼干。</p>
           <div class="card-grid">
             <div
               v-for="id in cardPool"
               :key="id"
-              class="item-card"
+              class="item-card cb-card"
               :style="{ borderColor: cardColor(id) }"
               :class="{ selected: selectedCards.includes(id) }"
               @click="toggleCard(id)"
             >
+              <div class="cb-badges">
+                <span class="cb-type">{{ getItem(id)?.type === 'food' ? '🍽 料理' : '⚒ 装备' }}</span>
+                <span class="cb-power">⚔ {{ cardStrengthText(id) }}</span>
+              </div>
               <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-card-img" @error="$event.target.style.display = 'none'" alt="" />
               <div class="item-card-name">{{ getItem(id)?.name }}</div>
-              <div class="dim">{{ getItem(id)?.type === 'food' ? '料理' : CATEGORY_LABEL[getItem(id)?.category] ?? getItem(id)?.category ?? '' }}</div>
+              <div class="dim">{{ CATEGORY_LABEL[getItem(id)?.category] ?? getItem(id)?.category ?? '' }}</div>
               <div class="mono dim">T{{ getItem(id)?.tier }}</div>
             </div>
+            <p v-if="!cardPool.length" class="dim" style="grid-column: 1 / -1">还没有收集到料理/装备，去制作或获得吧。</p>
           </div>
-          <div class="card" style="margin-top: 12px">
-            <template v-if="showBattle">
-              <p class="dim">战绩：{{ player.stats.cardBattle.wins }} 胜/ {{ player.stats.cardBattle.losses }} 负 · 已选 {{ selectedCards.length }}/3（料理/装备卡）</p>
-              <button class="btn btn-sm btn-primary" :disabled="!selectedCards.length" @click="doCardBattle">开始对战</button>
-              <div v-if="battleResult" class="battle-result" :class="{ win: battleResult.won, lose: !battleResult.won }">
-                {{ battleResult.won ? '🏆 卡牌对决胜利！+50 金币' : '💀 卡牌对决失败' }}
-                <div v-for="(r, i) in battleResult.rounds" :key="i" class="dim">
-                  {{ i + 1 }} 局：{{ r.mine ? itemName(r.mine) : '—' }}（{{ r.ms }}）vs {{ r.theirs ? itemName(r.theirs) : '—' }}（{{ r.ts }}）→ {{ r.win ? '胜' : '负' }}
+          <div class="card cb-battle-panel">
+            <div class="cb-battle-head">
+              <button class="btn btn-sm btn-primary" :disabled="!selectedCards.length" @click="doCardBattle">⚔️ 开始对战</button>
+              <span class="dim">当前卡组战力合计 <b class="mono">{{ selectedCards.reduce((a, id) => a + cardStrengthOf(id), 0).toFixed(0) }}</b></span>
+            </div>
+            <div v-if="battleResult" class="battle-result" :class="{ win: battleResult.won, lose: !battleResult.won }">
+              <div class="cb-result-title">{{ battleResult.won ? '🏆 卡牌对决胜利！+50 金币' : '💀 卡牌对决失败，再接再厉' }}</div>
+              <div class="cb-rounds">
+                <div v-for="(r, i) in battleResult.rounds" :key="i" class="cb-round" :class="{ win: r.win, lose: !r.win }">
+                  <span class="cb-round-idx">第 {{ i + 1 }} 局</span>
+                  <span class="cb-round-cards">
+                    {{ r.mine ? itemName(r.mine) : '—' }}（<b class="mono">{{ Math.round(r.ms) }}</b>）
+                    <span class="dim">vs</span>
+                    {{ r.theirs ? itemName(r.theirs) : '—' }}（<b class="mono">{{ Math.round(r.ts) }}</b>）
+                  </span>
+                  <span class="cb-round-verdict">{{ r.win ? '✅ 胜' : '❌ 负' }}</span>
                 </div>
               </div>
-            </template>
+            </div>
+            <p v-else class="dim" style="margin: 8px 0 0">选好卡组后点击「开始对战」。</p>
           </div>
         </template>
 

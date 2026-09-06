@@ -25,6 +25,7 @@ import { EventBus } from '../src/game/core/EventBus.js'
 import { settleOffline } from '../src/game/bootstrap.js'
 import { useUiStore } from '../src/stores/ui.js'
 import { ITEMS, getItem } from '../src/game/data/items.js'
+import { cardPoolFrom, cardStrength, simulateBattle, settleBattle } from '../src/game/data/cardBattle.js'
 import { ALL_ACHIEVEMENTS } from '../src/game/data/achievements.js'
 import { QUESTS } from '../src/game/data/quests.js'
 import { SHOP_ITEMS } from '../src/game/data/shop.js'
@@ -231,6 +232,26 @@ console.log('══ B2. 新系统（制作队列/装备词条/食客订单） �
   p3.orders.list.push({ ...order, id: 'o2', expireAt: Date.now() - 1000 })
   p3._tickOrders(2000)
   check('订单', '过期订单自动清理', p3.orders.list.length === 0)
+}
+
+// ── B3. 卡牌对战（纯逻辑层，2026-09-06 重构）──
+console.log('══ B3. 卡牌对战 ══')
+{
+  check('卡牌', '战力随档位单调（铁刀>铜刀）', cardStrength('ironKnife') > cardStrength('copperKnife'), `${cardStrength('ironKnife')} vs ${cardStrength('copperKnife')}`)
+  const pool = cardPoolFrom({ roastPotato: true, apple: true, copperKnife: true, saltOre: true, water: true })
+  check('卡牌', '收藏池只含料理/装备', pool.length === 2 && pool.includes('roastPotato') && pool.includes('copperKnife') && !pool.includes('apple') && !pool.includes('saltOre') && !pool.includes('water'), pool.join(','))
+  const r = simulateBattle(['ironKnife', 'copperKnife', 'ironPot'], { roastPotato: true }, () => 0.5)
+  check('卡牌', '模拟稳定：3 局且胜负与战力一致', r.rounds.length === 3 && r.rounds.every((x) => x.win === (x.ms > x.ts)), JSON.stringify(r.rounds.map((x) => x.win)))
+  const p4 = freshPlayer({})
+  p4.stats.cardBattle = { wins: 0, losses: 0 }
+  const g4 = p4.gold
+  const first = settleBattle(p4, { won: true, rounds: [] })
+  check('卡牌', '首胜奖励 +50 金 + 能量饼干', first === true && p4.gold === g4 + 50 && (p4.inventory.energyBiscuit ?? 0) === 1)
+  const g5 = p4.gold
+  const second = settleBattle(p4, { won: true, rounds: [] })
+  check('卡牌', '再次获胜只 +50 金（首胜饼干唯一）', second === false && p4.gold === g5 + 50 && (p4.inventory.energyBiscuit ?? 0) === 1)
+  settleBattle(p4, { won: false, rounds: [] })
+  check('卡牌', '失败计入败场', p4.stats.cardBattle.wins === 2 && p4.stats.cardBattle.losses === 1)
 }
 
 // ── C. 对决系统 ───────────────────────────────────
