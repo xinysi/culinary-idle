@@ -173,7 +173,7 @@ function typeLabel(id) {
     <!-- 抽卡操作台 -->
     <div class="card gacha-pull">
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
-      <div class="gacha-btns">
+      <div class="gacha-btns" :class="`pool-${activePool}`">
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
           <span class="gacha-btn-top">十连撷珍 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
@@ -285,8 +285,8 @@ function typeLabel(id) {
   transform: translateY(-4px);
 }
 .pool-mini-icon { font-size: 24px; }
-.pool-mini-name { font-size: 13px; font-weight: 700; }
-.pool-mini-price { font-size: 11px; color: var(--muted); }
+.pool-mini-name { font-size: 13px; font-weight: 700; color: rgb(var(--pc1)); }
+.pool-mini-price { font-size: 11px; color: rgba(var(--pc1), 0.7); }
 
 /* ── 卡池展示横幅：轮播（两端渐隐）+ 池名徽章 + 保底徽章 ── */
 .pool-banner {
@@ -340,6 +340,8 @@ function typeLabel(id) {
 }
 :global([data-theme='dark']) .pool-banner-pity .pill { background: rgba(44, 31, 22, 0.92); color: #e8b45f; }
 :global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
+:global([data-theme='dark']) .pool-mini-name { color: rgb(var(--pc2)); }
+:global([data-theme='dark']) .pool-mini-price { color: rgba(var(--pc2), 0.65); }
 :global([data-theme='dark']) .pool-mini.active {
   background:
     linear-gradient(135deg, rgba(var(--pc1), 0.28), rgba(var(--pc2), 0.32)),
@@ -372,25 +374,25 @@ function typeLabel(id) {
 .gacha-btn:active { transform: translateY(0) scale(0.98); }
 .gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
 .gacha-btn-main {
-  --sh1: 230, 92, 0;   /* 流光光带：橙黄原色系 */
-  --sh2: 249, 212, 35; /* 光带中心：黄色亮端 */
-  --shd: 176, 64, 0;   /* 流光暗斑：深橙 */
+  --sh1: var(--tsh1, 230, 92, 0);  /* 流光光带随池主题 */
+  --sh2: var(--tsh2, 249, 212, 35);
+  --shd: var(--tshd, 176, 64, 0);
   min-width: 300px;
   font-size: 19px;
-  background: linear-gradient(135deg, #e65c00, #f9d423);
+  background: linear-gradient(135deg, var(--thi1, #e65c00), var(--thi2, #f9d423));
 
-  box-shadow: 0 0 22px rgba(233, 132, 0, 0.45);
+  box-shadow: 0 0 22px rgba(var(--tglow, 233, 132, 0), 0.45);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  --sh1: 211, 148, 122; /* 流光光带：玫瑰金原色系 */
-  --sh2: 235, 181, 148; /* 光带中心：粉金亮端 */
-  --shd: 143, 79, 88;   /* 流光暗斑：玫瑰深 */
+  --sh1: var(--tsh1, 211, 148, 122); /* 流光光带随池主题 */
+  --sh2: var(--tsh2, 235, 181, 148);
+  --shd: var(--tshd, 143, 79, 88);
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, #b76e79, #e0a980);
+  background: linear-gradient(135deg, var(--tmd1, #b76e79), var(--tmd2, #e0a980));
 
-  box-shadow: 0 4px 14px rgba(183, 110, 121, 0.4);
+  box-shadow: 0 4px 14px rgba(var(--tglow, 183, 110, 121), 0.4);
 }
 .gacha-btn-tag {
   font-style: normal; font-size: 11px; font-weight: 800;
@@ -400,8 +402,44 @@ function typeLabel(id) {
 .gacha-btn-price { font-size: 13px; font-weight: 600; opacity: 0.92; }
 
 @keyframes gachaPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(233, 132, 0, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(255, 190, 50, 0.6); }
+  0%, 100% { box-shadow: 0 0 16px rgba(var(--tglow, 233, 132, 0), 0.3); }
+  50% { box-shadow: 0 0 30px rgba(var(--tglow, 233, 132, 0), 0.6); }
+}
+/* 池主题 → 抽卡按钮三档（十连亮 / 单抽中 / 百连深）+ 光带与光晕 */
+.gacha-btns.pool-material {
+  --thi1: #2be0b8; --thi2: #14a085;
+  --tmd1: #14a085; --tmd2: #0d7f66;
+  --tlo1: #0a6b55; --tlo2: #06483a;
+  --tsh1: 22, 160, 133; --tsh2: 43, 224, 184; --tshd: 6, 72, 58;
+  --tglow: 20, 160, 133;
+}
+.gacha-btns.pool-food {
+  --thi1: #f9d423; --thi2: #e65c00;
+  --tmd1: #e65c00; --tmd2: #c24d00;
+  --tlo1: #a34a00; --tlo2: #6e3100;
+  --tsh1: 230, 92, 0; --tsh2: 249, 212, 35; --tshd: 176, 64, 0;
+  --tglow: 233, 132, 0;
+}
+.gacha-btns.pool-gear {
+  --thi1: #8fb4c9; --thi2: #536976;
+  --tmd1: #536976; --tmd2: #45596a;
+  --tlo1: #38495a; --tlo2: #2a3745;
+  --tsh1: 83, 105, 118; --tsh2: 143, 180, 201; --tshd: 42, 55, 69;
+  --tglow: 83, 105, 118;
+}
+.gacha-btns.pool-mix {
+  --thi1: #b06ad2; --thi2: #8e44ad;
+  --tmd1: #8e44ad; --tmd2: #7a3d95;
+  --tlo1: #5c2f75; --tlo2: #3d2150;
+  --tsh1: 142, 68, 173; --tsh2: 176, 106, 210; --tshd: 61, 33, 80;
+  --tglow: 142, 68, 173;
+}
+.gacha-btns.pool-limited {
+  --thi1: #c98e2e; --thi2: #8a5a24;
+  --tmd1: #7a5024; --tmd2: #4a2c14;
+  --tlo1: #3a2010; --tlo2: #241408;
+  --tsh1: 122, 80, 36; --tsh2: 201, 142, 46; --tshd: 36, 20, 8;
+  --tglow: 160, 110, 40;
 }
 @media (max-width: 719px) {
   .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
@@ -497,16 +535,16 @@ function typeLabel(id) {
 
 /* 百连按钮（黑金限定风） */
 .gacha-btn-bulk {
-  --sh1: 140, 92, 42;
-  --sh2: 176, 122, 56;
-  --shd: 66, 40, 18;
+  --sh1: var(--tsh1, 140, 92, 42); /* 流光光带随池主题 */
+  --sh2: var(--tsh2, 176, 122, 56);
+  --shd: var(--tshd, 66, 40, 18);
   min-width: 300px;
   font-size: 16px;
   color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
-  background: linear-gradient(120deg, #4a2c14, #7a5024);
+  background: linear-gradient(120deg, var(--tlo1, #4a2c14), var(--tlo2, #7a5024));
 
-  box-shadow: 0 0 18px rgba(200, 140, 60, 0.3);
+  box-shadow: 0 0 18px rgba(var(--tglow, 200, 140, 60), 0.3);
 }
 .gacha-btn-bulk:disabled { filter: grayscale(0.7) brightness(0.72); }
 @media (max-width: 719px) {
