@@ -3997,3 +3997,25 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
   .game-layout { flex-direction: column; }
   .game-side { width: 100%; }
 }
+
+/* 小游戏大厅（2026-09-06） */
+.minigame-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.minigame-card {
+  background: rgba(255, 251, 244, 0.85);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.minigame-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(150, 110, 70, 0.25); }
+.minigame-emoji { font-size: 34px; }
+.minigame-name { font-size: 17px; font-weight: 800; }
+.minigame-desc { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; }
+.minigame-record { font-size: 12px; }
+html[data-theme='dark'] .minigame-card { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; }
