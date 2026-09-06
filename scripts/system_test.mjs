@@ -170,7 +170,67 @@ console.log('══ B. 联动链 ══')
   p2.equip('copperKnife')
   const combat = new Combat(p2)
   const stats0 = combat.playerStats()
-  check('联动', '铜刀提升攻击（装备攻击并入面板）', stats0.attack === 5 * 3 + getItem('copperKnife').stats.attack, `atk=${stats0.attack}`)
+  // 词条（2026-09-06）：普通品质 0-1 条攻击词条（±50% 浮动 → 至多 +4.5）
+  const baseAtk = 5 * 3 + getItem('copperKnife').stats.attack
+  check('联动', '铜刀提升攻击（装备攻击并入面板）', stats0.attack >= baseAtk && stats0.attack <= baseAtk + 4.51, `atk=${stats0.attack}`)
+}
+
+// ── B2. 新系统（制作队列 / 装备词条 / 食客订单，2026-09-06）──
+console.log('══ B2. 新系统（制作队列/装备词条/食客订单） ══')
+{
+  // 1) 制作队列：入队/合并/推进/暂停/恢复/清空
+  const p = freshPlayer({ craftsmithing: 5 })
+  p.gainItem('wood', 30)
+  p.gainItem('copperOre', 30)
+  const cs = getSkillInstance('craftsmithing')
+  const recipe = cs.recipes.find((r) => r.output?.itemId === 'copperKnife')
+  check('队列', 'enqueue 成功', cs.enqueue(recipe, 3).ok === true)
+  cs.enqueue(recipe, 2)
+  check('队列', '相同配方合并 qty', cs.craftQueue.length === 1 && cs.craftQueue[0].qty === 5)
+  cs.tick(3001)
+  check('队列', 'tick 推进 1 份（3s 间隔）', cs.craftQueue[0].qty === 4)
+  p.inventory.wood = 0
+  p.inventory.copperOre = 0
+  cs.tick(3001)
+  check('队列', '材料不足自动暂停', cs.craftQueue[0].paused === true)
+  p.gainItem('wood', 10)
+  p.gainItem('copperOre', 10)
+  cs.resumeQueue()
+  cs.tick(3001)
+  check('队列', '补料恢复后继续', cs.craftQueue[0].paused === false && cs.craftQueue[0].qty === 3)
+  cs.clearQueue()
+  check('队列', '清空队列', cs.craftQueue.length === 0)
+  for (let i = 0; i < 9; i++) cs.enqueue(recipe, 1)
+  check('队列', '相同配方重复入队仅合并', cs.craftQueue.length === 1 && cs.craftQueue[0].qty === 9)
+
+  // 2) 装备词条：穿戴生成、洗练扣费、面板乘区、金币词条
+  const p2 = freshPlayer({ craftsmithing: 5 })
+  p2.gainItem('copperKnife', 1)
+  p2.equip('copperKnife')
+  const mods = p2.gearMods?.weapon?.mods ?? []
+  check('词条', '穿戴生成词条（普通 0-1 条）', Array.isArray(mods) && mods.length <= 1)
+  p2.gold = 100000
+  const rr = p2.rerollGearMod('weapon')
+  check('词条', '洗练成功扣费（普通 400 金）', rr.ok === true && p2.gold === 100000 - 400)
+  check('词条', '词条并入装备面板', p2.equippedStats.attack >= getItem('copperKnife').stats.attack)
+  p2.gearMods.weapon = { itemId: 'copperKnife', mods: [{ stat: 'goldPct', label: '金币', value: 100 }] }
+  const g0 = p2.gold
+  p2.gainGold(100)
+  check('词条', '金币词条生效（+100%）', p2.gold === g0 + 200)
+
+  // 3) 食客订单：交付/移单/过期清理
+  const p3 = freshPlayer({ cooking: 5 })
+  p3.inventory.roastPotato = 5
+  p3.orders = { list: [], nextAt: 0 }
+  const order = { id: 'o1', name: '老饕老王', itemId: 'roastPotato', qty: 1, reward: 100, createdMs: Date.now(), expireAt: Date.now() + 3600000 }
+  p3.orders.list.push(order)
+  const g3 = p3.gold
+  const r3 = p3.finishOrder('o1')
+  check('订单', '交付成功发金币并移出列表', r3.ok === true && p3.gold === g3 + 100 && p3.orders.list.length === 0 && p3.inventory.roastPotato === 4)
+  p3.restaurant.menu = [] // 无菜单不会生成新单
+  p3.orders.list.push({ ...order, id: 'o2', expireAt: Date.now() - 1000 })
+  p3._tickOrders(2000)
+  check('订单', '过期订单自动清理', p3.orders.list.length === 0)
 }
 
 // ── C. 对决系统 ───────────────────────────────────
@@ -263,6 +323,7 @@ console.log('══ D. 装备系统 ══')
   p.gainItem('ironHat', 1)
   p.equip('ironKnife')
   p.equip('ironHat')
+  p.gearMods = {} // 词条属性独立测试（见 B2 节，此处校验基础装备属性之和）
   const st = p.equippedStats
   const kStats = getItem('ironKnife').stats
   const hStats = getItem('ironHat').stats
