@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MIJIAN_POOLS, GEAR_PITY, poolPreview } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, poolPreview, limitedRemainingMs } from '../game/data/mijianDraws.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -14,6 +14,7 @@ const ui = useUiStore()
 const activePool = ref('material')
 const pool = computed(() => MIJIAN_POOLS.find((p) => p.id === activePool.value))
 const isGearPool = computed(() => activePool.value === 'gear')
+const isLimitedPool = computed(() => activePool.value === 'limited')
 const pity = computed(() => player.mijianPity())
 const bgItems = computed(() => {
   const list = poolPreview(activePool.value, 20)
@@ -40,12 +41,18 @@ function draw(count) {
       delay: i * 0.13,
     }))
   drawing.value = true
-  results.value.forEach((item, i) => {
-    setTimeout(() => {
-      item.revealed = true
-      if (i === results.value.length - 1) drawing.value = false
-    }, 380 + i * 130)
-  })
+  if (count > 20) {
+    // 百连：快速揭示（无逐张等待）
+    results.value.forEach((item) => { item.revealed = true })
+    drawing.value = false
+  } else {
+    results.value.forEach((item, i) => {
+      setTimeout(() => {
+        item.revealed = true
+        if (i === results.value.length - 1) drawing.value = false
+      }, 380 + i * 130)
+    })
+  }
   ui.pushLog(`🎴 觅珍：${pool.value.name} ×${count}，获得 ${r.got.length} 件${r.boosted ? '（保底命中 ⭐）' : ''}`, 'gain')
 }
 function confirmResults() {
@@ -64,6 +71,12 @@ function qMeta(id) {
   const q = getItem(id)?.quality
   return QUALITY_META[q] ?? QUALITY_META['普通']
 }
+const limitedRemaining = computed(() => {
+  const ms = limitedRemainingMs()
+  const d = Math.floor(ms / 86400000)
+  const h = Math.floor((ms % 86400000) / 3600000)
+  return d > 0 ? d + ' 天 ' + h + ' 时' : h + ' 时'
+})
 function typeLabel(id) {
   const it = getItem(id)
   if (!it) return ''
@@ -96,7 +109,7 @@ function typeLabel(id) {
         :class="{ active: activePool === p.id }"
         @click="activePool = p.id"
       >
-        <span class="pool-mini-icon">{{ p.icon }}</span>
+        <span class="pool-mini-icon">{{ p.icon }}<i v-if="p.tag" class="pool-mini-tag">{{ p.tag }}</i></span>
         <span class="pool-mini-name">{{ p.name }}</span>
         <span class="pool-mini-price">{{ p.price }} 金/抽</span>
       </button>
@@ -116,15 +129,13 @@ function typeLabel(id) {
         <em>{{ pool.desc }}</em>
       </div>
       <div v-if="isGearPool" class="pool-banner-pity">⭐ 保底 {{ pity.current }}/{{ pity.need }}</div>
+      <div v-else-if="isLimitedPool" class="pool-banner-pity">⏳ 限时轮换 {{ limitedRemaining }} · ⭐ 保底 {{ pity.limited }}/{{ pity.limitedNeed }}</div>
     </div>
 
     <!-- 抽卡操作台 -->
     <div class="card gacha-pull">
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
       <div class="gacha-btns">
-        <div class="gacha-wing" aria-hidden="true">
-          <img v-for="b in bgItems.slice(0, 3)" :key="'l' + b.id" :src="b.img" alt="" />
-        </div>
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
           <span class="gacha-btn-top">🎴 十连抽卡 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
@@ -133,9 +144,10 @@ function typeLabel(id) {
           <span class="gacha-btn-top">🎴 单抽</span>
           <span class="gacha-btn-price">{{ pool.price }} 金</span>
         </button>
-        <div class="gacha-wing" aria-hidden="true">
-          <img v-for="b in bgItems.slice(3, 6)" :key="'r' + b.id" :src="b.img" alt="" />
-        </div>
+        <button class="gacha-btn gacha-btn-bulk" :disabled="drawing || player.gold < pool.price * 100" @click="draw(100)">
+          <span class="gacha-btn-top">🎴 百连抽卡 <i class="gacha-btn-tag">100连</i></span>
+          <span class="gacha-btn-price">{{ pool.price * 100 }} 金</span>
+        </button>
       </div>
     </div>
 
@@ -405,3 +417,20 @@ function typeLabel(id) {
 .gacha-wing { display: flex; gap: 8px; align-items: center; }
 .gacha-wing img { width: 40px; height: 40px; object-fit: contain; opacity: 0.45; }
 @media (max-width: 719px) { .gacha-wing { display: none; } }
+
+/* 百连按钮（次级紫蓝） */
+.gacha-btn-bulk {
+  min-width: 210px;
+  font-size: 15px;
+  background: linear-gradient(135deg, #6a5acd, #4a3f9e);
+  box-shadow: 0 4px 14px rgba(74, 63, 158, 0.35);
+}
+/* 限时池角标 */
+.pool-mini-tag {
+  font-style: normal; font-size: 10px; font-weight: 800;
+  color: #fff; background: linear-gradient(135deg, #e2a93f, #c9761c);
+  border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 4px;
+}
+@media (max-width: 719px) {
+  .gacha-btn-bulk { min-width: 150px; padding: 12px 16px; }
+}

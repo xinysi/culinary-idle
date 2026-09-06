@@ -7,32 +7,48 @@ export const MIJIAN_POOLS = [
   { id: 'material', name: '材料池', icon: '🧺', desc: '食材/矿物/种子与加工材料', price: 300, kinds: ['ingredient', 'spice'] },
   { id: 'food', name: '食物池', icon: '🍱', desc: '料理/饮品/调料成品', price: 300, kinds: ['food', 'drink'] },
   { id: 'gear', name: '厨具池', icon: '⚔️', desc: '装备（八槽位，稀有度加权，10 抽保底稀有+）', price: 500, kinds: ['equipment'] },
+  { id: 'mix', name: '混池', icon: '🎲', desc: '全品类混合（价格低、出货温和）', price: 80, kinds: ['mix'] },
+  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '全品类大奖池（价格高、极品概率极低，5 抽保底稀有+）', price: 1200, kinds: ['limited'] },
 ]
+
+/** 限时池轮换周期（14 天）；剩余时间用于横幅角标倒计时 */
+export const LIMITED_PERIOD_MS = 14 * 24 * 3600_000
+export function limitedRemainingMs(now = Date.now()) {
+  return LIMITED_PERIOD_MS - (now % LIMITED_PERIOD_MS)
+}
 
 // 厨具池保底：累计 10 抽未出「稀有」及以上 → 本次必出
 export const GEAR_PITY = 10
+// 限时池短保底：5 抽
+export const LIMITED_PITY = 5
 
 // 装备稀有度权重（厨具池）
 const QUALITY_WEIGHT = { 普通: 50, 精良: 24, 稀有: 14, 史诗: 7, 传说: 4, 神话: 1 }
 
-/** 池内候选（模块级缓存：材料/食物/装备）
- *  材料池排除矿物（矿有专属获取链）；食物池含全部料理饮品 */
+/** 池内候选（模块级缓存）
+ *  mix：全品类混合（材料/香料/料理/饮品/装备，排除矿物）
+ *  limited：全品类大奖池（池大 → 极品概率天然极低；另用 value^1.8 陡加权） */
 const POOL_CACHE = {}
 function poolItems(poolId) {
   if (POOL_CACHE[poolId]) return POOL_CACHE[poolId]
   const def = MIJIAN_POOLS.find((p) => p.id === poolId)
-  const items = Object.values(ITEMS).filter((it) => {
-    if (!def.kinds.includes(it.type)) return false
-    if (poolId === 'material' && (it.category === 'mineral' || /矿$/.test(it.name))) return false
-    return true
-  })
+  const all = Object.values(ITEMS)
+  let items
+  if (poolId === 'mix' || poolId === 'limited') {
+    items = all.filter((it) =>
+      ['ingredient', 'spice', 'food', 'drink', 'equipment'].includes(it.type) &&
+      !(it.category === 'mineral' || /矿$/.test(it.name))
+    )
+  } else {
+    items = all.filter((it) => def.kinds.includes(it.type) && !(it.category === 'mineral' || /矿$/.test(it.name)))
+  }
   POOL_CACHE[poolId] = items
   return items
 }
 
-/** 价值加权随机（0.7~1.3 幂次：低价值物品概率略平，高价值可控稀有） */
-function weightedPick(items, rng = Math.random) {
-  const weights = items.map((it) => Math.pow(Math.max(1, it.value), 0.85))
+/** 价值加权随机（幂次控制稀有度分布：越低越偏普通，越高越陡） */
+function weightedPick(items, rng = Math.random, exponent = 0.85) {
+  const weights = items.map((it) => Math.pow(Math.max(1, it.value), exponent))
   let total = 0
   for (const w of weights) total += w
   let roll = rng() * total
@@ -67,6 +83,21 @@ function pickGear(rng, pity) {
 
 export function pickItem(poolId, rng = Math.random, pity = 0) {
   if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
+  if (poolId === 'mix') return { item: weightedPick(poolItems('mix'), rng, 0.6), boosted: false }
+  if (poolId === 'limited') {
+    // 限时池：陡加权（高价值概率极低）+ 5 抽短保底（PITY_LIMITED=5）
+    const boosted = pity >= LIMITED_PITY - 1
+    let item
+    if (boosted) {
+      const gear = poolItems('gear')
+      const q = rng() < 0.15 ? '神话' : rng() < 0.45 ? '传说' : rng() < 0.9 ? '史诗' : '稀有'
+      const cand = gear.filter((it) => it.quality === q)
+      item = cand.length ? cand[Math.floor(rng() * cand.length)] : weightedPick(poolItems('limited'), rng, 1.8)
+    } else {
+      item = weightedPick(poolItems('limited'), rng, 1.8)
+    }
+    return { item, boosted }
+  }
   const items = poolItems(poolId)
   return { item: weightedPick(items, rng), boosted: false }
 }

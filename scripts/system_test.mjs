@@ -950,7 +950,22 @@ console.log('══ X. 觅珍抽卡 ══')
   const r4 = p.drawMijian('gear', 1)
   const boosted = r4.boosted && ['稀有', '史诗', '传说', '神话'].includes(r4.results[0]?.quality)
   check('觅珍', '保底第 10 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
-  check('觅珍', '保底后计数清零', p.mijian.pity === 0)
+  check('觅珍', '保底后计数清零（gear）', p.mijian.pity.gear === 0 || p.mijian.pity === 0)
+  // 混池 / 限时池 / 百连
+  const r5 = p.drawMijian('mix', 5)
+  const mixOk = r5.ok && r5.results.length === 5 && r5.results.every((it) => it && it.value > 0)
+  check('觅珍', '混池抽卡（80 金/抽，全品类）', mixOk, JSON.stringify((r5.results ?? []).map((it) => it?.id)))
+  const r6 = p.drawMijian('limited', 1)
+  check('觅珍', '限时池抽卡（1200 金/抽）', r6.ok && r6.results.length === 1 && r6.results[0]?.id, JSON.stringify((r6.results ?? []).map((it) => it?.id)))
+  const r100 = p.drawMijian('material', 100)
+  check('觅珍', '百连（100 张结果）', r100.ok && r100.results.length === 100, JSON.stringify(r100.results.length))
+  const afterSpent = p.gold
+  check('觅珍', '金币扣费与累计花费一致（stats.spent = 100000 - gold）', p.mijian.stats.spent === 100000 - afterSpent, `spent=${p.mijian.stats.spent} gold=${afterSpent}`)
+  // 限时池保底：5 抽短保底（pity.limited = 4 → 下一抽必稀有+）
+  p.mijian.pity = p.mijian.pity ?? { gear: 0, limited: 0 }
+  p.mijian.pity.limited = 4
+  const r7 = p.drawMijian('limited', 1)
+  check('觅珍', '限时池保底第 5 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
   // 图鉴三查：抽卡来源
   const { itemSources: src } = await import('../src/game/data/itemSources.js')
   check('觅珍', '图鉴来源含觅珍（厨具池）', src('copperKnife').some((s) => s.includes('觅珍·厨具池')), JSON.stringify(src('copperKnife').slice(0, 3)))
