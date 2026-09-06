@@ -109,8 +109,6 @@ function exchange(item) {
     </header>
 
     <div class="card game-stage">
-      <div class="game-layout">
-        <div class="game-main">
 
       <template v-if="quiz.length">
         <div class="trivia-progress">
@@ -153,18 +151,17 @@ function exchange(item) {
         </div>
         <span class="dim">剩余徽章：<b class="mono">{{ mg.badges ?? 0 }}</b> · 每周答对 ≥8 题 +1 枚</span>
       </div>
-        </div>
-        <div class="game-side">
-          <div class="game-side-card">
-            <h4>🎮 玩法</h4>
-            <ul><li>每周 10 题，答案实时取自游戏数据</li><li>答对 ≥8 题 → 徽章 +1 + 100 金</li><li>徽章可兑换奖励</li></ul>
-          </div>
-          <div class="game-side-card">
-            <h4>🏆 记录</h4>
-            <div class="game-side-row"><span>累计徽章</span><b class="mono">{{ mg.badges ?? 0 }}</b></div>
-            <div class="game-side-row"><span>本周最好成绩</span><b class="mono">{{ lastCorrect || '—' }}/10</b></div>
-          </div>
-        </div>
+      <div class="mg-info-grid">
+        <div class="mg-info-card">
+                    <h4>🎮 玩法</h4>
+                    <ul><li>每周 10 题，答案实时取自游戏数据</li><li>答对 ≥8 题 → 徽章 +1 + 100 金</li><li>徽章可兑换奖励</li></ul>
+                  </div>
+        <div class="mg-info-card">
+                    <h4>🏆 记录</h4>
+                    <div class="mg-info-row"><span>累计徽章</span><b class="mono">{{ mg.badges ?? 0 }}</b></div>
+                    <div class="mg-info-row"><span>本周最好成绩</span><b class="mono">{{ lastCorrect || '—' }}/10</b>
+                </div>
+            </div>
       </div>
     </div>
   </div>

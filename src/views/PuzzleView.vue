@@ -106,8 +106,6 @@ const cells = computed(() => tiles.value)
     </header>
 
     <div class="card game-stage">
-      <div class="game-layout">
-        <div class="game-main">
 
       <div class="puzzle-duo">
         <div class="puzzle-col">
@@ -137,18 +135,17 @@ const cells = computed(() => tiles.value)
         <button class="btn btn-sm" @click="resetDay()">重新打乱（当日固定）</button>
       </div>
       <div v-if="won" class="heat-verdict perfect">🎉 复原完成！{{ doneToday ? '每日奖励已领取' : '+能量饼干 ×1' }}</div>
-        </div>
-        <div class="game-side">
-          <div class="game-side-card">
-            <h4>🎮 玩法</h4>
-            <ul><li>点击与空格相邻的碎片滑移</li><li>按编号 1→15 复原成目标图</li><li>每日完成 +能量饼干 ×1</li></ul>
-          </div>
-          <div class="game-side-card">
-            <h4>🏆 记录</h4>
-            <div class="game-side-row"><span>累计完成</span><b class="mono">{{ player.minigames?.puzzle?.done ?? 0 }} 天</b></div>
-            <div class="game-side-row"><span>今日</span><b class="mono">{{ doneToday ? '✅ 已领' : '未完成' }}</b></div>
-          </div>
-        </div>
+      <div class="mg-info-grid">
+        <div class="mg-info-card">
+                    <h4>🎮 玩法</h4>
+                    <ul><li>点击与空格相邻的碎片滑移</li><li>按编号 1→15 复原成目标图</li><li>每日完成 +能量饼干 ×1</li></ul>
+                  </div>
+        <div class="mg-info-card">
+                    <h4>🏆 记录</h4>
+                    <div class="mg-info-row"><span>累计完成</span><b class="mono">{{ player.minigames?.puzzle?.done ?? 0 }} 天</b></div>
+                    <div class="mg-info-row"><span>今日</span><b class="mono">{{ doneToday ? '✅ 已领' : '未完成' }}</b>
+                </div>
+            </div>
       </div>
     </div>
   </div>
