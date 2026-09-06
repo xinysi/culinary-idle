@@ -6,7 +6,7 @@ export const MARKET_EVENTS = [
     id: 'nightMarket',
     icon: '🌙',
     name: '夜市狂潮',
-    hours: [[12, 20]],
+    hours: [[16, 22]],
     desc: '餐厅收入 ×2 · 对决经验 ×1.5',
     effect: { restaurant: 2, combatXp: 1.5 },
   },
@@ -17,6 +17,14 @@ export const MARKET_EVENTS = [
     hours: [[6, 9]],
     desc: '采集经验 ×1.5',
     effect: { gatherXp: 1.5 },
+  },
+  {
+    id: 'brainstorm',
+    icon: '💡',
+    name: '思想风暴',
+    hours: [[10, 13]],
+    desc: '制作经验 ×2',
+    effect: { craftXp: 2 },
   },
   {
     id: 'teaBreak',
@@ -41,6 +49,15 @@ export const MARKET_EVENTS = [
     weekday: 0, // 仅周日
     hours: [[9, 21]],
     desc: '【每周日】餐厅收入 ×1.5',
+    effect: { restaurant: 1.5 },
+  },
+  {
+    id: 'kfcThursday',
+    icon: '🐔',
+    name: '疯狂星期四',
+    weekday: 4, // 仅周四
+    hours: [[9, 21]],
+    desc: '【每周四】餐厅收入 ×1.5',
     effect: { restaurant: 1.5 },
   },
 ]

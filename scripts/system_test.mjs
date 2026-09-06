@@ -909,16 +909,18 @@ console.log('══ V. 对手数据 ══')
 console.log('══ W. 限时窗口活动 ══')
 {
   const p = freshPlayer()
-  // 固定传 weekday=1（周一）排除周日主厨日干扰；边界含窗口起止
-  check('夜市', '12-20 点窗口判定（含边界，周一）', p.marketOn(12, 1) === true && p.marketOn(19, 1) === true && p.marketOn(11, 1) === false && p.marketOn(20, 1) === false)
-  check('夜市', '窗口倍率 餐厅×2 / 对决×1.5', p.marketBoost(15, 1).restaurant === 2 && p.marketBoost(15, 1).combatXp === 1.5)
-  check('活动', '无窗口时段（凌晨 2 点）倍率为 1', p.marketBoost(2, 1).restaurant === 1 && p.marketBoost(2, 1).combatXp === 1)
-  // 五个窗口
+  // 固定传 weekday=1（周一）排除周日主厨日/周四疯狂星期四干扰；边界含窗口起止
   const ids = (h, w) => p.activeMarketEvents(h, w).map((e) => e.id).sort().join(',')
+  check('夜市', '16-22 点窗口判定（含边界，周一）', ids(16, 1).includes('nightMarket') && ids(21, 1).includes('nightMarket') && !ids(15, 1).includes('nightMarket') && !ids(22, 1).includes('nightMarket'))
+  check('夜市', '窗口倍率 餐厅×2 / 对决×1.5', p.marketBoost(18, 1).restaurant === 2 && p.marketBoost(18, 1).combatXp === 1.5)
+  check('活动', '无窗口时段（凌晨 2 点）倍率为 1', p.marketBoost(2, 1).restaurant === 1 && p.marketBoost(2, 1).combatXp === 1)
+  // 五个+ 窗口
   check('活动', '晨集 6-9 采集 ×1.5', ids(6, 1) === 'morningMarket' && p.marketBoost(6, 1).gatherXp === 1.5)
+  check('活动', '思想风暴 10-13 制作 ×2', ids(11, 1).includes('brainstorm') && p.marketBoost(11, 1).craftXp === 2)
   check('活动', '茶歇 14-17 制作 ×1.5', ids(15, 1).includes('teaBreak') && p.marketBoost(15, 1).craftXp === 1.5)
   check('活动', '午夜食堂 22-1 对决 ×2（跨夜）', ids(23, 1) === 'nightDiner' && ids(0, 1) === 'nightDiner' && p.marketBoost(23, 1).combatXp === 2)
   check('活动', '主厨日仅周日 9-21', ids(9, 0) === 'chefDay' && ids(9, 1) === '' && p.marketBoost(18, 0).restaurant === 3)
+  check('活动', '疯狂星期四仅周四 9-21（与夜市叠加 ×3）', ids(10, 4).includes('kfcThursday') && ids(10, 1) === '' && p.marketBoost(18, 4).restaurant === 3)
   // 经验链路：采集窗口加成
   const pg = freshPlayer({ foraging: 5 })
   const fg = getSkillInstance('foraging')
