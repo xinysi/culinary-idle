@@ -7,8 +7,10 @@ import { useUiStore } from '../stores/ui.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const SIZE = 4
-const grid = ref(newGrid())
+const mode = ref(4) // 4=标准 / 3=极速 3×3
+const SIZE = computed(() => mode.value)
+const best = computed(() => player.minigames?.kitchen2048?.[mode.value === 4 ? 'best' : 'best3'] ?? 0)
+const grid = ref(newGrid(4))
 const score = ref(0)
 const over = ref(false)
 const won = ref(false)
@@ -17,8 +19,8 @@ const TILE_META = {
   2: '🥬', 4: '🥔', 8: '🥕', 16: '🍅', 32: '🍆', 64: '🧄',
   128: '🍖', 256: '🍲', 512: '🐟', 1024: '🍰', 2048: '🍾', 4096: '🏆',
 }
-function newGrid() {
-  return Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+function newGrid(size = SIZE.value) {
+  return Array.from({ length: size }, () => Array(size).fill(0))
 }
 function spawn() {
   const empty = []
@@ -40,22 +42,23 @@ function slideLine(line) {
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) { arr[i] *= 2; score.value += arr[i]; arr.splice(i + 1, 1) }
   }
-  while (arr.length < SIZE) arr.push(0)
+  while (arr.length < SIZE.value) arr.push(0)
   return arr
 }
-function canMove() {
-  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+function canMove(size = SIZE.value) {
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
     const v = grid.value[r][c]
     if (!v) return true
-    if (c + 1 < SIZE && grid.value[r][c + 1] === v) return true
-    if (r + 1 < SIZE && grid.value[r + 1][c] === v) return true
+    if (c + 1 < size && grid.value[r][c + 1] === v) return true
+    if (r + 1 < size && grid.value[r + 1][c] === v) return true
   }
   return false
 }
 function move(dir) {
   if (over.value) return
   const before = JSON.stringify(grid.value)
-  for (let i = 0; i < SIZE; i++) {
+  const size = SIZE.value
+  for (let i = 0; i < size; i++) {
     let line = dir === 'left' || dir === 'right'
       ? grid.value[i].slice()
       : grid.value.map((r) => r[i])
@@ -77,10 +80,14 @@ function move(dir) {
   }
 }
 function giveReward() {
-  const coins = Math.min(200, Math.floor(score.value / 1024) * 20)
+  // 极速 3×3：每 512 分 +20（上限 100）；标准 4×4：每 1024 分 +20（上限 200）
+  const step = mode.value === 4 ? 1024 : 512
+  const cap = mode.value === 4 ? 200 : 100
+  const coins = Math.min(cap, Math.floor(score.value / step) * 20)
   const mg = player.minigames.kitchen2048
   if (!mg) player.minigames.kitchen2048 = { best: 0 }
-  player.minigames.kitchen2048.best = Math.max(player.minigames.kitchen2048.best ?? 0, score.value)
+  const key = mode.value === 4 ? 'best' : 'best3'
+  player.minigames.kitchen2048[key] = Math.max(player.minigames.kitchen2048[key] ?? 0, score.value)
   if (coins > 0) {
     player.gainGold(coins)
     ui.pushLog(`🧩 厨心 2048：最终 ${score.value} 分 → +${coins} 金币！`, 'gain')
@@ -92,8 +99,11 @@ function onKey(e) {
 }
 window.addEventListener('keydown', onKey)
 
+function switchMode(m) {
+  mode.value = m
+  reset()
+}
 reset()
-const best = computed(() => player.minigames?.kitchen2048?.best ?? 0)
 const rows = computed(() => grid.value)
 </script>
 
@@ -106,7 +116,7 @@ const rows = computed(() => grid.value)
       </div>
       <div class="skill-head-right">
         <span class="badge badge-on">⭐ {{ score }}</span>
-        <span class="dim mono">最佳 {{ best }}</span>
+        <span class="dim mono">最佳（{{ mode === 4 ? '4×4' : '3×3' }}）{{ best }}</span>
       </div>
     </header>
 
@@ -119,6 +129,9 @@ const rows = computed(() => grid.value)
         </div>
       </div>
       <div class="g2048-controls">
+        <button class="btn btn-sm" :class="{ 'btn-primary': mode === 4 }" @click="switchMode(4)">4×4 标准</button>
+        <button class="btn btn-sm" :class="{ 'btn-primary': mode === 3 }" @click="switchMode(3)">3×3 极速</button>
+        <span style="width: 10px"></span>
         <button class="btn btn-sm" @click="move('left')">←</button>
         <button class="btn btn-sm" @click="move('up')">↑</button>
         <button class="btn btn-sm" @click="move('down')">↓</button>

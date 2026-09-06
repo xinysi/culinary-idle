@@ -10,6 +10,7 @@ import { itemImage } from '../game/data/itemImage.js'
 import QuantityModal from '../components/QuantityModal.vue'
 import ItemImg from '../components/ItemImg.vue'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
+import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -168,16 +169,37 @@ function openCraft(r) {
   if (!canAfford(r)) return
   craftTarget.value = r
 }
+const heatModal = ref(null) // { recipe, n }
 function doCraftBatch(n) {
   if (!craftTarget.value) return
   const r = craftTarget.value
+  // 制作时火候挑战（2026-09-06，设置可关）：弹窗定火 → 完美 +30% / 良好 +15% 额外经验
+  if (player.settings?.heatCraftChallenge !== false && n <= 10) {
+    heatModal.value = { recipe: r, n }
+    return
+  }
+  runCraftBatch(r, n, 0)
+}
+function onHeatResult(type) {
+  const hm = heatModal.value
+  heatModal.value = null
+  if (!hm) return
+  const bonus = type === 'perfect' ? 0.3 : type === 'good' ? 0.15 : 0
+  runCraftBatch(hm.recipe, hm.n, bonus, type)
+}
+function runCraftBatch(r, n, bonus, heatType) {
   let ok = 0
   for (let i = 0; i < n; i++) {
     const res = props.instance.craft(r)
     if (res === 'denied') break
     if (res === 'ok') ok++
   }
-  if (ok > 0) ui.pushLog(`制作 ${getItem(r.output.itemId)?.name} ×${ok}`, 'info')
+  if (bonus > 0 && ok > 0) {
+    props.instance.addCardXp(Math.round(r.xp * bonus * ok), 1)
+  }
+  if (ok > 0) {
+    ui.pushLog(`制作 ${getItem(r.output.itemId)?.name} ×${ok}${heatType === 'perfect' ? '（🔥火候完美 +30% 经验）' : heatType === 'good' ? '（火候良好 +15% 经验）' : ''}`, 'info')
+  }
 }
 function useBiscuit() {
   const ok = player.consumeEnergyBiscuit()
@@ -467,6 +489,12 @@ function scrollToSection(label) {
       @confirm="doCraftBatch"
     />
     <RecipeTreeModal v-if="treeRecipe" :recipe="treeRecipe" :player="player" @close="treeRecipe = null" @jump="goTree" />
+    <HeatChallengeModal
+      v-if="heatModal"
+      :title="`🔥 火候挑战 · ${heatModal.recipe?.name}`"
+      @result="onHeatResult"
+      @close="heatModal = null"
+    />
   </div>
 </template>
 
