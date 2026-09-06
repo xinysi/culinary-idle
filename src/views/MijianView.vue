@@ -360,14 +360,14 @@ function typeLabel(id) {
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  --sh1: 53, 185, 245;  /* 流光光带：青蓝紫原色系 */
-  --sh2: 118, 222, 255; /* 光带中心：亮青 */
-  --shd: 88, 78, 172;   /* 流光暗斑：蓝紫深端 */
+  --sh1: 118, 190, 104; /* 流光光带：苹果绿原色系 */
+  --sh2: 136, 206, 118; /* 光带中心：亮绿 */
+  --shd: 88, 156, 75;   /* 流光暗斑：深绿 */
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, #22e1ff 0%, #1d8fe1 48%, #625eb1 100%);
+  background: linear-gradient(135deg, #72b864, #589c4b);
 
-  box-shadow: 0 4px 14px rgba(45, 150, 220, 0.4);
+  box-shadow: 0 4px 14px rgba(95, 165, 66, 0.35);
 }
 .gacha-btn-tag {
   font-style: normal; font-size: 11px; font-weight: 800;
@@ -496,16 +496,16 @@ function typeLabel(id) {
   gap: 16px; margin-top: 12px; font-size: 12px; flex-wrap: wrap;
 }
 .gacha-sim .sim-btn {
-  --sh1: 118, 190, 104;
-  --sh2: 136, 206, 118;
-  --shd: 88, 156, 75;
+  --sh1: 53, 185, 245;  /* 流光光带：青蓝紫原色系 */
+  --sh2: 118, 222, 255; /* 光带中心：亮青 */
+  --shd: 88, 78, 172;   /* 流光暗斑：蓝紫深端 */
   position: relative; overflow: hidden;
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
   border: none; border-radius: 12px;
-  background: linear-gradient(135deg, #72b864, #589c4b);
+  background: linear-gradient(135deg, #22e1ff 0%, #1d8fe1 48%, #625eb1 100%);
 
-  box-shadow: 0 3px 10px rgba(95, 165, 66, 0.35);
+  box-shadow: 0 3px 10px rgba(45, 150, 220, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
@@ -517,11 +517,11 @@ function typeLabel(id) {
 .sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn {
-  --sh1: 100, 166, 84;
-  --sh2: 118, 186, 100;
-  --shd: 74, 127, 62;
-  background: linear-gradient(135deg, #5f9c50, #4a7f3e);
-  box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4);
+  --sh1: 47, 168, 224;
+  --sh2: 106, 205, 240;
+  --shd: 76, 66, 152;
+  background: linear-gradient(135deg, #1f8fd9, #57539f);
+  box-shadow: 0 3px 10px rgba(45, 120, 200, 0.4);
 }
 
 
