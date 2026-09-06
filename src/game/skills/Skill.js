@@ -82,8 +82,10 @@ export class Skill {
     // 对决类技能高级加速（平衡：RS 曲线 60+ 过陡，战斗经验 +4%/级，仅对决类；
     // 2026-09-06 曲线修正：起点 75→60，与获胜经验分段倍率（60 级档 ×1.5 起）衔接，中段不再断崖）
     const catchup = this.def.category === 'combat' ? 1 + Math.max(0, this.level - 60) * 0.04 : 1
+    // 夜市狂潮（2026-09-06）：12-20 点对决类经验 ×1.5
+    const marketMult = this.def.category === 'combat' ? (this.player.marketBoost?.() ?? { combatXp: 1 }).combatXp : 1
 
-    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100) * prestigeMult * tonicMult * growthMult * catchup
+    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
     let level = this.level
     let leveled = false
     while (level < this.maxLevel && exp >= this.player.xpTotalForLevel(level + 1)) {

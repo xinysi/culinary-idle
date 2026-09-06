@@ -892,6 +892,25 @@ console.log('══ V. 对手数据 ══')
   check('对手', '所有掉落引用有效物品', badDrop.length === 0, badDrop.slice(0, 5).join('; '))
 }
 
+// ── W. 夜市狂潮窗口（2026-09-06 限时活动）─────────────
+console.log('══ W. 夜市狂潮 ══')
+{
+  const p = freshPlayer()
+  check('夜市', '12-20 点窗口判定（含边界）', p.marketOn(12) === true && p.marketOn(19) === true && p.marketOn(11) === false && p.marketOn(20) === false)
+  check('夜市', '窗口倍率 餐厅×2 / 对决×1.5', p.marketBoost(15).restaurant === 2 && p.marketBoost(15).combatXp === 1.5)
+  check('夜市', '非窗口倍率为 1', p.marketBoost(9).restaurant === 1 && p.marketBoost(23).combatXp === 1)
+  // 经验链路：对决类技能在窗口内获得 ×1.5
+  const pd = freshPlayer({ knife: 5 })
+  const kd = getSkillInstance('knife')
+  const before = pd.skills.knife.exp
+  // 挂起 marketBoost 为窗口（以 15 点模拟）
+  const origBoost = pd.marketBoost
+  pd.marketBoost = (h) => (h ?? 15) >= 12 && (h ?? 15) < 20 ? { restaurant: 2, combatXp: 1.5 } : { restaurant: 1, combatXp: 1 }
+  kd.addXp(1000)
+  check('夜市', '对决经验 ×1.5 生效', pd.skills.knife.exp - before === 1500, `got ${pd.skills.knife.exp - before}`)
+  pd.marketBoost = origBoost
+}
+
 // ── 汇总 ──────────────────────────────────────────
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
