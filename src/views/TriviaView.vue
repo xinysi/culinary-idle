@@ -110,6 +110,8 @@ function exchange(item) {
 
     <div class="card game-stage">
       <template v-if="quiz.length">
+        <div class="game-layout">
+        <div class="game-main">
         <div class="trivia-progress">
           <span class="dim mono">第 {{ index + 1 }}/10 题</span>
           <ProgressBar :progress="(index + (quiz[index]?.picked != null ? 1 : 0)) / 10" style="flex: 1" />
@@ -127,6 +129,19 @@ function exchange(item) {
           >{{ o }}</button>
         </div>
         <button v-if="quiz[index]?.picked != null && !finished" class="btn btn-sm btn-primary" style="margin-top: 10px" @click="next">下一题 →</button>
+        </div>
+        <div class="game-side">
+        <div class="game-side-card">
+            <h4>🎮 玩法</h4>
+            <ul><li>每周 10 题，答案实时取自游戏数据</li><li>答对 ≥8 题 → 徽章 +1 + 100 金</li><li>徽章可兑换奖励</li></ul>
+          </div>
+          <div class="game-side-card">
+            <h4>🏆 记录</h4>
+            <div class="game-side-row"><span>累计徽章</span><b class="mono">{{ mg.badges ?? 0 }}</b></div>
+            <div class="game-side-row"><span>本周最好成绩</span><b class="mono">{{ lastCorrect || '—' }}/10</b></div>
+          </div>
+        </div>
+      </div>
         <div v-if="finished" class="heat-verdict" :class="{ perfect: correctCount >= 8, miss: correctCount < 8 }">
           {{ correctCount >= 8 ? `🏅 通过！本周徽章 +1，+100 金币` : `本周答对 ${correctCount}/10，下周再来！` }}
         </div>
