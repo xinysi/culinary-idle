@@ -198,11 +198,9 @@ onMounted(() => {
           </div>
         </nav>
 
-        <!-- 新手引导横幅（新档首日 5 步；达标自动推进/可跳过） -->
-        <NewbieGuide />
-
-        <!-- 内容滚动区（独立滚动，导航不跟随） -->
+        <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
         <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll">
+          <NewbieGuide />
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />
