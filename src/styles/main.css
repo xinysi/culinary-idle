@@ -3735,3 +3735,10 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
   color: #e8b45f;
   border-color: rgba(232, 180, 95, 0.4);
 }
+
+/* 食客订单（2026-09-06） */
+.order-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.order-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.order-row .order-name { font-weight: 700; min-width: 72px; }
+.order-row .order-dish { font-size: 13px; }
+.order-row .order-urgent { color: var(--bad-strong); font-weight: 700; }

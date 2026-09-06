@@ -1,7 +1,7 @@
 <script setup>
 // 餐厅经营 — 需求文档 §13（可选扩展）
 // 放置经营：菜单放上已制作的料理 → 每小时自动赚金币（离线也赚，80% 效率）
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
@@ -10,6 +10,21 @@ import Pagination from '../components/Pagination.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
+
+// ── 食客订单（2026-09-06）：1 秒刷新剩余时间 ──
+const nowMs = ref(Date.now())
+let timerId = null
+onMounted(() => {
+  timerId = setInterval(() => { nowMs.value = Date.now() }, 1000)
+})
+onUnmounted(() => { if (timerId) clearInterval(timerId) })
+const orderList = computed(() => (player.orders?.list ?? []).map((o) => ({ ...o, remainMin: Math.max(0, Math.ceil((o.expireAt - nowMs.value) / 60000)) })))
+function orderHave(o) { return (player.inventory[o.itemId] ?? 0) >= o.qty }
+function deliverOrder(o) {
+  const r = player.finishOrder(o.id)
+  if (r.ok) ui.pushLog(`🍽 食客「${r.name}」满意而归：+${r.reward} 金币`, 'gain')
+  else ui.pushLog(r.msg ?? '交付失败', 'warn')
+}
 
 // 装饰：分类 tab + 分页
 const activeCat = ref('all')
@@ -106,6 +121,26 @@ function hourlyOf(dishId) {
         </div>
       </div>
       <p class="dim special-note">菜单只展示你背包里拥有的料理；累计赚取：{{ (player.stats.restaurantTotal ?? 0).toLocaleString() }} 金币</p>
+    </div>
+
+    <!-- 食客订单（2026-09-06）：到访点名料理 → 交货领赏金 -->
+    <div class="card">
+      <div class="decor-title-row">
+        <h3>📋 食客订单</h3>
+        <span class="dim mono">当前 {{ orderList.length }}/3 · 食客约 25-45 分钟到访一次 · 订单 60 分钟有效</span>
+      </div>
+      <div v-if="orderList.length" class="order-list">
+        <div v-for="o in orderList" :key="o.id" class="opp-row order-row">
+          <span class="order-name">{{ o.name }}</span>
+          <span class="order-dish">{{ getItem(o.itemId)?.name }} ×{{ o.qty }}</span>
+          <span class="dim">赏金 <b class="mono" style="color: var(--gold)">{{ o.reward.toLocaleString() }}</b> 金</span>
+          <span class="dim mono" :class="{ 'order-urgent': o.remainMin <= 10 }">⏳ {{ o.remainMin }} 分</span>
+          <button class="btn btn-sm btn-primary" :disabled="!orderHave(o)" @click="deliverOrder(o)">
+            {{ orderHave(o) ? '交付' : '料理不足' }}
+          </button>
+        </div>
+      </div>
+      <p v-else class="dim" style="margin-top: 4px">暂无食客订单——在菜单中挂上料理，食客会慕名而来；到访后交货可得金币并提升好感。</p>
     </div>
 
     <!-- 餐厅装饰（§13）：分类 tab + 分页 -->

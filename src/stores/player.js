@@ -30,6 +30,7 @@ import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
 import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
+import { makeOrder, nextOrderDelay, MAX_ORDERS } from '../game/data/restaurantOrders.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
 let _restaurantAccumMs = 0
@@ -178,6 +179,8 @@ export const usePlayerStore = defineStore('player', {
     craftQueues: {},
     // 装备词条（2026-09-06）：{ slot: { itemId, mods: [{stat,label,value}] } }
     gearMods: {},
+    // 食客订单（2026-09-06）：list=[{id,name,itemId,qty,reward,createdMs,expireAt}]；nextAt=下一单生成时刻
+    orders: { list: [], nextAt: 0 },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -481,6 +484,7 @@ export const usePlayerStore = defineStore('player', {
         mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
         gearMods: saved.gearMods ?? {}, // 装备词条：{ slot: { itemId, mods } }
+        orders: saved.orders ?? { list: [], nextAt: 0 }, // 食客订单
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -534,6 +538,7 @@ export const usePlayerStore = defineStore('player', {
         mijian: this.mijian,
         craftQueues: this.craftQueues,
         gearMods: this.gearMods,
+        orders: this.orders,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -1101,6 +1106,46 @@ export const usePlayerStore = defineStore('player', {
       }
     },
 
+    // ── 食客订单（2026-09-06）：在线生成/过期清理/交付 ──
+    _tickOrders(deltaMs) {
+      if (!this.orders) this.orders = { list: [], nextAt: 0 }
+      const now = Date.now()
+      if (this.orders.list.length) {
+        const before = this.orders.list.length
+        this.orders.list = this.orders.list.filter((o) => o.expireAt > now)
+        if (this.orders.list.length < before) {
+          try { useUiStore().pushLog('食客订单超时：有食客等不及离开了', 'warn') } catch (e) { /* ignore */ }
+        }
+      }
+      if (this.orders.list.length >= MAX_ORDERS) return
+      this._orderAccum = (this._orderAccum ?? 0) + deltaMs
+      if (this._orderAccum < 1000) return
+      this._orderAccum = 0
+      if (this.orders.nextAt > now) return
+      const order = makeOrder(this)
+      if (order) {
+        this.orders.list.push(order)
+        try { useUiStore().pushLog(`📋 食客「${order.name}」到访：需要 ${getItem(order.itemId)?.name}×${order.qty}，赏金 ${order.reward} 金`, 'info') } catch (e) { /* ignore */ }
+      }
+      this.orders.nextAt = now + nextOrderDelay()
+    },
+
+    /** 交付食客订单：消耗成品料理 → 金币 + 好感经验 */
+    finishOrder(orderId) {
+      const list = this.orders?.list ?? []
+      const idx = list.findIndex((o) => o.id === orderId)
+      if (idx < 0) return { ok: false, msg: '订单不存在或已超时' }
+      const o = list[idx]
+      if ((this.inventory[o.itemId] ?? 0) < o.qty) return { ok: false, msg: `需要 ${getItem(o.itemId)?.name}×${o.qty}` }
+      this.spendItem(o.itemId, o.qty)
+      list.splice(idx, 1)
+      this.gainGold(o.reward)
+      const favor = this.restaurant.favor ?? { xp: 0 }
+      favor.xp = (favor.xp ?? 0) + o.reward * 0.05
+      this.restaurant.favor = favor
+      return { ok: true, reward: o.reward, name: o.name }
+    },
+
     // ── 公会（§13）──
     joinGuild(id) {
       const g = getGuild(id)
@@ -1642,6 +1687,7 @@ export const usePlayerStore = defineStore('player', {
       getCombat()?.tick(deltaMs)
       this.drainAoji(deltaMs)
       this._tickRestaurant(deltaMs) // 餐厅放置收入（§13）
+      this._tickOrders(deltaMs) // 食客订单（2026-09-06）
       this._tickSpiritBonds(deltaMs) // 食灵羁绊出战时长（2026-09-06）
 
       // 周期任务：腐坏 / 成就 / 任务同步 / 赛季同步
