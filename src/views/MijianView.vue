@@ -517,11 +517,11 @@ function typeLabel(id) {
 .sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn {
-  --sh1: 47, 168, 224;
-  --sh2: 106, 205, 240;
-  --shd: 76, 66, 152;
-  background: linear-gradient(135deg, #1f8fd9, #57539f);
-  box-shadow: 0 3px 10px rgba(45, 120, 200, 0.4);
+  --sh1: 150, 178, 163;
+  --sh2: 175, 196, 184;
+  --shd: 70, 88, 106;
+  background: linear-gradient(135deg, #a9c4b4, #46586a);
+  box-shadow: 0 3px 10px rgba(83, 105, 118, 0.45);
 }
 
 
