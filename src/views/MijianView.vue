@@ -175,15 +175,15 @@ function typeLabel(id) {
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
       <div class="gacha-btns">
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
-          <span class="gacha-btn-top">🎴 十连撷珍 <i class="gacha-btn-tag">10连</i></span>
+          <span class="gacha-btn-top">十连撷珍 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
         </button>
         <button class="gacha-btn gacha-btn-sub" :disabled="drawing || player.gold < pool.price" @click="draw(1)">
-          <span class="gacha-btn-top">🎴 单次撷取</span>
+          <span class="gacha-btn-top">单次撷取</span>
           <span class="gacha-btn-price">{{ pool.price }} 金</span>
         </button>
         <button class="gacha-btn gacha-btn-bulk" :disabled="drawing || player.gold < pool.price * 100" @click="draw(100)">
-          <span class="gacha-btn-top">🎴 百连觅馐 <i class="gacha-btn-tag">100连</i></span>
+          <span class="gacha-btn-top">百连觅馐 <i class="gacha-btn-tag">100连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 100 }} 金</span>
         </button>
       </div>
@@ -537,25 +537,23 @@ function typeLabel(id) {
   pointer-events: none;
   border-radius: inherit;
 }
-/* 第一团水雾：高亮斑 0.95 + 暗斑 0.6，三斑交错，向右下涌 */
+/* 第一团水雾：亮斑 0.7 + 暗斑 0.4，每斑仅「颜色→透明」两段平滑渐隐，向右下涌 */
 .gacha-btn::before,
 .gacha-sim .sim-btn::before {
   background-image:
-    radial-gradient(60% 85% at 22% 28%, rgba(var(--sh2), 0.95), rgba(var(--sh1), 0.75) 35%, transparent 68%),
-    radial-gradient(60% 85% at 80% 65%, rgba(var(--shd), 0.6), transparent 70%),
-    radial-gradient(45% 70% at 55% 15%, rgba(var(--sh1), 0.7), transparent 70%);
-  background-size: 280% 280%;
-  animation: gachaSmokeA 6s ease-in-out infinite alternate;
+    radial-gradient(55% 80% at 25% 30%, rgba(var(--sh2), 0.7), transparent 72%),
+    radial-gradient(55% 80% at 78% 62%, rgba(var(--shd), 0.4), transparent 72%);
+  background-size: 260% 260%;
+  animation: gachaSmokeA 7s ease-in-out infinite alternate;
 }
 /* 第二团水雾：反向漂移——明暗交错形成水波流动感 */
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(55% 80% at 65% 20%, rgba(var(--shd), 0.65), transparent 70%),
-    radial-gradient(60% 85% at 25% 75%, rgba(var(--sh2), 0.9), rgba(var(--sh1), 0.7) 40%, transparent 72%),
-    radial-gradient(40% 65% at 12% 40%, rgba(var(--sh1), 0.6), transparent 70%);
-  background-size: 280% 280%;
-  animation: gachaSmokeB 9s ease-in-out infinite alternate;
+    radial-gradient(50% 75% at 62% 22%, rgba(var(--shd), 0.42), transparent 72%),
+    radial-gradient(55% 80% at 26% 74%, rgba(var(--sh2), 0.62), transparent 74%);
+  background-size: 260% 260%;
+  animation: gachaSmokeB 11s ease-in-out infinite alternate;
 }
 @keyframes gachaSmokeA {
   0% { background-position: 0% 0%; }
@@ -567,9 +565,9 @@ function typeLabel(id) {
   50% { background-position: 40% 60%; }
   100% { background-position: -10% 5%; }
 }
-/* 按钮文字浮于流光之上 */
+/* 按钮文字浮于流光之上（轻阴影增强可读性） */
 .gacha-btn > *,
-.gacha-sim .sim-btn > * { position: relative; z-index: 1; }
+.gacha-sim .sim-btn > * { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28); }
 @media (prefers-reduced-motion: reduce) {
   .gacha-btn::before, .gacha-btn::after,
   .gacha-sim .sim-btn::before, .gacha-sim .sim-btn::after { animation: none; }
