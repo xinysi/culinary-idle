@@ -3,6 +3,8 @@
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
+import { ITEMS } from '../game/data/items.js'
+import { itemImage } from '../game/data/itemImage.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -14,14 +16,18 @@ const MODES = {
   6: { label: '6×6 标准', pairs: 18, gold: 150 },
   8: { label: '8×8 挑战', pairs: 32, gold: 250 },
 }
-/* 只使用 ≤Emoji 12 的老 emoji（🫘/🫐 等 13.0 字形在 Win10 等系统不渲染 → 视觉缺失，2026-09-07 替换） */
-const EMOJI_ALL = Array.from('🍎🥔🍅🌶️🥕🍉🍇🍓🍆🍄🐟🦐🍞🍜🥟🍚🎃🧅🍗🥩🥜🥦🍌🍊🍋🍑🥭🍍🥥🍐🍒🥑')
+/* 图片制素材池：全部有图的食物/食材物品（稳定渲染，2026-09-07 替代 emoji 规避字体缺失） */
+const IMG_POOL = Object.values(ITEMS)
+  .filter((i) => ['ingredient', 'food', 'spice'].includes(i.type) && itemImage(i.id))
+  .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'zh'))
+  .map((i) => i.id)
+  .slice(0, 64)
 function poolFor() {
   const n = MODES[mode.value].pairs
   const ids = []
   const used = new Set()
   while (ids.length < n) {
-    const c = EMOJI_ALL[Math.floor(Math.random() * EMOJI_ALL.length)]
+    const c = IMG_POOL[Math.floor(Math.random() * IMG_POOL.length)]
     if (!used.has(c)) { used.add(c); ids.push(c) }
   }
   return ids
@@ -91,7 +97,7 @@ resetDay()
         class="mf-cell"
         :class="{ cleared: c.cleared, selected: selected === i }"
         @click="tap(i)"
-      >{{ c.cleared ? '' : c.id }}</div>
+      ><img v-if="!c.cleared" class="mf-img" :src="itemImage(c.id)" @error="$event.target.style.display = 'none'" alt="" /></div>
     </div>
 
     <div class="mf-keys">
