@@ -349,25 +349,25 @@ function typeLabel(id) {
 .gacha-btn:active { transform: translateY(0) scale(0.98); }
 .gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
 .gacha-btn-main {
-  --sh1: 255, 196, 74; /* 流光光带：按钮原色系（非白非彩） */
-  --sh2: 255, 212, 92; /* 光带中心：原色亮端 */
-  --shd: 230, 155, 40; /* 流光暗斑：原色深端 */
+  --sh1: 154, 84, 227; /* 流光光带：紫金原色系（非白非彩） */
+  --sh2: 234, 176, 74; /* 光带中心：金色亮端 */
+  --shd: 96, 48, 164;  /* 流光暗斑：紫色深端 */
   min-width: 300px;
   font-size: 19px;
-  background: linear-gradient(135deg, #ffc247, #e69b28);
+  background: linear-gradient(135deg, #7a3ec2, #eab04a);
 
-  box-shadow: 0 0 22px rgba(226, 169, 63, 0.5);
+  box-shadow: 0 0 22px rgba(138, 84, 200, 0.5);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  --sh1: 248, 130, 74;
-  --sh2: 255, 152, 100;
-  --shd: 216, 92, 44;
+  --sh1: 255, 196, 74;
+  --sh2: 255, 212, 92;
+  --shd: 230, 155, 40;
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, #f27c45, #d85c2c);
+  background: linear-gradient(135deg, #ffc247, #e69b28);
 
-  box-shadow: 0 4px 14px rgba(184, 68, 42, 0.35);
+  box-shadow: 0 4px 14px rgba(226, 169, 63, 0.35);
 }
 .gacha-btn-tag {
   font-style: normal; font-size: 11px; font-weight: 800;
@@ -377,8 +377,8 @@ function typeLabel(id) {
 .gacha-btn-price { font-size: 13px; font-weight: 600; opacity: 0.92; }
 
 @keyframes gachaPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(226, 169, 63, 0.35); }
-  50% { box-shadow: 0 0 30px rgba(226, 169, 63, 0.65); }
+  0%, 100% { box-shadow: 0 0 16px rgba(150, 96, 215, 0.35); }
+  50% { box-shadow: 0 0 30px rgba(180, 120, 235, 0.6); }
 }
 @media (max-width: 719px) {
   .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
