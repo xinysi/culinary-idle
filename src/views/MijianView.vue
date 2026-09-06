@@ -350,7 +350,7 @@ function typeLabel(id) {
 }
 :global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
 :global([data-theme='dark']) .pool-banner-fade {
-  background: linear-gradient(90deg, rgba(18, 13, 9, 0.62), rgba(18, 13, 9, 0) 13%, rgba(18, 13, 9, 0) 87%, rgba(18, 13, 9, 0.62));
+  background: linear-gradient(90deg, rgba(40, 29, 21, 0.96) 0%, rgba(40, 29, 21, 0) 16%, rgba(40, 29, 21, 0) 84%, rgba(40, 29, 21, 0.96) 100%) !important;
 }
 :global([data-theme='dark']) .pool-banner-title { background: rgba(40, 29, 21, 0.9); }
 :global([data-theme='dark']) .pool-banner-pity { color: #e8b45f; }
