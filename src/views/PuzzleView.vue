@@ -3,6 +3,8 @@
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
+import { ITEMS } from '../game/data/items.js'
+import { itemImage } from '../game/data/itemImage.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -18,7 +20,12 @@ const tiles = ref([])
 const moves = ref(0)
 const won = ref(false)
 
-const LABELS = ['🍚', '🥟', '🍜', '🦐', '🥘', '🍣', '🍙', '🍢', '🍡', '🥮', '🍵', '🍥', '🍲', '🍰', '🍪', '🥤', '🍞', '🥧', '🦀', '🐙', '🧁', '🍧', '🍮', '🍤', '🥠', '🥪']
+// 图鉴图片池（有图食物按中文名排序，按 size² 截取）
+const IMG_IDS = Object.values(ITEMS)
+  .filter((i) => ['food', 'ingredient'].includes(i.type) && itemImage(i.id))
+  .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'zh'))
+  .map((i) => i.id)
+  .slice(0, 30)
 function dayHash() {
   const t = new Date()
   let h = 0
@@ -112,7 +119,8 @@ const cells = computed(() => tiles.value)
         <div class="pz-label">🎯 目标图</div>
         <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
           <div v-for="i in mode * mode" :key="'g' + i" class="pz-cell pz-goal-cell">
-            <b class="pz-goal-num">{{ i }}</b>
+            <img class="pz-img" :src="itemImage(IMG_IDS[i - 1])" />
+            <span class="pz-num pz-num-big">{{ i }}</span>
           </div>
         </div>
       </div>
@@ -120,7 +128,7 @@ const cells = computed(() => tiles.value)
         <div class="pz-label">🧩 拼图（点击与空格相邻的碎片）</div>
         <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
           <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" @click="tap(i)">
-            <template v-if="v">{{ LABELS[v - 1] }}<span class="pz-num">{{ v }}</span></template>
+              <template v-if="v"><img class="pz-img" :src="itemImage(IMG_IDS[v - 1])" /><span class="pz-num">{{ v }}</span></template>
           </div>
         </div>
       </div>
@@ -144,7 +152,7 @@ const cells = computed(() => tiles.value)
 .pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
 .pz-board {
-  width: 300px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+  width: 340px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
   padding: 8px; border-radius: 14px;
   background: rgba(150, 110, 70, 0.16);
   border: 1px solid rgba(150, 110, 70, 0.3);
@@ -153,9 +161,11 @@ const cells = computed(() => tiles.value)
 .pz-cell {
   position: relative; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; border-radius: 8px; cursor: pointer; user-select: none;
+  padding: 4px; border-radius: 8px; cursor: pointer; user-select: none;
   background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
 }
+.pz-img { width: 100%; height: 100%; object-fit: contain; } /* 图片固定尺寸：格内撑满按比例居中 */
+.pz-num-big { font-size: 12px; font-weight: 800; }
 .pz-goal-cell { cursor: default; }
 .pz-goal-num { font-size: 20px; color: rgba(90, 62, 40, 0.55); }
 .pz-goal-cell { background: rgba(255, 251, 244, 0.5); }
