@@ -4058,10 +4058,10 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
   background: rgba(255, 252, 246, 0.72);
   border: 1px solid rgba(150, 110, 70, 0.35);
   border-radius: 14px;
-  height: auto; /* 内容自适应：不再留大片空洞（2026-09-06 终版：min 高度兜底，无固定上限） */
-  min-height: 500px;
-  max-height: 720px;
-  overflow-y: auto;
+  height: 620px; /* 固定游戏框（2026-09-06 最终规格）：内容弹性占满，不滚动、不跳变 */
+  min-height: 620px;
+  max-height: 620px;
+  overflow: hidden;
   padding: 12px 14px 16px;
   margin-bottom: 14px;
   position: relative;
@@ -4076,9 +4076,17 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
 .mg-stage .game-layout { display: flex; }
 .mg-stage .game-side { display: flex; }
 .mg-stage .game-main { flex: 1 1 auto; min-width: 0; }
-/* 信息框移至内容下方横向两卡：主内容全宽，不再左右挤压（2026-09-06 1280 实测优化） */
-.mg-stage .game-layout { display: block; }
-.mg-stage .game-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-top: 10px; }
+/* 固定框内弹性布局（2026-09-06 最终规格）：主内容伸展填满，信息卡固定底部 */
+.mg-stage .game-layout { display: flex; flex-direction: column; height: 100%; }
+.mg-stage .game-main {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; justify-content: space-around; gap: 6px;
+}
+.mg-stage .game-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-top: 10px; flex-shrink: 0; }
+/* 火候条弹性吸收剩余高度 */
+.mg-stage .heat-track { height: auto; flex: 1 1 auto; min-height: 60px; max-height: 130px; }
+.mg-stage .heat-actions { flex-shrink: 0; }
+.mg-stage .heat-verdict { margin-top: 0; }
 .mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .mg-stage-title { font-size: 15px; font-weight: 800; color: var(--primary-strong); }
 .mg-welcome { text-align: center; padding: 60px 0 40px; }
