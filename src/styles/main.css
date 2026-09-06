@@ -4051,3 +4051,40 @@ html[data-theme='dark'] .mg-frame {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
 }
 html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
+
+/* 小游戏大厅「大舞台在上、入口在下」（2026-09-06） */
+.mg-stage {
+  background: rgba(255, 252, 246, 0.72);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 14px;
+  min-height: 420px;
+  padding: 12px 14px 16px;
+  margin-bottom: 14px;
+  position: relative;
+}
+.mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.mg-stage-title { font-size: 15px; font-weight: 800; color: var(--primary-strong); }
+.mg-welcome { text-align: center; padding: 60px 0 40px; }
+.mg-welcome-emoji { font-size: 52px; }
+.mg-welcome h2 { margin: 8px 0 6px; }
+.mg-welcome p { max-width: 560px; margin: 0 auto; }
+.mg-welcome-hints { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; margin-top: 18px; font-size: 12px; }
+.mg-entry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.mg-entry {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 251, 244, 0.8);
+  cursor: pointer; text-align: left;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.mg-entry:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(150, 110, 70, 0.22); }
+.mg-entry-on { border-style: solid; border-color: var(--primary-strong); box-shadow: 0 0 0 2px rgba(217, 90, 56, 0.25); }
+.mg-entry-emoji { font-size: 24px; }
+.mg-entry-name { font-weight: 800; font-size: 14px; }
+.mg-entry-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.mg-entry-record { font-size: 11px; }
+html[data-theme='dark'] .mg-stage { background: rgba(44, 31, 22, 0.72); border-color: rgba(255, 255, 255, 0.16); }
+html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); border-color: rgba(255, 255, 255, 0.2); color: #f2e6d7; }
+html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
