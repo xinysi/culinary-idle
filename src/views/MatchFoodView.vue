@@ -32,7 +32,9 @@ const clearedCount = computed(() => board.value.filter((c) => c.cleared).length)
 const done = computed(() => board.value.length && clearedCount.value === board.value.length)
 
 function resetDay() {
-  const arr = [...poolFor(), ...poolFor()].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false }))
+  // 一次抽 n 种再复制成对：配对完备（2026-09-07 修复两次独立取池导致缺对）
+  const ids = poolFor()
+  const arr = [...ids, ...ids].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false }))
   board.value = arr
   selected.value = null
 }
