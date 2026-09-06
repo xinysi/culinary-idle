@@ -83,13 +83,15 @@ function move(dir) {
   const generate = []
   const collectIds = new Set()
   for (let line = 0; line < m; line++) {
-    // 抽该线 tiles（从行进方向）
+    // 方向映射：right/down 从远端收集、写入也从远端（2026-09-07 修正方向 bug）
+    const kk = (i) => (dir === 'right' || dir === 'down' ? m - 1 - i : i)
+    const wp = (i) => kk(i)
     const idxs = []
     for (let i = 0; i < m; i++) {
-      const r = dir === 'left' || dir === 'right' ? line : i
-      const c = dir === 'up' || dir === 'down' ? line : i
-      const cell = dir === 'left' || dir === 'right' ? virtual[r][c] : virtual[i][c]
-      if (cell?.value) idxs.push({ tile: cell, pos: i })
+      const r = dir === 'left' || dir === 'right' ? line : kk(i)
+      const c = dir === 'left' || dir === 'right' ? kk(i) : line
+      const cell = virtual[r][c]
+      if (cell?.value) idxs.push({ tile: cell })
     }
     if (!idxs.length) continue
     // 合并计算（每元素最多参与一次）
@@ -101,19 +103,14 @@ function move(dir) {
       const next = idxs[i + 1]
       if (next && next.tile.value === cur.tile.value) {
         // 合并：cur 滑动到目标位，相邻移除，生成合并块
-        const nr = dir === 'left' ? line : write
-        const nc = dir === 'left' ? write : dir === 'right' ? m - 1 - write : line
-        const row = dir === 'left' || dir === 'right' ? line : write
-        const col = dir === 'left' || dir === 'right' ? write : line
-        void nr; void nc
-        const target = { row: dir === 'up' || dir === 'down' ? write : line, col: dir === 'left' || dir === 'right' ? write : line }
+        const target = { row: dir === 'left' || dir === 'right' ? line : wp(write), col: dir === 'left' || dir === 'right' ? wp(write) : line }
         positions.set(cur.tile.id, { ...target, mergedInto: true })
         collectIds.add(next.tile.id)
         generate.push({ value: cur.tile.value * 2, ...target })
         score.value += cur.tile.value * 2
         i += 2
       } else {
-        const target = { row: dir === 'up' || dir === 'down' ? write : line, col: dir === 'left' || dir === 'right' ? write : line }
+        const target = { row: dir === 'left' || dir === 'right' ? line : wp(write), col: dir === 'left' || dir === 'right' ? wp(write) : line }
         positions.set(cur.tile.id, target)
         i += 1
       }
