@@ -3580,3 +3580,60 @@ html[data-theme='dark'] .mono { color: #f0e0c8; }
 html[data-theme='dark'] .battle-log { color: #d9c9b6; }
 html[data-theme='dark'] .log-list li { border-color: rgba(255, 255, 255, 0.12); }
 html[data-theme='dark'] .badge, html[data-theme='dark'] .badge-on { border-color: rgba(255, 255, 255, 0.2); }
+
+/* ── 深色主题 v4 补丁（2026-09-06）：表单控件 / 背包详情 / 食灵格 / 冷库 / 进度条 ── */
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] .plot-select {
+  background: rgba(52, 38, 28, 0.95);
+  color: #f2e6d7;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+html[data-theme='dark'] input[type='range'] { accent-color: #e0704a; }
+html[data-theme='dark'] select option { background: #241a13; color: #f2e6d7; }
+html[data-theme='dark'] input::placeholder { color: #b09478; }
+
+html[data-theme='dark'] .bag-detail,
+html[data-theme='dark'] .cold-pane,
+html[data-theme='dark'] .spirit-wall,
+html[data-theme='dark'] .spirit-detail-panel,
+html[data-theme='dark'] .progress-bar,
+html[data-theme='dark'] .progress-bar-bg,
+html[data-theme='dark'] .spoil-modal,
+html[data-theme='dark'] .cold-modal,
+html[data-theme='dark'] .spoil-list,
+html[data-theme='dark'] .cold-grid .item-cell,
+html[data-theme='dark'] .bag-grid .item-cell,
+html[data-theme='dark'] .item-grid .item-cell {
+  background: rgba(36, 26, 19, 0.92);
+  color: #ecdcc8;
+}
+html[data-theme='dark'] .spirit-cell {
+  background: rgba(46, 32, 23, 0.78);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e8dccb;
+}
+html[data-theme='dark'] .spirit-cell.locked { background: rgba(30, 22, 16, 0.6); }
+html[data-theme='dark'] .spirit-cell.active { background: rgba(224, 112, 74, 0.24); border-color: rgba(224, 112, 74, 0.7); }
+html[data-theme='dark'] .progress-bar, html[data-theme='dark'] .progress-bar-bg { background: rgba(52, 38, 28, 0.7); }
+html[data-theme='dark'] .progress-bar-fill { background-image: linear-gradient(90deg, #e0704a, #ff8a5e); }
+html[data-theme='dark'] .menu-list .opp-row { background: rgba(36, 26, 19, 0.9); }
+html[data-theme='dark'] .search-input, html[data-theme='dark'] .search-bar { background: rgba(52, 38, 28, 0.95); color: #f2e6d7; }
+html[data-theme='dark'] .pagination, html[data-theme='dark'] .pager-spacer { color: inherit; }
+html[data-theme='dark'] .tab-bar, html[data-theme='dark'] .status-tab { background: rgba(36, 26, 19, 0.6); }
+
+/* ── 深色主题 v4 兜底（!important 终结同优先级反覆盖）── */
+html[data-theme='dark'] .btn,
+html[data-theme='dark'] .btn-sm,
+html[data-theme='dark'] .btn-primary,
+html[data-theme='dark'] .btn-danger,
+html[data-theme='dark'] .region-tabs .btn,
+html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !important; color: #eadfca !important; border-color: rgba(255, 255, 255, 0.2) !important; }
+html[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.92) !important; color: #fff !important; }
+html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92) !important; color: #ffe9e4 !important; }
+html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6) !important; color: #e6d8c5 !important; }
+html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active { background: rgba(224, 112, 74, 0.34) !important; color: #ffb08a !important; }
+html[data-theme='dark'] .card, html[data-theme='dark'] .modal, html[data-theme='dark'] .gather-card { background: rgba(36, 26, 19, 0.92) !important; color: #ecdcc8 !important; }
+html[data-theme='dark'] .bag-detail, html[data-theme='dark'] .cold-pane, html[data-theme='dark'] .spirit-cell { background: rgba(36, 26, 19, 0.9) !important; color: #ecdcc8 !important; }
+html[data-theme='dark'] .plot-select, html[data-theme='dark'] input, html[data-theme='dark'] select { background: rgba(52, 38, 28, 0.95) !important; color: #f2e6d7 !important; }
