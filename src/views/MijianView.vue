@@ -122,6 +122,9 @@ function typeLabel(id) {
     <div class="card gacha-pull">
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
       <div class="gacha-btns">
+        <div class="gacha-wing" aria-hidden="true">
+          <img v-for="b in bgItems.slice(0, 3)" :key="'l' + b.id" :src="b.img" alt="" />
+        </div>
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
           <span class="gacha-btn-top">🎴 十连抽卡 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
@@ -130,6 +133,9 @@ function typeLabel(id) {
           <span class="gacha-btn-top">🎴 单抽</span>
           <span class="gacha-btn-price">{{ pool.price }} 金</span>
         </button>
+        <div class="gacha-wing" aria-hidden="true">
+          <img v-for="b in bgItems.slice(3, 6)" :key="'r' + b.id" :src="b.img" alt="" />
+        </div>
       </div>
     </div>
 
@@ -186,7 +192,8 @@ function typeLabel(id) {
 .gear-note { padding: 0 10px; }
 
 /* ── 卡池切换器（选中金边浮起） ── */
-.pool-minis { display: flex; gap: 12px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+.pool-minis { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+.pool-mini { flex: 1 1 0; max-width: 300px; }
 .pool-mini {
   min-width: 126px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -284,14 +291,14 @@ function typeLabel(id) {
 .gacha-btn:active { transform: translateY(0) scale(0.98); }
 .gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
 .gacha-btn-main {
-  min-width: 230px;
+  min-width: 300px;
   font-size: 19px;
   background: linear-gradient(135deg, #e2a93f, #c9761c);
   box-shadow: 0 0 22px rgba(226, 169, 63, 0.5);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  min-width: 168px;
+  min-width: 210px;
   font-size: 15px;
   background: linear-gradient(135deg, #d95a38, #b8442a);
   box-shadow: 0 4px 14px rgba(184, 68, 42, 0.35);
@@ -393,3 +400,8 @@ function typeLabel(id) {
   .gacha-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
 }
 </style>
+
+/* 装饰翼：按钮两则当前池精选图（静态低透明） */
+.gacha-wing { display: flex; gap: 8px; align-items: center; }
+.gacha-wing img { width: 40px; height: 40px; object-fit: contain; opacity: 0.45; }
+@media (max-width: 719px) { .gacha-wing { display: none; } }
