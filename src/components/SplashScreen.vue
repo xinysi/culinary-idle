@@ -88,7 +88,7 @@ function startNew() {
 .splash-bg {
   position: absolute;
   inset: 0;
-  background-image: url('/images/bg-start.jpg');
+  background-image: url('../../public/images/bg-start.jpg');
   background-size: cover;
   background-position: center;
 }

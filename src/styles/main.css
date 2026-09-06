@@ -271,7 +271,7 @@ body {
 
 .app-sidebar {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('/images/bg-sidebar.png');
+  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('../../public/images/bg-sidebar.png');
   background-size: cover;
   background-position: center;
   backdrop-filter: blur(50px);
@@ -284,7 +284,7 @@ body {
 }
 
 .app-main {
-  background-image: url('/images/bg-start.jpg');
+  background-image: url('../../public/images/bg-start.jpg');
   background-size: cover;
   background-position: center;
   display: flex;
@@ -297,8 +297,8 @@ body {
 .main-scroll {
   /* 性能：不用 backdrop-filter 动态模糊。实测动态进度条 fill 在带 blur 的层内每帧动画会触发
      Chromium 对背景的模糊重采样，把主线程拖到 ~20fps；改用静态半透明磨砂底遮罩背景——
-     提高不透明度(0.88)让背景更荫蔽、磨砂感更强（对应“更深的模糊/雾化”），且不牺牲进度条 ~60fps。 */
-  background: rgba(255, 251, 244, 0.88);
+     0.78 磨砂：既透出启动页背景图、又保证文字对比度（AGENTS.md 口径），且不牺牲进度条 ~60fps。 */
+  background: rgba(255, 251, 244, 0.78);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -307,7 +307,7 @@ body {
 
 .app-status {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('/images/bg-sidebar.png');
+  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('../../public/images/bg-sidebar.png');
   background-size: cover;
   background-position: center;
   backdrop-filter: blur(50px);
@@ -604,7 +604,7 @@ h2 {
   display: inline-block;
   width: 14px;
   height: 14px;
-  background: url('/images/coin.png') center / contain no-repeat;
+  background: url('../../public/images/coin.png') center / contain no-repeat;
   margin-right: 4px;
   vertical-align: middle;
 }
