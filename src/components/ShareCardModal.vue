@@ -1,6 +1,6 @@
 <script setup>
 // 战报分享卡 — 生成一张 PNG 战报（2026-09-06）
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
@@ -105,10 +105,15 @@ function draw() {
   generated.value = true
 }
 
-onShow()
-function onShow() {
-  nextTick(draw)
-}
+// 弹窗打开（canvas 已挂载）后再绘制——曾因 setup 时绘制（canvas 未挂载）导致空白
+watch(
+  () => ui.showShareCard,
+  (v) => {
+    if (v) {
+      nextTick(() => requestAnimationFrame(draw))
+    }
+  },
+)
 
 function download() {
   const a = document.createElement('a')
