@@ -4030,3 +4030,24 @@ html[data-theme='dark'] .minigame-card { background: rgba(44, 31, 22, 0.85); col
 }
 .mg-tab { flex: 0 0 auto; }
 .mg-subhead { display: flex; align-items: center; margin: 0 0 4px; }
+
+/* 小游戏「超级大框」（2026-09-06）：整页游戏厅面板，游戏在框内加载 */
+.mg-frame {
+  background: rgba(255, 252, 246, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(150, 110, 70, 0.32);
+  border-radius: 18px;
+  padding: 14px 16px 18px;
+  box-shadow: 0 6px 24px rgba(93, 64, 55, 0.10);
+}
+.mg-tabs {
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  border-radius: 12px;
+}
+html[data-theme='dark'] .mg-frame {
+  background: rgba(40, 29, 21, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
