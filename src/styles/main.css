@@ -100,7 +100,7 @@ body {
 .app-body {
   display: grid;
   /* 左右栏随视口/缩放等比自适应（2026-09-06：固定 230px 在放大时被内容撑破导致错位） */
-  grid-template-columns: clamp(170px, 16vw, 260px) minmax(0, 1fr) clamp(170px, 16vw, 260px);
+  grid-template-columns: minmax(170px, min(22%, 250px)) minmax(0, 1fr) minmax(170px, min(22%, 250px));
   flex: 1;
   min-height: 0;
 }
@@ -347,14 +347,14 @@ body {
   opacity: 1;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 940px) {
   .back-top-btn {
     right: 24px;
   }
 }
 
 /* 平板：两栏（§9.3），右面板收起为抽屉 */
-@media (max-width: 1100px) {
+@media (max-width: 940px) {
   .app-body {
     grid-template-columns: 200px minmax(0, 1fr);
   }
