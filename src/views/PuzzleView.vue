@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { ITEMS } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { PT_PHOTOS, ptUrl } from '../game/data/ptPhotos.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -102,8 +103,9 @@ const doneToday = computed(() => {
 })
 const doneDays = computed(() => player.minigames?.puzzle?.done ?? 0)
 // 图片拼图：每日固定一张图（图鉴物品图），左=完整图、右=同图切块
-const picIndex = dayHash() % IMG_IDS.length
-const puzzlePic = computed(() => itemImage(IMG_IDS[picIndex]))
+// 图片拼图：每日固定一张照片（public/images/items/pt/ 用户素材），左=完整照片、右=同照片切块
+const picIndex = dayHash() % PT_PHOTOS.length
+const puzzlePic = computed(() => ptUrl(PT_PHOTOS[picIndex]))
 function bgStyle(v) {
   if (!v) return {}
   const size = SIZE.value
