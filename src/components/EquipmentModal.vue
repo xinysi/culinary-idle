@@ -7,6 +7,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { fmtStat } from '../game/data/itemDetail.js'
+import { fmtMod, REROLL_COST } from '../game/data/gearMods.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -69,6 +70,24 @@ function itemDetailLines(id) {
   if (!it?.stats) return []
   return Object.entries(it.stats).map(([k, v]) => ({ label: EQ_STAT_LABEL[k] ?? k, value: fmtStat(v) }))
 }
+// 装备词条（2026-09-06）：按物品 id 查穿戴词条（词条只对穿戴中的同件生效）
+function modsFor(itemId) {
+  if (!itemId) return []
+  for (const m of Object.values(player.gearMods ?? {})) {
+    if (m?.itemId === itemId) return m.mods ?? []
+  }
+  return []
+}
+function wornSlotOf(itemId) {
+  for (const [slot, itemId2] of Object.entries(player.equipment)) {
+    if (itemId2 === itemId && player.gearMods?.[slot]?.itemId === itemId) return slot
+  }
+  return null
+}
+function doReroll(slot) {
+  const r = player.rerollGearMod(slot)
+  ui.pushLog(r.ok ? `✨ 洗练完成（-${r.cost} 金币）：${getItem(player.equipment[slot])?.name}` : r.msg ?? '洗练失败', r.ok ? 'gain' : 'warn')
+}
 function close() { ui.toggleEquipModal(false) }
 </script>
 
@@ -98,6 +117,9 @@ function close() { ui.toggleEquipModal(false) }
             </span>
             <button class="btn btn-sm" :disabled="!itemId" @click.stop="itemId && unequipSlot(slot)">卸下</button>
             <button class="btn btn-sm btn-primary" :disabled="!itemId" @click.stop="itemId && setUpgradeTarget(itemId)">强化</button>
+            <div v-if="itemId && modsFor(itemId).length" class="equip-mod-chips" @click.stop>
+              <span v-for="(m, i) in modsFor(itemId)" :key="i" class="mod-chip">{{ fmtMod(m) }}</span>
+            </div>
           </div>
         </div>
 
@@ -167,6 +189,20 @@ function close() { ui.toggleEquipModal(false) }
               <div v-for="l in itemDetailLines(selectedEquip)" :key="l.label" class="equip-detail-row"><span class="dim">{{ l.label }}</span><span class="mono">{{ l.value }}<template v-if="l.label === '暴击'">%</template></span></div>
               <div v-if="!itemDetailLines(selectedEquip).length" class="dim">该装备无附加属性。</div>
             </div>
+            <template v-if="modsFor(selectedEquip).length">
+              <div class="dim" style="font-size: 12px; margin-top: 6px">✨ 词条（穿戴中）：</div>
+              <div class="equip-mod-chips" style="margin-top: 4px">
+                <span v-for="(m, i) in modsFor(selectedEquip)" :key="i" class="mod-chip">{{ fmtMod(m) }}</span>
+              </div>
+              <button
+                v-if="wornSlotOf(selectedEquip)"
+                class="btn btn-sm"
+                :disabled="player.gold < (REROLL_COST[getItem(selectedEquip)?.quality] ?? REROLL_COST['普通'])"
+                @click="doReroll(wornSlotOf(selectedEquip))"
+                style="margin-top: 6px"
+                :title="`重随词条（费用 ${REROLL_COST[getItem(selectedEquip)?.quality] ?? REROLL_COST['普通']} 金币）`"
+              >✨ 洗练（{{ REROLL_COST[getItem(selectedEquip)?.quality] ?? REROLL_COST['普通'] }} 金）</button>
+            </template>
           </template>
           <p v-else class="dim">点击左侧/右侧装备查看详情。</p>
         </div>
