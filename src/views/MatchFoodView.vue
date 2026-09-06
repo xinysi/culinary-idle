@@ -124,11 +124,13 @@ resetDay()
 }
 .mf-cell {
   aspect-ratio: 1;
-  display: flex; align-items: center; justify-content: center; font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 5px;
   border-radius: 10px; cursor: pointer; user-select: none;
   background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
   transition: transform 0.1s ease;
 }
+.mf-img { width: 100%; height: 100%; object-fit: contain; } /* 固定尺寸：格内撑满按比例居中 */
 .mf-cell:hover { transform: scale(1.05); }
 .mf-cell.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(168, 120, 11, 0.5); }
 .mf-cell.cleared { background: rgba(87, 168, 97, 0.12); border-color: rgba(87, 168, 97, 0.3); cursor: default; }

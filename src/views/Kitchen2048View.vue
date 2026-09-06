@@ -4,6 +4,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
+import { itemImage } from '../game/data/itemImage.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -25,7 +26,8 @@ const GAP = 8
 const BOARD_INNER = () => 380 - 20 - 4 // padding 10*2 + border 2*2
 const CELL = computed(() => (BOARD_INNER() - (SIZE.value - 1) * GAP) / SIZE.value)
 
-const TILE_META = { 2: '🥬', 4: '🥔', 8: '🥕', 16: '🍅', 32: '🍆', 64: '🧄', 128: '🍖', 256: '🍲', 512: '🐟', 1024: '🍰', 2048: '🍾', 4096: '🏆' }
+// 物品图档位映射（与图鉴一致，图片必渲染）
+const TILE_IMG = { 2: 'apple', 4: 'potato', 8: 'carrot', 16: 'tomato', 32: 'eggplant', 64: 'mushroom', 128: 'roastPotato', 256: 'vegSalad', 512: 'grouperFeast', 1024: 'dragonHotpot', 2048: 'godFeast', 4096: 'legendaryManHan' }
 
 function spawnTile(row, col, value = 2, opts = {}) {
   tiles.value.push({ id: nextId++, value, row, col, fresh: !!opts.fresh, merged: false })
@@ -193,7 +195,8 @@ function posStyle(t) {
         class="g2048-cell2"
         :class="'v' + t.value"
         :style="posStyle(t)"
-      >{{ TILE_META[t.value] ?? t.value }}</div>
+      ><img v-if="TILE_IMG[t.value]" class="g2048-img" :src="itemImage(TILE_IMG[t.value])" @error="$event.target.style.display = 'none'" alt="" />
+      <span v-else>{{ t.value }}</span></div>
     </div>
 
     <div class="g2048-keys">
@@ -235,7 +238,7 @@ function posStyle(t) {
   position: absolute;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24px;
+  padding: 5px;
   background: rgba(255, 251, 244, 0.6);
   transition: left 0.12s ease, top 0.12s ease; /* 移动丝滑 */
   animation: tileBorn 0.12s ease; /* 新块/合并块浮现 */
@@ -245,6 +248,7 @@ function posStyle(t) {
   from { transform: scale(0.7); opacity: 0.4; }
   to { transform: scale(1); opacity: 1; }
 }
+.g2048-img { width: 100%; height: 100%; object-fit: contain; } /* 图片固定尺寸：格内撑满按比例居中 */
 .g2048-cell2.v2 { background: #e8f3d9; } .g2048-cell2.v4 { background: #d8ecb8; }
 .g2048-cell2.v8 { background: #c8e39a; } .g2048-cell2.v16 { background: #b6d98a; }
 .g2048-cell2.v32 { background: #f6d9a8; } .g2048-cell2.v64 { background: #f3c684; }
