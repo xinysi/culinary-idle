@@ -43,13 +43,15 @@ jobs:
         working-directory: lmewexe
         run: Compress-Archive -Path "release\美食放置：食之契约-win32-x64" -DestinationPath release\美食放置：食之契约-win32-x64.zip -Force
 
-      # 4. 创建 Release 并上传资产
+      # 4. 创建 Release 并上传资产（zip 文件；v0.1.0 教训：只能传文件，不能传目录）
       - name: Create release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          zip_base=$(ls -d lmewexe/release/*win32-x64.zip | head -1)
-          gh release create "${GITHUB_REF_NAME}" "lmewexe/release"          --title "${GITHUB_REF_NAME} — 美食放置：食之契约" \
+          zip_file=$(ls lmewexe/release/*win32-x64.zip | head -1)
+          echo "asset: $zip_file"
+          gh release create "${GITHUB_REF_NAME}" "$zip_file" \
+            --title "${GITHUB_REF_NAME} — 美食放置：食之契约" \
             --generate-notes \
             --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食之契约.exe 即可游玩。源码与开发说明见仓库根目录。"
