@@ -1,5 +1,5 @@
 <script setup>
-// 大胃王挑战（2026-09-06 顶部第三页）：60 秒连点「干饭」，达到档位领奖（每日只领一次，取最高档）
+// 大胃王挑战（2026-09-06 逐页重排版：大碗面板 + 档位进度 + 大按钮）
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -12,7 +12,6 @@ const REMAIN = ref(60)
 const bowls = ref(0)
 const done = ref(false)
 let timerId = null
-// 暴食（2026-09-06）：连点间隔 <1.2s 累计连击，10 连触发暴食 → 3 秒内每口双倍
 let combo = 0
 let lastEat = 0
 const raging = ref(false)
@@ -54,15 +53,15 @@ function finish() {
   done.value = true
   const mg = player.minigames.foodrush
   const today = todayKey()
+  if (!mg) player.minigames.foodrush = { day: 0, best: 0, rewarded: 0 }
   if (mg.day !== today) mg.day = today
   mg.best = Math.max(mg.best ?? 0, bowls.value)
-  // 每日只结算一次奖励（取本次达到的最高档）
   const bestReached = [...TIERS].reverse().find((t) => bowls.value >= t.need)
-  if (bestReached && mg.rewarded < bestReached.gold) {
+  if (bestReached && (mg.rewarded ?? 0) < bestReached.gold) {
     const gain = bestReached.gold - (mg.rewarded ?? 0)
     mg.rewarded = bestReached.gold
     player.gainGold(gain)
-    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${gain} 金币（今日奖励已领 ${mg.rewarded} 金）`, 'gain')
+    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${gain} 金币（今日已领 ${mg.rewarded} 金）`, 'gain')
   }
 }
 function todayKey() {
@@ -70,55 +69,71 @@ function todayKey() {
   return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`
 }
 const mg = computed(() => player.minigames?.foodrush ?? {})
-const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null)
+const progress = computed(() => Math.min(100, (bowls.value / 300) * 100))
+const doneToday = computed(() => mg.value.day === todayKey())
 </script>
 
 <template>
-  <div class="skill-view">
-    <header class="skill-head">
-      <div>
-        <h2>🍖 大胃王挑战</h2>
-        <p class="dim">60 秒内疯狂点「干饭」喂饱大胃王！每日结算一次奖励（取最高档）：120 碗 +40 金 / 200 碗 +60 金 / 300 碗 +100 金。连续点击可触发<b>暴食</b>：10 连击后 3 秒每口 ×2！</p>
-      </div>
-      <div class="skill-head-right">
-        <span class="badge badge-on">🏆 {{ mg.best ?? 0 }} 碗</span>
-        <span class="dim mono">今日奖励 {{ mg.rewarded ?? 0 }}/100 金</span>
-      </div>
-    </header>
+  <div class="fs-page">
+    <div class="fs-topbar">
+      <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
+      <span class="fs-chip" style="margin-left: auto">💰 今日 {{ mg.rewarded ?? 0 }}/100 金</span>
+    </div>
 
-    <div class="card game-stage rush-stage">
-
-      <div class="rush-counter">
-        <span class="rush-bowl-ico">🍚</span>
-        <b class="mono rush-bowls">{{ bowls }}</b>
-        <span class="rush-remain">碗 · 剩余 <b class="mono">{{ REMAIN }}</b> 秒</span>
-      </div>
-      <div class="rush-tiers">
-        <span v-for="t in TIERS" :key="t.need" class="rush-tier" :class="{ on: bowls >= t.need }">
-          {{ t.label }} <b>+{{ t.gold }}金</b>
-        </span>
-      </div>
-      <div class="rush-play">
-        <button v-if="!RUNNING" class="btn btn-primary rush-btn" @click="start">🍖 开始挑战（60 秒）</button>
-        <button v-else class="btn btn-primary rush-btn rush-eat" :class="{ 'rush-rage': raging }" @click="eat">
-          {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
-        </button>
-      </div>
-      <div v-if="done" class="heat-verdict" :class="{ perfect: nextTier, miss: !nextTier }">
-        {{ nextTier ? `🍖 达成 ${nextTier.label}！奖励已结算` : '💪 惜败！差一点就达标了' }}
-      </div>
-      <div class="mg-info-grid">
-        <div class="mg-info-card">
-                    <h4>🎮 玩法</h4>
-                    <ul><li>60 秒疯狂点击「干饭」</li><li>快速连点触发暴食（×2）</li><li>每日结算一次取最高档</li></ul>
-                  </div>
-        <div class="mg-info-card">
-                    <h4>🏆 记录</h4>
-                    <div class="mg-info-row"><span>最佳碗数</span><b class="mono">{{ mg.best ?? 0 }}</b></div>
-                    <div class="mg-info-row"><span>今日奖励</span><b class="mono">{{ mg.rewarded ?? 0 }}/100 金</b>
-                </div>
-            </div>
+    <div class="fs-bowl">
+      <div class="fs-bowl-emoji">🍚</div>
+      <div class="fs-bowl-num"><b class="mono">{{ bowls }}</b> 碗</div>
+      <div class="fs-timer">剩余 <b class="mono">{{ REMAIN }}</b> 秒</div>
+      <div class="fs-progress"><div class="fs-progress-fill" :style="{ width: progress + '%' }"></div></div>
+      <div class="fs-tiers">
+        <span v-for="t in TIERS" :key="t.need" class="fs-tier" :class="{ on: bowls >= t.need }">{{ t.label }} +{{ t.gold }}金</span>
       </div>
     </div>
+
+    <div class="fs-play">
+      <button v-if="!RUNNING" class="fs-btn" @click="start">🍖 开始挑战（60 秒）</button>
+      <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
+        {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
+      </button>
+    </div>
+    <div v-if="done" class="fs-done" :class="{ ok: bowls >= 120 }">
+      {{ bowls >= 120 ? `🍖 达成 ${[...TIERS].reverse().find((t) => bowls >= t.need)?.label ?? ''}！奖励已结算` : '💪 惜败！差一点就达标了' }}
+    </div>
+    <div class="fs-tip">快速连点 10 下触发「暴食」×2 · 每日结算取最高档</div>
   </div>
 </template>
+<style scoped>
+.fs-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
+.fs-topbar { display: flex; gap: 8px; width: 100%; }
+.fs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.fs-bowl {
+  width: min(420px, 92%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px 20px; border-radius: 20px;
+  background: linear-gradient(160deg, rgba(255, 199, 89, 0.2), rgba(217, 90, 56, 0.12));
+  border: 1px solid rgba(217, 138, 43, 0.35);
+  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.15);
+}
+.fs-bowl-emoji { font-size: 52px; }
+.fs-bowl-num { font-size: 20px; font-weight: 800; }
+.fs-bowl-num b { font-size: 36px; color: var(--primary-strong); }
+.fs-timer { font-size: 14px; }
+.fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(150, 110, 70, 0.2); overflow: hidden; }
+.fs-progress-fill { height: 100%; background: linear-gradient(90deg, #eab04a, #d95a38); border-radius: 999px; transition: width 0.2s ease; }
+.fs-tiers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--muted); }
+.fs-tier.on { background: rgba(87, 168, 97, 0.18); color: var(--good-strong); font-weight: 700; }
+.fs-play { display: flex; justify-content: center; }
+.fs-btn {
+  min-width: 280px; padding: 16px 36px; font-size: 19px; font-weight: 800; color: #fff;
+  border: none; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(135deg, #d95a38, #b8442a);
+  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.4);
+}
+.fs-eat { background: linear-gradient(135deg, #f27c45, #d85c2c); }
+.fs-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f); animation: fsPop 0.25s ease infinite; }
+@keyframes fsPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
+.fs-done { font-weight: 800; color: var(--bad-strong); }
+.fs-done.ok { color: var(--good-strong); }
+.fs-tip { color: var(--muted); font-size: 12px; }
+</style>

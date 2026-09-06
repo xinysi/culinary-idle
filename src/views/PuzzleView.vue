@@ -1,5 +1,5 @@
 <script setup>
-// 美食拼图（2026-09-06 顶部第三页）：每日一张 4×4 华容道（数字碎片拼回世界美食），完成得能量饼干 ×1（每日 1 次）
+// 每日美食拼图（2026-09-06 逐页重排版：顶部状态条 + 双图并排面板 + 底部控制）
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -8,11 +8,11 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const SIZE = 4
-const tiles = ref([]) // 16 个值 1-15 + 0(空位)，0 = 空
+const tiles = ref([])
 const moves = ref(0)
 const won = ref(false)
 
-const LABELS = ['🍚', '🥟', '🍜', '🦐', '🥘', '🍣', '🍙', '🍢', '🍡', '🥮', '🍵', '🥟', '🍲', '🍰', '🍪', '🥤']
+const LABELS = ['🍚', '🥟', '🍜', '🦐', '🥘', '🍣', '🍙', '🍢', '🍡', '🥮', '🍵', '🍥', '🍲', '🍰', '🍪', '🥤']
 function dayHash() {
   const t = new Date()
   let h = 0
@@ -29,10 +29,8 @@ function mulberry32(a) {
   }
 }
 function scrambled() {
-  // 每日固定种子：从完成态随机移动 250 步（保证可解）
   const arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
   const rng = mulberry32(dayHash())
-  const moves4 = ['up', 'down', 'left', 'right']
   for (let i = 0; i < 250; i++) {
     const idx = arr.indexOf(0)
     const r = Math.floor(idx / SIZE), c = idx % SIZE
@@ -43,7 +41,6 @@ function scrambled() {
     if (c < SIZE - 1) options.push(idx + 1)
     const pick = options[Math.floor(rng() * options.length)]
     ;[arr[idx], arr[pick]] = [arr[pick], arr[idx]]
-    void moves4
   }
   return arr
 }
@@ -64,21 +61,20 @@ function tap(i) {
   const er = Math.floor(empty / SIZE), ec = empty % SIZE
   if (Math.abs(r - er) + Math.abs(c - ec) !== 1) return
   ;[tiles.value[i], tiles.value[empty]] = [tiles.value[empty], tiles.value[i]]
+  tiles.value = [...tiles.value]
   moves.value++
   if (checkWin()) {
     won.value = true
     const mg = player.minigames.puzzle
     const today = todayKey()
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
-    if (mg.day !== today) mg.day = today
-    if ((mg.done ?? 0) < 1) {
-      player.minigames.puzzle.done = (mg.done ?? 0) + 1 // 每日仅计发一次（2026-09-06 修复可无限领取）
+    if (mg.day !== today) {
+      mg.day = today
+      mg.done = (mg.done ?? 0) + 1
       player.gainItem('energyBiscuit', 1)
       ui.pushLog('🧩 每日美食拼图完成！+能量饼干 ×1', 'gain')
     }
   }
-  // 防止直接修改引用丢失响应性：用新数组替换
-  tiles.value = [...tiles.value]
 }
 function todayKey() {
   const t = new Date()
@@ -88,65 +84,71 @@ const doneToday = computed(() => {
   const mg = player.minigames?.puzzle ?? { day: '', done: 0 }
   return mg.day === todayKey() && (mg.done ?? 0) >= 1
 })
+const doneDays = computed(() => player.minigames?.puzzle?.done ?? 0)
 resetDay()
 const cells = computed(() => tiles.value)
 </script>
 
 <template>
-  <div class="skill-view">
-    <header class="skill-head">
-      <div>
-        <h2>🧩 每日美食拼图</h2>
-        <p class="dim">每天一张 4×4 碎片拼图：<b>点击与空格相邻的碎片</b>，把它滑进空位——把乱序碎片按编号 1→15 复原成下边的「目标图」即完成！完成得 <b>能量饼干 ×1</b>（每日 1 次）。</p>
-      </div>
-      <div class="skill-head-right">
-        <span class="badge" :class="doneToday ? 'badge-on' : ''">{{ doneToday ? '✅ 今日已完成' : '📅 今日未完成' }}</span>
-        <span class="dim mono">步数 {{ moves }}</span>
-      </div>
-    </header>
+  <div class="pz-page">
+    <div class="pz-topbar">
+      <span class="pz-chip" :class="{ ok: doneToday }">{{ doneToday ? '✅ 今日已完成' : '📅 今日未完成' }}</span>
+      <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>
+      <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
+    </div>
 
-    <div class="card game-stage">
-
-      <div class="puzzle-duo">
-        <div class="puzzle-col">
-          <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 顺序）</div>
-          <div class="puzzle-board puzzle-goal">
-            <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="puzzle-cell puzzle-goal-cell">
-              {{ lbl }}<span class="puzzle-num">{{ i + 1 }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="puzzle-col">
-          <div class="puzzle-play-label">🧩 拼图（点格子滑动复原）</div>
-          <div class="puzzle-board puzzle-board-play">
-            <div
-              v-for="(v, i) in cells"
-              :key="i"
-              class="puzzle-cell"
-              :class="{ empty: v === 0 }"
-              @click="tap(i)"
-            >
-              <template v-if="v">{{ LABELS[v - 1] }}<span class="puzzle-num">{{ v }}</span></template>
-            </div>
+    <div class="pz-duo">
+      <div class="pz-col">
+        <div class="pz-label">🎯 目标图</div>
+        <div class="pz-board">
+          <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="pz-cell pz-goal-cell">
+            {{ lbl }}<span class="pz-num">{{ i + 1 }}</span>
           </div>
         </div>
       </div>
-      <div class="g2048-controls">
-        <button class="btn btn-sm" @click="resetDay()">重新打乱（当日固定）</button>
-      </div>
-      <div v-if="won" class="heat-verdict perfect">🎉 复原完成！{{ doneToday ? '每日奖励已领取' : '+能量饼干 ×1' }}</div>
-      <div class="mg-info-grid">
-        <div class="mg-info-card">
-                    <h4>🎮 玩法</h4>
-                    <ul><li>点击与空格相邻的碎片滑移</li><li>按编号 1→15 复原成目标图</li><li>每日完成 +能量饼干 ×1</li></ul>
-                  </div>
-        <div class="mg-info-card">
-                    <h4>🏆 记录</h4>
-                    <div class="mg-info-row"><span>累计完成</span><b class="mono">{{ player.minigames?.puzzle?.done ?? 0 }} 天</b></div>
-                    <div class="mg-info-row"><span>今日</span><b class="mono">{{ doneToday ? '✅ 已领' : '未完成' }}</b>
-                </div>
-            </div>
+      <div class="pz-col">
+        <div class="pz-label">🧩 拼图（点击与空格相邻的碎片）</div>
+        <div class="pz-board">
+          <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" @click="tap(i)">
+            <template v-if="v">{{ LABELS[v - 1] }}<span class="pz-num">{{ v }}</span></template>
+          </div>
+        </div>
       </div>
     </div>
+
+    <div class="pz-keys">
+      <button class="pz-reset" @click="resetDay()">重新打乱（当日固定）</button>
+    </div>
+    <div v-if="won" class="pz-done">🎉 复原完成！{{ doneToday ? '奖励今日已领' : '+能量饼干 ×1' }}</div>
+    <div class="pz-tip">每天同一张图 · 完成得能量饼干（每日 1 次）</div>
   </div>
 </template>
+<style scoped>
+.pz-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
+.pz-topbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
+.pz-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.pz-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
+.pz-duo { display: flex; gap: 22px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.pz-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
+.pz-board {
+  width: 300px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+  padding: 8px; border-radius: 14px;
+  background: rgba(150, 110, 70, 0.16);
+  border: 1px solid rgba(150, 110, 70, 0.3);
+  box-shadow: 0 8px 20px rgba(93, 64, 55, 0.14);
+}
+.pz-cell {
+  position: relative; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; border-radius: 8px; cursor: pointer; user-select: none;
+  background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
+}
+.pz-goal-cell { cursor: default; }
+.pz-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+.pz-num { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.pz-keys { display: flex; justify-content: center; }
+.pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
+.pz-done { font-weight: 800; color: var(--good-strong); }
+.pz-tip { color: var(--muted); font-size: 12px; }
+</style>
