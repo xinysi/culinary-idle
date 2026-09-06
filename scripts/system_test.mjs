@@ -67,6 +67,9 @@ function freshPlayer(skills = {}) {
   p.newGame()
   p.settings.autoEat = true
   p.settings.autoEatThreshold = 60
+  // 测试隔离：禁用限时窗口（CI 运行时刻可能命中晨集/茶歇等 → 经验断言受时区污染）
+  p.marketBoost = () => ({ restaurant: 1, combatXp: 1, gatherXp: 1, craftXp: 1 })
+  p.activeMarketEvents = () => []
   for (const [id, lv] of Object.entries(skills)) p.setSkillState(id, { level: lv, exp: totalXpForLevel(lv) })
   createSkillInstances(p)
   return p
