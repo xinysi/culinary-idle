@@ -88,9 +88,10 @@ export const REROLL_COST = {
   神话: 30000,
 }
 
-/** 词条展示文案（暴击显示为 %） */
+/** 词条展示文案（暴击/金币显示为 %） */
 export function fmtMod(mod) {
   if (mod.stat === 'critChance') return `${mod.label} +${(mod.value * 100).toFixed(1)}%`
+  if (mod.stat === 'goldPct') return `${mod.label} +${mod.value}%`
   return `${mod.label} +${mod.value}`
 }
 
