@@ -3919,7 +3919,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .puzzle-cell {
   aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px;
+  font-size: 30px;
   background: rgba(255, 251, 244, 0.92);
   border: 1px solid rgba(150, 110, 70, 0.3);
   border-radius: 8px;
@@ -3954,7 +3954,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 /* 拼图目标预览与编号（2026-09-06） */
 .puzzle-goal { pointer-events: none; opacity: 0.85; }
 .puzzle-goal-cell { cursor: default; }
-.puzzle-num { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.puzzle-num { position: absolute; right: 5px; bottom: 3px; font-size: 10px; color: var(--muted); font-family: var(--mono); }
 .puzzle-cell { position: relative; }
 .puzzle-goal-label { font-size: 12px; font-weight: 700; margin-bottom: 8px; text-align: center; color: var(--primary-strong); }
 .puzzle-board-play { margin-top: 10px; }
@@ -3964,8 +3964,8 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 /* 舞台内容：关键元素限宽居中 */
 .heat-track, .puzzle-board, .match-board, .g2048-board { margin-left: auto; margin-right: auto; }
 .heat-track { max-width: 420px; }
-.puzzle-board { max-width: 300px; }
-.puzzle-goal { max-width: 300px; }
+.puzzle-board { max-width: 360px; }
+.puzzle-goal { max-width: 360px; }
 .match-board { max-width: 360px; }
 .g2048-board { max-width: 340px; }
 
@@ -4068,9 +4068,10 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
 .mg-stage .skill-head { max-width: 920px; margin-left: auto; margin-right: auto; width: 100%; }
 .mg-stage .card { max-width: 920px; margin-left: auto; margin-right: auto; }
 .mg-stage .puzzle-goal-label, .mg-stage .puzzle-duo { max-width: 920px; margin-left: auto; margin-right: auto; }
-/* 大舞台已是完整容器：隐藏子游戏内部的「舞台+侧栏」双列中的侧栏，改回单列（2026-09-06 修复嵌套挤压） */
-.mg-stage .game-layout { display: block; }
-.mg-stage .game-side { display: none; }
+/* 大舞台内子游戏：恢复「主内容 + 右侧信息框」双列（2026-09-06 布局修好后请回信息框） */
+.mg-stage .game-layout { display: flex; }
+.mg-stage .game-side { display: flex; }
+.mg-stage .game-main { flex: 1 1 auto; min-width: 0; }
 .mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .mg-stage-title { font-size: 15px; font-weight: 800; color: var(--primary-strong); }
 .mg-welcome { text-align: center; padding: 60px 0 40px; }
