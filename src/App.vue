@@ -43,6 +43,7 @@ const Kitchen2048View = defineAsyncComponent(() => import('./views/Kitchen2048Vi
 const FoodRushView = defineAsyncComponent(() => import('./views/FoodRushView.vue'))
 const PuzzleView = defineAsyncComponent(() => import('./views/PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./views/MatchFoodView.vue'))
+const MinigamesView = defineAsyncComponent(() => import('./views/MinigamesView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -93,12 +94,7 @@ const TOP_PAGES = [
     { label: '🧪炼金', view: 'alchemy', onClick: () => ui.setView('alchemy') },
   ],
   [
-    { label: '🔥火候炉', view: 'heat', onClick: () => ui.setView('heat') },
-    { label: '📚美食讲堂', view: 'trivia', onClick: () => ui.setView('trivia') },
-    { label: '🧩厨心2048', view: 'kitchen2048', onClick: () => ui.setView('kitchen2048') },
-    { label: '🍖大胃王', view: 'foodrush', onClick: () => ui.setView('foodrush') },
-    { label: '🧩美食拼图', view: 'puzzle', onClick: () => ui.setView('puzzle') },
-    { label: '🀄食材连连看', view: 'matchfood', onClick: () => ui.setView('matchfood') },
+    { label: '🎮小游戏', view: 'minigames', onClick: () => ui.setView('minigames') },
   ],
 ]
 function navPage(dir) {
@@ -256,6 +252,7 @@ onMounted(() => {
           <FoodRushView v-else-if="ui.activeView === 'foodrush'" />
           <PuzzleView v-else-if="ui.activeView === 'puzzle'" />
           <MatchFoodView v-else-if="ui.activeView === 'matchfood'" />
+          <MinigamesView v-else-if="ui.activeView === 'minigames'" />
           <StatsView v-else-if="ui.activeView === 'stats'" />
           <LogView v-else-if="ui.activeView === 'log'" />
           <RestaurantView v-else-if="ui.activeView === 'restaurant'" />

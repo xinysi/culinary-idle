@@ -43,7 +43,7 @@ test.describe('游戏全流程', () => {
     // 顶部导航分 3 页（2026-09-06）：点击目标按钮前先翻到所在页（最多翻 2 次）
     // 统计/图鉴/攻略已固定到右侧图标钮（title 定位）；其余在翻页页中
     const iconMenus = [['统计', '📊'], ['图鉴', '📖'], ['攻略', '🗺️']]
-    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛', '火候炉', '美食讲堂', '厨心2048', '大胃王', '美食拼图', '食材连连看']
+    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛', '小游戏']
     for (const m of menus) {
       let clicked = false
       for (let p = 0; p < 3 && !clicked; p++) {
@@ -58,6 +58,16 @@ test.describe('游戏全流程', () => {
       if (!clicked) throw new Error('菜单未找到: ' + m)
       await page.waitForTimeout(400)
       await expect(page.locator('.main-scroll')).toBeVisible()
+    }
+    // 小游戏大厅：六张游戏卡逐个进入（回大厅再进下一张）
+    await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
+    await page.waitForTimeout(400)
+    for (let i = 0; i < 6; i++) {
+      await page.locator('.minigame-card').nth(i).click()
+      await page.waitForTimeout(300)
+      await expect(page.locator('.main-scroll')).toBeVisible()
+      await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
+      await page.waitForTimeout(300)
     }
     for (const [title, icon] of iconMenus) {
       await page.locator(`.top-nav-btn[title="${title}"]`).click()
