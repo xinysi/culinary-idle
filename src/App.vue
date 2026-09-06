@@ -54,9 +54,19 @@ const seasonDot = computed(() => {
   if (!se || !st) return false
   return (se.tiers ?? []).some((t, i) => !st.claimed.includes(i) && st.points >= t.points)
 })
-// 限时窗口活动（2026-09-06）：多枚呼吸徽章，点击查看轮换时间表
-const marketEvents = computed(() => player.activeMarketEvents?.() ?? [])
-const marketBoost = computed(() => player.marketBoost?.() ?? {})
+// 限时窗口活动（2026-09-06）：单活动显示徽章；多个同时命中聚合为「⏰ 活动 ×N」（点击查看时间表）
+const marketSummary = computed(() => {
+  const evs = player.activeMarketEvents?.() ?? []
+  if (!evs.length) return null
+  if (evs.length === 1) {
+    const e = evs[0]
+    return { label: `${e.icon} ${e.name} ×${Object.values(e.effect)[0]}`, title: `${e.desc}（点击查看全活动轮换时间表）` }
+  }
+  return {
+    label: `⏰ 活动 ×${evs.length}`,
+    title: `进行中：${evs.map((e) => `${e.icon}${e.name}（${e.desc}）`).join('、')}（点击查看时间表）`,
+  }
+})
 
 // ── 顶部导航分页（2026-09-06）：主功能按钮分 3 页，翻页浏览；右侧功能组固定 ──
 // 每页按钮：{ label, view, onClick, dot? }；view 用于激活高亮与自动跳页
@@ -197,12 +207,11 @@ onMounted(() => {
           <span class="top-nav-spacer"></span>
           <div class="top-nav-right">
             <button
-              v-for="ev in marketEvents"
-              :key="ev.id"
+              v-if="marketSummary"
               class="top-nav-market"
-              :title="`${ev.desc}（点击查看全活动轮换时间表）`"
+              :title="marketSummary.title"
               @click="ui.showMarketModal = true"
-            >{{ ev.icon }} {{ ev.name }} ×{{ Object.values(ev.effect)[0] }}</button>
+            >{{ marketSummary.label }}</button>
             <button class="top-nav-market top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰</button>
             <button class="top-nav-btn top-nav-pager" title="上一页" @click="navPage(-1)">‹</button>
             <span class="top-nav-pagenum mono">{{ ui.topNavPage + 1 }}/{{ TOP_PAGES.length }}</span>
