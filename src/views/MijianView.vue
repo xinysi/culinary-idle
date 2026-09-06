@@ -139,7 +139,7 @@ function typeLabel(id) {
         v-for="p in MIJIAN_POOLS"
         :key="p.id"
         class="pool-mini"
-        :class="{ active: activePool === p.id }"
+        :class="[`pool-${p.id}`, { active: activePool === p.id }]"
         @click="activePool = p.id"
       >
         <span class="pool-mini-icon">{{ p.icon }}</span>
@@ -250,6 +250,7 @@ function typeLabel(id) {
 .pool-minis { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
 .pool-mini { flex: 1 1 0; max-width: 300px; }
 .pool-mini {
+  position: relative;
   min-width: 126px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 10px 14px;
@@ -259,11 +260,28 @@ function typeLabel(id) {
   border: 1px solid rgba(150, 110, 70, 0.28);
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
+/* 每池主题色（顶部渐变细条 + 选中态渐变底/边框/光晕） */
+.pool-mini.pool-material { --pc1: 22, 160, 133; --pc2: 13, 127, 102; } /* 素材：翡翠绿 */
+.pool-mini.pool-food { --pc1: 230, 92, 0; --pc2: 249, 212, 35; } /* 美食：橙黄 */
+.pool-mini.pool-gear { --pc1: 83, 105, 118; --pc2: 61, 79, 92; } /* 厨具：钢蓝灰 */
+.pool-mini.pool-mix { --pc1: 142, 68, 173; --pc2: 98, 94, 177; } /* 混池：紫 */
+.pool-mini.pool-limited { --pc1: 74, 44, 20; --pc2: 122, 80, 36; } /* 限时：黑金 */
+.pool-mini::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 12%; right: 12%;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(90deg, rgba(var(--pc1), 0.9), rgba(var(--pc2), 0.9));
+  pointer-events: none;
+}
 .pool-mini:hover { transform: translateY(-2px); }
 .pool-mini.active {
-  background: #fff7e8;
-  border: 2px solid #d98a2b;
-  box-shadow: 0 0 14px rgba(217, 138, 43, 0.4);
+  background:
+    linear-gradient(135deg, rgba(var(--pc1), 0.16), rgba(var(--pc2), 0.22)),
+    #fff7e8;
+  border: 2px solid rgb(var(--pc2));
+  box-shadow: 0 0 14px rgba(var(--pc2), 0.45);
   transform: translateY(-4px);
 }
 .pool-mini-icon { font-size: 24px; }
@@ -322,7 +340,12 @@ function typeLabel(id) {
 }
 :global([data-theme='dark']) .pool-banner-pity .pill { background: rgba(44, 31, 22, 0.92); color: #e8b45f; }
 :global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
-:global([data-theme='dark']) .pool-mini.active { background: #3a2a18; border-color: #d98a2b; }
+:global([data-theme='dark']) .pool-mini.active {
+  background:
+    linear-gradient(135deg, rgba(var(--pc1), 0.28), rgba(var(--pc2), 0.32)),
+    #3a2a18;
+  border-color: rgb(var(--pc2));
+}
 :global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
 :global([data-theme='dark']) .pool-banner-fade {
   background: linear-gradient(90deg, rgba(18, 13, 9, 0.62), rgba(18, 13, 9, 0) 13%, rgba(18, 13, 9, 0) 87%, rgba(18, 13, 9, 0.62));
