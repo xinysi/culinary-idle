@@ -125,7 +125,7 @@ resetDay()
 .mf-cell {
   aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  padding: 5px;
+  padding: 7px;
   border-radius: 10px; cursor: pointer; user-select: none;
   background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
   transition: transform 0.1s ease;
