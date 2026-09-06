@@ -377,7 +377,7 @@ function typeLabel(id) {
 .gacha-pull { text-align: center; }
 .gacha-hold {
   display: inline-block;
-  color: rgba(var(--tsh1, 150, 110, 70), 0.95);
+  color: var(--tth, #6b4a1e); /* 浅色底上用主题深彩色，保证可读 */
   font-weight: 600;
   border: 1px solid rgba(var(--tsh1, 150, 110, 70), 0.45);
   background:
@@ -390,10 +390,10 @@ function typeLabel(id) {
   box-shadow: 0 4px 14px rgba(var(--tsh1, 150, 110, 70), 0.16);
 }
 .gacha-hold .mono {
-  color: var(--ttl, #c8860a);
+  color: var(--tth, #7a4a10);
   font-weight: 800;
   font-size: 1.25em;
-  text-shadow: 0 0 10px rgba(var(--tsh2, 249, 212, 35), 0.45);
+  text-shadow: 0 1px 2px rgba(var(--tsh2, 249, 212, 35), 0.3);
 }
 /* 顶部统计（已抽 N 次 · X 金）随池主题 */
 /* 顶部统计卡（已抽 N 次 · X 金）：主题色毛玻璃框（随池） */
@@ -411,9 +411,9 @@ function typeLabel(id) {
 }
 .mijian-view .season-pts-card .dim { color: rgba(var(--tsh1, 150, 110, 70), 0.9); }
 .mijian-view .season-pts-card strong {
-  color: rgb(var(--tsh2, 249, 212, 35));
+  color: var(--tth, #7a4a10); /* 浅色底上用主题深彩色，保证可读 */
   font-size: 1.2em;
-  text-shadow: 0 0 8px rgba(var(--tsh2, 249, 212, 35), 0.35);
+  text-shadow: 0 1px 2px rgba(var(--tsh2, 249, 212, 35), 0.3);
 }
 :global([data-theme='dark']) .mijian-view .season-pts-card {
   background:
