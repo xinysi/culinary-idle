@@ -3783,3 +3783,35 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
 html[data-theme='dark'] .rt-row:hover { background: rgba(255, 255, 255, 0.06); }
 html[data-theme='dark'] .rt-node::before { border-left-color: rgba(232, 180, 95, 0.28); }
 html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); }
+
+/* 卡牌对战面板（2026-09-06 重构排版） */
+.card-battle-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.card-battle-head .cb-count { color: var(--primary-strong); font-size: 15px; }
+.cb-card { position: relative; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.cb-card:hover { transform: translateY(-2px); box-shadow: 0 0 12px rgba(150, 110, 70, 0.25); }
+.cb-card.selected {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(168, 120, 11, 0.4);
+  transform: translateY(-3px);
+}
+.cb-badges { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-bottom: 2px; }
+.cb-badges span { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.cb-type { background: rgba(150, 110, 70, 0.14); color: var(--muted); }
+.cb-power { background: rgba(217, 138, 43, 0.2); color: var(--warn-strong); }
+.cb-battle-panel { margin-top: 12px; }
+.cb-battle-head { display: flex; align-items: center; gap: 12px; }
+.cb-result-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+.cb-rounds { display: flex; flex-direction: column; gap: 4px; }
+.cb-round {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 5px 10px; border-radius: 8px; font-size: 13px;
+}
+.cb-round-idx { font-size: 11px; color: var(--muted); min-width: 48px; }
+.cb-round-cards { flex: 1; }
+.cb-round-verdict { font-weight: 800; }
+.cb-round.win { background: rgba(87, 168, 97, 0.12); }
+.cb-round.lose { background: rgba(217, 75, 63, 0.1); }
+.cb-round.win .cb-round-verdict { color: var(--good-strong); }
+.cb-round.lose .cb-round-verdict { color: var(--bad-strong); }
+html[data-theme='dark'] .cb-card:hover { box-shadow: 0 0 12px rgba(255, 255, 255, 0.12); }
+html[data-theme='dark'] .cb-round.win { background: rgba(87, 168, 97, 0.14); }
+html[data-theme='dark'] .cb-round.lose { background: rgba(217, 75, 63, 0.14); }
