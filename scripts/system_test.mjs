@@ -1119,9 +1119,9 @@ console.log('══ C11. 食灵阁 ══')
     const pm = freshPlayer({ spiritSummoning: 99 })
     const ss = getSkillInstance('spiritSummoning')
     const first = ss.recipes[0]
-    const matId = Object.keys(first.ingredients)[0]
-    pm.gainItem(matId, first.ingredients[matId])
+    for (const [mid, n] of Object.entries(first.ingredients)) pm.gainItem(mid, n)
     check('食灵', '契约材料在背包即可制作（canCraft）', ss.canCraft(first) === true)
+    const matId = Object.keys(first.ingredients)[0]
     pm.inventory[matId] = 0
     check('食灵', '材料移除后 canCraft 为 false', ss.canCraft(first) === false)
   }
