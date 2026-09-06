@@ -171,8 +171,8 @@ export const usePlayerStore = defineStore('player', {
     guide: { step: 0, done: false },
     // 锻造套装集齐奖励（2026-09-06）：已发奖套名列表
     setBonuses: [],
-    // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）
-    mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
+    // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）；history=最近 10 次结果标志
+    mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -411,7 +411,7 @@ export const usePlayerStore = defineStore('player', {
         hardcoreStats: { days: 0, best: 0, lastDayKey: null },
         guide: { step: 0, done: false },
         setBonuses: [],
-        mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
+        mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
       })
     },
 
@@ -466,7 +466,7 @@ export const usePlayerStore = defineStore('player', {
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
         guide: saved.guide ?? { step: 0, done: false },
         setBonuses: saved.setBonuses ?? [],
-        mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
+        mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -1464,6 +1464,9 @@ export const usePlayerStore = defineStore('player', {
       }
       this.mijian.stats.pulls += count
       this.mijian.stats.spent += cost
+      // 历史（最近 10 次：⭐=稀有及以上，厨具池保底参考）
+      const rareHit = results.some((it) => it?.type === 'equipment' && ['稀有', '史诗', '传说', '神话'].includes(it.quality))
+      this.mijian.history = [...(this.mijian.history ?? []), rareHit ? 'rare' : 'common'].slice(-10)
       EventBus.emit('mijian:draw', { poolId, count, boosted })
       return { ok: true, results, got, boosted }
     },
