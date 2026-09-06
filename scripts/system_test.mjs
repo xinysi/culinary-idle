@@ -920,7 +920,7 @@ console.log('══ W. 限时窗口活动 ══')
   check('活动', '茶歇 14-17 制作 ×1.5', ids(15, 1).includes('teaBreak') && p.marketBoost(15, 1).craftXp === 1.5)
   check('活动', '午夜食堂 22-1 对决 ×2（跨夜）', ids(23, 1) === 'nightDiner' && ids(0, 1) === 'nightDiner' && p.marketBoost(23, 1).combatXp === 2)
   check('活动', '主厨日仅周日 9-21', ids(9, 0) === 'chefDay' && ids(9, 1) === '' && p.marketBoost(18, 0).restaurant === 3)
-  check('活动', '疯狂星期四仅周四 9-21（与夜市叠加 ×3）', ids(10, 4).includes('kfcThursday') && ids(10, 1) === '' && p.marketBoost(18, 4).restaurant === 3)
+  check('活动', '疯狂星期四仅周四 9-21（与夜市叠加 ×3）', ids(10, 4).includes('kfcThursday') && !ids(10, 1).includes('kfcThursday') && p.marketBoost(18, 4).restaurant === 3)
   // 经验链路：采集窗口加成
   const pg = freshPlayer({ foraging: 5 })
   const fg = getSkillInstance('foraging')
