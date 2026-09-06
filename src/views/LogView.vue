@@ -637,6 +637,7 @@ function scrollToTalesSeries(series) {
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'quest' }" @click="tab = 'quest'">任务</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'achieve' }" @click="tab = 'achieve'">成就（{{ unlockedIds.size }}/{{ ALL_ACHIEVEMENTS.length }}）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'log' }" @click="tab = 'log'">图鉴（{{ player.collectionPct }}%）</button>
+        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'cards' }" @click="tab = 'cards'">卡牌对战（{{ player.stats.cardBattle?.wins ?? 0 }}胜/{{ player.stats.cardBattle?.losses ?? 0 }}负）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'recipes' }" @click="tab = 'recipes'">配方手册</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'story' }" @click="tab = 'story'">📜故事</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'title' }" @click="tab = 'title'">称号</button>
@@ -753,7 +754,6 @@ function scrollToTalesSeries(series) {
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'items' }" @click="sub = 'items'">物品（{{ player.collectionPct }}%）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'boss' }" @click="sub = 'boss'">首领（{{ player.stats.bosses.length }}/{{ COMBAT_BOSSES.length }}）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'season' }" @click="sub = 'season'">赛季（{{ SEASONS.filter((s) => seasonClaimed(s) > 0).length }}/{{ SEASONS.length }}）</button>
-          <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'cards' }" @click="sub = 'cards'">卡牌对战（{{ player.stats.cardBattle?.wins ?? 0 }}胜/{{ player.stats.cardBattle?.losses ?? 0 }}负）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'prestige' }" @click="sub = 'prestige'">转生（{{ player.stats.prestiges ?? 0 }} 次）</button>
         </div>
 
@@ -896,9 +896,10 @@ function scrollToTalesSeries(series) {
             </div>
           </div>
         </template>
+      </template>
 
-        <!-- 卡牌对战（§13）：进入分类即直接展示对战面板（2026-09-06）-->
-        <template v-else>
+      <!-- 卡牌对战（§13）：图鉴页直属分类（2026-09-06）-->
+      <template v-else-if="tab === 'cards'">
           <h3 style="margin-top: 6px">
             卡牌收藏（获得过的料理、装备）· 点选 3 张组成卡组
           </h3>
@@ -930,7 +931,6 @@ function scrollToTalesSeries(series) {
             </template>
           </div>
         </template>
-      </template>
 
       <!-- ── 配方手册（§3.2：全部配方一览，含未解锁）── -->
       <template v-else-if="tab === 'recipes'">
