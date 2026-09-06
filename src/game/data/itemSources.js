@@ -17,7 +17,7 @@ import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './exp
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
 import { SHOP_ITEMS } from './shop.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
-import { getItem } from './items.js'
+import { getItem, ITEMS } from './items.js'
 import { COMBAT_BOSSES } from './combat.js'
 import { SEASONS } from './seasons.js'
 import { seasonTiers } from './seasonContent.js'
@@ -109,6 +109,20 @@ add('wood', '采摘附产物（8%）')
 add('copperOre', '挖掘附产物（6%）')
 add('fossil', '挖掘附产物（2%）')
 add('pheasantEgg', '狩猎野鸡附产物（15%）')
+
+// 觅珍抽卡（2026-09-06）：三池物品来源
+const MIJIAN_POOL_KINDS = {
+  material: ['ingredient', 'spice'],
+  food: ['food', 'drink'],
+  gear: ['equipment'],
+}
+for (const [pid, kinds] of Object.entries(MIJIAN_POOL_KINDS)) {
+  for (const [id, it] of Object.entries(ITEMS)) {
+    if (!kinds.includes(it.type)) continue
+    if (pid === 'material' && (it.category === 'mineral' || /矿$/.test(it.name))) continue
+    add(id, `觅珍·${pid === 'material' ? '材料池' : pid === 'food' ? '食物池' : '厨具池'}（抽卡）`)
+  }
+}
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {

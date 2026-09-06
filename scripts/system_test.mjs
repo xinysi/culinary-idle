@@ -932,7 +932,30 @@ console.log('══ W. 限时窗口活动 ══')
   pg.marketBoost = orig
 }
 
-// ── 汇总 ──────────────────────────────────────────
+// ── X. 觅珍抽卡（2026-09-06）──────────────────────
+console.log('══ X. 觅珍抽卡 ══')
+{
+  const p = freshPlayer()
+  p.gold = 100000
+  const r1 = p.drawMijian('material', 3)
+  check('觅珍', '材料池抽卡返回 3 件有效物品', r1.ok && r1.results.length === 3 && r1.results.every((it) => it && it.type && it.value > 0), JSON.stringify((r1.results ?? []).map((it) => it?.id)))
+  const r2 = p.drawMijian('food', 1)
+  check('觅珍', '食物池产出食物/饮品', r2.ok && r2.results.every((it) => ['food', 'drink'].includes(it?.type)), JSON.stringify((r2.results ?? []).map((it) => it?.id)))
+  const r3 = p.drawMijian('gear', 1)
+  const gearOk = r3.ok && r3.results.length === 1 && r3.results[0]?.type === 'equipment'
+  check('觅珍', '厨具池产出装备', gearOk, JSON.stringify((r3.results ?? []).map((it) => it?.id)))
+  check('觅珍', '金币扣费（300*3+300+500=1700）', p.gold === 100000 - 1700, `gold=${p.gold}`)
+  // 保底计数：连续抽 10 次厨具必出现稀有及以上（前置计数模拟）
+  p.mijian.pity = 9
+  const r4 = p.drawMijian('gear', 1)
+  const boosted = r4.boosted && ['稀有', '史诗', '传说', '神话'].includes(r4.results[0]?.quality)
+  check('觅珍', '保底第 10 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
+  check('觅珍', '保底后计数清零', p.mijian.pity === 0)
+  // 图鉴三查：抽卡来源
+  const { itemSources: src } = await import('../src/game/data/itemSources.js')
+  check('觅珍', '图鉴来源含觅珍（厨具池）', src('copperKnife').some((s) => s.includes('觅珍·厨具池')), JSON.stringify(src('copperKnife').slice(0, 3)))
+  check('觅珍', '图鉴来源含觅珍（材料池）', src('apple').some((s) => s.includes('觅珍·材料池')))
+}
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
