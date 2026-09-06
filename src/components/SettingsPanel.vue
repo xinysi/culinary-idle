@@ -24,6 +24,9 @@ function applyScale(pct) {
 function applyUiScale(v) {
   const el = document.documentElement
   el.style.zoom = v === 1 ? '' : String(v)
+  // 缩放档位标记：110% 网格减一列（与 App.vue 保持一致）
+  if (v === 1) delete el.dataset.scale
+  else el.dataset.scale = String(Math.round(v * 100))
 }
 // 打开面板时同步当前缩放
 applyUiScale(player.settings.uiScale ?? 1)
