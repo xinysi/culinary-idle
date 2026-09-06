@@ -12,6 +12,7 @@ import EquipmentModal from './components/EquipmentModal.vue'
 import SignInModal from './components/SignInModal.vue'
 import SearchModal from './components/SearchModal.vue'
 import EncounterModal from './components/EncounterModal.vue'
+import NewbieGuide from './components/NewbieGuide.vue'
 import { useUiStore } from './stores/ui.js'
 import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
@@ -59,8 +60,8 @@ const TOP_PAGES = [
     { label: '🤝公会', view: 'guild', onClick: () => ui.setView('guild') },
     { label: '🎪赛季', view: 'season', onClick: () => ui.setView('season'), dot: () => seasonDot.value },
     { label: '⚔️竞技场', view: 'arena', onClick: () => ui.setView('arena') },
-    { label: '🗼试炼塔', view: 'tower', onClick: () => ui.setView('tower') },
-    { label: '🏆大赛', view: 'fest', onClick: () => ui.setView('fest') },
+    { label: '🗼试炼塔', view: 'tower', onClick: () => ui.setView('tower'), dot: () => player.combatLevel >= 99 && (player.tower?.best ?? 0) === 0 },
+    { label: '🏆大赛', view: 'fest', onClick: () => ui.setView('fest'), dot: () => (player.fest?.todayEntries ?? 0) === 0 && (player.fest?.score ?? 0) < 1000 },
   ],
   [
     { label: '🛒商店', view: 'shop', onClick: () => ui.setView('shop') },
@@ -192,6 +193,9 @@ onMounted(() => {
             <button class="top-nav-btn" @click="ui.toggleSavePanel(true)">💾存档</button>
           </div>
         </nav>
+
+        <!-- 新手引导横幅（新档首日 5 步；达标自动推进/可跳过） -->
+        <NewbieGuide />
 
         <!-- 内容滚动区（独立滚动，导航不跟随） -->
         <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll">

@@ -12,11 +12,21 @@ const ui = useUiStore()
 const slots = ref(saveManager.listSlots())
 const refresh = () => {
   slots.value = saveManager.listSlots()
+  snapshots.value = saveManager.listSnapshots(currentSlot())
   refreshKey.value++
 }
 const refreshKey = ref(0)
 const fileInputs = ref({})
 const hardcoreChecked = ref(false) // 新建存档：硬核模式（§4.1/§8.2）
+// 自动快照（2026-09-06 档安全）：写档前自动备份旧档，3 份轮换，可回滚
+const snapshots = ref(saveManager.listSnapshots(currentSlot()))
+function restoreSnap(idx) {
+  if (!confirm(`确定将当前存档位回滚到快照（${fmtTime(snapshots.value.find((s) => s.idx === idx)?.savedAt)}）吗？\n当前进度会被覆盖。`)) return
+  if (saveManager.restoreSnapshot(currentSlot(), idx)) {
+    ui.pushLog('🛡 已从快照回滚，重新读取后生效', 'info')
+    refresh()
+  }
+}
 
 function totalLevelsOf(data) {
   if (!data?.player?.skills) return 0
@@ -125,6 +135,20 @@ function fmtTime(ts) {
 
       <p class="dim">当前玩家：{{ player.name }} · 金币 {{ player.gold.toLocaleString() }} · 总等级 {{ player.totalLevels }}</p>
       <p class="dim">提示：读取其他存档位会先自动保存当前进度；导出按钮导出当前存档位。</p>
+
+      <!-- 自动快照回滚（2026-09-06 档安全） -->
+      <div v-if="snapshots.length" class="snapshot-box">
+        <strong>🛡 自动快照（写档前自动备份，5 分钟节流，3 份轮换）</strong>
+        <div v-for="s in snapshots" :key="s.idx" class="snapshot-row">
+          <span class="mono dim">{{ fmtTime(s.savedAt) }}</span>
+          <button class="btn btn-sm" @click="restoreSnap(s.idx)">回滚到此快照</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.snapshot-box { margin-top: 10px; padding: 8px 10px; border: 1px dashed rgba(217, 90, 56, 0.3); border-radius: 8px; font-size: 12px; }
+.snapshot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+</style>
