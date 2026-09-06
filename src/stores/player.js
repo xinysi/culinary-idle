@@ -694,6 +694,14 @@ export const usePlayerStore = defineStore('player', {
       }
       return moved
     },
+    /** 一键入包：仓库全部物品（含装备/食灵）尽可能移回背包；返回移入种类数 */
+    moveAllToInventory() {
+      let moved = 0
+      for (const id of Object.keys(this.bank)) {
+        if ((this.bank[id] ?? 0) > 0 && this.moveToInventory(id, null)) moved++
+      }
+      return moved
+    },
     /** 一键出售全部「普通/精良」品质装备（低品质淘汰）；返回出售件数 */
     sellCommonEquipment() {
       let sold = 0

@@ -1090,6 +1090,32 @@ console.log('══ X. 觅珍抽卡 ══')
   check('觅珍', '图鉴来源含觅珍（厨具池）', src('copperKnife').some((s) => s.includes('觅珍·厨具池')), JSON.stringify(src('copperKnife').slice(0, 3)))
   check('觅珍', '图鉴来源含觅珍（材料池）', src('apple').some((s) => s.includes('觅珍·材料池')))
 }
+
+// ── C10. 一键入包（2026-09-06）──
+console.log('══ C10. 一键入包 ══')
+{
+  const p = freshPlayer({})
+  p.gainItem('apple', 5)
+  p.gainItem('ironKnife', 1)
+  const moved = p.moveAllToBank()
+  check('存取', '一键入仓（背包→仓库，装备跳过）', moved === 1 && (p.bank.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1)
+  const back = p.moveAllToInventory()
+  check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
+
+// ── C10. 一键入包（2026-09-06）──
+console.log('══ C10. 一键入包 ══')
+{
+  const p = freshPlayer({})
+  p.gainItem('apple', 5)
+  p.gainItem('ironKnife', 1)
+  // 全部移入仓库（含装备）
+  const moved = p.moveAllToBank()
+  check('存取', '一键入仓（背包→仓库，装备跳过）', moved === 1 && (p.bank.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1)
+  const back = p.moveAllToInventory()
+  check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
+}
