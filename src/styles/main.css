@@ -228,7 +228,8 @@ body {
   min-width: 0;
 }
 .bottom-nav-col:first-child {
-  flex: 0 0 auto; /* 左侧角色状态内容少，占窄 */
+  flex: 0 1 auto; /* 放大时可收缩（2026-09-06：与顶部导航同策略） */
+  min-width: 0;
 }
 .bottom-nav-col:last-child {
   flex: 1 1 auto; /* 右侧装备内容多，占宽 */
@@ -242,6 +243,8 @@ body {
   display: flex;
   gap: 18px;
   align-items: center;
+  flex-wrap: nowrap; /* 放大时保持单行，溢出交给容器 */
+  overflow: hidden;
 }
 .bottom-nav-stat {
   display: flex;
@@ -263,7 +266,7 @@ body {
 }
 .bottom-nav-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0, 1fr)); /* 可收缩列：放大时不撑破单行（2026-09-06） */
   gap: 3px 10px;
 }
 .bottom-nav-slot {
@@ -272,6 +275,7 @@ body {
   gap: 8px;
   font-size: 12px;
   white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -3839,3 +3843,7 @@ html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); c
 
 /* 顶部导航单行（2026-09-06）：隐藏自身横向滚动条 */
 .top-nav::-webkit-scrollbar { display: none; }
+
+/* 底部状态栏单行（2026-09-06）：隐藏横向滚动条；装备名超长省略 */
+.bottom-nav::-webkit-scrollbar { display: none; }
+.bottom-nav-slot span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
