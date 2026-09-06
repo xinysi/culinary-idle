@@ -118,7 +118,7 @@ function typeLabel(id) {
 </script>
 
 <template>
-  <div class="combat-view mijian-view">
+  <div class="combat-view mijian-view" :class="`pool-${activePool}`">
     <header class="skill-head">
       <div>
         <h2>🎴 觅珍</h2>
@@ -374,7 +374,21 @@ function typeLabel(id) {
 .pool-banner-title b { color: var(--tth, #8a5a12); }
 .pool-banner-pity .pill { color: var(--tth, #8a5a12); border-color: rgba(var(--tsh2, 217, 138, 43), 0.6); }
 .gacha-hold { color: rgba(var(--tsh1, 150, 110, 70), 0.95); font-weight: 600; }
-.gacha-hold .mono { color: var(--ttl, #c8860a); font-weight: 800; }
+.gacha-hold .mono {
+  color: var(--ttl, #c8860a);
+  font-weight: 800;
+  font-size: 1.25em;
+  text-shadow: 0 0 10px rgba(var(--tsh2, 249, 212, 35), 0.45);
+}
+/* 顶部统计（已抽 N 次 · X 金）随池主题 */
+.mijian-view .season-pts-card .dim { color: rgba(var(--tsh1, 150, 110, 70), 0.9); }
+.mijian-view .season-pts-card strong {
+  color: rgb(var(--tsh2, 249, 212, 35));
+  font-size: 1.2em;
+  text-shadow: 0 0 8px rgba(var(--tsh2, 249, 212, 35), 0.35);
+}
+:global([data-theme='dark']) .mijian-view .season-pts-card .dim { color: rgba(var(--tsh2, 232, 220, 203), 0.85); }
+:global([data-theme='dark']) .mijian-view .season-pts-card strong { color: rgb(var(--tsh2, 232, 180, 95)); }
 :global([data-theme='dark']) .pool-banner-title b { color: rgb(var(--tsh2, 232, 180, 95)); }
 :global([data-theme='dark']) .pool-banner-pity .pill { color: rgb(var(--tsh2, 232, 180, 95)); border-color: rgba(var(--tsh2, 232, 180, 95), 0.55); }
 :global([data-theme='dark']) .gacha-hold { color: rgb(var(--tsh2, 232, 220, 203)); }
