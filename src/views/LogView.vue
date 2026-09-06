@@ -42,7 +42,7 @@ const aPage = ref(1)
 const itemPage = ref(1)
 const seasonPage = ref(1)
 const quirkPage = ref(1)
-const PAGE = { quest: 24, achieve: 24, items: 28, season: 20, quirk: 24 } // 6/6/7/5/6 列 × 4 行
+const PAGE = { quest: 24, achieve: 24, items: 28, season: 20, quirk: 24, cards: 40 } // 6/6/7/5/6/8 列 × 4 行
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -177,6 +177,32 @@ const battleResult = ref(null)
 const cardDiff = ref('normal') // 难度：休闲/标准/挑战（AI 战力与奖励倍率）
 const battleReward = ref(null) // 结算明细 { reward, dailyBonus, firstBonus }
 const cardPool = computed(() => cardPoolFrom(player.collected))
+// 卡池管理（2026-09-06）：搜索 + 类型筛选 + 分页，防止卡牌过多时全量渲染
+const cardQuery = ref('')
+const cardCat = ref('all')
+const cardPage = ref(1)
+const filteredPool = computed(() => {
+  const q = cardQuery.value.trim().toLowerCase()
+  return cardPool.value.filter((id) => {
+    const it = getItem(id)
+    if (cardCat.value === 'food' && it?.type !== 'food') return false
+    if (cardCat.value === 'equipment' && it?.type !== 'equipment') return false
+    if (q && !(it?.name ?? '').toLowerCase().includes(q)) return false
+    return true
+  })
+})
+const cardPages = computed(() => Math.max(1, Math.ceil(filteredPool.value.length / PAGE.cards)))
+const pagedCards = computed(() => {
+  const p = Math.min(cardPage.value, cardPages.value)
+  const arr = filteredPool.value.slice((p - 1) * PAGE.cards, p * PAGE.cards)
+  while (arr.length < PAGE.cards) arr.push({ _pad: true })
+  return arr
+})
+watch([cardQuery, cardCat], () => { cardPage.value = 1 })
+/** 一键最强：自动选择当前筛选结果中战力前 3 */
+function pickBest() {
+  selectedCards.value = filteredPool.value.slice(0, 3)
+}
 function cardColor(id) { return cardColorFor(id) }
 function cardStrengthText(id) { return Math.round(cardStrengthOf(id)) }
 function toggleCard(id) {
@@ -881,10 +907,19 @@ function scrollToTalesSeries(series) {
               @click="cardDiff = key"
             >{{ d.label }}（AI ×{{ d.aiMult }} · 奖励 ×{{ d.rewardMult }}）</button>
           </div>
+          <div class="cb-filter-bar">
+            <input v-model="cardQuery" class="cb-filter-input" type="text" placeholder="🔍 搜索卡牌名称…" />
+            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'all' }" @click="cardCat = 'all'">全部</button>
+            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'food' }" @click="cardCat = 'food'">🍽 料理</button>
+            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'equipment' }" @click="cardCat = 'equipment'">⚒ 装备</button>
+            <span class="dim mono" style="margin-left: auto">{{ filteredPool.length }} 张</span>
+            <button class="btn btn-sm" title="自动选择战力最高的前 3 张" :disabled="!filteredPool.length" @click="pickBest">✨ 一键最强</button>
+          </div>
           <div class="card-grid">
             <div
-              v-for="id in cardPool"
-              :key="id"
+              v-for="(id, ii) in pagedCards"
+              :key="id?.id ?? 'pad-' + ii"
+              v-if="!id?._pad"
               class="item-card cb-card"
               :style="{ borderColor: cardColor(id) }"
               :class="{ selected: selectedCards.includes(id) }"
@@ -900,6 +935,10 @@ function scrollToTalesSeries(series) {
               <div class="mono dim">T{{ getItem(id)?.tier }}</div>
             </div>
             <p v-if="!cardPool.length" class="dim" style="grid-column: 1 / -1">还没有收集到料理/装备，去制作或获得吧。</p>
+            <p v-else-if="!filteredPool.length" class="dim" style="grid-column: 1 / -1">没有符合搜索/筛选的卡牌。</p>
+          </div>
+          <div style="display: flex; justify-content: center; margin-top: 8px">
+            <Pagination v-if="cardPages > 1" :current="Math.min(cardPage, cardPages)" :pages="cardPages" @update:current="(p) => (cardPage = p)" />
           </div>
           <div class="card cb-battle-panel">
             <div class="cb-battle-head">
