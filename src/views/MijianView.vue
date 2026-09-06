@@ -349,25 +349,25 @@ function typeLabel(id) {
 .gacha-btn:active { transform: translateY(0) scale(0.98); }
 .gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
 .gacha-btn-main {
-  --sh1: 154, 84, 227; /* 流光光带：紫金原色系（非白非彩） */
-  --sh2: 234, 176, 74; /* 光带中心：金色亮端 */
-  --shd: 96, 48, 164;  /* 流光暗斑：紫色深端 */
+  --sh1: 230, 92, 0;   /* 流光光带：橙黄原色系 */
+  --sh2: 249, 212, 35; /* 光带中心：黄色亮端 */
+  --shd: 176, 64, 0;   /* 流光暗斑：深橙 */
   min-width: 300px;
   font-size: 19px;
-  background: linear-gradient(135deg, #7a3ec2, #eab04a);
+  background: linear-gradient(135deg, #e65c00, #f9d423);
 
-  box-shadow: 0 0 22px rgba(138, 84, 200, 0.5);
+  box-shadow: 0 0 22px rgba(233, 132, 0, 0.45);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
-  --sh1: 255, 196, 74;
-  --sh2: 255, 212, 92;
-  --shd: 230, 155, 40;
+  --sh1: 53, 185, 245;  /* 流光光带：青蓝紫原色系 */
+  --sh2: 118, 222, 255; /* 光带中心：亮青 */
+  --shd: 88, 78, 172;   /* 流光暗斑：蓝紫深端 */
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, #ffc247, #e69b28);
+  background: linear-gradient(135deg, #22e1ff 0%, #1d8fe1 48%, #625eb1 100%);
 
-  box-shadow: 0 4px 14px rgba(226, 169, 63, 0.35);
+  box-shadow: 0 4px 14px rgba(45, 150, 220, 0.4);
 }
 .gacha-btn-tag {
   font-style: normal; font-size: 11px; font-weight: 800;
@@ -377,8 +377,8 @@ function typeLabel(id) {
 .gacha-btn-price { font-size: 13px; font-weight: 600; opacity: 0.92; }
 
 @keyframes gachaPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(150, 96, 215, 0.35); }
-  50% { box-shadow: 0 0 30px rgba(180, 120, 235, 0.6); }
+  0%, 100% { box-shadow: 0 0 16px rgba(233, 132, 0, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(255, 190, 50, 0.6); }
 }
 @media (max-width: 719px) {
   .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
@@ -474,16 +474,16 @@ function typeLabel(id) {
 
 /* 百连按钮（黑金限定风） */
 .gacha-btn-bulk {
-  --sh1: 178, 122, 72;
-  --sh2: 206, 148, 92;
-  --shd: 112, 72, 40;
+  --sh1: 140, 92, 42;
+  --sh2: 176, 122, 56;
+  --shd: 66, 40, 18;
   min-width: 300px;
   font-size: 16px;
   color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
-  background: linear-gradient(120deg, #704828, #a06836);
+  background: linear-gradient(120deg, #4a2c14, #7a5024);
 
-  box-shadow: 0 0 18px rgba(226, 169, 63, 0.35);
+  box-shadow: 0 0 18px rgba(200, 140, 60, 0.3);
 }
 .gacha-btn-bulk:disabled { filter: grayscale(0.7) brightness(0.72); }
 @media (max-width: 719px) {
