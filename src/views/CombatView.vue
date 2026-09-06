@@ -205,7 +205,7 @@ function buffText() {
         <h3>属性面板</h3>
         <div class="stat-row">
           <div class="stat"><div class="stat-num mono">{{ combatLevel }}</div><div class="stat-label">对决等级</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.maxHp }}</div><div class="stat-label">最大品鉴值</div></div>
+          <div class="stat"><div class="stat-num mono">{{ pStats.maxHp.toFixed(2) }}</div><div class="stat-label">最大品鉴值</div></div>
           <div class="stat"><div class="stat-num mono">{{ pStats.attack.toFixed(2) }}</div><div class="stat-label">攻击伤害</div></div>
           <div class="stat"><div class="stat-num mono">{{ pStats.accuracy.toFixed(2) }}</div><div class="stat-label">准确率</div></div>
           <div class="stat"><div class="stat-num mono">{{ pStats.defense.toFixed(2) }}</div><div class="stat-label">防御力</div></div>
