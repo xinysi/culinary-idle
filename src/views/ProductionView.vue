@@ -202,6 +202,27 @@ const treeRecipe = ref(null)
 function openTree(r) {
   treeRecipe.value = { ...r, skillId: props.instance.id }
 }
+const flashCard = ref(null) // { recipeId }：跳转后高亮闪烁
+function sectionLabelOf(reqLevel) {
+  const start = Math.floor((reqLevel - 1) / 5) * 5 + 1
+  return `${start}-${start + 4}`
+}
+function goTree(skillId) {
+  const target = treeRecipe.value
+  treeRecipe.value = null
+  if (!target) return
+  if (skillId === props.instance.id) {
+    // 同技能：「去做」= 展开所在等级段 + 滚动到该配方卡 + 闪烁高亮
+    const sec = sectionLabelOf(target.reqLevel)
+    if (!isOpen(sec)) toggleSection(sec)
+    scrollToSection(sec)
+    flashCard.value = { recipeId: target.id }
+    setTimeout(() => { flashCard.value = null }, 1800)
+  } else {
+    player.setActiveSkill(skillId)
+    ui.setView('skill')
+  }
+}
 
 // ── 卡片式分段（按 reqLevel 每 5 级一段，可折叠）──
 const sections = computed(() => {
@@ -380,7 +401,7 @@ function scrollToSection(label) {
             :key="r.id"
             v-tilt
             class="gather-card"
-            :class="{ locked: player.skillState(instance.id).level < r.reqLevel }"
+            :class="{ locked: player.skillState(instance.id).level < r.reqLevel, flash: flashCard?.recipeId === r.id }"
           >
             <div class="gather-card-head">
               <ItemImg :item-id="r.output.itemId" />
@@ -432,7 +453,7 @@ function scrollToSection(label) {
       @close="craftTarget = null"
       @confirm="doCraftBatch"
     />
-    <RecipeTreeModal v-if="treeRecipe" :recipe="treeRecipe" :player="player" @close="treeRecipe = null" />
+    <RecipeTreeModal v-if="treeRecipe" :recipe="treeRecipe" :player="player" @close="treeRecipe = null" @jump="goTree" />
   </div>
 </template>
 
@@ -452,4 +473,10 @@ function scrollToSection(label) {
 .queue-item .queue-paused { color: var(--bad-strong); font-size: 12px; font-weight: 700; }
 .queue-rm { margin-left: auto; }
 .queue-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+/* 配方树「去做」后的卡片高亮闪烁 */
+@keyframes recipeFlash {
+  0%, 100% { box-shadow: 0 0 0 rgba(217, 138, 43, 0); }
+  50% { box-shadow: 0 0 20px rgba(217, 138, 43, 0.85); }
+}
+.gather-card.flash { animation: recipeFlash 0.8s ease-in-out 2; }
 </style>
