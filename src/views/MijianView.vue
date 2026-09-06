@@ -15,7 +15,7 @@ const activePool = ref('material')
 const pool = computed(() => MIJIAN_POOLS.find((p) => p.id === activePool.value))
 // 抽卡背景：当前池的物品图轮播（双份列表无缝循环，低透明+模糊）
 const bgItems = computed(() => {
-  const list = poolPreview(activePool.value, 14)
+  const list = poolPreview(activePool.value, 20)
   return [...list, ...list] // 双份 → translateX(-50%) 无痕循环
 })
 const results = ref([]) // 最近一次抽卡结果 [{id, rare}]
@@ -111,30 +111,39 @@ function rarityClass(id) {
 </template>
 
 <style scoped>
-/* 抽卡舞台：卡内物品图轮播背景（随池切换图源），半透明透出页面底图 */
+/* 抽卡舞台：卡内物品图轮播背景（随池切换图源）——舞台加高居中，背景明显可见 */
 .mijian-stage {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 251, 244, 0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 251, 244, 0.35);
 }
 .mijian-bg {
   position: absolute; inset: 0;
   overflow: hidden; pointer-events: none;
 }
 .mijian-bg-track {
-  display: flex; align-items: center; gap: 26px;
+  display: flex; align-items: center; gap: 34px;
   width: max-content;
-  height: 100%;
-  animation: mijianScroll 110s linear infinite;
+  height: 240px;
+  animation: mijianScroll 90s linear infinite;
 }
 .mijian-bg-track img {
-  width: 78px; height: 78px;
+  width: 104px; height: 104px;
   object-fit: contain; flex-shrink: 0;
-  opacity: 0.28; filter: blur(0.6px);
+  opacity: 0.42; filter: blur(0.3px);
 }
-.mijian-stage-body { position: relative; z-index: 1; }
+.mijian-stage-body {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+.mijian-stage-body .region-tabs { justify-content: center; }
+.mijian-results { justify-content: center; }
 @keyframes mijianScroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -142,7 +151,7 @@ function rarityClass(id) {
 @media (prefers-reduced-motion: reduce) {
   .mijian-bg-track { animation: none; }
 }
-:global([data-theme='dark']) .mijian-stage { background: rgba(44, 31, 22, 0.6); }
+:global([data-theme='dark']) .mijian-stage { background: rgba(44, 31, 22, 0.55); }
 .mijian-results { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .mijian-card {
   width: 108px; padding: 10px 8px; text-align: center;
