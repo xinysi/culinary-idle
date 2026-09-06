@@ -3958,3 +3958,23 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .puzzle-cell { position: relative; }
 .puzzle-goal-label { font-size: 12px; font-weight: 700; margin-bottom: 8px; text-align: center; color: var(--primary-strong); }
 .puzzle-board-play { margin-top: 10px; }
+
+/* ── 小游戏「中央舞台」统一排版（2026-09-06，参考小游戏 UI 范式：上状态/中舞台/下按钮 + 限宽居中）── */
+.game-stage { max-width: 560px; width: 100%; margin: 0 auto; }
+/* 舞台内容：关键元素限宽居中 */
+.heat-track, .puzzle-board, .match-board, .g2048-board { margin-left: auto; margin-right: auto; }
+.heat-track { max-width: 420px; }
+.puzzle-board { max-width: 300px; }
+.puzzle-goal { max-width: 300px; }
+.match-board { max-width: 360px; }
+.g2048-board { max-width: 340px; }
+/* 说明行：收紧居中（信息预算） */
+.game-stage p.dim { max-width: 520px; margin-left: auto; margin-right: auto; }
+/* 讲堂：题目居中、选项等宽两列 */
+.trivia-q { text-align: center; font-size: 16px; }
+.trivia-progress { max-width: 420px; margin-left: auto; margin-right: auto; }
+.trivia-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 420px; margin: 0 auto; }
+.trivia-opt { min-width: 0; padding: 8px 10px; }
+/* 控制组：等宽居中 */
+.game-stage .heat-actions, .game-stage .g2048-controls { justify-content: center; }
+.rush-stage .rush-counter { margin-top: 6px; }

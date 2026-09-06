@@ -86,7 +86,7 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
       </div>
     </header>
 
-    <div class="card rush-stage">
+    <div class="card game-stage rush-stage">
       <div class="rush-counter">
         <span class="mono rush-bowls">{{ bowls }}</span>
         <span class="dim">碗 · 剩余 <b class="mono">{{ REMAIN }}</b> 秒</span>
