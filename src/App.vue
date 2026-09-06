@@ -36,6 +36,7 @@ const ArenaView = defineAsyncComponent(() => import('./views/ArenaView.vue'))
 const GuideView = defineAsyncComponent(() => import('./views/GuideView.vue'))
 const TowerView = defineAsyncComponent(() => import('./views/TowerView.vue'))
 const FestView = defineAsyncComponent(() => import('./views/FestView.vue'))
+const MijianView = defineAsyncComponent(() => import('./views/MijianView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -78,6 +79,7 @@ const TOP_PAGES = [
     { label: '⚔️竞技场', view: 'arena', onClick: () => ui.setView('arena') },
     { label: '🗼试炼塔', view: 'tower', onClick: () => ui.setView('tower'), dot: () => player.combatLevel >= 99 && (player.tower?.best ?? 0) === 0 },
     { label: '🏆大赛', view: 'fest', onClick: () => ui.setView('fest'), dot: () => (player.fest?.todayEntries ?? 0) === 0 && (player.fest?.score ?? 0) < 1000 },
+    { label: '🎴觅珍', view: 'mijian', onClick: () => ui.setView('mijian') },
   ],
   [
     { label: '🛒商店', view: 'shop', onClick: () => ui.setView('shop') },
@@ -239,6 +241,7 @@ onMounted(() => {
           <ArenaView v-else-if="ui.activeView === 'arena'" />
           <TowerView v-else-if="ui.activeView === 'tower'" />
           <FestView v-else-if="ui.activeView === 'fest'" />
+          <MijianView v-else-if="ui.activeView === 'mijian'" />
           <GuideView v-else-if="ui.activeView === 'guide'" />
           <SkillView v-else />
         </div>

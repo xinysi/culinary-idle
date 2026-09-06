@@ -27,6 +27,7 @@ import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/bat
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
+import { MIJIAN_POOLS, pickItem, GEAR_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
@@ -170,6 +171,8 @@ export const usePlayerStore = defineStore('player', {
     guide: { step: 0, done: false },
     // 锻造套装集齐奖励（2026-09-06）：已发奖套名列表
     setBonuses: [],
+    // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）
+    mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -408,6 +411,7 @@ export const usePlayerStore = defineStore('player', {
         hardcoreStats: { days: 0, best: 0, lastDayKey: null },
         guide: { step: 0, done: false },
         setBonuses: [],
+        mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
       })
     },
 
@@ -462,6 +466,7 @@ export const usePlayerStore = defineStore('player', {
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
         guide: saved.guide ?? { step: 0, done: false },
         setBonuses: saved.setBonuses ?? [],
+        mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0 },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -512,6 +517,7 @@ export const usePlayerStore = defineStore('player', {
         hardcoreStats: this.hardcoreStats,
         guide: this.guide,
         setBonuses: this.setBonuses,
+        mijian: this.mijian,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -1426,6 +1432,44 @@ export const usePlayerStore = defineStore('player', {
       }
       if (awarded > 0) this.setBonuses = list
       return awarded
+    },
+
+    // ── 觅珍抽卡（2026-09-06）──
+    /** 抽卡：poolId（material/food/gear）× count 次；扣金币 → 入库 → 返回结果 */
+    drawMijian(poolId, count = 1) {
+      const def = MIJIAN_POOLS.find((p) => p.id === poolId)
+      if (!def || !(count >= 1)) return null
+      const cost = def.price * count
+      if (!this.spendGold(cost)) return { ok: false, msg: `金币不足（需 ${cost}）` }
+      const results = []
+      let boosted = false
+      for (let i = 0; i < count; i++) {
+        const isGear = poolId === 'gear'
+        const { item, boosted: b } = pickItem(poolId, Math.random, isGear ? this.mijian.pity : 0)
+        if (isGear) {
+          if (item?.quality === '稀有' || item?.quality === '史诗' || item?.quality === '传说' || item?.quality === '神话') {
+            this.mijian.pity = 0
+            this.mijian.stats.gearRare++
+          } else {
+            this.mijian.pity++
+          }
+        }
+        results.push(item)
+        if (b) boosted = true
+      }
+      // 入库（背包满时逐件返回 false，不阻塞后续）
+      const got = []
+      for (const it of results) {
+        if (it && this.gainItem(it.id, 1)) got.push(it.id)
+      }
+      this.mijian.stats.pulls += count
+      this.mijian.stats.spent += cost
+      EventBus.emit('mijian:draw', { poolId, count, boosted })
+      return { ok: true, results, got, boosted }
+    },
+    /** 厨具池保底进度（N/10） */
+    mijianPity() {
+      return { current: this.mijian?.pity ?? 0, need: GEAR_PITY }
     },
 
     // ── 餐厅好感（2026-09-06）──
