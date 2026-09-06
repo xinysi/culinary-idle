@@ -799,9 +799,9 @@ export const usePlayerStore = defineStore('player', {
       if (old) this.gainItem(old, 1)
       this.equipment[slot] = itemId
       // 词条：换穿不同装备 → 重新掷词条；同件保留原词条（含洗练结果）
+      if (!this.gearMods) this.gearMods = {}
       const cur = this.gearMods[slot]
       if (!cur || cur.itemId !== itemId) {
-        if (!this.gearMods) this.gearMods = {}
         this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
       }
       return true
@@ -1118,6 +1118,11 @@ export const usePlayerStore = defineStore('player', {
         }
       }
       if (this.orders.list.length >= MAX_ORDERS) return
+      // 首次进入/旧档：设定下一个到访时刻（避免 nextAt=0 → 进游戏 1 秒内就来单）
+      if (this.orders.nextAt <= 0) {
+        this.orders.nextAt = now + nextOrderDelay()
+        return
+      }
       this._orderAccum = (this._orderAccum ?? 0) + deltaMs
       if (this._orderAccum < 1000) return
       this._orderAccum = 0
