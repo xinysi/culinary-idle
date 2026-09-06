@@ -349,27 +349,21 @@ function typeLabel(id) {
 .gacha-btn:active { transform: translateY(0) scale(0.98); }
 .gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
 .gacha-btn-main {
+  --sh1: 255, 196, 74; /* 流光光带：按钮原色系（非白非彩） */
+  --sh2: 255, 212, 92; /* 光带中心：原色亮端 */
   min-width: 300px;
   font-size: 19px;
-  background-image:
-    linear-gradient(90deg, rgba(255,194,71,0) 0%, rgba(255,194,71,0.4) 18%, rgba(230,155,40,0.6) 50%, rgba(255,194,71,0.4) 82%, rgba(255,194,71,0) 100%),
-    linear-gradient(135deg, #ffc247, #e69b28);
-  background-size: 200% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: repeat, no-repeat;
+  background: linear-gradient(135deg, #ffc247, #e69b28);
 
   box-shadow: 0 0 22px rgba(226, 169, 63, 0.5);
   animation: gachaPulse 2.2s ease-in-out infinite;
 }
 .gacha-btn-sub {
+  --sh1: 248, 130, 74;
+  --sh2: 255, 152, 100;
   min-width: 210px;
   font-size: 15px;
-  background-image:
-    linear-gradient(90deg, rgba(242,124,69,0) 0%, rgba(242,124,69,0.4) 18%, rgba(216,92,44,0.6) 50%, rgba(242,124,69,0.4) 82%, rgba(242,124,69,0) 100%),
-    linear-gradient(135deg, #f27c45, #d85c2c);
-  background-size: 200% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: repeat, no-repeat;
+  background: linear-gradient(135deg, #f27c45, #d85c2c);
 
   box-shadow: 0 4px 14px rgba(184, 68, 42, 0.35);
 }
@@ -478,16 +472,13 @@ function typeLabel(id) {
 
 /* 百连按钮（黑金限定风） */
 .gacha-btn-bulk {
+  --sh1: 178, 122, 72;
+  --sh2: 206, 148, 92;
   min-width: 300px;
   font-size: 16px;
   color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
-  background-image:
-    linear-gradient(90deg, rgba(160,104,54,0) 0%, rgba(160,104,54,0.45) 18%, rgba(160,104,54,0.7) 50%, rgba(160,104,54,0.45) 82%, rgba(160,104,54,0) 100%),
-    linear-gradient(120deg, #704828, #a06836);
-  background-size: 200% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: repeat, no-repeat;
+  background: linear-gradient(120deg, #704828, #a06836);
 
   box-shadow: 0 0 18px rgba(226, 169, 63, 0.35);
 }
@@ -502,16 +493,13 @@ function typeLabel(id) {
   gap: 16px; margin-top: 12px; font-size: 12px; flex-wrap: wrap;
 }
 .gacha-sim .sim-btn {
+  --sh1: 118, 190, 104;
+  --sh2: 136, 206, 118;
   position: relative; overflow: hidden;
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
   border: none; border-radius: 12px;
-  background-image:
-    linear-gradient(90deg, rgba(114,184,100,0) 0%, rgba(114,184,100,0.4) 18%, rgba(88,156,75,0.6) 50%, rgba(114,184,100,0.4) 82%, rgba(114,184,100,0) 100%),
-    linear-gradient(135deg, #72b864, #589c4b);
-  background-size: 200% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: repeat, no-repeat;
+  background: linear-gradient(135deg, #72b864, #589c4b);
 
   box-shadow: 0 3px 10px rgba(95, 165, 66, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
@@ -525,25 +513,51 @@ function typeLabel(id) {
 .sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn {
-  background-image:
-    linear-gradient(90deg, rgba(95,156,80,0) 0%, rgba(95,156,80,0.4) 18%, rgba(74,127,62,0.6) 50%, rgba(95,156,80,0.4) 82%, rgba(95,156,80,0) 100%),
-    linear-gradient(135deg, #5f9c50, #4a7f3e);
-  background-size: 200% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: repeat, no-repeat;
+  --sh1: 100, 166, 84;
+  --sh2: 118, 186, 100;
+  background: linear-gradient(135deg, #5f9c50, #4a7f3e);
   box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4);
 }
 
 
 
-/* 统计页同款流光（按钮）：底色静止 + 按钮原色柔光带 200%→0 平移扫过 */
-@keyframes gachaGlowFlow {
-  from { background-position: 200% 0, 0 0; }
-  to { background-position: 0 0, 0 0; }
+/* 流光：斜切光带扫过（业界 shimmer 扫光做法）——按钮原色、ease-in-out 缓动、双层追逐 */
+.gacha-btn::before,
+.gacha-btn::after,
+.gacha-sim .sim-btn::before,
+.gacha-sim .sim-btn::after {
+  content: '';
+  position: absolute;
+  top: -30%; bottom: -30%;
+  left: -70%;
+  width: 55%;
+  background: linear-gradient(90deg,
+    rgba(var(--sh1), 0) 0%,
+    rgba(var(--sh1), 0.38) 22%,
+    rgba(var(--sh2), 0.55) 50%,
+    rgba(var(--sh1), 0.38) 78%,
+    rgba(var(--sh1), 0) 100%);
+  transform: skewX(-24deg) translateX(0);
+  animation: gachaShine 3s ease-in-out infinite;
+  pointer-events: none;
+  will-change: transform;
 }
-.gacha-btn, .gacha-sim .sim-btn { animation: gachaGlowFlow 4s linear infinite; }
+.gacha-btn::after,
+.gacha-sim .sim-btn::after {
+  width: 34%;
+  animation-delay: 1.5s; /* 第二道光带滞后 1.5s，形成追逐 */
+  opacity: 0.75;
+}
+@keyframes gachaShine {
+  0% { transform: skewX(-24deg) translateX(0); }
+  100% { transform: skewX(-24deg) translateX(340%); }
+}
+/* 按钮文字浮于光带之上 */
+.gacha-btn > *,
+.gacha-sim .sim-btn > * { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
-  .gacha-btn, .gacha-sim .sim-btn { animation: none; }
+  .gacha-btn::before, .gacha-btn::after,
+  .gacha-sim .sim-btn::before, .gacha-sim .sim-btn::after { animation: none; }
 }
 
 </style>
