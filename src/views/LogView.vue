@@ -164,7 +164,7 @@ function seasonClaimed(s) {
 }
 
 // ── 图鉴卡牌化（§13）──
-const showBattle = ref(false)
+const showBattle = ref(true) // 卡牌对战分类：进入即直接展示对战面板（2026-09-06）
 const selectedCards = ref([])
 const battleResult = ref(null)
 
@@ -753,7 +753,7 @@ function scrollToTalesSeries(series) {
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'items' }" @click="sub = 'items'">物品（{{ player.collectionPct }}%）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'boss' }" @click="sub = 'boss'">首领（{{ player.stats.bosses.length }}/{{ COMBAT_BOSSES.length }}）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'season' }" @click="sub = 'season'">赛季（{{ SEASONS.filter((s) => seasonClaimed(s) > 0).length }}/{{ SEASONS.length }}）</button>
-          <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'cards' }" @click="sub = 'cards'">卡牌对战</button>
+          <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'cards' }" @click="sub = 'cards'">卡牌对战（{{ player.stats.cardBattle?.wins ?? 0 }}胜/{{ player.stats.cardBattle?.losses ?? 0 }}负）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'prestige' }" @click="sub = 'prestige'">转生（{{ player.stats.prestiges ?? 0 }} 次）</button>
         </div>
 
@@ -897,11 +897,10 @@ function scrollToTalesSeries(series) {
           </div>
         </template>
 
-        <!-- 卡牌对战（§13）-->
+        <!-- 卡牌对战（§13）：进入分类即直接展示对战面板（2026-09-06）-->
         <template v-else>
           <h3 style="margin-top: 6px">
-            卡牌收藏（获得过的料理、装备）
-            <button class="btn btn-sm" @click="showBattle = !showBattle">{{ showBattle ? '收起' : '挑战' }}</button>
+            卡牌收藏（获得过的料理、装备）· 点选 3 张组成卡组
           </h3>
           <div class="card-grid">
             <div
