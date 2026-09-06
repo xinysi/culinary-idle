@@ -75,75 +75,69 @@ function rarityClass(id) {
       </template>
     </div>
 
-    <!-- 操作与结果（抽卡舞台：内部轮播图背景，半透明透出页面底图） -->
-    <div class="card mijian-stage">
+    <!-- 抽卡轮播条：白色背景框，物品图在抽卡按钮上方滚动 -->
+    <div class="card mijian-carousel">
       <div class="mijian-bg" aria-hidden="true">
         <div class="mijian-bg-track">
           <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
         </div>
       </div>
-      <div class="mijian-stage-body">
-        <div class="region-tabs">
-          <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price" @click="draw(1)">🎴 单抽（{{ pool.price }} 金）</button>
-          <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price * 10" @click="draw(10)">🎴🎴 十连（{{ pool.price * 10 }} 金）</button>
-          <span class="dim" style="margin-left: auto">持有金币 <span class="mono">{{ player.gold.toLocaleString() }}</span></span>
-        </div>
+    </div>
 
-        <div v-if="results.length" class="mijian-results">
-          <div
-            v-for="(r, i) in results"
-            :key="r.id + '-' + i"
-            class="mijian-card"
-            :class="[rarityClass(r.id), { dazzle: r.rare }]"
-            :style="{ animationDelay: (i * 0.05) + 's' }"
-          >
-            <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
-            <div class="mijian-name">{{ getItem(r.id)?.name }}</div>
-            <div class="dim mono" style="font-size: 11px">
-              {{ getItem(r.id)?.type === 'equipment' ? (getItem(r.id)?.quality ?? '') : 'T' + (getItem(r.id)?.tier ?? '') }}
-            </div>
+    <!-- 操作与结果 -->
+    <div class="card">
+      <div class="region-tabs">
+        <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price" @click="draw(1)">🎴 单抽（{{ pool.price }} 金）</button>
+        <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price * 10" @click="draw(10)">🎴🎴 十连（{{ pool.price * 10 }} 金）</button>
+        <span class="dim" style="margin-left: auto">持有金币 <span class="mono">{{ player.gold.toLocaleString() }}</span></span>
+      </div>
+
+      <div v-if="results.length" class="mijian-results">
+        <div
+          v-for="(r, i) in results"
+          :key="r.id + '-' + i"
+          class="mijian-card"
+          :class="[rarityClass(r.id), { dazzle: r.rare }]"
+          :style="{ animationDelay: (i * 0.05) + 's' }"
+        >
+          <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
+          <div class="mijian-name">{{ getItem(r.id)?.name }}</div>
+          <div class="dim mono" style="font-size: 11px">
+            {{ getItem(r.id)?.type === 'equipment' ? (getItem(r.id)?.quality ?? '') : 'T' + (getItem(r.id)?.tier ?? '') }}
           </div>
         </div>
-        <p v-else class="dim" style="margin-top: 8px">点击「单抽」或「十连」开始觅珍——结果直接进背包。</p>
       </div>
+      <p v-else class="dim" style="margin-top: 8px">点击「单抽」或「十连」开始觅珍——结果直接进背包。</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 抽卡舞台：卡内物品图轮播背景（随池切换图源）——舞台加高居中，背景明显可见 */
-.mijian-stage {
+/* 抽卡轮播条：白色背景框（在抽卡按钮上方），物品图横排滚动（随池切换图源） */
+.mijian-carousel {
   position: relative;
   overflow: hidden;
-  min-height: 240px;
+  height: 116px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 251, 244, 0.35);
+  background: rgba(255, 252, 246, 0.96);
+  margin-bottom: 12px;
 }
 .mijian-bg {
   position: absolute; inset: 0;
   overflow: hidden; pointer-events: none;
 }
 .mijian-bg-track {
-  display: flex; align-items: center; gap: 34px;
+  display: flex; align-items: center; gap: 30px;
   width: max-content;
-  height: 240px;
-  animation: mijianScroll 90s linear infinite;
+  height: 116px;
+  animation: mijianScroll 80s linear infinite;
 }
 .mijian-bg-track img {
-  width: 104px; height: 104px;
+  width: 86px; height: 86px;
   object-fit: contain; flex-shrink: 0;
-  opacity: 0.42; filter: blur(0.3px);
+  opacity: 0.92; filter: none;
 }
-.mijian-stage-body {
-  position: relative; z-index: 1;
-  display: flex; flex-direction: column; gap: 12px;
-  width: 100%;
-  align-items: center;
-}
-.mijian-stage-body .region-tabs { justify-content: center; }
-.mijian-results { justify-content: center; }
 @keyframes mijianScroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -151,26 +145,7 @@ function rarityClass(id) {
 @media (prefers-reduced-motion: reduce) {
   .mijian-bg-track { animation: none; }
 }
-:global([data-theme='dark']) .mijian-stage { background: rgba(44, 31, 22, 0.55); }
+:global([data-theme='dark']) .mijian-carousel { background: rgba(40, 29, 21, 0.96); }
+:global([data-theme='dark']) .mijian-bg-track img { opacity: 0.85; }
 .mijian-results { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.mijian-card {
-  width: 108px; padding: 10px 8px; text-align: center;
-  background: rgba(255, 251, 244, 0.92);
-  border: 1px solid rgba(150, 110, 70, 0.28);
-  border-radius: 10px;
-  animation: mijianIn 0.4s ease-out both;
-}
-.mijian-card .item-img { width: 44px; height: 44px; object-fit: contain; margin: 0 auto; display: block; }
-.mijian-name { font-size: 12px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mijian-card.rarity-稀有 { border-color: #3b8bb8; }
-.mijian-card.rarity-史诗 { border-color: #7b1fa2; }
-.mijian-card.rarity-传说 { border-color: #bf7200; }
-.mijian-card.rarity-神话 { border-color: #b23a2f; }
-.mijian-card.dazzle { box-shadow: 0 0 12px rgba(224, 112, 74, 0.55); }
-.mijian-card.rarity-神话 { background: linear-gradient(160deg, rgba(255, 236, 200, 0.95), rgba(255, 214, 160, 0.9)); }
-@keyframes mijianIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.9); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-:global([data-theme='dark']) .mijian-card { background: rgba(44, 31, 22, 0.95); color: #f2e6d7; }
 </style>
