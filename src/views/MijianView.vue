@@ -187,12 +187,10 @@ function typeLabel(id) {
           <span class="gacha-btn-price">{{ pool.price * 100 }} 金</span>
         </button>
       </div>
-      <div class="gacha-sim">
-        <span class="dim">👁 模拟预览：</span>
-        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(1)">单抽效果</button>
-        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(10)">十连效果</button>
-        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(100)">百连效果</button>
-        <span class="dim" style="font-size: 11px">仅展示效果，不消耗金币/物品</span>
+      <div class="gacha-sim" title="模拟预览：仅展示效果，不消耗金币/物品">
+        <button class="btn btn-sm sim-btn sim-btn-1" :disabled="drawing" @click="simulateDraw(1)">单抽效果</button>
+        <button class="btn btn-sm sim-btn sim-btn-10" :disabled="drawing" @click="simulateDraw(10)">十连效果</button>
+        <button class="btn btn-sm sim-btn sim-btn-100" :disabled="drawing" @click="simulateDraw(100)">百连效果</button>
       </div>
     </div>
 
@@ -488,7 +486,7 @@ function typeLabel(id) {
   display: flex; align-items: center; justify-content: center;
   gap: 16px; margin-top: 12px; font-size: 12px; flex-wrap: wrap;
 }
-.gacha-sim .btn-sm {
+.gacha-sim .sim-btn {
   position: relative; overflow: hidden;
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
@@ -497,17 +495,20 @@ function typeLabel(id) {
   box-shadow: 0 3px 10px rgba(95, 165, 66, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
-.gacha-sim .btn-sm::after {
+.gacha-sim .sim-btn::after {
   content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
   background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
   animation: simSheen 3s ease-in-out infinite;
   pointer-events: none;
 }
-.gacha-sim .btn-sm:hover { transform: translateY(-2px); }
-.gacha-sim .btn-sm:active { transform: translateY(0) scale(0.97); }
-.gacha-sim .btn-sm:disabled { filter: grayscale(0.6) brightness(0.8); }
+.gacha-sim .sim-btn:hover { transform: translateY(-2px); }
+.gacha-sim .sim-btn:active { transform: translateY(0) scale(0.97); }
+.gacha-sim .sim-btn:disabled { filter: grayscale(0.6) brightness(0.8); }
+.sim-btn-1 { min-width: 210px; } /* 对齐上方「单抽」 */
+.sim-btn-10 { min-width: 300px; } /* 对齐上方「十连」 */
+.sim-btn-100 { min-width: 300px; } /* 对齐上方「百连」 */
 .sim-badge { margin-left: 8px; }
-:global([data-theme='dark']) .gacha-sim .btn-sm { background: linear-gradient(135deg, #6fae52, #4c8a3c); box-shadow: 0 3px 10px rgba(76, 138, 60, 0.4); }
+:global([data-theme='dark']) .gacha-sim .sim-btn { background: linear-gradient(135deg, #6fae52, #4c8a3c); box-shadow: 0 3px 10px rgba(76, 138, 60, 0.4); }
 @keyframes simSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
 
 </style>
