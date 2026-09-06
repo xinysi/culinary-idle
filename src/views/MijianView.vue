@@ -356,8 +356,8 @@ function typeLabel(id) {
 }
 .gacha-btn::after {
   content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
-  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.38), transparent);
-  animation: gachaSheen 3s ease-in-out infinite;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.52), transparent);
+  animation: gachaSheen 2.6s ease-in-out infinite;
   pointer-events: none;
 }
 .gacha-btn:hover { transform: translateY(-2px); }
@@ -509,8 +509,8 @@ function typeLabel(id) {
 }
 .gacha-sim .sim-btn::after {
   content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
-  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  animation: simSheen 3s ease-in-out infinite;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: simSheen 2.6s ease-in-out infinite;
   pointer-events: none;
 }
 .gacha-sim .sim-btn:hover { transform: translateY(-2px); }
@@ -522,18 +522,6 @@ function typeLabel(id) {
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn { background: linear-gradient(135deg, #5f9c50, #4a7f3e); box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4); }
 @keyframes simSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
-/* 按钮流光：基础渐变 + 背景流动（200% 宽循环） */
-.gacha-btn, .gacha-sim .sim-btn {
-  background-size: 200% 100%;
-  animation: gachaGlow 5s linear infinite;
-}
-@keyframes gachaGlow {
-  from { background-position: 0% 0; }
-  to { background-position: -200% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .gacha-btn, .gacha-sim .sim-btn { animation: none; }
-}
 
 
 </style>
