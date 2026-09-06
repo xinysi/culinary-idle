@@ -111,8 +111,8 @@ const cells = computed(() => tiles.value)
       <div class="pz-col">
         <div class="pz-label">🎯 目标图</div>
         <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
-          <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="pz-cell pz-goal-cell">
-            <b class="pz-goal-num">{{ i + 1 }}</b>
+          <div v-for="i in mode * mode" :key="'g' + i" class="pz-cell pz-goal-cell">
+            <b class="pz-goal-num">{{ i }}</b>
           </div>
         </div>
       </div>
