@@ -70,9 +70,9 @@ function tap(i) {
     const mg = player.minigames.puzzle
     const today = todayKey()
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
-    if (mg.day !== today) {
-      mg.day = today
-      mg.done = (mg.done ?? 0) + 1 // 累计完成天数（每日 1 次发放）
+    if (mg.day !== today) mg.day = today
+    if ((mg.done ?? 0) < 1) {
+      player.minigames.puzzle.done = (mg.done ?? 0) + 1 // 每日仅计发一次（2026-09-06 修复可无限领取）
       player.gainItem('energyBiscuit', 1)
       ui.pushLog('🧩 每日美食拼图完成！+能量饼干 ×1', 'gain')
     }
@@ -108,7 +108,8 @@ const cells = computed(() => tiles.value)
     <div class="card game-stage">
       <div class="game-layout">
         <div class="game-main">
-        <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 正确顺序）</div>
+
+      <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 正确顺序）</div>
       <div class="puzzle-board puzzle-goal">
         <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="puzzle-cell puzzle-goal-cell">
           {{ lbl }}<span class="puzzle-num">{{ i + 1 }}</span>
@@ -128,10 +129,10 @@ const cells = computed(() => tiles.value)
       <div class="g2048-controls">
         <button class="btn btn-sm" @click="resetDay()">重新打乱（当日固定）</button>
       </div>
-      <div v-if="won" class="heat-verdict perfect">
+      <div v-if="won" class="heat-verdict perfect">🎉 复原完成！{{ doneToday ? '每日奖励已领取' : '+能量饼干 ×1' }}</div>
         </div>
         <div class="game-side">
-        <div class="game-side-card">
+          <div class="game-side-card">
             <h4>🎮 玩法</h4>
             <ul><li>点击与空格相邻的碎片滑移</li><li>按编号 1→15 复原成目标图</li><li>每日完成 +能量饼干 ×1</li></ul>
           </div>
@@ -141,7 +142,7 @@ const cells = computed(() => tiles.value)
             <div class="game-side-row"><span>今日</span><b class="mono">{{ doneToday ? '✅ 已领' : '未完成' }}</b></div>
           </div>
         </div>
-      </div>🎉 复原完成！{{ doneToday ? '每日奖励已领取' : '+能量饼干 ×1' }}</div>
+      </div>
     </div>
   </div>
 </template>

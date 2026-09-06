@@ -89,7 +89,8 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
     <div class="card game-stage rush-stage">
       <div class="game-layout">
         <div class="game-main">
-        <div class="rush-counter">
+
+      <div class="rush-counter">
         <span class="mono rush-bowls">{{ bowls }}</span>
         <span class="dim">碗 · 剩余 <b class="mono">{{ REMAIN }}</b> 秒</span>
       </div>
@@ -104,10 +105,12 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
           {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
         </button>
       </div>
-      <div v-if="done" class="heat-verdict"
+      <div v-if="done" class="heat-verdict" :class="{ perfect: nextTier, miss: !nextTier }">
+        {{ nextTier ? `🍖 达成 ${nextTier.label}！奖励已结算` : '💪 惜败！差一点就达标了' }}
+      </div>
         </div>
         <div class="game-side">
-        <div class="game-side-card">
+          <div class="game-side-card">
             <h4>🎮 玩法</h4>
             <ul><li>60 秒疯狂点击「干饭」</li><li>快速连点触发暴食（×2）</li><li>每日结算一次取最高档</li></ul>
           </div>
@@ -117,8 +120,6 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
             <div class="game-side-row"><span>今日奖励</span><b class="mono">{{ mg.rewarded ?? 0 }}/100 金</b></div>
           </div>
         </div>
-      </div> :class="{ perfect: nextTier, miss: !nextTier }">
-        {{ nextTier ? `🍖 达成 ${nextTier.label}！奖励已结算` : '💪 惜败！差一点就达标了' }}
       </div>
     </div>
   </div>

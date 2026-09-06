@@ -133,7 +133,8 @@ const rows = computed(() => grid.value)
     <div class="card game-stage">
       <div class="game-layout">
         <div class="game-main">
-        <div class="g2048-board">
+
+      <div class="g2048-board">
         <div v-for="(row, r) in rows" :key="'r' + r" class="g2048-row">
           <div v-for="(v, c) in row" :key="c" class="g2048-cell" :class="'v' + v">
             <template v-if="v">{{ TILE_META[v] ?? v }}</template>
@@ -153,7 +154,7 @@ const rows = computed(() => grid.value)
       <div v-if="over" class="heat-verdict miss">💀 无路可走了！分数 {{ score }} · 本局已入账 {{ earned }} 金币（重开继续）</div>
         </div>
         <div class="game-side">
-        <div class="game-side-card">
+          <div class="game-side-card">
             <h4>🎮 玩法</h4>
             <ul><li>方向键 / 按钮滑动合并</li><li>每跨一档（4×4:1024 / 3×3:512）即时 +20 金</li><li>单局上限 200 / 100 金</li></ul>
           </div>
