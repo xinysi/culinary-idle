@@ -10,6 +10,8 @@ import { applyCraftXp } from './xpBalance.js'
 
 const BASE_SUCCESS_LEVEL_BONUS = 0.02 // 每高于食谱等级 1 级 +2% 成功率
 const MAX_SUCCESS = 0.98
+const CRAFT_QUEUE_INTERVAL_MS = 3000 // 制作队列：每 3 秒自动制作 1 次
+const MAX_QUEUE_ENTRIES = 8 // 每技能最多排队条目（相同配方自动合并）
 
 export class ProductionSkill extends Skill {
   /**
@@ -98,5 +100,72 @@ export class ProductionSkill extends Skill {
       timestamp: Date.now(),
     })
     return 'fail'
+  }
+
+  /* ── 制作队列（自动连续制作，放置核心） ── */
+
+  /** 当前队列（持久化于 player.craftQueues[this.id]，条目 { recipeId, qty, paused }） */
+  get craftQueue() {
+    if (!this.player.craftQueues) this.player.craftQueues = {}
+    const q = this.player.craftQueues[this.id]
+    if (!Array.isArray(q)) {
+      this.player.craftQueues[this.id] = [] // 旧档/异常：重置空队列
+    }
+    return this.player.craftQueues[this.id]
+  }
+
+  /**
+   * 入队：校验等级；相同配方合并到队尾条目；满 8 条目拒绝。
+   * @returns {{ok:boolean, reason?:string}}
+   */
+  enqueue(recipe, qty = 1) {
+    if (this.level < recipe.reqLevel) return { ok: false, reason: 'level' }
+    const q = this.craftQueue
+    const last = q[q.length - 1]
+    if (last && last.recipeId === recipe.id) {
+      last.qty += qty
+    } else if (q.length >= MAX_QUEUE_ENTRIES) {
+      return { ok: false, reason: 'full' }
+    } else {
+      q.push({ recipeId: recipe.id, qty, paused: false })
+    }
+    return { ok: true }
+  }
+
+  /** 引擎 tick：推进队列（3 秒 1 次；队头材料不足则暂停等待，补料后手动恢复） */
+  tick(deltaMs) {
+    if (!(deltaMs > 0)) return
+    const q = this.player.craftQueues?.[this.id]
+    if (!Array.isArray(q) || q.length === 0 || q[0]?.paused) return
+    this._queueAccum = (this._queueAccum ?? 0) + deltaMs
+    if (this._queueAccum < CRAFT_QUEUE_INTERVAL_MS) return
+    this._queueAccum = 0
+    const head = q[0]
+    const recipe = this.recipes.find((r) => r.id === head.recipeId)
+    if (!recipe) {
+      q.shift()
+      return
+    }
+    const res = this.craft(recipe)
+    if (res === 'denied') {
+      head.paused = true // 材料不足：暂停等补料
+      return
+    }
+    head.qty--
+    if (head.qty <= 0) q.shift()
+  }
+
+  /** 恢复被暂停的队头（补料后） */
+  resumeQueue() {
+    const q = this.craftQueue
+    if (q[0]) q[0].paused = false
+  }
+
+  removeQueueEntry(index) {
+    this.craftQueue.splice(index, 1)
+  }
+
+  clearQueue() {
+    this.craftQueue.splice(0)
   }
 }
