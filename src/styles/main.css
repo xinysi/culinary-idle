@@ -3714,3 +3714,6 @@ html[data-theme='dark'] .mijian-bg-track img { opacity: 0.85; }
 html[data-theme='dark'] .gacha-front { background: #2a1d15; color: #f2e6d7; border-color: rgba(var(--tsh1, 77, 58, 43), 0.5); }
 html[data-theme='dark'] .gacha-front-sub { color: #bfa98f; }
 html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, var(--tlo1, #7a4a30), var(--tlo2, #3a2418)); }
+
+/* 制作队列暗色（2026-09-06） */
+html[data-theme='dark'] .queue-item { background: rgba(44, 31, 22, 0.6); border-color: rgba(255, 255, 255, 0.16); }

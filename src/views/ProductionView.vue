@@ -183,6 +183,19 @@ function useBiscuit() {
   ui.pushLog(ok ? `使用能量饼干：离线时长上限 +4h（当前 +${player.offlineBonusH}h/12h）` : '能量饼干不足或已达上限', ok ? 'info' : 'warn')
 }
 
+// ── 制作队列（2026-09-06）：排队自动连续制作，每 3 秒 1 份 ──
+const queueList = computed(() =>
+  (props.instance.craftQueue ?? []).map((e) => ({
+    ...e,
+    recipe: props.instance.recipes.find((r) => r.id === e.recipeId),
+  }))
+)
+function queueAdd(r, qty) {
+  const res = props.instance.enqueue(r, qty)
+  if (res.ok) ui.pushLog(`「${r.name}」×${qty} 已加入制作队列（每 3 秒自动制作 1 次）`, 'info')
+  else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
+}
+
 // ── 卡片式分段（按 reqLevel 每 5 级一段，可折叠）──
 const sections = computed(() => {
   const map = new Map()
@@ -327,6 +340,26 @@ function scrollToSection(label) {
         <span class="dim" style="font-size: 12px">快速跳转：</span>
         <button v-for="sec in sections" :key="sec.label" class="btn btn-sm" @click="scrollToSection(sec.label)">{{ sec.label }}</button>
       </div>
+
+      <!-- 制作队列：排队自动制作（材料不足自动暂停，补料后恢复） -->
+      <div v-if="queueList.length" class="card queue-card">
+        <div class="queue-head">
+          <strong>⚙️ 制作队列</strong>
+          <span class="dim">每 3 秒自动制作 1 次 · 最多 8 项</span>
+          <div style="margin-left: auto; display: flex; gap: 8px">
+            <button class="btn btn-sm" :disabled="!(instance.craftQueue?.[0]?.paused)" @click="instance.resumeQueue()">▶ 恢复队头</button>
+            <button class="btn btn-sm" @click="instance.clearQueue()">清空</button>
+          </div>
+        </div>
+        <div class="queue-list">
+          <div v-for="(e, i) in queueList" :key="i" class="queue-item">
+            <span class="queue-name">{{ e.recipe?.name ?? e.recipeId }}</span>
+            <span class="mono">×{{ e.qty }}</span>
+            <span v-if="e.paused" class="queue-paused">⚠ 材料不足，暂停中</span>
+            <button class="btn btn-sm queue-rm" @click="instance.removeQueueEntry(i)">移除</button>
+          </div>
+        </div>
+      </div>
       <div v-for="sec in sections" :key="sec.label" class="gather-section" :id="'sec-' + sec.label">
         <div class="gather-section-title" @click="toggleSection(sec.label)">
           <span class="mono">{{ isOpen(sec.label) ? '▾' : '▸' }}</span>
@@ -370,9 +403,13 @@ function scrollToSection(label) {
                 <span>成功率</span>
                 <span class="mono">{{ (instance.successChance(r) * 100).toFixed(0) }}%</span>
               </div>
-              <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
-                {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
-              </button>
+              <div class="queue-btns">
+                <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>
+                <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 10)" title="加入制作队列 ×10（材料不足自动暂停）">⏳×10</button>
+                <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
+                  {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -389,3 +426,21 @@ function scrollToSection(label) {
     />
   </div>
 </template>
+
+<style scoped>
+/* 制作队列（2026-09-06） */
+.queue-card { margin-bottom: 12px; }
+.queue-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.queue-list { display: flex; flex-direction: column; gap: 6px; }
+.queue-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: rgba(255, 252, 246, 0.7);
+}
+.queue-item .queue-name { font-weight: 600; }
+.queue-item .queue-paused { color: var(--bad-strong); font-size: 12px; font-weight: 700; }
+.queue-rm { margin-left: auto; }
+.queue-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+</style>

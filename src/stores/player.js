@@ -173,6 +173,8 @@ export const usePlayerStore = defineStore('player', {
     setBonuses: [],
     // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）；history=最近 10 次结果标志
     mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
+    // 制作队列（2026-09-06）：{ skillId: [{recipeId, qty, paused}] }，3 秒自动制作 1 次
+    craftQueues: {},
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -467,6 +469,7 @@ export const usePlayerStore = defineStore('player', {
         guide: saved.guide ?? { step: 0, done: false },
         setBonuses: saved.setBonuses ?? [],
         mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
+        craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -518,6 +521,7 @@ export const usePlayerStore = defineStore('player', {
         guide: this.guide,
         setBonuses: this.setBonuses,
         mijian: this.mijian,
+        craftQueues: this.craftQueues,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
