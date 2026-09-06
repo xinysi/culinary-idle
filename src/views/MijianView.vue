@@ -379,7 +379,7 @@ function typeLabel(id) {
   --shd: var(--tshd, 176, 64, 0);
   min-width: 300px;
   font-size: 19px;
-  color: var(--tth, #4a2600);
+  color: var(--tth, #4a2600); /* 十连：主题深彩色字 */
   text-shadow: 0 1px 2px rgba(255, 250, 240, 0.3);
   background: linear-gradient(135deg, var(--thi1, #e65c00), var(--thi2, #f9d423));
 
@@ -392,6 +392,8 @@ function typeLabel(id) {
   --shd: var(--tshd, 143, 79, 88);
   min-width: 210px;
   font-size: 15px;
+  color: var(--ttm, #fff); /* 单抽：主题亮彩色字 */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   background: linear-gradient(120deg, var(--tmd1, #b76e79), var(--tmd2, #e0a980));
 
   box-shadow: 0 4px 14px rgba(var(--tglow, 183, 110, 121), 0.4);
@@ -414,7 +416,7 @@ function typeLabel(id) {
   --tlo1: #0a6b55; --tlo2: #06483a;
   --tsh1: 22, 160, 133; --tsh2: 53, 232, 192; --tshd: 6, 72, 58;
   --tglow: 20, 160, 133;
-  --tth: #06483a; /* 十连文字：主题深色，亮底醒目 */
+  --tth: #0b5c4a; --ttm: #7df0d9; --ttl: #ffd98a; /* 三档彩字：深青绿/亮青绿/暖金 */
 }
 .gacha-btns.pool-food {
   --thi1: #ffe066; --thi2: #f07800;
@@ -422,7 +424,7 @@ function typeLabel(id) {
   --tlo1: #a34a00; --tlo2: #6e3100;
   --tsh1: 230, 92, 0; --tsh2: 255, 224, 102; --tshd: 176, 64, 0;
   --tglow: 233, 132, 0;
-  --tth: #6e3100;
+  --tth: #8f3200; --ttm: #ffd76e; --ttl: #ffcf83;
 }
 .gacha-btns.pool-gear {
   --thi1: #a5c8da; --thi2: #5d7a8c;
@@ -430,7 +432,7 @@ function typeLabel(id) {
   --tlo1: #38495a; --tlo2: #2a3745;
   --tsh1: 83, 105, 118; --tsh2: 165, 200, 218; --tshd: 42, 55, 69;
   --tglow: 83, 105, 118;
-  --tth: #2a3745;
+  --tth: #1f2f3c; --ttm: #cfe6f2; --ttl: #ffd98a;
 }
 .gacha-btns.pool-mix {
   --thi1: #c389e2; --thi2: #9657b8;
@@ -438,7 +440,7 @@ function typeLabel(id) {
   --tlo1: #5c2f75; --tlo2: #3d2150;
   --tsh1: 142, 68, 173; --tsh2: 195, 137, 226; --tshd: 61, 33, 80;
   --tglow: 142, 68, 173;
-  --tth: #3d2150;
+  --tth: #3f1e5e; --ttm: #ecc9f8; --ttl: #ffd98a;
 }
 .gacha-btns.pool-limited {
   --thi1: #dba53a; --thi2: #96662a;
@@ -446,7 +448,7 @@ function typeLabel(id) {
   --tlo1: #3a2010; --tlo2: #241408;
   --tsh1: 122, 80, 36; --tsh2: 219, 165, 58; --tshd: 36, 20, 8;
   --tglow: 160, 110, 40;
-  --tth: #241408;
+  --tth: #4a2405; --ttm: #ffdf9e; --ttl: #f6c76a;
 }
 @media (max-width: 719px) {
   .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
@@ -547,7 +549,7 @@ function typeLabel(id) {
   --shd: var(--tshd, 66, 40, 18);
   min-width: 300px;
   font-size: 16px;
-  color: #ffdd99;
+  color: var(--ttl, #ffdd99); /* 百连：暖金字 */
   border: 1px solid rgba(226, 169, 63, 0.65);
   background: linear-gradient(105deg, var(--tlo1, #4a2c14), var(--tlo2, #7a5024));
 
