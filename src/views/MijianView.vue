@@ -87,30 +87,35 @@ function typeLabel(id) {
       </div>
     </header>
 
-    <!-- 池子选择 -->
-    <div class="card">
-      <div class="region-tabs">
-        <button
-          v-for="p in MIJIAN_POOLS"
-          :key="p.id"
-          class="btn btn-sm"
-          :class="{ 'btn-primary': activePool === p.id }"
-          @click="activePool = p.id"
-        >{{ p.icon }} {{ p.name }}（{{ p.price }} 金/抽）</button>
-        <span class="dim pool-desc" style="margin-left: auto">{{ pool.desc }}</span>
-      </div>
-      <template v-if="isGearPool">
-        <p class="dim">⭐ 保底进度：{{ pity.current }}/{{ pity.need }}（{{ pity.need - pity.current }} 抽内必出稀有及以上）</p>
-      </template>
+    <!-- 卡池切换器：三张池卡，选中金边浮起 -->
+    <div class="pool-minis">
+      <button
+        v-for="p in MIJIAN_POOLS"
+        :key="p.id"
+        class="pool-mini"
+        :class="{ active: activePool === p.id }"
+        @click="activePool = p.id"
+      >
+        <span class="pool-mini-icon">{{ p.icon }}</span>
+        <span class="pool-mini-name">{{ p.name }}</span>
+        <span class="pool-mini-price">{{ p.price }} 金/抽</span>
+      </button>
     </div>
 
-    <!-- 抽卡轮播条：白色背景框，物品图在抽卡按钮上方滚动 -->
-    <div class="card mijian-carousel">
+    <!-- 卡池展示横幅：轮播图（两端渐隐）+ 左侧池名徽章 + 右侧保底徽章 -->
+    <div class="card pool-banner">
       <div class="mijian-bg" aria-hidden="true">
         <div class="mijian-bg-track">
           <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
         </div>
       </div>
+      <div class="pool-banner-fade"></div>
+      <div class="pool-banner-title">
+        <span class="pool-banner-icon">{{ pool.icon }}</span>
+        <b>{{ pool.name }}</b>
+        <em>{{ pool.desc }}</em>
+      </div>
+      <div v-if="isGearPool" class="pool-banner-pity">⭐ 保底 {{ pity.current }}/{{ pity.need }}</div>
     </div>
 
     <!-- 抽卡操作台 -->
@@ -180,27 +185,81 @@ function typeLabel(id) {
 /* 奇偶行布局辅助 */
 .gear-note { padding: 0 10px; }
 
-/* ── 轮播条（白色背景框，按钮上方） ── */
-.mijian-carousel {
+/* ── 卡池切换器（选中金边浮起） ── */
+.pool-minis { display: flex; gap: 12px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+.pool-mini {
+  min-width: 126px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(255, 251, 244, 0.85);
+  border: 1px solid rgba(150, 110, 70, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.pool-mini:hover { transform: translateY(-2px); }
+.pool-mini.active {
+  background: #fff7e8;
+  border: 2px solid #d98a2b;
+  box-shadow: 0 0 14px rgba(217, 138, 43, 0.4);
+  transform: translateY(-4px);
+}
+.pool-mini-icon { font-size: 24px; }
+.pool-mini-name { font-size: 13px; font-weight: 700; }
+.pool-mini-price { font-size: 11px; color: var(--muted); }
+
+/* ── 卡池展示横幅：轮播（两端渐隐）+ 池名徽章 + 保底徽章 ── */
+.pool-banner {
   position: relative;
   overflow: hidden;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  background: rgba(255, 252, 246, 0.96);
+  height: 108px;
   margin-bottom: 12px;
+  background: rgba(255, 252, 246, 0.96);
 }
 .mijian-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .mijian-bg-track {
-  display: flex; align-items: center; gap: 18px;
-  width: max-content; height: 64px;
+  display: flex; align-items: center; gap: 26px;
+  width: max-content; height: 108px;
   animation: mijianScroll 80s linear infinite;
 }
 .mijian-bg-track img {
-  width: 43px; height: 43px;
+  width: 58px; height: 58px;
   object-fit: contain; flex-shrink: 0;
-  opacity: 0.92;
+  opacity: 0.6;
 }
+.pool-banner-fade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 252, 246, 0.96), rgba(255, 252, 246, 0) 16%, rgba(255, 252, 246, 0) 84%, rgba(255, 252, 246, 0.96));
+}
+.pool-banner-title {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 8px; z-index: 2;
+  background: rgba(255, 252, 246, 0.88);
+  border: 1px solid rgba(217, 138, 43, 0.35);
+  border-radius: 999px;
+  padding: 5px 14px;
+  box-shadow: 0 2px 8px rgba(150, 110, 70, 0.15);
+}
+.pool-banner-icon { font-size: 18px; }
+.pool-banner-title b { font-size: 14px; color: var(--primary-strong); }
+.pool-banner-title em { font-style: normal; font-size: 11px; color: var(--muted); }
+.pool-banner-pity {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  z-index: 2;
+  background: rgba(217, 138, 43, 0.12);
+  border: 1px solid rgba(217, 138, 43, 0.45);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px; font-weight: 600;
+  color: #a06a12;
+}
+:global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
+:global([data-theme='dark']) .pool-mini.active { background: #3a2a18; border-color: #d98a2b; }
+:global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
+:global([data-theme='dark']) .pool-banner-fade { background: linear-gradient(90deg, rgba(40, 29, 21, 0.96), rgba(40, 29, 21, 0) 16%, rgba(40, 29, 21, 0) 84%, rgba(40, 29, 21, 0.96)); }
+:global([data-theme='dark']) .pool-banner-title { background: rgba(40, 29, 21, 0.9); }
+:global([data-theme='dark']) .pool-banner-pity { color: #e8b45f; }
+
 @keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mijian-bg-track { animation: none; } }
 
