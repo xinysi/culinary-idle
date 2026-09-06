@@ -944,7 +944,7 @@ console.log('══ X. 觅珍抽卡 ══')
   const r3 = p.drawMijian('gear', 1)
   const gearOk = r3.ok && r3.results.length === 1 && r3.results[0]?.type === 'equipment'
   check('觅珍', '厨具池产出装备', gearOk, JSON.stringify((r3.results ?? []).map((it) => it?.id)))
-  check('觅珍', '金币扣费（300*3+300+500=1700）', p.gold === 100000 - 1700, `gold=${p.gold}`)
+  check('觅珍', '金币扣费（新价：材料60*3+食物110+厨具500=790）', p.gold === 100000 - 790, `gold=${p.gold}`)
   // 保底计数：连续抽 10 次厨具必出现稀有及以上（前置计数模拟）
   p.mijian.pity = 9
   const r4 = p.drawMijian('gear', 1)

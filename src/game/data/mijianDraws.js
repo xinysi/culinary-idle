@@ -4,11 +4,11 @@ import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
 
 export const MIJIAN_POOLS = [
-  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 300, kinds: ['ingredient', 'spice'], cap: 50 },
-  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（低价值成品，无珍品）', price: 300, kinds: ['food', 'drink'], cap: 100 },
+  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
+  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（低价值成品，无珍品）', price: 110, kinds: ['food', 'drink'], cap: 100 },
   { id: 'gear', name: '厨具池', icon: '⚔️', desc: '装备（八槽位，稀有度加权，10 抽保底稀有+）', price: 500, kinds: ['equipment'] },
   { id: 'mix', name: '混池', icon: '🎲', desc: '88% 普通素材 + 8% 装备（出货温和）', price: 80, kinds: ['mix'], cap: 60 },
-  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '80% 限时装备（极品率极低）+ 20% 美食，5 抽保底稀有+', price: 1200, kinds: ['limited'], cap: 150 },
+  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '80% 限时装备（极品率极低）+ 20% 美食，5 抽保底稀有+', price: 600, kinds: ['limited'], cap: 150 },
 ]
 
 /** 限时池轮换周期（14 天）；剩余时间用于横幅角标倒计时 */
