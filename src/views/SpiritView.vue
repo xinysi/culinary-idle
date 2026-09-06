@@ -20,7 +20,7 @@ function contractFor(spirit) {
   return props.instance.recipes.find((r) => r.output.itemId === spirit.id) ?? null
 }
 function have(itemId) {
-  return player.inventory[itemId] ?? 0
+  return player.spirits?.owned?.[itemId] ?? 0
 }
 function canCraft(spirit) {
   return props.instance.canCraft(contractFor(spirit))
@@ -33,7 +33,7 @@ function isActive(spiritId) {
   return player.spirits.active.includes(spiritId)
 }
 function isOwned(spiritId) {
-  return (player.inventory[spiritId] ?? 0) > 0 || isActive(spiritId)
+  return (player.spirits?.owned?.[spiritId] ?? 0) > 0 || isActive(spiritId)
 }
 function toggle(spiritId) {
   const ok = player.setSpiritActive(spiritId, !isActive(spiritId))

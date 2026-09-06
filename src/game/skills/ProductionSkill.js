@@ -69,7 +69,9 @@ export class ProductionSkill extends Skill {
       const out = recipe.output
       const doubled = Math.random() < masteryDoubleChance(this.masteryLevel(recipe))
       const qty = doubled ? out.qty * 2 : out.qty
-      this.player.gainItem(out.itemId, qty)
+      // 食灵召唤：产物直接入「食灵阁」（不占背包格，2026-09-06）
+      if (this.id === 'spiritSummoning') this.player.gainSpirit(out.itemId, qty)
+      else this.player.gainItem(out.itemId, qty)
       this.player.bumpStory('craft', this.id + ':' + out.itemId)
       // 食材保鲜：按保鲜产物 id 单独计次
       if (this.id === 'preservation') this.player.bumpStory('support', 'preservation:' + out.itemId)

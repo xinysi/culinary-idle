@@ -68,7 +68,7 @@ const it = computed(() => getItem(innerId.value))
 const lines = computed(() => itemDetailLines(innerId.value))
 const sources = computed(() => itemSourcesOf(innerId.value))
 const uses = computed(() => itemUses(innerId.value))
-const owned = computed(() => (player.inventory[innerId.value] ?? 0) + (player.bank[innerId.value] ?? 0))
+const owned = computed(() => (player.inventory[innerId.value] ?? 0) + (player.bank[innerId.value] ?? 0) + (player.spirits?.owned?.[innerId.value] ?? 0))
 const collected = computed(() => !!player.collected[innerId.value])
 // 超长来源/用途折叠：来源/产成过多时默认展开前 N 条，避免弹窗被万能材料（盐/水等）刷屏
 const SOURCE_LIMIT = 12
