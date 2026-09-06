@@ -14,7 +14,8 @@ const MODES = {
   6: { label: '6×6 标准', pairs: 18, gold: 150 },
   8: { label: '8×8 挑战', pairs: 32, gold: 250 },
 }
-const EMOJI_ALL = Array.from('🍎🥔🍅🌶️🥕🍉🍇🍓🍆🍄🐟🦐🍞🍜🥟🍚🎃🧅🍗🥩🫘🥦🍌🍊🍋🫐🥭🍍🥥🍐🍒🥑')
+/* 只使用 ≤Emoji 12 的老 emoji（🫘/🫐 等 13.0 字形在 Win10 等系统不渲染 → 视觉缺失，2026-09-07 替换） */
+const EMOJI_ALL = Array.from('🍎🥔🍅🌶️🥕🍉🍇🍓🍆🍄🐟🦐🍞🍜🥟🍚🎃🧅🍗🥩🥜🥦🍌🍊🍋🍑🥭🍍🥥🍐🍒🥑')
 function poolFor() {
   const n = MODES[mode.value].pairs
   const ids = []
