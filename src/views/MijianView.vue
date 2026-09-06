@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, poolPreview, limitedRemainingMs } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, poolPreview, limitedRemainingMs, pickItem } from '../game/data/mijianDraws.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -22,9 +22,10 @@ const bgItems = computed(() => {
 })
 
 // 抽卡结果（翻牌揭示序列）：{ id, rare, revealed }
-const results = ref([])
+const results = ref({ list: [], sim: false })
 const drawing = ref(false)
-const allRevealed = computed(() => results.value.length > 0 && results.value.every((r) => r.revealed))
+const hasResults = computed(() => results.value.list.length > 0)
+const allRevealed = computed(() => results.value.list.length > 0 && results.value.list.every((r) => r.revealed))
 
 function draw(count) {
   if (drawing.value) return
@@ -32,31 +33,55 @@ function draw(count) {
   if (!r) return
   if (!r.ok) { ui.pushLog(`🎴 觅珍：${r.msg}`, 'warn'); return }
   // 构建翻牌列表（卡背朝上，逐张揭示）
-  results.value = r.results
+  results.value = { list: r.results
     .filter(Boolean)
     .map((it, i) => ({
       id: it.id,
       rare: it.type === 'equipment' && ['稀有', '史诗', '传说', '神话'].includes(it.quality),
       revealed: false,
       delay: i * 0.13,
-    }))
-  drawing.value = true
-  if (count > 20) {
-    // 百连：快速揭示（无逐张等待）
-    results.value.forEach((item) => { item.revealed = true })
-    drawing.value = false
-  } else {
-    results.value.forEach((item, i) => {
-      setTimeout(() => {
-        item.revealed = true
-        if (i === results.value.length - 1) drawing.value = false
-      }, 380 + i * 130)
-    })
-  }
+    })), sim: false }
+  // 揭示序列（真实与模拟共用）
+  startReveal(results.value.list, count > 20)
   ui.pushLog(`🎴 觅珍：${pool.value.name} ×${count}，获得 ${r.got.length} 件${r.boosted ? '（保底命中 ⭐）' : ''}`, 'gain')
 }
+function startReveal(list, instant = false) {
+  drawing.value = true
+  if (instant) {
+    list.forEach((item) => { item.revealed = true })
+    drawing.value = false
+    return
+  }
+  list.forEach((item, i) => {
+    setTimeout(() => {
+      item.revealed = true
+      if (i === list.length - 1) drawing.value = false
+    }, 380 + i * 130)
+  })
+}
+/** 模拟预览：本地生成结果并展示（不扣金币/不入库/不动统计与保底） */
+function simulateDraw(count) {
+  if (drawing.value) return
+  const list = []
+  for (let i = 0; i < count; i++) {
+    const { item } = pickItem(activePool.value, Math.random, 0)
+    if (item) list.push(item)
+  }
+  results.value = {
+    list: list.map((it, i) => ({
+      id: it.id,
+      rare: !!it.quality && ['稀有', '史诗', '传说', '神话'].includes(it.quality),
+      revealed: false,
+      delay: i * 0.13,
+    })),
+    sim: true,
+  }
+  // results 改为对象后统一解包见模板调整
+  startReveal(results.value.list, count > 20)
+  ui.pushLog(`👁 模拟预览：${pool.value.name} ×${count}（不消耗金币/物品）`, 'info')
+}
 function confirmResults() {
-  results.value = []
+  results.value = { list: [], sim: false }
 }
 
 const QUALITY_META = {
@@ -154,14 +179,21 @@ function typeLabel(id) {
           <span class="gacha-btn-price">{{ pool.price * 100 }} 金</span>
         </button>
       </div>
+      <div class="gacha-sim">
+        <span class="dim">👁 模拟预览：</span>
+        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(1)">单抽效果</button>
+        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(10)">十连效果</button>
+        <button class="btn btn-sm" :disabled="drawing" @click="simulateDraw(100)">百连效果</button>
+        <span class="dim" style="font-size: 11px">仅展示效果，不消耗金币/物品</span>
+      </div>
     </div>
 
     <!-- 结果揭示（卡背 → 逐张 3D 翻转；品质光晕 / 神话金光；十连 5×2 网格） -->
-    <div v-if="results.length" class="card gacha-results">
-      <h3>抽卡结果 <span class="dim mono" style="font-size: 12px">{{ results.length }} 张</span></h3>
-      <div class="gacha-grid" :class="{ single: results.length === 1 }">
+    <div v-if="hasResults" class="card gacha-results">
+      <h3>抽卡结果 <span class="dim mono" style="font-size: 12px">{{ results.list.length }} 张</span><span v-if="results.sim" class="badge badge-on sim-badge">👁 模拟演示</span></h3>
+      <div class="gacha-grid" :class="{ single: results.list.length === 1 }">
         <div
-          v-for="(r, i) in results"
+          v-for="(r, i) in results.list"
           :key="r.id + '-' + i"
           class="gacha-card"
           :class="[qMeta(r.id).cls, { revealed: r.revealed }]"
