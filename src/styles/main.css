@@ -93,7 +93,7 @@ body {
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%; /* 百分比高度链（html/body/#app 100%）：zoom 缩放时与视口物理尺寸一致，绝不溢出/留空（2026-09-06） */
 }
 
 /* 顶部功能导航 + 三栏主体 */
