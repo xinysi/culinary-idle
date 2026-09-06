@@ -3749,25 +3749,25 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
 .rt-list, .rt-children { list-style: none; margin: 0; padding: 0; }
 .rt-children { margin-top: 4px; }
 .rt-node { position: relative; }
-/* 树形引导线：节点左侧竖线 + 圆点 */
+/* 树形引导线：固定主干线在左，圆点/文字随层级（--d）同步缩进，始终对齐 */
 .rt-node::before {
   content: '';
   position: absolute;
-  left: 24px; top: -6px; bottom: 6px;
+  left: 15px; top: -6px; bottom: 6px;
   width: 0;
   border-left: 2px solid rgba(217, 138, 43, 0.28);
 }
 .rt-row {
   position: relative;
   display: flex; flex-direction: column; gap: 4px;
-  padding: 6px 10px 6px 26px;
+  padding: 6px 10px 6px calc(30px + var(--d, 0) * 22px);
   border-radius: 8px;
   font-size: 13px;
 }
 .rt-row::before {
   content: '';
   position: absolute;
-  left: 21px; top: 50%;
+  left: calc(23px + var(--d, 0) * 22px); top: 50%;
   width: 8px; height: 8px;
   margin-top: -4px;
   border-radius: 50%;
