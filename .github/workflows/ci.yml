@@ -28,6 +28,7 @@ jobs:
           node scripts/buff_test.mjs
           node scripts/continuity_test.mjs
           node scripts/audit_sync.mjs
+          node scripts/item_triple_audit.mjs
 
       - name: Web build
         run: npm run build
