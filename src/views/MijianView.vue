@@ -401,6 +401,9 @@ function typeLabel(id) {
   text-shadow: 0 1px 2px rgba(var(--tsh2, 249, 212, 35), 0.3);
 }
 
+/* ── 抽卡操作台（gacha 按钮：主 CTA 大+金渐变+脉动光；次级小一号深红） ── */
+.gacha-hold { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.gacha-btns { display: flex; gap: 18px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
 .gacha-btn {
   position: relative; overflow: hidden; cursor: pointer;
   border: none; border-radius: 16px;
