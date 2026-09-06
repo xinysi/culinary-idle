@@ -5,7 +5,7 @@ import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem, ITEMS } from '../game/data/items.js'
-import ProgressBar from '../components/ProgressBar.vue'
+
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -97,72 +97,90 @@ function exchange(item) {
 </script>
 
 <template>
-  <div class="skill-view">
-    <header class="skill-head">
-      <div>
-        <h2>📚 美食讲堂</h2>
-        <p class="dim">每周 10 道食之契约竞答（答案随游戏数据实时取值）；答对 ≥8 题 → 徽章 +1 + 100 金币。</p>
-      </div>
-      <div class="skill-head-right">
-        <span class="badge badge-on">🏅 {{ mg.badges ?? 0 }} 枚徽章</span>
-      </div>
-    </header>
+  <div class="tz-page">
+    <div class="tz-progress-row">
+      <span class="tz-week">📅 本周 {{ mg.week === weekKey() && mg.answered > 0 ? '已答' : '未开始' }}</span>
+      <div class="tz-bar"><div class="tz-bar-fill" :style="{ width: (quiz.length ? Math.min(100, ((index + (quiz[index]?.picked != null ? 1 : 0)) / 10) * 100) : 0) + '%' }"></div></div>
+      <span class="tz-score">🎯 {{ correctCount }}/10</span>
+      <span class="tz-badges"><b class="mono">{{ mg.badges ?? 0 }}</b> 枚徽章</span>
+    </div>
 
-    <div class="card game-stage">
+    <div v-if="quiz.length" class="tz-quiz">
+      <div class="tz-q">{{ quiz[index]?.q }}</div>
+      <div class="tz-opts">
+        <button
+          v-for="o in quiz[index]?.opts"
+          :key="o"
+          class="tz-opt"
+          :class="{ 'tz-opt-right': quiz[index]?.picked != null && o === quiz[index]?.correct, 'tz-opt-wrong': quiz[index]?.picked === o && o !== quiz[index]?.correct }"
+          :disabled="quiz[index]?.picked != null"
+          @click="pick(o)"
+        >{{ o }}</button>
+      </div>
+      <button v-if="quiz[index]?.picked != null && !finished" class="tz-next" @click="next">下一题 →</button>
+      <div v-if="finished" class="tz-result" :class="{ ok: correctCount >= 8 }">
+        {{ correctCount >= 8 ? `🏅 通过！徽章 +1（共 ${mg.badges} 枚）` : `本周 ${correctCount}/10 —— 下周再来！` }}
+      </div>
+    </div>
 
-      <template v-if="quiz.length">
-        <div class="trivia-progress">
-          <span class="dim mono">第 {{ index + 1 }}/10 题</span>
-          <ProgressBar :progress="(index + (quiz[index]?.picked != null ? 1 : 0)) / 10" style="flex: 1" />
-          <span class="dim mono">已答 {{ correctCount }}/10</span>
-        </div>
-        <div class="trivia-q">{{ quiz[index]?.q }}</div>
-        <div class="trivia-opts">
-          <button
-            v-for="o in quiz[index]?.opts"
-            :key="o"
-            class="btn btn-sm trivia-opt"
-            :class="{ 'trivia-right': quiz[index]?.picked != null && o === quiz[index]?.correct, 'trivia-wrong': quiz[index]?.picked === o && o !== quiz[index]?.correct }"
-            :disabled="quiz[index]?.picked != null"
-            @click="pick(o)"
-          >{{ o }}</button>
-        </div>
-        <button v-if="quiz[index]?.picked != null && !finished" class="btn btn-sm btn-primary" style="margin-top: 10px" @click="next">下一题 →</button>
-        <div v-if="finished" class="heat-verdict" :class="{ perfect: correctCount >= 8, miss: correctCount < 8 }">
-          {{ correctCount >= 8 ? `🏅 通过！本周徽章 +1，+100 金币` : `本周答对 ${correctCount}/10，下周再来！` }}
-        </div>
+    <div v-else class="tz-start">
+      <template v-if="mg.week === weekKey() && mg.answered > 0">
+        <div class="tz-result" :class="{ ok: lastCorrect >= 8 }">本周成绩 {{ lastCorrect }}/10 · 徽章 {{ mg.badges }} 枚</div>
       </template>
-      <template v-else>
-        <template v-if="mg.week === weekKey() && mg.answered > 0">
-          <div class="heat-verdict" :class="{ perfect: lastCorrect >= 8, miss: lastCorrect < 8 }">
-            本周成绩：{{ lastCorrect }}/10（{{ lastCorrect >= 8 ? '徽章 +1 已发放' : '未达 8 题，下周再战' }}）· 累计徽章 {{ mg.badges ?? 0 }}
-          </div>
-        </template>
-        <button class="btn btn-sm btn-primary" :disabled="mg.week === weekKey() && mg.answered > 0" @click="newQuiz()">
-          {{ mg.week === weekKey() && mg.answered > 0 ? '本周已答完' : '开始本周竞答（10 题）' }}
-        </button>
-      </template>
-      <div class="trivia-exchange">
-        <h4>🏅 徽章兑换</h4>
-        <div class="trivia-exchange-opts">
-          <button v-for="it in EXCHANGES" :key="it.id" class="btn btn-sm" :disabled="(mg.badges ?? 0) < it.cost" @click="exchange(it)">
-            {{ it.label }}（{{ it.cost }} 徽章）
-          </button>
-        </div>
-        <span class="dim">剩余徽章：<b class="mono">{{ mg.badges ?? 0 }}</b> · 每周答对 ≥8 题 +1 枚</span>
+      <button class="tz-big" :disabled="mg.week === weekKey() && mg.answered > 0" @click="newQuiz()">
+        {{ mg.week === weekKey() && mg.answered > 0 ? '✅ 本周已答完' : '📚 开始本周竞答（10 题）' }}
+      </button>
+      <div class="tz-rules">
+        <span>📏 每周 10 题</span><span>🏅 答对 ≥8 题 → 徽章 +1 + 100 金</span><span>🔄 徽章可兑换饼干/金币</span>
       </div>
-      <div class="mg-info-grid">
-        <div class="mg-info-card">
-                    <h4>🎮 玩法</h4>
-                    <ul><li>每周 10 题，答案实时取自游戏数据</li><li>答对 ≥8 题 → 徽章 +1 + 100 金</li><li>徽章可兑换奖励</li></ul>
-                  </div>
-        <div class="mg-info-card">
-                    <h4>🏆 记录</h4>
-                    <div class="mg-info-row"><span>累计徽章</span><b class="mono">{{ mg.badges ?? 0 }}</b></div>
-                    <div class="mg-info-row"><span>本周最好成绩</span><b class="mono">{{ lastCorrect || '—' }}/10</b>
-                </div>
-            </div>
-      </div>
+    </div>
+
+    <div class="tz-exchange">
+      <span class="tz-exchange-title">🏅 徽章兑换</span>
+      <button v-for="it in EXCHANGES" :key="it.id" class="tz-ex" :disabled="(mg.badges ?? 0) < it.cost" @click="exchange(it)">
+        {{ it.label }}<span class="tz-ex-cost">{{ it.cost }} 徽章</span>
+      </button>
     </div>
   </div>
 </template>
+<style scoped>
+.tz-page { display: flex; flex-direction: column; gap: 14px; }
+.tz-progress-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tz-week { font-size: 12px; font-weight: 700; color: var(--muted); }
+.tz-bar { flex: 1; min-width: 120px; height: 10px; background: rgba(150, 110, 70, 0.2); border-radius: 999px; overflow: hidden; }
+.tz-bar-fill { height: 100%; background: linear-gradient(90deg, #eab04a, #f2c35d); border-radius: 999px; transition: width 0.3s ease; }
+.tz-score { font-size: 13px; font-weight: 800; }
+.tz-badges { font-size: 12px; padding: 4px 12px; border-radius: 999px; background: rgba(217, 138, 43, 0.15); color: var(--warn-strong); font-weight: 700; }
+.tz-quiz {
+  background: rgba(255, 252, 246, 0.85); border: 1px solid var(--border); border-radius: 18px;
+  padding: 22px; display: flex; flex-direction: column; gap: 16px;
+}
+.tz-q { font-size: 19px; font-weight: 800; line-height: 1.5; }
+.tz-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tz-opt {
+  padding: 14px 12px; font-size: 15px; font-weight: 700; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 251, 244, 0.9); border: 1px solid rgba(150, 110, 70, 0.35); color: var(--text);
+}
+.tz-opt:hover:not(:disabled) { border-color: var(--primary-strong); }
+.tz-opt-right { background: rgba(87, 168, 97, 0.18); border-color: var(--good-strong); color: var(--good-strong); }
+.tz-opt-wrong { background: rgba(217, 75, 63, 0.16); border-color: var(--bad-strong); color: var(--bad-strong); }
+.tz-next { align-self: flex-end; padding: 8px 18px; border: none; border-radius: 999px; color: #fff; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #d95a38, #b8442a); }
+.tz-result { text-align: center; padding: 12px; border-radius: 12px; font-weight: 800; background: rgba(217, 75, 63, 0.12); color: var(--bad-strong); }
+.tz-result.ok { background: rgba(87, 168, 97, 0.15); color: var(--good-strong); }
+.tz-start { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 10px 0; }
+.tz-rules { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; color: var(--muted); font-size: 13px; }
+.tz-big {
+  padding: 14px 34px; font-size: 16px; font-weight: 800; color: #fff; border: none; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(135deg, #eab04a, #d98a2b); box-shadow: 0 4px 14px rgba(217, 138, 43, 0.4);
+}
+.tz-big:disabled { filter: grayscale(0.6); cursor: not-allowed; }
+.tz-exchange { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tz-exchange-title { font-size: 13px; font-weight: 800; color: var(--primary-strong); }
+.tz-ex {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 251, 244, 0.85); border: 1px solid rgba(150, 110, 70, 0.35); font-weight: 700; font-size: 13px;
+}
+.tz-ex:disabled { opacity: 0.5; cursor: not-allowed; }
+.tz-ex-cost { font-size: 11px; color: var(--muted); font-weight: 600; }
+</style>

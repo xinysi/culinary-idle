@@ -1,5 +1,5 @@
 <script setup>
-// 厨心 2048（2026-09-06 顶部第三页）：4×4 滑动合并食材→满汉全席，分数兑金币（每 1024 分 +20 金，单局上限 200 金）
+// 厨心 2048（2026-09-06 逐页重排版：顶部状态条 + 中心大圆角棋盘 + 底部控制）
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -7,21 +7,17 @@ import { useUiStore } from '../stores/ui.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const mode = ref(4) // 4=标准 / 3=极速 3×3
+const mode = ref(4)
 const SIZE = computed(() => mode.value)
 const best = computed(() => player.minigames?.kitchen2048?.[mode.value === 4 ? 'best' : 'best3'] ?? 0)
 const grid = ref(newGrid(4))
-// 达标即时结算（2026-09-06 修复）：每跨过一档即 +20 金，不再等死局/重开才结算
-let paid = 0 // 本局已计入奖励的“达标分”
-let earned = 0 // 本局已发金币
+let paid = 0
+let earned = 0
 const score = ref(0)
 const over = ref(false)
 const won = ref(false)
 
-const TILE_META = {
-  2: '🥬', 4: '🥔', 8: '🥕', 16: '🍅', 32: '🍆', 64: '🧄',
-  128: '🍖', 256: '🍲', 512: '🐟', 1024: '🍰', 2048: '🍾', 4096: '🏆',
-}
+const TILE_META = { 2: '🥬', 4: '🥔', 8: '🥕', 16: '🍅', 32: '🍆', 64: '🧄', 128: '🍖', 256: '🍲', 512: '🐟', 1024: '🍰', 2048: '🍾', 4096: '🏆' }
 function newGrid(size = SIZE.value) {
   return Array.from({ length: size }, () => Array(size).fill(0))
 }
@@ -33,15 +29,14 @@ function spawn() {
   grid.value[r][c] = Math.random() < 0.9 ? 2 : 4
 }
 function reset() {
-  saveBest() // 重开/换模式前保存最佳（奖励已实时发放，无未结算）
+  saveBest()
   grid.value = newGrid()
   score.value = 0
   over.value = false
   won.value = false
   paid = 0
   earned = 0
-  spawn()
-  spawn()
+  spawn(); spawn()
 }
 function slideLine(line) {
   const arr = line.filter((v) => v)
@@ -51,17 +46,11 @@ function slideLine(line) {
   while (arr.length < SIZE.value) arr.push(0)
   return arr
 }
-function stepAndCap() {
-  return mode.value === 4 ? [1024, 200] : [512, 100]
-}
+function stepAndCap() { return mode.value === 4 ? [1024, 200] : [512, 100] }
 function tryPay() {
   const [step, cap] = stepAndCap()
-  while (score.value - paid >= step && earned + 20 <= cap) {
-    paid += step
-    earned += 20
-    player.gainGold(20)
-  }
-  if (earned >= cap && score.value - paid >= step) paid = score.value // 达单局上限后不再追发零头
+  while (score.value - paid >= step && earned + 20 <= cap) { paid += step; earned += 20; player.gainGold(20) }
+  if (earned >= cap && score.value - paid >= step) paid = score.value
 }
 function canMove(size = SIZE.value) {
   for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
@@ -77,9 +66,7 @@ function move(dir) {
   const before = JSON.stringify(grid.value)
   const size = SIZE.value
   for (let i = 0; i < size; i++) {
-    let line = dir === 'left' || dir === 'right'
-      ? grid.value[i].slice()
-      : grid.value.map((r) => r[i])
+    let line = dir === 'left' || dir === 'right' ? grid.value[i].slice() : grid.value.map((r) => r[i])
     if (dir === 'right' || dir === 'down') line.reverse()
     line = slideLine(line)
     if (dir === 'right' || dir === 'down') line.reverse()
@@ -89,13 +76,8 @@ function move(dir) {
   if (JSON.stringify(grid.value) === before) return
   spawn()
   tryPay()
-  if (!won.value && grid.value.some((r) => r.includes(2048))) {
-    won.value = true
-    ui.pushLog('🎉 厨心 2048：合出「神圣大餐」（2048）！', 'gain')
-  }
-  if (!canMove()) {
-    over.value = true
-  }
+  if (!won.value && grid.value.some((r) => r.includes(2048))) { won.value = true; ui.pushLog('🎉 合出「神圣大餐」（2048）！', 'gain') }
+  if (!canMove()) over.value = true
 }
 function saveBest() {
   const mg = player.minigames.kitchen2048
@@ -103,65 +85,81 @@ function saveBest() {
   const key = mode.value === 4 ? 'best' : 'best3'
   player.minigames.kitchen2048[key] = Math.max(player.minigames.kitchen2048[key] ?? 0, score.value)
 }
+function switchMode(m) { mode.value = m; reset() }
 function onKey(e) {
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }
   if (map[e.key]) { e.preventDefault(); move(map[e.key]) }
 }
 window.addEventListener('keydown', onKey)
-
-function switchMode(m) {
-  mode.value = m
-  reset()
-}
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 reset()
 const rows = computed(() => grid.value)
 </script>
 
 <template>
-  <div class="skill-view">
-    <header class="skill-head">
-      <div>
-        <h2>🧩 厨心 2048</h2>
-        <p class="dim">方向键 / 按钮滑动合并：蔬菜 → 料理 → 满汉全席（2048 神圣大餐！）。结算时每 1024 分 +20 金（单局上限 200 金）。</p>
-      </div>
-      <div class="skill-head-right">
-        <span class="badge badge-on">⭐ {{ score }}</span>
-        <span class="dim mono">本局 {{ earned }}/{{ mode === 4 ? 200 : 100 }} 金 · 最佳 {{ best }}</span>
-      </div>
-    </header>
-
-    <div class="card game-stage">
-
-      <div class="g2048-board">
-        <div v-for="(row, r) in rows" :key="'r' + r" class="g2048-row">
-          <div v-for="(v, c) in row" :key="c" class="g2048-cell" :class="'v' + v">
-            <template v-if="v">{{ TILE_META[v] ?? v }}</template>
-          </div>
-        </div>
-      </div>
-      <div class="g2048-controls">
-        <button class="btn btn-sm" :class="{ 'btn-primary': mode === 4 }" @click="switchMode(4)">4×4 标准</button>
-        <button class="btn btn-sm" :class="{ 'btn-primary': mode === 3 }" @click="switchMode(3)">3×3 极速</button>
-        <span style="width: 10px"></span>
-        <button class="btn btn-sm" @click="move('left')">←</button>
-        <button class="btn btn-sm" @click="move('up')">↑</button>
-        <button class="btn btn-sm" @click="move('down')">↓</button>
-        <button class="btn btn-sm" @click="move('right')">→</button>
-        <button class="btn btn-sm btn-primary" @click="reset()">重新开始</button>
-      </div>
-      <div v-if="over" class="heat-verdict miss">💀 无路可走了！分数 {{ score }} · 本局已入账 {{ earned }} 金币（重开继续）</div>
-      <div class="mg-info-grid">
-        <div class="mg-info-card">
-                    <h4>🎮 玩法</h4>
-                    <ul><li>方向键 / 按钮滑动合并</li><li>每跨一档（4×4:1024 / 3×3:512）即时 +20 金</li><li>单局上限 200 / 100 金</li></ul>
-                  </div>
-        <div class="mg-info-card">
-                    <h4>🏆 记录</h4>
-                    <div class="mg-info-row"><span>4×4 最佳</span><b class="mono">{{ player.minigames?.kitchen2048?.best ?? 0 }}</b></div>
-                    <div class="mg-info-row"><span>3×3 最佳</span><b class="mono">{{ player.minigames?.kitchen2048?.best3 ?? 0 }}</b>
-                </div>
-            </div>
+  <div class="g2048-page">
+    <div class="g2048-topbar">
+      <button class="g2048-mode" :class="{ on: mode === 4 }" @click="switchMode(4)">4×4 标准</button>
+      <button class="g2048-mode" :class="{ on: mode === 3 }" @click="switchMode(3)">3×3 极速</button>
+      <div class="g2048-stats">
+        <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
+        <span class="g2048-chip">💰 已得 <b class="mono">{{ earned }}/{{ mode === 4 ? 200 : 100 }}</b></span>
+        <span class="g2048-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       </div>
     </div>
+
+    <div class="g2048-board2" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
+      <div v-for="(cell, idx) in rows.flat()" :key="idx" class="g2048-cell2" :class="'v' + cell">
+        <template v-if="cell">{{ TILE_META[cell] ?? cell }}</template>
+      </div>
+    </div>
+
+    <div class="g2048-keys">
+      <button class="g2048-key" @click="move('left')">←</button>
+      <button class="g2048-key" @click="move('up')">↑</button>
+      <button class="g2048-key" @click="move('down')">↓</button>
+      <button class="g2048-key" @click="move('right')">→</button>
+      <button class="g2048-reset" @click="reset()">重新开始</button>
+    </div>
+    <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
+    <div class="g2048-tip">方向键或按钮滑动合并 · 每跨一档（4×4 每 1024 / 3×3 每 512 分）即时 +20 金，单局上限 200/100</div>
   </div>
 </template>
+<style scoped>
+.g2048-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
+.g2048-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+.g2048-mode {
+  padding: 7px 16px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 13px;
+  border: 1px solid rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.85); color: var(--muted);
+}
+.g2048-mode.on { background: var(--primary-strong); color: #fff; border-color: var(--primary-strong); }
+.g2048-stats { margin-left: auto; display: flex; gap: 8px; }
+.g2048-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; }
+.g2048-board2 {
+  width: min(380px, 90%); aspect-ratio: 1;
+  display: grid; gap: 8px;
+  background: rgba(150, 110, 70, 0.2);
+  border: 2px solid rgba(150, 110, 70, 0.35);
+  border-radius: 18px; padding: 10px;
+  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18), inset 0 2px 10px rgba(93, 64, 55, 0.12);
+}
+.g2048-cell2 {
+  border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;
+  background: rgba(255, 251, 244, 0.6);
+}
+.g2048-cell2.v2 { background: #e8f3d9; } .g2048-cell2.v4 { background: #d8ecb8; }
+.g2048-cell2.v8 { background: #c8e39a; } .g2048-cell2.v16 { background: #b6d98a; }
+.g2048-cell2.v32 { background: #f6d9a8; } .g2048-cell2.v64 { background: #f3c684; }
+.g2048-cell2.v128 { background: #efb669; } .g2048-cell2.v256 { background: #e8a24e; }
+.g2048-cell2.v512 { background: #dd8f3c; } .g2048-cell2.v1024 { background: #e0704a; }
+.g2048-cell2.v2048, .g2048-cell2.v4096 { background: #d95a38; color: #fff; }
+.g2048-keys { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.g2048-key {
+  width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer;
+  background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text);
+}
+.g2048-key:hover { border-color: var(--primary-strong); }
+.g2048-reset { padding: 0 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
+.g2048-over { font-weight: 800; color: var(--bad-strong); }
+.g2048-tip { color: var(--muted); font-size: 12px; text-align: center; }
+</style>
