@@ -11,3 +11,7 @@ npm-debug.log*
 
 # 桌面打包产物（2026-09-06）
 lmewexe/release2/
+
+# 测试产物
+/test-results/
+/playwright-report/
