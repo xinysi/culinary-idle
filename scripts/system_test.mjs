@@ -966,6 +966,31 @@ console.log('══ X. 觅珍抽卡 ══')
   p.mijian.pity.limited = 4
   const r7 = p.drawMijian('limited', 1)
   check('觅珍', '限时池保底第 5 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
+  // 爆率口径（2026-09-06 全面下调后；5000 次抽样区间校验）
+  {
+    const { pickItem: pk } = await import('../src/game/data/mijianDraws.js')
+    const RARE = ['稀有', '史诗', '传说', '神话']
+    const rate = (poolId, n = 5000) => {
+      let rare = 0
+      for (let i = 0; i < n; i++) {
+        const { item } = pk(poolId, Math.random, 0)
+        if (item?.quality && RARE.includes(item.quality)) rare++
+      }
+      return rare / n
+    }
+    const g = rate('gear'), m = rate('mix'), l = rate('limited')
+    check('觅珍', '厨具池稀有+ 爆率 8-14%（当前 10-11% 档）', g >= 0.08 && g <= 0.14, `g=${(g * 100).toFixed(2)}%`)
+    check('觅珍', '混池稀有+ 爆率 ≤2%', m >= 0.002 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
+    check('觅珍', '限时池稀有+ 爆率 ≤4%（5 抽保底兜底）', l >= 0.005 && l <= 0.04, `l=${(l * 100).toFixed(2)}%`)
+    // 普通池确定性：绝不产出超过价值上限的珍品
+    let capped = true
+    for (let i = 0; i < 200; i++) {
+      const mat = pk('material', Math.random, 0).item
+      const foo = pk('food', Math.random, 0).item
+      if (mat.value > 50 || foo.value > 100) capped = false
+    }
+    check('觅珍', '材料/食物池无珍品（价值上限 50/100）', capped)
+  }
   // 图鉴三查：抽卡来源
   const { itemSources: src } = await import('../src/game/data/itemSources.js')
   check('觅珍', '图鉴来源含觅珍（厨具池）', src('copperKnife').some((s) => s.includes('觅珍·厨具池')), JSON.stringify(src('copperKnife').slice(0, 3)))

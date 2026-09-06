@@ -4,11 +4,11 @@ import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
 
 export const MIJIAN_POOLS = [
-  { id: 'material', name: '材料池', icon: '🧺', desc: '食材/矿物/种子与加工材料', price: 300, kinds: ['ingredient', 'spice'] },
-  { id: 'food', name: '食物池', icon: '🍱', desc: '料理/饮品/调料成品', price: 300, kinds: ['food', 'drink'] },
+  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 300, kinds: ['ingredient', 'spice'], cap: 50 },
+  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（低价值成品，无珍品）', price: 300, kinds: ['food', 'drink'], cap: 100 },
   { id: 'gear', name: '厨具池', icon: '⚔️', desc: '装备（八槽位，稀有度加权，10 抽保底稀有+）', price: 500, kinds: ['equipment'] },
-  { id: 'mix', name: '混池', icon: '🎲', desc: '全品类混合（价格低、出货温和）', price: 80, kinds: ['mix'] },
-  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '全品类大奖池（价格高、极品概率极低，5 抽保底稀有+）', price: 1200, kinds: ['limited'] },
+  { id: 'mix', name: '混池', icon: '🎲', desc: '88% 普通素材 + 8% 装备（出货温和）', price: 80, kinds: ['mix'], cap: 60 },
+  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '80% 限时装备（极品率极低）+ 20% 美食，5 抽保底稀有+', price: 1200, kinds: ['limited'], cap: 150 },
 ]
 
 /** 限时池轮换周期（14 天）；剩余时间用于横幅角标倒计时 */
@@ -22,8 +22,12 @@ export const GEAR_PITY = 10
 // 限时池短保底：5 抽
 export const LIMITED_PITY = 5
 
-// 装备稀有度权重（厨具池）
-const QUALITY_WEIGHT = { 普通: 50, 精良: 24, 稀有: 14, 史诗: 7, 传说: 4, 神话: 1 }
+// 装备稀有度权重（厨具池：稀有+ ≈ 12%）
+const QUALITY_WEIGHT = { 普通: 74, 精良: 22, 稀有: 7, 史诗: 3.2, 传说: 1.3, 神话: 0.5 }
+// 限时池装备权重（稀有+ ≈ 3%，配 5 抽保底）
+const LIMITED_QUALITY_WEIGHT = { 普通: 86, 精良: 12, 稀有: 2, 史诗: 0.75, 传说: 0.2, 神话: 0.08 }
+// 素材/食物池加权幂次（0.85→0.55：拉平价值差，珍品率下降）
+const NORMAL_EXP = 0.85
 
 /** 池内候选（模块级缓存）
  *  mix：全品类混合（材料/香料/料理/饮品/装备，排除矿物）
@@ -40,7 +44,11 @@ function poolItems(poolId) {
       !(it.category === 'mineral' || /矿$/.test(it.name))
     )
   } else {
-    items = all.filter((it) => def.kinds.includes(it.type) && !(it.category === 'mineral' || /矿$/.test(it.name)))
+    items = all.filter((it) =>
+      def.kinds.includes(it.type) &&
+      !(it.category === 'mineral' || /矿$/.test(it.name)) &&
+      (!def.cap || it.value <= def.cap)
+    )
   }
   POOL_CACHE[poolId] = items
   return items
@@ -61,7 +69,7 @@ function weightedPick(items, rng = Math.random, exponent = 0.85) {
 
 /** 厨具池：先加权选稀有度 → 从该稀有度装备中随机一件
  *  pity：距上次稀有+的抽数（>= GEAR_PITY 必出稀有及以上） */
-function pickGear(rng, pity) {
+function pickGear(rng, pity, weightTable = QUALITY_WEIGHT) {
   const gear = poolItems('gear')
   if (!gear.length) return null
   let quality
@@ -69,7 +77,7 @@ function pickGear(rng, pity) {
     // 第 10 抽（累计未出稀有 9 次）触发保底
     quality = rng() < 0.15 ? '神话' : rng() < 0.4 ? '传说' : '史诗'
   } else {
-    const entries = Object.entries(QUALITY_WEIGHT)
+    const entries = Object.entries(weightTable)
     let total = entries.reduce((a, [, w]) => a + w, 0)
     let roll = rng() * total
     for (const [q, w] of entries) {
@@ -83,23 +91,39 @@ function pickGear(rng, pity) {
 
 export function pickItem(poolId, rng = Math.random, pity = 0) {
   if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
-  if (poolId === 'mix') return { item: weightedPick(poolItems('mix'), rng, 0.6), boosted: false }
+  if (poolId === 'mix') {
+    // 混池：8% 概率出装备（低权重表），其余素材（拉平；候选不含装备）
+    const item = rng() < 0.08 ? pickGear(rng, 0) : weightedPick(materialFoodItems(60), rng, NORMAL_EXP)
+    return { item, boosted: false }
+  }
   if (poolId === 'limited') {
-    // 限时池：陡加权（高价值概率极低）+ 5 抽短保底（PITY_LIMITED=5）
+    // 限时池：80% 装备（极陡权重表，稀有+ ≈ 3%）+ 20% 美食；5 抽保底
     const boosted = pity >= LIMITED_PITY - 1
     let item
     if (boosted) {
-      const gear = poolItems('gear')
-      const q = rng() < 0.15 ? '神话' : rng() < 0.45 ? '传说' : rng() < 0.9 ? '史诗' : '稀有'
-      const cand = gear.filter((it) => it.quality === q)
-      item = cand.length ? cand[Math.floor(rng() * cand.length)] : weightedPick(poolItems('limited'), rng, 1.8)
+      // 保底触发：强制稀有及以上（复用 pickGear 内部保底档位）
+      item = pickGear(rng, GEAR_PITY - 1, LIMITED_QUALITY_WEIGHT)
+    } else if (rng() < 0.8) {
+      item = pickGear(rng, 0, LIMITED_QUALITY_WEIGHT)
     } else {
-      item = weightedPick(poolItems('limited'), rng, 1.8)
+      item = weightedPick(materialFoodItems(150), rng, NORMAL_EXP)
     }
     return { item, boosted }
   }
   const items = poolItems(poolId)
-  return { item: weightedPick(items, rng), boosted: false }
+  return { item: weightedPick(items, rng, NORMAL_EXP), boosted: false }
+}
+
+/** 非装备素材缓存（混池/限时池的非装备分支与展示用） */
+let _materialFoodCache = null
+function materialFoodItems(cap = Infinity) {
+  if (!_materialFoodCache) {
+    _materialFoodCache = Object.values(ITEMS).filter((it) =>
+      ['ingredient', 'spice', 'food', 'drink'].includes(it.type) &&
+      !(it.category === 'mineral' || /矿$/.test(it.name))
+    )
+  }
+  return cap === Infinity ? _materialFoodCache : _materialFoodCache.filter((it) => it.value <= cap)
 }
 
 /** 池内预览图采样（抽卡背景轮播用）：等距取 count 张「有图片」的物品 */
