@@ -109,6 +109,7 @@ const cells = computed(() => tiles.value)
       <div class="game-layout">
         <div class="game-main">
 
+      <div class="puzzle-duo">
       <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 正确顺序）</div>
       <div class="puzzle-board puzzle-goal">
         <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="puzzle-cell puzzle-goal-cell">
@@ -116,6 +117,7 @@ const cells = computed(() => tiles.value)
         </div>
       </div>
       <div class="puzzle-board puzzle-board-play">
+      <span class="puzzle-play-label">🧩 拼图（点格子滑动）</span>
         <div
           v-for="(v, i) in cells"
           :key="i"
@@ -125,6 +127,7 @@ const cells = computed(() => tiles.value)
         >
           <template v-if="v">{{ LABELS[v - 1] }}<span class="puzzle-num">{{ v }}</span></template>
         </div>
+      </div>
       </div>
       <div class="g2048-controls">
         <button class="btn btn-sm" @click="resetDay()">重新打乱（当日固定）</button>
