@@ -1,5 +1,7 @@
 # 美食放置：食之契约（Culinary Idle: Taste Covenant）
 
+**🕹 在线游玩：[https://xinysi.github.io/culinary-idle/](https://xinysi.github.io/culinary-idle/)**（GitHub Pages，打开即玩；Windows 桌面版见 [Releases 页](https://github.com/xinysi/culinary-idle/releases)）
+
 Melvor Idle 风格的美食主题放置游戏。需求文档见 `美食放置：食之契约 — 游戏制作需求文档.md`。
 
 <img src="assets/72c4ab180fcb584c48c91800962659e9.png" width="1912" height="916" alt="image">
