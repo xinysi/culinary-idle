@@ -15,7 +15,10 @@ import { getAllSkillInstances } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { STORY } from '../game/data/story.js'
 import { TALES } from '../game/data/tales.js'
-import { TALES_EXT, QUIRKS } from '../game/data/tales_ext.js'
+// 传闻/轶事文案（tales_ext ~1.4MB）改为动态加载（2026-09-06 chunk 拆分：图鉴首开不背轶事文案）
+const talesExt = ref(null) // TALES_EXT（500 篇传闻）
+const quirks = ref(null) // QUIRKS（3588 条轶事）
+const quirkList = computed(() => quirks.value ?? [])
 import { SPIRITS } from '../game/data/spirits.js'
 import { AOJIS } from '../game/data/aojis.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -39,6 +42,11 @@ const tab = ref('quest')
 onMounted(() => {
   player.ensureDailyTasks()
   player.ensureWeeklyTask()
+  // 传闻/轶事文案 chunk 按需加载（2026-09-06 拆包）
+  import('../game/data/tales_ext.js').then((m) => {
+    talesExt.value = m.TALES_EXT
+    quirks.value = m.QUIRKS
+  }).catch(() => {})
 })
 
 // 日志页直达（图鉴/卡牌/成就）：导航按钮设置 ui.logInitialTab
@@ -424,7 +432,7 @@ function taleUnlocked(t) {
 const storyCat = ref('main')
 const quirkCat = ref('gather')
 const quirkSub = ref('foraging')
-const allTales = computed(() => [...TALES, ...TALES_EXT])
+const allTales = computed(() => [...TALES, ...(talesExt.value ?? [])])
 // 传闻解锁计数（500 条过滤一次缓存；模板按钮/标题不再内联全量 filter）
 const talesUnlocked = computed(() => allTales.value.filter(taleUnlocked).length)
 // 传闻按「系列」分组展示（同系列在一起），组头带解锁计数
@@ -457,7 +465,7 @@ const quirkCats = computed(() => {
   const defById = new Map(QUIRK_CAT_DEFS.map((c) => [c.id, c]))
   const defs = QUIRK_CAT_DEFS.map((c) => ({ ...c, total: 0, unlocked: 0 }))
   const subMap = new Map() // `cat|sub` → { sub, total, unlocked }
-  for (const q of QUIRKS) {
+  for (const q of quirkList.value) {
     const u = taleUnlocked(q)
     const d = defById.get(q.cat)
     if (d) { d.total++; if (u) d.unlocked++ }
@@ -478,7 +486,7 @@ const activeQuirkSubs = computed(() => {
   return list
 })
 const quirkSubStats = computed(() => quirkCats.value.subMap.get(quirkCat.value + '|' + quirkSub.value) ?? { sub: quirkSub.value, total: 0, unlocked: 0 })
-const currentQuirks = computed(() => QUIRKS.filter((q) => q.cat === quirkCat.value && q.sub === quirkSub.value))
+const currentQuirks = computed(() => quirkList.value.filter((q) => q.cat === quirkCat.value && q.sub === quirkSub.value))
 // 切换大类时，若当前子子类不在该大类下，则回退到该大类第一个子子类
 function switchQuirkCat(cat) {
   quirkCat.value = cat
@@ -500,7 +508,7 @@ function achievementProgress(a) {
     return { cur, need: Number(m[2]), pct: Math.min(100, (cur / Number(m[2])) * 100) }
   }
   const N = {
-    firstWin: 1, win10: 10, win100: 100, win500: 500, win1000: 1000, bossAll: 28,
+    firstWin: 1, win10: 10, win100: 100, win500: 500, win1000: 1000, bossAll: 28, hardBossAll: 28,
     log25: 25, log50: 50, log75: 75, log100: 100,
     explore1: 1, explore50: 50, region3: 3, region6: 6, region10: 10,
     gold10k: 10000, gold100k: 100000, items50: 50, prestige1: 1, prestige3: 3, prestige5: 5, prestige8: 8, prestige12: 12, level120: 120,
@@ -515,6 +523,7 @@ function achievementProgress(a) {
   else if (a.id.startsWith('hardcoreDay')) cur = p.hardcoreDayCount()
   else if (['firstWin', 'win10', 'win100', 'win500', 'win1000'].includes(a.id) || a.id === 'hardcore10') cur = p.stats.combatWins
   else if (a.id === 'bossAll') cur = p.stats.bosses.length
+  else if (a.id === 'hardBossAll') cur = p.stats.hardBosses?.length ?? 0
   else if (a.id.startsWith('explore')) cur = p.stats.explorations
   else if (a.id.startsWith('region')) cur = p.regionsUnlocked
   else if (a.id.startsWith('gold')) cur = p.stats.totalGoldEarned
@@ -1000,7 +1009,7 @@ function scrollToTalesSeries(series) {
         <div class="region-tabs" style="margin-bottom: 10px">
           <button class="btn btn-sm" :class="{ 'btn-primary': storyCat === 'main' }" @click="storyCat = 'main'">主线</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': storyCat === 'tales' }" @click="storyCat = 'tales'">传闻（{{ talesUnlocked }}/{{ allTales.length }}）</button>
-          <button class="btn btn-sm" :class="{ 'btn-primary': storyCat === 'quirks' }" @click="storyCat = 'quirks'">轶事（{{ quirkCats.defs.reduce((s, c) => s + c.unlocked, 0) }}/{{ QUIRKS.length }}）</button>
+          <button class="btn btn-sm" :class="{ 'btn-primary': storyCat === 'quirks' }" @click="storyCat = 'quirks'">轶事（{{ quirkCats.defs.reduce((s, c) => s + c.unlocked, 0) }}/{{ quirkList.length }}）</button>
         </div>
 
         <!-- 主线章节 -->
@@ -1070,6 +1079,7 @@ function scrollToTalesSeries(series) {
 
         <!-- 轶事 → 大类（采集/制作/对决/辅助）→ 子子类（技能/战斗/食灵…）两级 -->
         <template v-else>
+          <p v-if="!quirks" class="dim" style="margin: 10px 0">轶事文案加载中……</p>
           <div class="region-tabs" style="margin-bottom: 10px">
             <button
               v-for="c in quirkCats.defs"

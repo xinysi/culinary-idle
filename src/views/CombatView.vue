@@ -18,6 +18,7 @@ const combat = getCombat()
 
 const selectedRegion = ref(0)
 const persistent = ref(false) // 持久战：胜利后自动挑战下一个对手（区域顺序循环）
+const hardMode = ref(false) // 困难模式（2026-09-06）：BOSS 属性 ×1.5 + 首杀额外奖励
 const combatLevel = computed(() => player.combatLevel)
 const pStats = computed(() => combat?.playerStats() ?? {})
 const inFight = computed(() => combat?.inFight ?? false)
@@ -122,8 +123,22 @@ function advantageText(style, oppStyle) {
 }
 function startFight(opponent) {
   if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
-  combat.start(opponent)
-  ui.pushLog(`⚔️ 对决开始：${opponent.name}`, 'info')
+  let o = opponent
+  // 困难模式（2026-09-06）：BOSS 属性 ×1.5 运行时副本；首杀额外奖励，不占 BOSS 击杀口径
+  if (hardMode.value && opponent.isBoss) {
+    o = {
+      ...opponent,
+      isHard: true,
+      isBoss: false,
+      name: `${opponent.name}·困难`,
+      hp: Math.round(opponent.hp * 1.5),
+      atk: opponent.atk * 1.5,
+      def: Math.round(opponent.def * 1.5),
+      eva: opponent.eva + 3,
+    }
+  }
+  combat.start(o)
+  ui.pushLog(`⚔️ 对决开始：${o.name}${o.isHard ? '（🔥 困难）' : ''}`, 'info')
 }
 const MECH_LABEL = { regen: '回血', slowEvery: '降攻速', burn: '灼烧', poison: '中毒', instantKill: '秒杀', randomStyle: '随机风格', phases: '三阶段' }
 function mechText(b) {
@@ -328,7 +343,11 @@ function buffText() {
         </div>
       </div>
 
-      <h3 style="margin-top: 12px">首领</h3>
+      <h3 style="margin-top: 12px">首领
+        <button class="btn btn-sm" :class="{ 'btn-primary': hardMode }" style="margin-left: 8px" @click="hardMode = !hardMode" title="BOSS 属性 ×1.5（运行时副本，不动铁律数据）；困难首杀额外金币">
+          {{ hardMode ? '🔥 困难模式开' : '困难模式' }}
+        </button>
+      </h3>
       <div class="gather-grid">
         <div
           v-for="b in COMBAT_BOSSES"

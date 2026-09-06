@@ -65,6 +65,15 @@ function doMoveToInventory() {
 function doSell() {
   if (player.sellItem(selected.value, qty.value)) ui.pushLog(`出售 ${getItem(selected.value)?.name} ×${qty.value}`, 'info')
 }
+// 批量操作（2026-09-06）
+function doMoveAll() {
+  const n = player.moveAllToBank()
+  ui.pushLog(n ? `📥 一键入仓：${n} 种物品存入仓库` : '没有可转移的物品', n ? 'info' : 'warn')
+}
+function doSellCommon() {
+  const n = player.sellCommonEquipment()
+  ui.pushLog(n ? `💰 出售普通/精良装备 ${n} 件` : '没有可出售的低品质装备', n ? 'gain' : 'warn')
+}
 
 // ── 穿戴装备界面（§5.1）──
 const SLOT_NAMES = { weapon: '武器', helmet: '头盔', body: '身体', legs: '腿部', boots: '脚部', offhand: '副手', amulet: '饰品1', ring: '饰品2' }
@@ -100,6 +109,8 @@ function setUpgradeTarget(id) { upgradeTarget.value = id }
       <div class="region-tabs">
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'bag' }" @click="tab = 'bag'; selected = null">🧺 厨藏（{{ player.inventorySlotsUsed }}/{{ player.inventoryCap }} 格）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'bank' }" @click="tab = 'bank'; selected = null">📦 仓库（{{ player.bankSlotsUsed }}/{{ player.bankCap }} 格）</button>
+        <button class="btn btn-sm" :disabled="tab !== 'bag'" @click="doMoveAll" title="背包内全部非装备/非食灵物品存入仓库">📥 一键入仓</button>
+        <button class="btn btn-sm" :disabled="tab !== 'bag'" @click="doSellCommon" title="出售全部普通/精良品质装备（半价回收）">💰 卖普通装备</button>
         <select v-model="sortBy" class="plot-select" style="margin-left: auto; width: auto">
           <option v-for="o in SORT_OPTIONS" :key="o.id" :value="o.id">{{ o.name }}</option>
         </select>

@@ -25,6 +25,7 @@ import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
 import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
+import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { useUiStore } from './ui.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
@@ -166,8 +167,10 @@ export const usePlayerStore = defineStore('player', {
     hardcoreStats: { days: 0, best: 0, lastDayKey: null },
     // 新手引导（2026-09-06）：step=当前步骤（0-4），done=true 后不再显示
     guide: { step: 0, done: false },
+    // 锻造套装集齐奖励（2026-09-06）：已发奖套名列表
+    setBonuses: [],
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1 }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
+    settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
   }),
 
@@ -403,6 +406,7 @@ export const usePlayerStore = defineStore('player', {
         spiritBonds: {},
         hardcoreStats: { days: 0, best: 0, lastDayKey: null },
         guide: { step: 0, done: false },
+        setBonuses: [],
       })
     },
 
@@ -456,6 +460,7 @@ export const usePlayerStore = defineStore('player', {
         spiritBonds: saved.spiritBonds ?? {},
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
         guide: saved.guide ?? { step: 0, done: false },
+        setBonuses: saved.setBonuses ?? [],
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -505,6 +510,7 @@ export const usePlayerStore = defineStore('player', {
         spiritBonds: this.spiritBonds,
         hardcoreStats: this.hardcoreStats,
         guide: this.guide,
+        setBonuses: this.setBonuses,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -648,6 +654,27 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ── 出售（§11.3：出售价 = 价值 × 0.5）──
+    /** 一键入仓：背包内全部可转移物品（非装备/非食灵）存入仓库；返回转移种类数 */
+    moveAllToBank() {
+      let moved = 0
+      for (const id of Object.keys(this.inventory)) {
+        const it = getItem(id)
+        if (it?.type === 'equipment' || it?.type === 'spirit') continue
+        if ((this.inventory[id] ?? 0) > 0 && this.moveToBank(id, null)) moved++
+      }
+      return moved
+    },
+    /** 一键出售全部「普通/精良」品质装备（低品质淘汰）；返回出售件数 */
+    sellCommonEquipment() {
+      let sold = 0
+      for (const id of Object.keys(this.inventory)) {
+        const it = getItem(id)
+        if (it?.type !== 'equipment' || !['普通', '精良'].includes(it.quality)) continue
+        const qty = this.inventory[id] ?? 0
+        if (qty > 0 && this.sellItem(id, qty)) sold += qty
+      }
+      return sold
+    },
     sellItem(itemId, qty = 1) {
       if (!(qty > 0)) return false
       const have = this.inventory[itemId] ?? 0
@@ -1377,6 +1404,26 @@ export const usePlayerStore = defineStore('player', {
       return this.hardcoreStats?.best ?? 0
     },
 
+    // ── 锻造套装集齐奖励（2026-09-06）──
+    /** 检查全部锻造套收齐 → 一次性发奖；返回本次新集齐的套数 */
+    checkSetBonuses() {
+      const list = this.setBonuses ?? []
+      let awarded = 0
+      for (const set of COLLECTABLE_SETS) {
+        if (list.includes(set.key)) continue
+        // 图鉴收集覆盖整套装备（缺件则跳过）
+        if (!set.ids.every((id) => this.collected[id])) continue
+        list.push(set.key)
+        const r = setBonusReward(set)
+        this.gainGold(r.gold)
+        this.gainItem('mysterySpice', 1)
+        awarded++
+        EventBus.emit('set:bonus', { name: set.name, gold: r.gold })
+      }
+      if (awarded > 0) this.setBonuses = list
+      return awarded
+    },
+
     // ── 餐厅好感（2026-09-06）──
     favorLevel() {
       return favorLevelFromXp(this.restaurant?.favor?.xp ?? 0)
@@ -1509,6 +1556,7 @@ export const usePlayerStore = defineStore('player', {
         const now = Date.now()
         this.checkSpoilage(now)
         this.checkAchievements()
+        this.checkSetBonuses()
         this.syncQuestProgress()
         this.syncSeasonProgress()
         this.ensureDailyTasks()
