@@ -117,14 +117,16 @@ body {
   border-top: 1px solid var(--border);
   flex-shrink: 0; /* 不随内容区滚动（flex 布局固定）*/
   margin-bottom: 0;
-  flex-wrap: wrap; /* 按钮多时换行显示，避免被横向滚动隐藏 */
+  flex-wrap: nowrap; /* 放大/按钮多时保持单行，不再折成两行（2026-09-06） */
+  overflow-x: auto; /* 极窄兜底：横向可滚（隐藏滚动条） */
+  scrollbar-width: none;
   z-index: 20; /* 确保不被左侧栏覆盖 */
   position: relative;
 }
 
 /* 主按钮区与右侧固定组之间的弹性空间：翻页导致按钮数量变化时，右组位置不动 */
 .top-nav-spacer {
-  flex: 1 1 auto;
+  flex: 1 1 0; /* 先收缩弹性空隙，主按钮区与右侧组保持单行 */
   min-width: 8px;
 }
 
@@ -137,7 +139,8 @@ body {
 }
 
 .top-nav-btn {
-  flex-shrink: 0;
+  flex-shrink: 1; /* 空间不足时先收缩自身（保持单行），文字超出省略 */
+  min-width: 0;
   border: 1px dashed rgba(74, 47, 38, 0.28);
   background: rgba(255, 252, 246, 0.30);
   backdrop-filter: blur(12px);
@@ -145,6 +148,9 @@ body {
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   color: var(--text);
 }
@@ -3830,3 +3836,6 @@ html[data-theme='dark'] .cb-first-bonus { color: #8fd39a; }
   background: rgba(255, 252, 246, 0.9); color: var(--text);
 }
 html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.16); }
+
+/* 顶部导航单行（2026-09-06）：隐藏自身横向滚动条 */
+.top-nav::-webkit-scrollbar { display: none; }
