@@ -207,20 +207,33 @@ function sectionLabelOf(reqLevel) {
   const start = Math.floor((reqLevel - 1) / 5) * 5 + 1
   return `${start}-${start + 4}`
 }
-function goTree(skillId) {
+function goTree(nav) {
   const target = treeRecipe.value
   treeRecipe.value = null
-  if (!target) return
-  if (skillId === props.instance.id) {
-    // 同技能：「去做」= 展开所在等级段 + 滚动到该配方卡 + 闪烁高亮
-    const sec = sectionLabelOf(target.reqLevel)
-    if (!isOpen(sec)) toggleSection(sec)
-    scrollToSection(sec)
-    flashCard.value = { recipeId: target.id }
-    setTimeout(() => { flashCard.value = null }, 1800)
-  } else {
-    player.setActiveSkill(skillId)
+  if (!target || !nav) return
+  if (nav.type === 'craft') {
+    if (nav.skillId === props.instance.id) {
+      // 同技能：「去做」= 展开目标配方所在等级段 + 滚动到该卡 + 闪烁高亮
+      const sec = sectionLabelOf(nav.reqLevel ?? target.reqLevel)
+      if (!isOpen(sec)) toggleSection(sec)
+      scrollToSection(sec)
+      flashCard.value = { recipeId: nav.recipeId }
+      setTimeout(() => { flashCard.value = null }, 1800)
+    } else {
+      player.setActiveSkill(nav.skillId)
+      ui.setView('skill')
+    }
+  } else if (nav.type === 'gather') {
+    // 去采集：切换到对应采集技能并选中该材料目标
+    if (!player.skillTargets) player.skillTargets = {}
+    player.skillTargets[nav.skillId] = nav.targetId
+    player.setActiveSkill(nav.skillId)
     ui.setView('skill')
+  } else if (nav.type === 'farming') {
+    player.setActiveSkill('farming')
+    ui.setView('skill')
+  } else if (nav.type === 'shop') {
+    ui.setView('shop')
   }
 }
 
