@@ -72,6 +72,7 @@ function tap(i) {
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
     if (mg.day !== today) mg.day = today
     if ((mg.done ?? 0) < 1) {
+      player.minigames.puzzle.done = (mg.done ?? 0) + 1 // 每日仅计发一次（2026-09-06 修复可无限领取）
       player.gainItem('energyBiscuit', 1)
       ui.pushLog('🧩 每日美食拼图完成！+能量饼干 ×1', 'gain')
     }

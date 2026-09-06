@@ -68,7 +68,9 @@ function pick(opt) {
 function next() {
   if (index.value < quiz.value.length - 1) index.value++
 }
+const lastCorrect = ref(0)
 function settle() {
+  lastCorrect.value = correctCount.value
   const m = player.minigames.trivia
   if (correctCount.value >= 8) {
     m.badges = (m.badges ?? 0) + 1
@@ -130,8 +132,14 @@ function exchange(item) {
         </div>
       </template>
       <template v-else>
-        <p class="dim" style="margin: 6px 0">本周是否已答：<b>{{ mg.week === weekKey() && mg.answered > 0 ? '✅ 已答（下周重置）' : '未开始' }}</b></p>
-        <button class="btn btn-sm btn-primary" @click="newQuiz()">开始本周竞答（10 题）</button>
+        <template v-if="mg.week === weekKey() && mg.answered > 0">
+          <div class="heat-verdict" :class="{ perfect: lastCorrect >= 8, miss: lastCorrect < 8 }">
+            本周成绩：{{ lastCorrect }}/10（{{ lastCorrect >= 8 ? '徽章 +1 已发放' : '未达 8 题，下周再战' }}）· 累计徽章 {{ mg.badges ?? 0 }}
+          </div>
+        </template>
+        <button class="btn btn-sm btn-primary" :disabled="mg.week === weekKey() && mg.answered > 0" @click="newQuiz()">
+          {{ mg.week === weekKey() && mg.answered > 0 ? '本周已答完' : '开始本周竞答（10 题）' }}
+        </button>
       </template>
       <div class="trivia-exchange">
         <h4>🏅 徽章兑换</h4>
