@@ -76,14 +76,12 @@ function tap(i) {
   if (checkWin()) {
     won.value = true
     const mg = player.minigames.puzzle
-    const today = todayKey()
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
-    if (mg.day !== today) {
-      mg.day = today
-      mg.done = (mg.done ?? 0) + 1
-      player.gainItem('energyBiscuit', 1)
-      ui.pushLog('🧩 每日美食拼图完成！+能量饼干 ×1', 'gain')
-    }
+    mg.day = todayKey()
+    mg.done = (mg.done ?? 0) + 1
+    // 每次完成都可得饼干（2026-09-07 取消每日一次限制）
+    player.gainItem('energyBiscuit', 1)
+    ui.pushLog(`🧩 拼图完成！+能量饼干 ×1（累计 ${mg.done} 次）`, 'gain')
   }
 }
 function todayKey() {
@@ -103,7 +101,7 @@ const cells = computed(() => tiles.value)
   <div class="pz-page">
     <div class="pz-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = Number(key); resetDay()">{{ m.label }}</button>
-      <span class="pz-chip" :class="{ ok: doneToday }">{{ doneToday ? '✅ 今日已完成' : '📅 今日未完成' }}</span>
+      <span class="pz-chip">✅ 累计 <b class="mono">{{ doneDays }}</b> 次</span>
       <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>
       <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
     </div>
@@ -130,7 +128,7 @@ const cells = computed(() => tiles.value)
     <div class="pz-keys">
       <button class="pz-reset" @click="resetDay()">重新打乱（当日固定）</button>
     </div>
-    <div v-if="won" class="pz-done">🎉 复原完成！{{ doneToday ? '奖励今日已领' : '+能量饼干 ×1' }}</div>
+    <div v-if="won" class="pz-done">🎉 复原完成！+能量饼干 ×1</div>
     <div class="pz-tip">每天同一张图 · 完成得能量饼干（每日 1 次）</div>
   </div>
 </template>

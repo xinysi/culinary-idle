@@ -61,7 +61,7 @@ function judge(slot, modeKey, multi = false) {
   if (type === 'perfect') {
     mg.streak = (mg.streak ?? 0) + 1
     mg.bestStreak = Math.max(mg.bestStreak ?? 0, mg.streak)
-    if (mg.streak % m.every === 0 && mg.day === todayKey() && mg.streak / m.every <= 5) {
+    if (mg.streak % m.every === 0) { // 无每日上限（2026-09-07 放开每日限制）
       player.gainGold(m.reward)
       ui.pushLog(`🔥 火候炉：${m.label} ${mg.streak} 连完美！+${m.reward} 金币${superHit ? '（双锅大完美！）' : ''}`, 'gain')
     }
