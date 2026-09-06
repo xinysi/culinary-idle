@@ -101,6 +101,21 @@ const doneToday = computed(() => {
   return mg.day === todayKey() && (mg.done ?? 0) >= 1
 })
 const doneDays = computed(() => player.minigames?.puzzle?.done ?? 0)
+// 图片拼图：每日固定一张图（图鉴物品图），左=完整图、右=同图切块
+const picIndex = dayHash() % IMG_IDS.length
+const puzzlePic = computed(() => itemImage(IMG_IDS[picIndex]))
+function bgStyle(v) {
+  if (!v) return {}
+  const size = SIZE.value
+  const r = Math.floor((v - 1) / size)
+  const c = (v - 1) % size
+  return {
+    backgroundImage: 'url(' + puzzlePic.value + ')',
+    backgroundSize: size * 100 + '% ' + size * 100 + '%',
+    backgroundPosition: (c / (size - 1)) * 100 + '% ' + (r / (size - 1)) * 100 + '%',
+    backgroundRepeat: 'no-repeat',
+  }
+}
 resetDay()
 const cells = computed(() => tiles.value)
 </script>
@@ -116,19 +131,16 @@ const cells = computed(() => tiles.value)
 
     <div class="pz-duo">
       <div class="pz-col">
-        <div class="pz-label">🎯 目标图</div>
-        <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
-          <div v-for="i in mode * mode" :key="'g' + i" class="pz-cell pz-goal-cell">
-            <img class="pz-img" :src="itemImage(IMG_IDS[i - 1])" />
-            <span class="pz-num pz-num-big">{{ i }}</span>
-          </div>
+        <div class="pz-label">🎯 完整图（参考）</div>
+        <div class="pz-board pz-board-full">
+          <img class="pz-fullimg" :src="puzzlePic" alt="" />
         </div>
       </div>
       <div class="pz-col">
-        <div class="pz-label">🧩 拼图（点击与空格相邻的碎片）</div>
+        <div class="pz-label">🧩 切割块（点击与空格相邻的碎片滑入）</div>
         <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
-          <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" @click="tap(i)">
-              <template v-if="v"><img class="pz-img" :src="itemImage(IMG_IDS[v - 1])" /><span class="pz-num">{{ v }}</span></template>
+          <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" :style="bgStyle(v)" @click="tap(i)">
+            <span v-if="v" class="pz-num pz-num-big">{{ v }}</span>
           </div>
         </div>
       </div>
@@ -148,6 +160,12 @@ const cells = computed(() => tiles.value)
 .pz-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .pz-duo { display: flex; gap: 22px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
 .pz-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+/* 完整图：与切割块同尺寸变形（或放大后居中），左列参考 */
+.pz-board-full { display: block !important; position: relative; padding: 0; overflow: hidden; }
+.pz-fullimg { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+/* 切割块：背景切片（bgStyle 驱动） */
+.pz-cell { padding: 0; }
+.pz-cell:not(.empty) { background-color: rgba(255, 251, 244, 0.92); background-size: 100% 100%; }
 .pz-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
 .pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
