@@ -1,7 +1,59 @@
 /* 主题样式 — 需求文档 §9.2 配色 + §9.3 响应式布局
    美食主题配色：主色番茄红棕 #E2623C / 文字深可可 #4B3228 / 背景奶油白 #FAF3EA */
 
-/* ── 深色主题（2026-09-06）：CSS 变量 + 主要表面覆写 ── */[data-theme='dark'] {  --primary: #e0704a;  --primary-strong: #ff8a5e;  --primary-soft: #3a241a;  --text: #f0e4d5;  --text-dim: #c2a894;  --bg: #1c130d;  --card: #2a1d15;  --border: #4a382b;  --good: #6fbf7a;  --good-strong: #8cd899;  --good-soft: #22402a;  --warn: #f0a033;  --warn-strong: #ffb84d;  --bad: #ff6a5e;  --bad-strong: #ff8a80;  --bad-soft: #4a221e;  --muted: #a08a74;  --lock-bg: #2e2118;}[data-theme='dark'] .card, [data-theme='dark'] .gather-card, [data-theme='dark'] .opp-row,[data-theme='dark'] .slot-card, [data-theme='dark'] .item-card, [data-theme='dark'] .stats-col,[data-theme='dark'] .modal, [data-theme='dark'] .season-card, [data-theme='dark'] .daily-item,[data-theme='dark'] .fest-item, [data-theme='dark'] .tower-ms, [data-theme='dark'] .fest-ms,[data-theme='dark'] .offline-row, [data-theme='dark'] .prestige-item {  background: rgba(42, 29, 21, 0.86);  backdrop-filter: blur(10px);  -webkit-backdrop-filter: blur(10px);}[data-theme='dark'] .btn { background: rgba(48, 33, 24, 0.9); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.85); color: #fff; }[data-theme='dark'] .top-nav, [data-theme='dark'] .bottom-nav { background: rgba(30, 20, 14, 0.85); }[data-theme='dark'] .main-scroll { background: rgba(30, 20, 14, 0.86); }[data-theme='dark'] .app-main { background-image: linear-gradient(rgba(15, 10, 7, 0.35), rgba(15, 10, 7, 0.35)), url('../../public/images/bg-start.jpg'); }[data-theme='dark'] .app-sidebar, [data-theme='dark'] .app-status { background-image: linear-gradient(rgba(18, 12, 8, 0.65), rgba(18, 12, 8, 0.65)), url('../../public/images/bg-sidebar.png'); }[data-theme='dark'] .skill-item, [data-theme='dark'] .top-nav-btn { background: rgba(44, 30, 22, 0.5); color: #e0d2bf; }[data-theme='dark'] .skill-item.active, [data-theme='dark'] .top-nav-btn.active { background: rgba(224, 112, 74, 0.3); color: #ffb08a; }[data-theme='dark'] .stat, [data-theme='dark'] .quick-item, [data-theme='dark'] .story-part { color: #d9c9b6; }[data-theme='dark'] .item-cell, [data-theme='dark'] .gather-card-row span, [data-theme='dark'] .gather-card-row .dim { color: inherit; }[data-theme='dark'] .item-cell { background: rgba(42, 29, 21, 0.55); }[data-theme='dark'] .log-list li { border-color: rgba(255, 255, 255, 0.1); }[data-theme='dark'] .battle-left, [data-theme='dark'] .battle-right { background: rgba(42, 29, 21, 0.7); }
+
+/* ── 深色主题（2026-09-06 增强版）：变量 + 全表面覆写 + 文字可读性 ── */
+[data-theme='dark'] {
+  --primary: #e0704a;
+  --primary-strong: #ff8a5e;
+  --primary-soft: #3a241a;
+  --text: #f2e6d7;
+  --text-dim: #cfbaa5;
+  --bg: #1a120c;
+  --card: #241a13;
+  --border: #4d3a2b;
+  --good: #6fbf7a;
+  --good-strong: #8cd899;
+  --good-soft: #22402a;
+  --warn: #f0a033;
+  --warn-strong: #ffb84d;
+  --bad: #ff6a5e;
+  --bad-strong: #ff8a80;
+  --bad-soft: #4a221e;
+  --muted: #bfa98f;
+  --lock-bg: #2e2118;
+}
+[data-theme='dark'] .card, [data-theme='dark'] .gather-card, [data-theme='dark'] .opp-row,
+[data-theme='dark'] .slot-card, [data-theme='dark'] .item-card, [data-theme='dark'] .stats-col,
+[data-theme='dark'] .modal, [data-theme='dark'] .bag-pane, [data-theme='dark'] .season-card,
+[data-theme='dark'] .season-task-card, [data-theme='dark'] .season-tier-card,
+[data-theme='dark'] .season-pts-card, [data-theme='dark'] .daily-item, [data-theme='dark'] .fest-item,
+[data-theme='dark'] .tower-ms, [data-theme='dark'] .fest-ms, [data-theme='dark'] .offline-row,
+[data-theme='dark'] .prestige-item, [data-theme='dark'] .spirit-detail-panel,
+[data-theme='dark'] .eq-option, [data-theme='dark'] .battle-left, [data-theme='dark'] .battle-right,
+[data-theme='dark'] .alchemy-card, [data-theme='dark'] .eq-modal {
+  background: rgba(36, 26, 19, 0.9);
+  color: #ecdcc8;
+}
+[data-theme='dark'] .gather-section-title { background: rgba(52, 38, 28, 0.55); color: #e8d8c4; }
+[data-theme='dark'] .region-tabs .btn, [data-theme='dark'] .quick-nav .btn { background: rgba(52, 38, 28, 0.65); color: #e0d0bc; }
+[data-theme='dark'] .btn { background: rgba(52, 38, 28, 0.92); border-color: rgba(255, 255, 255, 0.18); color: #e8dccb; }
+[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.9); color: #fff; }
+[data-theme='dark'] .top-nav, [data-theme='dark'] .bottom-nav { background: rgba(28, 19, 13, 0.9); }
+[data-theme='dark'] .main-scroll { background: rgba(26, 18, 12, 0.9); }
+[data-theme='dark'] .app-main { background-image: linear-gradient(rgba(15, 10, 7, 0.4), rgba(15, 10, 7, 0.4)), url('../../public/images/bg-start.jpg'); }
+[data-theme='dark'] .app-sidebar, [data-theme='dark'] .app-status { background-image: linear-gradient(rgba(18, 12, 8, 0.72), rgba(18, 12, 8, 0.72)), url('../../public/images/bg-sidebar.png'); }
+[data-theme='dark'] .skill-item, [data-theme='dark'] .top-nav-btn { background: rgba(46, 32, 23, 0.55); color: #e6d8c5; }
+[data-theme='dark'] .skill-item.active, [data-theme='dark'] .top-nav-btn.active { background: rgba(224, 112, 74, 0.32); color: #ffb08a; }
+[data-theme='dark'] .item-cell { background: rgba(36, 26, 19, 0.6); }
+[data-theme='dark'] h2, [data-theme='dark'] h3, [data-theme='dark'] h4, [data-theme='dark'] strong { color: #f6ead9; }
+[data-theme='dark'] .dim { color: var(--text-dim); }
+[data-theme='dark'] .mono { color: #f0e0c8; }
+[data-theme='dark'] .stat-num, [data-theme='dark'] .stat-label { color: inherit; }
+[data-theme='dark'] .status-line, [data-theme='dark'] .spoil-item { background: rgba(36, 26, 19, 0.6); }
+[data-theme='dark'] .log-list li { border-color: rgba(255, 255, 255, 0.12); }
+[data-theme='dark'] .battle-log { color: #d9c9b6; }
+
 :root {
   --primary: #d95a38;
   --primary-strong: #b8442a;

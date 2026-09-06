@@ -344,10 +344,11 @@ function buffText() {
       </div>
 
       <h3 style="margin-top: 12px">首领
-        <button class="btn btn-sm" :class="{ 'btn-primary': hardMode }" style="margin-left: 8px" @click="hardMode = !hardMode" title="BOSS 属性 ×1.5（运行时副本，不动铁律数据）；困难首杀额外金币">
+        <button class="btn btn-sm" :class="{ 'btn-primary': hardMode }" style="margin-left: 8px" @click="hardMode = !hardMode">
           {{ hardMode ? '🔥 困难模式开' : '困难模式' }}
         </button>
       </h3>
+      <p class="dim" style="margin: 4px 0 8px">🔥 困难模式：点亮后挑战任一首领，其属性 ×1.5（生命/攻击/防御/闪避）、掉落照常；每个首领的困难首杀额外 +（50+等级×10）金币，不计入普通击杀/赛季任务进度。装备成型后可冲击「食神之巅」成就（28 困难首杀）。</p>
       <div class="gather-grid">
         <div
           v-for="b in COMBAT_BOSSES"
