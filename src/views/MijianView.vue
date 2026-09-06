@@ -97,8 +97,8 @@ function typeLabel(id) {
           :class="{ 'btn-primary': activePool === p.id }"
           @click="activePool = p.id"
         >{{ p.icon }} {{ p.name }}（{{ p.price }} 金/抽）</button>
+        <span class="dim pool-desc" style="margin-left: auto">{{ pool.desc }}</span>
       </div>
-      <p class="dim">{{ pool.desc }}</p>
       <template v-if="isGearPool">
         <p class="dim">⭐ 保底进度：{{ pity.current }}/{{ pity.need }}（{{ pity.need - pity.current }} 抽内必出稀有及以上）</p>
       </template>
@@ -178,7 +178,7 @@ function typeLabel(id) {
 .mijian-carousel {
   position: relative;
   overflow: hidden;
-  height: 116px;
+  height: 64px;
   display: flex;
   align-items: center;
   background: rgba(255, 252, 246, 0.96);
@@ -186,12 +186,12 @@ function typeLabel(id) {
 }
 .mijian-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .mijian-bg-track {
-  display: flex; align-items: center; gap: 30px;
-  width: max-content; height: 116px;
+  display: flex; align-items: center; gap: 18px;
+  width: max-content; height: 64px;
   animation: mijianScroll 80s linear infinite;
 }
 .mijian-bg-track img {
-  width: 86px; height: 86px;
+  width: 43px; height: 43px;
   object-fit: contain; flex-shrink: 0;
   opacity: 0.92;
 }
@@ -201,6 +201,7 @@ function typeLabel(id) {
 /* ── 抽卡操作台 ── */
 .btn-lg { font-size: 15px; padding: 8px 22px; }
 .gacha-pull { margin-bottom: 12px; }
+.gacha-pull .region-tabs { justify-content: center; }
 
 /* ── 翻牌网格（十连 5×2 / 单抽一张） ── */
 .gacha-grid {
