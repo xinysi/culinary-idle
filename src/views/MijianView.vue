@@ -351,6 +351,7 @@ function typeLabel(id) {
 .gacha-btn-main {
   --sh1: 255, 196, 74; /* 流光光带：按钮原色系（非白非彩） */
   --sh2: 255, 212, 92; /* 光带中心：原色亮端 */
+  --shd: 230, 155, 40; /* 流光暗斑：原色深端 */
   min-width: 300px;
   font-size: 19px;
   background: linear-gradient(135deg, #ffc247, #e69b28);
@@ -361,6 +362,7 @@ function typeLabel(id) {
 .gacha-btn-sub {
   --sh1: 248, 130, 74;
   --sh2: 255, 152, 100;
+  --shd: 216, 92, 44;
   min-width: 210px;
   font-size: 15px;
   background: linear-gradient(135deg, #f27c45, #d85c2c);
@@ -474,6 +476,7 @@ function typeLabel(id) {
 .gacha-btn-bulk {
   --sh1: 178, 122, 72;
   --sh2: 206, 148, 92;
+  --shd: 112, 72, 40;
   min-width: 300px;
   font-size: 16px;
   color: #ffdd99;
@@ -495,6 +498,7 @@ function typeLabel(id) {
 .gacha-sim .sim-btn {
   --sh1: 118, 190, 104;
   --sh2: 136, 206, 118;
+  --shd: 88, 156, 75;
   position: relative; overflow: hidden;
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
@@ -515,13 +519,14 @@ function typeLabel(id) {
 :global([data-theme='dark']) .gacha-sim .sim-btn {
   --sh1: 100, 166, 84;
   --sh2: 118, 186, 100;
+  --shd: 74, 127, 62;
   background: linear-gradient(135deg, #5f9c50, #4a7f3e);
   box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4);
 }
 
 
 
-/* 流光：烟雾/水波涌动（极光云雾做法）——多层原色径向光斑错位缓慢漂移，screen 混合与底色融合 */
+/* 流光：烟雾/水波涌动——亮斑与暗斑交错缓缓漂移（明暗对比是流动感的关键） */
 .gacha-btn::before,
 .gacha-btn::after,
 .gacha-sim .sim-btn::before,
@@ -530,36 +535,35 @@ function typeLabel(id) {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  mix-blend-mode: screen;
   border-radius: inherit;
 }
-/* 第一团云雾：向右下缓慢漂移 */
+/* 第一团水雾：亮斑 0.75 + 暗斑 0.4，向右下漂移 */
 .gacha-btn::before,
 .gacha-sim .sim-btn::before {
   background-image:
-    radial-gradient(45% 70% at 25% 30%, rgba(var(--sh1), 0.5), transparent 70%),
-    radial-gradient(50% 75% at 75% 65%, rgba(var(--sh2), 0.45), transparent 72%);
-  background-size: 220% 220%;
-  animation: gachaSmokeA 11s ease-in-out infinite alternate;
+    radial-gradient(50% 75% at 25% 30%, rgba(var(--sh2), 0.75), rgba(var(--sh1), 0.55) 38%, transparent 68%),
+    radial-gradient(55% 80% at 78% 62%, rgba(var(--shd), 0.42), transparent 70%);
+  background-size: 260% 260%;
+  animation: gachaSmokeA 8s ease-in-out infinite alternate;
 }
-/* 第二团云雾：反向漂移、速度更慢——两团错开形成水波流动感 */
+/* 第二团水雾：反向漂移、速度更慢——明暗交错形成水波流动感 */
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(40% 65% at 65% 25%, rgba(var(--sh2), 0.4), transparent 70%),
-    radial-gradient(45% 70% at 30% 70%, rgba(var(--sh1), 0.38), transparent 72%);
-  background-size: 240% 240%;
-  animation: gachaSmokeB 15s ease-in-out infinite alternate;
+    radial-gradient(45% 70% at 62% 22%, rgba(var(--shd), 0.5), transparent 70%),
+    radial-gradient(50% 75% at 28% 72%, rgba(var(--sh2), 0.65), transparent 72%);
+  background-size: 260% 260%;
+  animation: gachaSmokeB 12s ease-in-out infinite alternate;
 }
 @keyframes gachaSmokeA {
   0% { background-position: 0% 0%; }
-  50% { background-position: 60% 40%; }
-  100% { background-position: 100% 85%; }
+  50% { background-position: 65% 45%; }
+  100% { background-position: 110% 95%; }
 }
 @keyframes gachaSmokeB {
-  0% { background-position: 100% 100%; }
-  50% { background-position: 35% 60%; }
-  100% { background-position: 0% 15%; }
+  0% { background-position: 105% 100%; }
+  50% { background-position: 35% 55%; }
+  100% { background-position: -5% 10%; }
 }
 /* 按钮文字浮于流光之上 */
 .gacha-btn > *,
