@@ -44,13 +44,6 @@ function rarityClass(id) {
 
 <template>
   <div class="combat-view mijian-view">
-    <!-- 抽卡背景：物品图轮播（低透明+模糊，随池切换图源） -->
-    <div class="mijian-bg" aria-hidden="true">
-      <div class="mijian-bg-track">
-        <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
-      </div>
-    </div>
-
     <header class="skill-head">
       <div>
         <h2>🎴 觅珍</h2>
@@ -82,54 +75,66 @@ function rarityClass(id) {
       </template>
     </div>
 
-    <!-- 操作与结果 -->
-    <div class="card">
-      <div class="region-tabs">
-        <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price" @click="draw(1)">🎴 单抽（{{ pool.price }} 金）</button>
-        <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price * 10" @click="draw(10)">🎴🎴 十连（{{ pool.price * 10 }} 金）</button>
-        <span class="dim" style="margin-left: auto">持有金币 <span class="mono">{{ player.gold.toLocaleString() }}</span></span>
-      </div>
-
-      <div v-if="results.length" class="mijian-results">
-        <div
-          v-for="(r, i) in results"
-          :key="r.id + '-' + i"
-          class="mijian-card"
-          :class="[rarityClass(r.id), { dazzle: r.rare }]"
-          :style="{ animationDelay: (i * 0.05) + 's' }"
-        >
-          <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
-          <div class="mijian-name">{{ getItem(r.id)?.name }}</div>
-          <div class="dim mono" style="font-size: 11px">
-            {{ getItem(r.id)?.type === 'equipment' ? (getItem(r.id)?.quality ?? '') : 'T' + (getItem(r.id)?.tier ?? '') }}
-          </div>
+    <!-- 操作与结果（抽卡舞台：内部轮播图背景，半透明透出页面底图） -->
+    <div class="card mijian-stage">
+      <div class="mijian-bg" aria-hidden="true">
+        <div class="mijian-bg-track">
+          <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
         </div>
       </div>
-      <p v-else class="dim" style="margin-top: 8px">点击「单抽」或「十连」开始觅珍——结果直接进背包。</p>
+      <div class="mijian-stage-body">
+        <div class="region-tabs">
+          <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price" @click="draw(1)">🎴 单抽（{{ pool.price }} 金）</button>
+          <button class="btn btn-sm btn-primary" :disabled="player.gold < pool.price * 10" @click="draw(10)">🎴🎴 十连（{{ pool.price * 10 }} 金）</button>
+          <span class="dim" style="margin-left: auto">持有金币 <span class="mono">{{ player.gold.toLocaleString() }}</span></span>
+        </div>
+
+        <div v-if="results.length" class="mijian-results">
+          <div
+            v-for="(r, i) in results"
+            :key="r.id + '-' + i"
+            class="mijian-card"
+            :class="[rarityClass(r.id), { dazzle: r.rare }]"
+            :style="{ animationDelay: (i * 0.05) + 's' }"
+          >
+            <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
+            <div class="mijian-name">{{ getItem(r.id)?.name }}</div>
+            <div class="dim mono" style="font-size: 11px">
+              {{ getItem(r.id)?.type === 'equipment' ? (getItem(r.id)?.quality ?? '') : 'T' + (getItem(r.id)?.tier ?? '') }}
+            </div>
+          </div>
+        </div>
+        <p v-else class="dim" style="margin-top: 8px">点击「单抽」或「十连」开始觅珍——结果直接进背包。</p>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 抽卡背景：物品画廊轮播（视口级铺满，内容层在上） */
-.mijian-view { position: relative; }
+/* 抽卡舞台：卡内物品图轮播背景（随池切换图源），半透明透出页面底图 */
+.mijian-stage {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 251, 244, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
 .mijian-bg {
-  position: fixed; inset: 0;
+  position: absolute; inset: 0;
   overflow: hidden; pointer-events: none;
-  z-index: 0;
 }
 .mijian-bg-track {
-  display: flex; align-items: center; gap: 30px;
+  display: flex; align-items: center; gap: 26px;
   width: max-content;
-  height: 100vh;
+  height: 100%;
   animation: mijianScroll 110s linear infinite;
 }
 .mijian-bg-track img {
-  width: 92px; height: 92px;
+  width: 78px; height: 78px;
   object-fit: contain; flex-shrink: 0;
-  opacity: 0.13; filter: blur(1.2px);
+  opacity: 0.28; filter: blur(0.6px);
 }
-.mijian-view > *:not(.mijian-bg) { position: relative; z-index: 1; }
+.mijian-stage-body { position: relative; z-index: 1; }
 @keyframes mijianScroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -137,6 +142,7 @@ function rarityClass(id) {
 @media (prefers-reduced-motion: reduce) {
   .mijian-bg-track { animation: none; }
 }
+:global([data-theme='dark']) .mijian-stage { background: rgba(44, 31, 22, 0.6); }
 .mijian-results { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .mijian-card {
   width: 108px; padding: 10px 8px; text-align: center;
