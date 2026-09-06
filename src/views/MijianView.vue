@@ -111,16 +111,17 @@ function rarityClass(id) {
 </template>
 
 <style scoped>
-/* 抽卡背景：物品画廊轮播 */
-.mijian-view { position: relative; overflow: hidden; }
+/* 抽卡背景：物品画廊轮播（视口级铺满，内容层在上） */
+.mijian-view { position: relative; }
 .mijian-bg {
-  position: absolute; inset: 0;
+  position: fixed; inset: 0;
   overflow: hidden; pointer-events: none;
+  z-index: 0;
 }
 .mijian-bg-track {
   display: flex; align-items: center; gap: 30px;
   width: max-content;
-  height: 100%;
+  height: 100vh;
   animation: mijianScroll 110s linear infinite;
 }
 .mijian-bg-track img {
