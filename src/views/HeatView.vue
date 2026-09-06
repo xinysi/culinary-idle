@@ -88,7 +88,9 @@ const streak = computed(() => player.minigames?.heat?.streak ?? 0)
     </header>
 
     <div class="card game-stage heat-stage">
-      <div class="heat-track">
+      <div class="game-layout">
+        <div class="game-main">
+        <div class="heat-track">
         <div class="heat-perfect" :style="zoneStyle"></div>
         <div class="heat-needle" :style="needleStyle"></div>
       </div>
@@ -97,7 +99,21 @@ const streak = computed(() => player.minigames?.heat?.streak ?? 0)
         <button v-else class="btn btn-primary" @click="strike">🔥 定火！</button>
         <button v-if="RUNNING" class="btn btn-sm" @click="stop">停止</button>
       </div>
-      <div v-if="verdict" class="heat-verdict" :class="verdict.type">
+      <div v-if="verdict" class="heat-verdict"
+        </div>
+        <div class="game-side">
+          <div class="game-side-card">
+            <h4>🎮 玩法</h4>
+            <ul><li>点「开始」→ 指针摆动</li><li>点「定火」停在金黄区</li><li>完美/良好/失误三档</li></ul>
+          </div>
+          <div class="game-side-card">
+            <h4>🏆 记录</h4>
+            <div class="game-side-row"><span>当前连击</span><b class="mono">{{ streak || 0 }}</b></div>
+            <div class="game-side-row"><span>最佳连击</span><b class="mono">{{ player.minigames?.heat?.bestStreak ?? 0 }}</b></div>
+            <div class="game-side-row"><span>下次奖励</span><b class="mono">再 {{ 5 - ((streak || 0) % 5) }} 连 +50 金</b></div>
+          </div>
+        </div>
+      </div> :class="verdict.type">
         {{ verdict.type === 'perfect' ? '🔥 完美定火！' : verdict.type === 'good' ? '✅ 不错…差一点' : '❌ 火候过了！连击中断' }}
       </div>
       <p class="dim" style="margin-top: 8px">奖励规则：每 5 连完美 +50 金币（当日最多 5 次 = 250 金币）；连击断档重新计数。</p>

@@ -3977,3 +3977,23 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 /* 控制组：等宽居中 */
 .game-stage .heat-actions, .game-stage .g2048-controls { justify-content: center; }
 .rush-stage .rush-counter { margin-top: 6px; }
+
+/* ── 小游戏「舞台+侧栏」布局（2026-09-06：充实观感，左舞台右信息）── */
+.game-layout { display: flex; gap: 14px; align-items: stretch; }
+.game-main { flex: 1 1 auto; min-width: 0; }
+.game-side { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+.game-side-card {
+  background: rgba(150, 110, 70, 0.09);
+  border: 1px dashed rgba(150, 110, 70, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.game-side-card h4 { margin: 0 0 6px; font-size: 13px; }
+.game-side-card ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+.game-side-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.game-side-row:first-of-type { margin-top: 0; }
+@media (max-width: 900px) {
+  .game-layout { flex-direction: column; }
+  .game-side { width: 100%; }
+}
