@@ -149,7 +149,7 @@ function typeLabel(id) {
     </div>
 
     <!-- 卡池展示横幅：轮播图（两端渐隐）+ 左侧池名徽章 + 右侧保底徽章 -->
-    <div class="card pool-banner">
+    <div class="card pool-banner" :class="`pool-${activePool}`">
       <div class="mijian-bg" aria-hidden="true">
         <div class="mijian-bg-track">
           <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
@@ -171,9 +171,9 @@ function typeLabel(id) {
     </div>
 
     <!-- 抽卡操作台 -->
-    <div class="card gacha-pull">
+    <div class="card gacha-pull" :class="`pool-${activePool}`">
       <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
-      <div class="gacha-btns" :class="`pool-${activePool}`">
+      <div class="gacha-btns">
         <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
           <span class="gacha-btn-top">十连撷珍 <i class="gacha-btn-tag">10连</i></span>
           <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
@@ -358,6 +358,27 @@ function typeLabel(id) {
 @keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mijian-bg-track { animation: none; } }
 
+/* ── 横幅/操作台随池主题：边框 + 顶部渐变条 + 徽章/文字主题色 ── */
+.pool-banner { border: 1px solid rgba(var(--tsh1, 217, 138, 43), 0.4); }
+.pool-banner::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 12%; right: 12%;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(90deg, rgba(var(--tsh1, 217, 138, 43), 0.9), rgba(var(--tsh2, 249, 212, 35), 0.9));
+  pointer-events: none;
+  z-index: 1;
+}
+.pool-banner-title { border-color: rgba(var(--tsh1, 217, 138, 43), 0.45); }
+.pool-banner-title b { color: var(--tth, #8a5a12); }
+.pool-banner-pity .pill { color: var(--tth, #8a5a12); border-color: rgba(var(--tsh2, 217, 138, 43), 0.6); }
+.gacha-hold { color: rgba(var(--tsh1, 150, 110, 70), 0.95); font-weight: 600; }
+.gacha-hold .mono { color: var(--ttl, #c8860a); font-weight: 800; }
+:global([data-theme='dark']) .pool-banner-title b { color: rgb(var(--tsh2, 232, 180, 95)); }
+:global([data-theme='dark']) .pool-banner-pity .pill { color: rgb(var(--tsh2, 232, 180, 95)); border-color: rgba(var(--tsh2, 232, 180, 95), 0.55); }
+:global([data-theme='dark']) .gacha-hold { color: rgb(var(--tsh2, 232, 220, 203)); }
+
 /* ── 抽卡操作台（gacha 按钮：主 CTA 大+金渐变+脉动光；次级小一号深红） ── */
 .gacha-hold { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
 .gacha-btns { display: flex; gap: 18px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
@@ -410,7 +431,7 @@ function typeLabel(id) {
   50% { box-shadow: 0 0 30px rgba(var(--tglow, 233, 132, 0), 0.6); }
 }
 /* 池主题 → 抽卡按钮三档（十连亮 / 单抽中 / 百连深）+ 光带与光晕 */
-.gacha-btns.pool-material {
+.pool-material {
   --thi1: #35e8c0; --thi2: #16ad8a;
   --tmd1: #14a085; --tmd2: #0d7f66;
   --tlo1: #0a6b55; --tlo2: #06483a;
@@ -418,7 +439,7 @@ function typeLabel(id) {
   --tglow: 20, 160, 133;
   --tth: #0b5c4a; --ttm: #7df0d9; --ttl: #ffd98a; /* 三档彩字：深青绿/亮青绿/暖金 */
 }
-.gacha-btns.pool-food {
+.pool-food {
   --thi1: #ffe066; --thi2: #f07800;
   --tmd1: #e65c00; --tmd2: #c24d00;
   --tlo1: #a34a00; --tlo2: #6e3100;
@@ -426,7 +447,7 @@ function typeLabel(id) {
   --tglow: 233, 132, 0;
   --tth: #8f3200; --ttm: #ffd76e; --ttl: #ffcf83;
 }
-.gacha-btns.pool-gear {
+.pool-gear {
   --thi1: #a5c8da; --thi2: #5d7a8c;
   --tmd1: #536976; --tmd2: #45596a;
   --tlo1: #38495a; --tlo2: #2a3745;
@@ -434,7 +455,7 @@ function typeLabel(id) {
   --tglow: 83, 105, 118;
   --tth: #1f2f3c; --ttm: #cfe6f2; --ttl: #ffd98a;
 }
-.gacha-btns.pool-mix {
+.pool-mix {
   --thi1: #c389e2; --thi2: #9657b8;
   --tmd1: #8e44ad; --tmd2: #7a3d95;
   --tlo1: #5c2f75; --tlo2: #3d2150;
@@ -442,7 +463,7 @@ function typeLabel(id) {
   --tglow: 142, 68, 173;
   --tth: #3f1e5e; --ttm: #ecc9f8; --ttl: #ffd98a;
 }
-.gacha-btns.pool-limited {
+.pool-limited {
   --thi1: #dba53a; --thi2: #96662a;
   --tmd1: #7a5024; --tmd2: #4a2c14;
   --tlo1: #3a2010; --tlo2: #241408;
