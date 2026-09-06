@@ -3820,3 +3820,13 @@ html[data-theme='dark'] .cb-round.lose { background: rgba(217, 75, 63, 0.14); }
 .cb-first-bonus { font-size: 12px; color: var(--good-strong); margin-left: 6px; }
 html[data-theme='dark'] .cb-daily-bonus { color: var(--gold); }
 html[data-theme='dark'] .cb-first-bonus { color: #8fd39a; }
+
+/* 卡牌筛选栏（2026-09-06 卡池管理） */
+.cb-filter-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.cb-filter-input {
+  flex: 1 1 200px; max-width: 260px;
+  padding: 5px 10px; font-size: 13px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: rgba(255, 252, 246, 0.9); color: var(--text);
+}
+html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.16); }

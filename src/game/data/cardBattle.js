@@ -35,11 +35,11 @@ export function cardStrength(id) {
   return it.tier * 15 + (it.heal ?? 0) + atk * 3 + it.value * 0.05
 }
 
-/** 卡牌收藏池：已收集的料理/装备（排序后） */
+/** 卡牌收藏池：已收集的料理/装备，按战力降序（同战力按名），便于选卡与浏览 */
 export function cardPoolFrom(collected) {
   return Object.keys(collected ?? {})
     .filter((id) => { const it = getItem(id); return it && (it.type === 'food' || it.type === 'equipment') })
-    .sort()
+    .sort((a, b) => cardStrength(b) - cardStrength(a) || a.localeCompare(b))
 }
 
 /** AI 卡组：玩家已收集的料理+装备同池抽 3（不足时全库补齐，保证 3 局满员） */
