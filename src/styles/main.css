@@ -3854,3 +3854,9 @@ html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); c
 /* 底部状态栏单行（2026-09-06）：隐藏横向滚动条；装备名超长省略 */
 .bottom-nav::-webkit-scrollbar { display: none; }
 .bottom-nav-slot span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* 界面放大 110%：物品/卡牌网格自动减一列，避免卡片信息显示不全（2026-09-06） */
+html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+html[data-scale='110'] .grid-n-6 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+html[data-scale='110'] .grid-n-5 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0, 1fr)); }

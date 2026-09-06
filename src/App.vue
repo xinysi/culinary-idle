@@ -104,6 +104,9 @@ watch(
 function applyUiScale() {
   const v = player.settings?.uiScale ?? 1
   document.documentElement.style.zoom = v === 1 ? '' : String(v)
+  // 缩放档位标记（2026-09-06）：110% 时网格减一列防止卡牌信息被裁
+  if (v === 1) delete document.documentElement.dataset.scale
+  else document.documentElement.dataset.scale = String(Math.round(v * 100))
 }
 // 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
 function applyTheme() {
