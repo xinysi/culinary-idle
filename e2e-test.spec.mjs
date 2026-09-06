@@ -59,16 +59,16 @@ test.describe('游戏全流程', () => {
       await page.waitForTimeout(400)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
-    // 小游戏大厅：六张游戏卡逐个进入（回大厅再进下一张）
+    // 小游戏：顶部 tab 常驻——逐个 tab 点击即就地加载
     await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
     await page.waitForTimeout(400)
-    for (let i = 0; i < 6; i++) {
-      await page.locator('.minigame-card').nth(i).click()
+    for (const g of ['火候炉', '美食讲堂', '厨心 2048', '大胃王', '每日美食拼图', '食材连连看']) {
+      await page.locator('.mg-tab', { hasText: g }).click()
       await page.waitForTimeout(300)
       await expect(page.locator('.main-scroll')).toBeVisible()
-      await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
-      await page.waitForTimeout(300)
     }
+    await page.locator('.mg-tab', { hasText: '大厅' }).click()
+    await page.waitForTimeout(300)
     for (const [title, icon] of iconMenus) {
       await page.locator(`.top-nav-btn[title="${title}"]`).click()
       await page.waitForTimeout(400)

@@ -4019,3 +4019,14 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .minigame-desc { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; }
 .minigame-record { font-size: 12px; }
 html[data-theme='dark'] .minigame-card { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; }
+
+/* 小游戏选项卡框架（2026-09-06） */
+.mg-shell { display: flex; flex-direction: column; min-height: 0; }
+.mg-tabs {
+  position: sticky; top: -12px; z-index: 15; /* 固定框：滚动时保持可见 */
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+.mg-tab { flex: 0 0 auto; }
+.mg-subhead { display: flex; align-items: center; margin: 0 0 4px; }
