@@ -26,6 +26,7 @@ import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTas
 import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
+import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
 import { useUiStore } from './ui.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
@@ -1352,15 +1353,18 @@ export const usePlayerStore = defineStore('player', {
       return t
     },
 
-    // ── 夜市狂潮（2026-09-06 限时窗口）：每日 12:00-20:00，餐厅 ×2 + 对决经验 ×1.5 ──
-    /** 是否处于夜市窗口（hour 可传参，便于测试；默认取当前本地小时） */
-    marketOn(hour = null) {
-      const h = hour ?? new Date().getHours()
-      return h >= 12 && h < 20
+    // ── 限时窗口活动（2026-09-06 扩展）：夜市/晨集/茶歇/午夜/主厨日，倍率聚合可叠加 ──
+    /** 当前命中的活动列表（含跨夜窗口与周日主厨日） */
+    activeMarketEvents(hour = null, weekday = null) {
+      return activeMarketEvents_(hour, weekday)
     },
-    /** 夜市倍率：{ restaurant, combatXp }（非窗口均为 1） */
-    marketBoost(hour = null) {
-      return this.marketOn(hour) ? { restaurant: 2, combatXp: 1.5 } : { restaurant: 1, combatXp: 1 }
+    /** 处于活动窗口（兼容旧接口：任一事件命中即 true；专用断言仍可传参） */
+    marketOn(hour = null, weekday = null) {
+      return activeMarketEvents_(hour, weekday).length > 0
+    },
+    /** 聚合倍率（命中事件相乘）：{ restaurant, combatXp, gatherXp, craftXp } */
+    marketBoost(hour = null, weekday = null) {
+      return aggregateMarketBoost(hour, weekday)
     },
 
     // ── 食灵羁绊（2026-09-06 长线养成）──

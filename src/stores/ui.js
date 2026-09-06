@@ -20,6 +20,7 @@ export const useUiStore = defineStore('ui', {
     showSignIn: false, // 每日签到弹窗
     showSearch: false, // 全局搜索弹窗
     showShareCard: false, // 战报分享卡弹窗（2026-09-06）
+    showMarketModal: false, // 限时活动轮换表弹窗（2026-09-06）
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）

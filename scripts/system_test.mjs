@@ -905,23 +905,29 @@ console.log('══ V. 对手数据 ══')
   check('对手', '所有掉落引用有效物品', badDrop.length === 0, badDrop.slice(0, 5).join('; '))
 }
 
-// ── W. 夜市狂潮窗口（2026-09-06 限时活动）─────────────
-console.log('══ W. 夜市狂潮 ══')
+// ── W. 限时窗口活动（2026-09-06：夜市/晨集/茶歇/午夜/主厨日）──────
+console.log('══ W. 限时窗口活动 ══')
 {
   const p = freshPlayer()
-  check('夜市', '12-20 点窗口判定（含边界）', p.marketOn(12) === true && p.marketOn(19) === true && p.marketOn(11) === false && p.marketOn(20) === false)
-  check('夜市', '窗口倍率 餐厅×2 / 对决×1.5', p.marketBoost(15).restaurant === 2 && p.marketBoost(15).combatXp === 1.5)
-  check('夜市', '非窗口倍率为 1', p.marketBoost(9).restaurant === 1 && p.marketBoost(23).combatXp === 1)
-  // 经验链路：对决类技能在窗口内获得 ×1.5
-  const pd = freshPlayer({ knife: 5 })
-  const kd = getSkillInstance('knife')
-  const before = pd.skills.knife.exp
-  // 挂起 marketBoost 为窗口（以 15 点模拟）
-  const origBoost = pd.marketBoost
-  pd.marketBoost = (h) => (h ?? 15) >= 12 && (h ?? 15) < 20 ? { restaurant: 2, combatXp: 1.5 } : { restaurant: 1, combatXp: 1 }
-  kd.addXp(1000)
-  check('夜市', '对决经验 ×1.5 生效', pd.skills.knife.exp - before === 1500, `got ${pd.skills.knife.exp - before}`)
-  pd.marketBoost = origBoost
+  // 固定传 weekday=1（周一）排除周日主厨日干扰；边界含窗口起止
+  check('夜市', '12-20 点窗口判定（含边界，周一）', p.marketOn(12, 1) === true && p.marketOn(19, 1) === true && p.marketOn(11, 1) === false && p.marketOn(20, 1) === false)
+  check('夜市', '窗口倍率 餐厅×2 / 对决×1.5', p.marketBoost(15, 1).restaurant === 2 && p.marketBoost(15, 1).combatXp === 1.5)
+  check('活动', '无窗口时段（凌晨 2 点）倍率为 1', p.marketBoost(2, 1).restaurant === 1 && p.marketBoost(2, 1).combatXp === 1)
+  // 五个窗口
+  const ids = (h, w) => p.activeMarketEvents(h, w).map((e) => e.id).sort().join(',')
+  check('活动', '晨集 6-9 采集 ×1.5', ids(6, 1) === 'morningMarket' && p.marketBoost(6, 1).gatherXp === 1.5)
+  check('活动', '茶歇 14-17 制作 ×1.5', ids(15, 1).includes('teaBreak') && p.marketBoost(15, 1).craftXp === 1.5)
+  check('活动', '午夜食堂 22-1 对决 ×2（跨夜）', ids(23, 1) === 'nightDiner' && ids(0, 1) === 'nightDiner' && p.marketBoost(23, 1).combatXp === 2)
+  check('活动', '主厨日仅周日 9-21', ids(9, 0) === 'chefDay' && ids(9, 1) === '' && p.marketBoost(18, 0).restaurant === 3)
+  // 经验链路：采集窗口加成
+  const pg = freshPlayer({ foraging: 5 })
+  const fg = getSkillInstance('foraging')
+  const beforeG = pg.skills.foraging.exp
+  const orig = pg.marketBoost
+  pg.marketBoost = (h, w) => (h ?? 6) >= 6 && (h ?? 6) < 9 ? { restaurant: 1, combatXp: 1, gatherXp: 1.5, craftXp: 1 } : { restaurant: 1, combatXp: 1, gatherXp: 1, craftXp: 1 }
+  fg.addXp(1000)
+  check('活动', '晨集采集经验 ×1.5 生效', pg.skills.foraging.exp - beforeG === 1500, `got ${pg.skills.foraging.exp - beforeG}`)
+  pg.marketBoost = orig
 }
 
 // ── 汇总 ──────────────────────────────────────────
