@@ -45,19 +45,27 @@ function draw(count) {
   startReveal(results.value.list, count > 20)
   ui.pushLog(`🎴 觅珍：${pool.value.name} ×${count}，获得 ${r.got.length} 件${r.boosted ? '（保底命中 ⭐）' : ''}`, 'gain')
 }
-function startReveal(list, instant = false) {
+function startReveal(list, bulk = false) {
   drawing.value = true
-  if (instant) {
-    list.forEach((item) => { item.revealed = true })
-    drawing.value = false
+  if (!bulk) {
+    // 单抽/十连：逐张 0.13s 交错
+    list.forEach((item, i) => {
+      setTimeout(() => {
+        item.revealed = true
+        if (i === list.length - 1) drawing.value = false
+      }, 380 + i * 130)
+    })
     return
   }
-  list.forEach((item, i) => {
+  // 百连：每批 10 张齐翻，批次间隔 180ms（总约 2 秒，有节奏的翻牌而非瞬开）
+  const BATCH = 10
+  for (let i = 0; i < list.length; i += BATCH) {
+    const batchIdx = i / BATCH
     setTimeout(() => {
-      item.revealed = true
-      if (i === list.length - 1) drawing.value = false
-    }, 380 + i * 130)
-  })
+      list.slice(i, i + BATCH).forEach((item) => { item.revealed = true })
+      if (i + BATCH >= list.length) drawing.value = false
+    }, 300 + batchIdx * 180)
+  }
 }
 /** 模拟预览：本地生成结果并展示（不扣金币/不入库/不动统计与保底） */
 function simulateDraw(count) {
