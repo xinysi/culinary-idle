@@ -475,21 +475,31 @@ function typeLabel(id) {
   .gacha-btn-bulk { min-width: 150px; padding: 12px 16px; }
 }
 
-/* 模拟预览行（浅绿渐变，居中，按钮间距拉开） */
+/* 模拟预览行（按钮本身浅绿渐变，样式与上方抽卡大按钮一致） */
 .gacha-sim {
   display: flex; align-items: center; justify-content: center;
   gap: 16px; margin-top: 12px; font-size: 12px; flex-wrap: wrap;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #e9f7e0, #d3eec4);
-  border: 1px solid rgba(122, 199, 96, 0.45);
 }
-.gacha-sim .btn-sm { flex: 0 0 auto; padding: 4px 16px; font-weight: 600; }
+.gacha-sim .btn-sm {
+  position: relative; overflow: hidden;
+  flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
+  color: #fff;
+  border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #9ad97a, #5fa542);
+  box-shadow: 0 3px 10px rgba(95, 165, 66, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.gacha-sim .btn-sm::after {
+  content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: simSheen 3s ease-in-out infinite;
+  pointer-events: none;
+}
+.gacha-sim .btn-sm:hover { transform: translateY(-2px); }
+.gacha-sim .btn-sm:active { transform: translateY(0) scale(0.97); }
+.gacha-sim .btn-sm:disabled { filter: grayscale(0.6) brightness(0.8); }
 .sim-badge { margin-left: 8px; }
-:global([data-theme='dark']) .gacha-sim {
-  background: linear-gradient(135deg, #24331c, #1d2b16);
-  border-color: rgba(150, 220, 120, 0.3);
-}
-:global([data-theme='dark']) .gacha-sim .dim { color: #b8d6a4; }
+:global([data-theme='dark']) .gacha-sim .btn-sm { background: linear-gradient(135deg, #6fae52, #4c8a3c); box-shadow: 0 3px 10px rgba(76, 138, 60, 0.4); }
+@keyframes simSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
 
 </style>
