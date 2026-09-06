@@ -1,6 +1,9 @@
 // 验证 dev server 上所有 src 模块都能编译（HTTP 200 且无 Vite 编译错误）
+// 注意：需要 dev server 在 5173 运行；root 取脚本上级目录（支持 CI/Windows 任意路径）
 const fs = require('fs')
 const path = require('path')
+
+const root = path.resolve(__dirname, '..')
 
 function walk(d) {
   let out = []
@@ -12,7 +15,6 @@ function walk(d) {
   return out
 }
 
-const root = 'D:/plays/lmew'
 const files = walk(path.join(root, 'src'))
 
 ;(async () => {
