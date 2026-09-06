@@ -97,7 +97,7 @@ const cells = computed(() => tiles.value)
     <header class="skill-head">
       <div>
         <h2>🧩 每日美食拼图</h2>
-        <p class="dim">每天一张 4×4 华容道——点击与空位相邻的碎片滑移，把乱序美食复原！完成得 <b>能量饼干 ×1</b>（每日 1 次）。</p>
+        <p class="dim">每天一张 4×4 碎片拼图：<b>点击与空格相邻的碎片</b>，把它滑进空位——把乱序碎片按编号 1→15 复原成下边的「目标图」即完成！完成得 <b>能量饼干 ×1</b>（每日 1 次）。</p>
       </div>
       <div class="skill-head-right">
         <span class="badge" :class="doneToday ? 'badge-on' : ''">{{ doneToday ? '✅ 今日已完成' : '📅 今日未完成' }}</span>
@@ -106,14 +106,22 @@ const cells = computed(() => tiles.value)
     </header>
 
     <div class="card">
-      <div class="puzzle-board">
+      <div class="puzzle-goal-label">🎯 目标图（右下角编号 = 正确顺序）</div>
+      <div class="puzzle-board puzzle-goal">
+        <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="puzzle-cell puzzle-goal-cell">
+          {{ lbl }}<span class="puzzle-num">{{ i + 1 }}</span>
+        </div>
+      </div>
+      <div class="puzzle-board puzzle-board-play">
         <div
           v-for="(v, i) in cells"
           :key="i"
           class="puzzle-cell"
           :class="{ empty: v === 0 }"
           @click="tap(i)"
-        >{{ v ? LABELS[v - 1] : '' }}</div>
+        >
+          <template v-if="v">{{ LABELS[v - 1] }}<span class="puzzle-num">{{ v }}</span></template>
+        </div>
       </div>
       <div class="g2048-controls">
         <button class="btn btn-sm" @click="resetDay()">重新打乱（当日固定）</button>

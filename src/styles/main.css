@@ -3950,3 +3950,11 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .match-cell:hover { transform: scale(1.05); }
 .match-cell.selected { border-color: var(--gold); box-shadow: 0 0 8px rgba(168, 120, 11, 0.5); }
 .match-cell.cleared { background: rgba(87, 168, 97, 0.1); border-color: transparent; cursor: default; }
+
+/* 拼图目标预览与编号（2026-09-06） */
+.puzzle-goal { pointer-events: none; opacity: 0.85; }
+.puzzle-goal-cell { cursor: default; }
+.puzzle-num { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.puzzle-cell { position: relative; }
+.puzzle-goal-label { font-size: 12px; font-weight: 700; margin-bottom: 8px; text-align: center; color: var(--primary-strong); }
+.puzzle-board-play { margin-top: 10px; }

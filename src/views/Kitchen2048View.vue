@@ -11,6 +11,9 @@ const mode = ref(4) // 4=标准 / 3=极速 3×3
 const SIZE = computed(() => mode.value)
 const best = computed(() => player.minigames?.kitchen2048?.[mode.value === 4 ? 'best' : 'best3'] ?? 0)
 const grid = ref(newGrid(4))
+// 达标即时结算（2026-09-06 修复）：每跨过一档即 +20 金，不再等死局/重开才结算
+let paid = 0 // 本局已计入奖励的“达标分”
+let earned = 0 // 本局已发金币
 const score = ref(0)
 const over = ref(false)
 const won = ref(false)
@@ -30,10 +33,13 @@ function spawn() {
   grid.value[r][c] = Math.random() < 0.9 ? 2 : 4
 }
 function reset() {
+  saveBest() // 重开/换模式前保存最佳（奖励已实时发放，无未结算）
   grid.value = newGrid()
   score.value = 0
   over.value = false
   won.value = false
+  paid = 0
+  earned = 0
   spawn()
   spawn()
 }
@@ -44,6 +50,18 @@ function slideLine(line) {
   }
   while (arr.length < SIZE.value) arr.push(0)
   return arr
+}
+function stepAndCap() {
+  return mode.value === 4 ? [1024, 200] : [512, 100]
+}
+function tryPay() {
+  const [step, cap] = stepAndCap()
+  while (score.value - paid >= step && earned + 20 <= cap) {
+    paid += step
+    earned += 20
+    player.gainGold(20)
+  }
+  if (earned >= cap && score.value - paid >= step) paid = score.value // 达单局上限后不再追发零头
 }
 function canMove(size = SIZE.value) {
   for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
@@ -70,28 +88,20 @@ function move(dir) {
   }
   if (JSON.stringify(grid.value) === before) return
   spawn()
+  tryPay()
   if (!won.value && grid.value.some((r) => r.includes(2048))) {
     won.value = true
     ui.pushLog('🎉 厨心 2048：合出「神圣大餐」（2048）！', 'gain')
   }
   if (!canMove()) {
     over.value = true
-    giveReward()
   }
 }
-function giveReward() {
-  // 极速 3×3：每 512 分 +20（上限 100）；标准 4×4：每 1024 分 +20（上限 200）
-  const step = mode.value === 4 ? 1024 : 512
-  const cap = mode.value === 4 ? 200 : 100
-  const coins = Math.min(cap, Math.floor(score.value / step) * 20)
+function saveBest() {
   const mg = player.minigames.kitchen2048
   if (!mg) player.minigames.kitchen2048 = { best: 0 }
   const key = mode.value === 4 ? 'best' : 'best3'
   player.minigames.kitchen2048[key] = Math.max(player.minigames.kitchen2048[key] ?? 0, score.value)
-  if (coins > 0) {
-    player.gainGold(coins)
-    ui.pushLog(`🧩 厨心 2048：最终 ${score.value} 分 → +${coins} 金币！`, 'gain')
-  }
 }
 function onKey(e) {
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }
@@ -116,7 +126,7 @@ const rows = computed(() => grid.value)
       </div>
       <div class="skill-head-right">
         <span class="badge badge-on">⭐ {{ score }}</span>
-        <span class="dim mono">最佳（{{ mode === 4 ? '4×4' : '3×3' }}）{{ best }}</span>
+        <span class="dim mono">本局 {{ earned }}/{{ mode === 4 ? 200 : 100 }} 金 · 最佳 {{ best }}</span>
       </div>
     </header>
 
@@ -138,7 +148,7 @@ const rows = computed(() => grid.value)
         <button class="btn btn-sm" @click="move('right')">→</button>
         <button class="btn btn-sm btn-primary" @click="reset()">重新开始</button>
       </div>
-      <div v-if="over" class="heat-verdict miss">💀 无路可走了！分数 {{ score }}（已结算奖励）</div>
+      <div v-if="over" class="heat-verdict miss">💀 无路可走了！分数 {{ score }} · 本局已入账 {{ earned }} 金币（重开继续）</div>
     </div>
   </div>
 </template>
