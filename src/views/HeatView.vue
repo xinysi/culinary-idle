@@ -29,7 +29,7 @@ function startOne(slot, speed) {
   slot.running = true
   slot.last = 0
   slot.ph.value = 0
-  if (slot.ph2) slot.ph2.value = 0.5
+  if (slot.ph2) slot.ph2.value = 0.12 // 双锅相位差 12%：完美区(±8%)重叠窗口存在，高难度双完美（2026-09-07 修复不可命中）
   slot.raf = requestAnimationFrame(() => tick(slot, speed))
 }
 function stopOne(slot) {
@@ -55,6 +55,9 @@ function judge(slot, modeKey, multi = false) {
   else type = 'miss'
   slot.verdict.value = type
   slot.verdictSuper = superHit
+  // 判定限时显示：1.2s 后自动消失（2026-09-07 修复三框常驻「过了」困惑）
+  if (slot.vTimer) clearTimeout(slot.vTimer)
+  slot.vTimer = setTimeout(() => { slot.verdict.value = null }, 1200)
   if (type !== 'miss') stopOne(slot)
   const mg = player.minigames.heat
   mg.history = [...(mg.history ?? []), type].slice(-12)
@@ -174,11 +177,11 @@ const nextReward = computed(() => {
 .hz-box-head { display: flex; align-items: center; justify-content: space-between; }
 .hz-box-tag { font-weight: 800; font-size: 14px; }
 .hz-box-reward { font-size: 11px; color: var(--warn-strong); font-weight: 700; }
-.hz-track { position: relative; width: 100%; height: 22px; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #7a4a26, #c98e3f 20%, #f2cf7d 50%, #c98e3f 80%, #7a4a26); box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.22); }
+.hz-track { position: relative; width: 100%; height: 22px; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #f3dcc0, #ffe9d2 30%, #ffe9d2 70%, #f3dcc0); box-shadow: inset 0 1px 4px rgba(120, 84, 50, 0.18); }
 .hz-tiny { height: 16px; }
-.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, rgba(255, 236, 170, 0.95), rgba(255, 214, 100, 0.95)); box-shadow: 0 0 10px rgba(255, 220, 120, 0.9); border-radius: 999px; }
-.hz-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #d95a38; border-radius: 2px; box-shadow: 0 0 8px rgba(217, 90, 56, 0.9); }
-.hz-acts { display: flex; gap: 8px; align-items: center; }
+.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #ffd98a, #f2b94f); box-shadow: 0 0 12px rgba(242, 185, 79, 0.8); border-radius: 999px; }
+.hz-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #7a4a26; border-radius: 2px; box-shadow: 0 0 8px rgba(122, 74, 38, 0.55); }
+.hz-acts { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .hz-mini { padding: 5px 14px; font-size: 12px; font-weight: 800; border: none; border-radius: 999px; cursor: pointer; color: #fff; }
 .hz-mini-gold { background: linear-gradient(135deg, #eab04a, #c98e3f); }
 .hz-mini-fire { background: linear-gradient(135deg, #f27c45, #d85c2c); }

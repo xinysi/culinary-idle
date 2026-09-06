@@ -112,7 +112,7 @@ const cells = computed(() => tiles.value)
         <div class="pz-label">🎯 目标图</div>
         <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
           <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="pz-cell pz-goal-cell">
-            {{ lbl }}<span class="pz-num">{{ i + 1 }}</span>
+            <b class="pz-goal-num">{{ i + 1 }}</b>
           </div>
         </div>
       </div>
@@ -157,6 +157,8 @@ const cells = computed(() => tiles.value)
   background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
 }
 .pz-goal-cell { cursor: default; }
+.pz-goal-num { font-size: 20px; color: rgba(90, 62, 40, 0.55); }
+.pz-goal-cell { background: rgba(255, 251, 244, 0.5); }
 .pz-cell.empty { background: transparent; border-color: transparent; cursor: default; }
 .pz-num { position: absolute; right: 4px; bottom: 2px; font-size: 9px; color: var(--muted); font-family: var(--mono); }
 .pz-keys { display: flex; justify-content: center; }
