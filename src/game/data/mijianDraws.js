@@ -65,7 +65,7 @@ function pickGear(rng, pity) {
 }
 
 export function pickItem(poolId, rng = Math.random, pity = 0) {
-  if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY }
+  if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
   const items = poolItems(poolId)
   return { item: weightedPick(items, rng), boosted: false }
 }
