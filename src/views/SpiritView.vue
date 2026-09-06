@@ -20,7 +20,8 @@ function contractFor(spirit) {
   return props.instance.recipes.find((r) => r.output.itemId === spirit.id) ?? null
 }
 function have(itemId) {
-  return player.spirits?.owned?.[itemId] ?? 0
+  // 契约材料：普通物品在背包中查询（食灵本体才走 spirits.owned 食灵阁）
+  return player.inventory[itemId] ?? 0
 }
 function canCraft(spirit) {
   return props.instance.canCraft(contractFor(spirit))
