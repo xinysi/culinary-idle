@@ -1114,6 +1114,17 @@ console.log('══ C11. 食灵阁 ══')
   check('食灵', '出战消耗食灵阁 1 只', okOn === true && (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && p.spirits.active.includes('appleSpirit_1'))
   p.setSpiritActive('appleSpirit_1', false)
   check('食灵', '退役归还食灵阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !p.spirits.active.includes('appleSpirit_1'))
+  // 契约材料判定走背包（2026-09-06 修复：have() 曾误读食灵阁）
+  {
+    const pm = freshPlayer({ spiritSummoning: 99 })
+    const ss = getSkillInstance('spiritSummoning')
+    const first = ss.recipes[0]
+    const matId = Object.keys(first.ingredients)[0]
+    pm.gainItem(matId, first.ingredients[matId])
+    check('食灵', '契约材料在背包即可制作（canCraft）', ss.canCraft(first) === true)
+    pm.inventory[matId] = 0
+    check('食灵', '材料移除后 canCraft 为 false', ss.canCraft(first) === false)
+  }
   // 旧档迁移：背包里的食灵 → 食灵阁（新档重置后干净复现）
   p.newGame()
   p.inventory.appleSpirit_1 = 2
