@@ -15,9 +15,9 @@ function saveName() {
   nameMsg.value = r.ok ? '已保存' : r.msg
 }
 
-// 界面缩放（档位 80%-120%）：写入设置 + 立即应用
+// 界面缩放（档位 90%-110%，2026-09-06 收窄：主内容排版按 100% 设计，超出安全区间会错乱）
 function applyScale(pct) {
-  const v = Number(pct) / 100
+  const v = Math.min(1.1, Math.max(0.9, Number(pct) / 100))
   player.settings.uiScale = v
   applyUiScale(v)
 }
@@ -76,11 +76,11 @@ applyUiScale(player.settings.uiScale ?? 1)
         </select>
       </div>
       <div class="settings-row">
-        <span class="dim">界面缩放：{{ Math.round((player.settings.uiScale ?? 1) * 100) }}%</span>
+        <span class="dim">界面缩放：{{ Math.round((player.settings.uiScale ?? 1) * 100) }}%（90%-110%，超出会排版错乱）</span>
         <input
           type="range"
-          min="80"
-          max="120"
+          min="90"
+          max="110"
           step="10"
           :value="Math.round((player.settings.uiScale ?? 1) * 100)"
           style="flex: 1"
