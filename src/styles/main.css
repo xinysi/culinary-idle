@@ -3717,3 +3717,21 @@ html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, var(--
 
 /* 制作队列暗色（2026-09-06） */
 html[data-theme='dark'] .queue-item { background: rgba(44, 31, 22, 0.6); border-color: rgba(255, 255, 255, 0.16); }
+
+/* 装备词条芯片（2026-09-06） */
+.equip-mod-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.equip-mod-chips .mod-chip {
+  font-size: 11px; font-weight: 700;
+  color: #8a5a12;
+  background: rgba(255, 245, 224, 0.85);
+  border: 1px solid rgba(217, 138, 43, 0.4);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.equip-row-equipped { flex-wrap: wrap; }
+html[data-theme='dark'] .equip-mod-chips .mod-chip {
+  background: rgba(44, 31, 22, 0.85);
+  color: #e8b45f;
+  border-color: rgba(232, 180, 95, 0.4);
+}

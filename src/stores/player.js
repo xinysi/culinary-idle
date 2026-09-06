@@ -8,6 +8,7 @@ import { defineStore } from 'pinia'
 import { SKILL_DEFS } from '../game/data/skills.js'
 import { totalXpForLevel } from '../game/core/Experience.js'
 import { getItem } from '../game/data/items.js'
+import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getCombat } from '../game/combat/Combat.js'
@@ -175,6 +176,8 @@ export const usePlayerStore = defineStore('player', {
     mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
     // 制作队列（2026-09-06）：{ skillId: [{recipeId, qty, paused}] }，3 秒自动制作 1 次
     craftQueues: {},
+    // 装备词条（2026-09-06）：{ slot: { itemId, mods: [{stat,label,value}] } }
+    gearMods: {},
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -195,7 +198,7 @@ export const usePlayerStore = defineStore('player', {
     totalLevels(s) {
       return Object.values(s.skills).reduce((a, sk) => a + (sk.level ?? 1), 0)
     },
-    /** 已装备属性合计（§5.1/§4.2 来源之一） */
+    /** 已装备属性合计（§5.1/§4.2 来源之一）+ 装备词条（玩家侧乘区，2026-09-06） */
     equippedStats(s) {
       const sum = { attack: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0, hpBonus: 0, speedBonus: 0 }
       for (const itemId of Object.values(s.equipment)) {
@@ -206,6 +209,13 @@ export const usePlayerStore = defineStore('player', {
           const nv = Number(v)
           // 防某个装备字段缺失/非数字导致 NaN 传染到属性面板
           sum[k] = (sum[k] ?? 0) + (Number.isFinite(nv) ? nv : 0) * mult
+        }
+      }
+      // 词条：仅对「仍穿戴同一件」的槽位生效
+      for (const [slot, m] of Object.entries(s.gearMods ?? {})) {
+        if (!m?.mods?.length || s.equipment[slot] !== m.itemId) continue
+        for (const mod of m.mods) {
+          sum[mod.stat] = (sum[mod.stat] ?? 0) + (Number(mod.value) || 0)
         }
       }
       return sum
@@ -470,6 +480,7 @@ export const usePlayerStore = defineStore('player', {
         setBonuses: saved.setBonuses ?? [],
         mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
+        gearMods: saved.gearMods ?? {}, // 装备词条：{ slot: { itemId, mods } }
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -522,12 +533,15 @@ export const usePlayerStore = defineStore('player', {
         setBonuses: this.setBonuses,
         mijian: this.mijian,
         craftQueues: this.craftQueues,
+        gearMods: this.gearMods,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
 
     gainGold(amount) {
-      const n = Math.floor(amount)
+      // 装备词条「金币 +%」（仅穿戴着生效）
+      const gm = this.equippedStats.goldPct ?? 0
+      const n = Math.floor(amount * (1 + gm / 100))
       if (n > 0) {
         this.gold += n
         this.stats.totalGoldEarned += n
@@ -779,6 +793,12 @@ export const usePlayerStore = defineStore('player', {
       const old = this.equipment[slot]
       if (old) this.gainItem(old, 1)
       this.equipment[slot] = itemId
+      // 词条：换穿不同装备 → 重新掷词条；同件保留原词条（含洗练结果）
+      const cur = this.gearMods[slot]
+      if (!cur || cur.itemId !== itemId) {
+        if (!this.gearMods) this.gearMods = {}
+        this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
+      }
       return true
     },
 
@@ -788,6 +808,19 @@ export const usePlayerStore = defineStore('player', {
       this.equipment[slot] = null
       this.gainItem(itemId, 1)
       return true
+    },
+
+    /** 装备词条洗练（重随词条数量/类型/数值） */
+    rerollGearMod(slot) {
+      const itemId = this.equipment[slot]
+      const item = itemId ? getItem(itemId) : null
+      if (!item || item.type !== 'equipment') return { ok: false, msg: '该槽位没有穿戴装备' }
+      const cost = REROLL_COST[item.quality] ?? REROLL_COST['普通']
+      if (this.gold < cost) return { ok: false, msg: `洗练需要 ${cost} 金币` }
+      this.gold -= cost
+      if (!this.gearMods) this.gearMods = {}
+      this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
+      return { ok: true, cost, mods: this.gearMods[slot].mods }
     },
 
     consumeEnergyBiscuit() {
