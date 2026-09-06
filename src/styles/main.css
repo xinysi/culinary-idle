@@ -4057,8 +4057,8 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
   background: rgba(255, 252, 246, 0.72);
   border: 1px solid rgba(150, 110, 70, 0.35);
   border-radius: 14px;
-  height: 600px; /* 固定舞台框：不同小游戏切换时尺寸不变（2026-09-06） */
-  min-height: 600px;
+  height: 520px; /* 固定舞台框：不同小游戏切换时尺寸不变（2026-09-06，降高减少留白） */
+  min-height: 520px;
   overflow-y: auto;
   padding: 12px 14px 16px;
   margin-bottom: 14px;
@@ -4068,6 +4068,8 @@ html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
 .mg-stage .skill-head { max-width: 920px; margin-left: auto; margin-right: auto; width: 100%; }
 .mg-stage .card { max-width: 920px; margin-left: auto; margin-right: auto; }
 .mg-stage .puzzle-goal-label, .mg-stage .puzzle-duo { max-width: 920px; margin-left: auto; margin-right: auto; }
+/* 主内容垂直居中：框内留白均匀，不悬空 */
+.mg-stage .game-main { display: flex; flex-direction: column; justify-content: center; }
 /* 大舞台内子游戏：恢复「主内容 + 右侧信息框」双列（2026-09-06 布局修好后请回信息框） */
 .mg-stage .game-layout { display: flex; }
 .mg-stage .game-side { display: flex; }
@@ -4112,3 +4114,28 @@ html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
 @media (max-width: 700px) {
   .puzzle-duo { flex-direction: column; align-items: center; }
 }
+
+/* 舞台内主内容「放大占满」（2026-09-06 实测截图后调整） */
+.mg-stage .game-main .heat-track { max-width: none; width: 100%; height: 40px; }
+.mg-stage .heat-actions .btn { min-width: 170px; font-size: 16px; padding: 10px 26px; }
+.mg-stage .heat-actions { gap: 12px; }
+.mg-stage .heat-verdict { font-size: 15px; }
+.mg-stage .game-main .g2048-board { max-width: 400px; }
+.mg-stage .game-main .g2048-cell { font-size: 26px; }
+.mg-stage .game-main .match-board { max-width: 420px; }
+.mg-stage .game-main .match-cell { font-size: 30px; }
+.mg-stage .puzzle-duo { flex-direction: column; align-items: center; } /* 主区窄：双图改竖列大图 */
+.mg-stage .puzzle-board, .mg-stage .puzzle-goal { max-width: 400px; width: 100%; }
+.mg-stage .puzzle-cell { font-size: 34px; }
+.mg-stage .trivia-q { font-size: 20px; }
+.mg-stage .trivia-opts { max-width: 100%; }
+.mg-stage .trivia-opt { padding: 10px 12px; font-size: 14px; }
+.mg-stage .trivia-progress { max-width: 100%; }
+.mg-stage .rush-bowls { font-size: 64px; }
+.mg-stage .rush-btn { min-width: 260px; padding: 14px 30px; font-size: 20px; }
+.mg-stage .rush-counter { font-size: 16px; }
+.mg-stage .rush-tiers { gap: 12px; }
+
+/* 讲堂兑换居中（2026-09-06 实测） */
+.mg-stage .trivia-exchange { text-align: center; }
+.mg-stage .trivia-exchange-opts { justify-content: center; }
