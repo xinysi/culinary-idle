@@ -1,6 +1,6 @@
 <script setup>
 // 小游戏大厅 + 选项卡框架（2026-09-06）：顶部固定 tab 框，点游戏即在下方加载（SPA 式），随时切换
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 
 const player = usePlayerStore()
