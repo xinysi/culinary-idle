@@ -352,7 +352,7 @@ function typeLabel(id) {
   min-width: 300px;
   font-size: 19px;
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,244,214,0.85) 20%, rgba(255,214,150,0.9) 40%, rgba(255,244,214,0.85) 60%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(255,194,71,0) 0%, rgba(255,194,71,0.4) 18%, rgba(230,155,40,0.6) 50%, rgba(255,194,71,0.4) 82%, rgba(255,194,71,0) 100%),
     linear-gradient(135deg, #ffc247, #e69b28);
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -365,7 +365,7 @@ function typeLabel(id) {
   min-width: 210px;
   font-size: 15px;
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,244,214,0.85) 20%, rgba(255,214,150,0.9) 40%, rgba(255,244,214,0.85) 60%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(242,124,69,0) 0%, rgba(242,124,69,0.4) 18%, rgba(216,92,44,0.6) 50%, rgba(242,124,69,0.4) 82%, rgba(242,124,69,0) 100%),
     linear-gradient(135deg, #f27c45, #d85c2c);
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -483,7 +483,7 @@ function typeLabel(id) {
   color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,244,214,0.85) 20%, rgba(255,214,150,0.9) 40%, rgba(255,244,214,0.85) 60%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(160,104,54,0) 0%, rgba(160,104,54,0.45) 18%, rgba(160,104,54,0.7) 50%, rgba(160,104,54,0.45) 82%, rgba(160,104,54,0) 100%),
     linear-gradient(120deg, #704828, #a06836);
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -507,7 +507,7 @@ function typeLabel(id) {
   color: #fff;
   border: none; border-radius: 12px;
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,244,214,0.85) 20%, rgba(255,214,150,0.9) 40%, rgba(255,244,214,0.85) 60%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(114,184,100,0) 0%, rgba(114,184,100,0.4) 18%, rgba(88,156,75,0.6) 50%, rgba(114,184,100,0.4) 82%, rgba(114,184,100,0) 100%),
     linear-gradient(135deg, #72b864, #589c4b);
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -526,7 +526,7 @@ function typeLabel(id) {
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn {
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,244,214,0.85) 20%, rgba(255,214,150,0.9) 40%, rgba(255,244,214,0.85) 60%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(95,156,80,0) 0%, rgba(95,156,80,0.4) 18%, rgba(74,127,62,0.6) 50%, rgba(95,156,80,0.4) 82%, rgba(95,156,80,0) 100%),
     linear-gradient(135deg, #5f9c50, #4a7f3e);
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -536,7 +536,7 @@ function typeLabel(id) {
 
 
 
-/* 统计页同款彩虹流光（按钮） */
+/* 统计页同款流光（按钮）：底色静止 + 按钮原色柔光带 200%→0 平移扫过 */
 @keyframes gachaGlowFlow {
   from { background-position: 200% 0, 0 0; }
   to { background-position: 0 0, 0 0; }
