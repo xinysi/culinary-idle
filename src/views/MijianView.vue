@@ -537,33 +537,35 @@ function typeLabel(id) {
   pointer-events: none;
   border-radius: inherit;
 }
-/* 第一团水雾：亮斑 0.75 + 暗斑 0.4，向右下漂移 */
+/* 第一团水雾：高亮斑 0.95 + 暗斑 0.6，三斑交错，向右下涌 */
 .gacha-btn::before,
 .gacha-sim .sim-btn::before {
   background-image:
-    radial-gradient(50% 75% at 25% 30%, rgba(var(--sh2), 0.75), rgba(var(--sh1), 0.55) 38%, transparent 68%),
-    radial-gradient(55% 80% at 78% 62%, rgba(var(--shd), 0.42), transparent 70%);
-  background-size: 260% 260%;
-  animation: gachaSmokeA 8s ease-in-out infinite alternate;
+    radial-gradient(60% 85% at 22% 28%, rgba(var(--sh2), 0.95), rgba(var(--sh1), 0.75) 35%, transparent 68%),
+    radial-gradient(60% 85% at 80% 65%, rgba(var(--shd), 0.6), transparent 70%),
+    radial-gradient(45% 70% at 55% 15%, rgba(var(--sh1), 0.7), transparent 70%);
+  background-size: 280% 280%;
+  animation: gachaSmokeA 6s ease-in-out infinite alternate;
 }
-/* 第二团水雾：反向漂移、速度更慢——明暗交错形成水波流动感 */
+/* 第二团水雾：反向漂移——明暗交错形成水波流动感 */
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(45% 70% at 62% 22%, rgba(var(--shd), 0.5), transparent 70%),
-    radial-gradient(50% 75% at 28% 72%, rgba(var(--sh2), 0.65), transparent 72%);
-  background-size: 260% 260%;
-  animation: gachaSmokeB 12s ease-in-out infinite alternate;
+    radial-gradient(55% 80% at 65% 20%, rgba(var(--shd), 0.65), transparent 70%),
+    radial-gradient(60% 85% at 25% 75%, rgba(var(--sh2), 0.9), rgba(var(--sh1), 0.7) 40%, transparent 72%),
+    radial-gradient(40% 65% at 12% 40%, rgba(var(--sh1), 0.6), transparent 70%);
+  background-size: 280% 280%;
+  animation: gachaSmokeB 9s ease-in-out infinite alternate;
 }
 @keyframes gachaSmokeA {
   0% { background-position: 0% 0%; }
-  50% { background-position: 65% 45%; }
-  100% { background-position: 110% 95%; }
+  50% { background-position: 75% 50%; }
+  100% { background-position: 120% 105%; }
 }
 @keyframes gachaSmokeB {
-  0% { background-position: 105% 100%; }
-  50% { background-position: 35% 55%; }
-  100% { background-position: -5% 10%; }
+  0% { background-position: 120% 105%; }
+  50% { background-position: 40% 60%; }
+  100% { background-position: -10% 5%; }
 }
 /* 按钮文字浮于流光之上 */
 .gacha-btn > *,
