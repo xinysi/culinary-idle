@@ -550,28 +550,28 @@ function typeLabel(id) {
 .gacha-btn::before,
 .gacha-sim .sim-btn::before {
   background-image:
-    radial-gradient(30% 48% at 24% 32%, rgba(var(--sh2), 0.78) 0%, rgba(var(--sh2), 0.5) 60%, transparent 100%),
-    radial-gradient(32% 52% at 76% 64%, rgba(var(--shd), 0.55) 0%, rgba(var(--shd), 0.35) 60%, transparent 100%);
-  filter: blur(16px);
-  animation: gachaSmokeA 8s ease-in-out infinite alternate;
+    radial-gradient(20% 34% at 26% 30%, rgba(var(--sh2), 0.85) 0%, rgba(var(--sh2), 0.55) 62%, transparent 100%),
+    radial-gradient(18% 30% at 80% 66%, rgba(var(--shd), 0.6) 0%, rgba(var(--shd), 0.4) 62%, transparent 100%);
+  filter: blur(12px);
+  animation: gachaSmokeA 7s ease-in-out infinite alternate;
 }
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(28% 46% at 64% 24%, rgba(var(--shd), 0.5) 0%, rgba(var(--shd), 0.32) 60%, transparent 100%),
-    radial-gradient(30% 48% at 28% 74%, rgba(var(--sh2), 0.7) 0%, rgba(var(--sh2), 0.45) 60%, transparent 100%);
-  filter: blur(18px);
-  animation: gachaSmokeB 11s ease-in-out infinite alternate;
+    radial-gradient(18% 30% at 66% 22%, rgba(var(--shd), 0.55) 0%, rgba(var(--shd), 0.36) 62%, transparent 100%),
+    radial-gradient(20% 34% at 30% 72%, rgba(var(--sh2), 0.8) 0%, rgba(var(--sh2), 0.5) 62%, transparent 100%);
+  filter: blur(13px);
+  animation: gachaSmokeB 10s ease-in-out infinite alternate;
 }
 @keyframes gachaSmokeA {
-  0% { transform: translate(-9%, -5%); }
-  50% { transform: translate(3%, 1%); }
-  100% { transform: translate(11%, 7%); }
+  0% { transform: translate(-26%, -30%); }
+  50% { transform: translate(4%, 6%); }
+  100% { transform: translate(26%, 32%); }
 }
 @keyframes gachaSmokeB {
-  0% { transform: translate(11%, 7%); }
-  50% { transform: translate(-2%, -2%); }
-  100% { transform: translate(-11%, -7%); }
+  0% { transform: translate(26%, 30%); }
+  50% { transform: translate(-4%, -6%); }
+  100% { transform: translate(-26%, -32%); }
 }
 /* 按钮文字浮于流光之上（轻阴影增强可读性） */
 .gacha-btn > *,
