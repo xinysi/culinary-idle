@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { saveManager } from '../game/bootstrap.js'
-import { saveToSlot, loadSlot, deleteSlot, importSaveToSlot, exportSave, currentSlot } from '../game/bootstrap.js'
+import { saveToSlot, loadSlot, deleteSlot, importSaveToSlot, exportSave, currentSlot, newGameSlot } from '../game/bootstrap.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -33,16 +33,21 @@ function totalLevelsOf(data) {
   return Object.values(data.player.skills).reduce((a, s) => a + (s.level ?? 1), 0)
 }
 function saveInto(slot) {
-  // 硬核模式二次确认（死亡即删档，不可恢复）
-  if (!slots.value[slot]?.exists && hardcoreChecked.value) {
+  // 已有存档位：覆盖保存当前进度
+  saveToSlot(slot)
+  ui.pushLog(`已保存到存档位 ${slot + 1}${player.hardcore ? '（硬核模式）' : ''}`, 'info')
+  refresh()
+}
+function createNewIn(slot) {
+  // 空位新建 = 真正新开档（1 级/100 金），并切换当前会话
+  if (hardcoreChecked.value) {
     if (!confirm('⚠️ 确定开启【硬核模式】吗？\n\n硬核模式死亡后存档将被删除（不可恢复）！\n建议先备份存档。')) {
       hardcoreChecked.value = false
       return
     }
-    player.hardcore = true // 空位新建时应用硬核
   }
-  saveToSlot(slot)
-  ui.pushLog(`已保存到存档位 ${slot + 1}${player.hardcore ? '（硬核模式）' : ''}`, 'info')
+  newGameSlot(slot, { hardcore: hardcoreChecked.value })
+  hardcoreChecked.value = false
   refresh()
 }
 function loadFrom(slot) {
@@ -118,7 +123,7 @@ function fmtTime(ts) {
               <span>☠️ 硬核模式（死亡即删档）</span>
             </label>
             <div class="slot-actions" style="margin-top: 6px">
-              <button class="btn btn-sm btn-primary" @click="saveInto(s.slot)">在此位新建存档</button>
+              <button class="btn btn-sm btn-primary" @click="createNewIn(s.slot)">在此位新建存档</button>
               <button class="btn btn-sm import-btn" @click="fileInputs[s.slot]?.click()">导入 存档文件 到此位</button>
             </div>
             <input

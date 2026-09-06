@@ -396,7 +396,20 @@ console.log('══ F. 存档系统 ══')
   }
   // 深比较：serialize→applySave→serialize 不丢数据
   const p3 = freshPlayer()
-  p3.gainItem('truffle', 3)
+  // ── 空槽「新建存档」= 真正新开档（2026-09-06：修复「新建=当前进度保存」语义）──
+  {
+    const { newGameSlot, saveManager: smg2 } = await import('../src/game/bootstrap.js')
+    smg2.slot = 1
+    smg2.saveSlot(1, { schemaVersion: 1, savedAt: Date.now(), player: { gold: 99999, skills: { knife: { level: 99, exp: 1 } } } })
+    const pn = freshPlayer()
+    pn.gold = 555
+    setActivePinia(createPinia())
+    useUiStore()
+    newGameSlot(2)
+    const fresh2 = smg2.loadSlot(2)
+    check('存档', '新建 = 1 级/100 金新档', fresh2?.player?.gold === 100 && (fresh2?.player?.skills?.knife?.level ?? 1) === 1, `gold=${fresh2?.player?.gold}`)
+    smg2.slot = 1
+  }  p3.gainItem('truffle', 3)
   p3.gainItem('copperKnife', 1)
   p3.equip('copperKnife')
   p3.quests = { index: 2, completed: ['q1'], progress: { 'gather:apple': 5 } }

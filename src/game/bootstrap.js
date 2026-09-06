@@ -384,9 +384,24 @@ export function saveToSlot(slot) {
   saveManager.saveSlot(slot, buildSaveData())
 }
 
-/** 读取指定存档位并切换当前游戏（当前位先自动保存） */
-export function loadSlot(slot) {
+/** 在指定空槽位新建空白存档（1 级/100 金）并切换当前会话；
+ *  注意：不是「把当前进度存过去」，而是真正的新开档（2026-09-06 修复「新建=99級」语义问题） */
+export function newGameSlot(slot, { hardcore = false } = {}) {
   const player = usePlayerStore()
+  const ui = useUiStore()
+  saveManager.saveSlot(saveManager.slot, buildSaveData()) // 当前进度先写入当前位（显式操作，与 saveToSlot 一致）
+  saveManager.slot = slot
+  player.$reset()
+  player.newGame()
+  if (hardcore) player.hardcore = true
+  createSkillInstances(player) // 重建技能实例（绑定当前 store）
+  saveManager.saveSlot(slot, buildSaveData()) // 立即落盘新档
+  ui.pushLog(`已新建空白存档于存档位 ${slot + 1}${hardcore ? '（硬核模式）' : ''}，当前进度切换为新档`, 'info')
+  return true
+}
+
+/** 读取指定存档位并切换当前游戏（当前位先自动保存） */
+export function loadSlot(slot) {  const player = usePlayerStore()
   const ui = useUiStore()
   const data = saveManager.loadSlot(slot)
   if (!data) {
