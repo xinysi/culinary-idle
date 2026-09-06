@@ -546,4 +546,14 @@ function typeLabel(id) {
 
 
 
+/* 统计页同款彩虹流光（按钮） */
+@keyframes gachaGlowFlow {
+  from { background-position: 200% 0, 0 0; }
+  to { background-position: 0 0, 0 0; }
+}
+.gacha-btn, .gacha-sim .sim-btn { animation: gachaGlowFlow 4s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .gacha-btn, .gacha-sim .sim-btn { animation: none; }
+}
+
 </style>
