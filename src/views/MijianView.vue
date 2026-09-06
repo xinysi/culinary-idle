@@ -551,14 +551,14 @@ function typeLabel(id) {
 .gacha-sim .sim-btn::before {
   background-image:
     radial-gradient(20% 34% at 26% 30%, rgba(var(--sh2), 0.85) 0%, rgba(var(--sh2), 0.55) 62%, transparent 100%),
-    radial-gradient(18% 30% at 80% 66%, rgba(var(--shd), 0.6) 0%, rgba(var(--shd), 0.4) 62%, transparent 100%);
+    radial-gradient(22% 36% at 80% 66%, rgba(var(--shd), 0.78) 0%, rgba(var(--shd), 0.52) 62%, transparent 100%);
   filter: blur(12px);
   animation: gachaSmokeA 7s ease-in-out infinite alternate;
 }
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(18% 30% at 66% 22%, rgba(var(--shd), 0.55) 0%, rgba(var(--shd), 0.36) 62%, transparent 100%),
+    radial-gradient(21% 34% at 66% 22%, rgba(var(--shd), 0.72) 0%, rgba(var(--shd), 0.48) 62%, transparent 100%),
     radial-gradient(20% 34% at 30% 72%, rgba(var(--sh2), 0.8) 0%, rgba(var(--sh2), 0.5) 62%, transparent 100%);
   filter: blur(13px);
   animation: gachaSmokeB 10s ease-in-out infinite alternate;
