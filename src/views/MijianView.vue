@@ -522,5 +522,18 @@ function typeLabel(id) {
 .sim-badge { margin-left: 8px; }
 :global([data-theme='dark']) .gacha-sim .sim-btn { background: linear-gradient(135deg, #5f9c50, #4a7f3e); box-shadow: 0 3px 10px rgba(74, 127, 62, 0.4); }
 @keyframes simSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
+/* 按钮流光：基础渐变 + 背景流动（200% 宽循环） */
+.gacha-btn, .gacha-sim .sim-btn {
+  background-size: 200% 100%;
+  animation: gachaGlow 5s linear infinite;
+}
+@keyframes gachaGlow {
+  from { background-position: 0% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gacha-btn, .gacha-sim .sim-btn { animation: none; }
+}
+
 
 </style>
