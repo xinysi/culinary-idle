@@ -99,7 +99,8 @@ body {
 /* 顶部功能导航 + 三栏主体 */
 .app-body {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr) 230px;
+  /* 左右栏随视口/缩放等比自适应（2026-09-06：固定 230px 在放大时被内容撑破导致错位） */
+  grid-template-columns: clamp(170px, 16vw, 260px) minmax(0, 1fr) clamp(170px, 16vw, 260px);
   flex: 1;
   min-height: 0;
 }
