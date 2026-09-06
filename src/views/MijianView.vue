@@ -537,33 +537,41 @@ function typeLabel(id) {
   pointer-events: none;
   border-radius: inherit;
 }
-/* 第一团水雾：亮斑 0.7 + 暗斑 0.4，每斑仅「颜色→透明」两段平滑渐隐，向右下涌 */
+/* 流光：烟雾/水波涌动——实心原色云团 + 高斯模糊，边缘无穷平滑，彻底无颜色分界 */
+.gacha-btn::before,
+.gacha-btn::after,
+.gacha-sim .sim-btn::before,
+.gacha-sim .sim-btn::after {
+  content: '';
+  position: absolute;
+  inset: -18px; /* 云团移出按钮边缘也不露破绽 */
+  pointer-events: none;
+}
 .gacha-btn::before,
 .gacha-sim .sim-btn::before {
   background-image:
-    radial-gradient(55% 80% at 25% 30%, rgba(var(--sh2), 0.7), transparent 72%),
-    radial-gradient(55% 80% at 78% 62%, rgba(var(--shd), 0.4), transparent 72%);
-  background-size: 260% 260%;
-  animation: gachaSmokeA 7s ease-in-out infinite alternate;
+    radial-gradient(30% 48% at 24% 32%, rgba(var(--sh2), 0.78) 0%, rgba(var(--sh2), 0.5) 60%, transparent 100%),
+    radial-gradient(32% 52% at 76% 64%, rgba(var(--shd), 0.55) 0%, rgba(var(--shd), 0.35) 60%, transparent 100%);
+  filter: blur(16px);
+  animation: gachaSmokeA 8s ease-in-out infinite alternate;
 }
-/* 第二团水雾：反向漂移——明暗交错形成水波流动感 */
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
   background-image:
-    radial-gradient(50% 75% at 62% 22%, rgba(var(--shd), 0.42), transparent 72%),
-    radial-gradient(55% 80% at 26% 74%, rgba(var(--sh2), 0.62), transparent 74%);
-  background-size: 260% 260%;
+    radial-gradient(28% 46% at 64% 24%, rgba(var(--shd), 0.5) 0%, rgba(var(--shd), 0.32) 60%, transparent 100%),
+    radial-gradient(30% 48% at 28% 74%, rgba(var(--sh2), 0.7) 0%, rgba(var(--sh2), 0.45) 60%, transparent 100%);
+  filter: blur(18px);
   animation: gachaSmokeB 11s ease-in-out infinite alternate;
 }
 @keyframes gachaSmokeA {
-  0% { background-position: 0% 0%; }
-  50% { background-position: 75% 50%; }
-  100% { background-position: 120% 105%; }
+  0% { transform: translate(-9%, -5%); }
+  50% { transform: translate(3%, 1%); }
+  100% { transform: translate(11%, 7%); }
 }
 @keyframes gachaSmokeB {
-  0% { background-position: 120% 105%; }
-  50% { background-position: 40% 60%; }
-  100% { background-position: -10% 5%; }
+  0% { transform: translate(11%, 7%); }
+  50% { transform: translate(-2%, -2%); }
+  100% { transform: translate(-11%, -7%); }
 }
 /* 按钮文字浮于流光之上（轻阴影增强可读性） */
 .gacha-btn > *,
