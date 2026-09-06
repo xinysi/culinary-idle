@@ -4021,3 +4021,53 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .mg-info-row:first-of-type { margin-top: 0; }
 html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
 html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); color: #ffb08a; border-color: #e0704a; }
+
+/* ── 小游戏统一按钮/文字规范（2026-09-07）── */
+.mg-shell button { font-family: inherit; }
+/* 主按钮：橙金胶囊渐变 */
+.mg-shell .fs-btn, .mg-shell .pz-reset, .mg-shell .mf-reset, .mg-shell .g2048-reset,
+.mg-shell .tz-big, .mg-shell .hz-btn, .mg-shell .tz-next, .mg-shell .tv-next,
+.mg-shell .tv-opt:not(:disabled) {
+  border: none; border-radius: 999px; color: #fff;
+  background: linear-gradient(135deg, #e8703f, #c9542e) !important;
+  box-shadow: 0 3px 12px rgba(201, 84, 46, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  font-weight: 700;
+}
+.mg-shell .fs-btn:hover, .mg-shell .pz-reset:hover, .mg-shell .mf-reset:hover,
+.mg-shell .g2048-reset:hover, .mg-shell .tz-big:hover, .mg-shell .hz-btn:hover,
+.mg-shell .tz-next:hover, .mg-shell .tv-next:hover, .mg-shell .tv-opt:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(201, 84, 46, 0.45);
+}
+/* 模式切换/次级：玻璃胶囊虚线 */
+.mg-shell .fs-mode, .mg-shell .pz-mode, .mg-shell .mf-mode,
+.mg-shell .g2048-mode, .mg-shell .hz-mode, .mg-shell .tz-ex, .mg-shell .tv-ex, .mg-shell .tv-opt {
+  border-radius: 999px; font-weight: 700;
+  background: rgba(255, 252, 246, 0.85);
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  color: var(--muted);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.mg-shell .fs-mode:hover, .mg-shell .pz-mode:hover, .mg-shell .mf-mode:hover,
+.mg-shell .g2048-mode:hover, .mg-shell .hz-mode:hover, .mg-shell .tz-ex:hover, .mg-shell .tv-ex:hover {
+  border-color: var(--primary-strong); color: var(--text);
+}
+.mg-shell .fs-mode.on, .mg-shell .pz-mode.on, .mg-shell .mf-mode.on,
+.mg-shell .g2048-mode.on, .mg-shell .hz-mode.on {
+  border-style: solid; border-color: var(--primary-strong);
+  background: rgba(217, 90, 56, 0.16); color: var(--primary-strong);
+}
+/* 状态胶囊统一 */
+.mg-shell .fs-chip, .mg-shell .pz-chip, .mg-shell .mf-chip, .mg-shell .tv-chip,
+.mg-shell .g2048-chip, .mg-shell .hz-stat {
+  border-radius: 999px; font-size: 12px; font-weight: 700;
+  padding: 5px 12px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+}
+/* 页面标题统一（六页标题一致字号） */
+.mg-shell .hz-hero-title { font-size: 22px; }
+.mg-shell .pz-label, .mg-shell .hz-box-tag, .mg-shell .tv-box-title, .mg-shell .mf-chip, .mg-shell .fs-tip, .mg-shell .pz-tip, .mg-shell .mf-tip, .mg-shell .g2048-tip, .mg-shell .tv-rules {
+  font-weight: 700;
+}

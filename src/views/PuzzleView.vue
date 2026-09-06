@@ -10,9 +10,9 @@ const ui = useUiStore()
 const mode = ref(4)
 const SIZE = computed(() => mode.value)
 const MODES = {
-  3: { label: '3×3 轻松' },
-  4: { label: '4×4 标准' },
-  5: { label: '5×5 大师' },
+  3: { label: '3×3 轻松', gold: 80 },
+  4: { label: '4×4 标准', gold: 150 },
+  5: { label: '5×5 大师', gold: 250 },
 }
 const tiles = ref([])
 const moves = ref(0)
@@ -79,9 +79,10 @@ function tap(i) {
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
     mg.day = todayKey()
     mg.done = (mg.done ?? 0) + 1
-    // 每次完成都可得饼干（2026-09-07 取消每日一次限制）
-    player.gainItem('energyBiscuit', 1)
-    ui.pushLog(`🧩 拼图完成！+能量饼干 ×1（累计 ${mg.done} 次）`, 'gain')
+    // 每次完成得金币（按模式难度，2026-09-07 统一金币奖励）
+    const gold = MODES[mode.value].gold
+    player.gainGold(gold)
+    ui.pushLog(`🧩 拼图完成！+${gold} 金币（累计 ${mg.done} 次）`, 'gain')
   }
 }
 function todayKey() {
@@ -128,8 +129,8 @@ const cells = computed(() => tiles.value)
     <div class="pz-keys">
       <button class="pz-reset" @click="resetDay()">重新打乱（当日固定）</button>
     </div>
-    <div v-if="won" class="pz-done">🎉 复原完成！+能量饼干 ×1</div>
-    <div class="pz-tip">每天同一张图 · 完成得能量饼干（每日 1 次）</div>
+    <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
+    <div class="pz-tip">每天同一张图 · 完成得金币（3×3/4×4/5×5 = +80/150/250）</div>
   </div>
 </template>
 <style scoped>
