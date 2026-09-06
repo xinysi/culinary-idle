@@ -16,18 +16,30 @@ let combo = 0
 let lastEat = 0
 const raging = ref(false)
 let rageUntil = 0
-
-const TIERS = [
-  { need: 120, gold: 40, label: '120 碗' },
-  { need: 200, gold: 60, label: '200 碗' },
-  { need: 300, gold: 100, label: '300 碗' },
-]
+const mode = ref('classic')
+const MODES = {
+  classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40, label: '120 碗' }, { need: 200, gold: 60, label: '200 碗' }, { need: 300, gold: 100, label: '300 碗' }] },
+  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 40, label: '80 碗' }, { need: 140, gold: 70, label: '140 碗' }, { need: 200, gold: 110, label: '200 碗' }] },
+  marathon: { label: '马拉松 120s', dur: 120, tiers: [{ need: 200, gold: 70, label: '200 碗' }, { need: 350, gold: 110, label: '350 碗' }, { need: 500, gold: 160, label: '500 碗' }] },
+}
+const TIERS = computed(() => MODES[mode.value].tiers)
+function reset() {
+  RUNNING.value = false
+  if (timerId) clearInterval(timerId)
+  done.value = false
+  bowls.value = 0
+  REMAIN.value = MODES[mode.value].dur
+  combo = 0
+  lastEat = 0
+  raging.value = false
+  rageUntil = 0
+}
 function start() {
   if (RUNNING.value) return
   RUNNING.value = true
   done.value = false
   bowls.value = 0
-  REMAIN.value = 60
+  REMAIN.value = MODES[mode.value].dur
   timerId = setInterval(() => {
     REMAIN.value--
     if (REMAIN.value <= 0) finish()
@@ -76,8 +88,9 @@ const doneToday = computed(() => mg.value.day === todayKey())
 <template>
   <div class="fs-page">
     <div class="fs-topbar">
+      <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
-      <span class="fs-chip" style="margin-left: auto">💰 今日 {{ mg.rewarded ?? 0 }}/100 金</span>
+      <span class="fs-chip" style="margin-left: auto">💰 今日 {{ mg.rewarded ?? 0 }}/160 金</span>
     </div>
 
     <div class="fs-bowl">
@@ -91,7 +104,7 @@ const doneToday = computed(() => mg.value.day === todayKey())
     </div>
 
     <div class="fs-play">
-      <button v-if="!RUNNING" class="fs-btn" @click="start">🍖 开始挑战（60 秒）</button>
+      <button v-if="!RUNNING" class="fs-btn" @click="start">🍖 开始挑战（{{ MODES[mode].dur }} 秒）</button>
       <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
       </button>
@@ -105,6 +118,8 @@ const doneToday = computed(() => mg.value.day === todayKey())
 <style scoped>
 .fs-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
 .fs-topbar { display: flex; gap: 8px; width: 100%; }
+.fs-mode { padding: 6px 14px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
+.fs-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .fs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .fs-bowl {
   width: min(420px, 92%);

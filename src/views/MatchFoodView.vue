@@ -7,12 +7,23 @@ import { useUiStore } from '../stores/ui.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const GRID = 6
-const PAIRS = ['apple', 'potato', 'tomato', 'chili', 'carrot', 'watermelon', 'grape', 'strawberry', 'eggplant', 'mushroom', 'fish', 'shrimp', 'bread', 'noodles', 'dumpling', 'rice', 'pumpkin', 'onion']
-const EMOJI = {
-  apple: '🍎', potato: '🥔', tomato: '🍅', chili: '🌶️', carrot: '🥕', watermelon: '🍉',
-  grape: '🍇', strawberry: '🍓', eggplant: '🍆', mushroom: '🍄', fish: '🐟', shrimp: '🦐',
-  bread: '🍞', noodles: '🍜', dumpling: '🥟', rice: '🍚', pumpkin: '🎃', onion: '🧅',
+const mode = ref(6)
+const GRID = computed(() => mode.value)
+const MODES = {
+  4: { label: '4×4 快速', pairs: 8 },
+  6: { label: '6×6 标准', pairs: 18 },
+  8: { label: '8×8 挑战', pairs: 32 },
+}
+const EMOJI_ALL = Array.from('🍎🥔🍅🌶️🥕🍉🍇🍓🍆🍄🐟🦐🍞🍜🥟🍚🎃🧅🍗🥩🫘🥦🍌🍊🍋🫐🥭🍍🥥🍐🍒🥑')
+function poolFor() {
+  const n = MODES[mode.value].pairs
+  const ids = []
+  const used = new Set()
+  while (ids.length < n) {
+    const c = EMOJI_ALL[Math.floor(Math.random() * EMOJI_ALL.length)]
+    if (!used.has(c)) { used.add(c); ids.push(c) }
+  }
+  return ids
 }
 
 const board = ref([])
@@ -21,7 +32,7 @@ const clearedCount = computed(() => board.value.filter((c) => c.cleared).length)
 const done = computed(() => board.value.length && clearedCount.value === board.value.length)
 
 function resetDay() {
-  const arr = [...PAIRS, ...PAIRS].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false }))
+  const arr = [...poolFor(), ...poolFor()].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false }))
   board.value = arr
   selected.value = null
 }
@@ -68,19 +79,20 @@ resetDay()
 <template>
   <div class="mf-page">
     <div class="mf-topbar">
-      <span class="mf-chip">🀄 剩余 <b class="mono">{{ GRID * GRID - clearedCount }}</b></span>
+      <button v-for="(m, key) in MODES" :key="key" class="mf-mode" :class="{ on: mode === key }" @click="mode = Number(key); resetDay()">{{ m.label }}</button>
+      <span class="mf-chip">🀄 剩余 <b class="mono">{{ board.length - clearedCount }}</b></span>
       <span class="mf-chip" :class="{ ok: buffActive }">{{ buffActive ? '🔥 满汉全席 buff 生效中' : '今日 buff 未领取' }}</span>
       <span class="mf-chip" style="margin-left: auto">🏆 累计 <b class="mono">{{ buffDays }}</b> 天</span>
     </div>
 
-    <div class="mf-board">
+    <div class="mf-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
       <div
         v-for="(c, i) in board"
         :key="c.key"
         class="mf-cell"
         :class="{ cleared: c.cleared, selected: selected === i }"
         @click="tap(i)"
-      >{{ c.cleared ? '' : EMOJI[c.id] ?? '❓' }}</div>
+      >{{ c.cleared ? '' : c.id }}</div>
     </div>
 
     <div class="mf-keys">
@@ -93,6 +105,8 @@ resetDay()
 <style scoped>
 .mf-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
 .mf-topbar { display: flex; gap: 8px; width: 100%; }
+.mf-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
+.mf-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .mf-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .mf-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .mf-board {

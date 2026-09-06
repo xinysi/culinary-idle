@@ -7,12 +7,18 @@ import { useUiStore } from '../stores/ui.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const SIZE = 4
+const mode = ref(4)
+const SIZE = computed(() => mode.value)
+const MODES = {
+  3: { label: '3×3 轻松' },
+  4: { label: '4×4 标准' },
+  5: { label: '5×5 大师' },
+}
 const tiles = ref([])
 const moves = ref(0)
 const won = ref(false)
 
-const LABELS = ['🍚', '🥟', '🍜', '🦐', '🥘', '🍣', '🍙', '🍢', '🍡', '🥮', '🍵', '🍥', '🍲', '🍰', '🍪', '🥤']
+const LABELS = ['🍚', '🥟', '🍜', '🦐', '🥘', '🍣', '🍙', '🍢', '🍡', '🥮', '🍵', '🍥', '🍲', '🍰', '🍪', '🥤', '🍞', '🥧', '🦀', '🐙', '🧁', '🍧', '🍮', '🍤', '🥠', '🥪']
 function dayHash() {
   const t = new Date()
   let h = 0
@@ -29,16 +35,18 @@ function mulberry32(a) {
   }
 }
 function scrambled() {
-  const arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
-  const rng = mulberry32(dayHash())
+  const size = SIZE.value
+  const total = size * size
+  const arr = Array.from({ length: total }, (_, i) => (i === total - 1 ? 0 : i + 1))
+  const rng = mulberry32(dayHash() + size * 7919)
   for (let i = 0; i < 250; i++) {
     const idx = arr.indexOf(0)
-    const r = Math.floor(idx / SIZE), c = idx % SIZE
+    const r = Math.floor(idx / size), c = idx % size
     const options = []
-    if (r > 0) options.push(idx - SIZE)
-    if (r < SIZE - 1) options.push(idx + SIZE)
+    if (r > 0) options.push(idx - size)
+    if (r < size - 1) options.push(idx + size)
     if (c > 0) options.push(idx - 1)
-    if (c < SIZE - 1) options.push(idx + 1)
+    if (c < size - 1) options.push(idx + 1)
     const pick = options[Math.floor(rng() * options.length)]
     ;[arr[idx], arr[pick]] = [arr[pick], arr[idx]]
   }
@@ -50,15 +58,17 @@ function resetDay() {
   won.value = false
 }
 function checkWin() {
-  for (let i = 0; i < 15; i++) if (tiles.value[i] !== i + 1) return false
-  if (tiles.value[15] !== 0) return false
+  const total = SIZE.value * SIZE.value
+  for (let i = 0; i < total - 1; i++) if (tiles.value[i] !== i + 1) return false
+  if (tiles.value[total - 1] !== 0) return false
   return true
 }
 function tap(i) {
   if (won.value) return
+  const size = SIZE.value
   const empty = tiles.value.indexOf(0)
-  const r = Math.floor(i / SIZE), c = i % SIZE
-  const er = Math.floor(empty / SIZE), ec = empty % SIZE
+  const r = Math.floor(i / size), c = i % size
+  const er = Math.floor(empty / size), ec = empty % size
   if (Math.abs(r - er) + Math.abs(c - ec) !== 1) return
   ;[tiles.value[i], tiles.value[empty]] = [tiles.value[empty], tiles.value[i]]
   tiles.value = [...tiles.value]
@@ -92,6 +102,7 @@ const cells = computed(() => tiles.value)
 <template>
   <div class="pz-page">
     <div class="pz-topbar">
+      <button v-for="(m, key) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = Number(key); resetDay()">{{ m.label }}</button>
       <span class="pz-chip" :class="{ ok: doneToday }">{{ doneToday ? '✅ 今日已完成' : '📅 今日未完成' }}</span>
       <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>
       <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
@@ -100,7 +111,7 @@ const cells = computed(() => tiles.value)
     <div class="pz-duo">
       <div class="pz-col">
         <div class="pz-label">🎯 目标图</div>
-        <div class="pz-board">
+        <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
           <div v-for="(lbl, i) in LABELS" :key="'g' + i" class="pz-cell pz-goal-cell">
             {{ lbl }}<span class="pz-num">{{ i + 1 }}</span>
           </div>
@@ -108,7 +119,7 @@ const cells = computed(() => tiles.value)
       </div>
       <div class="pz-col">
         <div class="pz-label">🧩 拼图（点击与空格相邻的碎片）</div>
-        <div class="pz-board">
+        <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
           <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" @click="tap(i)">
             <template v-if="v">{{ LABELS[v - 1] }}<span class="pz-num">{{ v }}</span></template>
           </div>
@@ -130,6 +141,8 @@ const cells = computed(() => tiles.value)
 .pz-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .pz-duo { display: flex; gap: 22px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
 .pz-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.pz-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
+.pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
 .pz-board {
   width: 300px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
