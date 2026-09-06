@@ -51,4 +51,5 @@ jobs:
         run: |
           zip_base=$(ls -d lmewexe/release/*win32-x64.zip | head -1)
           gh release create "${GITHUB_REF_NAME}" "lmewexe/release"          --title "${GITHUB_REF_NAME} — 美食放置：食之契约" \
+            --generate-notes \
             --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食之契约.exe 即可游玩。源码与开发说明见仓库根目录。"
