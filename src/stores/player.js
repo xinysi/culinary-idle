@@ -27,7 +27,7 @@ import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/bat
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
-import { MIJIAN_POOLS, pickItem, GEAR_PITY } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
@@ -1440,39 +1440,46 @@ export const usePlayerStore = defineStore('player', {
       const def = MIJIAN_POOLS.find((p) => p.id === poolId)
       if (!def || !(count >= 1)) return null
       const cost = def.price * count
-      if (!this.spendGold(cost)) return { ok: false, msg: `金币不足（需 ${cost}）` }
+      if (!this.spendGold(cost)) return { ok: false, msg: '金币不足（需 ' + cost + '）' }
+      // 保底计数按池拆分（2026-09-06；兼容旧档数字形态 → 迁移为 { gear, limited }）
+      const mj = this.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+      if (typeof mj.pity === 'number') mj.pity = { gear: mj.pity, limited: 0 }
+      mj.pity = mj.pity ?? { gear: 0, limited: 0 }
+      mj.stats = mj.stats ?? { pulls: 0, spent: 0, gearRare: 0 }
+      const isGear = poolId === 'gear'
+      const isLimited = poolId === 'limited'
+      const pityKey = isGear ? 'gear' : isLimited ? 'limited' : null
+      const pityNeed = isLimited ? LIMITED_PITY : GEAR_PITY
       const results = []
       let boosted = false
+      const isRare = (it) => !!it?.quality && ['稀有', '史诗', '传说', '神话'].includes(it.quality)
       for (let i = 0; i < count; i++) {
-        const isGear = poolId === 'gear'
-        const { item, boosted: b } = pickItem(poolId, Math.random, isGear ? this.mijian.pity : 0)
-        if (isGear) {
-          if (item?.quality === '稀有' || item?.quality === '史诗' || item?.quality === '传说' || item?.quality === '神话') {
-            this.mijian.pity = 0
-            this.mijian.stats.gearRare++
-          } else {
-            this.mijian.pity++
-          }
+        const pv = pityKey ? mj.pity[pityKey] : 0
+        const { item, boosted: b } = pickItem(poolId, Math.random, pv)
+        if (pityKey) {
+          if (isRare(item)) { mj.pity[pityKey] = 0; if (isGear) mj.stats.gearRare++ }
+          else mj.pity[pityKey] = Math.min(pv + 1, pityNeed)
         }
         results.push(item)
         if (b) boosted = true
       }
-      // 入库（背包满时逐件返回 false，不阻塞后续）
       const got = []
       for (const it of results) {
         if (it && this.gainItem(it.id, 1)) got.push(it.id)
       }
-      this.mijian.stats.pulls += count
-      this.mijian.stats.spent += cost
-      // 历史（最近 10 次：⭐=稀有及以上，厨具池保底参考）
-      const rareHit = results.some((it) => it?.type === 'equipment' && ['稀有', '史诗', '传说', '神话'].includes(it.quality))
-      this.mijian.history = [...(this.mijian.history ?? []), rareHit ? 'rare' : 'common'].slice(-10)
+      mj.stats.pulls += count
+      mj.stats.spent += cost
+      const rareHit = results.some(isRare)
+      mj.history = [...(mj.history ?? []), rareHit ? 'rare' : 'common'].slice(-10)
+      this.mijian = mj
       EventBus.emit('mijian:draw', { poolId, count, boosted })
       return { ok: true, results, got, boosted }
     },
-    /** 厨具池保底进度（N/10） */
+    /** 保底进度（厨具 N/10 · 限时 N/5） */
     mijianPity() {
-      return { current: this.mijian?.pity ?? 0, need: GEAR_PITY }
+      const mj = this.mijian ?? {}
+      const pity = typeof mj.pity === 'number' ? { gear: mj.pity, limited: 0 } : (mj.pity ?? { gear: 0, limited: 0 })
+      return { current: pity.gear ?? 0, need: GEAR_PITY, limited: pity.limited ?? 0, limitedNeed: LIMITED_PITY }
     },
 
     // ── 餐厅好感（2026-09-06）──
