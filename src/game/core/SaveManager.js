@@ -6,6 +6,9 @@
 export const SAVE_PREFIX = 'culinary-idle'
 export const SAVE_VERSION = 1
 export const SLOT_COUNT = 3
+// 自动快照（2026-09-06 档安全）：写档前把旧档复制到快照位（3 份轮换，5 分钟节流）
+export const SNAPSHOT_COUNT = 3
+const SNAPSHOT_MIN_INTERVAL_MS = 5 * 60_000
 
 export class SaveManager {
   constructor({ slot = 0 } = {}) {
@@ -22,6 +25,57 @@ export class SaveManager {
 
   keyFor(slot) {
     return `${SAVE_PREFIX}.save.${slot}`
+  }
+
+  snapshotKeyFor(slot, idx) {
+    return `${SAVE_PREFIX}.snapshot.${slot}.${idx}`
+  }
+
+  // ── 自动快照：写档前备份旧档（轮换 3 份，5 分钟节流）──
+  _snapshotBefore(slot) {
+    try {
+      const raw = localStorage.getItem(this.keyFor(slot))
+      if (!raw) return
+      const lastKey = `${SAVE_PREFIX}.snapshot.${slot}.last`
+      const last = Number(localStorage.getItem(lastKey) || 0)
+      if (Date.now() - last < SNAPSHOT_MIN_INTERVAL_MS) return
+      const idxKey = `${SAVE_PREFIX}.snapshot.${slot}.idx`
+      const idx = localStorage.getItem(idxKey) === null ? 0 : (Number(localStorage.getItem(idxKey)) + 1) % SNAPSHOT_COUNT
+      localStorage.setItem(this.snapshotKeyFor(slot, idx), raw)
+      localStorage.setItem(idxKey, String(idx))
+      localStorage.setItem(lastKey, String(Date.now()))
+    } catch (err) {
+      console.warn('[SaveManager] snapshot before save failed', err)
+    }
+  }
+
+  /** 列出某存档位的快照（用于回滚） */
+  listSnapshots(slot) {
+    const out = []
+    for (let i = 0; i < SNAPSHOT_COUNT; i++) {
+      try {
+        const raw = localStorage.getItem(this.snapshotKeyFor(slot, i))
+        if (!raw) continue
+        const data = JSON.parse(raw)
+        out.push({ idx: i, savedAt: data?.savedAt ?? null })
+      } catch {
+        /* 损坏快照跳过 */
+      }
+    }
+    return out.sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0))
+  }
+
+  /** 从快照回滚到指定存档位（覆盖当前档） */
+  restoreSnapshot(slot, idx) {
+    try {
+      const raw = localStorage.getItem(this.snapshotKeyFor(slot, idx))
+      if (!raw) return false
+      localStorage.setItem(this.keyFor(slot), raw)
+      return true
+    } catch (err) {
+      console.error('[SaveManager] restore snapshot failed', err)
+      return false
+    }
   }
 
   // ── 当前位操作 ──
@@ -51,6 +105,7 @@ export class SaveManager {
 
   saveSlot(slot, data) {
     try {
+      this._snapshotBefore(slot)
       localStorage.setItem(this.keyFor(slot), JSON.stringify(data))
     } catch (err) {
       console.error(`[SaveManager] save slot ${slot} failed`, err)

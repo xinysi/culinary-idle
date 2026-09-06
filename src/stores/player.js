@@ -164,6 +164,8 @@ export const usePlayerStore = defineStore('player', {
     spiritBonds: {},
     // 硬核生存统计：当前生存天数（best 为历史最高；死亡即删档清空）
     hardcoreStats: { days: 0, best: 0, lastDayKey: null },
+    // 新手引导（2026-09-06）：step=当前步骤（0-4），done=true 后不再显示
+    guide: { step: 0, done: false },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1 }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
@@ -235,11 +237,13 @@ export const usePlayerStore = defineStore('player', {
       const style = Math.max(s.skills.knife?.level ?? 1, s.skills.plating?.level ?? 1, s.skills.flavorArtistry?.level ?? 1)
       return Math.floor((taste + heat + style) / 3)
     },
-    /** 图鉴完成度 %（§6.2，保留一位小数） */
+    /** 图鉴完成度 %（§6.2，保留一位小数；>0 时最低显示 0.1，避免「已收集但显示 0%」） */
     collectionPct(s) {
       const total = collectionTotal()
       if (total <= 0) return 0
-      return Math.min(100, Math.round((Object.keys(s.collected).length / total) * 1000) / 10)
+      const got = Object.keys(s.collected).length
+      if (got <= 0) return 0
+      return Math.min(100, Math.max(0.1, Math.round((got / total) * 1000) / 10))
     },
     /** 背包/仓库占用格数（§5.4：不同物品种类数） */
     inventorySlotsUsed(s) {
@@ -396,6 +400,7 @@ export const usePlayerStore = defineStore('player', {
         fest: { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: {},
         hardcoreStats: { days: 0, best: 0, lastDayKey: null },
+        guide: { step: 0, done: false },
       })
     },
 
@@ -448,6 +453,7 @@ export const usePlayerStore = defineStore('player', {
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
+        guide: saved.guide ?? { step: 0, done: false },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
     },
@@ -496,6 +502,7 @@ export const usePlayerStore = defineStore('player', {
         fest: this.fest,
         spiritBonds: this.spiritBonds,
         hardcoreStats: this.hardcoreStats,
+        guide: this.guide,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -1334,7 +1341,10 @@ export const usePlayerStore = defineStore('player', {
       const active = this.spirits?.active ?? []
       if (!active.length) return
       for (const id of active) {
+        const before = bondLevelOf(this.spiritBonds[id] ?? 0)
         this.spiritBonds[id] = (this.spiritBonds[id] ?? 0) + deltaMs
+        const after = bondLevelOf(this.spiritBonds[id])
+        if (after > before) EventBus.emit('spirit:bond', { spiritId: id, level: after })
       }
     },
 

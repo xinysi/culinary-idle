@@ -1,0 +1,59 @@
+# 持续集成：push main / PR → 模拟套件 + 构建 + e2e（9 项）
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Simulation suites
+        run: |
+          node scripts/system_test.mjs
+          node scripts/season_check.mjs
+          node scripts/system_test2.mjs
+          node scripts/buff_test.mjs
+          node scripts/continuity_test.mjs
+          node scripts/audit_sync.mjs
+          node scripts/verify_modules.cjs
+
+      - name: Web build
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install & browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: E2E (start dev server then run 9 tests)
+        run: |
+          npm run dev &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5173 >/dev/null && break
+            sleep 2
+          done
+          npx playwright test e2e-test.spec.mjs
