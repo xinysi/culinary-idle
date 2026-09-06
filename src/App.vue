@@ -84,11 +84,6 @@ const TOP_PAGES = [
     { label: '🍽️珍馐阁', view: 'deluxe', onClick: () => ui.setView('deluxe') },
     { label: '🧪炼金', view: 'alchemy', onClick: () => ui.setView('alchemy') },
   ],
-  [
-    { label: '📊统计', view: 'stats', onClick: () => ui.setView('stats') },
-    { label: '📖图鉴', view: 'log', onClick: () => ui.openLogTab('log') },
-    { label: '🗺️攻略', view: 'guide', onClick: () => ui.setView('guide') },
-  ],
 ]
 function navPage(dir) {
   const n = TOP_PAGES.length
@@ -212,7 +207,10 @@ onMounted(() => {
               :title="marketSummary.title"
               @click="ui.showMarketModal = true"
             >{{ marketSummary.label }}</button>
-            <button class="top-nav-market top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰</button>
+            <button class="top-nav-btn top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰</button>
+            <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊</button>
+            <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖</button>
+            <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️</button>
             <button class="top-nav-btn top-nav-pager" title="上一页" @click="navPage(-1)">‹</button>
             <span class="top-nav-pagenum mono">{{ ui.topNavPage + 1 }}/{{ TOP_PAGES.length }}</span>
             <button class="top-nav-btn top-nav-pager" title="下一页" @click="navPage(1)">›</button>
