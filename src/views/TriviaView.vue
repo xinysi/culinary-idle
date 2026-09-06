@@ -125,16 +125,15 @@ function resetWeek() {
   }
 }
 const EXCHANGES = [
-  { id: 'biscuit', label: '🎁 能量饼干 ×1', cost: 1 },
   { id: 'gold600', label: '💰 金币 600', cost: 1 },
   { id: 'gold1500', label: '💰 金币 1500', cost: 2 },
+  { id: 'gold3000', label: '💰 金币 3000', cost: 3 },
 ]
 function exchange(item) {
   const m = mg.value
   if ((m.badges ?? 0) < item.cost) return
   m.badges -= item.cost
-  if (item.id === 'biscuit') player.gainItem('energyBiscuit', 1)
-  else player.gainGold(item.id === 'gold600' ? 600 : 1500)
+  player.gainGold(item.id === 'gold600' ? 600 : item.id === 'gold1500' ? 1500 : 3000)
   ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
 }
 function boxProgress(b) {
