@@ -41,7 +41,9 @@ test.describe('游戏全流程', () => {
     await expect(page.locator('.app-layout')).toBeVisible()
 
     // 顶部导航分 3 页（2026-09-06）：点击目标按钮前先翻到所在页（最多翻 2 次）
-    const menus = ['商店', '珍馐阁', '炼金', '统计', '图鉴', '攻略', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛']
+    // 统计/图鉴/攻略已固定到右侧图标钮（title 定位）；其余在翻页页中
+    const iconMenus = [['统计', '📊'], ['图鉴', '📖'], ['攻略', '🗺️']]
+    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛']
     for (const m of menus) {
       try {
         await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 2000 })
@@ -50,7 +52,11 @@ test.describe('游戏全流程', () => {
         await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 2000 })
       }
       await page.waitForTimeout(400)
-      // 断言主区域有内容（main-scroll 存在）
+      await expect(page.locator('.main-scroll')).toBeVisible()
+    }
+    for (const [title, icon] of iconMenus) {
+      await page.locator(`.top-nav-btn[title="${title}"]`).click()
+      await page.waitForTimeout(400)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
     // 分页控件可循环翻页（‹ › 按钮存在且可点）

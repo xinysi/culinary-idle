@@ -3668,3 +3668,6 @@ html[data-theme='dark'] .spirit-wall-col .pager-row { background: rgba(44, 31, 2
 html[data-theme='dark'] .spirit-wall { background: transparent !important; }
 html[data-theme='dark'] .story-chapter, html[data-theme='dark'] .gather-section { background: rgba(36, 26, 19, 0.85) !important; }
 html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85) !important; }
+
+/* 顶部导航图标按钮（统计/图鉴/攻略固定右侧，2026-09-06） */
+.top-nav-icon { min-width: 30px; padding: 4px 8px; text-align: center; }
