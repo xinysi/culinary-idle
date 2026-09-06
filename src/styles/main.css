@@ -109,7 +109,7 @@ body {
   justify-content: flex-start; /* 主按钮区左对齐；右侧固定组由 spacer 顶到最右 */
   gap: 6px;
   padding: 6px 10px;
-  background: rgba(255, 252, 246, 0.7);
+  background: rgba(255, 252, 246, 0.80);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -206,7 +206,7 @@ body {
   align-items: stretch;
   gap: 14px;
   padding: 6px 12px;
-  background: rgba(255, 252, 246, 0.7);
+  background: rgba(255, 252, 246, 0.80);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--border);
@@ -271,7 +271,7 @@ body {
 
 .app-sidebar {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('../../public/images/bg-sidebar.png');
+  background-image: linear-gradient(rgba(255, 252, 246, 0.80), rgba(255, 252, 246, 0.80)), url('../../public/images/bg-sidebar.png');
   background-size: cover;
   background-position: center;
   backdrop-filter: blur(50px);
@@ -298,7 +298,7 @@ body {
   /* 性能：不用 backdrop-filter 动态模糊。实测动态进度条 fill 在带 blur 的层内每帧动画会触发
      Chromium 对背景的模糊重采样，把主线程拖到 ~20fps；改用静态半透明磨砂底遮罩背景——
      0.78 磨砂：既透出启动页背景图、又保证文字对比度（AGENTS.md 口径），且不牺牲进度条 ~60fps。 */
-  background: rgba(255, 251, 244, 0.78);
+  background: rgba(255, 251, 244, 0.86);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -307,7 +307,7 @@ body {
 
 .app-status {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.72), rgba(255, 252, 246, 0.72)), url('../../public/images/bg-sidebar.png');
+  background-image: linear-gradient(rgba(255, 252, 246, 0.80), rgba(255, 252, 246, 0.80)), url('../../public/images/bg-sidebar.png');
   background-size: cover;
   background-position: center;
   backdrop-filter: blur(50px);
@@ -436,7 +436,7 @@ body {
 
 /* ── 通用组件 ────────────────────────────────────────────── */
 .card {
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(255, 251, 244, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border);
@@ -823,7 +823,7 @@ h2 {
 /* 右侧导航栏卡片框 → 与左侧导航项(.skill-item)同款样式：
    透明毛玻璃背景 + 虚线边框，让底下的 bg-sidebar.png 背景透出，同时保持整体偏白 */
 .status-panel .card {
-  background: rgba(255, 252, 246, 0.55);
+  background: rgba(255, 252, 246, 0.62);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px dashed rgba(74, 47, 38, 0.28);
@@ -948,7 +948,7 @@ h2 {
   border-radius: 6px;
   padding: 4px 6px;
   font-size: 12px;
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(255, 251, 244, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   color: var(--text);
@@ -1812,7 +1812,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(255, 251, 244, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -1980,7 +1980,7 @@ h2 {
 
 /* 毛玻璃弹窗：半透明白底 + 背景模糊，内容保持清晰 */
 .modal {
-  background: rgba(255, 252, 246, 0.55);
+  background: rgba(255, 252, 246, 0.62);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -2010,7 +2010,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(255, 251, 244, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -2161,7 +2161,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px;
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(255, 251, 244, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   cursor: pointer;
@@ -2272,7 +2272,7 @@ h2 {
   margin-bottom: 10px;
   padding: 8px 12px;
   border: 1px solid rgba(217, 90, 56, 0.25);
-  background: rgba(255, 252, 246, 0.7);
+  background: rgba(255, 252, 246, 0.80);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-radius: 10px;
@@ -2288,7 +2288,7 @@ h2 {
 /* 右侧导航栏「食灵出战」卡片 */
 .spirit-side {
   border: 1px solid rgba(217, 90, 56, 0.25);
-  background: rgba(255, 252, 246, 0.7);
+  background: rgba(255, 252, 246, 0.80);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -2992,7 +2992,7 @@ h2 {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(255, 251, 244, 0.60);
+  background: rgba(255, 251, 244, 0.68);
 }
 .spoil-item .item-img {
   width: 28px;
@@ -3035,7 +3035,7 @@ h2 {
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(255, 251, 244, 0.60);
+  background: rgba(255, 251, 244, 0.68);
   padding: 10px;
 }
 .cold-pane-head {
@@ -3090,7 +3090,7 @@ h2 {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(255, 251, 244, 0.60);
+  background: rgba(255, 251, 244, 0.68);
 }
 .cold-cap-row .btn {
   margin-left: auto;
@@ -3304,7 +3304,7 @@ h2 {
 .spirit-duo-left {
   flex: 0 0 92px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 252, 246, 0.6);
+  background: rgba(255, 252, 246, 0.68);
   border: 1px dashed rgba(150, 110, 70, 0.3);
   border-radius: 10px;
   padding: 6px;
@@ -3371,7 +3371,7 @@ h2 {
 .spirit-book-img {
   width: 120px; height: 120px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 252, 246, 0.6);
+  background: rgba(255, 252, 246, 0.68);
   border: 1px dashed rgba(150, 110, 70, 0.3);
   border-radius: 14px;
 }
@@ -3435,7 +3435,7 @@ h2 {
 .spirit-detail-img {
   width: 120px; height: 120px; margin: 0 auto;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 252, 246, 0.6);
+  background: rgba(255, 252, 246, 0.68);
   border: 1px dashed rgba(150, 110, 70, 0.3);
   border-radius: 14px;
 }
