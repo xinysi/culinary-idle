@@ -521,38 +521,47 @@ function typeLabel(id) {
 
 
 
-/* 流光：斜切光带扫过（业界 shimmer 扫光做法）——按钮原色、ease-in-out 缓动、双层追逐 */
+/* 流光：烟雾/水波涌动（极光云雾做法）——多层原色径向光斑错位缓慢漂移，screen 混合与底色融合 */
 .gacha-btn::before,
 .gacha-btn::after,
 .gacha-sim .sim-btn::before,
 .gacha-sim .sim-btn::after {
   content: '';
   position: absolute;
-  top: -30%; bottom: -30%;
-  left: -70%;
-  width: 55%;
-  background: linear-gradient(90deg,
-    rgba(var(--sh1), 0) 0%,
-    rgba(var(--sh1), 0.38) 22%,
-    rgba(var(--sh2), 0.55) 50%,
-    rgba(var(--sh1), 0.38) 78%,
-    rgba(var(--sh1), 0) 100%);
-  transform: skewX(-24deg) translateX(0);
-  animation: gachaShine 3s ease-in-out infinite;
+  inset: 0;
   pointer-events: none;
-  will-change: transform;
+  mix-blend-mode: screen;
+  border-radius: inherit;
 }
+/* 第一团云雾：向右下缓慢漂移 */
+.gacha-btn::before,
+.gacha-sim .sim-btn::before {
+  background-image:
+    radial-gradient(45% 70% at 25% 30%, rgba(var(--sh1), 0.5), transparent 70%),
+    radial-gradient(50% 75% at 75% 65%, rgba(var(--sh2), 0.45), transparent 72%);
+  background-size: 220% 220%;
+  animation: gachaSmokeA 11s ease-in-out infinite alternate;
+}
+/* 第二团云雾：反向漂移、速度更慢——两团错开形成水波流动感 */
 .gacha-btn::after,
 .gacha-sim .sim-btn::after {
-  width: 34%;
-  animation-delay: 1.5s; /* 第二道光带滞后 1.5s，形成追逐 */
-  opacity: 0.75;
+  background-image:
+    radial-gradient(40% 65% at 65% 25%, rgba(var(--sh2), 0.4), transparent 70%),
+    radial-gradient(45% 70% at 30% 70%, rgba(var(--sh1), 0.38), transparent 72%);
+  background-size: 240% 240%;
+  animation: gachaSmokeB 15s ease-in-out infinite alternate;
 }
-@keyframes gachaShine {
-  0% { transform: skewX(-24deg) translateX(0); }
-  100% { transform: skewX(-24deg) translateX(340%); }
+@keyframes gachaSmokeA {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 60% 40%; }
+  100% { background-position: 100% 85%; }
 }
-/* 按钮文字浮于光带之上 */
+@keyframes gachaSmokeB {
+  0% { background-position: 100% 100%; }
+  50% { background-position: 35% 60%; }
+  100% { background-position: 0% 15%; }
+}
+/* 按钮文字浮于流光之上 */
 .gacha-btn > *,
 .gacha-sim .sim-btn > * { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
