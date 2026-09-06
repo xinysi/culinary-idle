@@ -119,8 +119,7 @@ function defaultEquipment() {
   return eq
 }
 
-export const usePlayerStore = defineStore('player', {
-  state: () => ({
+const defaultState = () => ({
     name: '美食学徒',
     title: null, // 称号（§6.3）
     avatar: null, // 自定义头像（base64 dataUrl，可在设置/头像处上传）
@@ -141,7 +140,7 @@ export const usePlayerStore = defineStore('player', {
     farming: { plots: [] }, // 农田（§3.1.5）
     offlineBonusH: 0, // 离线时长加成（§8.1），上限 +12h
     combat: { style: 'knife', hp: 10, flavorEnergy: 50 }, // §4
-    spirits: { active: [] }, // 食灵出战列表（§3.3.6，最多 2 个）
+    spirits: { active: [], owned: {} }, // 食灵出战列表（§3.3.6，最多 2 个）；owned=食灵阁（不占背包格，2026-09-06）
     gastronomy: { active: [] }, // 激活中的奥义（§3.4.1）
     tastePoints: 0, // 品鉴点数（对决胜利获得，奥义消耗）
     buffs: { xpMult: null, yieldMult: null }, // 增益剂（§3.4.2）：{mult, expiresAt}
@@ -184,7 +183,10 @@ export const usePlayerStore = defineStore('player', {
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light' }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.8-1.2）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
-  }),
+  })
+
+export const usePlayerStore = defineStore('player', {
+  state: defaultState,
 
   getters: {
     skillState: (s) => (id) => s.skills[id] ?? { level: 1, exp: 0, mastery: {}, prestiges: 0 },
@@ -385,49 +387,8 @@ export const usePlayerStore = defineStore('player', {
 
   actions: {
     newGame() {
-      this.$patch({
-        name: '美食学徒',
-        title: null,
-        gold: 100,
-        skills: defaultSkills(),
-        inventory: {},
-        bank: {},
-        inventoryCap: 20,
-        bankCap: 100,
-        hardcore: false,
-        pausedSkills: {},
-        closedIdleTasks: {},
-        equipment: defaultEquipment(),
-        activeSkill: 'foraging',
-        activeTarget: null,
-        skillTargets: {}, // 新档待机：不自动开始挂机，玩家选择目标后开始
-        lastOnlineAt: Date.now(),
-        farming: { plots: [] },
-        offlineBonusH: 0,
-        combat: { style: 'knife', hp: 10, flavorEnergy: 50 },
-        spirits: { active: [] },
-        gastronomy: { active: [] },
-        tastePoints: 0,
-        buffs: { xpMult: null, yieldMult: null },
-        spoilage: {},
-        coldStorage: {},
-        achievements: [],
-        collected: {},
-        quests: { index: 0, completed: [], progress: {} },
-        stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 } },
-        restaurant: { level: 1, menu: [], incomeAccum: 0 },
-        guild: { id: null, points: 0, day: null, taskProgress: {} },
-        seasons: {},
-        daily: { day: null, streak: 0, tasks: [], claimedAll: false },
-        weekly: { week: null, task: null, progress: 0, claimed: false },
-        tower: { floor: 1, best: 0, rewarded: [] },
-        fest: { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
-        spiritBonds: {},
-        hardcoreStats: { days: 0, best: 0, lastDayKey: null },
-        guide: { step: 0, done: false },
-        setBonuses: [],
-        mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
-      })
+      // 全新档：整体重置为默认状态（单一来源 defaultState，防止嵌套字段残留/漂移，2026-09-06）
+      this.$state = defaultState()
     },
 
     applySave(saved) {
@@ -457,7 +418,7 @@ export const usePlayerStore = defineStore('player', {
         farming: { plots: Array.isArray(saved.farming?.plots) ? saved.farming.plots : [] },
         offlineBonusH: Math.min(saved.offlineBonusH ?? 0, 12),
         combat: { ...this.combat, ...(saved.combat ?? {}) },
-        spirits: { active: Array.isArray(saved.spirits?.active) ? saved.spirits.active : [] },
+        spirits: { active: Array.isArray(saved.spirits?.active) ? saved.spirits.active : [], owned: saved.spirits?.owned ?? {} },
         gastronomy: { active: Array.isArray(saved.gastronomy?.active) ? saved.gastronomy.active : [] },
         tastePoints: saved.tastePoints ?? 0,
         buffs: { xpMult: saved.buffs?.xpMult ?? null, yieldMult: saved.buffs?.yieldMult ?? null },
@@ -487,6 +448,17 @@ export const usePlayerStore = defineStore('player', {
         orders: saved.orders ?? { list: [], nextAt: 0 }, // 食客订单
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
+      // 食灵阁迁移（2026-09-06）：旧档背包内的食灵物品移入独立食灵阁（不占背包格）
+      const owned = { ...(this.spirits?.owned ?? {}) }
+      let migrated = 0
+      for (const [itemId, qty] of Object.entries(this.inventory ?? {})) {
+        if (getItem(itemId)?.type === 'spirit' && qty > 0) {
+          owned[itemId] = (owned[itemId] ?? 0) + qty
+          delete this.inventory[itemId]
+          migrated += qty
+        }
+      }
+      if (migrated > 0) this.spirits = { ...(this.spirits ?? {}), owned }
     },
 
     serialize() {
@@ -882,20 +854,32 @@ export const usePlayerStore = defineStore('player', {
       return { ok: false, msg: '未知效果' }
     },
 
-    // ── 食灵（§3.3.6）──
+    // ── 食灵（§3.3.6）：食灵阁 owned 不占背包格（2026-09-06）──
+    /** 获得食灵（召唤产物直接入食灵阁；图鉴收集照常标记） */
+    gainSpirit(spiritId, qty = 1) {
+      if (getItem(spiritId)?.type !== 'spirit') return false
+      const n = Math.max(1, Math.floor(qty))
+      if (!this.spirits?.owned) {
+        this.spirits = { active: this.spirits?.active ?? [], owned: {} }
+      }
+      this.spirits.owned[spiritId] = (this.spirits.owned[spiritId] ?? 0) + n
+      this.collected[spiritId] = true
+      return true
+    },
     setSpiritActive(spiritId, on) {
       const active = [...this.spirits.active]
       if (on) {
         if (active.includes(spiritId)) return false
         if (active.length >= SPIRIT_SLOTS) return false
-        if ((this.inventory[spiritId] ?? 0) < 1) return false
-        if (!this.spendItem(spiritId, 1)) return false
+        if ((this.spirits.owned?.[spiritId] ?? 0) < 1) return false
+        this.spirits.owned[spiritId] -= 1
         this.spirits.active = [...active, spiritId]
         return true
       }
       if (!active.includes(spiritId)) return false
       this.spirits.active = active.filter((x) => x !== spiritId)
-      this.gainItem(spiritId, 1)
+      if (!this.spirits.owned) this.spirits.owned = {}
+      this.spirits.owned[spiritId] = (this.spirits.owned[spiritId] ?? 0) + 1
       return true
     },
 

@@ -1103,6 +1103,24 @@ console.log('══ C10. 一键入包 ══')
   check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
 }
 
+
+// ── C11. 食灵阁（2026-09-06：食灵不占背包格）──
+console.log('══ C11. 食灵阁 ══')
+{
+  const p = freshPlayer({ spiritSummoning: 10 })
+  p.gainSpirit('appleSpirit_1', 3)
+  check('食灵', '食灵入阁不占背包格', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !(p.inventory.appleSpirit_1 > 0) && Object.keys(p.inventory).filter((k) => p.inventory[k] > 0).length === 0)
+  const okOn = p.setSpiritActive('appleSpirit_1', true)
+  check('食灵', '出战消耗食灵阁 1 只', okOn === true && (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && p.spirits.active.includes('appleSpirit_1'))
+  p.setSpiritActive('appleSpirit_1', false)
+  check('食灵', '退役归还食灵阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !p.spirits.active.includes('appleSpirit_1'))
+  // 旧档迁移：背包里的食灵 → 食灵阁（新档重置后干净复现）
+  p.newGame()
+  p.inventory.appleSpirit_1 = 2
+  p.applySave(JSON.parse(JSON.stringify(p.$state)))
+  check('食灵', '旧档背包食灵自动迁移入阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && !(p.inventory.appleSpirit_1 > 0))
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
@@ -1118,4 +1136,24 @@ console.log('══ C10. 一键入包 ══')
   check('存取', '一键入仓（背包→仓库，装备跳过）', moved === 1 && (p.bank.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1)
   const back = p.moveAllToInventory()
   check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
+}
+
+// ── C11. 食灵阁（2026-09-06：食灵不占背包格）──
+console.log('══ C11. 食灵阁 ══')
+{
+  const p = freshPlayer({ spiritSummoning: 10 })
+  const ss = getSkillInstance('spiritSummoning')
+  const r = ss.recipes.find((x) => x.output.itemId === 'appleSpirit' + '_' + 1 || x.output.itemId === 'appleSpirit_1')
+  console.log('rec:', r?.output?.itemId)
+  // 用 makeOrder 同款：直接 gainSpirit 验证不占背包
+  p.gainSpirit('appleSpirit_1', 3)
+  check('食灵', '食灵入阁不占背包格', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !(p.inventory.appleSpirit_1 > 0) && Object.keys(p.inventory).length === 0)
+  const okOn = p.setSpiritActive('appleSpirit_1', true)
+  check('食灵', '出战消耗食灵阁 1 只', okOn === true && (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && p.spirits.active.includes('appleSpirit_1'))
+  p.setSpiritActive('appleSpirit_1', false)
+  check('食灵', '退役归还食灵阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !p.spirits.active.includes('appleSpirit_1'))
+  // 旧档迁移：背包里的食灵 → 食灵阁
+  p.inventory.appleSpirit_1 = 2
+  p.applySave({ ...p.$state, inventory: { appleSpirit_1: 2 }, spirits: { active: [], owned: {} } })
+  check('食灵', '旧档背包食灵自动迁移入阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && !(p.inventory.appleSpirit_1 > 0))
 }
