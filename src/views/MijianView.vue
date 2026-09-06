@@ -276,7 +276,13 @@ function typeLabel(id) {
   overflow: hidden;
   height: 108px;
   margin-bottom: 12px;
-  background: rgba(255, 252, 246, 0.96);
+  background: linear-gradient(90deg, #f6e3c6, #f3c9a0, #e6c3dd, #bcd7e8, #f6e3c6);
+  background-size: 300% 100%;
+  animation: bannerGlow 9s linear infinite;
+}
+@keyframes bannerGlow {
+  from { background-position: 0% 0; }
+  to { background-position: -300% 0; }
 }
 .mijian-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .mijian-bg-track {
@@ -323,7 +329,11 @@ function typeLabel(id) {
 :global([data-theme='dark']) .pool-banner-pity .pill { background: rgba(44, 31, 22, 0.92); color: #e8b45f; }
 :global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
 :global([data-theme='dark']) .pool-mini.active { background: #3a2a18; border-color: #d98a2b; }
-:global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
+:global([data-theme='dark']) .pool-banner {
+  background: linear-gradient(90deg, #3a2a1c, #54402c, #3f3350, #2c3a44, #3a2a1c);
+  background-size: 300% 100%;
+  animation: bannerGlow 9s linear infinite;
+}
 :global([data-theme='dark']) .pool-banner-fade {
   background: linear-gradient(90deg, rgba(18, 13, 9, 0.62), rgba(18, 13, 9, 0) 13%, rgba(18, 13, 9, 0) 87%, rgba(18, 13, 9, 0.62));
 }
