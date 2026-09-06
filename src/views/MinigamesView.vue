@@ -30,9 +30,9 @@ const current = computed(() => GAMES.find((g) => g.id === active.value) ?? null)
 </script>
 
 <template>
-  <div class="mg-shell">
+  <div class="mg-frame mg-shell">
     <!-- 顶部固定选项卡框：点哪个游戏就在下方加载 -->
-    <div class="card mg-tabs">
+    <div class="mg-tabs">
       <button class="btn btn-sm mg-tab" :class="{ 'btn-primary': active === null }" @click="active = null">🏠 大厅</button>
       <button
         v-for="g in GAMES"
