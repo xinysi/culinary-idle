@@ -1,6 +1,7 @@
 // 觅珍抽卡（2026-09-06）— 材料/食物/厨具三池，金币消费，价值加权随机（纯函数可测）
 // 纯新增获取来源（不动任何物品数值）；图鉴三查见 itemSources.js 的「觅珍」来源。
 import { ITEMS } from './items.js'
+import { itemImage } from './itemImage.js'
 
 export const MIJIAN_POOLS = [
   { id: 'material', name: '材料池', icon: '🧺', desc: '食材/矿物/种子与加工材料', price: 300, kinds: ['ingredient', 'spice'] },
@@ -68,4 +69,18 @@ export function pickItem(poolId, rng = Math.random, pity = 0) {
   if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
   const items = poolItems(poolId)
   return { item: weightedPick(items, rng), boosted: false }
+}
+
+/** 池内预览图采样（抽卡背景轮播用）：等距取 count 张「有图片」的物品 */
+export function poolPreview(poolId, count = 18) {
+  const items = poolItems(poolId).filter((it) => itemImage(it.id))
+  if (!items.length) return []
+  const step = Math.max(1, Math.floor(items.length / count))
+  const out = []
+  for (let i = 0; i < items.length; i += step) {
+    if (out.length >= count) break
+    const img = itemImage(items[i].id)
+    if (img) out.push({ id: items[i].id, name: items[i].name, img })
+  }
+  return out
 }

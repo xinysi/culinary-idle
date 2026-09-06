@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MIJIAN_POOLS, GEAR_PITY } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, GEAR_PITY, poolPreview } from '../game/data/mijianDraws.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -13,6 +13,11 @@ const ui = useUiStore()
 
 const activePool = ref('material')
 const pool = computed(() => MIJIAN_POOLS.find((p) => p.id === activePool.value))
+// 抽卡背景：当前池的物品图轮播（双份列表无缝循环，低透明+模糊）
+const bgItems = computed(() => {
+  const list = poolPreview(activePool.value, 14)
+  return [...list, ...list] // 双份 → translateX(-50%) 无痕循环
+})
 const results = ref([]) // 最近一次抽卡结果 [{id, rare}]
 const isGearPool = computed(() => activePool.value === 'gear')
 const pity = computed(() => player.mijianPity())
@@ -38,7 +43,14 @@ function rarityClass(id) {
 </script>
 
 <template>
-  <div class="combat-view">
+  <div class="combat-view mijian-view">
+    <!-- 抽卡背景：物品图轮播（低透明+模糊，随池切换图源） -->
+    <div class="mijian-bg" aria-hidden="true">
+      <div class="mijian-bg-track">
+        <img v-for="(b, i) in bgItems" :key="b.id + '-' + i" :src="b.img" alt="" loading="lazy" />
+      </div>
+    </div>
+
     <header class="skill-head">
       <div>
         <h2>🎴 觅珍</h2>
@@ -99,6 +111,31 @@ function rarityClass(id) {
 </template>
 
 <style scoped>
+/* 抽卡背景：物品画廊轮播 */
+.mijian-view { position: relative; overflow: hidden; }
+.mijian-bg {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+}
+.mijian-bg-track {
+  display: flex; align-items: center; gap: 30px;
+  width: max-content;
+  height: 100%;
+  animation: mijianScroll 110s linear infinite;
+}
+.mijian-bg-track img {
+  width: 92px; height: 92px;
+  object-fit: contain; flex-shrink: 0;
+  opacity: 0.13; filter: blur(1.2px);
+}
+.mijian-view > *:not(.mijian-bg) { position: relative; z-index: 1; }
+@keyframes mijianScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mijian-bg-track { animation: none; }
+}
 .mijian-results { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .mijian-card {
   width: 108px; padding: 10px 8px; text-align: center;
