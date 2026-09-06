@@ -100,13 +100,10 @@ watch(
   },
 )
 
-// 界面缩放（§10.2.3 uiScale）：启动/读档后应用
-// 2026-09-06：只缩放主内容区（.app-main），顶部/底部/左右导航保持固定尺寸
-// （原来对 html 整体 zoom，导航栏也被放大——大倍数下图标按钮显得臃肿）
+// 界面缩放（§10.2.3 uiScale）：启动/读档后应用（整页等比缩放；放大后的导航观感由 CSS 紧凑设计保障）
 function applyUiScale() {
   const v = player.settings?.uiScale ?? 1
-  const el = document.querySelector('.app-main')
-  if (el) el.style.zoom = v === 1 ? '' : String(v)
+  document.documentElement.style.zoom = v === 1 ? '' : String(v)
 }
 // 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
 function applyTheme() {

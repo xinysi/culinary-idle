@@ -3681,7 +3681,13 @@ html[data-theme='dark'] .story-chapter, html[data-theme='dark'] .gather-section 
 html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85) !important; }
 
 /* 顶部导航图标按钮（统计/图鉴/攻略固定右侧，2026-09-06） */
-.top-nav-icon { min-width: 30px; padding: 4px 8px; text-align: center; }
+.top-nav-icon {
+  min-width: 24px;
+  padding: 3px 6px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.2;
+}
 
 /* 视口级背景（觅珍抽卡等）置于左右栏之下（2026-09-06） */
 .app-sidebar, .app-status { position: relative; z-index: 1; }
