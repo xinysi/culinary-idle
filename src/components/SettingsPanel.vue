@@ -88,6 +88,13 @@ applyUiScale(player.settings.uiScale ?? 1)
         />
       </div>
       <div class="settings-row">
+        <span class="dim">界面主题</span>
+        <select v-model="player.settings.theme" style="flex: 1">
+          <option value="light">☀️ 亮色（默认）</option>
+          <option value="dark">🌙 深色</option>
+        </select>
+      </div>
+      <div class="settings-row">
         <label class="switch-row">
           <input type="checkbox" v-model="player.settings.soundEnabled" @change="player.settings.soundEnabled && primeAudio()" />
           <span>音效</span>

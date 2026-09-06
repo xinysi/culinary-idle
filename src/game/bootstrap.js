@@ -249,6 +249,10 @@ export function registerGameEvents() {
   EventBus.on('spirit:bond', ({ spiritId, level }) => {
     ui.pushLog(`💞 羁绊升级！${itemName(spiritId)} Lv${level}（效果 +${level * 4}%）`, 'levelup')
   })
+  // 锻造套装集齐（2026-09-06）
+  EventBus.on('set:bonus', ({ name, gold }) => {
+    ui.pushLog(`🏅 套装集齐：「${name}」+${gold} 金币、神秘调料 ×1`, 'levelup')
+  })
 
   // 背包/仓库满（§5.4）
   EventBus.on('inventory:full', () => ui.pushLog('🎒 背包已满！请整理、存入仓库或出售（商店可扩展容量）', 'warn'))

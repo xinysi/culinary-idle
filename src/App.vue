@@ -14,6 +14,7 @@ import SearchModal from './components/SearchModal.vue'
 import EncounterModal from './components/EncounterModal.vue'
 import NewbieGuide from './components/NewbieGuide.vue'
 import OfflineReportModal from './components/OfflineReportModal.vue'
+import ShareCardModal from './components/ShareCardModal.vue'
 import { useUiStore } from './stores/ui.js'
 import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
@@ -95,13 +96,22 @@ function applyUiScale() {
   const v = player.settings?.uiScale ?? 1
   document.documentElement.style.zoom = v === 1 ? '' : String(v)
 }
+// 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
+function applyTheme() {
+  const t = player.settings?.theme === 'dark' ? 'dark' : ''
+  if (t) document.documentElement.dataset.theme = t
+  else delete document.documentElement.dataset.theme
+}
 onMounted(() => {
   applyUiScale()
+  applyTheme()
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
 })
 onUnmounted(() => { clearInterval(refreshTodayTimer) })
+// 主题切换实时生效（设置面板修改 settings.theme）
+watch(() => player.settings?.theme, () => applyTheme())
 
 // 跨午夜刷新定时器句柄
 let refreshTodayTimer = null
@@ -157,6 +167,7 @@ onMounted(() => {
   EventBus.on('tower:milestone', () => on() && sfx.reward())
   EventBus.on('fest:submit', () => on() && sfx.collect())
   EventBus.on('fest:milestone', () => on() && sfx.reward())
+  EventBus.on('set:bonus', () => on() && sfx.reward())
   EventBus.on('skill:outofammo', () => on() && sfx.warn())
   EventBus.on('inventory:full', () => on() && sfx.warn())
   EventBus.on('bank:full', () => on() && sfx.warn())
@@ -251,6 +262,7 @@ onMounted(() => {
     <SignInModal v-if="ui.showSignIn" />
     <SearchModal v-if="ui.showSearch" />
     <EncounterModal />
+    <ShareCardModal />
     <OfflineReportModal />
 
     <!-- 移动端：技能抽屉 + 底部导航（§9.3 单栏布局） -->

@@ -38,6 +38,7 @@ export const ACHIEVEMENTS = [
   { id: 'win500', name: '百战名厨', category: '对决', desc: '赢得 500 场对决', reward: { gold: 3000 }, check: (p) => p.stats.combatWins >= 500 },
   { id: 'win1000', name: '无双食神', category: '对决', desc: '赢得 1000 场对决', title: '无双食神', reward: { gold: 8000 }, check: (p) => p.stats.combatWins >= 1000 },
   { id: 'bossAll', name: '诸神黄昏', category: '对决', desc: '击败全部 28 个 首领', title: '黑暗料理王', reward: { gold: 10000, items: { godCrown: 1 } }, check: (p) => p.stats.bosses.length >= 28 },
+  { id: 'hardBossAll', name: '食神之巅', category: '对决', desc: '困难模式首杀全部 28 个 首领', title: '食神之巅', reward: { gold: 20000, items: { godCrown: 1, energyBiscuit: 2 } }, check: (p) => (p.stats.hardBosses?.length ?? 0) >= 28 },
   // ── 收集 ──
   { id: 'log25', name: '初入图鉴', category: '收集', desc: '图鉴完成度达到 25%', reward: { gold: 500 }, check: (p) => p.collectionPct >= 25 },
   { id: 'log50', name: '收集家', category: '收集', desc: '图鉴完成度达到 50%', reward: { gold: 1500 }, check: (p) => p.collectionPct >= 50 },

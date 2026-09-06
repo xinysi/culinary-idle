@@ -2,12 +2,15 @@
 // 统计面板 — 里程碑总览（分栏式 + 赛季点数流光数字）
 // 数据全部来自 player store（已确认字段存在且口径正确）。
 import { computed } from 'vue'
+import { useUiStore } from '../stores/ui.js'
 import { usePlayerStore } from '../stores/player.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { ITEMS } from '../game/data/items.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
+import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
 
 const player = usePlayerStore()
+const ui = useUiStore()
 
 const skills = computed(() => getAllSkillInstances())
 const totalActions = computed(() => skills.value.reduce((a, s) => a + (s.actionsDone ?? 0), 0))
@@ -60,6 +63,7 @@ const sections = computed(() => [
     title: '收集',
     rows: [
       { label: '图鉴完成度', value: `${player.collectionPct}%`, sub: `（${Object.keys(player.collected).length}/${Object.keys(ITEMS).length}）` },
+      { label: '锻造套装集齐', value: player.setBonuses?.length ?? 0, sub: ` / ${COLLECTABLE_SETS.length} 套` },
       { label: '称号', value: player.title ? `「${player.title}」` : '无' },
       { label: '赛季套装收集', value: seasonClaimed.value, sub: ' 档' },
       { label: '厨艺大赛月分', value: player.fest?.score ?? 0, sub: player.fest?.month ? `（${player.festTheme()?.name ?? ''}）` : '（未开赛）' },
@@ -93,6 +97,7 @@ const sections = computed(() => [
         <h2>📊 统计</h2>
         <p class="dim">你的美食之旅里程碑总览</p>
       </div>
+      <button class="btn btn-sm btn-primary" style="margin-left: auto" @click="ui.toggleShareCard(true)">📸 生成战报</button>
     </header>
     <div class="stats-columns">
       <div v-for="sec in sections" :key="sec.title" class="stats-col card">

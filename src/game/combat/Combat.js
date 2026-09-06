@@ -372,6 +372,17 @@ export class Combat {
         drops.push({ itemId: d.itemId, qty })
       }
     }
+    // 困难模式首杀额外奖励（2026-09-06；不纳入正常 BOSS 记录/成就口径）
+    if (o.isHard) {
+      const baseName = o.name.replace(/·困难$/, '')
+      const list = this.player.stats.hardBosses ?? []
+      if (!list.includes(baseName)) {
+        this.player.stats.hardBosses = [...list, baseName]
+        const hg = 50 + o.level * 10
+        this.player.gainGold(hg)
+        this.logLine(`👑 困难模式首杀「${baseName}」！额外 +${hg} 金币`, 'win')
+      }
+    }
     this.player.onCombatWin?.({ name: o.name, level: o.level, isBoss: !!o.isBoss })
     const dropText = drops.length ? '，掉落：' + drops.map((d) => `${itemName(d.itemId)} ×${d.qty}`).join('、') : ''
     const xpText = `，经验：${STYLE_INFO[this.styleId].name} +${xpStyle}、品鉴力 +${xpTaste}、火候 +${xpHeat}`

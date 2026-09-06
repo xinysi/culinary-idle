@@ -19,6 +19,7 @@ export const useUiStore = defineStore('ui', {
     showEquipModal: false, // 装备（穿戴）弹窗（独立于背包/仓库）
     showSignIn: false, // 每日签到弹窗
     showSearch: false, // 全局搜索弹窗
+    showShareCard: false, // 战报分享卡弹窗（2026-09-06）
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）
@@ -47,6 +48,12 @@ export const useUiStore = defineStore('ui', {
     },
     toggleSearch(open) {
       this.showSearch = open ?? !this.showSearch
+    },
+    toggleShareCard(open) {
+      this.showShareCard = open ?? !this.showShareCard
+    },
+    closeShareCard() {
+      this.showShareCard = false
     },
     // 日志页直达子页（图鉴/卡牌等）
     openLogTab(tab) {
