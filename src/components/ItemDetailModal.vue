@@ -37,6 +37,8 @@ function jumpForSource(s) {
   if (s.includes('成就')) return { view: 'log' }
   if (s.includes('主线任务') || s.includes('任务')) return { view: 'log' }
   if (s.includes('契约') || s.includes('食灵')) return { view: 'skill', skill: 'spiritSummoning' }
+  if (s.includes('觅珍') || s.includes('抽卡')) return { view: 'mijian' }
+  if (s.includes('竞技场')) return { view: 'arena' }
   return null
 }
 function jumpSource(s) {

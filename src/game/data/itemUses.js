@@ -23,6 +23,7 @@ export function itemUses(itemId) {
   for (const a of ALCHEMY_RECIPES) {
     const qty = a.in?.[itemId]
     if (!qty) continue
+    if (!getItem(a.out)) continue // 幽灵产物（炼金表引用不存在物品）：不在图鉴展示
     add(a.out, a.name, qty)
   }
   return [...map.values()]

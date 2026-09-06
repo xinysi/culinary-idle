@@ -90,6 +90,8 @@ const CAT_ORDER = ['seafood', 'meat', 'fruit', 'vegetable', 'root', 'mineral', '
 const sections = computed(() => {
   const map = new Map()
   for (const r of ALCHEMY_RECIPES) {
+    // 幽灵配方过滤（2026-09-06 图鉴三查）：产物或任一材料不存在于 ITEMS 的配方不可执行，不展示
+    if (!getItem(r.out) || Object.keys(r.in ?? {}).some((k) => !getItem(k))) continue
     const it = getItem(r.out)
     const cat = it ? (CAT_MERGE[it.category] ?? it.category) : undefined
     let label = it ? (CATEGORY_LABEL[cat] ?? cat) : '其他'
