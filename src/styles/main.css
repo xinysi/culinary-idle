@@ -3815,3 +3815,8 @@ html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); 
 html[data-theme='dark'] .cb-card:hover { box-shadow: 0 0 12px rgba(255, 255, 255, 0.12); }
 html[data-theme='dark'] .cb-round.win { background: rgba(87, 168, 97, 0.14); }
 html[data-theme='dark'] .cb-round.lose { background: rgba(217, 75, 63, 0.14); }
+/* 卡牌对战奖励明细（2026-09-06 平衡优化） */
+.cb-daily-bonus { font-size: 12px; color: var(--gold); margin-left: 6px; }
+.cb-first-bonus { font-size: 12px; color: var(--good-strong); margin-left: 6px; }
+html[data-theme='dark'] .cb-daily-bonus { color: var(--gold); }
+html[data-theme='dark'] .cb-first-bonus { color: #8fd39a; }

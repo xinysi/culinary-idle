@@ -25,7 +25,7 @@ import { EventBus } from '../src/game/core/EventBus.js'
 import { settleOffline } from '../src/game/bootstrap.js'
 import { useUiStore } from '../src/stores/ui.js'
 import { ITEMS, getItem } from '../src/game/data/items.js'
-import { cardPoolFrom, cardStrength, simulateBattle, settleBattle } from '../src/game/data/cardBattle.js'
+import { cardPoolFrom, cardStrength, simulateBattle, settleBattle, DIFFICULTIES } from '../src/game/data/cardBattle.js'
 import { ALL_ACHIEVEMENTS } from '../src/game/data/achievements.js'
 import { QUESTS } from '../src/game/data/quests.js'
 import { SHOP_ITEMS } from '../src/game/data/shop.js'
@@ -234,24 +234,30 @@ console.log('══ B2. 新系统（制作队列/装备词条/食客订单） �
   check('订单', '过期订单自动清理', p3.orders.list.length === 0)
 }
 
-// ── B3. 卡牌对战（纯逻辑层，2026-09-06 重构）──
+// ── B3. 卡牌对战（纯逻辑层，2026-09-06 重构+平衡优化）──
 console.log('══ B3. 卡牌对战 ══')
 {
   check('卡牌', '战力随档位单调（铁刀>铜刀）', cardStrength('ironKnife') > cardStrength('copperKnife'), `${cardStrength('ironKnife')} vs ${cardStrength('copperKnife')}`)
   const pool = cardPoolFrom({ roastPotato: true, apple: true, copperKnife: true, saltOre: true, water: true })
   check('卡牌', '收藏池只含料理/装备', pool.length === 2 && pool.includes('roastPotato') && pool.includes('copperKnife') && !pool.includes('apple') && !pool.includes('saltOre') && !pool.includes('water'), pool.join(','))
-  const r = simulateBattle(['ironKnife', 'copperKnife', 'ironPot'], { roastPotato: true }, () => 0.5)
-  check('卡牌', '模拟稳定：3 局且胜负与战力一致', r.rounds.length === 3 && r.rounds.every((x) => x.win === (x.ms > x.ts)), JSON.stringify(r.rounds.map((x) => x.win)))
+  // rng 固定（0.5 时 variance=1.0 恰为基准战力）→ 胜负与基准战力完全一致
+  const r = simulateBattle(['copperKnife', 'copperKnife', 'copperKnife'], { roastPotato: true }, { rng: () => 0.5 })
+  check('卡牌', '模拟稳定：3 局且胜负与战力一致（基准）', r.rounds.length === 3 && r.rounds.every((x) => x.win === (x.ms > x.ts)), JSON.stringify(r.rounds.map((x) => x.win)))
+  check('卡牌', '难度默认标准（AI×1）', r.diff === 'normal')
   const p4 = freshPlayer({})
-  p4.stats.cardBattle = { wins: 0, losses: 0 }
+  p4.stats.cardBattle = { wins: 0, losses: 0, day: '2000-1-1' }
   const g4 = p4.gold
-  const first = settleBattle(p4, { won: true, rounds: [] })
-  check('卡牌', '首胜奖励 +50 金 + 能量饼干', first === true && p4.gold === g4 + 50 && (p4.inventory.energyBiscuit ?? 0) === 1)
+  const rw1 = settleBattle(p4, { won: true, rounds: [] }, 'normal')
+  check('卡牌', '标准胜 +75 金（×1.5）+ 每日首胜 +50', rw1.reward === 75 && rw1.dailyBonus === 50 && p4.gold === g4 + 125 && (p4.inventory.energyBiscuit ?? 0) === 1, `gold+${p4.gold - g4}`)
   const g5 = p4.gold
-  const second = settleBattle(p4, { won: true, rounds: [] })
-  check('卡牌', '再次获胜只 +50 金（首胜饼干唯一）', second === false && p4.gold === g5 + 50 && (p4.inventory.energyBiscuit ?? 0) === 1)
-  settleBattle(p4, { won: false, rounds: [] })
+  const rw2 = settleBattle(p4, { won: true, rounds: [] }, 'normal')
+  check('卡牌', '同日再胜无每日加成（+75）', rw2.dailyBonus === 0 && p4.gold === g5 + 75)
+  settleBattle(p4, { won: false, rounds: [] }, 'normal')
   check('卡牌', '失败计入败场', p4.stats.cardBattle.wins === 2 && p4.stats.cardBattle.losses === 1)
+  const p5 = freshPlayer({})
+  const g6 = p5.gold
+  const rw3 = settleBattle(p5, { won: true, rounds: [] }, 'hard')
+  check('卡牌', '挑战难度胜 +125（×2.5）', rw3.reward === 125 && p5.gold === g6 + 125 + 50, `got=${p5.gold - g6}`)
 }
 
 // ── C. 对决系统 ───────────────────────────────────

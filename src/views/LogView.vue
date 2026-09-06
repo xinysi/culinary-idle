@@ -15,6 +15,7 @@ import {
   cardStrength as cardStrengthOf,
   simulateBattle,
   settleBattle,
+  DIFFICULTIES,
 } from '../game/data/cardBattle.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { SEASONS } from '../game/data/seasons.js'
@@ -173,6 +174,8 @@ function seasonClaimed(s) {
 // ── 图鉴卡牌化（§13，2026-09-06 重构：逻辑在 game/data/cardBattle.js，本处仅薄壳）──
 const selectedCards = ref([])
 const battleResult = ref(null)
+const cardDiff = ref('normal') // 难度：休闲/标准/挑战（AI 战力与奖励倍率）
+const battleReward = ref(null) // 结算明细 { reward, dailyBonus, firstBonus }
 const cardPool = computed(() => cardPoolFrom(player.collected))
 function cardColor(id) { return cardColorFor(id) }
 function cardStrengthText(id) { return Math.round(cardStrengthOf(id)) }
@@ -184,8 +187,8 @@ function toggleCard(id) {
 function clearSelection() { selectedCards.value = [] }
 function doCardBattle() {
   if (!selectedCards.value.length) return
-  const result = simulateBattle(selectedCards.value, player.collected)
-  settleBattle(player, result)
+  const result = simulateBattle(selectedCards.value, player.collected, { difficulty: cardDiff.value })
+  battleReward.value = settleBattle(player, result, cardDiff.value)
   battleResult.value = result
   selectedCards.value = []
 }
@@ -867,7 +870,17 @@ function scrollToTalesSeries(series) {
             <span class="dim">卡池 {{ cardPool.length }} 张 · 已选 <b class="mono cb-count">{{ selectedCards.length }}</b>/3 · 战绩 {{ player.stats.cardBattle?.wins ?? 0 }}胜 {{ player.stats.cardBattle?.losses ?? 0 }}负</span>
             <button v-if="selectedCards.length" class="btn btn-sm" @click="clearSelection">清空选卡</button>
           </div>
-          <p class="dim" style="margin: 4px 0 8px">从已收集的料理/装备中<span style="color: var(--primary-strong); font-weight: 700">点选 3 张</span>组成卡组，与 AI 的三张料理卡对决（3 局 2 胜制）：胜 +50 金币，首胜额外 +能量饼干。</p>
+          <p class="dim" style="margin: 4px 0 8px">从已收集的料理/装备中<span style="color: var(--primary-strong); font-weight: 700">点选 3 张</span>组成卡组，与 AI 同池对决（3 局 2 胜制）：每局战力 ±12% 浮动；胜得金币（按难度倍率），每日首胜额外 +50，首次胜场额外 +能量饼干。</p>
+          <div class="region-tabs" style="flex-wrap: wrap; margin-bottom: 8px">
+            <span class="dim" style="align-self: center">难度：</span>
+            <button
+              v-for="(d, key) in DIFFICULTIES"
+              :key="key"
+              class="btn btn-sm"
+              :class="{ 'btn-primary': cardDiff === key }"
+              @click="cardDiff = key"
+            >{{ d.label }}（AI ×{{ d.aiMult }} · 奖励 ×{{ d.rewardMult }}）</button>
+          </div>
           <div class="card-grid">
             <div
               v-for="id in cardPool"
@@ -894,7 +907,14 @@ function scrollToTalesSeries(series) {
               <span class="dim">当前卡组战力合计 <b class="mono">{{ selectedCards.reduce((a, id) => a + cardStrengthOf(id), 0).toFixed(0) }}</b></span>
             </div>
             <div v-if="battleResult" class="battle-result" :class="{ win: battleResult.won, lose: !battleResult.won }">
-              <div class="cb-result-title">{{ battleResult.won ? '🏆 卡牌对决胜利！+50 金币' : '💀 卡牌对决失败，再接再厉' }}</div>
+              <div class="cb-result-title">
+                <template v-if="battleResult.won">
+                  🏆 卡牌对决胜利！+{{ battleReward?.reward ?? 50 }} 金币
+                  <span v-if="battleReward?.dailyBonus" class="cb-daily-bonus">+ 每日首胜 +{{ battleReward.dailyBonus }}</span>
+                  <span v-if="battleReward?.firstBonus" class="cb-first-bonus">🎁 首胜能量饼干 ×1</span>
+                </template>
+                <template v-else>💀 卡牌对决失败，换几张卡试试</template>
+              </div>
               <div class="cb-rounds">
                 <div v-for="(r, i) in battleResult.rounds" :key="i" class="cb-round" :class="{ win: r.win, lose: !r.win }">
                   <span class="cb-round-idx">第 {{ i + 1 }} 局</span>
