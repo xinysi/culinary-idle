@@ -379,6 +379,8 @@ function typeLabel(id) {
   --shd: var(--tshd, 176, 64, 0);
   min-width: 300px;
   font-size: 19px;
+  color: var(--tth, #4a2600);
+  text-shadow: 0 1px 2px rgba(255, 250, 240, 0.3);
   background: linear-gradient(135deg, var(--thi1, #e65c00), var(--thi2, #f9d423));
 
   box-shadow: 0 0 22px rgba(var(--tglow, 233, 132, 0), 0.45);
@@ -390,7 +392,7 @@ function typeLabel(id) {
   --shd: var(--tshd, 143, 79, 88);
   min-width: 210px;
   font-size: 15px;
-  background: linear-gradient(135deg, var(--tmd1, #b76e79), var(--tmd2, #e0a980));
+  background: linear-gradient(120deg, var(--tmd1, #b76e79), var(--tmd2, #e0a980));
 
   box-shadow: 0 4px 14px rgba(var(--tglow, 183, 110, 121), 0.4);
 }
@@ -407,39 +409,44 @@ function typeLabel(id) {
 }
 /* 池主题 → 抽卡按钮三档（十连亮 / 单抽中 / 百连深）+ 光带与光晕 */
 .gacha-btns.pool-material {
-  --thi1: #2be0b8; --thi2: #14a085;
+  --thi1: #35e8c0; --thi2: #16ad8a;
   --tmd1: #14a085; --tmd2: #0d7f66;
   --tlo1: #0a6b55; --tlo2: #06483a;
-  --tsh1: 22, 160, 133; --tsh2: 43, 224, 184; --tshd: 6, 72, 58;
+  --tsh1: 22, 160, 133; --tsh2: 53, 232, 192; --tshd: 6, 72, 58;
   --tglow: 20, 160, 133;
+  --tth: #06483a; /* 十连文字：主题深色，亮底醒目 */
 }
 .gacha-btns.pool-food {
-  --thi1: #f9d423; --thi2: #e65c00;
+  --thi1: #ffe066; --thi2: #f07800;
   --tmd1: #e65c00; --tmd2: #c24d00;
   --tlo1: #a34a00; --tlo2: #6e3100;
-  --tsh1: 230, 92, 0; --tsh2: 249, 212, 35; --tshd: 176, 64, 0;
+  --tsh1: 230, 92, 0; --tsh2: 255, 224, 102; --tshd: 176, 64, 0;
   --tglow: 233, 132, 0;
+  --tth: #6e3100;
 }
 .gacha-btns.pool-gear {
-  --thi1: #8fb4c9; --thi2: #536976;
+  --thi1: #a5c8da; --thi2: #5d7a8c;
   --tmd1: #536976; --tmd2: #45596a;
   --tlo1: #38495a; --tlo2: #2a3745;
-  --tsh1: 83, 105, 118; --tsh2: 143, 180, 201; --tshd: 42, 55, 69;
+  --tsh1: 83, 105, 118; --tsh2: 165, 200, 218; --tshd: 42, 55, 69;
   --tglow: 83, 105, 118;
+  --tth: #2a3745;
 }
 .gacha-btns.pool-mix {
-  --thi1: #b06ad2; --thi2: #8e44ad;
+  --thi1: #c389e2; --thi2: #9657b8;
   --tmd1: #8e44ad; --tmd2: #7a3d95;
   --tlo1: #5c2f75; --tlo2: #3d2150;
-  --tsh1: 142, 68, 173; --tsh2: 176, 106, 210; --tshd: 61, 33, 80;
+  --tsh1: 142, 68, 173; --tsh2: 195, 137, 226; --tshd: 61, 33, 80;
   --tglow: 142, 68, 173;
+  --tth: #3d2150;
 }
 .gacha-btns.pool-limited {
-  --thi1: #c98e2e; --thi2: #8a5a24;
+  --thi1: #dba53a; --thi2: #96662a;
   --tmd1: #7a5024; --tmd2: #4a2c14;
   --tlo1: #3a2010; --tlo2: #241408;
-  --tsh1: 122, 80, 36; --tsh2: 201, 142, 46; --tshd: 36, 20, 8;
+  --tsh1: 122, 80, 36; --tsh2: 219, 165, 58; --tshd: 36, 20, 8;
   --tglow: 160, 110, 40;
+  --tth: #241408;
 }
 @media (max-width: 719px) {
   .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
@@ -542,7 +549,7 @@ function typeLabel(id) {
   font-size: 16px;
   color: #ffdd99;
   border: 1px solid rgba(226, 169, 63, 0.65);
-  background: linear-gradient(120deg, var(--tlo1, #4a2c14), var(--tlo2, #7a5024));
+  background: linear-gradient(105deg, var(--tlo1, #4a2c14), var(--tlo2, #7a5024));
 
   box-shadow: 0 0 18px rgba(var(--tglow, 200, 140, 60), 0.3);
 }
