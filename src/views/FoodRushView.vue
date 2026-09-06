@@ -64,16 +64,15 @@ function finish() {
   clearInterval(timerId)
   done.value = true
   const mg = player.minigames.foodrush
-  const today = todayKey()
   if (!mg) player.minigames.foodrush = { day: 0, best: 0, rewarded: 0 }
-  if (mg.day !== today) mg.day = today
   mg.best = Math.max(mg.best ?? 0, bowls.value)
+  mg.earned = (mg.earned ?? 0) // 累计占位（可选展示）
   const bestReached = [...TIERS].reverse().find((t) => bowls.value >= t.need)
-  if (bestReached && (mg.rewarded ?? 0) < bestReached.gold) {
-    const gain = bestReached.gold - (mg.rewarded ?? 0)
-    mg.rewarded = bestReached.gold
-    player.gainGold(gain)
-    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${gain} 金币（今日已领 ${mg.rewarded} 金）`, 'gain')
+  if (bestReached) {
+    // 每局均可结算（2026-09-07 取消每日一次限制）
+    mg.rewarded = (mg.rewarded ?? 0) + bestReached.gold
+    player.gainGold(bestReached.gold)
+    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${bestReached.gold} 金币`, 'gain')
   }
 }
 function todayKey() {

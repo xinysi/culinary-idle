@@ -54,15 +54,19 @@ function tap(i) {
 function settle() {
   const mg = player.minigames.matchfood
   if (!mg) player.minigames.matchfood = { day: '', buffed: 0 }
-  const today = todayKey()
-  if (mg.day !== today) mg.day = today
-  if ((mg.buffed ?? 0) < 1) {
-    player.buffs.xpMult = { mult: 1.2, expiresAt: Date.now() + 3600_000 }
+  mg.day = todayKey()
+  if (Date.now() < (player.buffs?.xpMult?.expiresAt ?? 0) && player.buffs?.xpMult?.mult >= 1.2) {
+    // 已有同款 buff：叠加时长
+    const left = player.buffs.xpMult.expiresAt - Date.now()
+    player.buffs.xpMult = { mult: 1.2, expiresAt: Date.now() + Math.min(left + 3600_000, 4 * 3600_000) }
     mg.buffed = (mg.buffed ?? 0) + 1
-    ui.pushLog('🍽 食材连连看全清！获得「满汉全席」buff：全部经验 +20%（1 小时）', 'gain')
-  } else {
-    ui.pushLog('🍽 又全清啦！今日 buff 已领取过，明天再来。', 'info')
+    ui.pushLog('🍽 连连看全清！满汉全席 buff 续时（经验 +20%）', 'gain')
+    return
   }
+  // 每次全清均可获得（2026-09-07 取消每日一次限制）
+  player.buffs.xpMult = { mult: 1.2, expiresAt: Date.now() + 3600_000 }
+  mg.buffed = (mg.buffed ?? 0) + 1
+  ui.pushLog('🍽 食材连连看全清！获得「满汉全席」buff：全部经验 +20%（1 小时）', 'gain')
 }
 function todayKey() {
   const t = new Date()
@@ -81,8 +85,8 @@ resetDay()
     <div class="mf-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="mf-mode" :class="{ on: mode === key }" @click="mode = Number(key); resetDay()">{{ m.label }}</button>
       <span class="mf-chip">🀄 剩余 <b class="mono">{{ board.length - clearedCount }}</b></span>
-      <span class="mf-chip" :class="{ ok: buffActive }">{{ buffActive ? '🔥 满汉全席 buff 生效中' : '今日 buff 未领取' }}</span>
-      <span class="mf-chip" style="margin-left: auto">🏆 累计 <b class="mono">{{ buffDays }}</b> 天</span>
+      <span class="mf-chip" :class="{ ok: buffActive }">{{ buffActive ? '🔥 满汉全席 buff 生效中' : 'buff 未生效（全清即得）' }}</span>
+      <span class="mf-chip" style="margin-left: auto">🏆 累计 <b class="mono">{{ buffDays }}</b> 次</span>
     </div>
 
     <div class="mf-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
@@ -98,7 +102,7 @@ resetDay()
     <div class="mf-keys">
       <button class="mf-reset" @click="resetDay()">重新洗牌</button>
     </div>
-    <div v-if="done" class="mf-done">🍽 全清！{{ buffActive ? '「满汉全席」buff 已生效（经验 +20% / 1 小时）' : '每日奖励已领完，明天再来！' }}</div>
+    <div v-if="done" class="mf-done">🍽 全清！{{ buffActive ? '「满汉全席」buff 生效中（经验 +20%）' : '获得「满汉全席」buff：经验 +20% / 1 小时' }}</div>
     <div class="mf-tip">点两张相同食材消除 · 清空全场得经验 +20% buff（每日 1 次）</div>
   </div>
 </template>
