@@ -188,8 +188,8 @@ function typeLabel(id) {
         </button>
       </div>
       <div class="gacha-sim" title="模拟预览：仅展示效果，不消耗金币/物品">
-        <button class="btn btn-sm sim-btn sim-btn-1" :disabled="drawing" @click="simulateDraw(1)">单抽效果</button>
         <button class="btn btn-sm sim-btn sim-btn-10" :disabled="drawing" @click="simulateDraw(10)">十连效果</button>
+        <button class="btn btn-sm sim-btn sim-btn-1" :disabled="drawing" @click="simulateDraw(1)">单抽效果</button>
         <button class="btn btn-sm sim-btn sim-btn-100" :disabled="drawing" @click="simulateDraw(100)">百连效果</button>
       </div>
     </div>
@@ -324,7 +324,9 @@ function typeLabel(id) {
 :global([data-theme='dark']) .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
 :global([data-theme='dark']) .pool-mini.active { background: #3a2a18; border-color: #d98a2b; }
 :global([data-theme='dark']) .pool-banner { background: rgba(40, 29, 21, 0.96); }
-:global([data-theme='dark']) .pool-banner-fade { background: linear-gradient(90deg, rgba(40, 29, 21, 0.96), rgba(40, 29, 21, 0) 16%, rgba(40, 29, 21, 0) 84%, rgba(40, 29, 21, 0.96)); }
+:global([data-theme='dark']) .pool-banner-fade {
+  background: linear-gradient(90deg, rgba(18, 13, 9, 0.62), rgba(18, 13, 9, 0) 13%, rgba(18, 13, 9, 0) 87%, rgba(18, 13, 9, 0.62));
+}
 :global([data-theme='dark']) .pool-banner-title { background: rgba(40, 29, 21, 0.9); }
 :global([data-theme='dark']) .pool-banner-pity { color: #e8b45f; }
 
