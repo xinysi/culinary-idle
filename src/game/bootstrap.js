@@ -35,7 +35,8 @@ function buildSaveData() {
   return { schemaVersion: SAVE_VERSION, savedAt: Date.now(), player: player.serialize() }
 }
 
-/** 离线收益结算（§10.2.2），应用于当前状态；多技能并行（§3.1）：各采集/探索分别结算 */
+/** 离线收益结算（§10.2.2），应用于当前状态；多技能并行（§3.1）：各采集/探索分别结算
+ *  返回 { reports, restGold, elapsedMs }（无收益返回 null）——供离线结算弹窗展示（2026-09-06） */
 export function settleOffline(player, ui, elapsedMs) {
   // §8.1：基础 12h + 能量饼干加成（上限 +12h）
   const maxOfflineMs = DEFAULT_MAX_OFFLINE_MS + player.offlineBonusH * 3600_000
@@ -70,7 +71,7 @@ export function settleOffline(player, ui, elapsedMs) {
     )
   }
   if (reports.length === 0 && restGold > 0) ui.pushLog(`离线餐厅收入 ${restGold} 金币`, 'offline')
-  return reports.length ? reports : null
+  return reports.length || restGold > 0 ? { reports, restGold, elapsedMs } : null
 }
 
 // ── 事件监听注册（一次性，供 startGame 与启动界面共用）──────────
@@ -330,7 +331,9 @@ export function startGame({ slot, newGame = false } = {}) {
   const now = Date.now()
   const elapsed = now - (player.lastOnlineAt || now)
   const report = settleOffline(player, ui, elapsed)
-  if (!report) {
+  if (report) {
+    ui.openOfflineReport(report) // 离线结算详情弹窗（2026-09-06）
+  } else {
     if (loaded) ui.pushLog('欢迎回来，存档已加载', 'info')
     else ui.pushLog('新游戏开始：选择采摘目标开始挂机', 'info')
   }
@@ -398,7 +401,8 @@ export function loadSlot(slot) {
   if (player.combat.hp > player.maxHp) player.setCombat({ hp: player.maxHp })
   createSkillInstances(player) // 重建技能实例（绑定同一 store）
   const now = Date.now()
-  settleOffline(player, ui, now - (player.lastOnlineAt || now))
+  const report = settleOffline(player, ui, now - (player.lastOnlineAt || now))
+  if (report) ui.openOfflineReport(report)
   ui.pushLog(`已读取存档位 ${slot + 1}`, 'info')
   return true
 }

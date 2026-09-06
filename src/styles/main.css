@@ -183,6 +183,23 @@ body {
   user-select: none;
 }
 
+/* 夜市狂潮徽章（2026-09-06 限时窗口） */
+.top-nav-market {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a3b6f;
+  background: rgba(122, 59, 111, 0.12);
+  border: 1px dashed rgba(122, 59, 111, 0.45);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  animation: marketPulse 2.4s ease-in-out infinite;
+}
+@keyframes marketPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
 /* 中间底部状态条（样式复用顶部导航毛玻璃）：左角色状态 | 虚线 | 右装备 */
 .bottom-nav {
   display: flex;

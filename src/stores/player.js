@@ -335,7 +335,9 @@ export const usePlayerStore = defineStore('player', {
       // 顾客好感小费（2026-09-06）：每级 +3%，封顶 20 级（+57%）
       const favorLv = favorLevelFromXp(s.restaurant?.favor?.xp ?? 0)
       const tip = 1 + 0.03 * (favorLv - 1)
-      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip
+      // 夜市狂潮（2026-09-06）：12-20 点餐厅收入 ×2
+      const market = this.marketBoost?.() ?? { restaurant: 1, combatXp: 1 }
+      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip * market.restaurant
     },
     /** 公会被动效果（§13）— 函数 getter：guildEffects() */
     guildEffects(s) {
@@ -1321,6 +1323,17 @@ export const usePlayerStore = defineStore('player', {
       }
       this.tower = t
       return t
+    },
+
+    // ── 夜市狂潮（2026-09-06 限时窗口）：每日 12:00-20:00，餐厅 ×2 + 对决经验 ×1.5 ──
+    /** 是否处于夜市窗口（hour 可传参，便于测试；默认取当前本地小时） */
+    marketOn(hour = null) {
+      const h = hour ?? new Date().getHours()
+      return h >= 12 && h < 20
+    },
+    /** 夜市倍率：{ restaurant, combatXp }（非窗口均为 1） */
+    marketBoost(hour = null) {
+      return this.marketOn(hour) ? { restaurant: 2, combatXp: 1.5 } : { restaurant: 1, combatXp: 1 }
     },
 
     // ── 食灵羁绊（2026-09-06 长线养成）──
