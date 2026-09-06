@@ -3711,6 +3711,6 @@ html[data-theme='dark'] .gacha-sim .sim-btn {
 }
 html[data-theme='dark'] .mijian-carousel { background: rgba(40, 29, 21, 0.96); }
 html[data-theme='dark'] .mijian-bg-track img { opacity: 0.85; }
-html[data-theme='dark'] .gacha-front { background: #2a1d15; color: #f2e6d7; border-color: #4d3a2b; }
+html[data-theme='dark'] .gacha-front { background: #2a1d15; color: #f2e6d7; border-color: rgba(var(--tsh1, 77, 58, 43), 0.5); }
 html[data-theme='dark'] .gacha-front-sub { color: #bfa98f; }
-html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, #7a4a30, #3a2418); }
+html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, var(--tlo1, #7a4a30), var(--tlo2, #3a2418)); }

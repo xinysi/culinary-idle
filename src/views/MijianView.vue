@@ -521,23 +521,23 @@ function typeLabel(id) {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 6px; padding: 6px; text-align: center;
 }
-/* 卡背：呼吸光 + 「觅」字 */
+/* 卡背：池主题中档渐变 + 主题光晕（呼吸光）+ 主题字色 */
 .gacha-back {
-  background: linear-gradient(150deg, #6b3f2c, #4a2f26);
-  border: 2px solid rgba(255, 214, 160, 0.4);
+  background: linear-gradient(150deg, var(--tmd1, #6b3f2c), var(--tmd2, #4a2f26));
+  border: 2px solid rgba(var(--tsh2, 255, 214, 160), 0.45);
   animation: backGlow 1.8s ease-in-out infinite;
-  color: #f5d9a8;
+  color: rgb(var(--tsh2, 245, 217, 168));
 }
-.gacha-back-mark { font-size: 34px; font-weight: 800; text-shadow: 0 0 12px rgba(255, 200, 120, 0.6); }
+.gacha-back-mark { font-size: 34px; font-weight: 800; text-shadow: 0 0 12px rgba(var(--tsh2, 255, 200, 120), 0.6); }
 .gacha-back-sub { font-size: 11px; opacity: 0.8; letter-spacing: 3px; }
 @keyframes backGlow {
-  0%, 100% { box-shadow: 0 0 6px rgba(255, 190, 90, 0.25); }
-  50% { box-shadow: 0 0 16px rgba(255, 190, 90, 0.55); }
+  0%, 100% { box-shadow: 0 0 6px rgba(var(--tsh2, 255, 190, 90), 0.3); }
+  50% { box-shadow: 0 0 16px rgba(var(--tsh2, 255, 190, 90), 0.6); }
 }
-/* 卡面 */
+/* 卡面：主题淡色边框（稀有度 q-* 规则仍覆盖边框色） */
 .gacha-front {
   background: #fffdf9;
-  border: 2px solid var(--border);
+  border: 2px solid rgba(var(--tsh1, 200, 160, 115), 0.45);
   transform: rotateY(180deg);
 }
 .gacha-img { width: 56px; height: 56px; object-fit: contain; }
