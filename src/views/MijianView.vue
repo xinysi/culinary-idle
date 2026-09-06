@@ -115,10 +115,16 @@ function typeLabel(id) {
 
     <!-- 抽卡操作台 -->
     <div class="card gacha-pull">
-      <div class="region-tabs">
-        <button class="btn btn-primary btn-lg" :disabled="drawing || player.gold < pool.price" @click="draw(1)">🎴 单抽（{{ pool.price }} 金）</button>
-        <button class="btn btn-primary btn-lg" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">🎴🎴 十连（{{ pool.price * 10 }} 金）</button>
-        <span class="dim" style="margin-left: auto">持有金币 <span class="mono">{{ player.gold.toLocaleString() }}</span></span>
+      <div class="gacha-hold">持有金币 <b class="mono">{{ player.gold.toLocaleString() }}</b></div>
+      <div class="gacha-btns">
+        <button class="gacha-btn gacha-btn-main" :disabled="drawing || player.gold < pool.price * 10" @click="draw(10)">
+          <span class="gacha-btn-top">🎴 十连抽卡 <i class="gacha-btn-tag">10连</i></span>
+          <span class="gacha-btn-price">{{ pool.price * 10 }} 金</span>
+        </button>
+        <button class="gacha-btn gacha-btn-sub" :disabled="drawing || player.gold < pool.price" @click="draw(1)">
+          <span class="gacha-btn-top">🎴 单抽</span>
+          <span class="gacha-btn-price">{{ pool.price }} 金</span>
+        </button>
       </div>
     </div>
 
@@ -198,10 +204,54 @@ function typeLabel(id) {
 @keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .mijian-bg-track { animation: none; } }
 
-/* ── 抽卡操作台 ── */
-.btn-lg { font-size: 15px; padding: 8px 22px; }
-.gacha-pull { margin-bottom: 12px; }
-.gacha-pull .region-tabs { justify-content: center; }
+/* ── 抽卡操作台（gacha 按钮：主 CTA 大+金渐变+脉动光；次级小一号深红） ── */
+.gacha-hold { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.gacha-btns { display: flex; gap: 18px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
+.gacha-btn {
+  position: relative; overflow: hidden; cursor: pointer;
+  border: none; border-radius: 16px;
+  color: #fff; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 16px 40px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.gacha-btn::after {
+  content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  animation: gachaSheen 3s ease-in-out infinite;
+  pointer-events: none;
+}
+.gacha-btn:hover { transform: translateY(-2px); }
+.gacha-btn:active { transform: translateY(0) scale(0.98); }
+.gacha-btn:disabled { filter: grayscale(0.7) brightness(0.72); cursor: not-allowed; transform: none; }
+.gacha-btn-main {
+  min-width: 230px;
+  font-size: 19px;
+  background: linear-gradient(135deg, #e2a93f, #c9761c);
+  box-shadow: 0 0 22px rgba(226, 169, 63, 0.5);
+  animation: gachaPulse 2.2s ease-in-out infinite;
+}
+.gacha-btn-sub {
+  min-width: 168px;
+  font-size: 15px;
+  background: linear-gradient(135deg, #d95a38, #b8442a);
+  box-shadow: 0 4px 14px rgba(184, 68, 42, 0.35);
+}
+.gacha-btn-tag {
+  font-style: normal; font-size: 11px; font-weight: 800;
+  background: rgba(255, 245, 224, 0.3); border: 1px solid rgba(255, 245, 224, 0.55);
+  border-radius: 999px; padding: 2px 10px; margin-left: 6px; vertical-align: 2px;
+}
+.gacha-btn-price { font-size: 13px; font-weight: 600; opacity: 0.92; }
+@keyframes gachaSheen { 0%, 62% { left: -70%; } 100% { left: 130%; } }
+@keyframes gachaPulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(226, 169, 63, 0.35); }
+  50% { box-shadow: 0 0 30px rgba(226, 169, 63, 0.65); }
+}
+@media (max-width: 719px) {
+  .gacha-btn-main { min-width: 190px; padding: 14px 24px; font-size: 17px; }
+  .gacha-btn-sub { min-width: 140px; padding: 12px 18px; }
+}
 
 /* ── 翻牌网格（十连 5×2 / 单抽一张） ── */
 .gacha-grid {
