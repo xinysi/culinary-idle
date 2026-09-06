@@ -81,8 +81,6 @@ resetDay()
     </header>
 
     <div class="card game-stage">
-      <div class="game-layout">
-        <div class="game-main">
 
       <div class="match-board">
         <div
@@ -97,18 +95,17 @@ resetDay()
         <button class="btn btn-sm" @click="resetDay()">重新洗牌</button>
       </div>
       <div v-if="done" class="heat-verdict perfect">🍽 全清！{{ buffActive ? '「满汉全席」buff 已生效（+20% 经验 1 小时）' : '每日奖励已领完，明天再来！' }}</div>
-        </div>
-        <div class="game-side">
-          <div class="game-side-card">
-            <h4>🎮 玩法</h4>
-            <ul><li>点两张相同食材消除</li><li>清空全场得 buff</li><li>buff：全部经验 +20%（1 小时）</li></ul>
-          </div>
-          <div class="game-side-card">
-            <h4>🏆 记录</h4>
-            <div class="game-side-row"><span>累计 buff 天数</span><b class="mono">{{ player.minigames?.matchfood?.buffed ?? 0 }}</b></div>
-            <div class="game-side-row"><span>今日</span><b class="mono">{{ buffActive ? '🔥 生效中' : '未领取' }}</b></div>
-          </div>
-        </div>
+      <div class="mg-info-grid">
+        <div class="mg-info-card">
+                    <h4>🎮 玩法</h4>
+                    <ul><li>点两张相同食材消除</li><li>清空全场得 buff</li><li>buff：全部经验 +20%（1 小时）</li></ul>
+                  </div>
+        <div class="mg-info-card">
+                    <h4>🏆 记录</h4>
+                    <div class="mg-info-row"><span>累计 buff 天数</span><b class="mono">{{ player.minigames?.matchfood?.buffed ?? 0 }}</b></div>
+                    <div class="mg-info-row"><span>今日</span><b class="mono">{{ buffActive ? '🔥 生效中' : '未领取' }}</b>
+                </div>
+            </div>
       </div>
     </div>
   </div>

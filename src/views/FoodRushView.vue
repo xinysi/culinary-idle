@@ -87,12 +87,11 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
     </header>
 
     <div class="card game-stage rush-stage">
-      <div class="game-layout">
-        <div class="game-main">
 
       <div class="rush-counter">
-        <span class="mono rush-bowls">{{ bowls }}</span>
-        <span class="dim">碗 · 剩余 <b class="mono">{{ REMAIN }}</b> 秒</span>
+        <span class="rush-bowl-ico">🍚</span>
+        <b class="mono rush-bowls">{{ bowls }}</b>
+        <span class="rush-remain">碗 · 剩余 <b class="mono">{{ REMAIN }}</b> 秒</span>
       </div>
       <div class="rush-tiers">
         <span v-for="t in TIERS" :key="t.need" class="rush-tier" :class="{ on: bowls >= t.need }">
@@ -108,18 +107,17 @@ const nextTier = computed(() => TIERS.find((t) => bowls.value >= t.need) ?? null
       <div v-if="done" class="heat-verdict" :class="{ perfect: nextTier, miss: !nextTier }">
         {{ nextTier ? `🍖 达成 ${nextTier.label}！奖励已结算` : '💪 惜败！差一点就达标了' }}
       </div>
-        </div>
-        <div class="game-side">
-          <div class="game-side-card">
-            <h4>🎮 玩法</h4>
-            <ul><li>60 秒疯狂点击「干饭」</li><li>快速连点触发暴食（×2）</li><li>每日结算一次取最高档</li></ul>
-          </div>
-          <div class="game-side-card">
-            <h4>🏆 记录</h4>
-            <div class="game-side-row"><span>最佳碗数</span><b class="mono">{{ mg.best ?? 0 }}</b></div>
-            <div class="game-side-row"><span>今日奖励</span><b class="mono">{{ mg.rewarded ?? 0 }}/100 金</b></div>
-          </div>
-        </div>
+      <div class="mg-info-grid">
+        <div class="mg-info-card">
+                    <h4>🎮 玩法</h4>
+                    <ul><li>60 秒疯狂点击「干饭」</li><li>快速连点触发暴食（×2）</li><li>每日结算一次取最高档</li></ul>
+                  </div>
+        <div class="mg-info-card">
+                    <h4>🏆 记录</h4>
+                    <div class="mg-info-row"><span>最佳碗数</span><b class="mono">{{ mg.best ?? 0 }}</b></div>
+                    <div class="mg-info-row"><span>今日奖励</span><b class="mono">{{ mg.rewarded ?? 0 }}/100 金</b>
+                </div>
+            </div>
       </div>
     </div>
   </div>

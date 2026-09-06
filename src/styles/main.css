@@ -3980,183 +3980,6 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .rush-stage .rush-counter { margin-top: 6px; }
 
 /* ── 小游戏「舞台+侧栏」布局（2026-09-06：充实观感，左舞台右信息）── */
-.game-layout { display: flex; gap: 14px; align-items: stretch; }
-.game-main { flex: 1 1 auto; min-width: 0; }
-.game-side { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-.game-side-card {
-  background: rgba(150, 110, 70, 0.09);
-  border: 1px dashed rgba(150, 110, 70, 0.3);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
-}
-.game-side-card h4 { margin: 0 0 6px; font-size: 13px; }
-.game-side-card ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
-.game-side-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
-.game-side-row:first-of-type { margin-top: 0; }
-@media (max-width: 900px) {
-  .game-layout { flex-direction: column; }
-  .game-side { width: 100%; }
-}
-
-/* 小游戏大厅（2026-09-06） */
-.minigame-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-}
-.minigame-card {
-  background: rgba(255, 251, 244, 0.85);
-  border: 1px solid rgba(150, 110, 70, 0.35);
-  border-radius: 14px;
-  padding: 16px 18px;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.minigame-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(150, 110, 70, 0.25); }
-.minigame-emoji { font-size: 34px; }
-.minigame-name { font-size: 17px; font-weight: 800; }
-.minigame-desc { font-size: 12px; color: var(--muted); line-height: 1.5; flex: 1; }
-.minigame-record { font-size: 12px; }
-html[data-theme='dark'] .minigame-card { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; }
-
-/* 小游戏选项卡框架（2026-09-06） */
-.mg-shell { display: flex; flex-direction: column; min-height: 0; }
-.mg-tabs {
-  position: sticky; top: -12px; z-index: 15; /* 固定框：滚动时保持可见 */
-  display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 8px 10px;
-  margin-bottom: 12px;
-}
-.mg-tab { flex: 0 0 auto; }
-.mg-subhead { display: flex; align-items: center; margin: 0 0 4px; }
-
-/* 小游戏「超级大框」（2026-09-06）：整页游戏厅面板，游戏在框内加载 */
-.mg-frame {
-  background: rgba(255, 252, 246, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(150, 110, 70, 0.32);
-  border-radius: 18px;
-  padding: 14px 16px 18px;
-  box-shadow: 0 6px 24px rgba(93, 64, 55, 0.10);
-}
-.mg-tabs {
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  border-radius: 12px;
-}
-html[data-theme='dark'] .mg-frame {
-  background: rgba(40, 29, 21, 0.55);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-}
-html[data-theme='dark'] .mg-tabs { border-color: rgba(255, 255, 255, 0.2); }
-
-/* 小游戏大厅「大舞台在上、入口在下」（2026-09-06） */
-.mg-stage {
-  background: rgba(255, 252, 246, 0.72);
-  border: 1px solid rgba(150, 110, 70, 0.35);
-  border-radius: 14px;
-  height: 620px; /* 固定游戏框（2026-09-06 最终规格）：内容弹性占满，不滚动、不跳变 */
-  min-height: 620px;
-  max-height: 620px;
-  overflow: hidden;
-  padding: 12px 14px 16px;
-  margin-bottom: 14px;
-  position: relative;
-}
-/* 框内统一版心：标题/卡片限宽居中，排版对齐 */
-.mg-stage .skill-head { max-width: 920px; margin-left: auto; margin-right: auto; width: 100%; }
-.mg-stage .card { max-width: 920px; margin-left: auto; margin-right: auto; }
-.mg-stage .puzzle-goal-label, .mg-stage .puzzle-duo { max-width: 920px; margin-left: auto; margin-right: auto; }
-/* 主内容顶部流式布局（内容放大占满，底部空隙由框吸收） */
-.mg-stage .game-main { display: flow-root; }
-/* 大舞台内子游戏：恢复「主内容 + 右侧信息框」双列（2026-09-06 布局修好后请回信息框） */
-.mg-stage .game-layout { display: flex; }
-.mg-stage .game-side { display: flex; }
-.mg-stage .game-main { flex: 1 1 auto; min-width: 0; }
-/* 固定框内弹性布局（2026-09-06 最终规格）：主内容伸展填满，信息卡固定底部 */
-.mg-stage .game-layout { display: flex; flex-direction: column; height: 100%; }
-.mg-stage .game-main {
-  flex: 1 1 auto; min-height: 0;
-  display: flex; flex-direction: column; justify-content: space-around; gap: 6px;
-}
-.mg-stage .game-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; margin-top: 10px; flex-shrink: 0; }
-/* 核心元素弹性占满（2026-09-06 终版：flex:1 吃满剩余空间，绝不空洞） */
-.mg-stage .heat-track { height: auto; flex: 1 1 auto; min-height: 70px; }
-.mg-stage .heat-actions { flex-shrink: 0; }
-.mg-stage .heat-verdict { margin-top: 0; }
-.mg-stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.mg-stage-title { font-size: 15px; font-weight: 800; color: var(--primary-strong); }
-.mg-welcome { text-align: center; padding: 60px 0 40px; }
-.mg-welcome-emoji { font-size: 52px; }
-.mg-welcome h2 { margin: 8px 0 6px; }
-.mg-welcome p { max-width: 560px; margin: 0 auto; }
-.mg-welcome-hints { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; margin-top: 18px; font-size: 12px; }
-.mg-entry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-.mg-entry {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 251, 244, 0.8);
-  cursor: pointer; text-align: left;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-.mg-entry:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(150, 110, 70, 0.22); }
-.mg-entry-on { border-style: solid; border-color: var(--primary-strong); box-shadow: 0 0 0 2px rgba(217, 90, 56, 0.25); }
-.mg-entry-emoji { font-size: 24px; }
-.mg-entry-name { font-weight: 800; font-size: 14px; }
-.mg-entry-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
-.mg-entry-record { font-size: 11px; }
-html[data-theme='dark'] .mg-stage { background: rgba(44, 31, 22, 0.72); border-color: rgba(255, 255, 255, 0.16); }
-html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); border-color: rgba(255, 255, 255, 0.2); color: #f2e6d7; }
-html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
-
-/* 舞台关闭浮钮（2026-09-06：消除标题重复） */
-.mg-stage-close { position: absolute; top: 10px; right: 12px; z-index: 5; }
-/* 拼图：目标图与拼图盘一行并排 */
-.puzzle-duo { display: flex; gap: 18px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
-.puzzle-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.puzzle-duo .puzzle-goal-label, .puzzle-duo .puzzle-play-label {
-  font-size: 12px; font-weight: 700; color: var(--primary-strong);
-  min-height: 18px; display: flex; align-items: center;
-}
-.puzzle-board-play { display: grid; }
-@media (max-width: 700px) {
-  .puzzle-duo { flex-direction: column; align-items: center; }
-}
-
-/* 舞台内主内容「放大占满」（2026-09-06 实测截图后调整） */
-.mg-stage .game-main .heat-track { max-width: none; width: 100%; height: 40px; }
-.mg-stage .heat-actions .btn { min-width: 170px; font-size: 16px; padding: 10px 26px; }
-.mg-stage .heat-actions { gap: 12px; }
-.mg-stage .heat-verdict { font-size: 15px; }
-.mg-stage .game-main .g2048-board {
-  max-width: 400px; width: 100%;
-  flex: 1 1 auto; min-height: 250px; max-height: 300px;
-  display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 6px;
-}
-.mg-stage .game-main .g2048-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
-.mg-stage .game-main .g2048-cell { font-size: 26px; }
-.mg-stage .game-main .g2048-cell { font-size: 26px; }
-.mg-stage .game-main .match-board { max-width: 420px; width: 100%; flex: 1 1 auto; min-height: 260px; max-height: 340px; }
-.mg-stage .game-main .match-cell { font-size: 30px; }
-.mg-stage .puzzle-duo { flex-direction: row; align-items: stretch; flex-wrap: wrap; flex: 1 1 auto; min-height: 260px; max-height: 340px; align-content: center; } /* 双图并排、弹性占满 */
-.mg-stage .puzzle-board, .mg-stage .puzzle-goal { max-width: 340px; width: 100%; }
-.mg-stage .puzzle-cell { font-size: 28px; }
-.mg-stage .puzzle-num { font-size: 9px; }
-.mg-stage .trivia-q { font-size: 20px; }
-.mg-stage .trivia-opts { max-width: 100%; flex: 1 1 auto; align-content: center; grid-auto-rows: minmax(42px, 1fr); }
-.mg-stage .trivia-opt { padding: 10px 12px; font-size: 14px; }
-.mg-stage .trivia-progress { max-width: 100%; }
-.mg-stage .rush-counter { flex: 1 1 auto; flex-direction: column; justify-content: center; gap: 2px; }
-.mg-stage .rush-bowls { font-size: 88px; }
-.mg-stage .rush-btn { min-width: 260px; padding: 14px 30px; font-size: 20px; }
- .mg-stage .rush-counter .dim { font-size: 15px; }
-.mg-stage .rush-tiers { gap: 12px; }
-
 /* 讲堂兑换居中（2026-09-06 实测） */
 .mg-stage .trivia-exchange { text-align: center; }
 .mg-stage .trivia-exchange-opts { justify-content: center; }
@@ -4167,3 +3990,34 @@ html[data-theme='dark'] .mg-entry-on { border-color: #e0704a; }
 .mg-hist-dot.perfect { color: var(--good-strong); }
 .mg-hist-dot.good { color: var(--warn-strong); }
 .mg-hist-dot.miss { color: var(--bad-strong); }
+
+/* mg-stage 内子视图：纵向拉伸占满（2026-09-06 逐游戏调优：card 不再停留在内容高度） */
+.mg-stage > .skill-view { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.mg-stage .card.game-stage { flex: 1 1 auto; min-height: 0; }
+.mg-stage .card.game-stage > .game-layout { height: 100%; }
+
+/* ── 小游戏（2026-09-06 全面重构：自然流，与全站一致）── */
+.mg-shell { display: block; }
+.mg-entrybar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.mg-entry {
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 251, 244, 0.8);
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.mg-entry:hover { border-color: var(--primary-strong); }
+.mg-entry-on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.15); color: var(--primary-strong); }
+.mg-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
+.mg-info-card {
+  background: rgba(150, 110, 70, 0.09);
+  border: 1px dashed rgba(150, 110, 70, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.mg-info-card h4 { margin: 0 0 6px; font-size: 13px; }
+.mg-info-card ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+.mg-info-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.mg-info-row:first-of-type { margin-top: 0; }
+html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
+html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); color: #ffb08a; border-color: #e0704a; }
