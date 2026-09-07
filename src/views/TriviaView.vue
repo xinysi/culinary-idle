@@ -134,7 +134,6 @@ function weekKey() {
   return `${now.getFullYear()}-W${week}`
 }
 const mg = computed(() => player.minigames.trivia)
-const weekDone = computed(() => mg.value?.week === weekKey() && mg.value?.answered > 0)
 const EXCHANGES = [
   { id: 'gold600', label: '💰 金币 600', cost: 1 },
   { id: 'gold1500', label: '💰 金币 1500', cost: 2 },
@@ -160,7 +159,6 @@ resetRound()
       <button v-for="(m, key) in MODES" :key="key" class="tv-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
       <span class="tv-chip" style="margin-left: auto"><b class="mono">{{ mg.badges ?? 0 }}</b> 枚徽章</span>
       <button class="tv-chip tv-reset" @click="resetWeek">🔄 重新开始本周</button>
-      <span class="tv-chip" :class="{ ok: weekDone }">{{ weekDone ? '✅ 本周已答' : '📅 本周未开始' }}</span>
       <span class="tv-chip">🎯 总对 <b class="mono">{{ correctAll }}</b>/{{ totalQ }}</span>
       <button class="tv-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>

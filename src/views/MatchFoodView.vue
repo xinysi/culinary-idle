@@ -16,7 +16,7 @@ const MODES = {
   m4: { label: '4×4 快速', size: 4, pairs: 8, gold: 80, desc: '4×4 · 8 对 · +80 金 —— 手速快节奏' },
   m5: { label: '5×5 进阶', size: 5, pairs: 12, gold: 120, desc: '5×5 · 12 对 · +120 金' },
   m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 150, desc: '6×6 · 18 对 · +150 金 —— 经典体验' },
-  m7: { label: '7×7 高手', size: 7, pairs: 26, gold: 260, desc: '7×7 · 26 对 · +260 金' },
+  m7: { label: '7×7 高手', size: 7, pairs: 24, gold: 260, desc: '7×7 · 24 对 · +260 金' },
   m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 320, desc: '8×8 · 32 对 · +320 金' },
   m9: { label: '9×9 宗师', size: 9, pairs: 40, gold: 420, desc: '9×9 · 40 对 · +420 金' },
   m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 550, desc: '10×10 · 50 对 · +550 金' },
@@ -157,7 +157,7 @@ resetDay()
 .mf-cell.cleared { background: rgba(87, 168, 97, 0.12); border-color: rgba(87, 168, 97, 0.3); cursor: default; }
 .mf-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .mf-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.mf-info-btn { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
+.mf-info-btn { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .mf-done { font-weight: 800; color: var(--good-strong); }
 .mf-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .mf-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
