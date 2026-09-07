@@ -45,8 +45,20 @@ const BOARD_PX = computed(() => 380 + Math.max(0, MODES[mode.value].size - 4) * 
 const BOARD_INNER = () => BOARD_PX.value - 20 - 4 // padding 10*2 + border 2*2
 const CELL = computed(() => (BOARD_INNER() - (SIZE.value - 1) * GAP) / SIZE.value)
 
-// 物品图档位映射（与图鉴一致，图片必渲染）
-const TILE_IMG = { 2: 'apple', 4: 'potato', 8: 'carrot', 16: 'tomato', 32: 'eggplant', 64: 'mushroom', 128: 'roastPotato', 256: 'vegSalad', 512: 'grouperFeast', 1024: 'dragonHotpot', 2048: 'godFeast', 4096: 'legendaryManHan' }
+// 物品图档位映射（与图鉴一致，图片必渲染）：8192 起为 6×6 大棋盘专属升格，超出 262144 沿用封顶图
+const TILE_IMG = {
+  2: 'apple', 4: 'potato', 8: 'carrot', 16: 'tomato', 32: 'eggplant', 64: 'mushroom',
+  128: 'roastPotato', 256: 'vegSalad', 512: 'grouperFeast', 1024: 'dragonHotpot',
+  2048: 'godFeast', 4096: 'legendaryManHan',
+  8192: 'dragonRoast', // 龙息烤全龙
+  16384: 'goldenFeast', // 金龙鱼全宴
+  32768: 'mammothRoast', // 猛犸象烤肉
+  65536: 'chefFriedRice', // 食神炒饭
+  131072: 'seaCucumberStew', // 葱烧海参
+  262144: 'buddhaJump', // 佛跳墙（封顶）
+}
+const TILE_IMG_TOP = 262144
+function tileImgOf(v) { return TILE_IMG[v] ?? TILE_IMG[TILE_IMG_TOP] }
 
 function spawnTile(row, col, value = 2, opts = {}) {
   tiles.value.push({ id: nextId++, value, row, col, fresh: !!opts.fresh, merged: false })
@@ -238,7 +250,7 @@ function posStyle(t) {
         class="g2048-cell2"
         :class="'v' + t.value"
         :style="posStyle(t)"
-      ><img v-if="TILE_IMG[t.value]" class="g2048-img" :src="itemImage(TILE_IMG[t.value])" @error="$event.target.style.display = 'none'" alt="" />
+      ><img v-if="tileImgOf(t.value)" class="g2048-img" :src="itemImage(tileImgOf(t.value))" @error="$event.target.style.display = 'none'" alt="" />
       <span v-else>{{ t.value }}</span></div>
     </div>
 
