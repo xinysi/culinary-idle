@@ -4178,3 +4178,11 @@ html[data-theme='dark'] .mg-shell .pz-fail, html[data-theme='dark'] .mg-shell .m
 html[data-theme='dark'] .mg-shell .mm-fail { color: #f2a08e; }
 html[data-theme='dark'] .mg-shell .tv-opt.tv-right { background: rgba(87, 168, 97, 0.22); color: #a9e29b; }
 html[data-theme='dark'] .mg-shell .tv-opt.tv-wrong { background: rgba(217, 75, 63, 0.2); color: #f2a08e; }
+html[data-theme='dark'] .mg-shell .g2048-key {
+  background: rgba(52, 40, 31, 0.9);
+  border-color: rgba(210, 170, 120, 0.35);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .fs-progress {
+  background: rgba(234, 176, 74, 0.18);
+}

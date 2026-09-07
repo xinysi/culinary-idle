@@ -148,7 +148,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 .fs-bowl-num { font-size: 20px; font-weight: 800; }
 .fs-bowl-num b { font-size: 36px; color: var(--primary-strong); }
 .fs-timer { font-size: 14px; }
-.fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(88, 156, 75, 0.18); overflow: hidden; }
+.fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(234, 176, 74, 0.24); overflow: hidden; }
 .fs-progress-fill { height: 100%; background: linear-gradient(90deg, #eab04a, #d95a38); border-radius: 999px; transition: width 0.2s ease; }
 .fs-tiers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--warn-strong); }
