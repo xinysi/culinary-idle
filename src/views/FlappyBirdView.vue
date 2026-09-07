@@ -99,7 +99,7 @@ function loop(ts) {
   const oldRight = pipes.length ? Math.max(...pipes.map((p) => p.x)) : -1
   if (oldRight < W - 240) {
     const gapY = 50 + Math.random() * (H - 100 - m.gap)
-    pipes.push({ x: W + 10, gapY, gap: m.gap, w: 52 })
+    pipes.push({ x: W + 10, gapY, gap: m.gap, w: 90 })
   }
   for (const p of pipes) p.x -= m.speed * dt
   pipes = pipes.filter((p) => p.x > -p.w - 10)
