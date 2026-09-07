@@ -10,16 +10,24 @@ import { PT_PHOTOS, ptUrl } from '../game/data/ptPhotos.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const mode = ref(4)
-const SIZE = computed(() => mode.value)
+const mode = ref('s4')
 const MODES = {
-  3: { label: '3×3 轻松', gold: 80 },
-  4: { label: '4×4 标准', gold: 150 },
-  5: { label: '5×5 大师', gold: 250 },
+  s2: { label: '2×2 入门', size: 2, gold: 40 },
+  s3: { label: '3×3 轻松', size: 3, gold: 80 },
+  l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80 },
+  s4: { label: '4×4 标准', size: 4, gold: 150 },
+  l4: { label: '4×4 限步', size: 4, gold: 220, maxSteps: 250 },
+  s5: { label: '5×5 大师', size: 5, gold: 250 },
+  l5: { label: '5×5 限步', size: 5, gold: 400, maxSteps: 700 },
+  s6: { label: '6×6 宗师', size: 6, gold: 450 },
+  s7: { label: '7×7 传奇', size: 7, gold: 700 },
+  s8: { label: '8×8 史诗', size: 8, gold: 1000 },
 }
+const SIZE = computed(() => MODES[mode.value].size)
 const tiles = ref([])
 const moves = ref(0)
 const won = ref(false)
+const failed = ref(false) // 限步模式步数超限即失败（不结算）
 
 // 图鉴图片池（有图食物按中文名排序，按 size² 截取）
 const IMG_IDS = Object.values(ITEMS)
@@ -64,6 +72,7 @@ function resetDay() {
   tiles.value = scrambled()
   moves.value = 0
   won.value = false
+  failed.value = false
 }
 function checkWin() {
   const total = SIZE.value * SIZE.value
@@ -72,7 +81,7 @@ function checkWin() {
   return true
 }
 function tap(i) {
-  if (won.value) return
+  if (won.value || failed.value) return
   const size = SIZE.value
   const empty = tiles.value.indexOf(0)
   const r = Math.floor(i / size), c = i % size
@@ -91,6 +100,8 @@ function tap(i) {
     const gold = MODES[mode.value].gold
     player.gainGold(gold)
     ui.pushLog(`🧩 拼图完成！+${gold} 金币（累计 ${mg.done} 次）`, 'gain')
+  } else if (MODES[mode.value].maxSteps && moves.value >= MODES[mode.value].maxSteps) {
+    failed.value = true // 限步超限：本局失败，重新打乱再来
   }
 }
 function todayKey() {
@@ -125,10 +136,10 @@ const cells = computed(() => tiles.value)
 <template>
   <div class="pz-page">
     <div class="pz-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = Number(key); resetDay()">{{ m.label }}</button>
+      <button v-for="(m, key) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = key; resetDay()">{{ m.label }}</button>
+      <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
       <span class="pz-chip">✅ 累计 <b class="mono">{{ doneDays }}</b> 次</span>
       <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>
-      <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
     </div>
 
     <div class="pz-duo">
@@ -140,7 +151,7 @@ const cells = computed(() => tiles.value)
       </div>
       <div class="pz-col">
         <div class="pz-label">🧩 切割块（点击与空格相邻的碎片滑入）</div>
-        <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
+        <div class="pz-board" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
           <div v-for="(v, i) in cells" :key="i" class="pz-cell" :class="{ empty: v === 0 }" :style="bgStyle(v)" @click="tap(i)">
             <span v-if="v" class="pz-num pz-num-big">{{ v }}</span>
           </div>
@@ -152,7 +163,8 @@ const cells = computed(() => tiles.value)
       <button class="pz-reset" @click="resetDay()">重新打乱（当日固定）</button>
     </div>
     <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
-    <div class="pz-tip">每天同一张图 · 完成得金币（3×3/4×4/5×5 = +80/150/250）</div>
+    <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
+    <div class="pz-tip">每天同一张图 · 完成得金币（40~1000 金）· 限步模式超步数即失败 · 共十种模式</div>
   </div>
 </template>
 <style scoped>
@@ -194,5 +206,6 @@ const cells = computed(() => tiles.value)
 .pz-keys { display: flex; justify-content: center; }
 .pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
 .pz-done { font-weight: 800; color: var(--good-strong); }
+.pz-fail { color: var(--bad-strong); }
 .pz-tip { color: var(--muted); font-size: 12px; }
 </style>
