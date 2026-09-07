@@ -9,7 +9,8 @@ const ui = useUiStore()
 
 const W = 480
 const H = 360
-const BIRD_X = 96
+const BIRD_X = 240 // 鸟保持在屏幕中间
+const BIRD_HALF = 20 // GIF 鸟图半宽（碰撞区）
 
 const mode = ref('s2')
 const METAS = {
@@ -27,6 +28,7 @@ const METAS = {
 const showInfo = ref(false)
 
 const canvas = ref(null)
+const birdEl = ref(null)
 const BG = new Image()
 BG.src = '/images/fb-bg.png'
 let bgX = 0
@@ -129,10 +131,10 @@ function loop(ts) {
   birdY += birdVy * dt
   // 管道得分（过鸟右侧）
   for (const p of pipes) {
-    if (!p.scored && p.x + p.w < BIRD_X - 12) { p.scored = true; passed.value++ }
+    if (!p.scored && p.x + p.w < BIRD_X - BIRD_HALF) { p.scored = true; passed.value++ }
   }
   // 碰撞检测
-  const r = 10
+  const r = BIRD_HALF - 6 // 碰撞半径略小于图半宽
   for (const p of pipes) {
     const inX = BIRD_X + r > p.x && BIRD_X - r < p.x + p.w
     if (!inX) continue
@@ -176,28 +178,16 @@ function draw() {
       ctx.fillRect(p.x, botY, p.w, H - botY)
     }
   }
-  // 鸟（黄圆 + 眼睛 + 翅膀）
+  // 鸟（GIF 叠加层：DOM 图片每帧同步位置与倾斜；按 canvas 显示比例换算，保持居中）
   const tilt = Math.max(-0.5, Math.min(0.6, birdVy * 0.06))
-  ctx.save()
-  ctx.translate(BIRD_X, birdY)
-  ctx.rotate(tilt)
-  ctx.fillStyle = '#f4c542'
-  ctx.beginPath()
-  ctx.ellipse(0, 0, 11, 9, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#f27c45'
-  ctx.beginPath()
-  ctx.moveTo(8, 0); ctx.lineTo(15, -2); ctx.lineTo(15, 2); ctx.closePath()
-  ctx.fill()
-  ctx.fillStyle = '#fff'
-  ctx.beginPath()
-  ctx.arc(5, -3, 2.6, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#221a10'
-  ctx.beginPath()
-  ctx.arc(5.8, -3, 1.2, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.restore()
+  if (birdEl.value) {
+    const scale = cv.clientWidth / W // canvas 显示宽 / 逻辑宽
+    birdEl.value.style.width = BIRD_HALF * 2 * scale + 'px'
+    birdEl.value.style.height = BIRD_HALF * 2 * scale + 'px'
+    birdEl.value.style.left = (BIRD_X - BIRD_HALF) * scale + 'px'
+    birdEl.value.style.top = (birdY - BIRD_HALF) * scale + 'px'
+    birdEl.value.style.transform = 'rotate(' + tilt + 'rad)'
+  }
 }
 function onKey(e) {
   if (e.key === ' ' || e.key === 'ArrowUp') {
@@ -221,7 +211,10 @@ reset()
       <button class="fb-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
-    <canvas ref="canvas" class="fb-canvas" :width="480" :height="360" @click="flap()"></canvas>
+    <div class="fb-stage" @click="flap()">
+      <canvas ref="canvas" class="fb-canvas" :width="480" :height="360"></canvas>
+      <img ref="birdEl" class="fb-bird" src="/images/fb-bird.gif" alt="" />
+    </div>
 
     <div class="fb-keys">
       <button class="fb-reset" @click="reset()">重新开始</button>
@@ -250,7 +243,9 @@ reset()
 .fb-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .fb-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .fb-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.fb-canvas { width: min(540px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; }
+.fb-stage { position: relative; width: min(540px, 94%); cursor: pointer; }
+.fb-canvas { width: 100%; border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); display: block; }
+.fb-bird { position: absolute; width: 40px; height: 40px; pointer-events: none; will-change: left, top, transform; image-rendering: pixelated; }
 .fb-keys { display: flex; gap: 10px; justify-content: center; align-items: center; }
 .fb-reset { padding: 10px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
 .fb-start { padding: 10px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
