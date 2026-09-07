@@ -1,6 +1,6 @@
 <script setup>
-// 食材翻牌（2026-09-07 独立小游戏，自连连看 4×4 翻牌玩法升级）：牌面朝下记忆配对，翻错 450ms 盖回
-// 四模式：4×4 新手 / 6×6 大师 / 4×4 限时 75s / 6×6 限时 120s；最佳=最少翻牌次数完成
+// 食材翻牌（2026-09-07 十模式版）：牌面 ❓ 记忆配对 · 3D 翻转动画 · 翻错抖动盖回
+// 十模式：2×2/4×4/6×6/8×8/10×10 奇数...——偶数棋盘（牌=格数无空位） × 普通/限时/限翻（翻错次数有限）
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -10,12 +10,18 @@ import { itemImage } from '../game/data/itemImage.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const mode = ref('m4')
+const mode = ref('m2')
 const MODES = {
-  m4: { label: '4×4 新手', size: 4, pairs: 8, gold: 100, kind: 'normal', desc: '4×4 · 8 对 · +100 金 —— 记忆入门' },
-  m6: { label: '6×6 大师', size: 6, pairs: 18, gold: 240, kind: 'normal', desc: '6×6 · 18 对 · +240 金' },
+  m2: { label: '2×2 新手', size: 2, pairs: 2, gold: 30, kind: 'normal', desc: '2×2 · 2 对 · +30 金 —— 热身' },
+  m4: { label: '4×4 轻松', size: 4, pairs: 8, gold: 100, kind: 'normal', desc: '4×4 · 8 对 · +100 金' },
   t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 150, kind: 'time', time: 75, desc: '4×4 · 8 对 · 限 75 秒 · +150 金 —— 超时失败' },
+  s4: { label: '4×4 限翻', size: 4, pairs: 8, gold: 200, kind: 'steps', maxFlips: 24, desc: '4×4 · 8 对 · 限 24 次翻牌 · +200 金 —— 超翻失败' },
+  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 240, kind: 'normal', desc: '6×6 · 18 对 · +240 金' },
   t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 320, kind: 'time', time: 120, desc: '6×6 · 18 对 · 限 120 秒 · +320 金 —— 超时失败' },
+  s6: { label: '6×6 限翻', size: 6, pairs: 18, gold: 420, kind: 'steps', maxFlips: 48, desc: '6×6 · 18 对 · 限 48 次翻牌 · +420 金 —— 超翻失败' },
+  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 500, kind: 'normal', desc: '8×8 · 32 对 · +500 金' },
+  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 650, kind: 'time', time: 150, desc: '8×8 · 32 对 · 限 150 秒 · +650 金 —— 超时失败' },
+  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 900, kind: 'normal', desc: '10×10 · 50 对 · +900 金 —— 终极记忆' },
 }
 const showInfo = ref(false)
 
@@ -37,8 +43,9 @@ const done = computed(() => board.value.length && clearedCount.value === board.v
 const mg = computed(() => player.minigames?.memory ?? {})
 
 function resetDay() {
+  // 偶数棋盘：2×pairs = size² 恰好填满（无空位）
   const ids = [...IMG_POOL].sort(() => Math.random() - 0.5).slice(0, MODES[mode.value].pairs)
-  board.value = [...ids, ...ids].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false, face: false }))
+  board.value = [...ids, ...ids].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false, face: false, miss: false }))
   memSel.value = null
   busy.value = false
   failed.value = false
@@ -59,11 +66,17 @@ function resetDay() {
 }
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
 
+function failNow() {
+  failed.value = true
+  if (timerId) clearInterval(timerId)
+}
 function tap(i) {
   const c = board.value[i]
   if (c.cleared || failed.value || busy.value || c.face) return
   c.face = true
   flips.value++
+  const mm = MODES[mode.value]
+  if (mm.kind === 'steps' && flips.value > mm.maxFlips && !done.value) { failNow(); return }
   if (memSel.value == null) { memSel.value = i; return }
   const a = board.value[memSel.value]
   memSel.value = null
@@ -72,8 +85,11 @@ function tap(i) {
     c.cleared = true
     if (done.value) settle()
   } else {
+    // 翻错：两张抖动后盖回
+    a.miss = true
+    c.miss = true
     busy.value = true
-    setTimeout(() => { a.face = false; c.face = false; busy.value = false }, 450)
+    setTimeout(() => { a.face = false; c.face = false; a.miss = false; c.miss = false; busy.value = false }, 480)
   }
 }
 function settle() {
@@ -98,7 +114,7 @@ resetDay()
       <button v-for="(m, key) in MODES" :key="key" class="mm-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
       <span class="mm-chip" style="margin-left: auto">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 次</span>
       <span v-if="timeLeft !== null" class="mm-chip">⏱ 剩余 <b class="mono">{{ timeLeft }}</b> 秒</span>
-      <span class="mm-chip">🎯 翻 <b class="mono">{{ flips }}</b> 次</span>
+      <span class="mm-chip">🎯 翻 <b class="mono">{{ flips }}</b><template v-if="MODES[mode].maxFlips">/{{ MODES[mode].maxFlips }}</template> 次</span>
       <span class="mm-chip">🀄 剩余 <b class="mono">{{ board.length - clearedCount }}</b></span>
       <button class="mm-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
@@ -108,23 +124,27 @@ resetDay()
         v-for="(c, i) in board"
         :key="c.key"
         class="mm-cell"
-        :class="{ cleared: c.cleared, face: c.face }"
+        :class="{ face: c.face, cleared: c.cleared, miss: c.miss }"
         @click="tap(i)"
-      ><img v-if="!c.cleared && c.face" class="mm-img" :src="itemImage(c.id)" @error="$event.target.style.display = 'none'" alt="" />
-      <span v-if="!c.cleared && !c.face" class="mm-back">❓</span></div>
+      >
+        <div class="mm-inner">
+          <div class="mm-face mm-backface">❓</div>
+          <div class="mm-face mm-frontface"><img v-if="!c.cleared" class="mm-img" :src="itemImage(c.id)" @error="$event.target.style.display = 'none'" alt="" /></div>
+        </div>
+      </div>
     </div>
 
     <div class="mm-keys">
       <button class="mm-reset" @click="resetDay()">重新洗牌</button>
     </div>
     <div v-if="done" class="mm-done">🧠 全部配对！+{{ MODES[mode].gold }} 金币</div>
-    <div v-if="failed" class="mm-done mm-fail">💦 超时未清！重新洗牌再来</div>
+    <div v-if="failed" class="mm-done mm-fail">💦 超限未清！重新洗牌再来</div>
 
     <div v-if="showInfo" class="mm-info-mask" @click.self="showInfo = false">
       <div class="mm-info-box">
-        <div class="mm-info-head"><b>🧠 食材翻牌 · 模式说明</b><button class="mm-info-close" @click="showInfo = false">✕</button></div>
+        <div class="mm-info-head"><b>🧠 食材翻牌 · 十种模式说明</b><button class="mm-info-close" @click="showInfo = false">✕</button></div>
         <div class="mm-info-list">
-          <div class="mm-info-row mm-info-rule">通用规则：所有牌面朝下 ❓，翻开两张相同即消除、不同盖回（记牌挑战记忆力）· 全部配对得金币 · 最佳 = 最少翻牌次数完成</div>
+          <div class="mm-info-row mm-info-rule">通用规则：牌面朝下 ❓，翻开两张相同即消除、不同抖动盖回（记牌考验记忆力）· 全部配对得金币 · 最佳 = 最少翻牌次数 · 限时/限翻模式超限即失败</div>
           <div v-for="(m, key) in MODES" :key="key" class="mm-info-row">
             <b class="mm-info-name">{{ m.label }}</b>
             <span class="mm-info-desc">{{ m.desc }}</span>
@@ -149,19 +169,46 @@ resetDay()
   border: 1px solid rgba(150, 110, 70, 0.3);
   box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
 }
+/* 3D 翻牌：卡片翻转过渡 + 消除缩放 + 翻错抖动 */
 .mm-cell {
   aspect-ratio: 1;
-  display: flex; align-items: center; justify-content: center;
-  padding: 6px;
-  border-radius: 10px; cursor: pointer; user-select: none;
-  background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
-  transition: transform 0.1s ease;
+  perspective: 600px;
+  cursor: pointer; user-select: none;
+  background: transparent; border: none; padding: 0;
 }
-.mm-cell:hover { transform: scale(1.05); }
-.mm-cell.face { border-color: rgba(88, 156, 75, 0.5); }
-.mm-cell.cleared { background: rgba(87, 168, 97, 0.12); border-color: rgba(87, 168, 97, 0.3); cursor: default; }
+.mm-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.32s ease, opacity 0.28s ease;
+}
+.mm-cell.face .mm-inner { transform: rotateY(180deg); }
+.mm-cell.cleared .mm-inner { transform: rotateY(180deg) scale(0.82); opacity: 0; }
+.mm-cell.miss .mm-inner { animation: mmShake 0.35s ease; }
+@keyframes mmShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+.mm-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mm-backface {
+  background: rgba(255, 251, 244, 0.92);
+  border: 1px solid rgba(150, 110, 70, 0.25);
+  font-size: 26px; opacity: 0.55;
+}
+.mm-frontface {
+  background: rgba(255, 251, 244, 0.95);
+  border: 1px solid rgba(88, 156, 75, 0.5);
+  transform: rotateY(180deg);
+  padding: 6px;
+}
 .mm-img { width: 100%; height: 100%; object-fit: contain; }
-.mm-back { font-size: 26px; opacity: 0.55; }
+.mm-cell:hover { transform: scale(1.04); }
 .mm-keys { display: flex; gap: 10px; justify-content: center; }
 .mm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .mm-done { font-weight: 800; color: var(--good-strong); }

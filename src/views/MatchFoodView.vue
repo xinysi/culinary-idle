@@ -123,6 +123,7 @@ resetDay()
       <span v-if="timeLeft !== null" class="mf-chip">⏱ 剩余 <b class="mono">{{ timeLeft }}</b> 秒</span>
       <span v-if="stepsLeft !== null" class="mf-chip">🎯 余 <b class="mono">{{ stepsLeft }}</b> 步</span>
       <span class="mf-chip">🀄 剩余 <b class="mono">{{ board.length - clearedCount }}</b></span>
+      <button class="mf-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
     <div class="mf-board" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
@@ -137,7 +138,6 @@ resetDay()
 
     <div class="mf-keys">
       <button class="mf-reset" @click="resetDay()">重新洗牌</button>
-      <button class="mf-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="done" class="mf-done">🍽 全清！+{{ MODES[mode].gold }} 金币</div>
     <div v-if="failed" class="mf-done mf-fail">💦 超限未清！重新洗牌再来</div>
@@ -184,7 +184,7 @@ resetDay()
 .mf-cell.cleared { background: rgba(87, 168, 97, 0.12); border-color: rgba(87, 168, 97, 0.3); cursor: default; }
 .mf-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .mf-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.mf-info-btn { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.mf-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .mf-done { font-weight: 800; color: var(--good-strong); }
 .mf-fail { color: var(--bad-strong); }
 .mf-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }

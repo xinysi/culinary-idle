@@ -93,6 +93,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
       <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
       <span class="fs-chip" style="margin-left: auto">💰 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 金</span>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
+      <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
     <div class="fs-bowl">
@@ -111,7 +112,6 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
       <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
       </button>
-      <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="done" class="fs-done" :class="{ ok: bowls >= TIERS[0].need }">
       {{ bowls >= TIERS[0].need ? `🍖 达成 ${[...TIERS].reverse().find((t) => bowls >= t.need)?.need ?? ''} 碗档！奖励已结算` : '💪 惜败！差一点就达标了' }}
@@ -170,12 +170,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 }
 .fs-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f); animation: fsPop 0.25s ease infinite; }
 @keyframes fsPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
-.fs-info-btn {
-  height: 56px; padding: 0 28px; font-size: 16px; font-weight: 700; cursor: pointer;
-  border: none; border-radius: 999px; color: #fff;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #72b864, #589c4b);
-}
+.fs-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .fs-done { font-weight: 800; color: var(--bad-strong); }
 .fs-done.ok { color: var(--good-strong); }
 .fs-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
