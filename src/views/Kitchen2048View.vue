@@ -16,8 +16,9 @@ const best = computed(() => player.minigames?.kitchen2048?.[mode.value === 4 ? '
 // tiles 模型：{ id, value, row, col, fresh, merged }
 let nextId = 1
 const tiles = ref([])
-let paid = 0
+let paid = 0 // 保留兼容占位（已改档位达成制）
 let earned = 0
+const TILE_BONUS = { 8: 2, 16: 3, 32: 5, 64: 8, 128: 12, 256: 18, 512: 26, 1024: 36, 2048: 60, 4096: 100 }
 const score = ref(0)
 const over = ref(false)
 const won = ref(false)
@@ -50,15 +51,19 @@ function reset() {
   score.value = 0
   over.value = false
   won.value = false
-  paid = 0
   earned = 0
+  reached.clear() // 本局已领奖档位
   spawn(); spawn()
 }
-function stepAndCap() { return mode.value === 4 ? [1024, 200] : [512, 100] }
-function tryPay() {
-  const [step, cap] = stepAndCap()
-  while (score.value - paid >= step && earned + 20 <= cap) { paid += step; earned += 20; player.gainGold(20) }
-  if (earned >= cap && score.value - paid >= step) paid = score.value
+// 档位达成奖励（2026-09-07）：从合出 8 起，每个新档位首次合成即发奖
+const reached = new Set()
+function award(tileValue) {
+  const bonus = TILE_BONUS[tileValue]
+  if (!bonus || reached.has(tileValue)) return
+  reached.add(tileValue)
+  earned += bonus
+  player.gainGold(bonus)
+  ui.pushLog(`🧩 2048 合出 ${tileValue}！+${bonus} 金币`, 'gain')
 }
 function canMoveAny() {
   const m = SIZE.value
@@ -110,6 +115,7 @@ function move(dir) {
         collectIds.add(next.tile.id)
         generate.push({ value: cur.tile.value * 2, ...target })
         score.value += cur.tile.value * 2
+        award(cur.tile.value * 2) // 档位首次合成即发奖（从 8 开始）
         i += 2
       } else {
         const target = { row: dir === 'left' || dir === 'right' ? line : wp(write), col: dir === 'left' || dir === 'right' ? wp(write) : line }
@@ -141,7 +147,6 @@ function move(dir) {
 
   if (!changed) return
   spawn()
-  tryPay()
   if (!won.value && tiles.value.some((t) => t.value >= 2048)) { won.value = true; ui.pushLog('🎉 合出「神圣大餐」（2048）！', 'gain') }
   if (!canMoveAny()) over.value = true
 }
@@ -180,7 +185,7 @@ function posStyle(t) {
       <button class="g2048-mode" :class="{ on: mode === 3 }" @click="switchMode(3)">3×3 极速</button>
       <div class="g2048-stats">
         <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
-        <span class="g2048-chip">💰 已得 <b class="mono">{{ earned }}/{{ mode === 4 ? 200 : 100 }}</b></span>
+        <span class="g2048-chip">💰 奖 <b class="mono">{{ earned }}</b> 金</span>
         <span class="g2048-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       </div>
     </div>
@@ -207,7 +212,7 @@ function posStyle(t) {
       <button class="g2048-reset" @click="reset()">重新开始</button>
     </div>
     <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
-    <div class="g2048-tip">方向键或按钮滑动 · 每跨一档（4×4 每 1024 / 3×3 每 512 分）即时 +20 金</div>
+    <div class="g2048-tip">合成的每个新档位首次奖励：8→2金 · 16→3 · 32→5 · 64→8 · 128→12 · 256→18 · 512→26 · 1024→36 · 2048→60 · 4096→100 金</div>
   </div>
 </template>
 <style scoped>
