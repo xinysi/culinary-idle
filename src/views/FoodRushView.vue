@@ -74,9 +74,12 @@ function finish() {
   done.value = true
   const mg = player.minigames.foodrush
   if (!mg) player.minigames.foodrush = { day: 0, best: 0, rewarded: 0 }
+  const key = todayKey()
+  if (mg.day !== key) { mg.day = key; mg.rewarded = 0 } // 跨天重开「今日」计数
   mg.best = Math.max(mg.best ?? 0, bowls.value)
   mg.earned = (mg.earned ?? 0) // 累计占位（可选展示）
-  const bestReached = [...TIERS].reverse().find((t) => bowls.value >= t.need)
+  // 注意：TIERS 是 computed，script 中须用 TIERS.value 展开（曾因 [..TIERS] 抛 not iterable 导致结算+日志全断）
+  const bestReached = [...TIERS.value].reverse().find((t) => bowls.value >= t.need)
   if (bestReached) {
     // 每局均可结算（2026-09-07 取消每日一次限制）
     mg.rewarded = (mg.rewarded ?? 0) + bestReached.gold
@@ -141,7 +144,6 @@ const doneToday = computed(() => mg.value.day === todayKey())
 .fs-mode { padding: 6px 14px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
 .fs-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .fs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
-.fs-info-btn { padding: 6px 16px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .fs-bowl {
   width: min(420px, 92%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -161,14 +163,21 @@ const doneToday = computed(() => mg.value.day === todayKey())
 .fs-tier.on { background: rgba(87, 168, 97, 0.18); color: var(--good-strong); font-weight: 700; }
 .fs-play { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .fs-btn {
-  min-width: 280px; padding: 16px 36px; font-size: 19px; font-weight: 800; color: #fff;
+  min-width: 280px; height: 56px; padding: 0 36px; font-size: 19px; font-weight: 800; color: #fff;
   border: none; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #d95a38, #b8442a);
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.4);
 }
 .fs-eat { background: linear-gradient(135deg, #f27c45, #d85c2c); }
 .fs-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f); animation: fsPop 0.25s ease infinite; }
 @keyframes fsPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
+.fs-info-btn {
+  height: 56px; padding: 0 28px; font-size: 16px; font-weight: 700; cursor: pointer;
+  border: none; border-radius: 999px; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+}
 .fs-done { font-weight: 800; color: var(--bad-strong); }
 .fs-done.ok { color: var(--good-strong); }
 .fs-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
