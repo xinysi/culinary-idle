@@ -15,6 +15,11 @@ const MODES = {
   '5x5': { label: '5×5 挑战', size: 5, four: 0.1, mult: 2 },
   f4: { label: '4+ 怪物局', size: 4, four: 0.55, mult: 1.5 },
   easy: { label: '温和局', size: 4, four: 0.05, mult: 0.8 },
+  s6: { label: '6×6 漫游', size: 6, four: 0.1, mult: 0.6 },
+  s6f: { label: '6+ 巨人', size: 6, four: 0.55, mult: 2.5 },
+  f3: { label: '3+ 猛兽', size: 3, four: 0.55, mult: 3 },
+  w4: { label: '4+ 狂野', size: 4, four: 0.3, mult: 1.2 },
+  w5: { label: '5+ 狂野', size: 5, four: 0.3, mult: 1.8 },
 }
 const mode = ref('4x4')
 const SIZE = computed(() => MODES[mode.value].size)
@@ -34,7 +39,9 @@ const over = ref(false)
 const won = ref(false)
 
 const GAP = 8
-const BOARD_INNER = () => 380 - 20 - 4 // padding 10*2 + border 2*2
+// 棋盘随模式尺寸自适应：3×3/4×4=380 · 5×5=420 · 6×6=460（6×6 用 380 会太挤）
+const BOARD_PX = computed(() => 380 + Math.max(0, MODES[mode.value].size - 4) * 40)
+const BOARD_INNER = () => BOARD_PX.value - 20 - 4 // padding 10*2 + border 2*2
 const CELL = computed(() => (BOARD_INNER() - (SIZE.value - 1) * GAP) / SIZE.value)
 
 // 物品图档位映射（与图鉴一致，图片必渲染）
@@ -55,8 +62,7 @@ function spawn() {
   const [r, c] = empty[Math.floor(Math.random() * empty.length)]
   spawnTile(r, c, Math.random() < MODES[mode.value].four ? 4 : 2, { fresh: true })
 }
-function reset() {
-  saveBest()
+function resetBoard() {
   tiles.value = []
   score.value = 0
   over.value = false
@@ -64,6 +70,10 @@ function reset() {
   earned = 0
   reached.clear() // 本局已领奖档位
   spawn(); spawn()
+}
+function reset() {
+  saveBest()
+  resetBoard()
 }
 // 档位达成奖励（2026-09-07）：从合出 8 起，每个新档位首次合成即发奖
 const reached = new Set()
@@ -169,7 +179,12 @@ function saveBest() {
   const key = 'b_' + mode.value
   player.minigames.kitchen2048[key] = Math.max(player.minigames.kitchen2048[key] ?? 0, score.value)
 }
-function switchMode(m) { mode.value = m; reset() }
+function switchMode(m) {
+  if (m === mode.value) return
+  saveBest() // 切换前先保存当前模式最佳分（reset 内不再重复存分，避免旧局分数串到新模式键）
+  mode.value = m
+  resetBoard()
+}
 function onKey(e) {
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }
   if (map[e.key]) { e.preventDefault(); move(map[e.key]) }
@@ -202,7 +217,7 @@ function posStyle(t) {
       </div>
     </div>
 
-    <div class="g2048-board2">
+    <div class="g2048-board2" :style="{ width: BOARD_PX + 'px', height: BOARD_PX + 'px' }">
       <div class="g2048-slots" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
         <div v-for="(x, i) in slots" :key="i" class="g2048-slot"></div>
       </div>
@@ -224,7 +239,7 @@ function posStyle(t) {
       <button class="g2048-reset" @click="reset()">重新开始</button>
     </div>
     <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
-    <div class="g2048-tip">每档首次奖励（8→2金…4096→100金）×模式倍率：标准/极速×1 · 怪物局×1.5 · 温和局×0.8 · 5×5×2 · 最佳分按模式独立记录</div>
+    <div class="g2048-tip">十种模式：尺寸 3×3/4×4/5×5/6×6 × 出4率 5%/10%/30%/55%；每档首次奖励（8→2金…4096→100金）×模式倍率（温和×0.8 · 标准/极速×1 · 狂野×1.2 · 怪物×1.5 · 狂野5+×1.8 · 挑战×2 · 巨人×2.5 · 猛兽×3 · 漫游×0.6）· 最佳分按模式独立记录</div>
   </div>
 </template>
 <style scoped>
@@ -236,7 +251,6 @@ function posStyle(t) {
 .g2048-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; }
 .g2048-board2 {
   position: relative; /* 方块绝对定位容器 */
-  width: 380px; height: 380px;
   background: rgba(150, 110, 70, 0.3);
   border: 2px solid rgba(150, 110, 70, 0.35);
   border-radius: 18px;
