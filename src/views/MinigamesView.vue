@@ -15,14 +15,14 @@ const MemoryView = defineAsyncComponent(() => import('./MemoryView.vue'))
 const GameShopView = defineAsyncComponent(() => import('./GameShopView.vue'))
 
 const GAMES = [
-  { id: 'shop', emoji: '🛒', name: '游戏商店', comp: GameShopView },
+  { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView },
   { id: 'heat', emoji: '🔥', name: '火候炉', comp: HeatView },
-  { id: 'trivia', emoji: '📚', name: '美食讲堂', comp: TriviaView },
-  { id: 'kitchen2048', emoji: '🧩', name: '厨心 2048', comp: Kitchen2048View },
+  { id: 'trivia', emoji: '📚', name: '讲堂', comp: TriviaView },
+  { id: 'kitchen2048', emoji: '🧩', name: '2048', comp: Kitchen2048View },
   { id: 'foodrush', emoji: '🍖', name: '大胃王', comp: FoodRushView },
-  { id: 'puzzle', emoji: '🧩', name: '美食拼图', comp: PuzzleView },
-  { id: 'matchfood', emoji: '🀄', name: '食材连连看', comp: MatchFoodView },
-  { id: 'memory', emoji: '🧠', name: '食材翻牌', comp: MemoryView },
+  { id: 'puzzle', emoji: '🧩', name: '拼图', comp: PuzzleView },
+  { id: 'matchfood', emoji: '🀄', name: '连连看', comp: MatchFoodView },
+  { id: 'memory', emoji: '🧠', name: '翻牌', comp: MemoryView },
 ]
 
 const active = ref('heat') // 默认加载第一游戏
