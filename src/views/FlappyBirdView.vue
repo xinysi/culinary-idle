@@ -70,10 +70,10 @@ function die() {
   over.value = true
   running.value = false
   stopLoop()
-  const coins = Math.round(passed * METAS[mode.value].rate)
+  const coins = Math.round(passed.value * METAS[mode.value].rate)
   const mf = player.minigames
   if (!mf.flappy) mf.flappy = { best: 0 }
-  mf.flappy.best = Math.max(mf.flappy.best ?? 0, passed)
+  mf.flappy.best = Math.max(mf.flappy.best ?? 0, passed.value)
   if (coins > 0) {
     player.gainGameCoins(coins)
     ui.pushLog(`🐦 笨鸟先飞：穿  根管道 → +${coins} 游戏币`, 'gain')
