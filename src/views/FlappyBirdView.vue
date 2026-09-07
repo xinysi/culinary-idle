@@ -10,7 +10,27 @@ const ui = useUiStore()
 const W = 480
 const H = 360
 const BIRD_X = 240 // 鸟保持在屏幕中间
-const BIRD_HALF = 20 // GIF 鸟图半宽（碰撞区）
+const BIRD_HALF = 20 // 鸟图半宽（碰撞区）
+
+// 可选小鸟（2026-09-08 用户素材 8 只）：开局可自由选择，持久化到存档
+const BIRDS = {
+  '01': { label: '黄雀', file: 'bird-01.png' },
+  '02': { label: '红雀', file: 'bird-02.png' },
+  '03': { label: '绿飞侠', file: 'bird-03.png' },
+  '04': { label: '蓝雀', file: 'bird-04.png' },
+  '05': { label: '紫雀', file: 'bird-05.png' },
+  '06': { label: '粉雀', file: 'bird-06.png' },
+  '07': { label: '棒球帽', file: 'bird-07.png' },
+  '08': { label: '黑鸦', file: 'bird-08.png' },
+}
+const birdKey = ref(player.minigames?.flappy?.bird ?? '02')
+function selectBird(k) {
+  birdKey.value = k
+  const mf = player.minigames
+  if (!mf.flappy) mf.flappy = { best: 0 }
+  mf.flappy.bird = k
+}
+const birdSrc = computed(() => '/images/birds/' + BIRDS[birdKey.value].file)
 
 const mode = ref('s2')
 const METAS = {
@@ -211,9 +231,16 @@ reset()
       <button class="fb-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
+    <!-- 选鸟：开局自由选择（8 只，持久化） -->
+    <div class="fb-birds">
+      <button v-for="(b, k) in BIRDS" :key="k" class="fb-bird-btn" :class="{ on: birdKey === k }" :title="b.label" @click="selectBird(k)">
+        <img :src="'/images/birds/' + b.file" alt="" />
+      </button>
+    </div>
+
     <div class="fb-stage" @click="flap()">
       <canvas ref="canvas" class="fb-canvas" :width="480" :height="360"></canvas>
-      <img ref="birdEl" class="fb-bird" src="/images/fb-bird.gif" alt="" />
+      <img ref="birdEl" class="fb-bird" :src="birdSrc" alt="" />
     </div>
 
     <div class="fb-keys">
@@ -244,6 +271,10 @@ reset()
 .fb-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .fb-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .fb-stage { position: relative; width: min(540px, 94%); cursor: pointer; }
+.fb-birds { display: flex; gap: 8px; flex-wrap: wrap; margin-top: -6px; }
+.fb-bird-btn { width: 52px; height: 40px; border-radius: 10px; cursor: pointer; background: rgba(255, 252, 246, 0.8); border: 1px dashed rgba(150, 110, 70, 0.4); padding: 2px; display: inline-flex; align-items: center; justify-content: center; }
+.fb-bird-btn.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); }
+.fb-bird-btn img { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
 .fb-canvas { width: 100%; border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); display: block; }
 .fb-bird { position: absolute; width: 40px; height: 40px; pointer-events: none; will-change: left, top, transform; image-rendering: pixelated; }
 .fb-keys { display: flex; gap: 10px; justify-content: center; align-items: center; }
