@@ -17,10 +17,10 @@ const MODES = {
   t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 100, kind: 'time', time: 60, desc: '4×4 · 8 对 · 限 60 秒全清 · +100 金 —— 超时失败' },
   s4: { label: '4×4 限步', size: 4, pairs: 8, gold: 120, kind: 'steps', maxSteps: 16, desc: '4×4 · 8 对 · 限 16 步（每两次点击算 1 步）· +120 金 —— 超步失败' },
   m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 150, kind: 'normal', desc: '6×6 · 18 对 · +150 金 —— 经典体验' },
-  f4: { label: '4×4 翻牌', size: 4, pairs: 8, gold: 180, kind: 'memory', desc: '4×4 · 8 对 · 牌面朝下记忆翻牌 · +180 金 —— 翻错盖回' },
   t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 200, kind: 'time', time: 90, desc: '6×6 · 18 对 · 限 90 秒全清 · +200 金 —— 超时失败' },
   s6: { label: '6×6 限步', size: 6, pairs: 18, gold: 220, kind: 'steps', maxSteps: 30, desc: '6×6 · 18 对 · 限 30 步 · +220 金 —— 超步失败' },
   m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 320, kind: 'normal', desc: '8×8 · 32 对 · +320 金' },
+  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 400, kind: 'time', time: 120, desc: '8×8 · 32 对 · 限 120 秒全清 · +400 金 —— 超时失败' },
   m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 550, kind: 'normal', desc: '10×10 · 50 对 · +550 金 —— 终极眼力' },
 }
 const showInfo = ref(false)
@@ -39,8 +39,6 @@ function poolFor() {
 
 const board = ref([])
 const selected = ref(null)
-const memSel = ref(null)
-const busy = ref(false)
 const failed = ref(false)
 const timeLeft = ref(null) // 限时模式剩余秒数
 const stepsLeft = ref(null) // 限步模式剩余步数
@@ -52,11 +50,9 @@ function resetDay() {
   // 一次抽 n 种再复制成对：配对完备；偶数棋盘 2pairs=size² 恰好填满（无空位）
   const ids = poolFor()
   const kind = MODES[mode.value].kind
-  const arr = [...ids, ...ids].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false, face: kind !== 'memory' }))
+  const arr = [...ids, ...ids].sort(() => Math.random() - 0.5).map((id, i) => ({ id, key: id + '-' + i, cleared: false }))
   board.value = arr
   selected.value = null
-  memSel.value = null
-  busy.value = false
   failed.value = false
   if (timerId) clearInterval(timerId)
   if (kind === 'time') {
@@ -82,24 +78,7 @@ function tap(i) {
   const c = board.value[i]
   if (c.cleared || failed.value) return
   const mm = MODES[mode.value]
-  // —— 翻牌记忆模式 ——
-  if (mm.kind === 'memory') {
-    if (busy.value || c.face) return
-    c.face = true
-    if (memSel.value == null) { memSel.value = i; return }
-    const a = board.value[memSel.value]
-    memSel.value = null
-    if (a.id === c.id) {
-      a.cleared = true
-      c.cleared = true
-      if (done.value) settle()
-    } else {
-      busy.value = true
-      setTimeout(() => { a.face = false; c.face = false; busy.value = false }, 450)
-    }
-    return
-  }
-  // —— 明牌模式（普通/限时/限步）——
+  // —— 明牌玩法（普通/限时/限步）——
   if (selected.value === i) { selected.value = null; return }
   if (selected.value == null) { selected.value = i; return }
   const a = board.value[selected.value]
@@ -151,10 +130,9 @@ resetDay()
         v-for="(c, i) in board"
         :key="c.key"
         class="mf-cell"
-        :class="{ cleared: c.cleared, selected: selected === i, back: !c.face }"
+        :class="{ cleared: c.cleared, selected: selected === i }"
         @click="tap(i)"
-      ><img v-if="!c.cleared && c.face" class="mf-img" :src="itemImage(c.id)" @error="$event.target.style.display = 'none'" alt="" />
-      <span v-if="!c.cleared && !c.face" class="mf-back">❓</span></div>
+      ><img v-if="!c.cleared" class="mf-img" :src="itemImage(c.id)" @error="$event.target.style.display = 'none'" alt="" /></div>
     </div>
 
     <div class="mf-keys">
@@ -201,7 +179,6 @@ resetDay()
   transition: transform 0.1s ease;
 }
 .mf-img { width: 100%; height: 100%; object-fit: contain; } /* 固定尺寸：格内撑满按比例居中 */
-.mf-back { font-size: 26px; opacity: 0.55; }
 .mf-cell:hover { transform: scale(1.05); }
 .mf-cell.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(168, 120, 11, 0.5); }
 .mf-cell.cleared { background: rgba(87, 168, 97, 0.12); border-color: rgba(87, 168, 97, 0.3); cursor: default; }

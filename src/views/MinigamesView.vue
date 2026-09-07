@@ -11,6 +11,7 @@ const Kitchen2048View = defineAsyncComponent(() => import('./Kitchen2048View.vue
 const FoodRushView = defineAsyncComponent(() => import('./FoodRushView.vue'))
 const PuzzleView = defineAsyncComponent(() => import('./PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./MatchFoodView.vue'))
+const MemoryView = defineAsyncComponent(() => import('./MemoryView.vue'))
 
 const GAMES = [
   { id: 'heat', emoji: '🔥', name: '火候炉', comp: HeatView },
@@ -19,6 +20,7 @@ const GAMES = [
   { id: 'foodrush', emoji: '🍖', name: '大胃王', comp: FoodRushView },
   { id: 'puzzle', emoji: '🧩', name: '美食拼图', comp: PuzzleView },
   { id: 'matchfood', emoji: '🀄', name: '食材连连看', comp: MatchFoodView },
+  { id: 'memory', emoji: '🧠', name: '食材翻牌', comp: MemoryView },
 ]
 
 const active = ref('heat') // 默认加载第一游戏
