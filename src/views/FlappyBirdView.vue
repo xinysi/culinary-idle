@@ -27,6 +27,11 @@ const METAS = {
 const showInfo = ref(false)
 
 const canvas = ref(null)
+const BG = new Image()
+BG.src = '/images/fb-bg.png'
+let bgX = 0
+BG.onload = () => draw() // 图片加载完成后重绘
+
 let birdY = H / 2
 let birdVy = 0
 let pipes = []
@@ -92,6 +97,7 @@ function loop(ts) {
   }
   for (const p of pipes) p.x -= m.speed * dt
   pipes = pipes.filter((p) => p.x > -p.w - 10)
+  bgX -= m.speed * 0.35 * dt // 背景视差（慢于管道）
   // 鸟物理
   birdVy += m.grav * dt
   birdY += birdVy * dt
@@ -115,11 +121,19 @@ function draw() {
   const cv = canvas.value
   if (!cv) return
   const ctx = cv.getContext('2d')
-  // 背景
-  ctx.fillStyle = '#2b2117'
-  ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = 'rgba(230, 190, 120, 0.08)'
-  for (let i = 0; i < 30; i++) ctx.fillRect((i * 53 + (running.value ? 0 : 0)) % W, (i * 37) % H, 8, 8)
+  // 背景：雪山图（cover 拉伸 + 慢速视差滚动；未加载时深棕兜底）
+  if (BG.complete && BG.naturalWidth) {
+    const tw = (BG.naturalWidth * H) / BG.naturalHeight // 按高度缩放后的图宽
+    const startX = -(((bgX % tw) + tw) % tw)
+    for (let ox = startX; ox < W; ox += tw) ctx.drawImage(BG, ox, 0, tw, H)
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+      ctx.fillStyle = 'rgba(22, 16, 12, 0.45)' // 深色模式压暗背景
+      ctx.fillRect(0, 0, W, H)
+    }
+  } else {
+    ctx.fillStyle = '#2b2117'
+    ctx.fillRect(0, 0, W, H)
+  }
   // 管道
   for (const p of pipes) {
     ctx.fillStyle = '#4f8f3c'
