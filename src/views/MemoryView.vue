@@ -210,7 +210,7 @@ resetDay()
 .mm-img { width: 100%; height: 100%; object-fit: contain; }
 .mm-cell:hover { transform: scale(1.04); }
 .mm-keys { display: flex; gap: 10px; justify-content: center; }
-.mm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.mm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .mm-done { font-weight: 800; color: var(--good-strong); }
 .mm-fail { color: var(--bad-strong); }
 .mm-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
