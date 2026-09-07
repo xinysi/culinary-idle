@@ -18,16 +18,16 @@ const raging = ref(false)
 let rageUntil = 0
 const mode = ref('classic')
 const MODES = {
-  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 30 }, { need: 90, gold: 50 }, { need: 130, gold: 70 }], desc: '15 秒 · 50/90/130 碗 → 30/50/70 币 —— 零碎时间的小挑战' },
-  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 40 }, { need: 140, gold: 70 }, { need: 200, gold: 110 }], desc: '30 秒 · 80/140/200 碗 → 40/70/110 币 —— 手速爆发' },
-  midnight: { label: '宵夜 45s', dur: 45, tiers: [{ need: 100, gold: 35 }, { need: 180, gold: 60 }, { need: 260, gold: 95 }], desc: '45 秒 · 100/180/260 碗 → 35/60/95 币' },
-  classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40 }, { need: 200, gold: 60 }, { need: 300, gold: 100 }], desc: '60 秒 · 120/200/300 碗 → 40/60/100 币 —— 标准体验' },
-  greedy: { label: '贪吃 75s', dur: 75, tiers: [{ need: 140, gold: 45 }, { need: 240, gold: 80 }, { need: 340, gold: 120 }], desc: '75 秒 · 140/240/340 碗 → 45/80/120 币' },
-  feast: { label: '盛宴 90s', dur: 90, tiers: [{ need: 160, gold: 50 }, { need: 280, gold: 90 }, { need: 400, gold: 140 }], desc: '90 秒 · 160/280/400 碗 → 50/90/140 币' },
-  marathon: { label: '马拉松 120s', dur: 120, tiers: [{ need: 200, gold: 70 }, { need: 350, gold: 110 }, { need: 500, gold: 160 }], desc: '120 秒 · 200/350/500 碗 → 70/110/160 币 —— 持久战' },
-  epic: { label: '史诗 180s', dur: 180, tiers: [{ need: 300, gold: 100 }, { need: 500, gold: 160 }, { need: 700, gold: 220 }], desc: '180 秒 · 300/500/700 碗 → 100/160/220 币' },
-  god: { label: '神胃 240s', dur: 240, tiers: [{ need: 380, gold: 130 }, { need: 620, gold: 200 }, { need: 860, gold: 270 }], desc: '240 秒 · 380/620/860 碗 → 130/200/270 币 —— 超长耐力' },
-  immortal: { label: '无限 300s', dur: 300, tiers: [{ need: 450, gold: 150 }, { need: 700, gold: 220 }, { need: 950, gold: 300 }], desc: '300 秒 · 450/700/950 碗 → 150/220/300 币 —— 终极盛宴' },
+  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 15 }, { need: 90, gold: 30 }, { need: 130, gold: 43 }], desc: '15 秒 · 50/90/130 碗 → 15/30/43 币 —— 零碎时间的小挑战' },
+  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 26 }, { need: 140, gold: 46 }, { need: 200, gold: 66 }], desc: '30 秒 · 80/140/200 碗 → 26/46/66 币 —— 手速爆发' },
+  midnight: { label: '宵夜 45s', dur: 45, tiers: [{ need: 100, gold: 33 }, { need: 180, gold: 59 }, { need: 260, gold: 86 }], desc: '45 秒 · 100/180/260 碗 → 33/59/86 币' },
+  classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40 }, { need: 200, gold: 66 }, { need: 300, gold: 99 }], desc: '60 秒 · 120/200/300 碗 → 40/66/99 币 —— 标准体验' },
+  greedy: { label: '贪吃 75s', dur: 75, tiers: [{ need: 140, gold: 46 }, { need: 240, gold: 79 }, { need: 340, gold: 112 }], desc: '75 秒 · 140/240/340 碗 → 46/79/112 币' },
+  feast: { label: '盛宴 90s', dur: 90, tiers: [{ need: 160, gold: 53 }, { need: 280, gold: 92 }, { need: 400, gold: 132 }], desc: '90 秒 · 160/280/400 碗 → 53/92/132 币' },
+  marathon: { label: '马拉松 120s', dur: 120, tiers: [{ need: 200, gold: 66 }, { need: 350, gold: 116 }, { need: 500, gold: 165 }], desc: '120 秒 · 200/350/500 碗 → 66/116/165 币 —— 持久战' },
+  epic: { label: '史诗 180s', dur: 180, tiers: [{ need: 300, gold: 99 }, { need: 500, gold: 165 }, { need: 700, gold: 231 }], desc: '180 秒 · 300/500/700 碗 → 99/165/231 币' },
+  god: { label: '神胃 240s', dur: 240, tiers: [{ need: 380, gold: 125 }, { need: 620, gold: 205 }, { need: 860, gold: 284 }], desc: '240 秒 · 380/620/860 碗 → 125/205/284 币 —— 超长耐力' },
+  immortal: { label: '无限 300s', dur: 300, tiers: [{ need: 450, gold: 149 }, { need: 700, gold: 231 }, { need: 950, gold: 314 }], desc: '300 秒 · 450/700/950 碗 → 149/231/314 币 —— 终极盛宴' },
 }
 const showInfo = ref(false)
 const TIERS = computed(() => MODES[mode.value].tiers)

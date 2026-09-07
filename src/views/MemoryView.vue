@@ -12,16 +12,16 @@ const ui = useUiStore()
 
 const mode = ref('m2')
 const MODES = {
-  m2: { label: '2×2 新手', size: 2, pairs: 2, gold: 30, kind: 'normal', desc: '2×2 · 2 对 · +30 币 —— 热身' },
-  m4: { label: '4×4 轻松', size: 4, pairs: 8, gold: 100, kind: 'normal', desc: '4×4 · 8 对 · +100 币' },
-  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 150, kind: 'time', time: 75, desc: '4×4 · 8 对 · 限 75 秒 · +150 币 —— 超时失败' },
-  s4: { label: '4×4 限翻', size: 4, pairs: 8, gold: 200, kind: 'steps', maxFlips: 24, desc: '4×4 · 8 对 · 限 24 次翻牌 · +200 币 —— 超翻失败' },
-  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 240, kind: 'normal', desc: '6×6 · 18 对 · +240 币' },
-  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 320, kind: 'time', time: 120, desc: '6×6 · 18 对 · 限 120 秒 · +320 币 —— 超时失败' },
-  s6: { label: '6×6 限翻', size: 6, pairs: 18, gold: 420, kind: 'steps', maxFlips: 48, desc: '6×6 · 18 对 · 限 48 次翻牌 · +420 币 —— 超翻失败' },
-  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 500, kind: 'normal', desc: '8×8 · 32 对 · +500 币' },
-  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 650, kind: 'time', time: 150, desc: '8×8 · 32 对 · 限 150 秒 · +650 币 —— 超时失败' },
-  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 900, kind: 'normal', desc: '10×10 · 50 对 · +900 币 —— 终极记忆' },
+  m2: { label: '2×2 新手', size: 2, pairs: 2, gold: 25, kind: 'normal', desc: '2×2 · 2 对 · +25 币 —— 热身' },
+  m4: { label: '4×4 轻松', size: 4, pairs: 8, gold: 80, kind: 'normal', desc: '4×4 · 8 对 · +80 币' },
+  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 120, kind: 'time', time: 75, desc: '4×4 · 8 对 · 限 75 秒 · +120 币 —— 超时失败' },
+  s4: { label: '4×4 限翻', size: 4, pairs: 8, gold: 170, kind: 'steps', maxFlips: 24, desc: '4×4 · 8 对 · 限 24 次翻牌 · +170 币 —— 超翻失败' },
+  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 200, kind: 'normal', desc: '6×6 · 18 对 · +200 币' },
+  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 270, kind: 'time', time: 120, desc: '6×6 · 18 对 · 限 120 秒 · +270 币 —— 超时失败' },
+  s6: { label: '6×6 限翻', size: 6, pairs: 18, gold: 360, kind: 'steps', maxFlips: 48, desc: '6×6 · 18 对 · 限 48 次翻牌 · +360 币 —— 超翻失败' },
+  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 430, kind: 'normal', desc: '8×8 · 32 对 · +430 币' },
+  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 560, kind: 'time', time: 150, desc: '8×8 · 32 对 · 限 150 秒 · +560 币 —— 超时失败' },
+  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 760, kind: 'normal', desc: '10×10 · 50 对 · +760 币 —— 终极记忆' },
 }
 const showInfo = ref(false)
 
