@@ -31,7 +31,6 @@ const MODES = {
 }
 const showInfo = ref(false)
 const TIERS = computed(() => MODES[mode.value].tiers)
-const tierTotal = computed(() => TIERS.value.reduce((s, t) => s + t.gold, 0))
 function reset() {
   RUNNING.value = false
   if (timerId) clearInterval(timerId)
@@ -74,26 +73,18 @@ function finish() {
   done.value = true
   const mg = player.minigames.foodrush
   if (!mg) player.minigames.foodrush = { day: 0, best: 0, rewarded: 0 }
-  const key = todayKey()
-  if (mg.day !== key) { mg.day = key; mg.rewarded = 0 } // 跨天重开「今日」计数
   mg.best = Math.max(mg.best ?? 0, bowls.value)
-  mg.earned = (mg.earned ?? 0) // 累计占位（可选展示）
   // 注意：TIERS 是 computed，script 中须用 TIERS.value 展开（曾因 [..TIERS] 抛 not iterable 导致结算+日志全断）
   const bestReached = [...TIERS.value].reverse().find((t) => bowls.value >= t.need)
   if (bestReached) {
-    // 每局均可结算（2026-09-07 取消每日一次限制）
+    // 每局均可结算（2026-09-07 取消每日一次限制）；rewarded 为全周期累计（无上限）
     mg.rewarded = (mg.rewarded ?? 0) + bestReached.gold
     player.gainGold(bestReached.gold)
-    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${bestReached.gold} 金币`, 'gain')
+    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${bestReached.gold} 金币（累计 ${mg.rewarded}）`, 'gain')
   }
-}
-function todayKey() {
-  const t = new Date()
-  return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`
 }
 const mg = computed(() => player.minigames?.foodrush ?? {})
 const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.value.length - 1].need) * 100))
-const doneToday = computed(() => mg.value.day === todayKey())
 </script>
 
 <template>
@@ -101,7 +92,7 @@ const doneToday = computed(() => mg.value.day === todayKey())
     <div class="fs-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
-      <span class="fs-chip" style="margin-left: auto">💰 今日 {{ mg.rewarded ?? 0 }}/{{ tierTotal }} 金</span>
+      <span class="fs-chip" style="margin-left: auto">💰 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 金</span>
     </div>
 
     <div class="fs-bowl">
