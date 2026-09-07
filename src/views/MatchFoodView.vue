@@ -32,14 +32,9 @@ const IMG_POOL = Object.values(ITEMS)
   .map((i) => i.id)
   .slice(0, 64)
 function poolFor() {
+  // 池内一次随机排序后截取：配对始终完备；即使请求数 > 池也安全返回可用子集（不会死循环/缺对）
   const n = MODES[mode.value].pairs
-  const ids = []
-  const used = new Set()
-  while (ids.length < n) {
-    const c = IMG_POOL[Math.floor(Math.random() * IMG_POOL.length)]
-    if (!used.has(c)) { used.add(c); ids.push(c) }
-  }
-  return ids
+  return [...IMG_POOL].sort(() => Math.random() - 0.5).slice(0, n)
 }
 
 const board = ref([])

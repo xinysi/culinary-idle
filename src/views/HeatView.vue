@@ -132,8 +132,8 @@ const nextReward = computed(() => {
         <button v-if="!slot.running" class="hz-mini hz-mini-gold" @click="startOne">开始</button>
         <button v-else class="hz-mini hz-mini-fire" @click="judge">{{ METAS[mode].dual ? '🔥 双锅定火' : '🔥 定火' }}</button>
       </div>
-      <div v-if="slot.verdict" class="hz-v" :class="slot.verdict">
-        {{ slot.verdict === 'perfect' ? (slot.verdictSuper ? '🎯 双锅大完美！' : '完美！') : slot.verdict === 'good' ? '不错' : '过了' }}
+      <div v-if="slot.verdict.value" class="hz-v" :class="slot.verdict.value">
+        {{ slot.verdict.value === 'perfect' ? (slot.verdictSuper ? '🎯 双锅大完美！' : '✨ 完美！') : slot.verdict.value === 'good' ? '👍 不错！' : '💨 偏了！' }}
       </div>
     </div>
 
