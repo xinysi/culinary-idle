@@ -13,6 +13,9 @@ const PuzzleView = defineAsyncComponent(() => import('./PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./MatchFoodView.vue'))
 const MemoryView = defineAsyncComponent(() => import('./MemoryView.vue'))
 const GameShopView = defineAsyncComponent(() => import('./GameShopView.vue'))
+const SnakeView = defineAsyncComponent(() => import('./SnakeView.vue'))
+const PacmanView = defineAsyncComponent(() => import('./PacmanView.vue'))
+const Match3View = defineAsyncComponent(() => import('./Match3View.vue'))
 
 const GAMES = [
   { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView },
@@ -23,6 +26,9 @@ const GAMES = [
   { id: 'puzzle', emoji: '🧩', name: '拼图', comp: PuzzleView },
   { id: 'matchfood', emoji: '🀄', name: '连连看', comp: MatchFoodView },
   { id: 'memory', emoji: '🧠', name: '翻牌', comp: MemoryView },
+  { id: 'snake', emoji: '🐍', name: '贪吃蛇', comp: SnakeView },
+  { id: 'pacman', emoji: '👻', name: '吃豆人', comp: PacmanView },
+  { id: 'match3', emoji: '🍬', name: '消消乐', comp: Match3View },
 ]
 
 const active = ref('heat') // 默认加载第一游戏

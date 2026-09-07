@@ -4186,3 +4186,57 @@ html[data-theme='dark'] .mg-shell .g2048-key {
 html[data-theme='dark'] .mg-shell .fs-progress {
   background: rgba(234, 176, 74, 0.18);
 }
+
+/* ── 贪吃蛇/吃豆人/消消乐 深色适配（2026-09-08）── */
+html[data-theme='dark'] .mg-shell .sn-mode, html[data-theme='dark'] .mg-shell .pm-mode,
+html[data-theme='dark'] .mg-shell .m3-mode,
+html[data-theme='dark'] .mg-shell .sn-chip, html[data-theme='dark'] .mg-shell .pm-chip,
+html[data-theme='dark'] .mg-shell .m3-chip {
+  background: rgba(52, 40, 31, 0.85);
+  border-color: rgba(210, 170, 120, 0.35);
+  color: #d9c9b4;
+}
+html[data-theme='dark'] .mg-shell .sn-mode.on, html[data-theme='dark'] .mg-shell .pm-mode.on,
+html[data-theme='dark'] .mg-shell .m3-mode.on {
+  background: rgba(224, 112, 74, 0.3);
+  border-color: rgba(224, 112, 74, 0.8);
+  color: #ffb98e;
+}
+html[data-theme='dark'] .mg-shell .sn-canvas, html[data-theme='dark'] .mg-shell .pm-canvas {
+  border-color: rgba(210, 170, 120, 0.35);
+}
+html[data-theme='dark'] .mg-shell .m3-board {
+  background: rgba(38, 29, 22, 0.88);
+  border-color: rgba(210, 170, 120, 0.28);
+}
+html[data-theme='dark'] .mg-shell .m3-cell {
+  background: rgba(64, 50, 38, 0.92);
+  border-color: rgba(210, 170, 120, 0.25);
+}
+html[data-theme='dark'] .mg-shell .sn-key, html[data-theme='dark'] .mg-shell .pm-key {
+  background: rgba(52, 40, 31, 0.9);
+  border-color: rgba(210, 170, 120, 0.35);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .sn-info-box, html[data-theme='dark'] .mg-shell .pm-info-box,
+html[data-theme='dark'] .mg-shell .m3-info-box {
+  background: rgba(44, 35, 28, 0.96);
+  border-color: rgba(210, 170, 120, 0.4);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .sn-info-row, html[data-theme='dark'] .mg-shell .pm-info-row,
+html[data-theme='dark'] .mg-shell .m3-info-row {
+  background: rgba(66, 52, 40, 0.9);
+  border-color: rgba(210, 170, 120, 0.28);
+}
+html[data-theme='dark'] .mg-shell .sn-info-rule, html[data-theme='dark'] .mg-shell .pm-info-rule,
+html[data-theme='dark'] .mg-shell .m3-info-rule {
+  background: rgba(114, 184, 100, 0.12);
+  border-color: rgba(114, 184, 100, 0.35);
+  color: #cfe6c2;
+}
+html[data-theme='dark'] .mg-shell .sn-info-close, html[data-theme='dark'] .mg-shell .pm-info-close,
+html[data-theme='dark'] .mg-shell .m3-info-close {
+  background: rgba(210, 170, 120, 0.18);
+  color: #f2e6d7;
+}
