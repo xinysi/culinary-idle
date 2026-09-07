@@ -15,9 +15,9 @@ const METAS = {
   fast: { label: '疾速单轨', speed: 0.5, every: 5, reward: 70, zoneW: 0.16, dual: false, desc: '快速单轨 · 5 连 70 金' },
   blitz: { label: '快燃挑战', speed: 0.62, every: 5, reward: 75, zoneW: 0.16, dual: false, desc: '高速单轨 · 5 连 75 金' },
   ultra: { label: '极限单轨', speed: 0.8, every: 5, reward: 110, zoneW: 0.16, dual: false, desc: '极速单轨 · 5 连 110 金 —— 高手向' },
-  dual: { label: '双锅同调', speed: 0.3, every: 5, reward: 90, zoneW: 0.16, dual: true, desc: '双轨 · 双完美计数 5 连 90 金' },
-  dual2: { label: '双锅疾速', speed: 0.42, every: 5, reward: 130, zoneW: 0.16, dual: true, desc: '双轨快速 · 双完美 5 连 130 金' },
-  dual3: { label: '双锅极限', speed: 0.55, every: 5, reward: 180, zoneW: 0.16, dual: true, desc: '双轨极速 · 双完美 5 连 180 金 —— 极限同步' },
+  dual: { label: '双锅同调', speed: 0.3, dualSpeed: 0.24, every: 5, reward: 90, zoneW: 0.16, dual: true, desc: '双轨异速 · 双轨同时完美计数 5 连 90 金' },
+  dual2: { label: '双锅疾速', speed: 0.42, dualSpeed: 0.33, every: 5, reward: 130, zoneW: 0.16, dual: true, desc: '双轨异速快速 · 双完美 5 连 130 金' },
+  dual3: { label: '双锅极限', speed: 0.55, dualSpeed: 0.41, every: 5, reward: 180, zoneW: 0.16, dual: true, desc: '双轨异速极速 · 双完美 5 连 180 金 —— 极限同步' },
   precise: { label: '精准单轨', speed: 0.3, every: 4, reward: 80, zoneW: 0.1, dual: false, desc: '中速 · 完美区收窄至 10% · 4 连 80 金 —— 精准挑战' },
 }
 const showInfo = ref(false)
@@ -31,7 +31,7 @@ function tick() {
     const d = (performance.now() - slot.last) / 1000
     const sp = m.speed * (1 + Math.min(1.2, (player.minigames?.heat?.streak ?? 0) * 0.08))
     slot.ph.value = (slot.ph.value + d * sp) % 1
-    if (m.dual) slot.ph2.value = (slot.ph2.value + d * sp) % 1
+    if (m.dual) slot.ph2.value = (slot.ph2.value + d * (m.dualSpeed ?? m.speed)) % 1 // 双锅第二轨异速
   }
   slot.last = performance.now()
   if (slot.running) slot.raf = requestAnimationFrame(tick)
@@ -148,7 +148,7 @@ const nextReward = computed(() => {
       <div class="hz-info-box">
         <div class="hz-info-head"><b>🔥 火候炉 · 十种模式说明</b><button class="hz-info-close" @click="showInfo = false">✕</button></div>
         <div class="hz-info-list">
-          <div class="hz-info-row hz-info-rule">通用规则：指针扫入定火金区即「完美」，相邻窄区为「不错」；连击越顺奖励越高 · 双锅模式需双轨同时完美计双完美</div>
+          <div class="hz-info-row hz-info-rule">通用规则：指针扫入定火金区即「完美」，相邻窄区为「不错」；连击越顺奖励越高 · 双锅模式两轨**异速**（第二轨慢 20~25%），需同时完美计双完美</div>
           <div v-for="(m, key) in METAS" :key="key" class="hz-info-row">
             <b class="hz-info-name">{{ m.label }}</b>
             <span class="hz-info-desc">{{ m.desc }}</span>
