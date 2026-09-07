@@ -9,9 +9,19 @@ import { itemImage } from '../game/data/itemImage.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const mode = ref(4)
-const SIZE = computed(() => mode.value)
-const best = computed(() => player.minigames?.kitchen2048?.[mode.value === 4 ? 'best' : 'best3'] ?? 0)
+const MODES = {
+  '4x4': { label: '4×4 标准', size: 4, four: 0.1, mult: 1 },
+  '3x3': { label: '3×3 极速', size: 3, four: 0.1, mult: 1 },
+  '5x5': { label: '5×5 挑战', size: 5, four: 0.1, mult: 2 },
+  f4: { label: '4+ 怪物局', size: 4, four: 0.55, mult: 1.5 },
+  easy: { label: '温和局', size: 4, four: 0.05, mult: 0.8 },
+}
+const mode = ref('4x4')
+const SIZE = computed(() => MODES[mode.value].size)
+const best = computed(() => {
+  const mp = player.minigames?.kitchen2048 ?? {}
+  return mp['b_' + mode.value] ?? (mode.value === '4x4' ? (mp.best ?? 0) : mode.value === '3x3' ? (mp.best3 ?? 0) : 0)
+})
 
 // tiles 模型：{ id, value, row, col, fresh, merged }
 let nextId = 1
@@ -43,7 +53,7 @@ function spawn() {
   const empty = emptyCells()
   if (!empty.length) return
   const [r, c] = empty[Math.floor(Math.random() * empty.length)]
-  spawnTile(r, c, Math.random() < 0.9 ? 2 : 4, { fresh: true })
+  spawnTile(r, c, Math.random() < MODES[mode.value].four ? 4 : 2, { fresh: true })
 }
 function reset() {
   saveBest()
@@ -58,9 +68,10 @@ function reset() {
 // 档位达成奖励（2026-09-07）：从合出 8 起，每个新档位首次合成即发奖
 const reached = new Set()
 function award(tileValue) {
-  const bonus = TILE_BONUS[tileValue]
-  if (!bonus || reached.has(tileValue)) return
+  const base = TILE_BONUS[tileValue]
+  if (!base || reached.has(tileValue)) return
   reached.add(tileValue)
+  const bonus = Math.round(base * MODES[mode.value].mult) // 奖励随模式倍率（2026-09-07）
   earned += bonus
   player.gainGold(bonus)
   ui.pushLog(`🧩 2048 合出 ${tileValue}！+${bonus} 金币`, 'gain')
@@ -153,7 +164,7 @@ function move(dir) {
 function saveBest() {
   const mg = player.minigames.kitchen2048
   if (!mg) player.minigames.kitchen2048 = { best: 0 }
-  const key = mode.value === 4 ? 'best' : 'best3'
+  const key = 'b_' + mode.value
   player.minigames.kitchen2048[key] = Math.max(player.minigames.kitchen2048[key] ?? 0, score.value)
 }
 function switchMode(m) { mode.value = m; reset() }
@@ -181,8 +192,7 @@ function posStyle(t) {
 <template>
   <div class="g2048-page">
     <div class="g2048-topbar">
-      <button class="g2048-mode" :class="{ on: mode === 4 }" @click="switchMode(4)">4×4 标准</button>
-      <button class="g2048-mode" :class="{ on: mode === 3 }" @click="switchMode(3)">3×3 极速</button>
+      <button v-for="(m, id) in MODES" :key="id" class="g2048-mode" :class="{ on: mode === id }" @click="switchMode(id)">{{ m.label }}</button>
       <div class="g2048-stats">
         <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
         <span class="g2048-chip">💰 奖 <b class="mono">{{ earned }}</b> 金</span>
@@ -191,7 +201,7 @@ function posStyle(t) {
     </div>
 
     <div class="g2048-board2">
-      <div class="g2048-slots" :style="{ gridTemplateColumns: 'repeat(' + mode + ', minmax(0, 1fr))' }">
+      <div class="g2048-slots" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
         <div v-for="(x, i) in slots" :key="i" class="g2048-slot"></div>
       </div>
       <div
@@ -212,7 +222,7 @@ function posStyle(t) {
       <button class="g2048-reset" @click="reset()">重新开始</button>
     </div>
     <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
-    <div class="g2048-tip">合成的每个新档位首次奖励：8→2金 · 16→3 · 32→5 · 64→8 · 128→12 · 256→18 · 512→26 · 1024→36 · 2048→60 · 4096→100 金</div>
+    <div class="g2048-tip">每档首次奖励（8→2金…4096→100金）×模式倍率：标准/极速×1 · 怪物局×1.5 · 温和局×0.8 · 5×5×2 · 最佳分按模式独立记录</div>
   </div>
 </template>
 <style scoped>
@@ -232,9 +242,11 @@ function posStyle(t) {
 }
 .g2048-slots {
   position: absolute; inset: 12px;
-  display: grid; gap: 8px;
+  display: grid; gap: 8px; grid-auto-rows: 1fr; /* 槽格按容器高度均分（5×5 也成方形） */
 }
 .g2048-slot {
+  height: 0;
+  padding-top: 100%; /* 方形占位：宽度=列宽 → 高=宽（任意模式格子方正） */
   border-radius: 10px;
   background: rgba(255, 251, 244, 0.55);
   border: 1px solid rgba(150, 110, 70, 0.25);
