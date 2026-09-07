@@ -171,11 +171,11 @@ const nextReward = computed(() => {
 .hz-box-reward { font-size: 11px; color: var(--warn-strong); font-weight: 700; }
 .hz-track { position: relative; width: 100%; height: 22px; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #f3dcc0, #ffe9d2 30%, #ffe9d2 70%, #f3dcc0); box-shadow: inset 0 1px 4px rgba(120, 84, 50, 0.18); }
 .hz-tiny { height: 16px; }
-.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #ffd98a, #f2b94f); box-shadow: 0 0 12px rgba(242, 185, 79, 0.8); border-radius: 999px; }
+.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #f2a25c, #d95a38); box-shadow: 0 0 12px rgba(217, 90, 56, 0.8); border-radius: 999px; }
 .hz-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #7a4a26; border-radius: 2px; box-shadow: 0 0 8px rgba(122, 74, 38, 0.55); }
 .hz-acts { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .hz-mini { padding: 8px 22px; font-size: 14px; font-weight: 800; border: none; border-radius: 999px; cursor: pointer; color: #fff; }
-.hz-mini-gold { background: linear-gradient(135deg, #eab04a, #c98e3f); }
+.hz-mini-gold { background: linear-gradient(135deg, #f2a25c, #d95a38); }
 .hz-mini-fire { background: linear-gradient(135deg, #f27c45, #d85c2c); }
 .hz-v { font-size: 12px; font-weight: 700; }
 .hz-v.perfect { color: var(--good-strong); }

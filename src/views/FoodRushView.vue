@@ -146,13 +146,13 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 }
 .fs-bowl-emoji { font-size: 52px; }
 .fs-bowl-num { font-size: 20px; font-weight: 800; }
-.fs-bowl-num b { font-size: 36px; color: var(--good-strong); }
+.fs-bowl-num b { font-size: 36px; color: var(--primary-strong); }
 .fs-timer { font-size: 14px; }
 .fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(88, 156, 75, 0.18); overflow: hidden; }
-.fs-progress-fill { height: 100%; background: linear-gradient(90deg, #72b864, #589c4b); border-radius: 999px; transition: width 0.2s ease; }
+.fs-progress-fill { height: 100%; background: linear-gradient(90deg, #eab04a, #d95a38); border-radius: 999px; transition: width 0.2s ease; }
 .fs-tiers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--muted); }
-.fs-tier.on { background: rgba(87, 168, 97, 0.18); color: var(--good-strong); font-weight: 700; }
+.fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--warn-strong); }
+.fs-tier.on { background: rgba(242, 176, 90, 0.22); color: var(--primary-strong); font-weight: 700; }
 .fs-play { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .fs-btn {
   min-width: 280px; height: 56px; padding: 0 36px; font-size: 19px; font-weight: 800; color: #fff;
