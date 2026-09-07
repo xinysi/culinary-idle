@@ -34,8 +34,28 @@ const PIPE_TOP = new Image()
 PIPE_TOP.src = '/images/fb-pipe-top.png' // 青锈管（2026-09-08 用户素材）：上方管道
 const PIPE_BOT = new Image()
 PIPE_BOT.src = '/images/fb-pipe-bottom.png' // 铜管：下方管道
-PIPE_TOP.onload = () => draw()
-PIPE_BOT.onload = () => draw()
+// 裁剪图片四边透明留白（不透明内容边界），保证拉伸后管体上贴顶/下贴底
+function cropBounds(img) {
+  const c = document.createElement('canvas')
+  c.width = img.naturalWidth
+  c.height = img.naturalHeight
+  const cx = c.getContext('2d')
+  cx.drawImage(img, 0, 0)
+  const d = cx.getImageData(0, 0, c.width, c.height).data
+  let top = 0
+  outerT: for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 10) { top = y; break outerT }
+  }
+  let bottom = c.height
+  outerB: for (let y = c.height - 1; y >= 0; y--) {
+    for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 10) { bottom = y + 1; break outerB }
+  }
+  return { top, bottom }
+}
+const TOP_CROP = { top: 0, bottom: 1 }
+const BOT_CROP = { top: 0, bottom: 1 }
+PIPE_TOP.onload = () => { Object.assign(TOP_CROP, cropBounds(PIPE_TOP)); draw() }
+PIPE_BOT.onload = () => { Object.assign(BOT_CROP, cropBounds(PIPE_BOT)); draw() }
 BG.onload = () => draw() // 图片加载完成后重绘
 
 let birdY = H / 2
@@ -87,7 +107,7 @@ function die() {
   mf.flappy.best = Math.max(mf.flappy.best ?? 0, passed.value)
   if (coins > 0) {
     player.gainGameCoins(coins)
-    ui.pushLog(`🐦 笨鸟先飞：穿  根管道 → +${coins} 游戏币`, 'gain')
+    ui.pushLog(`🐦 笨鸟先飞：穿 ${passed.value} 根管道 → +${coins} 游戏币`, 'gain')
   }
 }
 function loop(ts) {
@@ -99,7 +119,7 @@ function loop(ts) {
   const oldRight = pipes.length ? Math.max(...pipes.map((p) => p.x)) : -1
   if (oldRight < W - 240) {
     const gapY = 50 + Math.random() * (H - 100 - m.gap)
-    pipes.push({ x: W + 10, gapY, gap: m.gap, w: 90 })
+    pipes.push({ x: W + 10, gapY, gap: m.gap, w: 130 })
   }
   for (const p of pipes) p.x -= m.speed * dt
   pipes = pipes.filter((p) => p.x > -p.w - 10)
@@ -140,18 +160,17 @@ function draw() {
     ctx.fillStyle = '#2b2117'
     ctx.fillRect(0, 0, W, H)
   }
-  // 管道
+  // 管道（贴片裁剪透明边后拉伸：上管贴顶、下管贴底）
   for (const p of pipes) {
-    // 管道（图片贴片：上方青锈管、下方铜管，加载中绿块兜底）
     if (PIPE_TOP.complete && PIPE_TOP.naturalWidth) {
-      ctx.drawImage(PIPE_TOP, p.x, 0, p.w, p.gapY)
+      ctx.drawImage(PIPE_TOP, 0, TOP_CROP.top, PIPE_TOP.naturalWidth, TOP_CROP.bottom - TOP_CROP.top, p.x, 0, p.w, p.gapY)
     } else {
       ctx.fillStyle = '#4f8f3c'
       ctx.fillRect(p.x, 0, p.w, p.gapY)
     }
     const botY = p.gapY + p.gap
     if (PIPE_BOT.complete && PIPE_BOT.naturalWidth) {
-      ctx.drawImage(PIPE_BOT, p.x, botY, p.w, H - botY)
+      ctx.drawImage(PIPE_BOT, 0, BOT_CROP.top, PIPE_BOT.naturalWidth, BOT_CROP.bottom - BOT_CROP.top, p.x, botY, p.w, H - botY)
     } else {
       ctx.fillStyle = '#4f8f3c'
       ctx.fillRect(p.x, botY, p.w, H - botY)
