@@ -120,9 +120,11 @@ function move(dir) {
       const cur = idxs[i]
       const next = idxs[i + 1]
       if (next && next.tile.value === cur.tile.value) {
-        // 合并：cur 滑动到目标位，相邻移除，生成合并块
+        // 合并：cur 与 next 都移除、只留生成块（2026-09-07 修复：原实现保留 cur，会在目标格留下
+        // 同值"假死块"——被新块覆盖后潜伏，上层移开后又复活，且空位判定把重叠格算占用，
+        // 棋盘有效空间被蚕食，难度显著高于标准 2048）
         const target = { row: dir === 'left' || dir === 'right' ? line : wp(write), col: dir === 'left' || dir === 'right' ? wp(write) : line }
-        positions.set(cur.tile.id, { ...target, mergedInto: true })
+        collectIds.add(cur.tile.id)
         collectIds.add(next.tile.id)
         generate.push({ value: cur.tile.value * 2, ...target })
         score.value += cur.tile.value * 2
