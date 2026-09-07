@@ -253,7 +253,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
 .gs-buy {
   margin-top: auto; /* 按钮置底：卡片内描述下方沉底对齐 */
   width: 100%; padding: 8px 14px; border-radius: 999px; cursor: pointer;
-  background: linear-gradient(135deg, #72b864, #589c4b); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
+  background: linear-gradient(135deg, #e8703f, #c9542e); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
 }
 .gs-buy:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
