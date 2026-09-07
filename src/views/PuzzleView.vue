@@ -160,7 +160,6 @@ const cells = computed(() => tiles.value)
     </div>
     <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
     <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
-    <div class="pz-tip">碎片滑入还原 · 完成得金币（40~1000 金）· 限步模式超步即失败 · 图片与乱序每次随机</div>
     <div v-if="showInfo" class="pz-info-mask" @click.self="showInfo = false">
       <div class="pz-info-box">
         <div class="pz-info-head"><b>🧩 美食拼图 · 十种模式说明</b><button class="pz-info-close" @click="showInfo = false">✕</button></div>

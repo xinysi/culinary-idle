@@ -1,5 +1,5 @@
 <script setup>
-// 美食讲堂（2026-09-07 v2 改版）：三个类型讲堂同屏（知识/火眼金睛/大厨连线），各自独立答题；≥10/12 得徽章
+// 美食讲堂（2026-09-07 v3 改版）：十种模式分类（知识/对比/连线 × 规模）· 单面板流式答题 · 顶栏状态胶囊 · 模式说明弹窗
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -42,38 +42,90 @@ const LINK = [
 ]
 const SKILLS_ALL = ['采摘', '垂钓', '狩猎', '挖掘', '农耕', '烹饪', '烘焙', '腌制', '调酒', '厨具锻造', '食材保鲜', '美食探索', '食灵召唤']
 
-function buildBox(defs, make) {
-  return defs.sort(() => Math.random() - 0.5).slice(0, 4).map(make)
+const mode = ref('all12')
+const MODES = {
+  k6: { label: '知识·入门', spec: { k: 6, c: 0, l: 0 }, pass: 5, gold: 50, desc: '6 知识题 · 答对 ≥5 得徽章 +50 金' },
+  k10: { label: '知识·标准', spec: { k: 10, c: 0, l: 0 }, pass: 8, gold: 90, desc: '10 知识题 · ≥8 得徽章 +90 金' },
+  k14: { label: '知识·大师', spec: { k: 14, c: 0, l: 0 }, pass: 12, gold: 150, desc: '14 知识题（全库）· ≥12 得徽章 +150 金' },
+  c3: { label: '对比·试炼', spec: { k: 0, c: 3, l: 0 }, pass: 3, gold: 40, desc: '3 对比题 · 全对 +40 金' },
+  c6: { label: '对比·挑战', spec: { k: 0, c: 6, l: 0 }, pass: 5, gold: 80, desc: '6 对比题 · ≥5 +80 金' },
+  l3: { label: '连线·试炼', spec: { k: 0, c: 0, l: 3 }, pass: 3, gold: 40, desc: '3 连线题 · 全对 +40 金' },
+  l6: { label: '连线·挑战', spec: { k: 0, c: 0, l: 6 }, pass: 5, gold: 80, desc: '6 连线题 · ≥5 +80 金' },
+  all12: { label: '综合·标准', spec: { k: 4, c: 4, l: 4 }, pass: 10, gold: 100, desc: '4 知识+4 对比+4 连线 =12 题 · ≥10 得徽章 +100 金' },
+  all15: { label: '综合·进阶', spec: { k: 5, c: 5, l: 5 }, pass: 13, gold: 160, desc: '5+5+5 =15 题 · ≥13 得徽章 +160 金' },
+  all18: { label: '综合·大师', spec: { k: 6, c: 6, l: 6 }, pass: 16, gold: 240, desc: '6+6+6 =18 题（对比/连线全库）· ≥16 得徽章 +240 金' },
 }
-function qBox() {
-  return buildBox([...QPOOL], (def) => {
-    const correct = def.ask()
-    const opts = def.opts.includes(correct) ? [...def.opts] : [correct, ...def.opts].slice(0, 4)
-    return { q: def.q, correct, opts: [...opts].sort(() => Math.random() - 0.5), picked: null }
-  })
+const showInfo = ref(false)
+
+function pickN(pool, n) {
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, n)
 }
-function cmpBox() {
-  return buildBox([...CMP], ([ida, idb, cmp, label]) => {
-    const a = getItem(ida)
-    const b = getItem(idb)
-    const winner = cmp(a, b) >= 0 ? ida : idb
-    return { q: `「${a.name}」与「${b.name}」，谁${label}？`, correct: winner, opts: [ida, idb].sort(() => Math.random() - 0.5), picked: null, names: { a: a.name, b: b.name } }
-  })
+function makeQ(def) {
+  const correct = def.ask()
+  const opts = def.opts.includes(correct) ? [...def.opts] : [correct, ...def.opts].slice(0, 4)
+  return { q: def.q, correct, opts: opts.map((v) => ({ v, label: String(v) })), picked: null }
 }
-function linkBox() {
-  return buildBox([...LINK], ([id, q, answer]) => {
-    const others = SKILLS_ALL.filter((x) => x !== answer).sort(() => Math.random() - 0.5).slice(0, 3)
-    return { q, correct: answer, opts: [answer, ...others].sort(() => Math.random() - 0.5), picked: null }
-  })
+function makeCmp([ida, idb, cmp, label]) {
+  const a = getItem(ida)
+  const b = getItem(idb)
+  const winner = cmp(a, b) >= 0 ? ida : idb
+  return { q: `「${a.name}」与「${b.name}」，谁${label}？`, correct: winner, opts: [{ v: ida, label: a.name }, { v: idb, label: b.name }].sort(() => Math.random() - 0.5), picked: null }
+}
+function makeLink([id, q, answer]) {
+  const others = SKILLS_ALL.filter((x) => x !== answer).sort(() => Math.random() - 0.5).slice(0, 3)
+  return { q, correct: answer, opts: [answer, ...others].sort(() => Math.random() - 0.5).map((v) => ({ v, label: v })), picked: null }
+}
+function buildQuestions(spec) {
+  const list = [
+    ...pickN(QPOOL, spec.k).map(makeQ),
+    ...pickN(CMP, spec.c).map(makeCmp),
+    ...pickN(LINK, spec.l).map(makeLink),
+  ]
+  return list.sort(() => Math.random() - 0.5)
 }
 
-const boxes = ref({
-  k: { title: '📖 美食知识', items: qBox(), idx: 0 },
-  c: { title: '⚖️ 火眼金睛', items: cmpBox(), idx: 0 },
-  l: { title: '🔗 大厨连线', items: linkBox(), idx: 0 },
-})
-const doneAll = computed(() => Object.values(boxes.value).every((b) => b.items.every((it) => it.picked !== null)))
-const correctAll = computed(() => Object.values(boxes.value).flat().filter((x) => x.picked === x.correct).length)
+const qlist = ref([])
+const idx = ref(0)
+const cur = computed(() => qlist.value[idx.value] ?? null)
+const totalQ = computed(() => qlist.value.length)
+const answeredN = computed(() => qlist.value.filter((q) => q.picked !== null).length)
+const correctAll = computed(() => qlist.value.filter((q) => q.picked === q.correct).length)
+const doneAll = computed(() => qlist.value.length > 0 && answeredN.value === qlist.value.length)
+
+function resetRound() {
+  qlist.value = buildQuestions(MODES[mode.value].spec)
+  idx.value = 0
+}
+function resetWeek() {
+  const m = mg.value
+  m.week = weekKey()
+  m.answered = 0
+  m.correct = 0
+  resetRound()
+}
+function pickOpt(opt) {
+  const q = cur.value
+  if (!q || q.picked !== null) return
+  q.picked = opt
+  const m = mg.value
+  m.answered = (m.answered ?? 0) + 1
+  if (opt === q.correct) m.correct = (m.correct ?? 0) + 1
+  if (doneAll.value) settle()
+}
+function nextQ() {
+  if (idx.value < qlist.value.length - 1 && cur.value.picked !== null) idx.value++
+}
+function settle() {
+  const m = MODES[mode.value]
+  const right = correctAll.value
+  const mg2 = mg.value
+  if (right >= m.pass) {
+    mg2.badges = (mg2.badges ?? 0) + 1
+    player.gainGold(m.gold)
+    ui.pushLog(`📚 美食讲堂：${m.label} 答对 ${right}/${totalQ.value}！徽章 +1（共 ${mg2.badges} 枚）+${m.gold} 金币`, 'gain')
+  }
+  mg2.week = weekKey()
+}
 
 function weekKey() {
   const now = new Date()
@@ -83,47 +135,6 @@ function weekKey() {
 }
 const mg = computed(() => player.minigames.trivia)
 const weekDone = computed(() => mg.value?.week === weekKey() && mg.value?.answered > 0)
-const lastCorrect = ref(0)
-
-function pickBox(key, opt) {
-  const box = boxes.value[key]
-  const cur = box.items[box.idx]
-  if (!cur || cur.picked !== null) return
-  cur.picked = opt
-  const m = mg.value
-  m.answered = (m.answered ?? 0) + 1
-  if (opt === cur.correct) m.correct = (m.correct ?? 0) + 1
-  // 本框答完自动推进/完成
-  const next = box.items[box.idx + 1]
-  if (next) box.idx++
-  if (doneAll.value) settle()
-}
-function nextBox(key) {
-  const box = boxes.value[key]
-  if (box.idx < box.items.length - 1 && box.items[box.idx].picked !== null) box.idx++
-}
-function settle() {
-  lastCorrect.value = correctAll.value
-  const m = mg.value
-  if (!m.badges) m.badges = 0
-  if (correctAll.value >= 10) {
-    m.badges = (m.badges ?? 0) + 1
-    player.gainGold(100)
-    ui.pushLog(`📚 美食讲堂：本周答对 ${correctAll.value}/12！徽章 +1（共 ${m.badges} 枚）+100 金币`, 'gain')
-  }
-  m.week = weekKey()
-}
-function resetWeek() {
-  const m = mg.value
-  m.week = weekKey()
-  m.answered = 0
-  m.correct = 0
-  boxes.value = {
-    k: { title: '📖 美食知识', items: qBox(), idx: 0 },
-    c: { title: '⚖️ 火眼金睛', items: cmpBox(), idx: 0 },
-    l: { title: '🔗 大厨连线', items: linkBox(), idx: 0 },
-  }
-}
 const EXCHANGES = [
   { id: 'gold600', label: '💰 金币 600', cost: 1 },
   { id: 'gold1500', label: '💰 金币 1500', cost: 2 },
@@ -136,57 +147,52 @@ function exchange(item) {
   player.gainGold(item.id === 'gold600' ? 600 : item.id === 'gold1500' ? 1500 : 3000)
   ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
 }
-function boxProgress(b) {
-  let done = 0
-  b.items.forEach((it) => { if (it.picked !== null) done++ })
-  const right = b.items.filter((it) => it.picked === it.correct).length
-  return { done, right }
+function switchMode(k) {
+  mode.value = k
+  resetRound()
 }
+resetRound()
 </script>
 
 <template>
   <div class="tv-page">
     <div class="tv-topbar">
-      <span class="tv-chip" :class="{ ok: weekDone }">{{ weekDone ? '✅ 本周已答' : '📅 本周未开始' }}</span>
-      <span class="tv-chip">🎯 总对 <b class="mono">{{ correctAll }}</b>/12</span>
+      <button v-for="(m, key) in MODES" :key="key" class="tv-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
       <span class="tv-chip" style="margin-left: auto"><b class="mono">{{ mg.badges ?? 0 }}</b> 枚徽章</span>
       <button class="tv-chip tv-reset" @click="resetWeek">🔄 重新开始本周</button>
+      <span class="tv-chip" :class="{ ok: weekDone }">{{ weekDone ? '✅ 本周已答' : '📅 本周未开始' }}</span>
+      <span class="tv-chip">🎯 总对 <b class="mono">{{ correctAll }}</b>/{{ totalQ }}</span>
+      <button class="tv-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
-    <!-- 三个讲堂同屏 -->
-    <div class="tv-grid">
-      <div v-for="(box, key) in boxes" :key="key" class="tv-box" :class="'tv-' + key">
-        <div class="tv-box-head">
-          <span class="tv-box-title">{{ box.title }}</span>
-          <span class="mono dim">{{ boxProgress(box).right }}/{{ boxProgress(box).done }}</span>
-        </div>
-        <template v-if="box.idx < box.items.length">
-          <div class="tv-q">{{ box.items[box.idx]?.q }}</div>
-          <div class="tv-opts">
-            <button
-              v-for="o in box.items[box.idx]?.opts"
-              :key="o"
-              class="tv-opt"
-              :class="{
-                'tv-right': box.items[box.idx]?.picked != null && o === box.items[box.idx]?.correct,
-                'tv-wrong': box.items[box.idx]?.picked === o && o !== box.items[box.idx]?.correct,
-              }"
-              :disabled="box.items[box.idx]?.picked != null"
-              @click="pickBox(key, o)"
-            >{{ o === box.items[box.idx]?.opts[0] && box.items[box.idx]?.names ? box.items[box.idx].names.a : o === box.items[box.idx]?.opts[1] && box.items[box.idx]?.names ? box.items[box.idx].names.b : o }}</button>
-          </div>
-          <button
-            v-if="box.items[box.idx]?.picked != null && box.idx < box.items.length - 1"
-            class="tv-next"
-            @click="nextBox(key)"
-          >下一题 →</button>
-        </template>
-        <div v-else class="tv-flag">✅ 本类完成</div>
+    <!-- 单面板流式答题 -->
+    <div class="tv-box">
+      <div class="tv-box-head">
+        <span class="tv-box-title">{{ MODES[mode].label }}（{{ answeredN }}/{{ totalQ }}）</span>
+        <span class="mono dim"> ✅ {{ correctAll }} · 达标 {{ MODES[mode].pass }}</span>
       </div>
+      <template v-if="cur">
+        <div class="tv-q">{{ cur.q }}</div>
+        <div class="tv-opts">
+          <button
+            v-for="o in cur.opts"
+            :key="o.v"
+            class="tv-opt"
+            :class="{
+              'tv-right': cur.picked != null && o.v === cur.correct,
+              'tv-wrong': cur.picked === o.v && o.v !== cur.correct,
+            }"
+            :disabled="cur.picked != null"
+            @click="pickOpt(o.v)"
+          >{{ o.label }}</button>
+        </div>
+        <button v-if="cur.picked != null && idx < qlist.length - 1" class="tv-next" @click="nextQ">下一题 →</button>
+      </template>
+      <div v-else class="tv-flag">✅ 本模式完成</div>
     </div>
 
-    <div v-if="doneAll" class="tv-result" :class="{ ok: correctAll >= 10 }">
-      {{ correctAll >= 10 ? `🏅 通过！徽章 +1（共 ${mg.badges} 枚）` : `本周 ${correctAll}/12 —— 下周再来！` }}
+    <div v-if="doneAll" class="tv-result" :class="{ ok: correctAll >= MODES[mode].pass }">
+      {{ correctAll >= MODES[mode].pass ? `🏅 通过！徽章 +1（共 ${mg.badges} 枚）+${MODES[mode].gold} 金` : `${correctAll}/${totalQ} —— 未达标，重新开始本周再来！` }}
     </div>
 
     <div class="tv-exchange">
@@ -195,16 +201,30 @@ function boxProgress(b) {
         {{ it.label }}<span class="tv-ex-cost">{{ it.cost }} 徽章</span>
       </button>
     </div>
-    <div class="tv-rules">12 题 = 4 知识 + 4 对比 + 4 连线 · 答对 ≥10 得徽章 +1 + 100 金</div>
+
+    <div v-if="showInfo" class="tv-info-mask" @click.self="showInfo = false">
+      <div class="tv-info-box">
+        <div class="tv-info-head"><b>📚 美食讲堂 · 十种模式说明</b><button class="tv-info-close" @click="showInfo = false">✕</button></div>
+        <div class="tv-info-list">
+          <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得徽章+金币（可与兑换行换金币）· 徽章与本周记录按周重置</div>
+          <div v-for="(m, key) in MODES" :key="key" class="tv-info-row">
+            <b class="tv-info-name">{{ m.label }}</b>
+            <span class="tv-info-desc">{{ m.desc }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped>
 .tv-page { display: flex; flex-direction: column; gap: 12px; }
 .tv-topbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tv-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
+.tv-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .tv-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .tv-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .tv-reset { cursor: pointer; border-style: dashed; }
-.tv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.tv-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .tv-box { background: rgba(255, 252, 246, 0.85); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tv-box-head { display: flex; align-items: center; justify-content: space-between; }
 .tv-box-title { font-weight: 800; font-size: 14px; }
@@ -223,5 +243,13 @@ function boxProgress(b) {
 .tv-ex { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; cursor: pointer; background: rgba(255, 251, 244, 0.85); border: 1px solid rgba(150, 110, 70, 0.35); font-weight: 700; font-size: 13px; }
 .tv-ex:disabled { opacity: 0.5; cursor: not-allowed; }
 .tv-ex-cost { font-size: 11px; color: var(--muted); }
-.tv-rules { color: var(--muted); font-size: 12px; text-align: center; }
+.tv-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.tv-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.tv-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
+.tv-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.tv-info-list { display: flex; flex-direction: column; gap: 8px; }
+.tv-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
+.tv-info-rule { border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; }
+.tv-info-name { flex: 0 0 104px; color: var(--primary-strong); }
+.tv-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
 </style>
