@@ -4080,3 +4080,101 @@ html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); col
 
 /* 游戏币图标（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店） */
 .coin-ico { width: 14px; height: 14px; vertical-align: -2px; margin-right: 1px; border-radius: 3px; image-rendering: pixelated; }
+
+/* ── 小游戏深色适配（2026-09-07）：大厅内八款游戏组件覆盖 ── */
+html[data-theme='dark'] .mg-shell .hz-mode, html[data-theme='dark'] .mg-shell .tv-mode,
+html[data-theme='dark'] .mg-shell .g2048-mode, html[data-theme='dark'] .mg-shell .fs-mode,
+html[data-theme='dark'] .mg-shell .pz-mode, html[data-theme='dark'] .mg-shell .mf-mode,
+html[data-theme='dark'] .mg-shell .mm-mode,
+html[data-theme='dark'] .mg-shell .hz-chip, html[data-theme='dark'] .mg-shell .tv-chip,
+html[data-theme='dark'] .mg-shell .g2048-chip, html[data-theme='dark'] .mg-shell .fs-chip,
+html[data-theme='dark'] .mg-shell .pz-chip, html[data-theme='dark'] .mg-shell .mf-chip,
+html[data-theme='dark'] .mg-shell .mm-chip, html[data-theme='dark'] .mg-shell .gs-chip {
+  background: rgba(52, 40, 31, 0.85);
+  border-color: rgba(210, 170, 120, 0.35);
+  color: #d9c9b4;
+}
+html[data-theme='dark'] .mg-shell .hz-mode.on, html[data-theme='dark'] .mg-shell .tv-mode.on,
+html[data-theme='dark'] .mg-shell .g2048-mode.on, html[data-theme='dark'] .mg-shell .fs-mode.on,
+html[data-theme='dark'] .mg-shell .pz-mode.on, html[data-theme='dark'] .mg-shell .mf-mode.on,
+html[data-theme='dark'] .mg-shell .mm-mode.on {
+  background: rgba(224, 112, 74, 0.3);
+  border-color: rgba(224, 112, 74, 0.8);
+  color: #ffb98e;
+}
+html[data-theme='dark'] .mg-shell .hz-box, html[data-theme='dark'] .mg-shell .tv-box,
+html[data-theme='dark'] .mg-shell .fs-bowl, html[data-theme='dark'] .mg-shell .mf-board,
+html[data-theme='dark'] .mg-shell .mm-board, html[data-theme='dark'] .mg-shell .pz-board,
+html[data-theme='dark'] .mg-shell .gs-card, html[data-theme='dark'] .mg-shell .hz-history {
+  background: rgba(38, 29, 22, 0.88);
+  border-color: rgba(210, 170, 120, 0.28);
+}
+html[data-theme='dark'] .mg-shell .gs-note { background: rgba(217, 138, 43, 0.14); border-color: rgba(234, 176, 74, 0.4); color: #ecd9bd; }
+html[data-theme='dark'] .mg-shell .g2048-board2 { background: rgba(88, 62, 44, 0.5); border-color: rgba(210, 170, 120, 0.35); }
+html[data-theme='dark'] .mg-shell .pz-cell, html[data-theme='dark'] .mg-shell .mf-cell,
+html[data-theme='dark'] .mg-shell .mm-frontface, html[data-theme='dark'] .mg-shell .mm-backface {
+  background: rgba(64, 50, 38, 0.92);
+  border-color: rgba(210, 170, 120, 0.25);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .g2048-slot { background: rgba(255, 251, 244, 0.12); border-color: rgba(210, 170, 120, 0.2); }
+html[data-theme='dark'] .mg-shell .pz-cell.empty { background: transparent; border-color: transparent; }
+html[data-theme='dark'] .mg-shell .mf-cell.cleared { background: rgba(87, 168, 97, 0.18); border-color: rgba(114, 184, 100, 0.4); }
+html[data-theme='dark'] .mg-shell .mf-cell.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(230, 190, 90, 0.55); }
+html[data-theme='dark'] .mg-shell .hz-track {
+  background: linear-gradient(90deg, #4a3a2c, #5c4936 30%, #5c4936 70%, #4a3a2c);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+html[data-theme='dark'] .mg-shell .tv-opt { background: rgba(64, 50, 38, 0.92); border-color: rgba(210, 170, 120, 0.3); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .g2048-cell2 {
+  background: rgba(84, 68, 52, 0.95) !important;
+  color: #f2e6d7 !important;
+}
+html[data-theme='dark'] .mg-shell .g2048-cell2.v8 { background: #3a4a2c !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v16 { background: #43542e !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v32 { background: #54432a !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v64 { background: #5b4a30 !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v128 { background: #64523a !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v256 { background: #6d5942 !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v512 { background: #755f4a !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v1024 { background: #7d6549 !important; }
+html[data-theme='dark'] .mg-shell .g2048-cell2.v2048, html[data-theme='dark'] .mg-shell .g2048-cell2.v4096 { background: linear-gradient(135deg, #b5532f, #d95a38) !important; color: #fff !important; }
+html[data-theme='dark'] .mg-shell .hz-info-box, html[data-theme='dark'] .mg-shell .tv-info-box,
+html[data-theme='dark'] .mg-shell .g2048-info-box, html[data-theme='dark'] .mg-shell .fs-info-box,
+html[data-theme='dark'] .mg-shell .pz-info-box, html[data-theme='dark'] .mg-shell .mf-info-box,
+html[data-theme='dark'] .mg-shell .mm-info-box {
+  background: rgba(44, 35, 28, 0.96);
+  border-color: rgba(210, 170, 120, 0.4);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .hz-info-row, html[data-theme='dark'] .mg-shell .tv-info-row,
+html[data-theme='dark'] .mg-shell .g2048-info-row, html[data-theme='dark'] .mg-shell .fs-info-row,
+html[data-theme='dark'] .mg-shell .pz-info-row, html[data-theme='dark'] .mg-shell .mf-info-row,
+html[data-theme='dark'] .mg-shell .mm-info-row {
+  background: rgba(66, 52, 40, 0.9);
+  border-color: rgba(210, 170, 120, 0.28);
+}
+html[data-theme='dark'] .mg-shell .hz-info-rule, html[data-theme='dark'] .mg-shell .tv-info-rule,
+html[data-theme='dark'] .mg-shell .g2048-info-rule, html[data-theme='dark'] .mg-shell .fs-info-rule,
+html[data-theme='dark'] .mg-shell .pz-info-rule, html[data-theme='dark'] .mg-shell .mf-info-rule,
+html[data-theme='dark'] .mg-shell .mm-info-rule {
+  background: rgba(114, 184, 100, 0.12);
+  border-color: rgba(114, 184, 100, 0.35);
+  color: #cfe6c2;
+}
+html[data-theme='dark'] .mg-shell .hz-info-close, html[data-theme='dark'] .mg-shell .tv-info-close,
+html[data-theme='dark'] .mg-shell .g2048-info-close, html[data-theme='dark'] .mg-shell .fs-info-close,
+html[data-theme='dark'] .mg-shell .pz-info-close, html[data-theme='dark'] .mg-shell .mf-info-close,
+html[data-theme='dark'] .mg-shell .mm-info-close {
+  background: rgba(210, 170, 120, 0.18);
+  color: #f2e6d7;
+}
+html[data-theme='dark'] .mg-shell .gs-buy:disabled { background: rgba(52, 40, 31, 0.85); color: #8a7a66; }
+html[data-theme='dark'] .mg-shell .fs-tier { background: rgba(70, 54, 40, 0.8); color: #eeb17a; }
+html[data-theme='dark'] .mg-shell .fs-tier.on { background: rgba(217, 138, 43, 0.28); color: #ffc27a; }
+html[data-theme='dark'] .mg-shell .pz-done, html[data-theme='dark'] .mg-shell .mf-done,
+html[data-theme='dark'] .mg-shell .mm-done { color: #a9e29b; }
+html[data-theme='dark'] .mg-shell .pz-fail, html[data-theme='dark'] .mg-shell .mf-fail,
+html[data-theme='dark'] .mg-shell .mm-fail { color: #f2a08e; }
+html[data-theme='dark'] .mg-shell .tv-opt.tv-right { background: rgba(87, 168, 97, 0.22); color: #a9e29b; }
+html[data-theme='dark'] .mg-shell .tv-opt.tv-wrong { background: rgba(217, 75, 63, 0.2); color: #f2a08e; }
