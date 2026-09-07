@@ -11,6 +11,14 @@ const coins = computed(() => player.gameCoins ?? 0)
 
 const RARE_POOL = ['spiritFruit', 'dragonRoot', 'truffle', 'lingzhi'].filter((id) => !!getItem(id))
 const SEED_POOL = Object.values(ITEMS).filter((i) => i.type === 'seed').map((i) => i.id)
+const FOOD_POOL = Object.values(ITEMS).filter((i) => i.type === 'food').map((i) => i.id)
+const SPICE_POOL = Object.values(ITEMS).filter((i) => i.type === 'spice').map((i) => i.id)
+const MINERAL_POOL = Object.values(ITEMS)
+  .filter((i) => i.category === 'mineral' || /矿|Ore|fossil/.test((i.name ?? '') + i.id))
+  .map((i) => i.id)
+const INGREDIENT_POOL = Object.values(ITEMS)
+  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral')
+  .map((i) => i.id)
 
 /** 商店发货：优先入背包；背包满则直发仓库（仓库种类满才拒收），保证商品一定生效 */
 function grantShopItem(id, qty) {
@@ -30,10 +38,10 @@ function rareBoxApply(min, max) {
   for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
   return got ? `稀有食材 ${got} 份（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
 }
-function seedBagApply(count) {
-  // 先随机 3~8 种种子再分数量（种类集中不爆背包种类容量，确保整袋入库）
+/** 通用礼包：先随机 3~8 种再分数量（种类集中不爆背包），背包满直发仓库 */
+function poolBagApply(pool, count) {
   const kindN = 3 + Math.floor(Math.random() * 6)
-  const kinds = [...SEED_POOL].sort(() => Math.random() - 0.5).slice(0, Math.min(kindN, SEED_POOL.length))
+  const kinds = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(kindN, pool.length))
   const counts = {}
   for (let i = 0; i < count; i++) {
     const id = kinds[Math.floor(Math.random() * kinds.length)]
@@ -41,7 +49,10 @@ function seedBagApply(count) {
   }
   let got = 0
   for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
-  return got ? `种子 ×${got}（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+  return got ? `入库 ${got} 份（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+}
+function seedBagApply(count) {
+  return poolBagApply(SEED_POOL, count)
 }
 function ticketApply(qty) {
   player.mijian = player.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
@@ -85,6 +96,30 @@ const PRODUCTS = {
     icon: '🎁', name: '至臻稀有食材盲盒', price: 10000, repeat: true,
     desc: '随机稀有食材 100~300 份（灵果/龙根/松露/灵芝池）',
     apply() { return rareBoxApply(100, 300) },
+  },
+  ingredientBag: {
+    cat: '💰 经济互通',
+    icon: '🐟', name: '鲜味食材礼包', price: 500, repeat: true,
+    desc: '随机普通食材 30~80 份（蔬菜/鲜肉/水产等，不含稀有）',
+    apply() { return poolBagApply(INGREDIENT_POOL, 30 + Math.floor(Math.random() * 51)) },
+  },
+  foodBag: {
+    cat: '💰 经济互通',
+    icon: '🥩', name: '珍馐料理礼包', price: 1500, repeat: true,
+    desc: '随机成品料理 10~20 份（备菜快进，可回血/对决用）',
+    apply() { return poolBagApply(FOOD_POOL, 10 + Math.floor(Math.random() * 11)) },
+  },
+  spiceBag: {
+    cat: '💰 经济互通',
+    icon: '🌶️', name: '精酿调料礼包', price: 400, repeat: true,
+    desc: '随机调料 20~50 份（香料/酱料池）',
+    apply() { return poolBagApply(SPICE_POOL, 20 + Math.floor(Math.random() * 31)) },
+  },
+  mineralBag: {
+    cat: '💰 经济互通',
+    icon: '⛏️', name: '锻造矿材礼包', price: 800, repeat: true,
+    desc: '随机矿石/宝石 20~50 份（锻造原料池）',
+    apply() { return poolBagApply(MINERAL_POOL, 20 + Math.floor(Math.random() * 31)) },
   },
   xpPotion: {
     cat: '⚡ 增益加速',
