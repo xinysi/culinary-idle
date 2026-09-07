@@ -1,5 +1,5 @@
 <script setup>
-// 消消乐（2026-09-08 新增）：8×8 三消（图鉴食物图）× 十个模式（步数型/限时型 × 目标分数）
+// 消消乐（2026-09-08 v2 动画版）：tile 绝对定位（交换/下落过渡、消除弹出动画、连锁）；十模式短名 + 高目标分
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -12,26 +12,28 @@ const ui = useUiStore()
 const SIZE = 8
 const IMG_POOL = Object.values(ITEMS)
   .filter((i) => ['ingredient', 'food', 'spice'].includes(i.type) && itemImage(i.id))
+  .sort(() => Math.random() - 0.5)
+  .slice(0, 6)
   .map((i) => i.id)
-  .slice(0, 60)
 
 const mode = ref('m1')
 const MODES = {
-  m1: { label: '新手·20步', steps: 20, time: null, goal: 200, gold: 30, desc: '20 步内达 200 分 · +30 币 —— 入门' },
-  m2: { label: '标准·20步', steps: 20, time: null, goal: 400, gold: 60, desc: '20 步内达 400 分 · +60 币' },
-  m3: { label: '进阶·20步', steps: 20, time: null, goal: 700, gold: 100, desc: '20 步内达 700 分 · +100 币' },
-  m4: { label: '高手·20步', steps: 20, time: null, goal: 1100, gold: 150, desc: '20 步内达 1100 分 · +150 币 —— 连锁大师' },
-  t1: { label: '限时·60s·200', steps: null, time: 60, goal: 200, gold: 60, desc: '60 秒内达 200 分 · +60 币' },
-  t2: { label: '限时·60s·500', steps: null, time: 60, goal: 500, gold: 120, desc: '60 秒内达 500 分 · +120 币' },
-  t3: { label: '限时·90s·600', steps: null, time: 90, goal: 600, gold: 160, desc: '90 秒内达 600 分 · +160 币' },
-  t4: { label: '限时·90s·1000', steps: null, time: 90, goal: 1000, gold: 260, desc: '90 秒内达 1000 分 · +260 币 —— 高难高速' },
-  x1: { label: '硬核·15步·800', steps: 15, time: null, goal: 800, gold: 200, desc: '仅 15 步达 800 分 · +200 币' },
-  x2: { label: '硬核·15步·1300', steps: 15, time: null, goal: 1300, gold: 320, desc: '仅 15 步达 1300 分 · +320 币 —— 极限连消' },
+  m1: { label: '新手20', steps: 20, time: null, goal: 600, gold: 40, desc: '20 步内达 600 分 · +40 币 —— 入门' },
+  m2: { label: '标准20', steps: 20, time: null, goal: 1200, gold: 90, desc: '20 步内达 1200 分 · +90 币' },
+  m3: { label: '进阶20', steps: 20, time: null, goal: 2000, gold: 150, desc: '20 步内达 2000 分 · +150 币' },
+  m4: { label: '高手20', steps: 20, time: null, goal: 3000, gold: 230, desc: '20 步内达 3000 分 · +230 币 —— 连锁大师' },
+  t1: { label: '60秒600', steps: null, time: 60, goal: 600, gold: 80, desc: '60 秒内达 600 分 · +80 币' },
+  t2: { label: '60秒1500', steps: null, time: 60, goal: 1500, gold: 160, desc: '60 秒内达 1500 分 · +160 币' },
+  t3: { label: '90秒2000', steps: null, time: 90, goal: 2000, gold: 220, desc: '90 秒内达 2000 分 · +220 币' },
+  t4: { label: '90秒3200', steps: null, time: 90, goal: 3200, gold: 340, desc: '90 秒内达 3200 分 · +340 币 —— 高难高速' },
+  x1: { label: '硬核15', steps: 15, time: null, goal: 2200, gold: 280, desc: '仅 15 步达 2200 分 · +280 币' },
+  x2: { label: '地狱15', steps: 15, time: null, goal: 3800, gold: 450, desc: '仅 15 步达 3800 分 · +450 币 —— 极限连消' },
 }
 const showInfo = ref(false)
 
-const board = ref([])
-const selected = ref(null)
+const tiles = ref([])
+let nextKey = 1
+const selectedKey = ref(null)
 const score = ref(0)
 const stepsLeft = ref(null)
 const timeLeft = ref(null)
@@ -40,33 +42,41 @@ const won = ref(false)
 let timerId = null
 let busy = false
 
-function shuffleIds() {
-  const ids = []
-  for (let i = 0; i < SIZE * SIZE; i++) ids.push(IMG_POOL[Math.floor(Math.random() * 6)])
-  return ids
-}
+function randImg() { return IMG_POOL[Math.floor(Math.random() * IMG_POOL.length)] }
+
 function freshBoard() {
-  // 生成无初始三连（简单重试）
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const ids = shuffleIds()
+  // 生成无初始三连（重试）
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const arr = Array.from({ length: SIZE * SIZE }, () => randImg())
     let ok = true
     outer: for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
-      const id = ids[y * SIZE + x]
-      if (x >= 2 && ids[y * SIZE + x - 1] === id && ids[y * SIZE + x - 2] === id) { ok = false; break outer }
-      if (y >= 2 && ids[(y - 1) * SIZE + x] === id && ids[(y - 2) * SIZE + x] === id) { ok = false; break outer }
+      const id = arr[y * SIZE + x]
+      if (x >= 2 && arr[y * SIZE + x - 1] === id && arr[y * SIZE + x - 2] === id) { ok = false; break outer }
+      if (y >= 2 && arr[(y - 1) * SIZE + x] === id && arr[(y - 2) * SIZE + x] === id) { ok = false; break outer }
     }
-    if (ok) return ids
+    if (ok) return arr
   }
-  return shuffleIds()
+  return Array.from({ length: SIZE * SIZE }, () => randImg())
 }
 function reset() {
   if (timerId) clearInterval(timerId)
-  board.value = freshBoard()
-  selected.value = null
+  tiles.value = []
+  nextKey = 1
+  const arr = freshBoard()
+  for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) tiles.value.push({ key: nextKey++, row: y - SIZE, col: x, img: arr[y * SIZE + x], pop: false })
+  selectedKey.value = null
   score.value = 0
   over.value = false
   won.value = false
   busy = false
+  // 开局整盘从上方滑入
+  setTimeout(() => {
+    if (!tiles.value.length) return
+    for (let i = 0; i < tiles.value.length; i++) {
+      const t = tiles.value[i]
+      t.row = Math.floor(i / SIZE)
+    }
+  }, 20)
   if (MODES[mode.value].time) {
     timeLeft.value = MODES[mode.value].time
     timerId = setInterval(() => {
@@ -78,14 +88,31 @@ function reset() {
 }
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
 
-function matchesIn(ids) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+function tileAt(key) { return tiles.value.find((t) => t.key === key && !t.pop) }
+function grid() {
+  const g = []
+  for (let r = 0; r < SIZE; r++) {
+    g.push([])
+    for (let c = 0; c < SIZE; c++) {
+      const t = tiles.value.find((x) => x.row === r && x.col === c && !x.pop)
+      g[r].push(t ? t.img : null)
+    }
+  }
+  return g
+}
+function findMatchTiles() {
+  const g = grid()
+  const byPos = {}
+  for (const t of tiles.value) if (!t.pop) byPos[t.row + '-' + t.col] = t
   const matched = new Set()
   for (let y = 0; y < SIZE; y++) {
     let run = 1
     for (let x = 1; x <= SIZE; x++) {
-      if (x < SIZE && ids[y * SIZE + x] === ids[y * SIZE + x - 1]) run++
+      if (x < SIZE && g[y][x] === g[y][x - 1] && g[y][x] !== null) run++
       else {
-        if (run >= 3) for (let k = 0; k < run; k++) matched.add(y * SIZE + x - 1 - k)
+        if (run >= 3) for (let k = 0; k < run; k++) matched.add(y + '-' + (x - 1 - k))
         run = 1
       }
     }
@@ -93,59 +120,92 @@ function matchesIn(ids) {
   for (let x = 0; x < SIZE; x++) {
     let run = 1
     for (let y = 1; y <= SIZE; y++) {
-      if (y < SIZE && ids[y * SIZE + x] === ids[(y - 1) * SIZE + x]) run++
+      if (y < SIZE && g[y][x] === g[y - 1][x] && g[y][x] !== null) run++
       else {
-        if (run >= 3) for (let k = 0; k < run; k++) matched.add((y - 1 - k) * SIZE + x)
+        if (run >= 3) for (let k = 0; k < run; k++) matched.add((y - 1 - k) + '-' + x)
         run = 1
       }
     }
   }
-  return matched
+  return [...matched].map((k) => byPos[k]).filter(Boolean)
 }
-function resolveBoard(ids, chain) {
-  let total = 0
-  let matched = matchesIn(ids)
-  while (matched.size >= 3) {
-    total += matched.size * 10 * (1 + 0.5 * chain)
-    chain++
-    // 移除 + 下落 + 顶部补充
-    for (const idx of matched) ids[idx] = null
-    for (let x = 0; x < SIZE; x++) {
-      const col = []
-      for (let y = 0; y < SIZE; y++) if (ids[y * SIZE + x] !== null) col.push(ids[y * SIZE + x])
-      while (col.length < SIZE) col.unshift(IMG_POOL[Math.floor(Math.random() * 6)])
-      for (let y = 0; y < SIZE; y++) ids[y * SIZE + x] = col[y]
-    }
-    matched = matchesIn(ids)
-  }
-  return Math.round(total)
+function scoreOf(matched, chain) {
+  return Math.round(matched.length * 15 * Math.pow(1.5, chain - 1))
 }
-function tap(i) {
-  if (over.value || busy) return
+async function tap(i) {
+  if (over.value || busy || !tiles.value.length) return
   const x = i % SIZE
   const y = Math.floor(i / SIZE)
-  if (selected.value == null) { selected.value = i; return }
-  const sel = selected.value
-  const sx = sel % SIZE
-  const sy = Math.floor(sel / SIZE)
-  if (Math.abs(sx - x) + Math.abs(sy - y) !== 1) { selected.value = i; return }
-  selected.value = null
+  const t0 = tiles.value.find((t) => t.row === y && t.col === x && !t.pop)
+  if (!t0) return
+  if (selectedKey.value == null) { selectedKey.value = t0.key; return }
+  if (selectedKey.value === t0.key) { selectedKey.value = null; return }
+  const a = tileAt(selectedKey.value)
+  const sx = a.col
+  const sy = a.row
+  if (Math.abs(sx - x) + Math.abs(sy - y) !== 1) { selectedKey.value = t0.key; return }
+  selectedKey.value = null
   busy = true
-  const ids = [...board.value]
-  ;[ids[sel], ids[i]] = [ids[i], ids[sel]]
-  const gained = resolveBoard(ids, 0)
+  const b = t0
+  if (!a || !b) { busy = false; return }
+  // 交换（过渡动画）
+  const [ar, ac, br, bc] = [a.row, a.col, b.row, b.col]
+  a.row = br; a.col = bc; b.row = ar; b.col = ac
+  await sleep(180)
+  let gained = 0
+  let chain = 0
+  let matched = findMatchTiles()
+  while (matched.length >= 3) {
+    chain++
+    gained += scoreOf(matched, chain)
+    for (const t of matched) t.pop = true // 消除弹出动画
+    await sleep(240)
+    for (const t of matched) {
+      const idx = tiles.value.indexOf(t)
+      if (idx >= 0) tiles.value.splice(idx, 1)
+    }
+    await cascadeDrop()
+    await sleep(160)
+    matched = findMatchTiles()
+  }
   if (gained > 0) {
-    board.value = [...ids]
     score.value += gained
     if (MODES[mode.value].steps) stepsLeft.value--
-    busy = false
     if (score.value >= MODES[mode.value].goal && !won.value) endNow(true)
-    else if (MODES[mode.value].steps && stepsLeft.value <= 0 && !won.value) endNow(score.value >= MODES[mode.value].goal)
+    else if (MODES[mode.value].steps && stepsLeft.value <= 0) endNow(score.value >= MODES[mode.value].goal)
   } else {
-    ;[ids[sel], ids[i]] = [ids[i], ids[sel]]
+    // 无匹配换回
+    a.row = ar; a.col = ac; b.row = br; b.col = bc
+    await sleep(180)
     if (MODES[mode.value].steps) stepsLeft.value--
-    busy = false
-    if (stepsLeft.value <= 0 && MODES[mode.value].steps && !won.value) endNow(score.value >= MODES[mode.value].goal)
+    if (MODES[mode.value].steps && stepsLeft.value <= 0) endNow(score.value >= MODES[mode.value].goal)
+  }
+  busy = false
+}
+async function cascadeDrop() {
+  // 每列下落：旧块底部对齐，空缺从上方滑入新块
+  const news = []
+  for (let c = 0; c < SIZE; c++) {
+    const colTiles = tiles.value.filter((t) => t.col === c && !t.pop).sort((a, b) => a.row - b.row)
+    const keep = colTiles.length
+    for (let i = 0; i < keep; i++) colTiles[i].row = SIZE - keep + i
+    const need = SIZE - keep
+    for (let k = 0; k < need; k++) news.push({ key: nextKey++, row: -(need - k), col: c, img: randImg(), pop: false })
+  }
+  for (const n of news) tiles.value.push(n)
+  await sleep(20)
+  // 新块目标行 = 该列最上（按 row 计算：列内现有最高 row-1 递减）
+  for (const n of news) {
+    const higher = tiles.value.filter((t) => t.col === n.col && t !== n && t.row < 0).length
+    n.row = -(higher + 1)
+  }
+  // 重新精确分配新块 row（从该列当前已有 min row 向上）
+  const byCol = {}
+  for (const n of news) { if (!byCol[n.col]) byCol[n.col] = []; byCol[n.col].push(n) }
+  for (const [c, list] of Object.entries(byCol)) {
+    const existingMin = Math.min(...tiles.value.filter((t) => t.col === +c && !list.includes(t)).map((t) => t.row), 0)
+    list.sort((a, b) => a.row - b.row)
+    list.forEach((n, i) => { n.row = existingMin - list.length + i })
   }
 }
 function endNow(win) {
@@ -156,6 +216,15 @@ function endNow(win) {
     const gold = MODES[mode.value].gold
     player.gainGameCoins(gold)
     ui.pushLog(`🍬 消消乐达成 ${score.value} 分！+${gold} 游戏币`, 'gain')
+  }
+}
+function tileStyle(t) {
+  const cell = 100 / SIZE
+  return {
+    left: (t.col * cell) + '%',
+    top: (t.row * cell) + '%',
+    width: cell + '%',
+    height: cell + '%',
   }
 }
 reset()
@@ -174,12 +243,13 @@ reset()
 
     <div class="m3-board">
       <div
-        v-for="(id, i) in board"
-        :key="i"
-        class="m3-cell"
-        :class="{ sel: selected === i }"
+        v-for="(t, i) in tiles"
+        :key="t.key"
+        class="m3-tile"
+        :class="{ sel: t.key === selectedKey, pop: t.pop }"
+        :style="tileStyle(t)"
         @click="tap(i)"
-      ><img class="m3-img" :src="itemImage(id)" @error="$event.target.style.display = 'none'" alt="" /></div>
+      ><div class="m3-inner"><img class="m3-img" :src="itemImage(t.img)" @error="$event.target.style.display = 'none'" alt="" /></div></div>
     </div>
 
     <div class="m3-keys">
@@ -191,7 +261,7 @@ reset()
       <div class="m3-info-box">
         <div class="m3-info-head"><b>🍬 消消乐 · 十种模式说明</b><button class="m3-info-close" @click="showInfo = false">✕</button></div>
         <div class="m3-info-list">
-          <div class="m3-info-row m3-info-rule">通用规则：点击交换相邻两块 · 三连及以上消除（4/5 连倍数计分）· 连锁 +50% 加成 · 步数/时间耗尽未达标即失败</div>
+          <div class="m3-info-row m3-info-rule">通用规则：点击交换相邻两块 · 三连及以上消除（4/5 连加成）· 连锁 1.5 倍递增 · 步数/时间耗尽未达标即失败</div>
           <div v-for="(m, key) in MODES" :key="key" class="m3-info-row">
             <b class="m3-info-name">{{ m.label }}</b>
             <span class="m3-info-desc">{{ m.desc }}</span>
@@ -209,21 +279,38 @@ reset()
 .m3-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .m3-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .m3-board {
-  width: min(520px, 94%);
-  display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px;
-  padding: 12px; border-radius: 18px;
+  position: relative;
+  width: min(520px, 94%); aspect-ratio: 1;
+  border-radius: 18px;
   background: rgba(150, 110, 70, 0.16);
   border: 1px solid rgba(150, 110, 70, 0.3);
   box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
+  overflow: hidden;
 }
-.m3-cell {
-  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-  padding: 4px; border-radius: 9px; cursor: pointer; user-select: none;
-  background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
+.m3-tile {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 3px;
+  transition: left 0.16s ease, top 0.16s ease, opacity 0.2s ease;
 }
+.m3-tile.pop { animation: m3pop 0.22s ease forwards; }
+@keyframes m3pop {
+  0% { transform: scale(1); opacity: 1; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+.m3-inner {
+  width: 100%; height: 100%;
+  background: rgba(255, 251, 244, 0.92);
+  border: 1px solid rgba(150, 110, 70, 0.25);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px;
+  cursor: pointer;
+}
+.m3-tile.sel .m3-inner { border-color: var(--gold); box-shadow: 0 0 10px rgba(168, 120, 11, 0.5); }
+.m3-tile:hover .m3-inner { border-color: var(--primary-strong); }
 .m3-img { width: 100%; height: 100%; object-fit: contain; }
-.m3-cell.sel { border-color: var(--gold); box-shadow: 0 0 10px rgba(168, 120, 11, 0.5); }
-.m3-cell:hover { transform: scale(1.06); }
 .m3-keys { display: flex; gap: 10px; justify-content: center; }
 .m3-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .m3-done { font-weight: 800; color: var(--bad-strong); }
@@ -235,6 +322,6 @@ reset()
 .m3-info-list { display: flex; flex-direction: column; gap: 8px; }
 .m3-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
 .m3-info-rule { border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; }
-.m3-info-name { flex: 0 0 128px; color: var(--primary-strong); }
+.m3-info-name { flex: 0 0 96px; color: var(--primary-strong); }
 .m3-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
 </style>

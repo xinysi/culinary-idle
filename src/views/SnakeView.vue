@@ -1,6 +1,6 @@
 <script setup>
 // 贪吃蛇（2026-09-08 新增）：Canvas 网格 · 十模式（速度 × 边界/障碍）× 每食物结算
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 
@@ -127,6 +127,7 @@ function draw() {
     ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2)
   })
 }
+onMounted(() => draw())
 reset()
 </script>
 

@@ -1,6 +1,6 @@
 <script setup>
 // 吃豆人（2026-09-08 新增）：Canvas 迷宫 · 十模式（幽灵数 0~3 × 速度）× 通关奖励
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 
@@ -33,14 +33,14 @@ const mode = ref('g1s')
 const METAS = {
   g0: { label: '无鬼练习', ghosts: 0, mul: 1.0, gold: 50, desc: '0 幽灵 · 标准速度 · 通关 +50 币 —— 先记路' },
   g1s: { label: '一鬼·慢', ghosts: 1, mul: 1.0, gold: 70, desc: '1 幽灵 · 标准速 · 通关 +70 币' },
-  g1m: { label: '一鬼·标准', ghosts: 1, mul: 0.75, gold: 100, desc: '1 幽灵 · 快 25% · 通关 +100 币' },
-  g1f: { label: '一鬼·快', ghosts: 1, mul: 0.55, gold: 150, desc: '1 幽灵 · 快 45% · 通关 +150 币' },
+  g1m: { label: '一鬼·标准', ghosts: 1, mul: 0.85, gold: 100, desc: '1 幽灵 · 快 15% · 通关 +100 币' },
+  g1f: { label: '一鬼·快', ghosts: 1, mul: 0.7, gold: 150, desc: '1 幽灵 · 快 30% · 通关 +150 币' },
   g2s: { label: '双鬼·慢', ghosts: 2, mul: 1.0, gold: 120, desc: '2 幽灵 · 标准速 · 通关 +120 币' },
-  g2m: { label: '双鬼·标准', ghosts: 2, mul: 0.75, gold: 170, desc: '2 幽灵 · 快 25% · 通关 +170 币' },
-  g2f: { label: '双鬼·快', ghosts: 2, mul: 0.55, gold: 250, desc: '2 幽灵 · 快 45% · 通关 +250 币' },
+  g2m: { label: '双鬼·标准', ghosts: 2, mul: 0.85, gold: 170, desc: '2 幽灵 · 快 15% · 通关 +170 币' },
+  g2f: { label: '双鬼·快', ghosts: 2, mul: 0.7, gold: 250, desc: '2 幽灵 · 快 30% · 通关 +250 币' },
   g3s: { label: '三鬼·慢', ghosts: 3, mul: 1.0, gold: 200, desc: '3 幽灵 · 标准速 · 通关 +200 币' },
-  g3m: { label: '三鬼·标准', ghosts: 3, mul: 0.75, gold: 280, desc: '3 幽灵 · 快 25% · 通关 +280 币' },
-  g3f: { label: '三鬼·快', ghosts: 3, mul: 0.55, gold: 400, desc: '3 幽灵 · 快 45% · 通关 +400 币 —— 极限躲藏' },
+  g3m: { label: '三鬼·标准', ghosts: 3, mul: 0.85, gold: 280, desc: '3 幽灵 · 快 15% · 通关 +280 币' },
+  g3f: { label: '三鬼·快', ghosts: 3, mul: 0.7, gold: 400, desc: '3 幽灵 · 快 30% · 通关 +400 币 —— 极限躲藏' },
 }
 const showInfo = ref(false)
 
@@ -53,13 +53,21 @@ const dots = ref([])
 let scaredUntil = 0
 const over = ref(false)
 const running = ref(false)
-let pTimer = null
-let gTimer = null
+let rafId = null
+let lastP = 0
+let lastG = 0
+let px = 1 // 渲染插值坐标（平滑移动）
+let py = 1
+let gx = []
+let gy = []
 let eaten = 0
 
+function stopLoop() {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = null
+}
 function reset() {
-  if (pTimer) clearInterval(pTimer)
-  if (gTimer) clearInterval(gTimer)
+  stopLoop()
   playerPos = [1, 1]
   playerDir = [1, 0]
   nextDir = [1, 0]
@@ -67,6 +75,10 @@ function reset() {
   eaten = 0
   ghosts = []
   for (let i = 0; i < METAS[mode.value].ghosts; i++) ghosts.push({ x: 7, y: 6 + i, dir: i % 2 ? [-1, 0] : [1, 0] })
+  gx = ghosts.map((g) => g.x)
+  gy = ghosts.map((g) => g.y)
+  px = playerPos[0]
+  py = playerPos[1]
   scaredUntil = 0
   over.value = false
   running.value = false
@@ -75,9 +87,24 @@ function reset() {
 function start() {
   if (running.value || over.value) return
   running.value = true
+  px = playerPos[0]
+  py = playerPos[1]
+  gx = ghosts.map((g) => g.x)
+  gy = ghosts.map((g) => g.y)
+  lastP = performance.now()
+  lastG = lastP
+  rafId = requestAnimationFrame(loop)
+}
+function loop(ts) {
   const m = METAS[mode.value]
-  pTimer = setInterval(step, Math.round(150 * m.mul))
-  gTimer = setInterval(stepGhosts, Math.round(190 * m.mul))
+  // 基准 210ms/格（快档 0.7 → 147ms/格，匀速不跳变）
+  if (ts - lastP >= 210 * m.mul) { lastP = ts; step() }
+  if (ts - lastG >= 240 * m.mul) { lastG = ts; stepGhosts() }
+  px += (playerPos[0] - px) * 0.18
+  py += (playerPos[1] - py) * 0.18
+  ghosts.forEach((g, i) => { gx[i] += (g.x - gx[i]) * 0.14; gy[i] += (g.y - gy[i]) * 0.14 })
+  draw()
+  if (running.value && !over.value) rafId = requestAnimationFrame(loop)
 }
 function step() {
   if (over.value) return
@@ -91,7 +118,6 @@ function step() {
   }
   eatNow()
   checkGhost()
-  draw()
 }
 function eatNow() {
   const idx = dots.value.findIndex(([x, y]) => x === playerPos[0] && y === playerPos[1])
@@ -139,8 +165,8 @@ function checkGhost() {
 function win() {
   over.value = true
   running.value = false
-  if (pTimer) clearInterval(pTimer)
-  if (gTimer) clearInterval(gTimer)
+  stopLoop()
+
   const gold = METAS[mode.value].gold
   player.gainGameCoins(gold)
   ui.pushLog(`👻 吃豆人通关！+${gold} 游戏币`, 'gain')
@@ -148,8 +174,8 @@ function win() {
 function lose() {
   over.value = true
   running.value = false
-  if (pTimer) clearInterval(pTimer)
-  if (gTimer) clearInterval(gTimer)
+  stopLoop()
+
 }
 const keyMap = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
 function onKey(e) {
@@ -159,7 +185,7 @@ function onKey(e) {
   nextDir = d
 }
 window.addEventListener('keydown', onKey)
-onUnmounted(() => { window.removeEventListener('keydown', onKey); if (pTimer) clearInterval(pTimer); if (gTimer) clearInterval(gTimer) })
+onUnmounted(() => { window.removeEventListener('keydown', onKey) })
 
 function draw() {
   const cv = canvas.value
@@ -180,23 +206,26 @@ function draw() {
       ctx.fill()
     }
   }
-  // 幽灵
+  // 幽灵（插值坐标平滑移动）
   const scared = Date.now() < scaredUntil
-  for (const g of ghosts) {
+  for (let i = 0; i < ghosts.length; i++) {
+    const gx2 = gx[i]
+    const gy2 = gy[i]
+    if (gx2 === undefined || gy2 === undefined) continue
     ctx.fillStyle = scared ? '#3f6fb2' : '#d95a6b'
     ctx.beginPath()
-    ctx.arc(g.x * s + s / 2, g.y * s + s / 2 + 1, s / 2 - 4, Math.PI, 0)
-    ctx.lineTo(g.x * s + s - 4, g.y * s + s - 5)
-    ctx.lineTo(g.x * s + s / 2 + 4, g.y * s + s - 9)
-    ctx.lineTo(g.x * s + s / 2, g.y * s + s - 5)
-    ctx.lineTo(g.x * s + 4, g.y * s + s - 9)
-    ctx.lineTo(g.x * s + 4, g.y * s + s - 5)
+    ctx.arc(gx2 * s + s / 2, gy2 * s + s / 2 + 1, s / 2 - 4, Math.PI, 0)
+    ctx.lineTo(gx2 * s + s - 4, gy2 * s + s - 5)
+    ctx.lineTo(gx2 * s + s / 2 + 4, gy2 * s + s - 9)
+    ctx.lineTo(gx2 * s + s / 2, gy2 * s + s - 5)
+    ctx.lineTo(gx2 * s + 4, gy2 * s + s - 9)
+    ctx.lineTo(gx2 * s + 4, gy2 * s + s - 5)
     ctx.fill()
   }
-  // 吃豆人
+  // 吃豆人（插值坐标）
   ctx.fillStyle = '#f4c542'
-  const pcx = playerPos[0] * s + s / 2
-  const pcy = playerPos[1] * s + s / 2
+  const pcx = px * s + s / 2
+  const pcy = py * s + s / 2
   const ang = Math.atan2(playerDir[1], playerDir[0])
   ctx.beginPath()
   ctx.moveTo(pcx, pcy)
@@ -204,6 +233,7 @@ function draw() {
   ctx.closePath()
   ctx.fill()
 }
+onMounted(() => draw())
 reset()
 </script>
 
