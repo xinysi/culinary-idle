@@ -12,7 +12,7 @@ const QPOOL = [
   { q: '烤土豆（T1）的对决回血是多少？', ask: () => getItem('roastPotato')?.heal ?? 14, opts: [6, 14, 20, 30] },
   { q: '「铜刀」需要什么等级？', ask: () => getItem('copperKnife')?.tier ?? 1, opts: [1, 5, 10, 20] },
   { q: '「灵果」的采集等级是？', ask: () => getItem('spiritFruit')?.tier ?? 90, opts: [60, 70, 80, 90] },
-  { q: '小麦种子在杂货铺卖多少金币？（种子售价=value×0.5）', ask: () => Math.round((getItem('wheat')?.value ?? 10) * 0.5), opts: [5, 10, 20, 30] },
+  { q: '小麦种子在杂货铺卖多少游戏币？（种子售价=value×0.5）', ask: () => Math.round((getItem('wheat')?.value ?? 10) * 0.5), opts: [5, 10, 20, 30] },
   { q: '「米酒」的档位 T 是多少？', ask: () => getItem('riceWine')?.tier ?? 20, opts: [3, 10, 20, 40] },
   { q: '品鉴力达到多少可以解锁「无尽挑战塔」？', ask: () => 99, opts: [50, 75, 90, 99] },
   { q: '对决中「刀工」克制「？」', ask: () => '摆盘', opts: ['摆盘', '调味', '刀工', '品鉴'] },
@@ -44,16 +44,16 @@ const SKILLS_ALL = ['采摘', '垂钓', '狩猎', '挖掘', '农耕', '烹饪', 
 
 const mode = ref('all12')
 const MODES = {
-  k6: { label: '知识·入门', spec: { k: 6, c: 0, l: 0 }, pass: 5, gold: 50, desc: '6 知识题 · 答对 ≥5 得徽章 +50 金' },
-  k10: { label: '知识·标准', spec: { k: 10, c: 0, l: 0 }, pass: 8, gold: 90, desc: '10 知识题 · ≥8 得徽章 +90 金' },
-  k14: { label: '知识·大师', spec: { k: 14, c: 0, l: 0 }, pass: 12, gold: 150, desc: '14 知识题（全库）· ≥12 得徽章 +150 金' },
-  c3: { label: '对比·试炼', spec: { k: 0, c: 3, l: 0 }, pass: 3, gold: 40, desc: '3 对比题 · 全对 +40 金' },
-  c6: { label: '对比·挑战', spec: { k: 0, c: 6, l: 0 }, pass: 5, gold: 80, desc: '6 对比题 · ≥5 +80 金' },
-  l3: { label: '连线·试炼', spec: { k: 0, c: 0, l: 3 }, pass: 3, gold: 40, desc: '3 连线题 · 全对 +40 金' },
-  l6: { label: '连线·挑战', spec: { k: 0, c: 0, l: 6 }, pass: 5, gold: 80, desc: '6 连线题 · ≥5 +80 金' },
-  all12: { label: '综合·标准', spec: { k: 4, c: 4, l: 4 }, pass: 10, gold: 100, desc: '4 知识+4 对比+4 连线 =12 题 · ≥10 得徽章 +100 金' },
-  all15: { label: '综合·进阶', spec: { k: 5, c: 5, l: 5 }, pass: 13, gold: 160, desc: '5+5+5 =15 题 · ≥13 得徽章 +160 金' },
-  all18: { label: '综合·大师', spec: { k: 6, c: 6, l: 6 }, pass: 16, gold: 240, desc: '6+6+6 =18 题（对比/连线全库）· ≥16 得徽章 +240 金' },
+  k6: { label: '知识·入门', spec: { k: 6, c: 0, l: 0 }, pass: 5, gold: 50, desc: '6 知识题 · 答对 ≥5 得徽章 +50 币' },
+  k10: { label: '知识·标准', spec: { k: 10, c: 0, l: 0 }, pass: 8, gold: 90, desc: '10 知识题 · ≥8 得徽章 +90 币' },
+  k14: { label: '知识·大师', spec: { k: 14, c: 0, l: 0 }, pass: 12, gold: 150, desc: '14 知识题（全库）· ≥12 得徽章 +150 币' },
+  c3: { label: '对比·试炼', spec: { k: 0, c: 3, l: 0 }, pass: 3, gold: 40, desc: '3 对比题 · 全对 +40 币' },
+  c6: { label: '对比·挑战', spec: { k: 0, c: 6, l: 0 }, pass: 5, gold: 80, desc: '6 对比题 · ≥5 +80 币' },
+  l3: { label: '连线·试炼', spec: { k: 0, c: 0, l: 3 }, pass: 3, gold: 40, desc: '3 连线题 · 全对 +40 币' },
+  l6: { label: '连线·挑战', spec: { k: 0, c: 0, l: 6 }, pass: 5, gold: 80, desc: '6 连线题 · ≥5 +80 币' },
+  all12: { label: '综合·标准', spec: { k: 4, c: 4, l: 4 }, pass: 10, gold: 100, desc: '4 知识+4 对比+4 连线 =12 题 · ≥10 得徽章 +100 币' },
+  all15: { label: '综合·进阶', spec: { k: 5, c: 5, l: 5 }, pass: 13, gold: 160, desc: '5+5+5 =15 题 · ≥13 得徽章 +160 币' },
+  all18: { label: '综合·大师', spec: { k: 6, c: 6, l: 6 }, pass: 16, gold: 240, desc: '6+6+6 =18 题（对比/连线全库）· ≥16 得徽章 +240 币' },
 }
 const showInfo = ref(false)
 
@@ -121,8 +121,8 @@ function settle() {
   const mg2 = mg.value
   if (right >= m.pass) {
     mg2.badges = (mg2.badges ?? 0) + 1
-    player.gainGold(m.gold)
-    ui.pushLog(`📚 美食讲堂：${m.label} 答对 ${right}/${totalQ.value}！徽章 +1（共 ${mg2.badges} 枚）+${m.gold} 金币`, 'gain')
+    player.gainGameCoins(m.gold)
+    ui.pushLog(`📚 美食讲堂：${m.label} 答对 ${right}/${totalQ.value}！徽章 +1（共 ${mg2.badges} 枚）+${m.gold} 游戏币`, 'gain')
   }
   mg2.week = weekKey()
 }
@@ -135,15 +135,15 @@ function weekKey() {
 }
 const mg = computed(() => player.minigames.trivia)
 const EXCHANGES = [
-  { id: 'gold600', label: '💰 金币 600', cost: 1 },
-  { id: 'gold1500', label: '💰 金币 1500', cost: 2 },
-  { id: 'gold3000', label: '💰 金币 3000', cost: 3 },
+  { id: 'gold600', label: '游戏币 600', cost: 1 },
+  { id: 'gold1500', label: '游戏币 1500', cost: 2 },
+  { id: 'gold3000', label: '游戏币 3000', cost: 3 },
 ]
 function exchange(item) {
   const m = mg.value
   if ((m.badges ?? 0) < item.cost) return
   m.badges -= item.cost
-  player.gainGold(item.id === 'gold600' ? 600 : item.id === 'gold1500' ? 1500 : 3000)
+  player.gainGameCoins(item.id === 'gold600' ? 600 : item.id === 'gold1500' ? 1500 : 3000)
   ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
 }
 function switchMode(k) {
@@ -196,7 +196,7 @@ resetRound()
     <div class="tv-exchange">
       <span class="tv-exchange-title">🏅 徽章兑换</span>
       <button v-for="it in EXCHANGES" :key="it.id" class="tv-ex" :disabled="(mg.badges ?? 0) < it.cost" @click="exchange(it)">
-        {{ it.label }}<span class="tv-ex-cost">{{ it.cost }} 徽章</span>
+        <img class="coin-ico" src="/images/icon-coin.png" alt="">{{ it.label }}<span class="tv-ex-cost">{{ it.cost }} 徽章</span>
       </button>
     </div>
 
@@ -204,7 +204,7 @@ resetRound()
       <div class="tv-info-box">
         <div class="tv-info-head"><b>📚 美食讲堂 · 十种模式说明</b><button class="tv-info-close" @click="showInfo = false">✕</button></div>
         <div class="tv-info-list">
-          <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得徽章+金币（可与兑换行换金币）· 徽章与本周记录按周重置</div>
+          <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得徽章+游戏币（可与兑换行换游戏币）· 徽章与本周记录按周重置</div>
           <div v-for="(m, key) in MODES" :key="key" class="tv-info-row">
             <b class="tv-info-name">{{ m.label }}</b>
             <span class="tv-info-desc">{{ m.desc }}</span>

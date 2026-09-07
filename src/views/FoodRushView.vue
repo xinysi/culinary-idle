@@ -18,16 +18,16 @@ const raging = ref(false)
 let rageUntil = 0
 const mode = ref('classic')
 const MODES = {
-  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 30 }, { need: 90, gold: 50 }, { need: 130, gold: 70 }], desc: '15 秒 · 50/90/130 碗 → 30/50/70 金 —— 零碎时间的小挑战' },
-  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 40 }, { need: 140, gold: 70 }, { need: 200, gold: 110 }], desc: '30 秒 · 80/140/200 碗 → 40/70/110 金 —— 手速爆发' },
-  midnight: { label: '宵夜 45s', dur: 45, tiers: [{ need: 100, gold: 35 }, { need: 180, gold: 60 }, { need: 260, gold: 95 }], desc: '45 秒 · 100/180/260 碗 → 35/60/95 金' },
-  classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40 }, { need: 200, gold: 60 }, { need: 300, gold: 100 }], desc: '60 秒 · 120/200/300 碗 → 40/60/100 金 —— 标准体验' },
-  greedy: { label: '贪吃 75s', dur: 75, tiers: [{ need: 140, gold: 45 }, { need: 240, gold: 80 }, { need: 340, gold: 120 }], desc: '75 秒 · 140/240/340 碗 → 45/80/120 金' },
-  feast: { label: '盛宴 90s', dur: 90, tiers: [{ need: 160, gold: 50 }, { need: 280, gold: 90 }, { need: 400, gold: 140 }], desc: '90 秒 · 160/280/400 碗 → 50/90/140 金' },
-  marathon: { label: '马拉松 120s', dur: 120, tiers: [{ need: 200, gold: 70 }, { need: 350, gold: 110 }, { need: 500, gold: 160 }], desc: '120 秒 · 200/350/500 碗 → 70/110/160 金 —— 持久战' },
-  epic: { label: '史诗 180s', dur: 180, tiers: [{ need: 300, gold: 100 }, { need: 500, gold: 160 }, { need: 700, gold: 220 }], desc: '180 秒 · 300/500/700 碗 → 100/160/220 金' },
-  god: { label: '神胃 240s', dur: 240, tiers: [{ need: 380, gold: 130 }, { need: 620, gold: 200 }, { need: 860, gold: 270 }], desc: '240 秒 · 380/620/860 碗 → 130/200/270 金 —— 超长耐力' },
-  immortal: { label: '无限 300s', dur: 300, tiers: [{ need: 450, gold: 150 }, { need: 700, gold: 220 }, { need: 950, gold: 300 }], desc: '300 秒 · 450/700/950 碗 → 150/220/300 金 —— 终极盛宴' },
+  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 30 }, { need: 90, gold: 50 }, { need: 130, gold: 70 }], desc: '15 秒 · 50/90/130 碗 → 30/50/70 币 —— 零碎时间的小挑战' },
+  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 40 }, { need: 140, gold: 70 }, { need: 200, gold: 110 }], desc: '30 秒 · 80/140/200 碗 → 40/70/110 币 —— 手速爆发' },
+  midnight: { label: '宵夜 45s', dur: 45, tiers: [{ need: 100, gold: 35 }, { need: 180, gold: 60 }, { need: 260, gold: 95 }], desc: '45 秒 · 100/180/260 碗 → 35/60/95 币' },
+  classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40 }, { need: 200, gold: 60 }, { need: 300, gold: 100 }], desc: '60 秒 · 120/200/300 碗 → 40/60/100 币 —— 标准体验' },
+  greedy: { label: '贪吃 75s', dur: 75, tiers: [{ need: 140, gold: 45 }, { need: 240, gold: 80 }, { need: 340, gold: 120 }], desc: '75 秒 · 140/240/340 碗 → 45/80/120 币' },
+  feast: { label: '盛宴 90s', dur: 90, tiers: [{ need: 160, gold: 50 }, { need: 280, gold: 90 }, { need: 400, gold: 140 }], desc: '90 秒 · 160/280/400 碗 → 50/90/140 币' },
+  marathon: { label: '马拉松 120s', dur: 120, tiers: [{ need: 200, gold: 70 }, { need: 350, gold: 110 }, { need: 500, gold: 160 }], desc: '120 秒 · 200/350/500 碗 → 70/110/160 币 —— 持久战' },
+  epic: { label: '史诗 180s', dur: 180, tiers: [{ need: 300, gold: 100 }, { need: 500, gold: 160 }, { need: 700, gold: 220 }], desc: '180 秒 · 300/500/700 碗 → 100/160/220 币' },
+  god: { label: '神胃 240s', dur: 240, tiers: [{ need: 380, gold: 130 }, { need: 620, gold: 200 }, { need: 860, gold: 270 }], desc: '240 秒 · 380/620/860 碗 → 130/200/270 币 —— 超长耐力' },
+  immortal: { label: '无限 300s', dur: 300, tiers: [{ need: 450, gold: 150 }, { need: 700, gold: 220 }, { need: 950, gold: 300 }], desc: '300 秒 · 450/700/950 碗 → 150/220/300 币 —— 终极盛宴' },
 }
 const showInfo = ref(false)
 const TIERS = computed(() => MODES[mode.value].tiers)
@@ -79,8 +79,8 @@ function finish() {
   if (bestReached) {
     // 每局均可结算（2026-09-07 取消每日一次限制）；rewarded 为全周期累计（无上限）
     mg.rewarded = (mg.rewarded ?? 0) + bestReached.gold
-    player.gainGold(bestReached.gold)
-    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${bestReached.gold} 金币（累计 ${mg.rewarded}）`, 'gain')
+    player.gainGameCoins(bestReached.gold)
+    ui.pushLog(`🍖 大胃王挑战：${bowls.value} 碗 → +${bestReached.gold} 游戏币（累计 ${mg.rewarded}）`, 'gain')
   }
 }
 const mg = computed(() => player.minigames?.foodrush ?? {})
@@ -91,7 +91,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   <div class="fs-page">
     <div class="fs-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
-      <span class="fs-chip" style="margin-left: auto">💰 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 金</span>
+      <span class="fs-chip" style="margin-left: auto"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 游戏币</span>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
       <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
@@ -120,7 +120,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
       <div class="fs-info-box">
         <div class="fs-info-head"><b>🍖 大胃王 · 十种模式说明</b><button class="fs-info-close" @click="showInfo = false">✕</button></div>
         <div class="fs-info-list">
-          <div class="fs-info-row fs-info-rule">通用规则：快速连点 10 下触发「暴食」×2（持续 3 秒）· 每局结算达标最高档金币</div>
+          <div class="fs-info-row fs-info-rule">通用规则：快速连点 10 下触发「暴食」×2（持续 3 秒）· 每局结算达标最高档游戏币</div>
           <div v-for="(m, key) in MODES" :key="key" class="fs-info-row">
             <b class="fs-info-name">{{ m.label }}</b>
             <span class="fs-info-desc">{{ m.desc }}</span>

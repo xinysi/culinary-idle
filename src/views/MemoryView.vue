@@ -12,16 +12,16 @@ const ui = useUiStore()
 
 const mode = ref('m2')
 const MODES = {
-  m2: { label: '2×2 新手', size: 2, pairs: 2, gold: 30, kind: 'normal', desc: '2×2 · 2 对 · +30 金 —— 热身' },
-  m4: { label: '4×4 轻松', size: 4, pairs: 8, gold: 100, kind: 'normal', desc: '4×4 · 8 对 · +100 金' },
-  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 150, kind: 'time', time: 75, desc: '4×4 · 8 对 · 限 75 秒 · +150 金 —— 超时失败' },
-  s4: { label: '4×4 限翻', size: 4, pairs: 8, gold: 200, kind: 'steps', maxFlips: 24, desc: '4×4 · 8 对 · 限 24 次翻牌 · +200 金 —— 超翻失败' },
-  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 240, kind: 'normal', desc: '6×6 · 18 对 · +240 金' },
-  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 320, kind: 'time', time: 120, desc: '6×6 · 18 对 · 限 120 秒 · +320 金 —— 超时失败' },
-  s6: { label: '6×6 限翻', size: 6, pairs: 18, gold: 420, kind: 'steps', maxFlips: 48, desc: '6×6 · 18 对 · 限 48 次翻牌 · +420 金 —— 超翻失败' },
-  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 500, kind: 'normal', desc: '8×8 · 32 对 · +500 金' },
-  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 650, kind: 'time', time: 150, desc: '8×8 · 32 对 · 限 150 秒 · +650 金 —— 超时失败' },
-  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 900, kind: 'normal', desc: '10×10 · 50 对 · +900 金 —— 终极记忆' },
+  m2: { label: '2×2 新手', size: 2, pairs: 2, gold: 30, kind: 'normal', desc: '2×2 · 2 对 · +30 币 —— 热身' },
+  m4: { label: '4×4 轻松', size: 4, pairs: 8, gold: 100, kind: 'normal', desc: '4×4 · 8 对 · +100 币' },
+  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 150, kind: 'time', time: 75, desc: '4×4 · 8 对 · 限 75 秒 · +150 币 —— 超时失败' },
+  s4: { label: '4×4 限翻', size: 4, pairs: 8, gold: 200, kind: 'steps', maxFlips: 24, desc: '4×4 · 8 对 · 限 24 次翻牌 · +200 币 —— 超翻失败' },
+  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 240, kind: 'normal', desc: '6×6 · 18 对 · +240 币' },
+  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 320, kind: 'time', time: 120, desc: '6×6 · 18 对 · 限 120 秒 · +320 币 —— 超时失败' },
+  s6: { label: '6×6 限翻', size: 6, pairs: 18, gold: 420, kind: 'steps', maxFlips: 48, desc: '6×6 · 18 对 · 限 48 次翻牌 · +420 币 —— 超翻失败' },
+  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 500, kind: 'normal', desc: '8×8 · 32 对 · +500 币' },
+  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 650, kind: 'time', time: 150, desc: '8×8 · 32 对 · 限 150 秒 · +650 币 —— 超时失败' },
+  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 900, kind: 'normal', desc: '10×10 · 50 对 · +900 币 —— 终极记忆' },
 }
 const showInfo = ref(false)
 
@@ -98,8 +98,8 @@ function settle() {
   m.memory.done = (m.memory.done ?? 0) + 1
   m.memory.rewarded = (m.memory.rewarded ?? 0) + MODES[mode.value].gold
   m.memory.best = m.memory.best ? Math.min(m.memory.best, flips.value) : flips.value
-  player.gainGold(MODES[mode.value].gold)
-  ui.pushLog(`🧠 食材翻牌完成！${flips.value} 次翻牌 +${MODES[mode.value].gold} 金币`, 'gain')
+  player.gainGameCoins(MODES[mode.value].gold)
+  ui.pushLog(`🧠 食材翻牌完成！${flips.value} 次翻牌 +${MODES[mode.value].gold} 游戏币`, 'gain')
 }
 function switchMode(k) {
   mode.value = k
@@ -137,14 +137,14 @@ resetDay()
     <div class="mm-keys">
       <button class="mm-reset" @click="resetDay()">重新洗牌</button>
     </div>
-    <div v-if="done" class="mm-done">🧠 全部配对！+{{ MODES[mode].gold }} 金币</div>
+    <div v-if="done" class="mm-done">🧠 全部配对！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-if="failed" class="mm-done mm-fail">💦 超限未清！重新洗牌再来</div>
 
     <div v-if="showInfo" class="mm-info-mask" @click.self="showInfo = false">
       <div class="mm-info-box">
         <div class="mm-info-head"><b>🧠 食材翻牌 · 十种模式说明</b><button class="mm-info-close" @click="showInfo = false">✕</button></div>
         <div class="mm-info-list">
-          <div class="mm-info-row mm-info-rule">通用规则：牌面朝下 ❓，翻开两张相同即消除、不同抖动盖回（记牌考验记忆力）· 全部配对得金币 · 最佳 = 最少翻牌次数 · 限时/限翻模式超限即失败</div>
+          <div class="mm-info-row mm-info-rule">通用规则：牌面朝下 ❓，翻开两张相同即消除、不同抖动盖回（记牌考验记忆力）· 全部配对得游戏币 · 最佳 = 最少翻牌次数 · 限时/限翻模式超限即失败</div>
           <div v-for="(m, key) in MODES" :key="key" class="mm-info-row">
             <b class="mm-info-name">{{ m.label }}</b>
             <span class="mm-info-desc">{{ m.desc }}</span>
