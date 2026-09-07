@@ -69,13 +69,13 @@ const PRODUCTS = {
   },
   goldDeluxe: {
     cat: '💰 经济互通',
-    icon: '💰', name: '豪华金币兑换包', price: 900, repeat: true,
+    icon: '💰', name: '豪华金币兑换包', price: 880, repeat: true,
     desc: '900 游戏币 → 金币 ×10000',
     apply() { player.gainGold(10000); return '金币 +10000' },
   },
   goldPremium: {
     cat: '💰 经济互通',
-    icon: '💰', name: '至臻金币兑换包', price: 9000, repeat: true,
+    icon: '💰', name: '至臻金币兑换包', price: 8500, repeat: true,
     desc: '9000 游戏币 → 金币 ×100000',
     apply() { player.gainGold(100000); return '金币 +100000' },
   },
@@ -93,7 +93,7 @@ const PRODUCTS = {
   },
   rareBoxPremium: {
     cat: '💰 经济互通',
-    icon: '🎁', name: '至臻稀有食材盲盒', price: 10000, repeat: true,
+    icon: '🎁', name: '至臻稀有食材盲盒', price: 9000, repeat: true,
     desc: '随机稀有食材 100~300 份（灵果/龙根/松露/灵芝池）',
     apply() { return rareBoxApply(100, 300) },
   },
@@ -141,7 +141,7 @@ const PRODUCTS = {
   },
   seedBagPremium: {
     cat: '⚡ 增益加速',
-    icon: '🌱', name: '至臻神秘种子袋', price: 5000, repeat: true,
+    icon: '🌱', name: '至臻神秘种子袋', price: 4500, repeat: true,
     desc: '随机 300 颗可种作物种子（含稀有，开出即赚）',
     apply() { return seedBagApply(300) },
   },
@@ -159,7 +159,7 @@ const PRODUCTS = {
   },
   gachaTicket100: {
     cat: '🧰 便捷用品',
-    icon: '🎴', name: '觅珍抽卡券·百连', price: 18000, repeat: true,
+    icon: '🎴', name: '觅珍抽卡券·百连', price: 17000, repeat: true,
     desc: '觅珍抽卡券 ×100（九折，抽卡优先抵扣）',
     apply() { return ticketApply(100) },
   },
@@ -251,7 +251,8 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
 .gs-card-price { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--warn-strong); font-size: 13px; }
 .gs-card-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .gs-buy {
-  align-self: flex-start; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  margin-top: auto; /* 按钮置底：卡片内描述下方沉底对齐 */
+  width: 100%; padding: 8px 14px; border-radius: 999px; cursor: pointer;
   background: linear-gradient(135deg, #72b864, #589c4b); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
 }
 .gs-buy:disabled { opacity: 0.5; cursor: not-allowed; }

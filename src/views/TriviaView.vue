@@ -135,15 +135,15 @@ function weekKey() {
 }
 const mg = computed(() => player.minigames.trivia)
 const EXCHANGES = [
-  { id: 'gold600', label: '游戏币 600', cost: 1 },
-  { id: 'gold1500', label: '游戏币 1500', cost: 2 },
-  { id: 'gold3000', label: '游戏币 3000', cost: 3 },
+  { id: 'gold600', label: '游戏币 200', cost: 1 },
+  { id: 'gold1500', label: '游戏币 450', cost: 2 },
+  { id: 'gold3000', label: '游戏币 800', cost: 3 },
 ]
 function exchange(item) {
   const m = mg.value
   if ((m.badges ?? 0) < item.cost) return
   m.badges -= item.cost
-  player.gainGameCoins(item.id === 'gold600' ? 600 : item.id === 'gold1500' ? 1500 : 3000)
+  player.gainGameCoins(item.id === 'gold600' ? 200 : item.id === 'gold1500' ? 450 : 800)
   ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
 }
 function switchMode(k) {
