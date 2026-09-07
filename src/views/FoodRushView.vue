@@ -91,8 +91,8 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   <div class="fs-page">
     <div class="fs-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
-      <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
       <span class="fs-chip" style="margin-left: auto">💰 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 金</span>
+      <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
     </div>
 
     <div class="fs-bowl">
