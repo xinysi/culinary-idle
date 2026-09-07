@@ -10,17 +10,18 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  '4x4': { label: '4×4 标准', size: 4, four: 0.1, mult: 1 },
-  '3x3': { label: '3×3 极速', size: 3, four: 0.1, mult: 1 },
-  '5x5': { label: '5×5 挑战', size: 5, four: 0.1, mult: 2 },
-  f4: { label: '4+ 怪物局', size: 4, four: 0.55, mult: 1.5 },
-  easy: { label: '温和局', size: 4, four: 0.05, mult: 0.8 },
-  s6: { label: '6×6 漫游', size: 6, four: 0.1, mult: 0.6 },
-  s6f: { label: '6+ 巨人', size: 6, four: 0.55, mult: 2.5 },
-  f3: { label: '3+ 猛兽', size: 3, four: 0.55, mult: 3 },
-  w4: { label: '4+ 狂野', size: 4, four: 0.3, mult: 1.2 },
-  w5: { label: '5+ 狂野', size: 5, four: 0.3, mult: 1.8 },
+  '3x3': { label: '3×3 极速', size: 3, four: 0.1, mult: 1, desc: '9 格小盘 · 出4率 10% · 奖励×1 —— 空间极小，能合出 128 已是高手' },
+  f3: { label: '3+ 猛兽', size: 3, four: 0.55, mult: 3, desc: '9 格 · 出4率 55% · 奖励×3 —— 全部最难：高概率直出 4，无空间缓冲' },
+  easy: { label: '温和局', size: 4, four: 0.05, mult: 0.8, desc: '16 格 · 出4率 5% · 奖励×0.8 —— 新块几乎全是 2，最安逸' },
+  '4x4': { label: '4×4 标准', size: 4, four: 0.1, mult: 1, desc: '16 格 · 出4率 10% · 奖励×1 —— 经典 2048 数值' },
+  w4: { label: '4+ 狂野', size: 4, four: 0.3, mult: 1.2, desc: '16 格 · 出4率 30% · 奖励×1.2 —— 4 更常见，节奏更紧' },
+  f4: { label: '4+ 怪物局', size: 4, four: 0.55, mult: 1.5, desc: '16 格 · 出4率 55% · 奖励×1.5 —— 高难：半数新块是 4' },
+  '5x5': { label: '5×5 挑战', size: 5, four: 0.1, mult: 2, desc: '25 格 · 出4率 10% · 奖励×2 —— 空间充足，平稳合大块' },
+  w5: { label: '5+ 狂野', size: 5, four: 0.3, mult: 1.8, desc: '25 格 · 出4率 30% · 奖励×1.8 —— 大而凶' },
+  s6: { label: '6×6 漫游', size: 6, four: 0.1, mult: 0.6, desc: '36 格 · 出4率 10% · 奖励×0.6 —— 最大棋盘，合出 2048 几乎必成' },
+  s6f: { label: '6+ 巨人', size: 6, four: 0.55, mult: 2.5, desc: '36 格 · 出4率 55% · 奖励×2.5 —— 大空间高难度，四率 55%' },
 }
+const showInfo = ref(false)
 const mode = ref('4x4')
 const SIZE = computed(() => MODES[mode.value].size)
 const best = computed(() => {
@@ -195,6 +196,18 @@ reset()
 
 const rows = computed(() => tiles.value)
 const slots = computed(() => Array.from({ length: SIZE.value * SIZE.value }))
+// 槽格与瓦片共用同一套绝对定位公式（12 内边距 + CELL + GAP 步进），保证像素级对齐
+function slotStyle(i) {
+  const cell = CELL.value
+  const r = Math.floor(i / SIZE.value)
+  const c = i % SIZE.value
+  return {
+    width: cell + 'px',
+    height: cell + 'px',
+    left: 12 + c * (cell + GAP) + 'px',
+    top: 12 + r * (cell + GAP) + 'px',
+  }
+}
 function posStyle(t) {
   const cell = CELL.value
   return {
@@ -218,9 +231,7 @@ function posStyle(t) {
     </div>
 
     <div class="g2048-board2" :style="{ width: BOARD_PX + 'px', height: BOARD_PX + 'px' }">
-      <div class="g2048-slots" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
-        <div v-for="(x, i) in slots" :key="i" class="g2048-slot"></div>
-      </div>
+      <div v-for="(x, i) in slots" :key="i" class="g2048-slot" :style="slotStyle(i)"></div>
       <div
         v-for="t in tiles"
         :key="t.id"
@@ -237,9 +248,20 @@ function posStyle(t) {
       <button class="g2048-key" @click="move('down')">↓</button>
       <button class="g2048-key" @click="move('right')">→</button>
       <button class="g2048-reset" @click="reset()">重新开始</button>
+      <button class="g2048-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
-    <div class="g2048-tip">十种模式：尺寸 3×3/4×4/5×5/6×6 × 出4率 5%/10%/30%/55%；每档首次奖励（8→2金…4096→100金）×模式倍率（温和×0.8 · 标准/极速×1 · 狂野×1.2 · 怪物×1.5 · 狂野5+×1.8 · 挑战×2 · 巨人×2.5 · 猛兽×3 · 漫游×0.6）· 最佳分按模式独立记录</div>
+    <div v-if="showInfo" class="g2048-info-mask" @click.self="showInfo = false">
+      <div class="g2048-info-box">
+        <div class="g2048-info-head"><b>厨心 2048 · 十种模式说明</b><button class="g2048-info-close" @click="showInfo = false">✕</button></div>
+        <div class="g2048-info-list">
+          <div v-for="(m, id) in MODES" :key="id" class="g2048-info-row">
+            <b class="g2048-info-name">{{ m.label }}</b>
+            <span class="g2048-info-desc">{{ m.desc }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped>
@@ -256,13 +278,9 @@ function posStyle(t) {
   border-radius: 18px;
   box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18), inset 0 2px 10px rgba(93, 64, 55, 0.12);
 }
-.g2048-slots {
-  position: absolute; inset: 12px;
-  display: grid; gap: 8px; grid-auto-rows: 1fr; /* 槽格按容器高度均分（5×5 也成方形） */
-}
 .g2048-slot {
-  height: 0;
-  padding-top: 100%; /* 方形占位：宽度=列宽 → 高=宽（任意模式格子方正） */
+  position: absolute; /* 与瓦片共用绝对定位公式，像素级对齐（原 grid 布局有浮点/边框累计误差） */
+  box-sizing: border-box;
   border-radius: 10px;
   background: rgba(255, 251, 244, 0.55);
   border: 1px solid rgba(150, 110, 70, 0.25);
@@ -292,6 +310,14 @@ function posStyle(t) {
 .g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text); }
 .g2048-key:hover { border-color: var(--primary-strong); }
 .g2048-reset { padding: 0 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
+.g2048-info-btn { padding: 0 20px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #8fae7a, #67945c); border: none; }
+.g2048-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.g2048-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.g2048-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
+.g2048-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.g2048-info-list { display: flex; flex-direction: column; gap: 8px; }
+.g2048-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
+.g2048-info-name { flex: 0 0 96px; color: var(--primary-strong); }
+.g2048-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
 .g2048-over { font-weight: 800; color: var(--bad-strong); }
-.g2048-tip { color: var(--muted); font-size: 12px; text-align: center; }
 </style>
