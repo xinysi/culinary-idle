@@ -132,15 +132,16 @@ function findMatchTiles() {
 function scoreOf(matched, chain) {
   return Math.round(matched.length * 15 * Math.pow(1.5, chain - 1))
 }
-async function tap(i) {
+async function tap(t) {
   if (over.value || busy || !tiles.value.length) return
-  const x = i % SIZE
-  const y = Math.floor(i / SIZE)
-  const t0 = tiles.value.find((t) => t.row === y && t.col === x && !t.pop)
+  const x = t.col
+  const y = t.row
+  const t0 = t
   if (!t0) return
   if (selectedKey.value == null) { selectedKey.value = t0.key; return }
   if (selectedKey.value === t0.key) { selectedKey.value = null; return }
   const a = tileAt(selectedKey.value)
+  if (!a) { selectedKey.value = null; busy = false; return }
   const sx = a.col
   const sy = a.row
   if (Math.abs(sx - x) + Math.abs(sy - y) !== 1) { selectedKey.value = t0.key; return }
@@ -248,7 +249,7 @@ reset()
         class="m3-tile"
         :class="{ sel: t.key === selectedKey, pop: t.pop }"
         :style="tileStyle(t)"
-        @click="tap(i)"
+        @click="tap(t)"
       ><div class="m3-inner"><img class="m3-img" :src="itemImage(t.img)" @error="$event.target.style.display = 'none'" alt="" /></div></div>
     </div>
 
