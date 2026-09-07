@@ -12,6 +12,43 @@ const coins = computed(() => player.gameCoins ?? 0)
 const RARE_POOL = ['spiritFruit', 'dragonRoot', 'truffle', 'lingzhi'].filter((id) => !!getItem(id))
 const SEED_POOL = Object.values(ITEMS).filter((i) => i.type === 'seed').map((i) => i.id)
 
+/** 商店发货：优先入背包；背包满则直发仓库（仓库种类满才拒收），保证商品一定生效 */
+function grantShopItem(id, qty) {
+  if (player.gainItem(id, qty)) return true
+  if (!(id in player.bank) && player.bankSlotsUsed >= player.bankCap) return false
+  player.bank[id] = (player.bank[id] ?? 0) + qty
+  return true
+}
+function rareBoxApply(min, max) {
+  const n = min + Math.floor(Math.random() * (max - min + 1))
+  const counts = {}
+  for (let i = 0; i < n; i++) {
+    const id = RARE_POOL[Math.floor(Math.random() * RARE_POOL.length)]
+    counts[id] = (counts[id] ?? 0) + 1
+  }
+  let got = 0
+  for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
+  return got ? `稀有食材 ${got} 份（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+}
+function seedBagApply(count) {
+  // 先随机 3~8 种种子再分数量（种类集中不爆背包种类容量，确保整袋入库）
+  const kindN = 3 + Math.floor(Math.random() * 6)
+  const kinds = [...SEED_POOL].sort(() => Math.random() - 0.5).slice(0, Math.min(kindN, SEED_POOL.length))
+  const counts = {}
+  for (let i = 0; i < count; i++) {
+    const id = kinds[Math.floor(Math.random() * kinds.length)]
+    counts[id] = (counts[id] ?? 0) + 1
+  }
+  let got = 0
+  for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
+  return got ? `种子 ×${got}（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+}
+function ticketApply(qty) {
+  player.mijian = player.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+  player.mijian.tickets = (player.mijian.tickets ?? 0) + qty
+  return `抽卡券 +${qty}（觅珍页面显示 🎟️）`
+}
+
 const PRODUCTS = {
   gold: {
     cat: '💰 经济互通',
@@ -19,19 +56,35 @@ const PRODUCTS = {
     desc: '100 游戏币 → 金币 ×1000（主货币互通）',
     apply() { player.gainGold(1000); return '金币 +1000' },
   },
+  goldDeluxe: {
+    cat: '💰 经济互通',
+    icon: '💰', name: '豪华金币兑换包', price: 900, repeat: true,
+    desc: '900 游戏币 → 金币 ×10000',
+    apply() { player.gainGold(10000); return '金币 +10000' },
+  },
+  goldPremium: {
+    cat: '💰 经济互通',
+    icon: '💰', name: '至臻金币兑换包', price: 9000, repeat: true,
+    desc: '9000 游戏币 → 金币 ×100000',
+    apply() { player.gainGold(100000); return '金币 +100000' },
+  },
   rareBox: {
     cat: '💰 经济互通',
     icon: '🎁', name: '稀有食材盲盒', price: 120, repeat: true,
     desc: '随机稀有食材 1~3 份（灵果/龙根/松露/灵芝池）',
-    apply() {
-      const n = 1 + Math.floor(Math.random() * 3)
-      const got = []
-      for (let i = 0; i < n; i++) {
-        const id = RARE_POOL[Math.floor(Math.random() * RARE_POOL.length)]
-        if (player.gainItem(id, 1)) got.push(getItem(id)?.name)
-      }
-      return got.length ? `${got.length} 份：${got.join('、')}` : '背包已满，未入库'
-    },
+    apply() { return rareBoxApply(1, 3) },
+  },
+  rareBoxDeluxe: {
+    cat: '💰 经济互通',
+    icon: '🎁', name: '豪华稀有食材盲盒', price: 1000, repeat: true,
+    desc: '随机稀有食材 10~30 份（灵果/龙根/松露/灵芝池）',
+    apply() { return rareBoxApply(10, 30) },
+  },
+  rareBoxPremium: {
+    cat: '💰 经济互通',
+    icon: '🎁', name: '至臻稀有食材盲盒', price: 10000, repeat: true,
+    desc: '随机稀有食材 100~300 份（灵果/龙根/松露/灵芝池）',
+    apply() { return rareBoxApply(100, 300) },
   },
   xpPotion: {
     cat: '⚡ 增益加速',
@@ -43,22 +96,37 @@ const PRODUCTS = {
     cat: '⚡ 增益加速',
     icon: '🌱', name: '神秘种子袋', price: 60, repeat: true,
     desc: '随机 3 颗可种作物种子（含稀有，开出即赚）',
-    apply() {
-      const picks = [...SEED_POOL].sort(() => Math.random() - 0.5).slice(0, 3)
-      let got = 0
-      for (const id of picks) if (player.gainItem(id, 1)) got++
-      return got ? `种子 ×${got}` : '背包已满，未入库'
-    },
+    apply() { return seedBagApply(3) },
+  },
+  seedBagDeluxe: {
+    cat: '⚡ 增益加速',
+    icon: '🌱', name: '豪华神秘种子袋', price: 500, repeat: true,
+    desc: '随机 30 颗可种作物种子（含稀有，开出即赚）',
+    apply() { return seedBagApply(30) },
+  },
+  seedBagPremium: {
+    cat: '⚡ 增益加速',
+    icon: '🌱', name: '至臻神秘种子袋', price: 5000, repeat: true,
+    desc: '随机 300 颗可种作物种子（含稀有，开出即赚）',
+    apply() { return seedBagApply(300) },
   },
   gachaTicket: {
     cat: '🧰 便捷用品',
     icon: '🎴', name: '觅珍抽卡券', price: 200, repeat: true,
     desc: '觅珍抽卡券 ×1（抽卡时优先抵扣，剩余金币补齐）',
-    apply() {
-      player.mijian = player.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
-      player.mijian.tickets = (player.mijian.tickets ?? 0) + 1
-      return '抽卡券 +1（觅珍页面显示 🎟️）'
-    },
+    apply() { return ticketApply(1) },
+  },
+  gachaTicket10: {
+    cat: '🧰 便捷用品',
+    icon: '🎴', name: '觅珍抽卡券·十连', price: 1800, repeat: true,
+    desc: '觅珍抽卡券 ×10（九折，抽卡优先抵扣）',
+    apply() { return ticketApply(10) },
+  },
+  gachaTicket100: {
+    cat: '🧰 便捷用品',
+    icon: '🎴', name: '觅珍抽卡券·百连', price: 18000, repeat: true,
+    desc: '觅珍抽卡券 ×100（九折，抽卡优先抵扣）',
+    apply() { return ticketApply(100) },
   },
   craftBoost: {
     cat: '🧰 便捷用品',
