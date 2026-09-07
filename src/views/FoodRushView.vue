@@ -106,6 +106,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
     </div>
 
     <div class="fs-play">
+      <button v-if="RUNNING" class="fs-finish" @click="finish">🏁 提前结算</button>
       <button v-if="!RUNNING" class="fs-btn" @click="start">🍖 开始挑战（{{ MODES[mode].dur }} 秒）</button>
       <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
@@ -161,6 +162,12 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.4);
 }
 .fs-eat { background: linear-gradient(135deg, #f27c45, #d85c2c); }
+.fs-finish {
+  height: 56px; padding: 0 28px; font-size: 16px; font-weight: 700; cursor: pointer;
+  border: none; border-radius: 999px; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #7d8894, #5a646e);
+}
 .fs-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f); animation: fsPop 0.25s ease infinite; }
 @keyframes fsPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
 .fs-info-btn {
