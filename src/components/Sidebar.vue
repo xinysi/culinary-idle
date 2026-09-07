@@ -58,11 +58,12 @@ function onAvatarPick(e) {
         v-if="player.avatar"
         :src="player.avatar"
         class="avatar avatar-img"
+        :class="{ 'avatar-frame-gold': player.avatarFrame === 'gold' }"
         alt="头像"
         title="点击更换头像"
         @click="openAvatarPicker"
       />
-      <div v-else class="avatar" title="点击更换头像" @click="openAvatarPicker">食</div>
+      <div v-else class="avatar" :class="{ 'avatar-frame-gold': player.avatarFrame === 'gold' }" title="点击更换头像" @click="openAvatarPicker">食</div>
       <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatarPick" />
       <div class="sidebar-identity">
         <div class="player-name">

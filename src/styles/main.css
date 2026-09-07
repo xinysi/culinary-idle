@@ -593,6 +593,12 @@ h2 {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* 游戏商店「神厨」头像框（2026-09-07）：金色描边 + 光晕 */
+.avatar-frame-gold {
+  border: 3px solid #eab04a !important;
+  box-shadow: 0 0 12px rgba(234, 176, 74, 0.65) !important;
+}
+
 .player-name {
   font-weight: 600;
 }

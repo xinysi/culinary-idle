@@ -125,6 +125,7 @@ const defaultState = () => ({
     avatar: null, // 自定义头像（base64 dataUrl，可在设置/头像处上传）
     gold: 100,
     gameCoins: 0, // 游戏币（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店统一结算）
+    shopOwned: {}, // 游戏商店一次性商品已购标记：{ title/frame/avatar: true }（旧档无则默认空）
     skills: defaultSkills(),
     inventory: {}, // { itemId: qty }
     bank: {}, // { itemId: qty }
@@ -413,6 +414,7 @@ export const usePlayerStore = defineStore('player', {
         avatar: saved.avatar ?? null,
         gold: saved.gold ?? 0,
         gameCoins: saved.gameCoins ?? 0,
+        shopOwned: saved.shopOwned ?? {},
         skills,
         inventory: saved.inventory ?? {},
         bank: saved.bank ?? {},
@@ -480,6 +482,7 @@ export const usePlayerStore = defineStore('player', {
         avatar: this.avatar,
         gold: this.gold,
         gameCoins: this.gameCoins,
+        shopOwned: this.shopOwned,
         skills: this.skills,
         inventory: this.inventory,
         bank: this.bank,
@@ -542,6 +545,32 @@ export const usePlayerStore = defineStore('player', {
       // 游戏币（小游戏奖励，无词条加成）
       const n = Math.floor(amount)
       if (n > 0) this.gameCoins += n
+    },
+    spendGameCoins(amount) {
+      // 游戏商店消费（2026-09-07）
+      if (this.gameCoins >= amount) {
+        this.gameCoins -= amount
+        return true
+      }
+      return false
+    },
+    /** 游戏商店「制作加速器」：对全部制作类技能队列快进 min 分钟（等价 engine tick，材料不足自动暂停/停止） */
+    boostCraftQueues(minutes = 10) {
+      const n = Math.round((minutes * 60 * 1000) / 3000) // 每 3 秒 1 份
+      let made = 0
+      for (const inst of getAllSkillInstances()) {
+        if (inst.type !== 'production') continue
+        for (let k = 0; k < n; k++) {
+          const q = inst.craftQueue
+          if (!q || !q.length || q[0]?.paused) break
+          const before = q[0].qty
+          inst.tick(600_000)
+          if (q[0]?.paused) break // 材料不足自动暂停
+          if (q[0]?.qty !== before || !q.length) made++
+          else break // 无变化（异常保护）
+        }
+      }
+      return made
     },
 
     spendGold(amount) {
@@ -1538,7 +1567,12 @@ export const usePlayerStore = defineStore('player', {
       const def = MIJIAN_POOLS.find((p) => p.id === poolId)
       if (!def || !(count >= 1)) return null
       const cost = def.price * count
-      if (!this.spendGold(cost)) return { ok: false, msg: '金币不足（需 ' + cost + '）' }
+      // 商店「觅珍抽卡券」优先抵扣（2026-09-07）：每张抵 1 抽，剩余部分金币结算
+      const mjA = this.mijian ?? (this.mijian = { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] })
+      const useT = Math.min(mjA.tickets ?? 0, count)
+      const goldCost = cost - useT * def.price
+      if (goldCost > 0 && !this.spendGold(goldCost)) return { ok: false, msg: '金币不足（需 ' + goldCost + '）' }
+      if (useT > 0) mjA.tickets = (mjA.tickets ?? 0) - useT
       // 保底计数按池拆分（2026-09-06；兼容旧档数字形态 → 迁移为 { gear, limited }）
       const mj = this.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
       if (typeof mj.pity === 'number') mj.pity = { gear: mj.pity, limited: 0 }
