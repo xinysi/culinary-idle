@@ -135,6 +135,7 @@ const cells = computed(() => tiles.value)
       <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
       <span class="pz-chip">✅ 累计 <b class="mono">{{ doneDays }}</b> 次</span>
       <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>
+      <button class="pz-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
     <div class="pz-duo">
@@ -156,7 +157,6 @@ const cells = computed(() => tiles.value)
 
     <div class="pz-keys">
       <button class="pz-reset" @click="resetDay()">🔀 重新打乱</button>
-      <button class="pz-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
     <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
@@ -212,7 +212,7 @@ const cells = computed(() => tiles.value)
 .pz-num { position: absolute; right: 6px; bottom: 4px; font-size: 13px; color: var(--muted); font-family: var(--mono); font-weight: 700; }
 .pz-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
-.pz-info-btn { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.pz-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .pz-done { font-weight: 800; color: var(--good-strong); }
 .pz-fail { color: var(--bad-strong); }
 .pz-tip { color: var(--muted); font-size: 12px; }

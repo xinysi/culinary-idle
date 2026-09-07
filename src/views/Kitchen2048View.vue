@@ -240,6 +240,7 @@ function posStyle(t) {
         <span class="g2048-chip">💰 奖 <b class="mono">{{ earned }}</b> 金</span>
         <span class="g2048-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       </div>
+      <button class="g2048-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
     <div class="g2048-board2" :style="{ width: BOARD_PX + 'px', height: BOARD_PX + 'px' }">
@@ -260,7 +261,6 @@ function posStyle(t) {
       <button class="g2048-key" @click="move('down')">↓</button>
       <button class="g2048-key" @click="move('right')">→</button>
       <button class="g2048-reset" @click="reset()">重新开始</button>
-      <button class="g2048-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
     <div v-if="showInfo" class="g2048-info-mask" @click.self="showInfo = false">
@@ -322,7 +322,7 @@ function posStyle(t) {
 .g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text); }
 .g2048-key:hover { border-color: var(--primary-strong); }
 .g2048-reset { padding: 0 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
-.g2048-info-btn { padding: 0 20px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #8fae7a, #67945c); border: none; }
+.g2048-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .g2048-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .g2048-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
 .g2048-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
