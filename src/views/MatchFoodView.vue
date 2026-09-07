@@ -12,16 +12,16 @@ const ui = useUiStore()
 
 const mode = ref('m4')
 const MODES = {
-  m2: { label: '2×2 入门', size: 2, pairs: 2, gold: 20, kind: 'normal', desc: '2×2 · 2 对 · +20 金 —— 入门热身' },
-  m4: { label: '4×4 快速', size: 4, pairs: 8, gold: 80, kind: 'normal', desc: '4×4 · 8 对 · +80 金' },
-  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 100, kind: 'time', time: 60, desc: '4×4 · 8 对 · 限 60 秒全清 · +100 金 —— 超时失败' },
-  s4: { label: '4×4 限步', size: 4, pairs: 8, gold: 120, kind: 'steps', maxSteps: 16, desc: '4×4 · 8 对 · 限 16 步（每两次点击算 1 步）· +120 金 —— 超步失败' },
-  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 150, kind: 'normal', desc: '6×6 · 18 对 · +150 金 —— 经典体验' },
-  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 200, kind: 'time', time: 90, desc: '6×6 · 18 对 · 限 90 秒全清 · +200 金 —— 超时失败' },
-  s6: { label: '6×6 限步', size: 6, pairs: 18, gold: 220, kind: 'steps', maxSteps: 30, desc: '6×6 · 18 对 · 限 30 步 · +220 金 —— 超步失败' },
-  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 320, kind: 'normal', desc: '8×8 · 32 对 · +320 金' },
-  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 400, kind: 'time', time: 120, desc: '8×8 · 32 对 · 限 120 秒全清 · +400 金 —— 超时失败' },
-  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 550, kind: 'normal', desc: '10×10 · 50 对 · +550 金 —— 终极眼力' },
+  m2: { label: '2×2 入门', size: 2, pairs: 2, gold: 20, kind: 'normal', desc: '2×2 · 2 对 · +20 币 —— 入门热身' },
+  m4: { label: '4×4 快速', size: 4, pairs: 8, gold: 80, kind: 'normal', desc: '4×4 · 8 对 · +80 币' },
+  t4: { label: '4×4 限时', size: 4, pairs: 8, gold: 100, kind: 'time', time: 60, desc: '4×4 · 8 对 · 限 60 秒全清 · +100 币 —— 超时失败' },
+  s4: { label: '4×4 限步', size: 4, pairs: 8, gold: 120, kind: 'steps', maxSteps: 16, desc: '4×4 · 8 对 · 限 16 步（每两次点击算 1 步）· +120 币 —— 超步失败' },
+  m6: { label: '6×6 标准', size: 6, pairs: 18, gold: 150, kind: 'normal', desc: '6×6 · 18 对 · +150 币 —— 经典体验' },
+  t6: { label: '6×6 限时', size: 6, pairs: 18, gold: 200, kind: 'time', time: 90, desc: '6×6 · 18 对 · 限 90 秒全清 · +200 币 —— 超时失败' },
+  s6: { label: '6×6 限步', size: 6, pairs: 18, gold: 220, kind: 'steps', maxSteps: 30, desc: '6×6 · 18 对 · 限 30 步 · +220 币 —— 超步失败' },
+  m8: { label: '8×8 挑战', size: 8, pairs: 32, gold: 320, kind: 'normal', desc: '8×8 · 32 对 · +320 币' },
+  t8: { label: '8×8 限时', size: 8, pairs: 32, gold: 400, kind: 'time', time: 120, desc: '8×8 · 32 对 · 限 120 秒全清 · +400 币 —— 超时失败' },
+  m10: { label: '10×10 传奇', size: 10, pairs: 50, gold: 550, kind: 'normal', desc: '10×10 · 50 对 · +550 币 —— 终极眼力' },
 }
 const showInfo = ref(false)
 
@@ -97,11 +97,11 @@ function settle() {
   const mg = player.minigames.matchfood
   if (!mg) player.minigames.matchfood = { day: '', buffed: 0 }
   mg.day = todayKey()
-  // 每次全清得金币（按模式难度，2026-09-07 统一金币奖励）
+  // 每次全清得游戏币（按模式难度，2026-09-07 统一游戏币奖励）
   const gold = MODES[mode.value].gold
   mg.buffed = (mg.buffed ?? 0) + 1
-  player.gainGold(gold)
-  ui.pushLog(`🍽 食材连连看全清！+${gold} 金币`, 'gain')
+  player.gainGameCoins(gold)
+  ui.pushLog(`🍽 食材连连看全清！+${gold} 游戏币`, 'gain')
 }
 function todayKey() {
   const t = new Date()
@@ -139,13 +139,13 @@ resetDay()
     <div class="mf-keys">
       <button class="mf-reset" @click="resetDay()">重新洗牌</button>
     </div>
-    <div v-if="done" class="mf-done">🍽 全清！+{{ MODES[mode].gold }} 金币</div>
+    <div v-if="done" class="mf-done">🍽 全清！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-if="failed" class="mf-done mf-fail">💦 超限未清！重新洗牌再来</div>
     <div v-if="showInfo" class="mf-info-mask" @click.self="showInfo = false">
       <div class="mf-info-box">
         <div class="mf-info-head"><b>🀄 食材连连看 · 十种模式说明</b><button class="mf-info-close" @click="showInfo = false">✕</button></div>
         <div class="mf-info-list">
-          <div class="mf-info-row mf-info-rule">通用规则：点两张相同食材消除 · 全部清空得金币 · 偶数棋盘恰好填满（无缺格）· 限时/限步/翻牌为玩法变体</div>
+          <div class="mf-info-row mf-info-rule">通用规则：点两张相同食材消除 · 全部清空得游戏币 · 偶数棋盘恰好填满（无缺格）· 限时/限步/翻牌为玩法变体</div>
           <div v-for="(m, key) in MODES" :key="key" class="mf-info-row">
             <b class="mf-info-name">{{ m.label }}</b>
             <span class="mf-info-desc">{{ m.desc }}</span>

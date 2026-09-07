@@ -96,8 +96,8 @@ function award(tileValue) {
   reached.add(tileValue)
   const bonus = Math.round(base * MODES[mode.value].mult) // 奖励随模式倍率（2026-09-07）
   earned += bonus
-  player.gainGold(bonus)
-  ui.pushLog(`🧩 2048 合出 ${tileValue}！+${bonus} 金币`, 'gain')
+  player.gainGameCoins(bonus)
+  ui.pushLog(`🧩 2048 合出 ${tileValue}！+${bonus} 游戏币`, 'gain')
 }
 function canMoveAny() {
   const m = SIZE.value
@@ -237,7 +237,7 @@ function posStyle(t) {
       <button v-for="(m, id) in MODES" :key="id" class="g2048-mode" :class="{ on: mode === id }" @click="switchMode(id)">{{ m.label }}</button>
       <div class="g2048-stats">
         <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
-        <span class="g2048-chip">💰 奖 <b class="mono">{{ earned }}</b> 金</span>
+        <span class="g2048-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 奖 <b class="mono">{{ earned }}</b> 游戏币</span>
         <span class="g2048-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       </div>
       <button class="g2048-info-btn" @click="showInfo = true">📖 模式说明</button>
@@ -262,7 +262,7 @@ function posStyle(t) {
       <button class="g2048-key" @click="move('right')">→</button>
       <button class="g2048-reset" @click="reset()">重新开始</button>
     </div>
-    <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 金币</div>
+    <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 游戏币</div>
     <div v-if="showInfo" class="g2048-info-mask" @click.self="showInfo = false">
       <div class="g2048-info-box">
         <div class="g2048-info-head"><b>厨心 2048 · 十种模式说明</b><button class="g2048-info-close" @click="showInfo = false">✕</button></div>

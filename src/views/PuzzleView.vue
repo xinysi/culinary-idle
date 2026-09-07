@@ -12,16 +12,16 @@ const ui = useUiStore()
 
 const mode = ref('s4')
 const MODES = {
-  s2: { label: '2×2 入门', size: 2, gold: 40, desc: '2×2 · 4 块 · +40 金 —— 入门热身' },
-  s3: { label: '3×3 轻松', size: 3, gold: 80, desc: '3×3 · 9 块 · +80 金' },
-  l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80, desc: '3×3 · 限 80 步完成 · +120 金 —— 超步即失败' },
-  s4: { label: '4×4 标准', size: 4, gold: 150, desc: '4×4 · 16 块 · +150 金 —— 经典体验' },
-  l4: { label: '4×4 限步', size: 4, gold: 220, maxSteps: 250, desc: '4×4 · 限 250 步完成 · +220 金 —— 超步即失败' },
-  s5: { label: '5×5 大师', size: 5, gold: 250, desc: '5×5 · 25 块 · +250 金' },
-  l5: { label: '5×5 限步', size: 5, gold: 400, maxSteps: 700, desc: '5×5 · 限 700 步完成 · +400 金 —— 超步即失败' },
-  s6: { label: '6×6 宗师', size: 6, gold: 450, desc: '6×6 · 36 块 · +450 金' },
-  s7: { label: '7×7 传奇', size: 7, gold: 700, desc: '7×7 · 49 块 · +700 金' },
-  s8: { label: '8×8 史诗', size: 8, gold: 1000, desc: '8×8 · 64 块 · +1000 金 —— 终极挑战' },
+  s2: { label: '2×2 入门', size: 2, gold: 40, desc: '2×2 · 4 块 · +40 币 —— 入门热身' },
+  s3: { label: '3×3 轻松', size: 3, gold: 80, desc: '3×3 · 9 块 · +80 币' },
+  l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80, desc: '3×3 · 限 80 步完成 · +120 币 —— 超步即失败' },
+  s4: { label: '4×4 标准', size: 4, gold: 150, desc: '4×4 · 16 块 · +150 币 —— 经典体验' },
+  l4: { label: '4×4 限步', size: 4, gold: 220, maxSteps: 250, desc: '4×4 · 限 250 步完成 · +220 币 —— 超步即失败' },
+  s5: { label: '5×5 大师', size: 5, gold: 250, desc: '5×5 · 25 块 · +250 币' },
+  l5: { label: '5×5 限步', size: 5, gold: 400, maxSteps: 700, desc: '5×5 · 限 700 步完成 · +400 币 —— 超步即失败' },
+  s6: { label: '6×6 宗师', size: 6, gold: 450, desc: '6×6 · 36 块 · +450 币' },
+  s7: { label: '7×7 传奇', size: 7, gold: 700, desc: '7×7 · 49 块 · +700 币' },
+  s8: { label: '8×8 史诗', size: 8, gold: 1000, desc: '8×8 · 64 块 · +1000 币 —— 终极挑战' },
 }
 const showInfo = ref(false)
 const SIZE = computed(() => MODES[mode.value].size)
@@ -93,10 +93,10 @@ function tap(i) {
     if (!mg) player.minigames.puzzle = { day: '', done: 0 }
     mg.day = todayKey()
     mg.done = (mg.done ?? 0) + 1
-    // 每次完成得金币（按模式难度，2026-09-07 统一金币奖励）
+    // 每次完成得游戏币（按模式难度，2026-09-07 统一游戏币奖励）
     const gold = MODES[mode.value].gold
-    player.gainGold(gold)
-    ui.pushLog(`🧩 拼图完成！+${gold} 金币（累计 ${mg.done} 次）`, 'gain')
+    player.gainGameCoins(gold)
+    ui.pushLog(`🧩 拼图完成！+${gold} 游戏币（累计 ${mg.done} 次）`, 'gain')
   } else if (MODES[mode.value].maxSteps && moves.value >= MODES[mode.value].maxSteps) {
     failed.value = true // 限步超限：本局失败，重新打乱再来
   }
@@ -158,7 +158,7 @@ const cells = computed(() => tiles.value)
     <div class="pz-keys">
       <button class="pz-reset" @click="resetDay()">🔀 重新打乱</button>
     </div>
-    <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
+    <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
     <div v-if="showInfo" class="pz-info-mask" @click.self="showInfo = false">
       <div class="pz-info-box">

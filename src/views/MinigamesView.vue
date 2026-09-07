@@ -12,8 +12,10 @@ const FoodRushView = defineAsyncComponent(() => import('./FoodRushView.vue'))
 const PuzzleView = defineAsyncComponent(() => import('./PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./MatchFoodView.vue'))
 const MemoryView = defineAsyncComponent(() => import('./MemoryView.vue'))
+const GameShopView = defineAsyncComponent(() => import('./GameShopView.vue'))
 
 const GAMES = [
+  { id: 'shop', emoji: '🛒', name: '游戏商店', comp: GameShopView },
   { id: 'heat', emoji: '🔥', name: '火候炉', comp: HeatView },
   { id: 'trivia', emoji: '📚', name: '美食讲堂', comp: TriviaView },
   { id: 'kitchen2048', emoji: '🧩', name: '厨心 2048', comp: Kitchen2048View },

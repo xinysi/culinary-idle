@@ -124,6 +124,7 @@ const defaultState = () => ({
     title: null, // 称号（§6.3）
     avatar: null, // 自定义头像（base64 dataUrl，可在设置/头像处上传）
     gold: 100,
+    gameCoins: 0, // 游戏币（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店统一结算）
     skills: defaultSkills(),
     inventory: {}, // { itemId: qty }
     bank: {}, // { itemId: qty }
@@ -411,6 +412,7 @@ export const usePlayerStore = defineStore('player', {
         title: saved.title ?? null,
         avatar: saved.avatar ?? null,
         gold: saved.gold ?? 0,
+        gameCoins: saved.gameCoins ?? 0,
         skills,
         inventory: saved.inventory ?? {},
         bank: saved.bank ?? {},
@@ -477,6 +479,7 @@ export const usePlayerStore = defineStore('player', {
         title: this.title,
         avatar: this.avatar,
         gold: this.gold,
+        gameCoins: this.gameCoins,
         skills: this.skills,
         inventory: this.inventory,
         bank: this.bank,
@@ -534,6 +537,11 @@ export const usePlayerStore = defineStore('player', {
         this.gold += n
         this.stats.totalGoldEarned += n
       }
+    },
+    gainGameCoins(amount) {
+      // 游戏币（小游戏奖励，无词条加成）
+      const n = Math.floor(amount)
+      if (n > 0) this.gameCoins += n
     },
 
     spendGold(amount) {

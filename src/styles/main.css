@@ -4071,3 +4071,6 @@ html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); col
 .mg-shell .pz-label, .mg-shell .hz-box-tag, .mg-shell .tv-box-title, .mg-shell .mf-chip, .mg-shell .fs-tip, .mg-shell .pz-tip, .mg-shell .mf-tip, .mg-shell .g2048-tip, .mg-shell .tv-rules {
   font-weight: 700;
 }
+
+/* 游戏币图标（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店） */
+.coin-ico { width: 14px; height: 14px; vertical-align: -2px; margin-right: 1px; border-radius: 3px; image-rendering: pixelated; }
