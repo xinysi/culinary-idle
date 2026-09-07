@@ -1,43 +1,103 @@
 <script setup>
-// 游戏商店（2026-09-07 新增）：小游戏奖励「游戏币」的唯一消费口；货架内容待定，当前展示候选商品建议
-import { computed } from 'vue'
+// 游戏商店（2026-09-07 v2）：九件商品全部真实生效——扣游戏币 → 发放/应用效果；一次性商品（称号/头像框/头像）防重复购买
+import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
+import { useUiStore } from '../stores/ui.js'
+import { ITEMS, getItem } from '../game/data/items.js'
 
 const player = usePlayerStore()
+const ui = useUiStore()
 const coins = computed(() => player.gameCoins ?? 0)
 
-// 候选商品建议（2026-09-07 用户要求先提供建议，选定后上架；价格均为建议值）
-const SUGGESTIONS = [
-  {
+const RARE_POOL = ['spiritFruit', 'dragonRoot', 'truffle', 'lingzhi'].filter((id) => !!getItem(id))
+const SEED_POOL = Object.values(ITEMS).filter((i) => i.type === 'seed').map((i) => i.id)
+
+const PRODUCTS = {
+  gold: {
     cat: '💰 经济互通',
-    items: [
-      { icon: '💰', name: '金币兑换包', price: 100, desc: '100 游戏币 → 金币 ×1000（主货币互通）' },
-      { icon: '🎁', name: '稀有食材盲盒', price: 120, desc: '随机稀有食材 1~3 份（松露/灵果/龙根等池）' },
-    ],
+    icon: '💰', name: '金币兑换包', price: 100, repeat: true,
+    desc: '100 游戏币 → 金币 ×1000（主货币互通）',
+    apply() { player.gainGold(1000); return '金币 +1000' },
   },
-  {
+  rareBox: {
+    cat: '💰 经济互通',
+    icon: '🎁', name: '稀有食材盲盒', price: 120, repeat: true,
+    desc: '随机稀有食材 1~3 份（灵果/龙根/松露/灵芝池）',
+    apply() {
+      const n = 1 + Math.floor(Math.random() * 3)
+      const got = []
+      for (let i = 0; i < n; i++) {
+        const id = RARE_POOL[Math.floor(Math.random() * RARE_POOL.length)]
+        if (player.gainItem(id, 1)) got.push(getItem(id)?.name)
+      }
+      return got.length ? `${got.length} 份：${got.join('、')}` : '背包已满，未入库'
+    },
+  },
+  xpPotion: {
     cat: '⚡ 增益加速',
-    items: [
-      { icon: '🔥', name: '双倍挂机药剂', price: 80, desc: '采集/制作经验 ×2 · 持续 30 分钟' },
-      { icon: '🍪', name: '离线饼干礼包', price: 50, desc: '能量饼干 ×3（提升离线收益上限）' },
-    ],
+    icon: '🔥', name: '双倍挂机药剂', price: 80, repeat: true,
+    desc: '采集/制作经验 ×2 · 持续 30 分钟（覆盖式刷新）',
+    apply() { player.buffs.xpMult = { mult: 2, expiresAt: Date.now() + 30 * 60_000 }; return '经验 ×2（30 分钟）' },
   },
-  {
+  seedBag: {
+    cat: '⚡ 增益加速',
+    icon: '🌱', name: '神秘种子袋', price: 60, repeat: true,
+    desc: '随机 3 颗可种作物种子（含稀有，开出即赚）',
+    apply() {
+      const picks = [...SEED_POOL].sort(() => Math.random() - 0.5).slice(0, 3)
+      let got = 0
+      for (const id of picks) if (player.gainItem(id, 1)) got++
+      return got ? `种子 ×${got}` : '背包已满，未入库'
+    },
+  },
+  gachaTicket: {
     cat: '🧰 便捷用品',
-    items: [
-      { icon: '🎴', name: '觅珍抽卡券', price: 200, desc: '觅珍单抽券 ×1（普通/限时池通用）' },
-      { icon: '⏩', name: '制作加速器', price: 60, desc: '制作队列立即完成 10 分钟产量' },
-    ],
+    icon: '🎴', name: '觅珍抽卡券', price: 200, repeat: true,
+    desc: '觅珍抽卡券 ×1（抽卡时优先抵扣，剩余金币补齐）',
+    apply() {
+      player.mijian = player.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+      player.mijian.tickets = (player.mijian.tickets ?? 0) + 1
+      return '抽卡券 +1（觅珍页面显示 🎟️）'
+    },
   },
-  {
+  craftBoost: {
+    cat: '🧰 便捷用品',
+    icon: '⏩', name: '制作加速器', price: 60, repeat: true,
+    desc: '全部制作队列立即快进 10 分钟产量（材料不足自动暂停不浪费）',
+    apply() { const n = player.boostCraftQueues(10); return `队列快进 10 分钟（完成 ${n} 份产物）` },
+  },
+  title: {
     cat: '👑 外观纪念',
-    items: [
-      { icon: '👑', name: '「大胃王」称号', price: 500, desc: '永久称号，头像旁展示' },
-      { icon: '🖼️', name: '「神厨」头像框', price: 1000, desc: '永久头像框，名字高亮展示' },
-      { icon: '🧸', name: '限定头像·像素厨神', price: 800, desc: '商店专属头像（可设为主头像）' },
-    ],
+    icon: '👑', name: '「大胃王」称号', price: 500, repeat: false,
+    desc: '永久称号，头像与名字旁展示',
+    apply() { player.title = '大胃王'; return '称号「大胃王」已佩戴' },
   },
-]
+  frame: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「神厨」头像框', price: 1000, repeat: false,
+    desc: '永久金色头像框，头像描边发光',
+    apply() { player.avatarFrame = 'gold'; return '金色头像框已佩戴' },
+  },
+  avatar: {
+    cat: '👑 外观纪念',
+    icon: '🧸', name: '限定头像·食神盛宴', price: 800, repeat: false,
+    desc: '商店专属头像（食神盛宴图，购买即换装）',
+    apply() { player.avatar = 'images/items/food/食神盛宴.png'; return '头像已更换为「食神盛宴」' },
+  },
+}
+
+function buy(id) {
+  const p = PRODUCTS[id]
+  if (!p) return
+  if (!p.repeat && player.shopOwned?.[id]) { ui.pushLog(`🛒 已拥有「${p.name}」，无需重复购买`, 'warn'); return }
+  if (!player.spendGameCoins(p.price)) { ui.pushLog(`🛒 游戏币不足（需 ${p.price} 币）`, 'warn'); return }
+  const res = p.apply()
+  if (!p.repeat) player.shopOwned = { ...(player.shopOwned ?? {}), [id]: true }
+  ui.pushLog(`🛒 购买「${p.name}」：${res}`, 'gain')
+}
+
+const GROUPS = ['💰 经济互通', '⚡ 增益加速', '🧰 便捷用品', '👑 外观纪念']
+const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries(PRODUCTS).filter(([, p]) => p.cat === cat) })))
 </script>
 
 <template>
@@ -45,24 +105,24 @@ const SUGGESTIONS = [
     <div class="gs-topbar">
       <span class="gs-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 余额 <b class="mono">{{ coins }}</b> 游戏币</span>
       <span class="gs-chip">🕹️ 七款小游戏奖励均为游戏币</span>
-      <span class="gs-chip" style="margin-left: auto">🛒 货架筹备中 · 以下为候选建议</span>
+      <span class="gs-chip" style="margin-left: auto">🛒 购买即生效 · 一次性商品购后锁定</span>
     </div>
 
-    <div class="gs-note">
-      🧾 老板还没定进货单——先摆出「候选商品建议」，选定后上架即可购买。每一类都列了价目和效果，欢迎挑挑拣拣！
-    </div>
-
-    <div v-for="g in SUGGESTIONS" :key="g.cat" class="gs-group">
+    <div v-for="g in grouped" :key="g.cat" class="gs-group">
       <div class="gs-group-title">{{ g.cat }}</div>
       <div class="gs-grid">
-        <div v-for="it in g.items" :key="it.name" class="gs-card">
+        <div v-for="[id, p] in g.items" :key="id" class="gs-card" :class="{ owned: !p.repeat && player.shopOwned?.[id] }">
           <div class="gs-card-head">
-            <span class="gs-card-icon">{{ it.icon }}</span>
-            <b class="gs-card-name">{{ it.name }}</b>
-            <span class="gs-card-price"><img class="coin-ico" src="/images/icon-coin.png" alt="">{{ it.price }}</span>
+            <span class="gs-card-icon">{{ p.icon }}</span>
+            <b class="gs-card-name">{{ p.name }}</b>
+            <span class="gs-card-price"><img class="coin-ico" src="/images/icon-coin.png" alt="">{{ p.price }}</span>
           </div>
-          <div class="gs-card-desc">{{ it.desc }}</div>
-          <span class="gs-badge">待定价</span>
+          <div class="gs-card-desc">{{ p.desc }}</div>
+          <button
+            class="gs-buy"
+            :disabled="(!p.repeat && player.shopOwned?.[id]) || coins < p.price"
+            @click="buy(id)"
+          >{{ !p.repeat && player.shopOwned?.[id] ? '✓ 已拥有' : `🛒 购买（${p.price} 币）` }}</button>
         </div>
       </div>
     </div>
@@ -72,7 +132,6 @@ const SUGGESTIONS = [
 .gs-page { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 12px; }
 .gs-topbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .gs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
-.gs-note { padding: 10px 14px; border-radius: 12px; background: rgba(255, 244, 214, 0.75); border: 1px dashed rgba(217, 138, 43, 0.45); font-size: 13px; color: var(--text); }
 .gs-group { display: flex; flex-direction: column; gap: 8px; }
 .gs-group-title { font-size: 14px; font-weight: 800; color: var(--primary-strong); }
 .gs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
@@ -82,10 +141,15 @@ const SUGGESTIONS = [
   border: 1px solid rgba(150, 110, 70, 0.25);
   border-radius: 14px; padding: 12px;
 }
+.gs-card.owned { background: rgba(87, 168, 97, 0.08); border-color: rgba(87, 168, 97, 0.3); }
 .gs-card-head { display: flex; align-items: center; gap: 8px; }
 .gs-card-icon { font-size: 20px; }
 .gs-card-name { flex: 1; font-size: 13.5px; }
 .gs-card-price { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; color: var(--warn-strong); font-size: 13px; }
 .gs-card-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
-.gs-badge { align-self: flex-start; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(150, 110, 70, 0.12); color: var(--muted); font-weight: 700; }
+.gs-buy {
+  align-self: flex-start; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(135deg, #72b864, #589c4b); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
+}
+.gs-buy:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
