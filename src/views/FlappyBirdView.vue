@@ -30,6 +30,12 @@ const canvas = ref(null)
 const BG = new Image()
 BG.src = '/images/fb-bg.png'
 let bgX = 0
+const PIPE_TOP = new Image()
+PIPE_TOP.src = '/images/fb-pipe-top.png' // 青锈管（2026-09-08 用户素材）：上方管道
+const PIPE_BOT = new Image()
+PIPE_BOT.src = '/images/fb-pipe-bottom.png' // 铜管：下方管道
+PIPE_TOP.onload = () => draw()
+PIPE_BOT.onload = () => draw()
 BG.onload = () => draw() // 图片加载完成后重绘
 
 let birdY = H / 2
@@ -136,12 +142,20 @@ function draw() {
   }
   // 管道
   for (const p of pipes) {
-    ctx.fillStyle = '#4f8f3c'
-    ctx.fillRect(p.x, 0, p.w, p.gapY)
-    ctx.fillRect(p.x, p.gapY + p.gap, p.w, H - p.gapY - p.gap)
-    ctx.fillStyle = '#3c6f2f'
-    ctx.fillRect(p.x - 3, p.gapY - 12, p.w + 6, 12)
-    ctx.fillRect(p.x - 3, p.gapY + p.gap, p.w + 6, 12)
+    // 管道（图片贴片：上方青锈管、下方铜管，加载中绿块兜底）
+    if (PIPE_TOP.complete && PIPE_TOP.naturalWidth) {
+      ctx.drawImage(PIPE_TOP, p.x, 0, p.w, p.gapY)
+    } else {
+      ctx.fillStyle = '#4f8f3c'
+      ctx.fillRect(p.x, 0, p.w, p.gapY)
+    }
+    const botY = p.gapY + p.gap
+    if (PIPE_BOT.complete && PIPE_BOT.naturalWidth) {
+      ctx.drawImage(PIPE_BOT, p.x, botY, p.w, H - botY)
+    } else {
+      ctx.fillStyle = '#4f8f3c'
+      ctx.fillRect(p.x, botY, p.w, H - botY)
+    }
   }
   // 鸟（黄圆 + 眼睛 + 翅膀）
   const tilt = Math.max(-0.5, Math.min(0.6, birdVy * 0.06))
