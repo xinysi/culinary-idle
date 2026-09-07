@@ -12,17 +12,18 @@ const ui = useUiStore()
 
 const mode = ref('s4')
 const MODES = {
-  s2: { label: '2×2 入门', size: 2, gold: 40 },
-  s3: { label: '3×3 轻松', size: 3, gold: 80 },
-  l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80 },
-  s4: { label: '4×4 标准', size: 4, gold: 150 },
-  l4: { label: '4×4 限步', size: 4, gold: 220, maxSteps: 250 },
-  s5: { label: '5×5 大师', size: 5, gold: 250 },
-  l5: { label: '5×5 限步', size: 5, gold: 400, maxSteps: 700 },
-  s6: { label: '6×6 宗师', size: 6, gold: 450 },
-  s7: { label: '7×7 传奇', size: 7, gold: 700 },
-  s8: { label: '8×8 史诗', size: 8, gold: 1000 },
+  s2: { label: '2×2 入门', size: 2, gold: 40, desc: '2×2 · 4 块 · +40 金 —— 入门热身' },
+  s3: { label: '3×3 轻松', size: 3, gold: 80, desc: '3×3 · 9 块 · +80 金' },
+  l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80, desc: '3×3 · 限 80 步完成 · +120 金 —— 超步即失败' },
+  s4: { label: '4×4 标准', size: 4, gold: 150, desc: '4×4 · 16 块 · +150 金 —— 经典体验' },
+  l4: { label: '4×4 限步', size: 4, gold: 220, maxSteps: 250, desc: '4×4 · 限 250 步完成 · +220 金 —— 超步即失败' },
+  s5: { label: '5×5 大师', size: 5, gold: 250, desc: '5×5 · 25 块 · +250 金' },
+  l5: { label: '5×5 限步', size: 5, gold: 400, maxSteps: 700, desc: '5×5 · 限 700 步完成 · +400 金 —— 超步即失败' },
+  s6: { label: '6×6 宗师', size: 6, gold: 450, desc: '6×6 · 36 块 · +450 金' },
+  s7: { label: '7×7 传奇', size: 7, gold: 700, desc: '7×7 · 49 块 · +700 金' },
+  s8: { label: '8×8 史诗', size: 8, gold: 1000, desc: '8×8 · 64 块 · +1000 金 —— 终极挑战' },
 }
+const showInfo = ref(false)
 const SIZE = computed(() => MODES[mode.value].size)
 const tiles = ref([])
 const moves = ref(0)
@@ -35,13 +36,6 @@ const IMG_IDS = Object.values(ITEMS)
   .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'zh'))
   .map((i) => i.id)
   .slice(0, 30)
-function dayHash() {
-  const t = new Date()
-  let h = 0
-  const s = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return h
-}
 function mulberry32(a) {
   return () => {
     a |= 0; a = (a + 0x6d2b79f5) | 0
@@ -54,7 +48,8 @@ function scrambled() {
   const size = SIZE.value
   const total = size * size
   const arr = Array.from({ length: total }, (_, i) => (i === total - 1 ? 0 : i + 1))
-  const rng = mulberry32(dayHash() + size * 7919)
+  // 取消当日固定：每次重开随机种子（2026-09-07）
+  const rng = mulberry32(Math.floor(Math.random() * 0xffffffff) ^ (size * 7919))
   for (let i = 0; i < 250; i++) {
     const idx = arr.indexOf(0)
     const r = Math.floor(idx / size), c = idx % size
@@ -73,6 +68,8 @@ function resetDay() {
   moves.value = 0
   won.value = false
   failed.value = false
+  // 取消当日固定：每次随机一张素材照片
+  puzzlePic.value = ptUrl(PT_PHOTOS[Math.floor(Math.random() * PT_PHOTOS.length)])
 }
 function checkWin() {
   const total = SIZE.value * SIZE.value
@@ -113,10 +110,8 @@ const doneToday = computed(() => {
   return mg.day === todayKey() && (mg.done ?? 0) >= 1
 })
 const doneDays = computed(() => player.minigames?.puzzle?.done ?? 0)
-// 图片拼图：每日固定一张图（图鉴物品图），左=完整图、右=同图切块
-// 图片拼图：每日固定一张照片（public/images/items/pt/ 用户素材），左=完整照片、右=同照片切块
-const picIndex = dayHash() % PT_PHOTOS.length
-const puzzlePic = computed(() => ptUrl(PT_PHOTOS[picIndex]))
+// 图片拼图：素材照片每次随机（已取消当日固定），左=完整照片、右=同照片切块
+const puzzlePic = ref(null)
 function bgStyle(v) {
   if (!v) return {}
   const size = SIZE.value
@@ -160,11 +155,24 @@ const cells = computed(() => tiles.value)
     </div>
 
     <div class="pz-keys">
-      <button class="pz-reset" @click="resetDay()">重新打乱（当日固定）</button>
+      <button class="pz-reset" @click="resetDay()">🔀 重新打乱</button>
+      <button class="pz-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 金币</div>
     <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
-    <div class="pz-tip">每天同一张图 · 完成得金币（40~1000 金）· 限步模式超步数即失败 · 共十种模式</div>
+    <div class="pz-tip">碎片滑入还原 · 完成得金币（40~1000 金）· 限步模式超步即失败 · 图片与乱序每次随机</div>
+    <div v-if="showInfo" class="pz-info-mask" @click.self="showInfo = false">
+      <div class="pz-info-box">
+        <div class="pz-info-head"><b>🧩 美食拼图 · 十种模式说明</b><button class="pz-info-close" @click="showInfo = false">✕</button></div>
+        <div class="pz-info-list">
+          <div class="pz-info-row pz-info-rule">通用规则：点击与空格相邻的碎片滑入还原 · 图片与初始乱序每次随机（已取消当日固定）· 限步模式超步即失败、不可继续点击</div>
+          <div v-for="(m, key) in MODES" :key="key" class="pz-info-row">
+            <b class="pz-info-name">{{ m.label }}</b>
+            <span class="pz-info-desc">{{ m.desc }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <style scoped>
@@ -203,9 +211,19 @@ const cells = computed(() => tiles.value)
 .pz-goal-cell { background: rgba(255, 251, 244, 0.5); }
 .pz-cell.empty { background: transparent; border-color: transparent; cursor: default; }
 .pz-num { position: absolute; right: 6px; bottom: 4px; font-size: 13px; color: var(--muted); font-family: var(--mono); font-weight: 700; }
-.pz-keys { display: flex; justify-content: center; }
+.pz-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
+.pz-info-btn { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .pz-done { font-weight: 800; color: var(--good-strong); }
 .pz-fail { color: var(--bad-strong); }
 .pz-tip { color: var(--muted); font-size: 12px; }
+.pz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.pz-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.pz-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
+.pz-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.pz-info-list { display: flex; flex-direction: column; gap: 8px; }
+.pz-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
+.pz-info-rule { border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; }
+.pz-info-name { flex: 0 0 96px; color: var(--primary-strong); }
+.pz-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
 </style>
