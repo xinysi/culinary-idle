@@ -99,7 +99,6 @@ const doneToday = computed(() => mg.value.day === todayKey())
       <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
       <span class="fs-chip" style="margin-left: auto">💰 今日 {{ mg.rewarded ?? 0 }}/{{ tierTotal }} 金</span>
-      <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
     <div class="fs-bowl">
@@ -117,6 +116,7 @@ const doneToday = computed(() => mg.value.day === todayKey())
       <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
       </button>
+      <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
     <div v-if="done" class="fs-done" :class="{ ok: bowls >= TIERS[0].need }">
       {{ bowls >= TIERS[0].need ? `🍖 达成 ${[...TIERS].reverse().find((t) => bowls >= t.need)?.need ?? ''} 碗档！奖励已结算` : '💪 惜败！差一点就达标了' }}
@@ -145,10 +145,10 @@ const doneToday = computed(() => mg.value.day === todayKey())
 .fs-bowl {
   width: min(420px, 92%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 24px 20px; border-radius: 20px;
-  background: linear-gradient(160deg, rgba(114, 184, 100, 0.22), rgba(88, 156, 75, 0.12)); /* 连连看绿 */
-  border: 1px solid rgba(88, 156, 75, 0.35);
-  box-shadow: 0 10px 28px rgba(56, 96, 46, 0.15);
+  padding: 24px 20px; border-radius: 18px;
+  background: rgba(150, 110, 70, 0.16); /* 与连连看大框一致的棕灰玻璃 */
+  border: 1px solid rgba(150, 110, 70, 0.3);
+  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
 }
 .fs-bowl-emoji { font-size: 52px; }
 .fs-bowl-num { font-size: 20px; font-weight: 800; }
@@ -159,7 +159,7 @@ const doneToday = computed(() => mg.value.day === todayKey())
 .fs-tiers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--muted); }
 .fs-tier.on { background: rgba(87, 168, 97, 0.18); color: var(--good-strong); font-weight: 700; }
-.fs-play { display: flex; justify-content: center; }
+.fs-play { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .fs-btn {
   min-width: 280px; padding: 16px 36px; font-size: 19px; font-weight: 800; color: #fff;
   border: none; border-radius: 999px; cursor: pointer;
