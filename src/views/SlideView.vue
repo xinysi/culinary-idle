@@ -24,18 +24,19 @@ const IMGS = POOL.map((id) => {
 })
 const imgOf = (v) => itemImage(POOL[(v - 1) % POOL.length])
 
-// ── 十模式（棋盘 × 目标 × 步数上限）──
+// ── 十模式（棋盘 × 目标类型 × 步数/时限）──
+// goal: single/multi = 把 ⭐ 主菜滑到金框格（可多个）；order = 整盘按编号还原
 const MODES = {
-  m1: { label: '模式1', n: 3, goal: 'target', moves: 10, gold: 30, desc: '3×3 · 主菜归位 · 10 步内 · +30 币' },
-  m2: { label: '模式2', n: 3, goal: 'target', moves: 7, gold: 35, desc: '3×3 · 主菜归位 · 7 步内 · +35 币' },
-  m3: { label: '模式3', n: 3, goal: 'order', moves: 28, gold: 65, desc: '3×3 · 整盘还原 · 28 步内 · +65 币' },
-  m4: { label: '模式4', n: 3, goal: 'order', moves: 22, gold: 75, desc: '3×3 · 整盘还原 · 22 步内 · +75 币' },
-  m5: { label: '模式5', n: 4, goal: 'target', moves: 16, gold: 45, desc: '4×4 · 主菜归位 · 16 步内 · +45 币' },
-  m6: { label: '模式6', n: 4, goal: 'target', moves: 11, gold: 55, desc: '4×4 · 主菜归位 · 11 步内 · +55 币' },
-  m7: { label: '模式7', n: 4, goal: 'order', moves: 80, gold: 165, desc: '4×4 · 整盘还原 · 80 步内 · +165 币' },
-  m8: { label: '模式8', n: 5, goal: 'target', moves: 24, gold: 65, desc: '5×5 · 主菜归位 · 24 步内 · +65 币' },
-  m9: { label: '模式9', n: 5, goal: 'target', moves: 16, gold: 80, desc: '5×5 · 主菜归位 · 16 步内 · +80 币' },
-  m10: { label: '模式10', n: 4, goal: 'order', moves: 60, gold: 140, desc: '4×4 · 整盘还原 · 60 步内 · +140 币' },
+  m1: { label: '模式1', n: 3, goal: 'single', stars: [1], cells: [4], moves: 10, gold: 30, desc: '3×3 · 主菜归位（1 个目标格）· 10 步内 · +30 币' },
+  m2: { label: '模式2', n: 3, goal: 'single', stars: [1], cells: [4], moves: 7, gold: 35, desc: '3×3 · 主菜归位 · 7 步内 · +35 币' },
+  m3: { label: '模式3', n: 3, goal: 'order', moves: 28, gold: 75, desc: '3×3 · 整盘还原（按编号 1、2、3…）· 28 步内 · +75 币' },
+  m4: { label: '模式4', n: 3, goal: 'order', moves: 26, hideNums: true, gold: 95, desc: '3×3 · 整盘还原 · **隐藏编号**（照预览图靠图案认位）· 26 步内 · +95 币' },
+  m5: { label: '模式5', n: 4, goal: 'multi', stars: [1, 2], cells: [0, 15], moves: 20, gold: 55, desc: '4×4 · 双菜归位（2 个 ⭐ 各滑到金框格）· 20 步内 · +55 币' },
+  m6: { label: '模式6', n: 4, goal: 'order', moves: 80, gold: 165, desc: '4×4 · 整盘还原 · 80 步内 · +165 币' },
+  m7: { label: '模式7', n: 4, goal: 'order', moves: 60, gold: 150, desc: '4×4 · 整盘还原 · 60 步内 · +150 币' },
+  m8: { label: '模式8', n: 5, goal: 'multi', stars: [1, 2, 3], cells: [0, 12, 24], moves: 30, gold: 85, desc: '5×5 · 三菜归位（3 个 ⭐ 各就各位）· 30 步内 · +85 币' },
+  m9: { label: '模式9', n: 5, goal: 'multi', stars: [1, 2, 3], cells: [0, 12, 24], moves: 24, timeLimit: 120, gold: 105, desc: '5×5 · 三菜归位 · **限时 120 秒** + 24 步 · +105 币' },
+  m10: { label: '模式10', n: 4, goal: 'order', moves: 60, timeLimit: 180, gold: 180, desc: '4×4 · 整盘还原 · **限时 180 秒** + 60 步 · +180 币' },
 }
 const showInfo = ref(false)
 
@@ -50,15 +51,13 @@ const started = ref(false)
 const hint = ref('')
 const best = computed(() => player.minigames?.slide?.best ?? 0) // 最少步数（通关时记录）
 const cfg = computed(() => MODES[mode.value])
-const starTile = computed(() => (cfg.value.goal === 'target' ? 1 : 0))
-const targetCell = computed(() => {
-  const n = cfg.value.n
-  return Math.floor((n * n) / 2)
-})
-const cell = computed(() => (cfg.value.n === 3 ? 112 : cfg.value.n === 4 ? 82 : 64))
+const isOrder = computed(() => cfg.value.goal === 'order')
+const starSet = computed(() => new Set(cfg.value.stars ?? []))
+const cell = computed(() => (cfg.value.n === 3 ? 128 : cfg.value.n === 4 ? 96 : 78))
 const gap = 6
 const boardPx = computed(() => cfg.value.n * cell.value + (cfg.value.n - 1) * gap)
 const movesText = computed(() => `${moves.value}/${cfg.value.moves}`)
+const timeText = computed(() => (cfg.value.timeLimit ? `${elapsed.value}/${cfg.value.timeLimit}` : `${elapsed.value}`))
 
 let timerId = null
 let elapsedAccum = 0
@@ -84,13 +83,19 @@ function buildBoard() {
     prev = gapIdx
     gapIdx = pick
   }
-  // 主菜别一开始就已在目标格
-  if (cfg.value.goal === 'target' && b[targetCell.value] === 1) {
-    const nbs = neighbors(targetCell.value, n)
-    if (nbs.length) {
-      const pick = nbs[Math.floor(Math.random() * nbs.length)]
-      b[targetCell.value] = b[pick]
-      b[pick] = 0
+  // 打乱后确保没有 ⭐ 主菜恰好已经在目标格
+  const c = cfg.value
+  if (c.goal !== 'order') {
+    for (let k = 0; k < c.stars.length; k++) {
+      const cellIdx = c.cells[k]
+      if (b[cellIdx] === c.stars[k]) {
+        const nbs = neighbors(cellIdx, c.n)
+        if (nbs.length) {
+          const pick = nbs[Math.floor(Math.random() * nbs.length)]
+          b[cellIdx] = b[pick]
+          b[pick] = 0
+        }
+      }
     }
   }
   return b
@@ -128,11 +133,15 @@ function tapTile(v) {
   if (moves.value >= cfg.value.moves) settle(false)
 }
 function isSolved() {
-  const n = cfg.value.n
+  const c = cfg.value
   const b = board.value
-  if (cfg.value.goal === 'target') return b[targetCell.value] === 1
-  for (let i = 0; i < n * n - 1; i++) if (b[i] !== i + 1) return false
-  return b[n * n - 1] === 0
+  if (c.goal === 'order') {
+    const n = c.n
+    for (let i = 0; i < n * n - 1; i++) if (b[i] !== i + 1) return false
+    return b[n * n - 1] === 0
+  }
+  for (let k = 0; k < c.stars.length; k++) if (b[c.cells[k]] !== c.stars[k]) return false
+  return true
 }
 
 // ── 计时 ──
@@ -144,6 +153,8 @@ function startTimer() {
     elapsedAccum += (now - lastTs) / 1000
     lastTs = now
     elapsed.value = Math.floor(elapsedAccum)
+    // 限时模式超时判负
+    if (cfg.value.timeLimit && elapsedAccum >= cfg.value.timeLimit && !over.value) settle(false)
   }, 200)
 }
 function stopTimer() {
@@ -186,7 +197,10 @@ function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
-  hint.value = cfg.value.goal === 'target' ? '把 ⭐ 主菜滑到金框格子里' : '按编号顺序把菜块排好（1 在左上，空格在右下）'
+  const c = cfg.value
+  hint.value = c.goal === 'order'
+    ? '按编号顺序把菜块排好（1 在左上，空格在右下）'
+    : `把 ${c.stars.length} 个 ⭐ 主菜分别滑到金框格子里`
   beep(880, 0.08)
 }
 function pass() {
@@ -212,7 +226,7 @@ function settle(win) {
   stopTimer()
   if (!win) {
     beep(160, 0.3, 'sawtooth')
-    ui.pushLog(`🍽️ 摆盘华容道：${cfg.value.moves} 步内没排好，未达标`, 'warn')
+    ui.pushLog(`🍽️ 摆盘华容道：${cfg.value.timeLimit && elapsedAccum >= cfg.value.timeLimit ? '超时' : cfg.value.moves + ' 步内没排好'}，未达标`, 'warn')
   }
 }
 
@@ -224,7 +238,7 @@ onUnmounted(() => { stopTimer() })
   <div class="sl-page">
     <div class="sl-topbar">
       <button v-for="(m, key) in MODES" :key="key" class="sl-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
-      <span class="sl-chip" style="margin-left: auto">⏱ <b class="mono">{{ elapsed }}</b> 秒</span>
+      <span class="sl-chip" style="margin-left: auto">⏱ <b class="mono">{{ timeText }}</b> 秒</span>
       <span class="sl-chip">🎯 步数 <b class="mono">{{ movesText }}</b></span>
       <span class="sl-chip">💰 <b class="mono">{{ cfg.gold }}</b> 币</span>
       <span class="sl-chip">🏆 最少步 <b class="mono">{{ best }}</b></span>
@@ -232,24 +246,43 @@ onUnmounted(() => { stopTimer() })
     </div>
 
     <div class="sl-stage" :style="{ width: boardPx + 'px', height: boardPx + 'px' }">
-      <!-- 目标格（主菜归位模式） -->
-      <div
-        v-if="cfg.goal === 'target'"
-        class="sl-goal-cell"
-        :style="{ left: (targetCell % cfg.n) * (cell + gap) + 'px', top: Math.floor(targetCell / cfg.n) * (cell + gap) + 'px', width: cell + 'px', height: cell + 'px' }"
-      >★</div>
       <div
         v-for="(v, i) in board"
         v-show="v !== 0"
         :key="v"
         class="sl-tile"
-        :class="{ star: cfg.goal === 'target' && v === 1 }"
+        :class="{ star: starSet.has(v) }"
         :style="{ left: (i % cfg.n) * (cell + gap) + 'px', top: Math.floor(i / cfg.n) * (cell + gap) + 'px', width: cell + 'px', height: cell + 'px' }"
         @click="tapTile(v)"
       >
         <img :src="imgOf(v)" alt="" @error="$event.target.style.display = 'none'" />
-        <span class="sl-num">{{ v }}</span>
-        <span v-if="cfg.goal === 'target' && v === 1" class="sl-star">⭐</span>
+        <span v-if="!cfg.hideNums" class="sl-num">{{ v }}</span>
+        <span v-if="starSet.has(v)" class="sl-star">⭐</span>
+      </div>
+      <!-- 目标格（画在菜块之上，避免被压住看不见） -->
+      <div
+        v-for="(tc, k) in (cfg.cells || [])"
+        :key="'g' + k"
+        class="sl-goal-cell"
+        :style="{ left: (tc % cfg.n) * (cell + gap) + 'px', top: Math.floor(tc / cfg.n) * (cell + gap) + 'px', width: cell + 'px', height: cell + 'px' }"
+      >★</div>
+    </div>
+
+    <!-- 目标排列预览（整盘还原模式） -->
+    <div v-if="isOrder" class="sl-preview">
+      <div class="sl-preview-title">目标排列</div>
+      <div class="sl-preview-grid" :style="{ gridTemplateColumns: `repeat(${cfg.n}, 1fr)`, width: (cfg.n * 30 - 4) + 'px' }">
+        <div
+          v-for="i in cfg.n * cfg.n"
+          :key="'p' + i"
+          class="sl-preview-cell"
+          :class="{ gap: i === cfg.n * cfg.n }"
+        >
+          <template v-if="i < cfg.n * cfg.n">
+            <img :src="imgOf(i)" alt="" @error="$event.target.style.display = 'none'" />
+            <span class="sl-preview-num">{{ i }}</span>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -283,9 +316,12 @@ onUnmounted(() => { stopTimer() })
         <div class="sl-info-list">
           <div class="sl-info-row sl-info-rule">
             玩法：菜块排成方阵，中间留一个空格；<b>点击与空格相邻的菜块</b>即可让它滑进空格。<br />
-            两种目标：<b>主菜归位</b>——把带 ⭐ 的主菜滑到金框格（<b>整盘还原</b>——按左上角的编号 1、2、3… 依次排好，空格留在右下角）。<br />
+            <b>四种目标</b>：<b>主菜归位</b>——把带 ⭐ 的主菜滑到金框格（模式 1/2 一个、5 双菜、8/9 三菜）；
+            <b>整盘还原</b>——按左上角编号 1、2、3… 依次排好、空格留在右下角（模式 3/6/7/10）；
+            <b>隐藏编号</b>——模式 4 不显示编号，靠下方「目标排列」预览图认图案归位；
+            <b>限时</b>——模式 9/10 除步数上限外还有时间限制，超时判负。<br />
             每局有<b>步数上限</b>，用完还没排好就判负；开局由「随机合法滑动」打乱，<b>保证一定可解</b>。<br />
-            结算：在步数内完成即达标发游戏币，并记录同模式的最少步数。
+            结算：在步数（与时限）内完成即达标发游戏币，并记录同模式的最少步数。
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="sl-info-row">
             <b class="sl-info-name">{{ m.label }}</b>
@@ -306,7 +342,7 @@ onUnmounted(() => { stopTimer() })
 .sl-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 
 .sl-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.22); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); }
-.sl-goal-cell { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2px dashed var(--gold); color: var(--gold); font-size: 22px; background: rgba(224, 161, 58, 0.12); }
+.sl-goal-cell { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2.5px dashed var(--gold); color: var(--gold); font-size: 24px; background: rgba(224, 161, 58, 0.16); pointer-events: none; z-index: 5; text-shadow: 0 1px 3px rgba(90, 60, 10, 0.5); }
 .sl-tile { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255, 252, 246, 0.92); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 2px 6px rgba(93, 64, 55, 0.18); cursor: pointer; transition: left 0.14s ease, top 0.14s ease, box-shadow 0.14s; overflow: hidden; }
 .sl-tile:hover { box-shadow: 0 4px 12px rgba(184, 68, 42, 0.3); }
 .sl-tile.star { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(224, 161, 58, 0.35), 0 2px 6px rgba(93, 64, 55, 0.18); }
@@ -315,6 +351,14 @@ onUnmounted(() => { stopTimer() })
 .sl-star { position: absolute; left: 4px; top: 2px; font-size: 13px; }
 
 .sl-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
+/* 目标排列预览（整盘还原模式） */
+.sl-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sl-preview-title { font-size: 11px; font-weight: 700; color: var(--muted); }
+.sl-preview-grid { display: grid; gap: 2px; background: rgba(120, 84, 50, 0.2); padding: 3px; border-radius: 8px; }
+.sl-preview-cell { position: relative; aspect-ratio: 1; border-radius: 4px; background: rgba(255, 252, 246, 0.88); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.sl-preview-cell.gap { background: rgba(120, 84, 50, 0.4); }
+.sl-preview-cell img { width: 84%; height: 84%; object-fit: contain; }
+.sl-preview-num { position: absolute; right: 1px; bottom: 0; font-size: 7px; font-weight: 800; color: rgba(120, 80, 50, 0.85); }
 .sl-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .sl-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 .sl-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }

@@ -264,50 +264,160 @@ function draw() {
   drawHud(ctx, dark)
   ctx.restore()
 }
+// ── 场景配色（深/浅两套）──
+function pal(dark) {
+  return dark
+    ? { sky: ['#182238', '#26364a'], sun: 'rgba(255,236,190,0.20)', hill: '#1f3128', g1: '#24402c', g2: '#1d3626', g3: '#162c1e', blade: 'rgba(255,255,255,0.07)', soil0: '#5a3f26', soil1: '#33220f', pit: '#0b0705', rim: '#6b4a2a', pebble: '#6a6258', flower: ['#c98fb0', '#e0c56a', '#8fb0d9'] }
+    : { sky: ['#c6e8f8', '#eef8e4'], sun: 'rgba(255,248,200,0.75)', hill: '#a9cfa4', g1: '#b6df98', g2: '#9ed37c', g3: '#86c463', blade: 'rgba(255,255,255,0.24)', soil0: '#c1925f', soil1: '#8a6238', pit: '#3a2412', rim: '#a87848', pebble: '#9c9184', flower: ['#e39ac0', '#f0d27a', '#9cc0e8'] }
+}
+function rnd2(seed) {
+  let s = (seed >>> 0) || 1
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
+}
 function drawField(ctx, dark) {
-  const g = ctx.createLinearGradient(0, 0, 0, H)
-  if (dark) { g.addColorStop(0, '#20281c'); g.addColorStop(1, '#141a12') } else { g.addColorStop(0, '#cfe3a8'); g.addColorStop(1, '#9dbb6e') }
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, W, H)
-  // 田垄
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.05)' : 'rgba(90,120,50,0.22)'
-  ctx.lineWidth = 2
-  for (let i = 0; i < 9; i++) {
-    const y = 40 + i * 52
+  const P = pal(dark)
+  // 天空
+  const sky = ctx.createLinearGradient(0, 0, 0, 150)
+  sky.addColorStop(0, P.sky[0])
+  sky.addColorStop(1, P.sky[1])
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, W, 150)
+  // 日晕
+  const sg = ctx.createRadialGradient(72, 42, 6, 72, 42, 160)
+  sg.addColorStop(0, P.sun)
+  sg.addColorStop(1, 'rgba(255,248,200,0)')
+  ctx.fillStyle = sg
+  ctx.beginPath(); ctx.arc(72, 42, 160, 0, TAU); ctx.fill()
+  // 远山
+  ctx.fillStyle = P.hill
+  ctx.beginPath()
+  ctx.moveTo(0, 152)
+  for (let x = 0; x <= W; x += 8) ctx.lineTo(x, 120 - Math.sin(x * 0.013) * 15 - Math.sin(x * 0.041) * 6)
+  ctx.lineTo(W, 152)
+  ctx.closePath()
+  ctx.fill()
+  // 三层草地
+  const bands = [
+    [P.g1, 138, 22],
+    [P.g2, 196, 26],
+    [P.g3, 262, 34],
+  ]
+  for (const [col, top, amp] of bands) {
+    ctx.fillStyle = col
     ctx.beginPath()
-    ctx.moveTo(0, y)
-    for (let x = 0; x <= W; x += 20) ctx.lineTo(x, y + Math.sin(x * 0.03 + i) * 3)
+    ctx.moveTo(0, H)
+    ctx.lineTo(0, top)
+    for (let x = 0; x <= W; x += 8) ctx.lineTo(x, top + Math.sin(x * 0.021 + top) * amp * 0.35 + Math.sin(x * 0.07) * amp * 0.16)
+    ctx.lineTo(W, H)
+    ctx.closePath()
+    ctx.fill()
+  }
+  // 草叶
+  const rng = rnd2(20260909)
+  ctx.strokeStyle = P.blade
+  ctx.lineWidth = 1.6
+  for (let i = 0; i < 150; i++) {
+    const x = rng() * W
+    const y = 150 + rng() * (H - 150)
+    const len = 6 + rng() * 12
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.quadraticCurveTo(x + (rng() - 0.5) * 7, y - len * 0.6, x + (rng() - 0.5) * 12, y - len)
     ctx.stroke()
   }
+  // 小花 + 石子
+  for (let i = 0; i < 14; i++) {
+    const x = rng() * W
+    const y = 210 + rng() * (H - 230)
+    ctx.fillStyle = P.flower[i % 3]
+    ctx.globalAlpha = 0.85
+    ctx.beginPath(); ctx.arc(x, y, 2.6 + rng() * 1.6, 0, TAU); ctx.fill()
+    ctx.globalAlpha = 1
+  }
+  for (let i = 0; i < 10; i++) {
+    const x = rng() * W
+    const y = 300 + rng() * (H - 320)
+    ctx.fillStyle = P.pebble
+    ctx.globalAlpha = 0.55
+    ctx.beginPath(); ctx.ellipse(x, y, 3 + rng() * 4, 2 + rng() * 2.5, rng() * 3, 0, TAU); ctx.fill()
+    ctx.globalAlpha = 1
+  }
   // 顶部光
-  const rg = ctx.createRadialGradient(W / 2, 40, 20, W / 2, 40, 320)
-  rg.addColorStop(0, dark ? 'rgba(255,240,200,0.06)' : 'rgba(255,255,255,0.35)')
+  const rg = ctx.createRadialGradient(W / 2, 30, 20, W / 2, 30, 340)
+  rg.addColorStop(0, dark ? 'rgba(255,240,200,0.05)' : 'rgba(255,255,255,0.3)')
   rg.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = rg
   ctx.fillRect(0, 0, W, H)
 }
 function drawHoleBack(ctx, h, dark) {
-  // 洞口（下半圈阴影）
-  ctx.fillStyle = dark ? '#2a1f14' : '#6b4a2a'
+  const P = pal(dark)
+  const idx = HOLES.indexOf(h)
+  const rng = rnd2(idx * 977 + 41)
+  // 土堆
+  const mg = ctx.createRadialGradient(h.x - 8, h.y - 12, 4, h.x, h.y + 2, HOLE_RX + 18)
+  mg.addColorStop(0, P.soil0)
+  mg.addColorStop(1, P.soil1)
+  ctx.fillStyle = mg
+  ctx.beginPath()
+  ctx.ellipse(h.x, h.y - 2, HOLE_RX + 15, HOLE_RY + 12, 0, 0, TAU)
+  ctx.fill()
+  // 土堆上的小石子
+  for (let i = 0; i < 5; i++) {
+    const a = rng() * TAU
+    const rr = 0.55 + rng() * 0.4
+    const px = h.x + Math.cos(a) * (HOLE_RX + 10) * rr
+    const py = h.y - 2 + Math.sin(a) * (HOLE_RY + 9) * rr
+    ctx.fillStyle = P.pebble
+    ctx.globalAlpha = 0.5
+    ctx.beginPath(); ctx.ellipse(px, py, 2 + rng() * 2.4, 1.4 + rng() * 1.6, rng() * 3, 0, TAU); ctx.fill()
+    ctx.globalAlpha = 1
+  }
+  // 坑口
+  ctx.fillStyle = P.pit
   ctx.beginPath()
   ctx.ellipse(h.x, h.y, HOLE_RX, HOLE_RY, 0, 0, TAU)
   ctx.fill()
-  ctx.fillStyle = dark ? '#120d08' : '#3f2a16'
+  const pg = ctx.createRadialGradient(h.x, h.y + 5, 2, h.x, h.y - 1, HOLE_RX)
+  pg.addColorStop(0, 'rgba(0,0,0,0.9)')
+  pg.addColorStop(1, 'rgba(0,0,0,0.05)')
+  ctx.fillStyle = pg
   ctx.beginPath()
-  ctx.ellipse(h.x, h.y, HOLE_RX - 5, HOLE_RY - 3, 0, 0, TAU)
+  ctx.ellipse(h.x, h.y, HOLE_RX - 3, HOLE_RY - 2, 0, 0, TAU)
   ctx.fill()
+  // 坑口内沿高光
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.4)'
+  ctx.lineWidth = 1.4
+  ctx.beginPath()
+  ctx.ellipse(h.x, h.y, HOLE_RX - 1, HOLE_RY - 1, 0, 0, Math.PI)
+  ctx.stroke()
 }
 function drawHoleFront(ctx, h, dark) {
-  // 洞口前沿：遮住冒出物的下半截
-  ctx.fillStyle = dark ? '#3a2c1c' : '#8a6238'
+  const P = pal(dark)
+  const idx = HOLES.indexOf(h)
+  const rng = rnd2(idx * 313 + 7)
+  // 前沿土沿
+  ctx.fillStyle = P.rim
   ctx.beginPath()
   ctx.ellipse(h.x, h.y, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
   ctx.fill()
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.35)'
-  ctx.lineWidth = 1.4
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.45)'
+  ctx.lineWidth = 1.6
   ctx.beginPath()
   ctx.ellipse(h.x, h.y, HOLE_RX - 2, HOLE_RY - 2, 0, 0, Math.PI)
   ctx.stroke()
+  // 土堆边缘的草
+  ctx.strokeStyle = dark ? 'rgba(140,190,120,0.5)' : 'rgba(96,158,72,0.75)'
+  ctx.lineWidth = 2
+  for (let i = 0; i < 9; i++) {
+    const a = Math.PI + (i / 8) * Math.PI
+    const bx = h.x + Math.cos(a) * (HOLE_RX + 11)
+    const by = h.y - 2 + Math.sin(a) * (HOLE_RY + 8)
+    const len = 6 + rng() * 7
+    ctx.beginPath()
+    ctx.moveTo(bx, by)
+    ctx.quadraticCurveTo(bx + (rng() - 0.5) * 5, by - len * 0.6, bx + (rng() - 0.5) * 9, by - len)
+    ctx.stroke()
+  }
 }
 function drawPop(ctx, h) {
   const it = h.item
