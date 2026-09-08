@@ -11,15 +11,15 @@ const ui = useUiStore()
 
 // ── 画布与坑位 ──
 // 画布比例 = 背景图（2848×1600，16:9），图里的 9 个坑位按实测归一化坐标对齐
-const W = 560
-const H = 315
+const W = 720
+const H = 389
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
-const HOLE_RX = 33 // 图中坑口半径（按 560/2848 缩放：340×203 → 67×40）
-const HOLE_RY = 20
-const POP_MAX = 44 // 冒出高度
-const ITEM_SIZE = 44
+const HOLE_RX = 43 // 图中坑口半径（按 720/2848 缩放）
+const HOLE_RY = 26
+const POP_MAX = 70 // 冒出高度（升到坑口上方，完全露出来）
+const ITEM_SIZE = 68
 const HOLES = []
 for (const ny of [0.2455, 0.5305, 0.8162]) { // 已按「裁掉底部水印条」后的图重算
   for (const nx of [0.282, 0.4993, 0.7124]) {
@@ -149,8 +149,8 @@ function onDown(e) {
     const h = HOLES[k]
     if (!h.item || h.item.hit) continue
     const it = h.item
-    const cy = h.y + 14 - popOffset(it)
-    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.9) <= 32) { hitHole(h); return }
+    const cy = h.y + 20 - popOffset(it)
+    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.9) <= 41) { hitHole(h); return }
   }
 }
 function popOffset(it) {
@@ -170,14 +170,14 @@ function hitHole(h) {
     if (graceT <= 0) {
       lives.value--
       graceT = 0.6
-      floats.push({ x: h.x, y: h.y - 42, text: it.kind === 'rock' ? '石头！-1 ❤' : '虫子！-1 ❤', life: 0, max: 1.0, color: '#e06a5a' })
+      floats.push({ x: h.x, y: h.y - 54, text: it.kind === 'rock' ? '石头！-1 ❤' : '虫子！-1 ❤', life: 0, max: 1.0, color: '#e06a5a' })
       beep(150, 0.26, 'sawtooth', 0.09)
       if (lives.value <= 0) settle()
     } else {
-      floats.push({ x: h.x, y: h.y - 42, text: '点错了！', life: 0, max: 0.8, color: '#e06a5a' })
+      floats.push({ x: h.x, y: h.y - 54, text: '点错了！', life: 0, max: 0.8, color: '#e06a5a' })
       beep(190, 0.14, 'sawtooth', 0.05)
     }
-    for (let i = 0; i < 10; i++) sparks.push({ x: h.x, y: h.y - 30, vx: rand(-130, 130), vy: rand(-150, 20), life: 0, max: rand(0.3, 0.6), color: '#b9a08a', size: rand(1.5, 3) })
+    for (let i = 0; i < 10; i++) sparks.push({ x: h.x, y: h.y - 38, vx: rand(-130, 130), vy: rand(-150, 20), life: 0, max: rand(0.3, 0.6), color: '#b9a08a', size: rand(1.5, 3) })
     return
   }
   const now = performance.now()
@@ -188,8 +188,8 @@ function hitHole(h) {
   const base = it.kind === 'gold' ? ING[it.i].score * 3 : ING[it.i].score
   const gain = Math.round(base * mult)
   score.value += gain
-  floats.push({ x: h.x, y: h.y - 42, text: `+${gain}`, life: 0, max: 0.9, color: it.kind === 'gold' ? '#ffd65a' : '#eaf6c8' })
-  for (let i = 0; i < 8; i++) sparks.push({ x: h.x, y: h.y - 30, vx: rand(-90, 90), vy: rand(-160, -20), life: 0, max: rand(0.3, 0.6), color: it.kind === 'gold' ? '#ffe08a' : '#bfe08a', size: rand(1.4, 2.6) })
+  floats.push({ x: h.x, y: h.y - 54, text: `+${gain}`, life: 0, max: 0.9, color: it.kind === 'gold' ? '#ffd65a' : '#eaf6c8' })
+  for (let i = 0; i < 8; i++) sparks.push({ x: h.x, y: h.y - 38, vx: rand(-90, 90), vy: rand(-160, -20), life: 0, max: rand(0.3, 0.6), color: it.kind === 'gold' ? '#ffe08a' : '#bfe08a', size: rand(1.4, 2.6) })
   beep(it.kind === 'gold' ? 1180 : 780 + combo.value * 40, 0.06, 'triangle', 0.06)
 }
 
@@ -292,17 +292,17 @@ function drawPop(ctx, h) {
   const pop = popOffset(it)
   if (pop <= 0.02) return
   const cx = h.x
-  const cy = h.y + 14 - pop
+  const cy = h.y + 20 - pop
   const wob = Math.sin(waveT * 6 + it.seed) * 1.6
   ctx.save()
   // 裁剪：把洞口「前沿」（下半椭圆）挖掉，冒出物的根部就会被洞沿挡住
   ctx.beginPath()
   ctx.rect(0, 0, W, H)
-  ctx.ellipse(h.x, h.y + 3, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
+  ctx.ellipse(h.x, h.y + 4, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
   ctx.clip('evenodd')
   ctx.translate(cx + wob, cy)
-  if (it.kind === 'rock') { ctx.scale(0.72, 0.72); drawRock(ctx) }
-  else if (it.kind === 'bug') { ctx.scale(0.72, 0.72); drawBug(ctx) }
+  if (it.kind === 'rock') { ctx.scale(0.9, 0.9); drawRock(ctx) }
+  else if (it.kind === 'bug') { ctx.scale(0.9, 0.9); drawBug(ctx) }
   else {
     const im = IMGS[it.i]
     const s = ITEM_SIZE
@@ -556,7 +556,7 @@ onUnmounted(() => { stopLoop() })
 .wk-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .wk-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .wk-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.wk-canvas { width: min(560px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
+.wk-canvas { width: min(720px, 96%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
 .wk-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
 .wk-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .wk-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
