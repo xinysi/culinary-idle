@@ -3,22 +3,12 @@
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { ITEMS, getItem } from '../game/data/items.js'
+
+import { RARE_POOL, SEED_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL, INGREDIENT_POOL } from '../game/data/gameShopPools.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
 const coins = computed(() => player.gameCoins ?? 0)
-
-const RARE_POOL = ['spiritFruit', 'dragonRoot', 'truffle', 'lingzhi'].filter((id) => !!getItem(id))
-const SEED_POOL = Object.values(ITEMS).filter((i) => i.type === 'seed').map((i) => i.id)
-const FOOD_POOL = Object.values(ITEMS).filter((i) => i.type === 'food').map((i) => i.id)
-const SPICE_POOL = Object.values(ITEMS).filter((i) => i.type === 'spice').map((i) => i.id)
-const MINERAL_POOL = Object.values(ITEMS)
-  .filter((i) => i.category === 'mineral' || /矿|Ore|fossil/.test((i.name ?? '') + i.id))
-  .map((i) => i.id)
-const INGREDIENT_POOL = Object.values(ITEMS)
-  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral')
-  .map((i) => i.id)
 
 /** 商店发货：优先入背包；背包满则直发仓库（仓库种类满才拒收），保证商品一定生效 */
 function grantShopItem(id, qty) {
