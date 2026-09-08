@@ -14,8 +14,6 @@ const W = 420
 const H = 470
 const COLS = 3
 const ROWS = 3
-const HOLE_RX = 46
-const HOLE_RY = 18
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
@@ -264,177 +262,80 @@ function draw() {
   drawHud(ctx, dark)
   ctx.restore()
 }
-// ── 场景配色（深/浅两套）──
-function pal(dark) {
-  return dark
-    ? { sky: ['#182238', '#26364a'], sun: 'rgba(255,236,190,0.20)', hill: '#1f3128', g1: '#24402c', g2: '#1d3626', g3: '#162c1e', blade: 'rgba(255,255,255,0.07)', soil0: '#5a3f26', soil1: '#33220f', pit: '#0b0705', rim: '#6b4a2a', pebble: '#6a6258', flower: ['#c98fb0', '#e0c56a', '#8fb0d9'] }
-    : { sky: ['#c6e8f8', '#eef8e4'], sun: 'rgba(255,248,200,0.75)', hill: '#a9cfa4', g1: '#b6df98', g2: '#9ed37c', g3: '#86c463', blade: 'rgba(255,255,255,0.24)', soil0: '#c1925f', soil1: '#8a6238', pit: '#3a2412', rim: '#a87848', pebble: '#9c9184', flower: ['#e39ac0', '#f0d27a', '#9cc0e8'] }
-}
-function rnd2(seed) {
-  let s = (seed >>> 0) || 1
-  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
-}
-// 远景素材（用户提供的现成图：雪山 + 云 + 树线）
+// ── 素材：俯视像素草地背景 + 坑洞贴图 ──
+// 坑洞原图是 JPEG（棋盘底烘焙在图里），加载后先做「浅色低饱和 → 透明」去背，得到可叠加的精灵
 const BG_IMG = (() => {
   const im = new Image()
-  im.src = 'images/fb-bg.png'
+  im.src = 'images/wk-bg.jpg'
   return im
 })()
+let HOLE_SPRITE = null
+;(() => {
+  const im = new Image()
+  im.src = 'images/wk-hole.jpg'
+  im.onload = () => {
+    const c = document.createElement('canvas')
+    c.width = im.naturalWidth
+    c.height = im.naturalHeight
+    const g = c.getContext('2d')
+    g.drawImage(im, 0, 0)
+    const d = g.getImageData(0, 0, c.width, c.height)
+    const px = d.data
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i]
+      const gg = px[i + 1]
+      const b = px[i + 2]
+      const mx = Math.max(r, gg, b)
+      const mn = Math.min(r, gg, b)
+      const sat = mx === 0 ? 0 : (mx - mn) / mx
+      if (mx > 205 && sat < 0.1) px[i + 3] = 0 // 棋盘格主体
+      else if (mx > 185 && sat < 0.14) px[i + 3] = Math.round(255 * (1 - (mx - 185) / 20) * 0.7) // 边缘半透明
+    }
+    g.putImageData(d, 0, 0)
+    HOLE_SPRITE = c
+  }
+})()
+const HOLE_W = 152 // 坑洞贴图绘制宽度（含土沿）
 function drawField(ctx, dark) {
-  const P = pal(dark)
-  const HZ = 152 // 地平线
-  // 远景
+  // 俯视草地背景（cover 铺满）
   if (BG_IMG.complete && BG_IMG.naturalWidth) {
-    const scale = W / BG_IMG.naturalWidth
-    const ih = BG_IMG.naturalHeight * scale
-    ctx.drawImage(BG_IMG, 0, HZ - ih, W, ih)
+    const s = Math.max(W / BG_IMG.naturalWidth, H / BG_IMG.naturalHeight)
+    const iw = BG_IMG.naturalWidth * s
+    const ih = BG_IMG.naturalHeight * s
+    ctx.drawImage(BG_IMG, (W - iw) / 2, (H - ih) / 2, iw, ih)
   } else {
-    const sky = ctx.createLinearGradient(0, 0, 0, HZ)
-    sky.addColorStop(0, P.sky[0])
-    sky.addColorStop(1, P.sky[1])
-    ctx.fillStyle = sky
-    ctx.fillRect(0, 0, W, HZ)
+    ctx.fillStyle = dark ? '#1b3320' : '#8bc96c'
+    ctx.fillRect(0, 0, W, H)
   }
   if (dark) {
-    ctx.fillStyle = 'rgba(12,18,30,0.45)'
-    ctx.fillRect(0, 0, W, HZ)
+    ctx.fillStyle = 'rgba(10,16,26,0.5)'
+    ctx.fillRect(0, 0, W, H)
   }
-  // 地平线雾化过渡（把远景与前景草地衔接）
-  const hz = ctx.createLinearGradient(0, HZ - 30, 0, HZ + 10)
-  hz.addColorStop(0, 'rgba(255,255,255,0)')
-  hz.addColorStop(1, dark ? 'rgba(28,46,32,0.92)' : 'rgba(206,236,172,0.92)')
-  ctx.fillStyle = hz
-  ctx.fillRect(0, HZ - 30, W, 40)
-  // 草地
-  const gg = ctx.createLinearGradient(0, HZ, 0, H)
-  gg.addColorStop(0, dark ? '#2a452e' : '#a9da8b')
-  gg.addColorStop(0.45, dark ? '#213a26' : '#8bc96c')
-  gg.addColorStop(1, dark ? '#16281a' : '#69b052')
-  ctx.fillStyle = gg
-  ctx.fillRect(0, HZ, W, H - HZ)
-  // 修剪草坪条纹（横向明暗带，比纯色平涂更有质感）
-  for (let y = HZ; y < H; y += 36) {
-    ctx.fillStyle = ((y / 36) | 0) % 2 ? 'rgba(255,255,255,0.055)' : 'rgba(0,0,0,0.035)'
-    ctx.fillRect(0, y, W, 36)
-  }
-  // 远处起伏草浪
-  for (let k = 0; k < 2; k++) {
-    ctx.fillStyle = dark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.13)'
-    const y0 = HZ + 22 + k * 44
-    ctx.beginPath()
-    ctx.moveTo(0, y0)
-    for (let x = 0; x <= W; x += 10) ctx.lineTo(x, y0 + Math.sin(x * 0.019 + k * 2.1) * 8)
-    ctx.lineTo(W, y0 + 34)
-    ctx.lineTo(0, y0 + 34)
-    ctx.closePath()
-    ctx.fill()
-  }
-  // 草叶
-  const rng = rnd2(20260909)
-  ctx.strokeStyle = P.blade
-  ctx.lineWidth = 1.6
-  for (let i = 0; i < 170; i++) {
-    const x = rng() * W
-    const y = HZ + 8 + rng() * (H - HZ - 8)
-    const len = 5 + rng() * 13
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.quadraticCurveTo(x + (rng() - 0.5) * 7, y - len * 0.6, x + (rng() - 0.5) * 13, y - len)
-    ctx.stroke()
-  }
-  // 小花 + 石子
-  for (let i = 0; i < 16; i++) {
-    const x = rng() * W
-    const y = HZ + 60 + rng() * (H - HZ - 70)
-    ctx.fillStyle = P.flower[i % 3]
-    ctx.globalAlpha = 0.85
-    ctx.beginPath(); ctx.arc(x, y, 2.4 + rng() * 1.6, 0, TAU); ctx.fill()
-    ctx.globalAlpha = 1
-  }
-  for (let i = 0; i < 12; i++) {
-    const x = rng() * W
-    const y = HZ + 120 + rng() * (H - HZ - 130)
-    ctx.fillStyle = P.pebble
-    ctx.globalAlpha = 0.5
-    ctx.beginPath(); ctx.ellipse(x, y, 3 + rng() * 4, 2 + rng() * 2.5, rng() * 3, 0, TAU); ctx.fill()
-    ctx.globalAlpha = 1
-  }
-  // 前景压暗（近处更暗，制造纵深）
-  const fg2 = ctx.createLinearGradient(0, H - 150, 0, H)
-  fg2.addColorStop(0, 'rgba(0,0,0,0)')
-  fg2.addColorStop(1, dark ? 'rgba(0,0,0,0.35)' : 'rgba(20,50,10,0.16)')
-  ctx.fillStyle = fg2
-  ctx.fillRect(0, H - 150, W, 150)
+  // 暗角：聚焦中间
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.82)
+  vg.addColorStop(0, 'rgba(0,0,0,0)')
+  vg.addColorStop(1, dark ? 'rgba(0,0,0,0.35)' : 'rgba(20,50,10,0.16)')
+  ctx.fillStyle = vg
+  ctx.fillRect(0, 0, W, H)
 }
 function drawHoleBack(ctx, h, dark) {
-  const idx = HOLES.indexOf(h)
-  const rng = rnd2(idx * 977 + 41)
   // 落影
-  ctx.fillStyle = dark ? 'rgba(0,0,0,0.3)' : 'rgba(24,44,16,0.2)'
+  ctx.fillStyle = dark ? 'rgba(0,0,0,0.32)' : 'rgba(20,40,12,0.22)'
   ctx.beginPath()
-  ctx.ellipse(h.x + 3, h.y + 5, HOLE_RX + 8, HOLE_RY + 6, 0, 0, TAU)
+  ctx.ellipse(h.x + 2, h.y + 6, HOLE_W * 0.46, HOLE_W * 0.2, 0, 0, TAU)
   ctx.fill()
-  // 薄土沿（细环，不做大土堆）
-  const mg = ctx.createLinearGradient(0, h.y - HOLE_RY - 5, 0, h.y + HOLE_RY + 4)
-  mg.addColorStop(0, dark ? '#6b4a2c' : '#c69a68')
-  mg.addColorStop(1, dark ? '#3a2716' : '#8a6238')
-  ctx.fillStyle = mg
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y - 0.5, HOLE_RX + 3, HOLE_RY + 2.5, 0, 0, TAU)
-  ctx.fill()
-  // 土沿颗粒
-  for (let i = 0; i < 14; i++) {
-    const a = rng() * TAU
-    const rr = 0.6 + rng() * 0.4
-    const px = h.x + Math.cos(a) * (HOLE_RX + 2) * rr
-    const py = h.y - 0.5 + Math.sin(a) * (HOLE_RY + 2) * rr
-    ctx.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.16)'
-    ctx.beginPath(); ctx.arc(px, py, 0.8 + rng() * 1.2, 0, TAU); ctx.fill()
+  // 贴图上半（后沿），下半留给 drawHoleFront 遮住冒出物的根部
+  if (HOLE_SPRITE) {
+    const sw = HOLE_SPRITE.width
+    const sh = HOLE_SPRITE.height
+    ctx.drawImage(HOLE_SPRITE, 0, 0, sw, sh / 2, h.x - HOLE_W / 2, h.y - HOLE_W / 2, HOLE_W, HOLE_W / 2)
   }
-  // 坑
-  ctx.fillStyle = dark ? '#0b0806' : '#33200f'
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y, HOLE_RX, HOLE_RY, 0, 0, TAU)
-  ctx.fill()
-  const pg = ctx.createRadialGradient(h.x, h.y + HOLE_RY * 0.4, 2, h.x, h.y - 2, HOLE_RX)
-  pg.addColorStop(0, 'rgba(0,0,0,0.98)')
-  pg.addColorStop(1, 'rgba(0,0,0,0.4)')
-  ctx.fillStyle = pg
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y, HOLE_RX - 2, HOLE_RY - 1.5, 0, 0, TAU)
-  ctx.fill()
-  // 内壁上沿高光
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,238,205,0.55)'
-  ctx.lineWidth = 1.8
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y - 0.5, HOLE_RX - 2, HOLE_RY - 2, 0, 0, Math.PI)
-  ctx.stroke()
 }
 function drawHoleFront(ctx, h, dark) {
-  const idx = HOLES.indexOf(h)
-  const rng = rnd2(idx * 313 + 7)
-  // 前沿土沿
-  ctx.fillStyle = dark ? '#4a3320' : '#a87848'
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
-  ctx.fill()
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.14)' : 'rgba(255,240,214,0.6)'
-  ctx.lineWidth = 1.8
-  ctx.beginPath()
-  ctx.ellipse(h.x, h.y, HOLE_RX - 2, HOLE_RY - 2, 0, 0, Math.PI)
-  ctx.stroke()
-  // 土沿外缘的草须
-  ctx.strokeStyle = dark ? 'rgba(150,200,130,0.6)' : 'rgba(80,142,56,0.85)'
-  ctx.lineWidth = 2
-  for (let i = 0; i < 12; i++) {
-    const a = Math.PI + (i / 11) * Math.PI
-    const bx = h.x + Math.cos(a) * (HOLE_RX + 5)
-    const by = h.y - 1 + Math.sin(a) * (HOLE_RY + 4)
-    const len = 6 + rng() * 9
-    ctx.beginPath()
-    ctx.moveTo(bx, by)
-    ctx.quadraticCurveTo(bx + (rng() - 0.5) * 5, by - len * 0.6, bx + (rng() - 0.5) * 11, by - len)
-    ctx.stroke()
+  if (HOLE_SPRITE) {
+    const sw = HOLE_SPRITE.width
+    const sh = HOLE_SPRITE.height
+    ctx.drawImage(HOLE_SPRITE, 0, sh / 2, sw, sh / 2, h.x - HOLE_W / 2, h.y, HOLE_W, HOLE_W / 2)
   }
 }
 function drawPop(ctx, h) {
