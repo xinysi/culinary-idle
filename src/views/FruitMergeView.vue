@@ -13,7 +13,8 @@ const W = 420
 const H = 560
 const GRAV = 2200
 const REST = 0.16
-const FRICTION = 0.06
+const MU = 0.42          // 切向摩擦系数（越小越滑）
+const ANG_DAMP = 0.55    // 角速度衰减（每秒）
 
 // 12 级合成链（青枣以「青梅」替代——图鉴有图且同为青色小果）
 const FRUITS = [
@@ -57,7 +58,7 @@ let best = 0
 let over = false
 let won = false
 let lineY = 110
-let rafId = null
+let loopId = null
 let lastTs = 0
 let flashUntil = 0
 let aiming = false
@@ -69,6 +70,7 @@ const overRef = ref(false)
 const wonRef = ref(false)
 const bestRef = ref(player.minigames?.fruitmerge?.best ?? 0)
 const runningRef = ref(false)
+const started = ref(false)
 
 const IMGS = FRUITS.map((f) => {
   const im = new Image()
@@ -114,17 +116,24 @@ function reset() {
   overRef.value = false
   wonRef.value = false
   runningRef.value = false
+  started.value = false // 需点击「开始游戏」后才可操作
   lineY = 110
   lineYRef.value = 110
   flashUntil = 0
   aimX = W / 2
   rollNext()
   lastTs = 0
-  if (rafId) cancelAnimationFrame(rafId)
-  rafId = requestAnimationFrame(loop)
+  stopLoop()
+  startLoop()
+}
+function startGame() {
+  if (over || won) reset()
+  started.value = true
+  runningRef.value = true
+  lastTs = 0
 }
 function startIfIdle() {
-  if (over || won) return false
+  if (over || won || !started.value) return false
   if (!runningRef.value) { runningRef.value = true; lastTs = 0 }
   return true
 }
@@ -132,7 +141,7 @@ function drop() {
   if (over || won) return
   if (!startIfIdle()) return
   const r = FRUITS[nextLevel - 1].r
-  fruits.push({ id: nextId++, x: Math.max(r + 1, Math.min(W - r - 1, aimX)), y: 40, vx: 0, vy: 0, level: nextLevel, r, age: 0, mergeCd: 0.05, overTime: 0 })
+  fruits.push({ id: nextId++, x: Math.max(r + 1, Math.min(W - r - 1, aimX)), y: 40, vx: 0, vy: 0, av: 0, angle: 0, level: nextLevel, r, age: 0, mergeCd: 0.05, overTime: 0 })
   rollNext()
 }
 function mergeAt(a, b) {
@@ -143,6 +152,8 @@ function mergeAt(a, b) {
     y: (a.y + b.y) / 2,
     vx: (a.vx + b.vx) / 2,
     vy: (a.vy + b.vy) / 2 - 40,
+    av: (a.av + b.av) / 2,
+    angle: (a.angle + b.angle) / 2,
     level: lv,
     r: FRUITS[lv - 1].r,
     age: 0,
@@ -170,14 +181,30 @@ function physics(dt) {
     if (f.vy > 3200) f.vy = 3200
     f.x += f.vx * dt
     f.y += f.vy * dt
+    f.angle += f.av * dt
+    f.av *= Math.pow(ANG_DAMP, dt) // 角速度衰减
     f.age += dt
     if (f.mergeCd > 0) f.mergeCd -= dt
   }
-  // 容器边界（左右墙 + 地面）
+  // 容器边界（左右墙 + 地面）：法向回弹 + 切向摩擦（带动滚动）
   for (const f of fruits) {
     if (f.x - f.r < 0) { f.x = f.r; f.vx = Math.abs(f.vx) * REST }
     if (f.x + f.r > W) { f.x = W - f.r; f.vx = -Math.abs(f.vx) * REST }
-    if (f.y + f.r > H) { f.y = H - f.r; f.vy = -Math.abs(f.vy) * REST; f.vx *= 1 - FRICTION }
+    if (f.y + f.r > H) {
+      f.y = H - f.r
+      if (f.vy > 0) f.vy = -f.vy * REST
+      // 地面摩擦：法向力 = 重力支撑冲量 + 反弹冲量（静止时反弹≈0，必须含重力项否则摩擦恒为 0）
+      const m = f.r * f.r
+      const I = 0.5 * m * f.r * f.r
+      const jn = m * GRAV * dt + Math.abs(f.vy) * m
+      const vt = f.vx - f.av * f.r // 接触点切向速度（含滚动）
+      let jt = -vt / (1 / m + (f.r * f.r) / I)
+      const maxJt = MU * jn
+      if (jt > maxJt) jt = maxJt
+      else if (jt < -maxJt) jt = -maxJt
+      f.vx += jt / m
+      f.av += (-f.r * jt) / I
+    }
   }
   // 两两碰撞（先收集合成，避免迭代中改数组）
   let merged = null
@@ -195,9 +222,11 @@ function physics(dt) {
         merged = { a, b, nf: mergeAt(a, b) }
         break outer
       }
-      // 碰撞解算：位置修正 + 冲量
+      // 碰撞解算：位置修正 + 法向冲量 + 切向摩擦（产生旋转）
       const nx = dx / d
       const ny = dy / d
+      const tx = -ny
+      const ty = nx
       const overlap = minD - d
       const ma = a.r * a.r
       const mb = b.r * b.r
@@ -206,15 +235,36 @@ function physics(dt) {
       a.y -= ny * overlap * (mb / total)
       b.x += nx * overlap * (ma / total)
       b.y += ny * overlap * (ma / total)
-      const rvx = b.vx - a.vx
-      const rvy = b.vy - a.vy
+      // 接触点相对速度（含旋转贡献）
+      const rax = nx * a.r
+      const ray = ny * a.r
+      const rbx = -nx * b.r
+      const rby = -ny * b.r
+      const vaX = a.vx + a.av * -ray
+      const vaY = a.vy + a.av * rax
+      const vbX = b.vx + b.av * -rby
+      const vbY = b.vy + b.av * rbx
+      const rvx = vbX - vaX
+      const rvy = vbY - vaY
       const vn = rvx * nx + rvy * ny
       if (vn < 0) {
-        const jImp = (-(1 + REST) * vn) / (1 / ma + 1 / mb)
-        a.vx -= (jImp * nx) / ma
-        a.vy -= (jImp * ny) / ma
-        b.vx += (jImp * nx) / mb
-        b.vy += (jImp * ny) / mb
+        const Ia = 0.5 * ma * a.r * a.r
+        const Ib = 0.5 * mb * b.r * b.r
+        const jn = (-(1 + REST) * vn) / (1 / ma + 1 / mb)
+        // 切向摩擦冲量（库仑摩擦，限幅 μ|jn|）
+        const vt = rvx * tx + rvy * ty
+        let jt = -vt / (1 / ma + 1 / mb + (a.r * a.r) / Ia + (b.r * b.r) / Ib)
+        const maxJt = MU * Math.abs(jn)
+        if (jt > maxJt) jt = maxJt
+        else if (jt < -maxJt) jt = -maxJt
+        const fx = jn * nx + jt * tx
+        const fy = jn * ny + jt * ty
+        a.vx -= fx / ma
+        a.vy -= fy / ma
+        a.av -= (rax * fy - ray * fx) / Ia
+        b.vx += fx / mb
+        b.vy += fy / mb
+        b.av += (rbx * fy - rby * fx) / Ib
       }
     }
   }
@@ -223,12 +273,12 @@ function physics(dt) {
     fruits = fruits.filter((f) => f !== a && f !== b)
     fruits.push(nf)
   }
-  // 溢出红线判定（静止且在线上方持续 1.2s）
+  // 溢出红线判定（落地后越线持续 1 秒即判负；不再要求静止——堆叠抖动会漏判）
   if (runningRef.value && !over && !won) {
     for (const f of fruits) {
-      if (f.age > 0.6 && Math.abs(f.vy) < 40 && f.y - f.r < lineY) f.overTime += dt
+      if (f.age > 1.0 && f.y - f.r < lineY) f.overTime += dt
       else f.overTime = 0
-      if (f.overTime > 1.2) { lose(); break }
+      if (f.overTime > 1.0) { lose(); break }
     }
   }
 }
@@ -275,10 +325,10 @@ function saveBest() {
   bestRef.value = best
 }
 
-function loop(ts) {
-
-  const dt = lastTs ? Math.min(0.033, (ts - lastTs) / 1000) : 0.016
-  lastTs = ts
+function loop() {
+  const now = performance.now()
+  const dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0.016
+  lastTs = now
   if (runningRef.value && !over && !won) {
     // 子步进：4 次/帧，提升堆叠稳定性
     const sub = dt / 4
@@ -291,8 +341,18 @@ function loop(ts) {
     checkWin()
   }
   draw()
-  rafId = requestAnimationFrame(loop)
 }
+// 用 setInterval 驱动（rAF 在后台标签页会被浏览器暂停；dt 归一化保证帧率无关）
+function startLoop() {
+  if (loopId) clearInterval(loopId)
+  lastTs = 0
+  loopId = setInterval(loop, 16)
+}
+function stopLoop() {
+  if (loopId) clearInterval(loopId)
+  loopId = null
+}
+
 
 function draw() {
   const cv = canvas.value
@@ -316,10 +376,10 @@ function draw() {
   ctx.setLineDash([])
   // 水果
   for (const f of fruits) {
-    drawFruit(ctx, f.x, f.y, f.r, f.level)
+    drawFruit(ctx, f.x, f.y, f.r, f.level, f.angle || 0)
   }
   // 待落水果 + 落点引导
-  if (!over && !won) {
+  if (started.value && !over && !won) {
     const r = FRUITS[nextLevel - 1].r
     const x = Math.max(r + 1, Math.min(W - r - 1, aimX))
     ctx.strokeStyle = 'rgba(150,110,70,0.35)'
@@ -337,17 +397,19 @@ function draw() {
     ctx.fillRect(0, 0, W, H)
   }
 }
-function drawFruit(ctx, x, y, r, level) {
+function drawFruit(ctx, x, y, r, level, angle = 0) {
   const im = IMGS[level - 1]
   ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(angle) // 旋转自身（碰撞滚动）
   ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.arc(0, 0, r, 0, Math.PI * 2)
   ctx.clip()
   if (im.complete && im.naturalWidth) {
-    ctx.drawImage(im, x - r, y - r, r * 2, r * 2)
+    ctx.drawImage(im, -r, -r, r * 2, r * 2)
   } else {
     ctx.fillStyle = FRUITS[level - 1].color
-    ctx.fillRect(x - r, y - r, r * 2, r * 2)
+    ctx.fillRect(-r, -r, r * 2, r * 2)
   }
   ctx.restore()
   ctx.strokeStyle = 'rgba(93,64,55,0.28)'
@@ -362,12 +424,12 @@ function pointerX(e) {
   return ((e.clientX - rect.left) / rect.width) * W
 }
 function onPointerDown(e) {
-  if (over || won) return
+  if (!started.value || over || won) return
   aiming = true
   aimX = pointerX(e)
 }
 function onPointerMove(e) {
-  if (over || won) return
+  if (!started.value || over || won) return
   aimX = pointerX(e)
 }
 function onPointerUp() {
@@ -382,11 +444,11 @@ function onKey(e) {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKey)
-  rafId = requestAnimationFrame(loop)
+  startLoop()
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
-  if (rafId) cancelAnimationFrame(rafId)
+  stopLoop()
 })
 reset()
 </script>
@@ -415,8 +477,10 @@ reset()
     ></canvas>
 
     <div class="fm-keys">
-      <button class="fm-reset" @click="reset()">🔄 重新开始</button>
+      <button v-if="!started" class="fm-start" @click="startGame()">▶ 开始游戏</button>
+      <button v-else class="fm-reset" @click="reset()">🔄 重新开始</button>
     </div>
+    <div v-if="!started && !overRef && !wonRef" class="fm-hint">点击「开始游戏」后，拖动/点击棋盘投放水果</div>
     <div v-if="wonRef" class="fm-done ok">🎉 达标通关！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-else-if="overRef" class="fm-done">💦 溢出红线！本局 {{ scoreRef }} 分{{ MODES[mode].target ? '（未达标）' : '' }}</div>
 
@@ -447,6 +511,8 @@ reset()
 .fm-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .fm-canvas { width: min(420px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); touch-action: none; cursor: pointer; }
 .fm-keys { display: flex; gap: 10px; justify-content: center; }
+.fm-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.fm-hint { font-size: 12.5px; color: var(--muted); }
 .fm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .fm-done { font-weight: 800; color: var(--bad-strong); }
 .fm-done.ok { color: var(--good-strong); }
