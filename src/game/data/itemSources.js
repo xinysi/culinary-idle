@@ -24,6 +24,7 @@ import { seasonTiers } from './seasonContent.js'
 import { SPIRITS } from './spirits.js'
 import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { QUESTS } from './quests.js'
+import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL } from './gameShopPools.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -123,6 +124,14 @@ for (const [pid, kinds] of Object.entries(MIJIAN_POOL_KINDS)) {
     add(id, `觅珍·${pid === 'material' ? '材料池' : pid === 'food' ? '食物池' : '厨具池'}（抽卡）`)
   }
 }
+
+// 游戏商店（2026-09-09 小游戏游戏币商店）：礼包/盲盒/种子袋随机获取（池定义与商店发货共用 gameShopPools）
+for (const id of RARE_POOL) add(id, '游戏商店·稀有食材盲盒（游戏币购买）')
+for (const id of SEED_POOL) add(id, '游戏商店·神秘种子袋（游戏币购买）')
+for (const id of INGREDIENT_POOL) add(id, '游戏商店·鲜味食材礼包（游戏币购买）')
+for (const id of FOOD_POOL) add(id, '游戏商店·珍馐料理礼包（游戏币购买）')
+for (const id of SPICE_POOL) add(id, '游戏商店·精酿调料礼包（游戏币购买）')
+for (const id of MINERAL_POOL) add(id, '游戏商店·锻造矿材礼包（游戏币购买）')
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {

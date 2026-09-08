@@ -30,6 +30,7 @@ function jumpForSource(s) {
   if (s.includes('锻造')) return { view: 'skill', skill: 'craftsmithing' }
   if (s.includes('保鲜')) return { view: 'skill', skill: 'preservation' }
   if (s.includes('探索')) return { view: 'skill', skill: 'exploration' }
+  if (s.includes('游戏商店')) return { view: 'minigames' } // 小游戏游戏币商店（须先于通用「商店」判定）
   if (s.includes('商店') || s.includes('购买')) return { view: 'shop' }
   if (s.includes('赛季')) return { view: 'season' }
   if (s.includes('BOSS') || s.includes('首领') || s.includes('击败')) return { view: 'skill', skill: 'knife' }
