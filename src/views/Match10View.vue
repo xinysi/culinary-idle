@@ -323,7 +323,7 @@ reset()
 <template>
   <div class="m10-page">
     <div class="m10-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="m10-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="m10-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="m10-chip" style="margin-left: auto">📦 余 <b class="mono">{{ stepsLeft }}</b> 步</span>
       <span class="m10-chip">🔢 剩 <b class="mono">{{ remaining }}</b> 块</span>
       <span class="m10-chip">🪜 第 <b class="mono">{{ activeLayer }}</b> 层</span>

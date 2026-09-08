@@ -134,7 +134,7 @@ reset()
 <template>
   <div class="sn-page">
     <div class="sn-topbar">
-      <button v-for="(m, key) in METAS" :key="key" class="sn-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in METAS" :key="key" class="sn-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="sn-chip" style="margin-left: auto">🍎 食物 <b class="mono">{{ eaten }}</b></span>
       <span class="sn-chip">⏱ 速度 <b class="mono">{{ METAS[mode].speed.toFixed(2) }}s/格</b></span>
       <span class="sn-chip">💰 每食 <b class="mono">{{ METAS[mode].rate }}</b> 币</span>

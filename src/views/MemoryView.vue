@@ -111,7 +111,7 @@ resetDay()
 <template>
   <div class="mm-page">
     <div class="mm-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="mm-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="mm-mode" :class="{ on: mode === key }" @click="switchMode(key)">模式{{ idx + 1 }}</button>
       <span class="mm-chip" style="margin-left: auto">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 次</span>
       <span v-if="timeLeft !== null" class="mm-chip">⏱ 剩余 <b class="mono">{{ timeLeft }}</b> 秒</span>
       <span class="mm-chip">🎯 翻 <b class="mono">{{ flips }}</b><template v-if="MODES[mode].maxFlips">/{{ MODES[mode].maxFlips }}</template> 次</span>

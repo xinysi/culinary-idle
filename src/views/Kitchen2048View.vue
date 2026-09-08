@@ -234,7 +234,7 @@ function posStyle(t) {
 <template>
   <div class="g2048-page">
     <div class="g2048-topbar">
-      <button v-for="(m, id) in MODES" :key="id" class="g2048-mode" :class="{ on: mode === id }" @click="switchMode(id)">{{ m.label }}</button>
+      <button v-for="(m, id, idx) in MODES" :key="id" class="g2048-mode" :class="{ on: mode === id }" @click="switchMode(id)">模式{{ idx + 1 }}</button>
       <div class="g2048-stats">
         <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
         <span class="g2048-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 奖 <b class="mono">{{ earned }}</b> 游戏币</span>

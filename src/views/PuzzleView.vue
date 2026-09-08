@@ -131,7 +131,7 @@ const cells = computed(() => tiles.value)
 <template>
   <div class="pz-page">
     <div class="pz-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = key; resetDay()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="pz-mode" :class="{ on: mode === key }" @click="mode = key; resetDay()">模式{{ idx + 1 }}</button>
       <span class="pz-chip" style="margin-left: auto">🏆 累计完成 <b class="mono">{{ doneDays }}</b> 天</span>
       <span class="pz-chip">✅ 累计 <b class="mono">{{ doneDays }}</b> 次</span>
       <span class="pz-chip">🎯 步数 <b class="mono">{{ moves }}</b></span>

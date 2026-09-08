@@ -156,7 +156,7 @@ resetRound()
 <template>
   <div class="tv-page">
     <div class="tv-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="tv-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="tv-mode" :class="{ on: mode === key }" @click="switchMode(key)">模式{{ idx + 1 }}</button>
       <span class="tv-chip" style="margin-left: auto"><b class="mono">{{ mg.badges ?? 0 }}</b> 枚徽章</span>
       <button class="tv-chip tv-reset" @click="resetWeek">🔄 重新开始本周</button>
       <span class="tv-chip">🎯 总对 <b class="mono">{{ correctAll }}</b>/{{ totalQ }}</span>

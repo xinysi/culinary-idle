@@ -240,7 +240,7 @@ reset()
 <template>
   <div class="m3-page">
     <div class="m3-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="m3-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="m3-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="m3-chip" style="margin-left: auto">⭐ <b class="mono">{{ score }}</b>/{{ MODES[mode].goal }}</span>
       <span v-if="stepsLeft !== null" class="m3-chip">🎯 余 <b class="mono">{{ stepsLeft }}</b> 步</span>
       <span v-if="timeLeft !== null" class="m3-chip">⏱ 剩余 <b class="mono">{{ timeLeft }}</b> 秒</span>

@@ -107,7 +107,7 @@ const nextReward = computed(() => {
   <div class="hz-page">
     <!-- 顶栏：模式胶囊 + 状态胶囊（连击/最佳靠右）+ 模式说明 -->
     <div class="hz-topbar">
-      <button v-for="(m, key) in METAS" :key="key" class="hz-mode" :class="{ on: mode === key }" @click="switchMode(key)">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in METAS" :key="key" class="hz-mode" :class="{ on: mode === key }" @click="switchMode(key)">模式{{ idx + 1 }}</button>
       <span class="hz-chip" style="margin-left: auto">🎯 再 <b class="mono">{{ nextReward }}</b> 连奖</span>
       <span class="hz-chip">🔥 <b class="mono">{{ streak }}</b> 连击</span>
       <span class="hz-chip">🏆 最佳 <b class="mono">{{ bestStreak }}</b></span>

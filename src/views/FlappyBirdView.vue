@@ -224,7 +224,7 @@ reset()
 <template>
   <div class="fb-page">
     <div class="fb-topbar">
-      <button v-for="(m, key) in METAS" :key="key" class="fb-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in METAS" :key="key" class="fb-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="fb-chip" style="margin-left: auto">🎯 穿管 <b class="mono">{{ passed }}</b></span>
       <span class="fb-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       <span class="fb-chip">💰 每管 <b class="mono">{{ METAS[mode].rate }}</b> 币</span>

@@ -506,7 +506,7 @@ reset()
 <template>
   <div class="fm-page">
     <div class="fm-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="fm-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="fm-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="fm-chip" style="margin-left: auto">⭐ <b class="mono">{{ scoreRef }}</b></span>
       <span class="fm-chip">🎯 <b class="mono">{{ targetText }}</b></span>
       <span class="fm-chip">🍎 下一颗 <b class="mono">{{ FRUITS[nextLevelRef - 1].name }}</b></span>
