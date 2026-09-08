@@ -4295,3 +4295,15 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 1
 /* ── 商店头像框扩展（2026-09-09）：翡翠 / 皇紫 ── */
 .avatar-frame-jade { border: 3px solid #4f9e58 !important; box-shadow: 0 0 12px rgba(79, 158, 88, 0.65) !important; }
 .avatar-frame-royal { border: 3px solid #7a5fd9 !important; box-shadow: 0 0 14px rgba(122, 95, 217, 0.7) !important; }
+
+/* ── 商店头像框扩充（2026-09-09）：共 10 款 ── */
+.avatar-frame-copper { border: 3px solid #c87f4a !important; box-shadow: 0 0 12px rgba(200, 127, 74, 0.65) !important; }
+.avatar-frame-silver { border: 3px solid #c0c8d0 !important; box-shadow: 0 0 12px rgba(192, 200, 208, 0.7) !important; }
+.avatar-frame-lava { border: 3px solid #e04a2a !important; box-shadow: 0 0 16px rgba(224, 74, 42, 0.8) !important; }
+.avatar-frame-frost { border: 3px solid #7ec8e8 !important; box-shadow: 0 0 14px rgba(126, 200, 232, 0.75) !important; }
+.avatar-frame-rainbow {
+  border: 3px solid #f0a0c0 !important;
+  box-shadow: 0 0 6px rgba(240, 112, 112, 0.8), 0 0 12px rgba(112, 200, 240, 0.75), 0 0 18px rgba(160, 120, 230, 0.7) !important;
+}
+.avatar-frame-star { border: 3px solid #f2e08a !important; box-shadow: 0 0 8px rgba(242, 224, 138, 0.85), 0 0 16px rgba(242, 224, 138, 0.5) !important; }
+.avatar-frame-dragon { border: 3px solid #b8862e !important; box-shadow: 0 0 8px rgba(184, 134, 46, 0.8), 0 0 18px rgba(79, 158, 88, 0.6) !important; }

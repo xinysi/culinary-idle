@@ -171,84 +171,181 @@ const PRODUCTS = {
   },
   title: {
     cat: '👑 外观纪念',
-    icon: '👑', name: '「大胃王」称号', price: 10000, repeat: false,
-    desc: '永久称号，头像与名字旁展示',
-    apply() { player.title = '大胃王'; return '称号「大胃王」已佩戴' },
+    icon: '👑', name: '「大胃王」称号', price: 10000, repeat: false, slot: 'title', value: '大胃王',
+    desc: '永久称号 · 购后可在已拥有外观间免费切换',
   },
   title2: {
     cat: '👑 外观纪念',
-    icon: '👑', name: '「食神」称号', price: 12000, repeat: false,
+    icon: '👑', name: '「食神」称号', price: 12000, repeat: false, slot: 'title', value: '食神',
     desc: '永久称号 · 厨艺巅峰',
-    apply() { player.title = '食神'; return '称号「食神」已佩戴' },
   },
   title3: {
     cat: '👑 外观纪念',
-    icon: '🏅', name: '「千杯不醉」称号', price: 15000, repeat: false,
+    icon: '🏅', name: '「千杯不醉」称号', price: 15000, repeat: false, slot: 'title', value: '千杯不醉',
     desc: '永久称号 · 酒仙风范',
-    apply() { player.title = '千杯不醉'; return '称号「千杯不醉」已佩戴' },
+  },
+  title4: {
+    cat: '👑 外观纪念',
+    icon: '🔥', name: '「火候大师」称号', price: 11000, repeat: false, slot: 'title', value: '火候大师',
+    desc: '永久称号 · 掌火如神',
+  },
+  title5: {
+    cat: '👑 外观纪念',
+    icon: '🔪', name: '「刀工宗师」称号', price: 13000, repeat: false, slot: 'title', value: '刀工宗师',
+    desc: '永久称号 · 刀走龙蛇',
+  },
+  title6: {
+    cat: '👑 外观纪念',
+    icon: '👻', name: '「食灵之主」称号', price: 16000, repeat: false, slot: 'title', value: '食灵之主',
+    desc: '永久称号 · 万灵归心',
+  },
+  title7: {
+    cat: '👑 外观纪念',
+    icon: '🍲', name: '「满汉全席」称号', price: 18000, repeat: false, slot: 'title', value: '满汉全席',
+    desc: '永久称号 · 宴压天下',
   },
   frame: {
     cat: '👑 外观纪念',
-    icon: '🖼️', name: '「神厨」金框', price: 12000, repeat: false,
+    icon: '🖼️', name: '「神厨」金框', price: 12000, repeat: false, slot: 'avatarFrame', value: 'gold',
     desc: '永久金色头像框，头像描边发光',
-    apply() { player.avatarFrame = 'gold'; return '金色头像框已佩戴' },
   },
   frameJade: {
     cat: '👑 外观纪念',
-    icon: '🖼️', name: '「翡翠」头像框', price: 10000, repeat: false,
+    icon: '🖼️', name: '「翡翠」头像框', price: 10000, repeat: false, slot: 'avatarFrame', value: 'jade',
     desc: '永久翡翠绿头像框 · 翠玉质感光晕',
-    apply() { player.avatarFrame = 'jade'; return '翡翠头像框已佩戴' },
   },
   frameRoyal: {
     cat: '👑 外观纪念',
-    icon: '🖼️', name: '「皇紫」头像框', price: 18000, repeat: false,
+    icon: '🖼️', name: '「皇紫」头像框', price: 18000, repeat: false, slot: 'avatarFrame', value: 'royal',
     desc: '永久皇家紫头像框 · 尊贵光晕',
-    apply() { player.avatarFrame = 'royal'; return '皇紫头像框已佩戴' },
+  },
+  frameCopper: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「赤铜」头像框', price: 8000, repeat: false, slot: 'avatarFrame', value: 'copper',
+    desc: '永久赤铜头像框 · 暖铜光晕',
+  },
+  frameSilver: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「白银」头像框', price: 10000, repeat: false, slot: 'avatarFrame', value: 'silver',
+    desc: '永久白银头像框 · 冷银光晕',
+  },
+  frameLava: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「熔岩」头像框', price: 14000, repeat: false, slot: 'avatarFrame', value: 'lava',
+    desc: '永久熔岩头像框 · 炽热红光',
+  },
+  frameFrost: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「霜蓝」头像框', price: 14000, repeat: false, slot: 'avatarFrame', value: 'frost',
+    desc: '永久霜蓝头像框 · 冰晶蓝光',
+  },
+  frameRainbow: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「彩虹」头像框', price: 20000, repeat: false, slot: 'avatarFrame', value: 'rainbow',
+    desc: '永久彩虹头像框 · 三色光环',
+  },
+  frameStar: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「星辉」头像框', price: 22000, repeat: false, slot: 'avatarFrame', value: 'star',
+    desc: '永久星辉头像框 · 双层金色光晕',
+  },
+  frameDragon: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「龙鳞」头像框', price: 26000, repeat: false, slot: 'avatarFrame', value: 'dragon',
+    desc: '永久龙鳞头像框 · 金绿龙气',
   },
   avatar: {
     cat: '👑 外观纪念',
-    icon: '🧸', name: '头像·食神盛宴', price: 6000, repeat: false,
-    desc: '商店专属头像（食神盛宴图，购买即换装）',
-    apply() { player.avatar = 'images/items/food/食神盛宴.png'; return '头像已更换为「食神盛宴」' },
+    icon: '🧸', name: '头像·食神盛宴', price: 6000, repeat: false, slot: 'avatar', value: 'images/items/food/食神盛宴.png',
+    desc: '商店专属头像（食神盛宴图，购后免费切换）',
   },
   avatar2: {
     cat: '👑 外观纪念',
-    icon: '🧸', name: '头像·满汉全席', price: 8000, repeat: false,
+    icon: '🧸', name: '头像·满汉全席', price: 8000, repeat: false, slot: 'avatar', value: 'images/items/food/传说满汉全席.png',
     desc: '商店专属头像（传说满汉全席图）',
-    apply() { player.avatar = 'images/items/food/传说满汉全席.png'; return '头像已更换为「传说满汉全席」' },
   },
   avatar3: {
     cat: '👑 外观纪念',
-    icon: '🧸', name: '头像·龙息烤全龙', price: 9000, repeat: false,
+    icon: '🧸', name: '头像·龙息烤全龙', price: 9000, repeat: false, slot: 'avatar', value: 'images/items/food/龙息烤全龙.png',
     desc: '商店专属头像（龙息烤全龙图）',
-    apply() { player.avatar = 'images/items/food/龙息烤全龙.png'; return '头像已更换为「龙息烤全龙」' },
   },
   avatar4: {
     cat: '👑 外观纪念',
-    icon: '🧸', name: '头像·金龙鱼全宴', price: 7000, repeat: false,
+    icon: '🧸', name: '头像·金龙鱼全宴', price: 7000, repeat: false, slot: 'avatar', value: 'images/items/food/金龙鱼全宴.png',
     desc: '商店专属头像（金龙鱼全宴图）',
-    apply() { player.avatar = 'images/items/food/金龙鱼全宴.png'; return '头像已更换为「金龙鱼全宴」' },
   },
   nameGold: {
     cat: '👑 外观纪念',
-    icon: '🥇', name: '名字·鎏金', price: 20000, repeat: false,
-    desc: '永久名字特效 · 鎏金（购买即切换，多款可购后依次切换）',
-    apply() { player.nameColor = 'gold'; return '名字已切换为「鎏金」' },
+    icon: '🥇', name: '名字·鎏金', price: 20000, repeat: false, slot: 'nameColor', value: 'gold',
+    desc: '永久名字特效 · 鎏金',
   },
   nameSilver: {
     cat: '👑 外观纪念',
-    icon: '🥈', name: '名字·银辉', price: 14000, repeat: false,
-    desc: '永久名字特效 · 银辉（购买即切换）',
-    apply() { player.nameColor = 'silver'; return '名字已切换为「银辉」' },
+    icon: '🥈', name: '名字·银辉', price: 14000, repeat: false, slot: 'nameColor', value: 'silver',
+    desc: '永久名字特效 · 银辉',
   },
+  nameBamboo: {
+    cat: '👑 外观纪念',
+    icon: '🎋', name: '名字·青竹', price: 12000, repeat: false, slot: 'nameColor', value: 'bamboo',
+    desc: '永久名字特效 · 青竹',
+  },
+  namePeach: {
+    cat: '👑 外观纪念',
+    icon: '🌸', name: '名字·桃夭', price: 12000, repeat: false, slot: 'nameColor', value: 'peach',
+    desc: '永久名字特效 · 桃夭',
+  },
+  nameFlame: {
+    cat: '👑 外观纪念',
+    icon: '🔥', name: '名字·赤焰', price: 16000, repeat: false, slot: 'nameColor', value: 'flame',
+    desc: '永久名字特效 · 赤焰',
+  },
+  nameWave: {
+    cat: '👑 外观纪念',
+    icon: '🌊', name: '名字·碧波', price: 16000, repeat: false, slot: 'nameColor', value: 'wave',
+    desc: '永久名字特效 · 碧波',
+  },
+  nameThunder: {
+    cat: '👑 外观纪念',
+    icon: '⚡', name: '名字·紫电', price: 18000, repeat: false, slot: 'nameColor', value: 'thunder',
+    desc: '永久名字特效 · 紫电',
+  },
+  nameMint: {
+    cat: '👑 外观纪念',
+    icon: '🍃', name: '名字·薄荷', price: 13000, repeat: false, slot: 'nameColor', value: 'mint',
+    desc: '永久名字特效 · 薄荷',
+  },
+  nameEmber: {
+    cat: '👑 外观纪念',
+    icon: '🟠', name: '名字·琥珀', price: 15000, repeat: false, slot: 'nameColor', value: 'ember',
+    desc: '永久名字特效 · 琥珀',
+  },
+}
+
+// 外观佩戴状态：{ label, disabled, kind: 'buy'|'equip'|'equipped'|'owned' }
+function btnState(id) {
+  const p = PRODUCTS[id]
+  const owned = !p.repeat && player.shopOwned?.[id]
+  if (!owned) return { label: `🛒 购买（${p.price} 币）`, disabled: coins.value < p.price, kind: 'buy' }
+  if (p.slot) {
+    const equipped = player[p.slot] === p.value
+    if (equipped) return { label: '✓ 佩戴中', disabled: true, kind: 'equipped' }
+    return { label: '👗 佩戴', disabled: false, kind: 'equip' }
+  }
+  return { label: '✓ 已拥有', disabled: true, kind: 'owned' }
 }
 
 function buy(id) {
   const p = PRODUCTS[id]
   if (!p) return
-  if (!p.repeat && player.shopOwned?.[id]) { ui.pushLog(`🛒 已拥有「${p.name}」，无需重复购买`, 'warn'); return }
+  const st = btnState(id)
+  if (st.kind === 'equipped' || st.kind === 'owned') return
+  if (st.kind === 'equip') {
+    player[p.slot] = p.value // 已拥有：免费切换佩戴
+    ui.pushLog(`🛒 佩戴「${p.name}」`, 'gain')
+    return
+  }
   if (!player.spendGameCoins(p.price)) { ui.pushLog(`🛒 游戏币不足（需 ${p.price} 币）`, 'warn'); return }
-  const res = p.apply()
+  const res = p.apply ? p.apply() : (p.slot ? (player[p.slot] = p.value, `已佩戴「${p.name}」`) : '')
   if (!p.repeat) player.shopOwned = { ...(player.shopOwned ?? {}), [id]: true }
   ui.pushLog(`🛒 购买「${p.name}」：${res}`, 'gain')
 }
@@ -262,7 +359,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
     <div class="gs-topbar">
       <span class="gs-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 余额 <b class="mono">{{ coins }}</b> 游戏币</span>
       <span class="gs-chip">🕹️ 七款小游戏奖励均为游戏币</span>
-      <span class="gs-chip" style="margin-left: auto">🛒 购买即生效 · 一次性商品购后锁定</span>
+      <span class="gs-chip" style="margin-left: auto">🛒 购买即生效 · 一次性外观购后可在已拥有间免费佩戴切换</span>
     </div>
 
     <div v-for="g in grouped" :key="g.cat" class="gs-group">
@@ -277,9 +374,9 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
           <div class="gs-card-desc">{{ p.desc }}</div>
           <button
             class="gs-buy"
-            :disabled="(!p.repeat && player.shopOwned?.[id]) || coins < p.price"
+            :disabled="btnState(id).disabled"
             @click="buy(id)"
-          >{{ !p.repeat && player.shopOwned?.[id] ? '✓ 已拥有' : `🛒 购买（${p.price} 币）` }}</button>
+          >{{ btnState(id).label }}</button>
         </div>
       </div>
     </div>
