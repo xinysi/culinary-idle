@@ -4015,7 +4015,9 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .mg-entry-on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.15); color: var(--primary-strong); }
 .mg-entry-shop { flex-shrink: 0; }
 .mg-entry-sep { width: 1px; height: 22px; background: rgba(150, 110, 70, 0.3); flex-shrink: 0; }
-.mg-pager { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.mg-pager { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.mg-pager::-webkit-scrollbar { display: none; }
+.mg-pager-ctrl { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .mg-page-btn { width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 15px; color: var(--text); background: rgba(255, 251, 244, 0.8); border: 1px dashed rgba(150, 110, 70, 0.4); flex-shrink: 0; }
 .mg-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .mg-page-btn:hover:not(:disabled) { border-color: var(--primary-strong); }
