@@ -10,8 +10,10 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const SIZE = 8
+// 缺图物品排除（2026-09-09）：这些物品的图片文件缺失，抽到会渲染成白块
+const MISSING_IMG_IDS = new Set(['foraging_ext_27', 'cooking_ext_11', 'cooking_ext_25', 'cooking_ext2_07', 'cooking_ext2_14', 'preserving_ext2_25', 'spiceMixing_ext2_06', 'spiceMixing_ext2_19'])
 const IMG_POOL = Object.values(ITEMS)
-  .filter((i) => ['ingredient', 'food', 'spice'].includes(i.type) && itemImage(i.id))
+  .filter((i) => ['ingredient', 'food', 'spice'].includes(i.type) && itemImage(i.id) && !MISSING_IMG_IDS.has(i.id))
   .sort(() => Math.random() - 0.5)
   .slice(0, 6)
   .map((i) => i.id)
@@ -33,6 +35,7 @@ const showInfo = ref(false)
 
 const tiles = ref([])
 let nextKey = 1
+let epoch = 0 // 重置代际：作废进行中的异步消除流程（防重开后串改新棋盘）
 const selectedKey = ref(null)
 const score = ref(0)
 const stepsLeft = ref(null)
@@ -60,23 +63,19 @@ function freshBoard() {
 }
 function reset() {
   if (timerId) clearInterval(timerId)
+  epoch++ // 作废进行中的异步消除流程
+  const myEpoch = epoch
   tiles.value = []
   nextKey = 1
   const arr = freshBoard()
-  for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) tiles.value.push({ key: nextKey++, row: y - SIZE, col: x, img: arr[y * SIZE + x], pop: false })
+  // 坐标同步写入正确行（不依赖定时器）；入场滑入用纯 CSS 动画，避免被节流导致整盘空白
+  for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) tiles.value.push({ key: nextKey++, row: y, col: x, img: arr[y * SIZE + x], pop: false, justIn: true })
   selectedKey.value = null
   score.value = 0
   over.value = false
   won.value = false
   busy = false
-  // 开局整盘从上方滑入
-  setTimeout(() => {
-    if (!tiles.value.length) return
-    for (let i = 0; i < tiles.value.length; i++) {
-      const t = tiles.value[i]
-      t.row = Math.floor(i / SIZE)
-    }
-  }, 20)
+  setTimeout(() => { if (myEpoch === epoch) tiles.value.forEach((t) => { t.justIn = false }) }, 420)
   if (MODES[mode.value].time) {
     timeLeft.value = MODES[mode.value].time
     timerId = setInterval(() => {
@@ -134,6 +133,7 @@ function scoreOf(matched, chain) {
 }
 async function tap(t) {
   if (over.value || busy || !tiles.value.length) return
+  const myEpoch = epoch
   const x = t.col
   const y = t.row
   const t0 = t
@@ -153,6 +153,7 @@ async function tap(t) {
   const [ar, ac, br, bc] = [a.row, a.col, b.row, b.col]
   a.row = br; a.col = bc; b.row = ar; b.col = ac
   await sleep(180)
+  if (myEpoch !== epoch) return // 期间已重开：放弃本次流程
   let gained = 0
   let chain = 0
   let matched = findMatchTiles()
@@ -161,12 +162,15 @@ async function tap(t) {
     gained += scoreOf(matched, chain)
     for (const t of matched) t.pop = true // 消除弹出动画
     await sleep(240)
+    if (myEpoch !== epoch) return
     for (const t of matched) {
       const idx = tiles.value.indexOf(t)
       if (idx >= 0) tiles.value.splice(idx, 1)
     }
-    await cascadeDrop()
+    await cascadeDrop(myEpoch)
+    if (myEpoch !== epoch) return
     await sleep(160)
+    if (myEpoch !== epoch) return
     matched = findMatchTiles()
   }
   if (gained > 0) {
@@ -178,12 +182,14 @@ async function tap(t) {
     // 无匹配换回
     a.row = ar; a.col = ac; b.row = br; b.col = bc
     await sleep(180)
+    if (myEpoch !== epoch) return
     if (MODES[mode.value].steps) stepsLeft.value--
     if (MODES[mode.value].steps && stepsLeft.value <= 0) endNow(score.value >= MODES[mode.value].goal)
   }
   busy = false
 }
-async function cascadeDrop() {
+async function cascadeDrop(myEpoch) {
+  if (myEpoch !== undefined && myEpoch !== epoch) return
   // 每列下落：旧块底部对齐，空缺从上方滑入新块
   const news = []
   for (let c = 0; c < SIZE; c++) {
@@ -247,7 +253,7 @@ reset()
         v-for="(t, i) in tiles"
         :key="t.key"
         class="m3-tile"
-        :class="{ sel: t.key === selectedKey, pop: t.pop }"
+        :class="{ sel: t.key === selectedKey, pop: t.pop, justin: t.justin }"
         :style="tileStyle(t)"
         @click="tap(t)"
       ><div class="m3-inner"><img class="m3-img" :src="itemImage(t.img)" @error="$event.target.style.display = 'none'" alt="" /></div></div>
@@ -295,6 +301,12 @@ reset()
   transition: left 0.16s ease, top 0.16s ease, opacity 0.2s ease;
 }
 .m3-tile.pop { animation: m3pop 0.22s ease forwards; }
+/* 入场动画：纯 CSS（不依赖定时器，避免被节流导致整盘空白） */
+.m3-tile.justin .m3-inner { animation: m3in 0.32s ease backwards; }
+@keyframes m3in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 @keyframes m3pop {
   0% { transform: scale(1); opacity: 1; }
   60% { transform: scale(1.18); opacity: 1; }
