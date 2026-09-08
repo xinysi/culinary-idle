@@ -5,6 +5,8 @@ import { test, expect } from '@playwright/test'
 const BASE = 'http://localhost:5173'
 
 test.describe('游戏全流程', () => {
+  // 大厅入口随小游戏数量增长，逐个点完需要更长时间（2026-09-09：18 款 + 商店）
+  test.describe.configure({ timeout: 90000 })
   test.beforeEach(async ({ page }) => {
     await page.goto(BASE)
     await page.waitForTimeout(800)
@@ -62,7 +64,7 @@ test.describe('游戏全流程', () => {
     // 小游戏：入口行点击 → 游戏内容视图
     await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
     await page.waitForTimeout(400)
-    for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消', '水果合成', '果了个果', '垂钓渔翁']) {
+    for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消', '水果合成', '果了个果', '垂钓渔翁', '切菜大师', '打地鼠', '摆盘']) {
       // 分页入口（2026-09-09）：目标不在当前页时先翻页（最多 3 次，防死循环）
       for (let guard = 0; guard < 3; guard++) {
         if (await page.locator('.mg-entry', { hasText: g }).count() > 0) break
