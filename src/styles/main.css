@@ -4323,3 +4323,16 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 1
 .gather-card:not(.locked) { cursor: pointer; }
 html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
 html[data-theme='dark'] .mg-entry-sep { background: rgba(255, 255, 255, 0.18); }
+
+/* ── 水果合成 深色适配（2026-09-09）── */
+html[data-theme='dark'] .mg-shell .fm-mode, html[data-theme='dark'] .mg-shell .fm-chip {
+  background: rgba(52, 40, 31, 0.85);
+  border-color: rgba(210, 170, 120, 0.35);
+  color: #d9c9b4;
+}
+html[data-theme='dark'] .mg-shell .fm-mode.on { background: rgba(224, 112, 74, 0.3); border-color: rgba(224, 112, 74, 0.8); color: #ffb98e; }
+html[data-theme='dark'] .mg-shell .fm-canvas { border-color: rgba(210, 170, 120, 0.35); }
+html[data-theme='dark'] .mg-shell .fm-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(210, 170, 120, 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fm-info-row { background: rgba(66, 52, 40, 0.9); border-color: rgba(210, 170, 120, 0.28); }
+html[data-theme='dark'] .mg-shell .fm-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
+html[data-theme='dark'] .mg-shell .fm-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
