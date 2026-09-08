@@ -16,12 +16,13 @@ const POOL = [
   'banana', 'ume', 'bayberry', 'soybean', 'sesame', 'barley',
   'teaLeaf', 'mint', 'rose', 'chrysanthemum', 'osmanthus', 'jasmine',
 ]
+// 预加载 + 取 URL（模板 :src 需要字符串，不能直接传 Image 对象）
 const IMGS = POOL.map((id) => {
   const im = new Image()
   im.src = itemImage(id)
   return im
 })
-const imgOf = (v) => IMGS[(v - 1) % IMGS.length]
+const imgOf = (v) => itemImage(POOL[(v - 1) % POOL.length])
 
 // ── 十模式（棋盘 × 目标 × 步数上限）──
 const MODES = {
