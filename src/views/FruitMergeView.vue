@@ -14,7 +14,7 @@ const H = 560
 const GRAV = 2200
 const REST = 0.16
 const MU = 0.42          // 切向摩擦系数（越小越滑）
-const ANG_DAMP = 0.55    // 角速度衰减（每秒）
+const ANG_DAMP = 0.12    // 角速度衰减（每秒，越小越快停转）
 
 // 12 级合成链（青枣以「青梅」替代——图鉴有图且同为青色小果）
 const FRUITS = [
@@ -60,7 +60,7 @@ let won = false
 let lineY = 110
 let loopId = null
 let lastTs = 0
-let flashUntil = 0
+let particles = []      // 烟花粒子 {x,y,vx,vy,life,maxLife,color}
 let aiming = false
 let nextId = 1
 const scoreRef = ref(0)
@@ -119,7 +119,7 @@ function reset() {
   started.value = false // 需点击「开始游戏」后才可操作
   lineY = 110
   lineYRef.value = 110
-  flashUntil = 0
+  particles = []
   aimX = W / 2
   rollNext()
   lastTs = 0
@@ -141,7 +141,7 @@ function drop() {
   if (over || won) return
   if (!startIfIdle()) return
   const r = FRUITS[nextLevel - 1].r
-  fruits.push({ id: nextId++, x: Math.max(r + 1, Math.min(W - r - 1, aimX)), y: 40, vx: 0, vy: 0, av: 0, angle: 0, level: nextLevel, r, age: 0, mergeCd: 0.05, overTime: 0 })
+  fruits.push({ id: nextId++, x: Math.max(r + 1, Math.min(W - r - 1, aimX + (Math.random() - 0.5) * 7)), y: 40, vx: 0, vy: 0, av: 0, angle: 0, level: nextLevel, r, age: 0, mergeCd: 0.05, overTime: 0, sleepT: 0 })
   rollNext()
 }
 function mergeAt(a, b) {
@@ -158,6 +158,7 @@ function mergeAt(a, b) {
     r: FRUITS[lv - 1].r,
     age: 0,
     mergeCd: 0.05,
+    sleepT: 0,
     overTime: 0,
   }
   const gain = lv * lv * 4
@@ -165,32 +166,45 @@ function mergeAt(a, b) {
   scoreRef.value = score
   combo++
   comboRef.value = combo
-  if (combo % 5 === 0) { // 暴击合成：连续 5 次合成闪光加分
+  if (combo % 5 === 0) { // 暴击合成：连续 5 次合成 → 烟花特效 + 50% 加分
     const crit = Math.round(gain * 0.5)
     score += crit
     scoreRef.value = score
-    flashUntil = performance.now() + 420
+    spawnFireworks(nf.x, nf.y, 18)
   }
   if (lv === 12) watermelonCount++
   return nf
 }
+function spawnFireworks(x, y, n = 16) {
+  const colors = ['#f6d365', '#fda085', '#f093fb', '#f5576c', '#4facfe', '#43e97b']
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2
+    const sp = 90 + Math.random() * 200
+    particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 70, life: 0, maxLife: 0.5 + Math.random() * 0.45, color: colors[i % colors.length] })
+  }
+}
 function physics(dt) {
-  // 积分
+  const touched = new Set() // 本子步有接触的果实（用于接触阻尼）
+  // 积分 + 角速度衰减 + 睡眠（速度/自转极小时归零，避免堆叠后无休止滚动）
   for (const f of fruits) {
     f.vy += GRAV * dt
     if (f.vy > 3200) f.vy = 3200
     f.x += f.vx * dt
     f.y += f.vy * dt
     f.angle += f.av * dt
-    f.av *= Math.pow(ANG_DAMP, dt) // 角速度衰减
+    f.av *= Math.pow(ANG_DAMP, dt)
     f.age += dt
     if (f.mergeCd > 0) f.mergeCd -= dt
+    if (Math.abs(f.vx) < 14 && Math.abs(f.vy) < 42 && Math.abs(f.av) < 1.2) f.sleepT += dt
+    else f.sleepT = 0
+    if (f.sleepT > 0.35) { f.vx = 0; f.vy = 0; f.av = 0 }
   }
   // 容器边界（左右墙 + 地面）：法向回弹 + 切向摩擦（带动滚动）
   for (const f of fruits) {
     if (f.x - f.r < 0) { f.x = f.r; f.vx = Math.abs(f.vx) * REST }
     if (f.x + f.r > W) { f.x = W - f.r; f.vx = -Math.abs(f.vx) * REST }
     if (f.y + f.r > H) {
+      touched.add(f)
       f.y = H - f.r
       if (f.vy > 0) f.vy = -f.vy * REST
       // 地面摩擦：法向力 = 重力支撑冲量 + 反弹冲量（静止时反弹≈0，必须含重力项否则摩擦恒为 0）
@@ -206,7 +220,7 @@ function physics(dt) {
       f.av += (-f.r * jt) / I
     }
   }
-  // 两两碰撞（先收集合成，避免迭代中改数组）
+  // 合成检测（每子步一次；同级且都落地）
   let merged = null
   outer: for (let i = 0; i < fruits.length; i++) {
     for (let j = i + 1; j < fruits.length; j++) {
@@ -215,56 +229,10 @@ function physics(dt) {
       const dx = b.x - a.x
       const dy = b.y - a.y
       const d = Math.sqrt(dx * dx + dy * dy) || 0.0001
-      const minD = a.r + b.r
-      if (d >= minD) continue
-      // 同级合成（西瓜封顶：level 12 不再合成）
+      if (d >= a.r + b.r) continue
       if (a.level === b.level && a.level < 12 && a.mergeCd <= 0 && b.mergeCd <= 0 && a.age > 0.06 && b.age > 0.06) {
         merged = { a, b, nf: mergeAt(a, b) }
         break outer
-      }
-      // 碰撞解算：位置修正 + 法向冲量 + 切向摩擦（产生旋转）
-      const nx = dx / d
-      const ny = dy / d
-      const tx = -ny
-      const ty = nx
-      const overlap = minD - d
-      const ma = a.r * a.r
-      const mb = b.r * b.r
-      const total = ma + mb
-      a.x -= nx * overlap * (mb / total)
-      a.y -= ny * overlap * (mb / total)
-      b.x += nx * overlap * (ma / total)
-      b.y += ny * overlap * (ma / total)
-      // 接触点相对速度（含旋转贡献）
-      const rax = nx * a.r
-      const ray = ny * a.r
-      const rbx = -nx * b.r
-      const rby = -ny * b.r
-      const vaX = a.vx + a.av * -ray
-      const vaY = a.vy + a.av * rax
-      const vbX = b.vx + b.av * -rby
-      const vbY = b.vy + b.av * rbx
-      const rvx = vbX - vaX
-      const rvy = vbY - vaY
-      const vn = rvx * nx + rvy * ny
-      if (vn < 0) {
-        const Ia = 0.5 * ma * a.r * a.r
-        const Ib = 0.5 * mb * b.r * b.r
-        const jn = (-(1 + REST) * vn) / (1 / ma + 1 / mb)
-        // 切向摩擦冲量（库仑摩擦，限幅 μ|jn|）
-        const vt = rvx * tx + rvy * ty
-        let jt = -vt / (1 / ma + 1 / mb + (a.r * a.r) / Ia + (b.r * b.r) / Ib)
-        const maxJt = MU * Math.abs(jn)
-        if (jt > maxJt) jt = maxJt
-        else if (jt < -maxJt) jt = -maxJt
-        const fx = jn * nx + jt * tx
-        const fy = jn * ny + jt * ty
-        a.vx -= fx / ma
-        a.vy -= fy / ma
-        a.av -= (rax * fy - ray * fx) / Ia
-        b.vx += fx / mb
-        b.vy += fy / mb
-        b.av += (rbx * fy - rby * fx) / Ib
       }
     }
   }
@@ -273,6 +241,73 @@ function physics(dt) {
     fruits = fruits.filter((f) => f !== a && f !== b)
     fruits.push(nf)
   }
+  // 碰撞解算：3 次迭代（单次迭代在多层堆叠下会残留穿透）
+  for (let iter = 0; iter < 3; iter++) {
+    for (let i = 0; i < fruits.length; i++) {
+      for (let j = i + 1; j < fruits.length; j++) {
+        const a = fruits[i]
+        const b = fruits[j]
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let d = Math.sqrt(dx * dx + dy * dy) || 0.0001
+        const minD = a.r + b.r
+        if (d >= minD) continue
+        // 近乎正上/正下的接触：给一点横向扰动，避免水果像硬币一样完美叠成一柱
+        if (iter === 0 && Math.abs(dx) < 1.2 && Math.abs(b.vy - a.vy) > 80) {
+          const push = (a.r < b.r ? 1 : -1) * (5 + Math.random() * 9)
+          a.vx -= push
+          b.vx += push
+        }
+        touched.add(a)
+        touched.add(b)
+        const nx = dx / d
+        const ny = dy / d
+        const tx = -ny
+        const ty = nx
+        const overlap = minD - d
+        const ma = a.r * a.r
+        const mb = b.r * b.r
+        const total = ma + mb
+        a.x -= nx * overlap * (mb / total)
+        a.y -= ny * overlap * (mb / total)
+        b.x += nx * overlap * (ma / total)
+        b.y += ny * overlap * (ma / total)
+        // 接触点相对速度（含旋转贡献）
+        const rax = nx * a.r
+        const ray = ny * a.r
+        const rbx = -nx * b.r
+        const rby = -ny * b.r
+        const vaX = a.vx + a.av * -ray
+        const vaY = a.vy + a.av * rax
+        const vbX = b.vx + b.av * -rby
+        const vbY = b.vy + b.av * rbx
+        const rvx = vbX - vaX
+        const rvy = vbY - vaY
+        const vn = rvx * nx + rvy * ny
+        if (vn < 0) {
+          const Ia = 0.5 * ma * a.r * a.r
+          const Ib = 0.5 * mb * b.r * b.r
+          const jn = (-(1 + REST) * vn) / (1 / ma + 1 / mb)
+          // 切向摩擦冲量（库仑摩擦，限幅 μ|jn|）
+          const vt = rvx * tx + rvy * ty
+          let jt = -vt / (1 / ma + 1 / mb + (a.r * a.r) / Ia + (b.r * b.r) / Ib)
+          const maxJt = MU * Math.abs(jn)
+          if (jt > maxJt) jt = maxJt
+          else if (jt < -maxJt) jt = -maxJt
+          const fx = jn * nx + jt * tx
+          const fy = jn * ny + jt * ty
+          a.vx -= fx / ma
+          a.vy -= fy / ma
+          a.av -= (rax * fy - ray * fx) / Ia
+          b.vx += fx / mb
+          b.vy += fy / mb
+          b.av += (rbx * fy - rby * fx) / Ib
+        }
+      }
+    }
+  }
+  // 接触阻尼：贴地/互靠的果实缓慢衰减（模拟滚动阻力，避免堆叠后无休止滑动）
+  for (const f of touched) { f.vx *= 0.978; f.av *= 0.978 }
   // 溢出红线判定（落地后越线持续 1 秒即判负；不再要求静止——堆叠抖动会漏判）
   if (runningRef.value && !over && !won) {
     for (const f of fruits) {
@@ -340,6 +375,16 @@ function loop() {
     }
     checkWin()
   }
+  // 烟花粒子推进（重力 + 生命周期）
+  if (particles.length) {
+    for (const p of particles) {
+      p.vy += 520 * dt
+      p.x += p.vx * dt
+      p.y += p.vy * dt
+      p.life += dt
+    }
+    particles = particles.filter((p) => p.life < p.maxLife)
+  }
   draw()
 }
 // 用 setInterval 驱动（rAF 在后台标签页会被浏览器暂停；dt 归一化保证帧率无关）
@@ -352,6 +397,7 @@ function stopLoop() {
   if (loopId) clearInterval(loopId)
   loopId = null
 }
+
 
 
 function draw() {
@@ -391,11 +437,15 @@ function draw() {
     ctx.setLineDash([])
     drawFruit(ctx, x, 40, r, nextLevel)
   }
-  // 暴击闪光
-  if (performance.now() < flashUntil) {
-    ctx.fillStyle = 'rgba(255, 236, 170, 0.35)'
-    ctx.fillRect(0, 0, W, H)
+  // 烟花粒子（暴击合成特效）
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, 1 - p.life / p.maxLife)
+    ctx.fillStyle = p.color
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2)
+    ctx.fill()
   }
+  ctx.globalAlpha = 1
 }
 function drawFruit(ctx, x, y, r, level, angle = 0) {
   const im = IMGS[level - 1]
