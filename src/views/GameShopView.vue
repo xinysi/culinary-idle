@@ -166,7 +166,7 @@ const PRODUCTS = {
   },
   title2: {
     cat: '👑 外观纪念',
-    icon: '👑', name: '「食神」称号', price: 12000, repeat: false, slot: 'title', value: '食神',
+    icon: '👑', name: '「御膳食神」称号', price: 12000, repeat: false, slot: 'title', value: '御膳食神',
     desc: '永久称号 · 厨艺巅峰',
   },
   title3: {
