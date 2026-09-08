@@ -103,6 +103,7 @@ const passed = ref(false)
 const caughtList = ref([]) // { id, name, r, score, n }
 const showInfo = ref(false)
 const hint = ref('')
+const started = ref(false)
 const combo = ref(0)
 const maxCombo = ref(0)
 const baitN = ref(1)
@@ -145,6 +146,12 @@ let lastTs = 0
 let loopId = null
 let held = false
 let nextId = 1
+let pointerX = 0
+let pointerY = 0
+let downPos = null
+let downAt = 0
+let reelT = 0
+let reelFrom = null
 
 const IMGS = FISH.map((f) => {
   const im = new Image()
@@ -213,9 +220,13 @@ function toCanvas(e) {
   }
 }
 function onDown(e) {
-  if (!running || overFlag) return
+  if (!running || overFlag || !started.value) return
   const p = toCanvas(e)
   held = true
+  pointerX = p.x
+  pointerY = p.y
+  downPos = { x: p.x, y: p.y }
+  downAt = performance.now()
   if (phase === 'ready') {
     phase = 'charge'
     charge = 0
@@ -229,8 +240,10 @@ function onDown(e) {
   }
 }
 function onMove(e) {
-  if (!running || overFlag) return
+  if (!running || overFlag || !started.value) return
   const p = toCanvas(e)
+  pointerX = p.x
+  pointerY = p.y
   if (phase === 'charge') {
     aimX = clamp(p.x, 44, W - 44)
   } else if (phase === 'wait' && hook.inWater) {
@@ -240,7 +253,23 @@ function onMove(e) {
 function onUp() {
   if (!held) return
   held = false
-  if (phase === 'charge') cast()
+  if (phase === 'charge') { cast(); downPos = null; return }
+  // 轻点（未拖动）→ 收杆
+  if (downPos && (phase === 'wait' || phase === 'sink')) {
+    const moved = Math.hypot(pointerX - downPos.x, pointerY - downPos.y)
+    if (moved < 10 && performance.now() - downAt < 450) reelIn()
+  }
+  downPos = null
+}
+// ── 收杆（空钩回收）──
+function reelIn() {
+  if (phase !== 'wait' && phase !== 'sink') return
+  phase = 'reel'
+  reelT = 0
+  reelFrom = { x: hook.x, y: hook.y }
+  hook.inWater = false
+  hint.value = '收杆中…'
+  beep(320, 0.1, 'sine', 0.05)
 }
 
 // ── 抛竿 / 咬钩 / 提竿 ──
@@ -367,12 +396,14 @@ function loop() {
   waveT += dt
   if (running && !overFlag) {
     const m = MODES[mode.value]
-    // 倒计时
-    timeAccum += dt
-    if (timeAccum >= 1) {
-      timeAccum -= 1
-      timeLeft.value = Math.max(0, timeLeft.value - 1)
-      if (timeLeft.value <= 0) settle()
+    // 倒计时（点击「开始游戏」后才开始计时）
+    if (started.value) {
+      timeAccum += dt
+      if (timeAccum >= 1) {
+        timeAccum -= 1
+        timeLeft.value = Math.max(0, timeLeft.value - 1)
+        if (timeLeft.value <= 0) settle()
+      }
     }
     // 蓄力（松手事件丢失时兜底：未按住即视为松手）
     if (phase === 'charge') {
@@ -389,7 +420,7 @@ function loop() {
         hook.inWater = true
         hook.y = hook.ty
         phase = 'wait'
-        hint.value = '静待鱼咬钩（左右拖动可移动鱼钩）'
+        hint.value = '静待鱼咬钩（拖动移动鱼钩 · 点击水面收杆）'
         splash(hook.x, WATER_TOP, 7)
         beep(420, 0.09, 'sine', 0.05)
       }
@@ -419,6 +450,20 @@ function loop() {
       escapeT -= dt
       if (escapeT <= 0) {
         phase = 'ready'
+        resetHook()
+        hint.value = '按住水面蓄力抛竿'
+      }
+    }
+    // 收杆动画
+    if (phase === 'reel' && reelFrom) {
+      reelT += dt
+      const k = Math.min(1, reelT / 0.4)
+      const e = 1 - (1 - k) * (1 - k)
+      hook.x = lerp(reelFrom.x, ROD_TIP.x, e)
+      hook.y = lerp(reelFrom.y, ROD_TIP.y, e)
+      if (k >= 1) {
+        phase = 'ready'
+        reelFrom = null
         resetHook()
         hint.value = '按住水面蓄力抛竿'
       }
@@ -1198,7 +1243,7 @@ function drawHud(ctx, pal) {
     ctx.fillStyle = 'rgba(255,255,255,0.55)'
     ctx.font = '11px system-ui, sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText('按住水面蓄力抛竿', W / 2, H - 16)
+    ctx.fillText(started.value ? '按住水面蓄力抛竿' : '点击下方「开始游戏」', W / 2, H - 16)
   }
 }
 function drawVignette(ctx) {
@@ -1241,10 +1286,23 @@ function reset() {
   spawnAccum = 0
   timeAccum = 0
   held = false
-  hint.value = '按住水面蓄力抛竿'
+  downPos = null
+  reelFrom = null
+  started.value = false
+  hint.value = '点击「开始游戏」后，按住水面蓄力抛竿'
   running = true
-  for (let i = 0; i < 6; i++) spawnFish()
+  for (let i = 0; i < 8; i++) spawnFish()
   startLoop()
+}
+// 点击「开始游戏」后本局才计时、才可抛竿
+function startGame() {
+  if (overFlag) return
+  started.value = true
+  timeLeft.value = MODES[mode.value].dur
+  timeAccum = 0
+  hint.value = '按住水面蓄力抛竿'
+  beep(880, 0.08)
+  setTimeout(() => beep(1175, 0.1), 90)
 }
 function settle() {
   if (overFlag) return
@@ -1329,9 +1387,10 @@ onUnmounted(() => {
     <div class="fh-hint">{{ hint }}</div>
 
     <div class="fh-keys">
-      <button class="fh-reset" @click="reset()">🔄 重置本局</button>
-      <button class="fh-prop" :disabled="baitN <= 0 || over" @click="useBait()">🪱 鱼饵 ×{{ baitN }}</button>
-      <button class="fh-prop" :disabled="speedN <= 0 || over" @click="useSpeed()">⚡ 加速钩 ×{{ speedN }}</button>
+      <button v-if="!started" class="fh-start" @click="startGame()">▶ 开始游戏</button>
+      <button v-else class="fh-reset" @click="reset()">🔄 重置本局</button>
+      <button class="fh-prop" :disabled="baitN <= 0 || over || !started" @click="useBait()">🪱 鱼饵 ×{{ baitN }}</button>
+      <button class="fh-prop" :disabled="speedN <= 0 || over || !started" @click="useSpeed()">⚡ 加速钩 ×{{ speedN }}</button>
     </div>
 
     <!-- 结算弹窗 -->
@@ -1367,11 +1426,13 @@ onUnmounted(() => {
         <div class="fh-info-head"><b>🎣 垂钓渔翁 · 十模式说明</b><button class="fh-info-close" @click="showInfo = false">✕</button></div>
         <div class="fh-info-list">
           <div class="fh-info-row fh-info-rule">
+            开始：点击下方「▶ 开始游戏」后才开始计时与操作（未开始时水面鱼群会照常游动）。<br />
             玩法三步：<b>① 蓄力抛竿</b>——按住水面蓄力（左侧力度条），松手抛投；力度越大鱼钩落得越深，
             <b>深水才会出现史诗 / 传说鱼</b>。<br />
             <b>② 咬钩提竿</b>——鱼会靠近鱼钩试探，咬钩瞬间弹出「！」和倒计时条，<b>立刻点击提竿</b>；手慢鱼就跑了（连击清零）。<br />
             <b>③ 收线角力</b>——中鱼后右侧出现判定条：<b>按住</b>让绿色判定区上浮、<b>松开</b>下沉，
             把鱼保持在绿区内蓄满左侧进度条即可入护；让鱼跑出绿区进度会倒退，退到 0 就断线跑鱼。<br />
+            收杆：抛竿后可<b>轻点水面收杆</b>（拖动是移动鱼钩，轻点才是收杆）；咬钩瞬间的点击优先用于提竿。<br />
             连击：连续入护不断线，单条得分最高 ×1.5（×1 → ×1.1 → … → ×1.5）。<br />
             道具：🪱 鱼饵（15 秒内鱼更主动咬钩、稀有鱼更愿意靠近）×1 · ⚡ 加速钩（本局判定条加宽 40%）×1
           </div>
@@ -1398,6 +1459,7 @@ onUnmounted(() => {
 .fh-canvas { width: min(420px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: crosshair; touch-action: none; }
 .fh-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
 .fh-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.fh-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 .fh-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .fh-prop { padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
 .fh-prop:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -1425,7 +1487,9 @@ onUnmounted(() => {
 .fh-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
 .fh-info-list { display: flex; flex-direction: column; gap: 8px; }
 .fh-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
-.fh-info-rule { border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
+/* 规则行含 <br> 与 <b>，必须是块级（flex 会把文本节点拆成多个弹性项，导致换行失效、排版错乱） */
+.fh-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
+.fh-info-rule b { color: var(--primary-strong); }
 .fh-info-name { flex: 0 0 82px; color: var(--primary-strong); }
 .fh-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
 </style>
