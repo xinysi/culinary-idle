@@ -245,7 +245,8 @@ onUnmounted(() => { stopTimer() })
       <button class="sl-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
 
-    <div class="sl-stage" :style="{ width: boardPx + 'px', height: boardPx + 'px' }">
+    <!-- 尺寸 +2 是给 1px 边框留位：绝对定位以 padding box 为基准，否则右下角菜块会溢出边框 -->
+    <div class="sl-stage" :style="{ width: (boardPx + 2) + 'px', height: (boardPx + 2) + 'px' }">
       <div
         v-for="(v, i) in board"
         v-show="v !== 0"
@@ -341,7 +342,7 @@ onUnmounted(() => { stopTimer() })
 .sl-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .sl-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 
-.sl-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.22); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); }
+.sl-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.22); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); overflow: hidden; }
 .sl-goal-cell { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2.5px dashed var(--gold); color: var(--gold); font-size: 24px; background: rgba(224, 161, 58, 0.16); pointer-events: none; z-index: 5; text-shadow: 0 1px 3px rgba(90, 60, 10, 0.5); }
 .sl-tile { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255, 252, 246, 0.92); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 2px 6px rgba(93, 64, 55, 0.18); cursor: pointer; transition: left 0.14s ease, top 0.14s ease, box-shadow 0.14s; overflow: hidden; }
 .sl-tile:hover { box-shadow: 0 4px 12px rgba(184, 68, 42, 0.3); }

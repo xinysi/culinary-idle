@@ -63,6 +63,14 @@ function makeRng(seed) {
   let s = (seed >>> 0) || 1
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
 }
+// 热气粒子（预生成一次，按 sin 曲线淡入淡出，循环无跳变）
+const STEAM = Array.from({ length: 9 }, () => ({
+  x: rand(30, W - 30),
+  ph: Math.random(),
+  sp: rand(0.09, 0.2),
+  r: rand(18, 40),
+  wob: rand(0, TAU),
+}))
 
 // ── 响应式状态 ──
 const canvas = ref(null)
@@ -492,14 +500,21 @@ function drawBackdrop(ctx, dark) {
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.4)'
   ctx.lineWidth = 1.5
   ctx.beginPath(); ctx.moveTo(0, H - 96); ctx.lineTo(W, H - 96); ctx.stroke()
-  // 4) 氛围：热气
-  for (let i = 0; i < 4; i++) {
-    const sx = 60 + i * 100 + Math.sin(waveT * 0.6 + i) * 22
-    const sy = H - 120 - ((waveT * 26 + i * 90) % 200)
-    const a = 0.05 + 0.05 * Math.sin(waveT + i)
-    ctx.fillStyle = dark ? `rgba(255,255,255,${a})` : `rgba(255,255,255,${a + 0.06})`
+  // 4) 氛围：热气（预生成 + sin 淡入淡出，平滑循环不跳帧）
+  for (const s of STEAM) {
+    const t = (waveT * s.sp + s.ph) % 1
+    const a = Math.sin(t * Math.PI) * (dark ? 0.1 : 0.17)
+    if (a <= 0.004) continue
+    const rr = s.r * (0.7 + t * 1.0)
+    const cx = s.x + Math.sin(waveT * 0.5 + s.wob) * 22
+    const cy = H - 56 - t * 270
+    const sg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr)
+    sg.addColorStop(0, `rgba(255,255,255,${a})`)
+    sg.addColorStop(0.6, `rgba(255,255,255,${a * 0.45})`)
+    sg.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = sg
     ctx.beginPath()
-    ctx.ellipse(sx, sy, 26, 12, Math.sin(waveT * 0.4 + i) * 0.5, 0, TAU)
+    ctx.arc(cx, cy, rr, 0, TAU)
     ctx.fill()
   }
   // 5) 暗色适配 + 暗角
