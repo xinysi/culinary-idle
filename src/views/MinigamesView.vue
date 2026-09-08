@@ -33,7 +33,7 @@ const GAMES = [
   { id: 'pacman', emoji: '👻', name: '吃豆人', comp: PacmanView },
   { id: 'match3', emoji: '🍬', name: '消消乐', comp: Match3View },
   { id: 'flappy', emoji: '🐦', name: '笨鸟先飞', comp: FlappyBirdView },
-  { id: 'match10', emoji: '🧮', name: '凑十消', comp: Match10View },
+  { id: 'match10', emoji: '🧮', name: '凑凑消', comp: Match10View },
 ]
 
 const active = ref('heat') // 默认加载第一游戏
