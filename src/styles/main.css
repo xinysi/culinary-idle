@@ -4004,7 +4004,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 
 /* ── 小游戏（2026-09-06 全面重构：自然流，与全站一致）── */
 .mg-shell { display: block; }
-.mg-entrybar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.mg-entrybar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: nowrap; }
 .mg-entry {
   padding: 8px 14px; border-radius: 10px; cursor: pointer;
   border: 1px dashed rgba(150, 110, 70, 0.4);
@@ -4013,6 +4013,13 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 }
 .mg-entry:hover { border-color: var(--primary-strong); }
 .mg-entry-on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.15); color: var(--primary-strong); }
+.mg-entry-shop { flex-shrink: 0; }
+.mg-entry-sep { width: 1px; height: 22px; background: rgba(150, 110, 70, 0.3); flex-shrink: 0; }
+.mg-pager { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.mg-page-btn { width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 15px; color: var(--text); background: rgba(255, 251, 244, 0.8); border: 1px dashed rgba(150, 110, 70, 0.4); flex-shrink: 0; }
+.mg-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.mg-page-btn:hover:not(:disabled) { border-color: var(--primary-strong); }
+.mg-page-ind { font-size: 12px; color: var(--muted); flex-shrink: 0; }
 .mg-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; }
 .mg-info-card {
   background: rgba(150, 110, 70, 0.09);
@@ -4312,3 +4319,5 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 1
 .gather-card.title-equipped { border-color: var(--gold) !important; box-shadow: 0 0 12px rgba(168, 120, 11, 0.45); }
 .title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(234, 176, 74, 0.25); color: var(--primary-strong); }
 .gather-card:not(.locked) { cursor: pointer; }
+html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
+html[data-theme='dark'] .mg-entry-sep { background: rgba(255, 255, 255, 0.18); }
