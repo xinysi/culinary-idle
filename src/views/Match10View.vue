@@ -389,13 +389,13 @@ reset()
   width: min(520px, 94%);
   display: grid; gap: 7px;
   padding: 14px; border-radius: 18px;
-  /* 绿色竹子墙体：棋盘底（环间空隙即竹墙） */
+  /* 橙色墙体底纹（2026-09-09 由绿改橙）：棋盘底（环间空隙即墙） */
   background:
-    repeating-linear-gradient(0deg, rgba(38, 92, 44, 0.25) 0 3px, transparent 3px 26px),
-    repeating-linear-gradient(90deg, rgba(38, 92, 44, 0.25) 0 3px, transparent 3px 26px),
-    rgba(78, 128, 66, 0.35);
-  border: 4px solid rgba(38, 92, 44, 0.55);
-  box-shadow: 0 10px 28px rgba(40, 74, 40, 0.3);
+    repeating-linear-gradient(0deg, rgba(217, 138, 43, 0.28) 0 3px, transparent 3px 26px),
+    repeating-linear-gradient(90deg, rgba(217, 138, 43, 0.28) 0 3px, transparent 3px 26px),
+    rgba(234, 176, 74, 0.32);
+  border: 4px solid rgba(201, 132, 43, 0.6);
+  box-shadow: 0 10px 28px rgba(150, 96, 30, 0.3);
 }
 .m10-cell {
   aspect-ratio: 1;
