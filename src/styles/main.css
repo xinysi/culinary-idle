@@ -4283,7 +4283,7 @@ html[data-theme='dark'] .mg-shell .m10-mode, html[data-theme='dark'] .mg-shell .
   color: #d9c9b4;
 }
 html[data-theme='dark'] .mg-shell .m10-mode.on { background: rgba(224, 112, 74, 0.3); border-color: rgba(224, 112, 74, 0.8); color: #ffb98e; }
-html[data-theme='dark'] .mg-shell .m10-exit { background: rgba(52, 40, 31, 0.7); color: #c9b49c; border-color: rgba(210, 170, 120, 0.3); }
+
 html[data-theme='dark'] .mg-shell .m10-board { border-color: rgba(38, 92, 44, 0.8); }
 html[data-theme='dark'] .mg-shell .m10-cell { background: rgba(244, 238, 226, 0.92); color: #26201a; }
 html[data-theme='dark'] .mg-shell .m10-cell.locked { background: rgba(120, 112, 98, 0.5); color: #a49a86; }

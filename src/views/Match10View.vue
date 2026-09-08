@@ -4,7 +4,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { EventBus } from '../game/core/EventBus.js'
+
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -299,7 +299,7 @@ function reshuffle() {
   reshuffleN.value--
   beep(440, 0.1)
 }
-function exitGame() { EventBus.emit('mg:back') }
+
 function beep(freq, dur) {
   if (!player.settings?.soundEnabled) return
   try {
@@ -330,7 +330,6 @@ reset()
       <span class="m10-chip">🧮 <b class="mono">{{ curTargetText() }}</b></span>
       <span class="m10-chip">💰 <b class="mono">{{ MODES[mode].gold }}</b> 币</span>
       <button class="m10-info-btn" @click="showInfo = true">📖 模式说明</button>
-      <button class="m10-exit" @click="exitGame">🚪 退出</button>
     </div>
 
     <div class="m10-board" :style="{ gridTemplateColumns: 'repeat(' + MODES[mode].size + ', minmax(0, 1fr))' }">
@@ -385,7 +384,7 @@ reset()
 .m10-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .m10-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .m10-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.m10-exit { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #7a6a58; background: rgba(255, 252, 246, 0.7); border: 1px solid rgba(150, 110, 70, 0.3); }
+
 .m10-board {
   width: min(520px, 94%);
   display: grid; gap: 7px;
