@@ -1,7 +1,8 @@
 <script setup>
 // 小游戏（2026-09-06 全面重构）：顶部入口行 + 下方自然流游戏区（与全站普通页面一致）
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
+import { EventBus } from '../game/core/EventBus.js'
 
 const player = usePlayerStore()
 
@@ -17,6 +18,7 @@ const SnakeView = defineAsyncComponent(() => import('./SnakeView.vue'))
 const PacmanView = defineAsyncComponent(() => import('./PacmanView.vue'))
 const Match3View = defineAsyncComponent(() => import('./Match3View.vue'))
 const FlappyBirdView = defineAsyncComponent(() => import('./FlappyBirdView.vue'))
+const Match10View = defineAsyncComponent(() => import('./Match10View.vue'))
 
 const GAMES = [
   { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView },
@@ -31,10 +33,15 @@ const GAMES = [
   { id: 'pacman', emoji: '👻', name: '吃豆人', comp: PacmanView },
   { id: 'match3', emoji: '🍬', name: '消消乐', comp: Match3View },
   { id: 'flappy', emoji: '🐦', name: '笨鸟先飞', comp: FlappyBirdView },
+  { id: 'match10', emoji: '🧮', name: '凑十消', comp: Match10View },
 ]
 
 const active = ref('heat') // 默认加载第一游戏
 const activeComp = computed(() => GAMES.find((g) => g.id === active.value)?.comp ?? null)
+// 小游戏「🚪 退出」→ 回到大厅默认游戏
+function onBack() { active.value = 'heat' }
+onMounted(() => EventBus.on('mg:back', onBack))
+onUnmounted(() => EventBus.off('mg:back', onBack))
 </script>
 
 <template>
