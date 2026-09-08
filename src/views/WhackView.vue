@@ -25,8 +25,8 @@ const HOLE_RY = 30
 const ITEM_LIFT = 46 // 冒出物显示在坑口上方的高度
 const ITEM_SIZE = 100 // 水果更大
 const HOLES = []
-for (const y of [128, 290, 452]) {
-  for (const x of [222, 500, 778]) {
+for (const y of [145, 291, 437]) {
+  for (const x of [256, 500, 744]) {
     HOLES.push({ x, y, item: null, cd: 0 })
   }
 }
