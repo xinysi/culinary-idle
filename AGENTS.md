@@ -1,10 +1,23 @@
 # AGENTS.md — 项目约定与须知
 
+## 🚨 最高级别铁律（2026-09-08 用户重申，优先于本文其余全部条款）
+
+### 0. 备份绝不能失控：禁止无限备份、禁止无限套娃文件夹
+- **备份目录 `D:\plays\lmew_beifen` 总容量上限 10 GB**；一旦超过，**直接删除最旧的备份**（`rm -rf`，**绝不允许放回收站**）。
+- **绝不允许产生无限套娃的文件夹**：`wuguan/node_modules/culinary-idle` 是指向 `D:\plays\lmew` 的**自引用 junction**，任何递归复制必须加 `/XJ` 排除 junction/符号链接；**禁止**用 `/MIR` 清理含 junction 的目录。
+- 备份前先看目标目录文件数（正常约 2 万；出现几十万即已套娃）与磁盘剩余空间，发现异常立即停止并删除。
+- 备份只覆盖源码与资源（`src`/`public`/`scripts`/根目录文件/`dist`），排除 `node_modules` 与 `wuguan` 构建产物。
+
 ## ⚠️ 强制规则（违反会造成不可逆数据损坏）
 
 ### 1. 每次修改文件前，必须先备份整个项目
 - 任何批量修改、重写、重构、编码转换前，**第一步**必须把项目完整备份到项目目录之外，**固定目标目录：`D:\plays\lmew_beifen`**（可用时间戳子目录），确认备份成功后再操作。
 - 涉及 11+ 个文件的批量改动，尤其必须在改动前做全量备份。
+- **必须排除 junction / 符号链接**：`wuguan/node_modules/culinary-idle` 是指向 `D:\plays\lmew` 的**自引用 junction**，普通递归复制会无限套娃（曾把备份撑到 67 万文件 / 数十 GB）。
+  - 正确命令（Git Bash 下需禁用参数转换）：`MSYS2_ARG_CONV_EXCL="*" robocopy "D:\plays\lmew" "D:\plays\lmew_beifen\<时间戳>" /E /XJ /MT:16 /NFL /NDL /NJH /NJS /R:1 /W:1`
+  - `/XJ` = 排除 junction/符号链接；**不要**用 `/MIR` 对含 junction 的目录做清理。
+- **备份目录总容量上限 10 GB**（用户 2026-09-08 明确要求）：超过就直接删除最旧的备份（`rm -rf`，**不要**放回收站）；备份前先确认剩余空间。
+- 备份只需覆盖源码与资源（`src`/`public`/`scripts`/根目录文件/`dist` 等），`node_modules`、`wuguan` 里的构建产物可排除；确认 `src` 与 `public` 文件数与源一致即可。
 
 ### 2. 文件编码：此项目源文件全部为 UTF-8
 - **严禁**使用 Windows PowerShell 的 `Get-Content` / `Set-Content` / `Out-File` 默认编码（系统 ANSI/GBK）读写这些文件，否则中文会损坏为乱码且**不可逆**。
