@@ -37,14 +37,14 @@ const FRUITS = [
 const MODES = {
   m1: { label: '1关 五格', cells: 7, layers: 3, groups: 15, matchN: 3, types: 6, slots: 5, gold: 60, desc: '45 张 · 3 层 · 卡槽仅 5 格 · +60 币' },
   m2: { label: '2关 限时', cells: 7, layers: 3, groups: 30, matchN: 3, types: 6, slots: 6, time: 110, gold: 100, desc: '90 张 · 3 层 · 限时 110 秒 · +100 币' },
-  m3: { label: '3关 盲盒', cells: 7, layers: 4, groups: 45, matchN: 3, types: 7, slots: 6, blind: 0.3, gold: 150, desc: '135 张 · 4 层 · 30% 背面卡（先点翻开）· +150 币' },
+  m3: { label: '3关 盲盒', cells: 7, layers: 4, groups: 45, matchN: 3, types: 7, slots: 6, blind: 0.3, gold: 150, desc: '135 张 · 4 层 · 30% 卡牌**图案隐藏**（入槽才揭晓，考验取舍）· +150 币' },
   m4: { label: '4关 四消', cells: 8, layers: 4, groups: 45, matchN: 4, types: 8, slots: 7, gold: 220, desc: '180 张 · 需 4 张同款才消除 · +220 币' },
   m5: { label: '5关 移位', cells: 8, layers: 5, groups: 75, matchN: 3, types: 8, slots: 6, shift: 8, gold: 260, desc: '225 张 · 5 层 · 每 8 秒全部卡牌重排位置 · +260 币' },
-  m6: { label: '6关 锁链', cells: 8, layers: 5, groups: 90, matchN: 3, types: 9, slots: 6, lock: 0.25, gold: 300, desc: '270 张 · 5 层 · 25% 卡需点击两次（先解锁）· +300 币' },
+  m6: { label: '6关 锁链', cells: 8, layers: 5, groups: 90, matchN: 3, types: 9, slots: 6, lock: 0.25, gold: 300, desc: '270 张 · 5 层 · 25% 卡被锁**不可点取**（每消除一组解锁 1 张）· +300 币' },
   m7: { label: '7关 极限五格', cells: 9, layers: 6, groups: 120, matchN: 3, types: 9, slots: 5, gold: 360, desc: '360 张 · 6 层 · 卡槽 5 格 · +360 币' },
   m8: { label: '8关 限时·五格', cells: 9, layers: 6, groups: 150, matchN: 3, types: 10, slots: 5, time: 540, gold: 420, desc: '450 张 · 6 层 · 5 格 + 限时 540 秒 · +420 币' },
   m9: { label: '9关 盲盒·四消', cells: 9, layers: 7, groups: 135, matchN: 4, types: 10, slots: 7, blind: 0.25, gold: 480, desc: '540 张 · 7 层 · 四消 + 25% 背面卡 · +480 币' },
-  m10: { label: '10关 地狱', cells: 9, layers: 7, groups: 168, matchN: 4, types: 12, slots: 5, blind: 0.3, shift: 12, lock: 0.2, gold: 600, desc: '672 张 · 7 层 · 5 格 + 四消 + 30% 背面 + 12 秒移位 + 20% 锁链 · +600 币' },
+  m10: { label: '10关 地狱', cells: 9, layers: 7, groups: 168, matchN: 4, types: 12, slots: 5, blind: 0.3, shift: 12, lock: 0.2, gold: 600, desc: '672 张 · 7 层 · 5 格 + 四消 + 30% 图案隐藏 + 12 秒移位 + 20% 锁链 · +600 币' },
 }
 const showInfo = ref(false)
 
@@ -78,6 +78,8 @@ const MATCH_N = computed(() => m.value.matchN)
 
 const remainBoard = computed(() => cards.value.filter((c) => !c.cleared && !c.inSlot).length)
 const remainSlot = computed(() => slots.value.filter((s) => s !== null).length)
+const lockedCount = computed(() => cards.value.filter((c) => c.locked && !c.cleared && !c.inSlot).length)
+const hiddenCount = computed(() => cards.value.filter((c) => c.hidden && !c.cleared && !c.inSlot).length)
 
 // ── 音效 ──
 function beep(freq, dur, type = 'sine') {
@@ -135,27 +137,38 @@ function genLevel() {
       positions.push({ layer: l, hx, hy })
     }
   }
-  // 3) 按层序（顶层优先）每 matchN 张一组分配同一水果 → 可解
+  // 3) 按层序（顶层优先）排序并赋 z 序 → 每 matchN 张一组分配同一水果（可解性）
   shuffleArr(positions)
   positions.sort((a, b) => b.layer - a.layer)
-  const list = []
+  const list = positions.map((p, i) => ({
+    id: nextId++, layer: p.layer, hx: p.hx, hy: p.hy, z: p.layer * 10000 + i, type: 0,
+    cleared: false, inSlot: false, slotIdx: -1, clearing: false, justUnlocked: false,
+    hidden: false, locked: false,
+  }))
   let gi = 0
-  for (let i = 0; i < positions.length; i += cfg.matchN) {
+  for (let i = 0; i < list.length; i += cfg.matchN) {
     const t = gi % cfg.types
     gi++
-    for (let k = 0; k < cfg.matchN && i + k < positions.length; k++) {
-      const p = positions[i + k]
-      list.push({
-        id: nextId++, layer: p.layer, hx: p.hx, hy: p.hy, type: t,
-        cleared: false, inSlot: false, slotIdx: -1, clearing: false, justUnlocked: false,
-        faceDown: false, locked: false,
-      })
-    }
+    for (let k = 0; k < cfg.matchN && i + k < list.length; k++) list[i + k].type = t
   }
-  // 4) 盲盒 / 锁链标记（互斥）
-  for (const c of list) {
-    if (cfg.blind && Math.random() < cfg.blind) c.faceDown = true
-    else if (cfg.lock && Math.random() < cfg.lock) c.locked = true
+  // 4) 盲盒：图案永久隐藏（点击直接取走，入槽后才揭晓）
+  if (cfg.blind) for (const c of list) if (Math.random() < cfg.blind) c.hidden = true
+  // 5) 锁链：被锁卡不可点取；每消除一组解锁 1 张 —— 锁卡随机分布（顶层最多锁一半，保证开局可动）
+  if (cfg.lock) {
+    const cand = shuffleArr(list.filter((c) => !c.hidden))
+    const nLock = Math.floor(cand.length * cfg.lock)
+    const topLayer = Math.max(...list.map((c) => c.layer))
+    const topCount = cand.filter((c) => c.layer === topLayer).length
+    const maxTopLock = Math.floor(topCount / 2)
+    let lockedTop = 0
+    let left2 = nLock
+    for (const c of cand) {
+      if (left2 <= 0) break
+      if (c.layer === topLayer && lockedTop >= maxTopLock) continue
+      c.locked = true
+      if (c.layer === topLayer) lockedTop++
+      left2--
+    }
   }
   return list
 }
@@ -216,17 +229,18 @@ function shiftPositions() {
 }
 
 // ── 遮挡判定 ──
+// 遮挡判定（2026-09-09 收紧）：任何 z 序更高的卡压住一点（含同层后放的卡）即不可点
 function isCovered(card) {
   if (card.cleared || card.inSlot) return false
   for (const o of cards.value) {
     if (o === card || o.cleared || o.inSlot) continue
-    if (o.layer <= card.layer) continue
+    if (o.z <= card.z) continue
     if (Math.abs(o.hx - card.hx) < 2 && Math.abs(o.hy - card.hy) < 2) return true
   }
   return false
 }
 function canClick(card) {
-  return !won.value && !over.value && !card.cleared && !card.inSlot && !isCovered(card)
+  return !won.value && !over.value && !card.cleared && !card.inSlot && !card.locked && !isCovered(card)
 }
 const covered = computed(() => {
   cards.value.length
@@ -250,8 +264,7 @@ function compactSlots() {
 // ── 点击卡牌 ──
 function tapCard(card) {
   if (!canClick(card)) return
-  if (card.faceDown) { card.faceDown = false; beep(520, 0.07); return } // 盲盒：先翻开
-  if (card.locked) { card.locked = false; beep(480, 0.1, 'triangle'); return } // 锁链：先解锁
+  if (card.locked) { beep(300, 0.08, 'square'); return } // 锁链：被锁卡不可点取（需消除一组解锁）
   const free = slots.value.indexOf(null)
   if (free < 0) { fail('💦 卡槽已满且无法消除'); return }
   card.inSlot = true
@@ -282,6 +295,14 @@ function tapCard(card) {
       group.forEach((c) => { c.cleared = true; c.inSlot = false })
       slots.value = slots.value.map((id) => (group.some((g) => g.id === id) ? null : id))
       compactSlots()
+      // 锁链：每消除一组解锁 1 张被锁卡（优先 z 序高者，即最上层）
+      const lockedLeft = cards.value.filter((c) => c.locked && !c.cleared && !c.inSlot).sort((a, b) => b.z - a.z)
+      if (lockedLeft.length) {
+        lockedLeft[0].locked = false
+        lockedLeft[0].justUnlocked = true
+        beep(760, 0.1)
+        ui.pushLog(`🍇 消除一组 → 解锁 1 张锁卡（剩余 ${lockedLeft.length - 1} 张）`, 'info')
+      }
       cards.value.forEach((c) => {
         if (!c.cleared && !c.inSlot && !isCovered(c)) c.justUnlocked = true
       })
@@ -297,7 +318,17 @@ function checkEnd() {
   if (won.value || over.value) return
   if (remainBoard.value === 0 && remainSlot.value === 0) { win(); return }
   if (remainSlot.value >= SLOT_MAX.value) { fail('💦 卡槽已满且无法消除'); return }
-  if (remainBoard.value > 0 && !cards.value.some((c) => canClick(c))) { fail('💦 无可点击的卡牌'); return }
+  if (remainBoard.value > 0 && !cards.value.some((c) => canClick(c))) {
+    // 兜底：若还有锁卡（全被锁住导致无卡可点），自动解锁一张，避免不公平失败
+    const lockedLeft = cards.value.filter((c) => c.locked && !c.cleared && !c.inSlot).sort((a, b) => b.z - a.z)
+    if (lockedLeft.length) {
+      lockedLeft[0].locked = false
+      lockedLeft[0].justUnlocked = true
+      ui.pushLog('🍇 无卡可点 → 自动解锁一张锁卡', 'info')
+      return
+    }
+    fail('💦 无可点击的卡牌')
+  }
 }
 function win() {
   won.value = true
@@ -408,6 +439,8 @@ reset()
       <span class="gg-chip" style="margin-left: auto">🍇 场上 <b class="mono">{{ remainBoard }}</b></span>
       <span class="gg-chip">🈵 卡槽 <b class="mono">{{ remainSlot }}</b>/{{ SLOT_MAX }}</span>
       <span v-if="timeLeft !== null" class="gg-chip">⏱ <b class="mono">{{ timeLeft }}</b> 秒</span>
+      <span v-if="lockedCount > 0" class="gg-chip">🔒 锁 <b class="mono">{{ lockedCount }}</b></span>
+      <span v-if="hiddenCount > 0" class="gg-chip">❓ 隐藏 <b class="mono">{{ hiddenCount }}</b></span>
       <span class="gg-chip">💰 <b class="mono">{{ m.gold }}</b> 币</span>
       <button class="gg-info-btn" @click="showInfo = true">📖 模式说明</button>
     </div>
@@ -432,13 +465,13 @@ reset()
           clearing: c.clearing,
           hint: hintIds.includes(c.id),
           unlocked: c.justUnlocked,
-          blind: c.faceDown,
+          blind: c.hidden && !c.inSlot,
           lock: c.locked,
         }"
         :style="cardStyle(c)"
         @click="tapCard(c)"
       >
-        <img v-if="!c.faceDown" class="gg-img" :src="itemImage(FRUITS[c.type].id)" :alt="FRUITS[c.type].name" @error="$event.target.style.display = 'none'" />
+        <img v-if="!c.hidden || c.inSlot" class="gg-img" :src="itemImage(FRUITS[c.type].id)" :alt="FRUITS[c.type].name" @error="$event.target.style.display = 'none'" />
         <span v-else class="gg-back">❓</span>
         <span v-if="c.locked" class="gg-lock">🔒</span>
       </div>
@@ -463,8 +496,10 @@ reset()
         <div class="gg-info-head"><b>🍇 果了个果 · 十关模式说明</b><button class="gg-info-close" @click="showInfo = false">✕</button></div>
         <div class="gg-info-list">
           <div class="gg-info-row gg-info-rule">
-            通用规则：点击未被压住的卡牌放入卡槽（被压住的灰色不可点）· 卡槽凑齐 {{ MATCH_N }} 张同款立即消除 ·
-            消除后下层解锁 · 卡槽填满即失败 · 清空全部卡牌通关 · 道具：提示 ×2 / 洗牌 ×1 / 撤回 ×1
+            通用规则：任何被上层卡牌压住一点点的卡都不可点击（灰色显示）· 点击未被压住的卡放入卡槽 ·
+            卡槽凑齐 {{ MATCH_N }} 张同款立即消除 · 消除后下层解锁 · 卡槽填满即失败 · 清空全部卡牌通关 ·
+            盲盒关：图案隐藏的卡可直接取走，入槽才知种类 · 锁链关：🔒 卡不可点取，每消除一组解锁 1 张 ·
+            道具：提示 ×2 / 洗牌 ×1 / 撤回 ×1
           </div>
           <div v-for="(cfg, key) in MODES" :key="key" class="gg-info-row">
             <b class="gg-info-name">{{ cfg.label }}</b>
