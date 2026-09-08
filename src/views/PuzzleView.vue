@@ -12,7 +12,7 @@ const ui = useUiStore()
 
 const mode = ref('s4')
 const MODES = {
-  s2: { label: '2×2 入门', size: 2, gold: 40, desc: '2×2 · 4 块 · +40 币 —— 入门热身' },
+  s2: { label: '2×2 入门', size: 2, gold: 20, desc: '2×2 · 4 块 · +20 币 —— 入门热身' },
   s3: { label: '3×3 轻松', size: 3, gold: 80, desc: '3×3 · 9 块 · +80 币' },
   l3: { label: '3×3 限步', size: 3, gold: 120, maxSteps: 80, desc: '3×3 · 限 80 步完成 · +120 币 —— 超步即失败' },
   s4: { label: '4×4 标准', size: 4, gold: 150, desc: '4×4 · 16 块 · +150 币 —— 经典体验' },

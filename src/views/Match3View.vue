@@ -25,11 +25,11 @@ const MODES = {
   m3: { label: '进阶20', steps: 20, time: null, goal: 2000, gold: 150, desc: '20 步内达 2000 分 · +150 币' },
   m4: { label: '高手20', steps: 20, time: null, goal: 3000, gold: 230, desc: '20 步内达 3000 分 · +230 币 —— 连锁大师' },
   t1: { label: '60秒600', steps: null, time: 60, goal: 600, gold: 80, desc: '60 秒内达 600 分 · +80 币' },
-  t2: { label: '60秒1500', steps: null, time: 60, goal: 1500, gold: 160, desc: '60 秒内达 1500 分 · +160 币' },
-  t3: { label: '90秒2000', steps: null, time: 90, goal: 2000, gold: 220, desc: '90 秒内达 2000 分 · +220 币' },
-  t4: { label: '90秒3200', steps: null, time: 90, goal: 3200, gold: 340, desc: '90 秒内达 3200 分 · +340 币 —— 高难高速' },
-  x1: { label: '硬核15', steps: 15, time: null, goal: 2200, gold: 280, desc: '仅 15 步达 2200 分 · +280 币' },
-  x2: { label: '地狱15', steps: 15, time: null, goal: 3800, gold: 450, desc: '仅 15 步达 3800 分 · +450 币 —— 极限连消' },
+  t2: { label: '60秒1500', steps: null, time: 60, goal: 1500, gold: 130, desc: '60 秒内达 1500 分 · +130 币' },
+  t3: { label: '90秒2000', steps: null, time: 90, goal: 2000, gold: 180, desc: '90 秒内达 2000 分 · +180 币' },
+  t4: { label: '90秒3200', steps: null, time: 90, goal: 3200, gold: 260, desc: '90 秒内达 3200 分 · +260 币 —— 高难高速' },
+  x1: { label: '硬核15', steps: 15, time: null, goal: 2200, gold: 220, desc: '仅 15 步达 2200 分 · +220 币' },
+  x2: { label: '地狱15', steps: 15, time: null, goal: 3800, gold: 320, desc: '仅 15 步达 3800 分 · +320 币 —— 极限连消' },
 }
 const showInfo = ref(false)
 
