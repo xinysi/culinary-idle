@@ -44,6 +44,26 @@ const MODES = {
 }
 const showInfo = ref(false)
 
+// ── 十套背景（每个模式一套，程序化绘制；浅色为主，保证食材看得清）──
+const BG = [
+  { name: '木案板', base: ['#f7e8d3', '#dcbf9a'], pattern: 'planks', tint: 'rgba(120,80,40,' },
+  { name: '大理石台', base: ['#f6f7f9', '#dde2e8'], pattern: 'marble', tint: 'rgba(150,160,175,' },
+  { name: '青瓷台面', base: ['#e9f5f2', '#c2ded7'], pattern: 'glaze', tint: 'rgba(110,150,140,' },
+  { name: '竹席', base: ['#f4ecd4', '#d8c79a'], pattern: 'bamboo', tint: 'rgba(140,110,50,' },
+  { name: '铁板烧', base: ['#3d4147', '#22252a'], pattern: 'iron', tint: 'rgba(200,210,220,' },
+  { name: '石桌', base: ['#e2e4e0', '#bfc3bd'], pattern: 'stone', tint: 'rgba(120,126,120,' },
+  { name: '白瓷砖', base: ['#fcfcfc', '#e4e7ea'], pattern: 'tile', tint: 'rgba(160,170,180,' },
+  { name: '深色石板', base: ['#4d4e52', '#2d2e32'], pattern: 'slate', tint: 'rgba(180,186,196,' },
+  { name: '红木桌', base: ['#8d4c2f', '#5d2e1b'], pattern: 'wood', tint: 'rgba(230,170,120,' },
+  { name: '夜市摊', base: ['#1e2c47', '#0e192b'], pattern: 'night', tint: 'rgba(255,210,140,' },
+]
+const modeIdx = computed(() => Math.max(0, Number(mode.value.slice(1)) - 1))
+// 确定性伪随机（同一模式每帧图案一致）
+function makeRng(seed) {
+  let s = (seed >>> 0) || 1
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
+}
+
 // ── 响应式状态 ──
 const canvas = ref(null)
 const mode = ref('m1')
@@ -304,27 +324,193 @@ function draw() {
   ctx.restore()
 }
 function drawBackdrop(ctx, dark) {
+  const bg = BG[modeIdx.value]
+  const rng = makeRng(modeIdx.value * 7919 + 13)
+  // 1) 底色渐变
   const g = ctx.createLinearGradient(0, 0, 0, H)
-  if (dark) { g.addColorStop(0, '#241a14'); g.addColorStop(1, '#15100c') } else { g.addColorStop(0, '#f6e7d2'); g.addColorStop(1, '#e0c8a8') }
+  g.addColorStop(0, bg.base[0])
+  g.addColorStop(1, bg.base[1])
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
-  // 案板
-  ctx.fillStyle = dark ? 'rgba(90,62,42,0.55)' : 'rgba(196,148,96,0.5)'
-  ctx.fillRect(0, H - 120, W, 120)
-  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.05)' : 'rgba(120,80,40,0.18)'
-  ctx.lineWidth = 1
-  for (let i = 0; i < 7; i++) {
-    const y = H - 108 + i * 16
+  // 2) 纹理
+  const p = bg.pattern
+  if (p === 'planks' || p === 'wood') {
+    const ph = p === 'wood' ? 92 : 64
+    for (let i = 0; i < Math.ceil(H / ph) + 1; i++) {
+      const y = i * ph
+      ctx.fillStyle = i % 2 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'
+      ctx.fillRect(0, y, W, ph)
+      ctx.strokeStyle = bg.tint + '0.35)'
+      ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
+      for (let k = 0; k < 5; k++) {
+        const yy = y + 10 + rng() * (ph - 20)
+        ctx.strokeStyle = bg.tint + (0.1 + rng() * 0.12) + ')'
+        ctx.lineWidth = 1 + rng() * 1.6
+        ctx.beginPath()
+        ctx.moveTo(0, yy)
+        for (let x = 0; x <= W; x += 26) ctx.lineTo(x, yy + Math.sin(x * 0.018 + rng() * 3) * 2.5)
+        ctx.stroke()
+      }
+      if (rng() < 0.45) {
+        const kx = rng() * W
+        const ky = y + ph * 0.5
+        ctx.strokeStyle = bg.tint + '0.3)'
+        ctx.lineWidth = 2
+        for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.ellipse(kx, ky, k * 3.4, k * 2.2, 0, 0, TAU); ctx.stroke() }
+      }
+    }
+  } else if (p === 'marble') {
+    for (let i = 0; i < 8; i++) {
+      ctx.strokeStyle = bg.tint + (0.16 + rng() * 0.2) + ')'
+      ctx.lineWidth = 1 + rng() * 2.6
+      ctx.beginPath()
+      let x = -30
+      let y = rng() * H
+      ctx.moveTo(x, y)
+      while (x < W + 30) { x += 26 + rng() * 54; y += (rng() - 0.5) * 70; ctx.lineTo(x, y) }
+      ctx.stroke()
+    }
+    for (let i = 0; i < 70; i++) {
+      ctx.fillStyle = bg.tint + (0.08 + rng() * 0.18) + ')'
+      ctx.beginPath(); ctx.arc(rng() * W, rng() * H, 1 + rng() * 2.2, 0, TAU); ctx.fill()
+    }
+  } else if (p === 'glaze') {
+    for (let i = 0; i < 5; i++) {
+      const cx = rng() * W
+      const cy = rng() * H
+      const rg = ctx.createRadialGradient(cx, cy, 8, cx, cy, 190 + rng() * 130)
+      rg.addColorStop(0, 'rgba(255,255,255,0.26)')
+      rg.addColorStop(1, 'rgba(255,255,255,0)')
+      ctx.fillStyle = rg
+      ctx.beginPath(); ctx.arc(cx, cy, 340, 0, TAU); ctx.fill()
+    }
+    ctx.strokeStyle = bg.tint + '0.22)'
+    ctx.lineWidth = 1
+    for (let i = 0; i < 16; i++) {
+      let x = rng() * W
+      let y = rng() * H
+      ctx.beginPath(); ctx.moveTo(x, y)
+      for (let k = 0; k < 4; k++) { x += (rng() - 0.5) * 60; y += (rng() - 0.5) * 60; ctx.lineTo(x, y) }
+      ctx.stroke()
+    }
+  } else if (p === 'bamboo') {
+    const sw = 26
+    for (let x = 0; x < W; x += sw) {
+      ctx.fillStyle = ((x / sw) | 0) % 2 ? 'rgba(0,0,0,0.055)' : 'rgba(255,255,255,0.07)'
+      ctx.fillRect(x, 0, sw, H)
+      ctx.strokeStyle = bg.tint + '0.34)'
+      ctx.lineWidth = 1.6
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke()
+    }
+    ctx.strokeStyle = bg.tint + '0.24)'
+    ctx.lineWidth = 1.4
+    for (let y = 44; y < H; y += 92) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+  } else if (p === 'iron') {
+    for (let i = 0; i < 110; i++) {
+      ctx.strokeStyle = bg.tint + (0.02 + rng() * 0.05) + ')'
+      ctx.lineWidth = 1
+      const y = rng() * H
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
+    }
+    const hg = ctx.createRadialGradient(W / 2, H * 0.82, 30, W / 2, H * 0.82, 340)
+    hg.addColorStop(0, 'rgba(255,120,40,0.26)')
+    hg.addColorStop(1, 'rgba(255,120,40,0)')
+    ctx.fillStyle = hg
+    ctx.fillRect(0, 0, W, H)
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,0.05)'
+      ctx.beginPath()
+      ctx.ellipse(rng() * W, rng() * H, 18 + rng() * 44, 5 + rng() * 10, rng() * 3, 0, TAU)
+      ctx.fill()
+    }
+  } else if (p === 'stone') {
+    for (let i = 0; i < 120; i++) {
+      ctx.fillStyle = bg.tint + (0.06 + rng() * 0.2) + ')'
+      ctx.beginPath(); ctx.arc(rng() * W, rng() * H, 1 + rng() * 3.4, 0, TAU); ctx.fill()
+    }
+    ctx.strokeStyle = bg.tint + '0.18)'
+    ctx.lineWidth = 1.2
+    for (let i = 0; i < 6; i++) {
+      let x = rng() * W
+      let y = rng() * H
+      ctx.beginPath(); ctx.moveTo(x, y)
+      for (let k = 0; k < 5; k++) { x += (rng() - 0.5) * 90; y += (rng() - 0.5) * 70; ctx.lineTo(x, y) }
+      ctx.stroke()
+    }
+  } else if (p === 'tile') {
+    const cs = 68
+    ctx.strokeStyle = bg.tint + '0.45)'
+    ctx.lineWidth = 2
+    for (let x = 0; x <= W; x += cs) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke() }
+    for (let y = 0; y <= H; y += cs) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'
+      ctx.beginPath(); ctx.arc(rng() * W, rng() * H, 1 + rng() * 2, 0, TAU); ctx.fill()
+    }
+  } else if (p === 'slate') {
+    for (let i = 0; i < 90; i++) {
+      ctx.fillStyle = bg.tint + (0.04 + rng() * 0.1) + ')'
+      ctx.beginPath(); ctx.arc(rng() * W, rng() * H, 1 + rng() * 3, 0, TAU); ctx.fill()
+    }
+    ctx.strokeStyle = bg.tint + '0.22)'
+    ctx.lineWidth = 1.4
+    for (let i = 0; i < 9; i++) {
+      let x = rng() * W
+      let y = rng() * H
+      ctx.beginPath(); ctx.moveTo(x, y)
+      for (let k = 0; k < 4; k++) { x += (rng() - 0.5) * 70; y += (rng() - 0.5) * 90; ctx.lineTo(x, y) }
+      ctx.stroke()
+    }
+  } else if (p === 'night') {
+    // 夜市灯串
+    for (let i = 0; i < 9; i++) {
+      const bx = 26 + i * 46
+      const by = 24 + Math.sin(i * 1.1) * 10
+      const gg = ctx.createRadialGradient(bx, by, 2, bx, by, 54)
+      gg.addColorStop(0, 'rgba(255,214,120,0.85)')
+      gg.addColorStop(0.3, 'rgba(255,190,90,0.32)')
+      gg.addColorStop(1, 'rgba(255,190,90,0)')
+      ctx.fillStyle = gg
+      ctx.beginPath(); ctx.arc(bx, by, 54, 0, TAU); ctx.fill()
+      ctx.fillStyle = '#ffe6a8'
+      ctx.beginPath(); ctx.arc(bx, by, 5.5, 0, TAU); ctx.fill()
+    }
+    ctx.strokeStyle = 'rgba(255,220,160,0.35)'
+    ctx.lineWidth = 1.2
     ctx.beginPath()
-    ctx.moveTo(0, y)
-    ctx.lineTo(W, y)
+    for (let x = 0; x <= W; x += 8) ctx.lineTo(x, 18 + Math.sin(x * 0.03) * 6)
     ctx.stroke()
+    for (let i = 0; i < 26; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,0.05)'
+      ctx.beginPath(); ctx.arc(rng() * W, rng() * H, 1 + rng() * 2, 0, TAU); ctx.fill()
+    }
   }
-  // 光晕
-  const rg = ctx.createRadialGradient(W / 2, H * 0.42, 40, W / 2, H * 0.42, H * 0.7)
-  rg.addColorStop(0, dark ? 'rgba(255,210,150,0.06)' : 'rgba(255,255,255,0.28)')
-  rg.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = rg
+  // 3) 台面收边（底部）
+  ctx.fillStyle = dark ? 'rgba(0,0,0,0.28)' : 'rgba(90,60,30,0.16)'
+  ctx.fillRect(0, H - 96, W, 96)
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.4)'
+  ctx.lineWidth = 1.5
+  ctx.beginPath(); ctx.moveTo(0, H - 96); ctx.lineTo(W, H - 96); ctx.stroke()
+  // 4) 氛围：热气
+  for (let i = 0; i < 4; i++) {
+    const sx = 60 + i * 100 + Math.sin(waveT * 0.6 + i) * 22
+    const sy = H - 120 - ((waveT * 26 + i * 90) % 200)
+    const a = 0.05 + 0.05 * Math.sin(waveT + i)
+    ctx.fillStyle = dark ? `rgba(255,255,255,${a})` : `rgba(255,255,255,${a + 0.06})`
+    ctx.beginPath()
+    ctx.ellipse(sx, sy, 26, 12, Math.sin(waveT * 0.4 + i) * 0.5, 0, TAU)
+    ctx.fill()
+  }
+  // 5) 暗色适配 + 暗角
+  if (dark) {
+    ctx.fillStyle = 'rgba(10,14,22,0.42)'
+    ctx.fillRect(0, 0, W, H)
+  }
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.78)
+  vg.addColorStop(0, 'rgba(0,0,0,0)')
+  vg.addColorStop(1, 'rgba(20,12,6,0.3)')
+  ctx.fillStyle = vg
   ctx.fillRect(0, 0, W, H)
 }
 function drawItem(ctx, it) {
@@ -433,6 +619,11 @@ function drawFloats(ctx) {
   ctx.globalAlpha = 1
 }
 function drawHud(ctx, dark) {
+  // 背景名（每个模式一套背景）
+  ctx.textAlign = 'center'
+  ctx.font = '10px system-ui, sans-serif'
+  ctx.fillStyle = dark ? 'rgba(255,255,255,0.38)' : 'rgba(90,60,30,0.5)'
+  ctx.fillText(BG[modeIdx.value].name, W / 2, 18)
   // 生命
   ctx.textAlign = 'left'
   ctx.font = '16px system-ui, sans-serif'
@@ -585,6 +776,9 @@ onUnmounted(() => {
           <div v-for="(m, key) in MODES" :key="key" class="sk-info-row">
             <b class="sk-info-name">{{ m.label }}</b>
             <span class="sk-info-desc">{{ m.desc }}</span>
+          </div>
+          <div class="sk-info-row sk-info-rule">
+            十模式背景（每个模式一套）：{{ BG.map((b, i) => '模式' + (i + 1) + ' ' + b.name).join(' · ') }}
           </div>
           <div class="sk-info-row sk-info-rule">
             食材图鉴：{{ ING.map((f) => f.name + '(' + f.score + '分)').join('、') }}
