@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SKILL_CATEGORIES, SKILL_DEFS } from '../game/data/skills.js'
 import { xpProgress } from '../game/core/Experience.js'
+import { nameColorOf } from '../game/data/cosmetics.js'
 import ProgressBar from './ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -71,7 +72,7 @@ function onAvatarPick(e) {
       <div v-else class="avatar" :class="frameCls" title="点击更换头像" @click="openAvatarPicker">食</div>
       <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatarPick" />
       <div class="sidebar-identity">
-        <div class="player-name" :style="player.nameColor ? { color: player.nameColor === 'gold' ? '#eab04a' : '#b8c4cc' } : {}">
+        <div class="player-name" :style="nameColorOf(player.nameColor) ? { color: nameColorOf(player.nameColor) } : {}">
           {{ player.name }}
           <span v-if="player.hardcore" class="title-badge" style="background: var(--bad-strong)">☠️硬核</span>
           <span v-if="player.title" class="title-badge">{{ player.title }}</span>
