@@ -18,8 +18,8 @@ const raging = ref(false)
 let rageUntil = 0
 const mode = ref('classic')
 const MODES = {
-  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 15 }, { need: 90, gold: 30 }, { need: 130, gold: 43 }], desc: '15 秒 · 50/90/130 碗 → 15/30/43 币 —— 零碎时间的小挑战' },
-  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 26 }, { need: 140, gold: 46 }, { need: 200, gold: 66 }], desc: '30 秒 · 80/140/200 碗 → 26/46/66 币 —— 手速爆发' },
+  nibble: { label: '轻食 15s', dur: 15, tiers: [{ need: 50, gold: 10 }, { need: 90, gold: 20 }, { need: 130, gold: 28 }], desc: '15 秒 · 50/90/130 碗 → 10/20/28 币 —— 零碎时间的小挑战' },
+  sprint: { label: '冲刺 30s', dur: 30, tiers: [{ need: 80, gold: 20 }, { need: 140, gold: 36 }, { need: 200, gold: 52 }], desc: '30 秒 · 80/140/200 碗 → 20/36/52 币 —— 手速爆发' },
   midnight: { label: '宵夜 45s', dur: 45, tiers: [{ need: 100, gold: 33 }, { need: 180, gold: 59 }, { need: 260, gold: 86 }], desc: '45 秒 · 100/180/260 碗 → 33/59/86 币' },
   classic: { label: '经典 60s', dur: 60, tiers: [{ need: 120, gold: 40 }, { need: 200, gold: 66 }, { need: 300, gold: 99 }], desc: '60 秒 · 120/200/300 碗 → 40/66/99 币 —— 标准体验' },
   greedy: { label: '贪吃 75s', dur: 75, tiers: [{ need: 140, gold: 46 }, { need: 240, gold: 79 }, { need: 340, gold: 112 }], desc: '75 秒 · 140/240/340 碗 → 46/79/112 币' },

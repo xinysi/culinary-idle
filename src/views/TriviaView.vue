@@ -44,13 +44,13 @@ const SKILLS_ALL = ['采摘', '垂钓', '狩猎', '挖掘', '农耕', '烹饪', 
 
 const mode = ref('all12')
 const MODES = {
-  k6: { label: '知识·入门', spec: { k: 6, c: 0, l: 0 }, pass: 5, gold: 50, desc: '6 知识题 · 答对 ≥5 得徽章 +50 币' },
+  k6: { label: '知识·入门', spec: { k: 6, c: 0, l: 0 }, pass: 5, gold: 50, desc: '6 知识题 · 答对 ≥5 得 +50 币（短模式不发徽章）' },
   k10: { label: '知识·标准', spec: { k: 10, c: 0, l: 0 }, pass: 8, gold: 90, desc: '10 知识题 · ≥8 得徽章 +90 币' },
   k14: { label: '知识·大师', spec: { k: 14, c: 0, l: 0 }, pass: 12, gold: 150, desc: '14 知识题（全库）· ≥12 得徽章 +150 币' },
-  c3: { label: '对比·试炼', spec: { k: 0, c: 3, l: 0 }, pass: 3, gold: 40, desc: '3 对比题 · 全对 +40 币' },
-  c6: { label: '对比·挑战', spec: { k: 0, c: 6, l: 0 }, pass: 5, gold: 80, desc: '6 对比题 · ≥5 +80 币' },
-  l3: { label: '连线·试炼', spec: { k: 0, c: 0, l: 3 }, pass: 3, gold: 40, desc: '3 连线题 · 全对 +40 币' },
-  l6: { label: '连线·挑战', spec: { k: 0, c: 0, l: 6 }, pass: 5, gold: 80, desc: '6 连线题 · ≥5 +80 币' },
+  c3: { label: '对比·试炼', spec: { k: 0, c: 3, l: 0 }, pass: 3, gold: 40, desc: '3 对比题 · 全对 +40 币（短模式不发徽章）' },
+  c6: { label: '对比·挑战', spec: { k: 0, c: 6, l: 0 }, pass: 5, gold: 80, desc: '6 对比题 · ≥5 +80 币（短模式不发徽章）' },
+  l3: { label: '连线·试炼', spec: { k: 0, c: 0, l: 3 }, pass: 3, gold: 40, desc: '3 连线题 · 全对 +40 币（短模式不发徽章）' },
+  l6: { label: '连线·挑战', spec: { k: 0, c: 0, l: 6 }, pass: 5, gold: 80, desc: '6 连线题 · ≥5 +80 币（短模式不发徽章）' },
   all12: { label: '综合·标准', spec: { k: 4, c: 4, l: 4 }, pass: 10, gold: 100, desc: '4 知识+4 对比+4 连线 =12 题 · ≥10 得徽章 +100 币' },
   all15: { label: '综合·进阶', spec: { k: 5, c: 5, l: 5 }, pass: 13, gold: 160, desc: '5+5+5 =15 题 · ≥13 得徽章 +160 币' },
   all18: { label: '综合·大师', spec: { k: 6, c: 6, l: 6 }, pass: 16, gold: 240, desc: '6+6+6 =18 题（对比/连线全库）· ≥16 得徽章 +240 币' },
@@ -120,9 +120,11 @@ function settle() {
   const right = correctAll.value
   const mg2 = mg.value
   if (right >= m.pass) {
-    mg2.badges = (mg2.badges ?? 0) + 1
+    // 徽章仅在「≥10 题」模式达标时发放（短模式刷徽章过快，2026-09-09 经济平衡）
+    const badge = qlist.value.length >= 10
+    if (badge) mg2.badges = (mg2.badges ?? 0) + 1
     player.gainGameCoins(m.gold)
-    ui.pushLog(`📚 美食讲堂：${m.label} 答对 ${right}/${totalQ.value}！徽章 +1（共 ${mg2.badges} 枚）+${m.gold} 游戏币`, 'gain')
+    ui.pushLog(`📚 美食讲堂：${m.label} 答对 ${right}/${totalQ.value}！${badge ? '徽章 +1（共 ' + mg2.badges + ' 枚）' : '（短模式不发徽章）'}+${m.gold} 游戏币`, 'gain')
   }
   mg2.week = weekKey()
 }
@@ -135,15 +137,15 @@ function weekKey() {
 }
 const mg = computed(() => player.minigames.trivia)
 const EXCHANGES = [
-  { id: 'gold600', label: '游戏币 200', cost: 1 },
-  { id: 'gold1500', label: '游戏币 450', cost: 2 },
-  { id: 'gold3000', label: '游戏币 800', cost: 3 },
+  { id: 'gold600', label: '游戏币 60', cost: 1 },
+  { id: 'gold1500', label: '游戏币 130', cost: 2 },
+  { id: 'gold3000', label: '游戏币 210', cost: 3 },
 ]
 function exchange(item) {
   const m = mg.value
   if ((m.badges ?? 0) < item.cost) return
   m.badges -= item.cost
-  player.gainGameCoins(item.id === 'gold600' ? 200 : item.id === 'gold1500' ? 450 : 800)
+  player.gainGameCoins(item.id === 'gold600' ? 60 : item.id === 'gold1500' ? 130 : 210)
   ui.pushLog(`📚 讲堂兑换：${item.label}（剩余徽章 ${m.badges}）`, 'gain')
 }
 function switchMode(k) {
@@ -204,7 +206,7 @@ resetRound()
       <div class="tv-info-box">
         <div class="tv-info-head"><b>📚 美食讲堂 · 十种模式说明</b><button class="tv-info-close" @click="showInfo = false">✕</button></div>
         <div class="tv-info-list">
-          <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得徽章+游戏币（可与兑换行换游戏币）· 徽章与本周记录按周重置</div>
+          <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得金币（≥10 题模式额外得徽章）（可与兑换行换游戏币）· 徽章与本周记录按周重置</div>
           <div v-for="(m, key) in MODES" :key="key" class="tv-info-row">
             <b class="tv-info-name">{{ m.label }}</b>
             <span class="tv-info-desc">{{ m.desc }}</span>

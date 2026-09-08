@@ -12,13 +12,13 @@ const METAS = {
   wide: { label: '新手宽区', speed: 0.25, every: 4, reward: 35, zoneW: 0.24, dual: false, desc: '慢速 · 完美区加宽 · 4 连 35 币 —— 新手友好' },
   slow: { label: '慢火单轨', speed: 0.22, every: 4, reward: 40, zoneW: 0.16, dual: false, desc: '慢速单轨 · 4 连 40 币' },
   classic: { label: '经典单轨', speed: 0.35, every: 5, reward: 50, zoneW: 0.16, dual: false, desc: '中速单轨 · 5 连 50 币 —— 标准体验' },
-  fast: { label: '疾速单轨', speed: 0.5, every: 5, reward: 70, zoneW: 0.16, dual: false, desc: '快速单轨 · 5 连 70 币' },
-  blitz: { label: '快燃挑战', speed: 0.62, every: 5, reward: 75, zoneW: 0.16, dual: false, desc: '高速单轨 · 5 连 75 币' },
-  ultra: { label: '极限单轨', speed: 0.8, every: 5, reward: 110, zoneW: 0.16, dual: false, desc: '极速单轨 · 5 连 110 币 —— 高手向' },
-  dual: { label: '双锅同调', speed: 0.3, dualSpeed: 0.24, every: 5, reward: 90, zoneW: 0.16, dual: true, desc: '双轨异速 · 双轨同时完美计数 5 连 90 币' },
-  dual2: { label: '双锅疾速', speed: 0.42, dualSpeed: 0.33, every: 5, reward: 130, zoneW: 0.16, dual: true, desc: '双轨异速快速 · 双完美 5 连 130 币' },
-  dual3: { label: '双锅极限', speed: 0.55, dualSpeed: 0.41, every: 5, reward: 180, zoneW: 0.16, dual: true, desc: '双轨异速极速 · 双完美 5 连 180 币 —— 极限同步' },
-  precise: { label: '精准单轨', speed: 0.3, every: 4, reward: 80, zoneW: 0.1, dual: false, desc: '中速 · 完美区收窄至 10% · 4 连 80 币 —— 精准挑战' },
+  fast: { label: '疾速单轨', speed: 0.5, every: 5, reward: 40, zoneW: 0.16, dual: false, desc: '快速单轨 · 5 连 40 币' },
+  blitz: { label: '快燃挑战', speed: 0.62, every: 5, reward: 33, zoneW: 0.16, dual: false, desc: '高速单轨 · 5 连 33 币' },
+  ultra: { label: '极限单轨', speed: 0.8, every: 5, reward: 26, zoneW: 0.16, dual: false, desc: '极速单轨 · 5 连 26 币 —— 高手向' },
+  dual: { label: '双锅同调', speed: 0.3, dualSpeed: 0.24, every: 5, reward: 65, zoneW: 0.16, dual: true, desc: '双轨异速 · 双轨同时完美计数 5 连 65 币' },
+  dual2: { label: '双锅疾速', speed: 0.42, dualSpeed: 0.33, every: 5, reward: 45, zoneW: 0.16, dual: true, desc: '双轨异速快速 · 双完美 5 连 45 币' },
+  dual3: { label: '双锅极限', speed: 0.55, dualSpeed: 0.41, every: 5, reward: 35, zoneW: 0.16, dual: true, desc: '双轨异速极速 · 双完美 5 连 35 币 —— 极限同步' },
+  precise: { label: '精准单轨', speed: 0.3, every: 4, reward: 55, zoneW: 0.1, dual: false, desc: '中速 · 完美区收窄至 10% · 4 连 55 币 —— 精准挑战' },
 }
 const showInfo = ref(false)
 
