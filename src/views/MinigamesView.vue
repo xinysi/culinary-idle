@@ -20,6 +20,7 @@ const PacmanView = defineAsyncComponent(() => import('./PacmanView.vue'))
 const Match3View = defineAsyncComponent(() => import('./Match3View.vue'))
 const FlappyBirdView = defineAsyncComponent(() => import('./FlappyBirdView.vue'))
 const Match10View = defineAsyncComponent(() => import('./Match10View.vue'))
+const FruitMergeView = defineAsyncComponent(() => import('./FruitMergeView.vue'))
 
 // 商店固定入口（2026-09-09：商店不参与分页，固定在入口行最左）
 const SHOP = { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView }
@@ -36,6 +37,7 @@ const GAMES = [
   { id: 'match3', emoji: '🍬', name: '消消乐', comp: Match3View },
   { id: 'flappy', emoji: '🐦', name: '笨鸟先飞', comp: FlappyBirdView },
   { id: 'match10', emoji: '🧮', name: '凑凑消', comp: Match10View },
+  { id: 'fruitmerge', emoji: '🍉', name: '水果合成', comp: FruitMergeView },
 ]
 
 // 游戏分类分页（每页 9 个；新游戏继续往后排，不会被挤到第二行）
