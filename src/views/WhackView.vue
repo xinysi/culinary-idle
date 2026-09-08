@@ -10,20 +10,24 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 // ── 画布与坑位 ──
-// 画布比例 = 背景图（2848×1600，16:9），图里的 9 个坑位按实测归一化坐标对齐
 const W = 720
 const H = 389
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
-const HOLE_RX = 43 // 图中坑口半径（按 720/2848 缩放）
-const HOLE_RY = 26
+// 坑洞精灵（256×256；坑口实测 188×137、中心 131.5,133）
+const HOLE_S = 152 // 绘制边长
+const HOLE_K = HOLE_S / 256
+const PIT_CX = 131.5
+const PIT_CY = 133
+const HOLE_RX = 46 // 命中半径（略小于可见坑口）
+const HOLE_RY = 30
 const POP_MAX = 70 // 冒出高度（升到坑口上方，完全露出来）
 const ITEM_SIZE = 68
 const HOLES = []
-for (const ny of [0.2455, 0.5305, 0.8162]) { // 已按「裁掉底部水印条」后的图重算
-  for (const nx of [0.282, 0.4993, 0.7124]) {
-    HOLES.push({ x: nx * W, y: ny * H, item: null, cd: 0 })
+for (const y of [95, 218, 341]) {
+  for (const x of [160, 360, 560]) {
+    HOLES.push({ x, y, item: null, cd: 0 })
   }
 }
 
@@ -150,7 +154,7 @@ function onDown(e) {
     if (!h.item || h.item.hit) continue
     const it = h.item
     const cy = h.y + 20 - popOffset(it)
-    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.9) <= 41) { hitHole(h); return }
+    if (Math.hypot((p.x - h.x) / HOLE_RX, (p.y - cy) / HOLE_RY) <= 1) { hitHole(h); return }
   }
 }
 function popOffset(it) {
@@ -255,21 +259,29 @@ function draw() {
   ctx.save()
   if (shake > 0) ctx.translate(rand(-1, 1) * shake * 7, rand(-1, 1) * shake * 7)
   drawField(ctx, dark)
+  // 坑洞分两半画：上半在冒出物之前、下半在之后，形成「从洞里钻出来」的遮挡
+  for (const h of HOLES) drawHoleHalf(ctx, h, false)
   for (const h of HOLES) drawPop(ctx, h)
+  for (const h of HOLES) drawHoleHalf(ctx, h, true)
   drawSparks(ctx)
   drawFloats(ctx)
   drawHud(ctx, dark)
   ctx.restore()
 }
-// ── 素材：整幅俯视像素草地（坑洞已画在图中）──
+// ── 素材：俯视像素草地背景 + 坑洞精灵 ──
 const BG_IMG = (() => {
   const im = new Image()
-  im.src = 'images/wk-bg.jpg?v=2' // 换图后带版本号，避免浏览器沿用旧缓存
+  im.src = 'images/wk-bg.jpg?v=3' // 换图后带版本号，避免浏览器沿用旧缓存
+  return im
+})()
+const HOLE_IMG = (() => {
+  const im = new Image()
+  im.src = 'images/wk-hole.png?v=2'
   return im
 })()
 function drawField(ctx, dark) {
   if (BG_IMG.complete && BG_IMG.naturalWidth) {
-    // 裁掉底部 60px：去掉生成器水印（坑位坐标已按裁剪后重算）
+    // 裁掉底部 60px：去掉生成器水印
     ctx.drawImage(BG_IMG, 0, 0, BG_IMG.naturalWidth, BG_IMG.naturalHeight - 60, 0, 0, W, H)
   } else {
     ctx.fillStyle = dark ? '#1b3320' : '#8bc96c'
@@ -286,6 +298,18 @@ function drawField(ctx, dark) {
   ctx.fillStyle = vg
   ctx.fillRect(0, 0, W, H)
 }
+// 坑洞精灵：以坑口中心对齐到坑位；front=false 画上半（坑口中线以上），front=true 画下半
+function drawHoleHalf(ctx, h, front) {
+  if (!HOLE_IMG.complete || !HOLE_IMG.naturalWidth) return
+  const k = HOLE_K
+  const x0 = h.x - PIT_CX * k
+  const y0 = h.y - PIT_CY * k
+  if (!front) {
+    ctx.drawImage(HOLE_IMG, 0, 0, 256, PIT_CY, x0, y0, HOLE_S, PIT_CY * k)
+  } else {
+    ctx.drawImage(HOLE_IMG, 0, PIT_CY, 256, 256 - PIT_CY, x0, h.y, HOLE_S, (256 - PIT_CY) * k)
+  }
+}
 function drawPop(ctx, h) {
   const it = h.item
   if (!it) return
@@ -295,11 +319,6 @@ function drawPop(ctx, h) {
   const cy = h.y + 20 - pop
   const wob = Math.sin(waveT * 6 + it.seed) * 1.6
   ctx.save()
-  // 裁剪：把洞口「前沿」（下半椭圆）挖掉，冒出物的根部就会被洞沿挡住
-  ctx.beginPath()
-  ctx.rect(0, 0, W, H)
-  ctx.ellipse(h.x, h.y + 4, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
-  ctx.clip('evenodd')
   ctx.translate(cx + wob, cy)
   if (it.kind === 'rock') { ctx.scale(0.9, 0.9); drawRock(ctx) }
   else if (it.kind === 'bug') { ctx.scale(0.9, 0.9); drawBug(ctx) }
