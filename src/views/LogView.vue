@@ -6,6 +6,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
+import { SHOP_TITLES } from '../game/data/titles.js'
 import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
@@ -358,8 +359,18 @@ function scrollToLabel(instId, label) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-// 称号
+// 称号（2026-09-09：成就称号 + 商店称号统一展示，支持佩戴/取消佩戴）
 const titleAchievements = computed(() => ALL_ACHIEVEMENTS.filter((a) => a.title))
+const ownedShopTitles = computed(() => SHOP_TITLES.filter((t) => player.shopOwned?.[t.key]))
+function equipTitle(name) {
+  player.title = name
+  ui.pushLog(`🏷 已佩戴称号「${name}」`, 'gain')
+}
+function clearTitle() {
+  if (!player.title) return
+  player.title = null
+  ui.pushLog('🏷 已取消佩戴称号', 'info')
+}
 
 // ── 故事（§13：线性七章，每章覆盖全部功能，需求全达标解锁下一章）──
 function storyCur(kind) {
@@ -1164,22 +1175,50 @@ function scrollToTalesSeries(series) {
         </template>
       </template>
 
-      <!-- ── 称号（§6.3）── -->
+      <!-- ── 称号（§6.3；2026-09-09 支持佩戴/取消佩戴 + 商店称号）── -->
       <template v-else>
-        <p>当前称号：<strong v-if="player.title" class="title-badge">{{ player.title }}</strong><span v-else class="dim">（无）</span></p>
+        <p>
+          当前称号：<strong v-if="player.title" class="title-badge">{{ player.title }}</strong><span v-else class="dim">（无）</span>
+          <button v-if="player.title" class="btn btn-sm" style="margin-left: 8px" @click="clearTitle()">取消佩戴</button>
+        </p>
+        <h3 style="margin: 12px 0 6px">🏅 成就称号（点击已解锁称号佩戴）</h3>
         <div class="gather-grid">
           <div
             v-for="a in titleAchievements"
             :key="a.id"
             v-tilt
             class="gather-card"
-            :class="{ locked: !unlockedIds.has(a.id) }"
+            :class="{ locked: !unlockedIds.has(a.id), 'title-equipped': player.title === a.title }"
+            @click="unlockedIds.has(a.id) && equipTitle(a.title)"
           >
             <div class="gather-card-head">
               <span class="achieve-mark">{{ unlockedIds.has(a.id) ? '✔' : '○' }}</span>
               <div>
                 <strong>{{ a.title }}</strong>
+                <span v-if="player.title === a.title" class="title-eq-badge">佩戴中</span>
                 <div class="dim" style="font-size: 11px">{{ a.desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3 style="margin: 14px 0 6px">🛒 商店称号（游戏商店购买）</h3>
+        <div class="gather-grid">
+          <div
+            v-for="t in SHOP_TITLES"
+            :key="t.key"
+            v-tilt
+            class="gather-card"
+            :class="{ locked: !player.shopOwned?.[t.key], 'title-equipped': player.title === t.name }"
+            @click="player.shopOwned?.[t.key] && equipTitle(t.name)"
+          >
+            <div class="gather-card-head">
+              <span class="achieve-mark">{{ player.shopOwned?.[t.key] ? '✔' : '🔒' }}</span>
+              <div>
+                <strong>{{ t.icon }} {{ t.name }}</strong>
+                <span v-if="player.title === t.name" class="title-eq-badge">佩戴中</span>
+                <div class="dim" style="font-size: 11px">
+                  {{ player.shopOwned?.[t.key] ? '已拥有 · 点击佩戴' : `未拥有 · 游戏商店 ${t.price} 游戏币` }}
+                </div>
               </div>
             </div>
           </div>
