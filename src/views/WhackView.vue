@@ -10,23 +10,23 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 // ── 画布与坑位 ──
-const W = 720
-const H = 389
+const W = 1000
+const H = 540
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
 // 坑洞精灵（256×256；坑口实测 188×137、中心 131.5,133）
-const HOLE_S = 152 // 绘制边长
+const HOLE_S = 136 // 绘制边长（相对画面更小）
 const HOLE_K = HOLE_S / 256
 const PIT_CX = 131.5
 const PIT_CY = 133
 const HOLE_RX = 46 // 命中半径（略小于可见坑口）
 const HOLE_RY = 30
-const ITEM_LIFT = 34 // 冒出物显示在坑口上方的高度
-const ITEM_SIZE = 68
+const ITEM_LIFT = 46 // 冒出物显示在坑口上方的高度
+const ITEM_SIZE = 100 // 水果更大
 const HOLES = []
-for (const y of [95, 218, 341]) {
-  for (const x of [160, 360, 560]) {
+for (const y of [128, 290, 452]) {
+  for (const x of [222, 500, 778]) {
     HOLES.push({ x, y, item: null, cd: 0 })
   }
 }
@@ -571,7 +571,7 @@ onUnmounted(() => { stopLoop() })
 .wk-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .wk-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .wk-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.wk-canvas { width: min(720px, 96%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
+.wk-canvas { width: min(1000px, 98%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
 .wk-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
 .wk-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .wk-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
