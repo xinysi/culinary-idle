@@ -38,8 +38,8 @@ const GAMES = [
   { id: 'match10', emoji: '🧮', name: '凑凑消', comp: Match10View },
 ]
 
-// 游戏分类分页（每页 6 个；新游戏继续往后排，不会被挤到第二行）
-const PAGE_SIZE = 6
+// 游戏分类分页（每页 9 个；新游戏继续往后排，不会被挤到第二行）
+const PAGE_SIZE = 9
 const page = ref(0)
 const pageCount = computed(() => Math.max(1, Math.ceil(GAMES.length / PAGE_SIZE)))
 const pagedGames = computed(() => GAMES.slice(page.value * PAGE_SIZE, (page.value + 1) * PAGE_SIZE))
@@ -65,7 +65,7 @@ onUnmounted(() => EventBus.off('mg:back', onBack))
 
 <template>
   <div class="mg-shell">
-    <!-- 顶部入口行：🛒 商店固定 + 游戏分类分页 -->
+    <!-- 顶部入口行：🛒 商店固定 + 游戏分类分页 + 翻页控件固定最右 -->
     <div class="mg-entrybar">
       <button
         class="mg-entry mg-entry-shop"
@@ -74,7 +74,6 @@ onUnmounted(() => EventBus.off('mg:back', onBack))
       >{{ SHOP.emoji }} {{ SHOP.name }}</button>
       <span class="mg-entry-sep"></span>
       <div class="mg-pager">
-        <button class="mg-page-btn" :disabled="pageCount <= 1" @click="turnPage(-1)">‹</button>
         <button
           v-for="g in pagedGames"
           :key="g.id"
@@ -82,8 +81,11 @@ onUnmounted(() => EventBus.off('mg:back', onBack))
           :class="{ 'mg-entry-on': active === g.id }"
           @click="active = g.id"
         >{{ g.emoji }} {{ g.name }}</button>
-        <button class="mg-page-btn" :disabled="pageCount <= 1" @click="turnPage(1)">›</button>
+      </div>
+      <div class="mg-pager-ctrl">
+        <button class="mg-page-btn" :disabled="pageCount <= 1" @click="turnPage(-1)">‹</button>
         <span class="mg-page-ind mono">{{ page + 1 }}/{{ pageCount }}</span>
+        <button class="mg-page-btn" :disabled="pageCount <= 1" @click="turnPage(1)">›</button>
       </div>
     </div>
     <!-- 游戏区域：自然流 -->
