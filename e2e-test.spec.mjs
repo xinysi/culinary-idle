@@ -62,7 +62,7 @@ test.describe('游戏全流程', () => {
     // 小游戏：入口行点击 → 游戏内容视图
     await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
     await page.waitForTimeout(400)
-    for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑十消']) {
+    for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消']) {
       await page.locator('.mg-entry', { hasText: g }).click()
       await page.waitForTimeout(700)
       await expect(page.locator('.mg-shell')).toBeVisible()

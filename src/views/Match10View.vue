@@ -9,20 +9,65 @@ import { EventBus } from '../game/core/EventBus.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const mode = ref('s6')
+const mode = ref('a10')
+// 凑凑消（2026-09-09 扩展）：加法/减法/乘法/除法/混算 五类运算 × 规则/不规则异形棋盘
 const MODES = {
-  s4: { label: '4×4 新手', size: 4, five: 0, buffer: 4, gold: 50, desc: '4×4 · 8 对 · 容错 4 步 · +50 币 —— 熟悉玩法' },
-  h4: { label: '4×4 紧凑', size: 4, five: 0, buffer: 1, gold: 90, desc: '4×4 · 8 对 · 仅 1 步容错 · +90 币' },
-  s6: { label: '6×6 标准', size: 6, five: 0.1, buffer: 6, gold: 110, desc: '6×6 · 18 对 · 容错 6 步 · +110 币' },
-  n6: { label: '6×6 无五', size: 6, five: 0, buffer: 6, gold: 130, desc: '6×6 · 无 5 方块（配对唯一清晰）· +130 币' },
-  w6: { label: '6×6 多五', size: 6, five: 0.4, buffer: 6, gold: 150, desc: '6×6 · 40% 为 5 对 · +150 币 —— 5 只能对 5' },
-  h6: { label: '6×6 紧凑', size: 6, five: 0.1, buffer: 2, gold: 180, desc: '6×6 · 18 对 · 仅 2 步容错 · +180 币' },
-  s8: { label: '8×8 挑战', size: 8, five: 0.15, buffer: 10, gold: 220, desc: '8×8 · 32 对 · 容错 10 步 · +220 币' },
-  m8: { label: '8×8 专精', size: 8, five: 0.15, buffer: 6, gold: 290, desc: '8×8 · 32 对 · 容错 6 步 · +290 币' },
-  w8: { label: '8×8 多五', size: 8, five: 0.45, buffer: 10, gold: 300, desc: '8×8 · 45% 为 5 对 · +300 币 —— 高难度配对' },
-  h8: { label: '8×8 紧凑', size: 8, five: 0.15, buffer: 3, gold: 360, desc: '8×8 · 32 对 · 仅 3 步容错 · +360 币 —— 零失误挑战' },
+  a10: { label: '加10·规', size: 6, op: '+', target: 10, irregular: false, buffer: 6, gold: 110, desc: '6×6 规则回字 · 两数和 = 10 · 容错 6 步 · +110 币' },
+  a12: { label: '加12·异', size: 6, op: '+', target: 12, irregular: true, buffer: 6, gold: 130, desc: '6×6 不规则异形 · 两数和 = 12 · 容错 6 步 · +130 币' },
+  a15: { label: '加15·异', size: 8, op: '+', target: 15, irregular: true, buffer: 10, gold: 260, desc: '8×8 异形 · 两数和 = 15 · 容错 10 步 · +260 币' },
+  s5: { label: '差5·异', size: 6, op: '-', target: 5, irregular: true, buffer: 6, gold: 150, desc: '6×6 异形 · 两数差 = 5（绝对差）· 容错 6 步 · +150 币' },
+  s7: { label: '差7·异', size: 8, op: '-', target: 7, irregular: true, buffer: 10, gold: 280, desc: '8×8 异形 · 两数差 = 7 · 容错 10 步 · +280 币' },
+  m12: { label: '积12·异', size: 6, op: '*', target: 12, irregular: true, buffer: 6, gold: 210, desc: '6×6 异形 · 两数积 = 12（如 2×6）· 容错 6 步 · +210 币' },
+  m18: { label: '积18·异', size: 8, op: '*', target: 18, irregular: true, buffer: 10, gold: 330, desc: '8×8 异形 · 两数积 = 18（如 3×6）· 容错 10 步 · +330 币' },
+  d2: { label: '商2·异', size: 6, op: '/', target: 2, irregular: true, buffer: 6, gold: 170, desc: '6×6 异形 · 两数商 = 2（如 8÷4）· 容错 6 步 · +170 币' },
+  d3: { label: '商3·异', size: 8, op: '/', target: 3, irregular: true, buffer: 10, gold: 300, desc: '8×8 异形 · 两数商 = 3（如 9÷3）· 容错 10 步 · +300 币' },
+  mix: { label: '混算·异', size: 6, op: 'mix', target: 0, irregular: true, buffer: 7, gold: 240, desc: '6×6 异形 · 每对随机「加得 10」或「乘得 12」· 容错 7 步 · +240 币 —— 要求心算两种运算' },
 }
 const showInfo = ref(false)
+
+// 配对判定：模式运算下两数字是否成对
+function okPair(x, y, m) {
+  const [a, b] = x >= y ? [x, y] : [y, x]
+  if (m.op === '+') return a + b === m.target
+  if (m.op === '-') return a - b === m.target
+  if (m.op === '*') return a * b === m.target
+  if (m.op === '/') return b > 0 && a % b === 0 && a / b === m.target
+  if (m.op === 'mix') return a + b === 10 || a * b === 12
+  return false
+}
+// 配对数字池（每层按运算可用对）
+function pairPool(m) {
+  if (m.op === '+') {
+    const pool = []
+    for (let a = 1; a <= m.target - 1; a++) pool.push([a, m.target - a])
+    return pool
+  }
+  if (m.op === '-') {
+    const pool = []
+    for (let a = 1; a + m.target <= 12; a++) pool.push([a + m.target, a])
+    return pool
+  }
+  if (m.op === '*') {
+    const pool = []
+    for (let d = 1; d * d <= m.target; d++) if (m.target % d === 0) pool.push([d, m.target / d])
+    return pool
+  }
+  if (m.op === '/') {
+    const pool = []
+    for (let b = 1; b * m.target <= 12; b++) pool.push([b * m.target, b])
+    return pool
+  }
+  if (m.op === 'mix') return [...pairPool({ op: '+', target: 10 }), ...pairPool({ op: '*', target: 12 })]
+  return []
+}
+// 运算徽标
+function opLabel(m) {
+  if (m.op === '+') return '和=' + m.target
+  if (m.op === '-') return '差=' + m.target
+  if (m.op === '*') return '积=' + m.target
+  if (m.op === '/') return '商=' + m.target
+  return '加10|乘12'
+}
 
 const board = ref([])
 const sel = ref(null)
@@ -38,31 +83,55 @@ const celebrating = ref(false)
 let nextKey = 1
 let unlockTimer = null
 
-const PAIRS = [[1, 9], [2, 8], [3, 7], [4, 6], [5, 5]]
+// 配对池见 pairPool（按模式运算生成）
 
 function ringCells(size, layer) {
-  // 回字嵌套：层 k 缩进 k-1 格的外环
+  // 层环：层 k 缩进 k-1 格的外环；irregular 时挖孔 + 外扩形成不规则异形
   const cells = []
   const lo = layer - 1
   const hi = size - 1 - lo
   if (lo > hi) return cells
+  const set = new Set()
   for (let r = lo; r <= hi; r++) for (let c = lo; c <= hi; c++) {
-    if (r === lo || r === hi || c === lo || c === hi) cells.push({ row: r, col: c })
+    if (r === lo || r === hi || c === lo || c === hi) set.add(r + ',' + c)
   }
-  return cells
+  if (MODES[mode.value].irregular) {
+    // 挖孔：随机删偶数个（保留至少 6 格）
+    let holes = Math.floor((set.size * 0.18) / 2) * 2
+    if (set.size - holes < 6) holes = Math.max(0, Math.floor((set.size - 6) / 2) * 2)
+    for (let i = 0; i < holes; i++) {
+      const pick = [...set][Math.floor(Math.random() * set.size)]
+      set.delete(pick)
+    }
+    // 外扩：在 lo-1 / hi+1 边界随机加偶数格（不越界、不与已占格重叠、不进入内层）
+    const bulgeN = Math.floor(Math.random() * 3) * 2
+    let add = 0
+    let guard = 0
+    while (add < bulgeN && guard++ < 60) {
+      const dir = Math.random() < 0.5 ? -1 : 1
+      const edge = dir < 0 ? lo - 1 : hi + 1
+      if (edge < 0 || edge > size - 1) continue
+      const r = Math.random() < 0.5 ? edge : lo + Math.floor(Math.random() * (hi - lo + 1))
+      const c = Math.random() < 0.5 ? edge : lo + Math.floor(Math.random() * (hi - lo + 1))
+      const key = r + ',' + c
+      if (!set.has(key) && !(r > lo && r < hi && c > lo && c < hi)) { set.add(key); add++ }
+    }
+    // 保偶数格（配对需要）
+    if (set.size % 2 !== 0) {
+      const last = [...set].pop()
+      set.delete(last)
+    }
+  }
+  return [...set].map((k) => { const [r, c] = k.split(','); return { row: +r, col: +c } })
 }
-function layerNums(size, layer, fiveRate, total) {
-  // 层内自足配对：5 对按比例，其余从 1/9…4/6 对池随机 —— 保证该层清空时必有配对（可解）
+function layerNums(m, total) {
+  // 按运算从配对池抽样：层内自足配对（开局必可解）
+  const pool = pairPool(m)
   const nums = []
-  const fivePairs = Math.round((total / 2) * fiveRate)
-  const restPairs = total / 2 - fivePairs
-  const restPool = [PAIRS[0], PAIRS[1], PAIRS[2], PAIRS[3]]
-  for (let i = 0; i < fivePairs; i++) nums.push(5, 5)
-  for (let i = 0; i < restPairs; i++) {
-    const [a, b] = restPool[Math.floor(Math.random() * restPool.length)]
+  for (let i = 0; i < total / 2; i++) {
+    const [a, b] = pool[Math.floor(Math.random() * pool.length)]
     nums.push(a, b)
   }
-  // 洗牌
   for (let i = nums.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[nums[i], nums[j]] = [nums[j], nums[i]]
@@ -73,15 +142,13 @@ function genBoard() {
   const m = MODES[mode.value]
   const maxLayer = Math.floor(m.size / 2)
   const list = []
-  let activeCount = 0
   for (let layer = 1; layer <= maxLayer; layer++) {
     const cells = ringCells(m.size, layer)
     if (!cells.length) continue
-    const nums = layerNums(m.size, layer, m.five, cells.length)
+    const nums = layerNums(m, cells.length)
     cells.forEach((cell, i) => {
       list.push({ key: nextKey++, layer, row: cell.row, col: cell.col, num: nums[i], cleared: false })
     })
-    activeCount += cells.length
   }
   return list
 }
@@ -113,7 +180,7 @@ function matchExists() {
     if (used.has(i)) continue
     let found = -1
     for (let j = i + 1; j < list.length; j++) {
-      if (list[i].num + list[j].num === 10 && !used.has(j)) { found = j; break }
+      if (okPair(list[i].num, list[j].num, MODES[mode.value]) && !used.has(j)) { found = j; break }
     }
     if (found < 0) return false
     used.add(i); used.add(found)
@@ -158,7 +225,7 @@ function tap(t) {
   if (sel.value === t.key) { sel.value = null; return }
   const a = board.value.find((b) => b.key === sel.value)
   const b = t
-  const ok = a.num + b.num === 10 && a.key !== b.key
+  const ok = a.key !== b.key && okPair(a.num, b.num, MODES[mode.value])
   sel.value = null
   if (ok) {
     busy.value = true
@@ -186,7 +253,7 @@ function useHint() {
   const list = board.value.filter((b) => !b.cleared && b.layer === activeLayer.value)
   for (let i = 0; i < list.length; i++) {
     for (let j = i + 1; j < list.length; j++) {
-      if (list[i].num + list[j].num === 10) {
+      if (okPair(list[i].num, list[j].num, MODES[mode.value])) {
         hintN.value--
         hintPairs.value = [list[i].key, list[j].key]
         setTimeout(() => { hintPairs.value = [] }, 1800)
@@ -234,6 +301,7 @@ reset()
       <span class="m10-chip" style="margin-left: auto">📦 余 <b class="mono">{{ stepsLeft }}</b> 步</span>
       <span class="m10-chip">🔢 剩 <b class="mono">{{ remaining }}</b> 块</span>
       <span class="m10-chip">🪜 第 <b class="mono">{{ activeLayer }}</b> 层</span>
+      <span class="m10-chip">🧮 <b class="mono">{{ opLabel(MODES[mode]) }}</b></span>
       <span class="m10-chip">💰 <b class="mono">{{ MODES[mode].gold }}</b> 币</span>
       <button class="m10-info-btn" @click="showInfo = true">📖 模式说明</button>
       <button class="m10-exit" @click="exitGame">🚪 退出</button>
@@ -272,9 +340,9 @@ reset()
 
     <div v-if="showInfo" class="m10-info-mask" @click.self="showInfo = false">
       <div class="m10-info-box">
-        <div class="m10-info-head"><b>🧮 凑十消 · 十种模式说明</b><button class="m10-info-close" @click="showInfo = false">✕</button></div>
+        <div class="m10-info-head"><b>🧮 凑凑消 · 十种模式说明</b><button class="m10-info-close" @click="showInfo = false">✕</button></div>
         <div class="m10-info-list">
-          <div class="m10-info-row m10-info-rule">通用规则：回字多层棋盘，外层清空才解锁内层 · 选两个数字相加等于 10 即消除（1+9/2+8/3+7/4+6/5+5）· 5 只能对 5 · 锁定方块不可点击 · 全清通关得金币 · 无配对或步数耗尽即失败 · 提示×2/重排×1 每局免费</div>
+          <div class="m10-info-row m10-info-rule">通用规则：多层嵌套（规则回字或随机挖孔+外扩异形）棋盘，外层清空才解锁内层 · 按模式运算配对即消除（加=目标和/差=固定差/积=目标积/商=固定商/混算=加10或乘12）· 锁定方块不可点击 · 全清通关得游戏币 · 无配对或步数耗尽即失败 · 提示×2/重排×1 每局免费</div>
           <div v-for="(m, key) in MODES" :key="key" class="m10-info-row">
             <b class="m10-info-name">{{ m.label }}</b>
             <span class="m10-info-desc">{{ m.desc }}</span>
