@@ -171,21 +171,75 @@ const PRODUCTS = {
   },
   title: {
     cat: '👑 外观纪念',
-    icon: '👑', name: '「大胃王」称号', price: 500, repeat: false,
+    icon: '👑', name: '「大胃王」称号', price: 10000, repeat: false,
     desc: '永久称号，头像与名字旁展示',
     apply() { player.title = '大胃王'; return '称号「大胃王」已佩戴' },
   },
+  title2: {
+    cat: '👑 外观纪念',
+    icon: '👑', name: '「食神」称号', price: 12000, repeat: false,
+    desc: '永久称号 · 厨艺巅峰',
+    apply() { player.title = '食神'; return '称号「食神」已佩戴' },
+  },
+  title3: {
+    cat: '👑 外观纪念',
+    icon: '🏅', name: '「千杯不醉」称号', price: 15000, repeat: false,
+    desc: '永久称号 · 酒仙风范',
+    apply() { player.title = '千杯不醉'; return '称号「千杯不醉」已佩戴' },
+  },
   frame: {
     cat: '👑 外观纪念',
-    icon: '🖼️', name: '「神厨」头像框', price: 1000, repeat: false,
+    icon: '🖼️', name: '「神厨」金框', price: 12000, repeat: false,
     desc: '永久金色头像框，头像描边发光',
     apply() { player.avatarFrame = 'gold'; return '金色头像框已佩戴' },
   },
+  frameJade: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「翡翠」头像框', price: 10000, repeat: false,
+    desc: '永久翡翠绿头像框 · 翠玉质感光晕',
+    apply() { player.avatarFrame = 'jade'; return '翡翠头像框已佩戴' },
+  },
+  frameRoyal: {
+    cat: '👑 外观纪念',
+    icon: '🖼️', name: '「皇紫」头像框', price: 18000, repeat: false,
+    desc: '永久皇家紫头像框 · 尊贵光晕',
+    apply() { player.avatarFrame = 'royal'; return '皇紫头像框已佩戴' },
+  },
   avatar: {
     cat: '👑 外观纪念',
-    icon: '🧸', name: '限定头像·食神盛宴', price: 800, repeat: false,
+    icon: '🧸', name: '头像·食神盛宴', price: 6000, repeat: false,
     desc: '商店专属头像（食神盛宴图，购买即换装）',
     apply() { player.avatar = 'images/items/food/食神盛宴.png'; return '头像已更换为「食神盛宴」' },
+  },
+  avatar2: {
+    cat: '👑 外观纪念',
+    icon: '🧸', name: '头像·满汉全席', price: 8000, repeat: false,
+    desc: '商店专属头像（传说满汉全席图）',
+    apply() { player.avatar = 'images/items/food/传说满汉全席.png'; return '头像已更换为「传说满汉全席」' },
+  },
+  avatar3: {
+    cat: '👑 外观纪念',
+    icon: '🧸', name: '头像·龙息烤全龙', price: 9000, repeat: false,
+    desc: '商店专属头像（龙息烤全龙图）',
+    apply() { player.avatar = 'images/items/food/龙息烤全龙.png'; return '头像已更换为「龙息烤全龙」' },
+  },
+  avatar4: {
+    cat: '👑 外观纪念',
+    icon: '🧸', name: '头像·金龙鱼全宴', price: 7000, repeat: false,
+    desc: '商店专属头像（金龙鱼全宴图）',
+    apply() { player.avatar = 'images/items/food/金龙鱼全宴.png'; return '头像已更换为「金龙鱼全宴」' },
+  },
+  nameGold: {
+    cat: '👑 外观纪念',
+    icon: '🥇', name: '名字·鎏金', price: 20000, repeat: false,
+    desc: '永久名字特效 · 鎏金（购买即切换，多款可购后依次切换）',
+    apply() { player.nameColor = 'gold'; return '名字已切换为「鎏金」' },
+  },
+  nameSilver: {
+    cat: '👑 外观纪念',
+    icon: '🥈', name: '名字·银辉', price: 14000, repeat: false,
+    desc: '永久名字特效 · 银辉（购买即切换）',
+    apply() { player.nameColor = 'silver'; return '名字已切换为「银辉」' },
   },
 }
 

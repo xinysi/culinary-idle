@@ -4291,3 +4291,7 @@ html[data-theme='dark'] .mg-shell .m10-info-box { background: rgba(44, 35, 28, 0
 html[data-theme='dark'] .mg-shell .m10-info-row { background: rgba(66, 52, 40, 0.9); border-color: rgba(210, 170, 120, 0.28); }
 html[data-theme='dark'] .mg-shell .m10-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
 html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
+
+/* ── 商店头像框扩展（2026-09-09）：翡翠 / 皇紫 ── */
+.avatar-frame-jade { border: 3px solid #4f9e58 !important; box-shadow: 0 0 12px rgba(79, 158, 88, 0.65) !important; }
+.avatar-frame-royal { border: 3px solid #7a5fd9 !important; box-shadow: 0 0 14px rgba(122, 95, 217, 0.7) !important; }

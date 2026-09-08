@@ -125,7 +125,8 @@ const defaultState = () => ({
     avatar: null, // 自定义头像（base64 dataUrl，可在设置/头像处上传）
     gold: 100,
     gameCoins: 0, // 游戏币（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店统一结算）
-    shopOwned: {}, // 游戏商店一次性商品已购标记：{ title/frame/avatar: true }（旧档无则默认空）
+    shopOwned: {}, // 游戏商店一次性商品已购标记（旧档无则默认空）
+    nameColor: null, // 名字特效（2026-09-09 商店外观）：gold/silver/null
     skills: defaultSkills(),
     inventory: {}, // { itemId: qty }
     bank: {}, // { itemId: qty }
@@ -415,6 +416,7 @@ export const usePlayerStore = defineStore('player', {
         gold: saved.gold ?? 0,
         gameCoins: saved.gameCoins ?? 0,
         shopOwned: saved.shopOwned ?? {},
+        nameColor: saved.nameColor ?? null,
         skills,
         inventory: saved.inventory ?? {},
         bank: saved.bank ?? {},
@@ -483,6 +485,7 @@ export const usePlayerStore = defineStore('player', {
         gold: this.gold,
         gameCoins: this.gameCoins,
         shopOwned: this.shopOwned,
+        nameColor: this.nameColor,
         skills: this.skills,
         inventory: this.inventory,
         bank: this.bank,
