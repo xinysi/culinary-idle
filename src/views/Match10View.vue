@@ -12,61 +12,86 @@ const ui = useUiStore()
 const mode = ref('a10')
 // 凑凑消（2026-09-09 扩展）：加法/减法/乘法/除法/混算 五类运算 × 规则/不规则异形棋盘
 const MODES = {
-  a10: { label: '加10·规', size: 6, op: '+', target: 10, irregular: false, buffer: 6, gold: 110, desc: '6×6 规则回字 · 两数和 = 10 · 容错 6 步 · +110 币' },
-  a12: { label: '加12·异', size: 6, op: '+', target: 12, irregular: true, buffer: 6, gold: 130, desc: '6×6 不规则异形 · 两数和 = 12 · 容错 6 步 · +130 币' },
-  a15: { label: '加15·异', size: 8, op: '+', target: 15, irregular: true, buffer: 10, gold: 260, desc: '8×8 异形 · 两数和 = 15 · 容错 10 步 · +260 币' },
-  s5: { label: '差5·异', size: 6, op: '-', target: 5, irregular: true, buffer: 6, gold: 150, desc: '6×6 异形 · 两数差 = 5（绝对差）· 容错 6 步 · +150 币' },
-  s7: { label: '差7·异', size: 8, op: '-', target: 7, irregular: true, buffer: 10, gold: 280, desc: '8×8 异形 · 两数差 = 7 · 容错 10 步 · +280 币' },
-  m12: { label: '积12·异', size: 6, op: '*', target: 12, irregular: true, buffer: 6, gold: 210, desc: '6×6 异形 · 两数积 = 12（如 2×6）· 容错 6 步 · +210 币' },
-  m18: { label: '积18·异', size: 8, op: '*', target: 18, irregular: true, buffer: 10, gold: 330, desc: '8×8 异形 · 两数积 = 18（如 3×6）· 容错 10 步 · +330 币' },
-  d2: { label: '商2·异', size: 6, op: '/', target: 2, irregular: true, buffer: 6, gold: 170, desc: '6×6 异形 · 两数商 = 2（如 8÷4）· 容错 6 步 · +170 币' },
-  d3: { label: '商3·异', size: 8, op: '/', target: 3, irregular: true, buffer: 10, gold: 300, desc: '8×8 异形 · 两数商 = 3（如 9÷3）· 容错 10 步 · +300 币' },
-  mix: { label: '混算·异', size: 6, op: 'mix', target: 0, irregular: true, buffer: 7, gold: 240, desc: '6×6 异形 · 每对随机「加得 10」或「乘得 12」· 容错 7 步 · +240 币 —— 要求心算两种运算' },
+  a10: { label: '加·规', size: 6, op: '+', irregular: false, buffer: 6, gold: 110, desc: '6×6 规则回字 · 两数和 = 随机 10~16 · 容错 6 步 · +110 币' },
+  a12: { label: '加·异', size: 6, op: '+', irregular: true, buffer: 6, gold: 130, desc: '6×6 不规则异形 · 两数和 = 随机 10~16 · 容错 6 步 · +130 币' },
+  a15: { label: '加·大异', size: 8, op: '+', irregular: true, buffer: 10, gold: 260, desc: '8×8 异形 · 两数和 = 随机 10~16 · 容错 10 步 · +260 币' },
+  s5: { label: '差·异', size: 6, op: '-', irregular: true, buffer: 6, gold: 150, desc: '6×6 异形 · 两数差 = 随机 3~9（绝对差）· 容错 6 步 · +150 币' },
+  s7: { label: '差·大异', size: 8, op: '-', irregular: true, buffer: 10, gold: 280, desc: '8×8 异形 · 两数差 = 随机 3~9 · 容错 10 步 · +280 币' },
+  m12: { label: '积·异', size: 6, op: '*', irregular: true, buffer: 6, gold: 210, desc: '6×6 异形 · 两数积 = 随机合数（6~24 中至少 2 组因式）· 容错 6 步 · +210 币' },
+  m18: { label: '积·大异', size: 8, op: '*', irregular: true, buffer: 10, gold: 330, desc: '8×8 异形 · 两数积 = 随机合数（6~24）· 容错 10 步 · +330 币' },
+  d2: { label: '商·异', size: 6, op: '/', irregular: true, buffer: 6, gold: 170, desc: '6×6 异形 · 两数商 = 随机 2~4（整除）· 容错 6 步 · +170 币' },
+  d3: { label: '商·大异', size: 8, op: '/', irregular: true, buffer: 10, gold: 300, desc: '8×8 异形 · 两数商 = 随机 2~4 · 容错 10 步 · +300 币' },
+  mix: { label: '混算·异', size: 6, op: 'mix', irregular: true, buffer: 7, gold: 240, desc: '6×6 异形 · 每对随机「加得 10/12」或「乘得 12/16」· 容错 7 步 · +240 币 —— 要求心算两种运算' },
 }
 const showInfo = ref(false)
 
-// 配对判定：模式运算下两数字是否成对
+// —— 目标随机化（2026-09-09）：每次重开从合法池随机 ——
+const PLUS_POOL = [10, 11, 12, 13, 14, 15, 16]
+const MINUS_POOL = [3, 4, 5, 6, 7, 8, 9]
+const TIMES_POOL = [6, 8, 10, 12, 14, 15, 16, 18, 20, 21, 22, 24] // 至少 2 组因式对的合数
+const DIV_POOL = [2, 3, 4]
+const curPlus = ref(10) // 当前局目标（加法/混算）
+const curTimes = ref(12) // 当前局目标（乘法/混算）
+const curDiff = ref(5) // 当前局目标（减法）
+const curDiv = ref(2) // 当前局目标（除法）
+function rollTarget() {
+  const m = MODES[mode.value]
+  if (m.op === '+') curPlus.value = PLUS_POOL[Math.floor(Math.random() * PLUS_POOL.length)]
+  else if (m.op === '-') curDiff.value = MINUS_POOL[Math.floor(Math.random() * MINUS_POOL.length)]
+  else if (m.op === '*') curTimes.value = TIMES_POOL[Math.floor(Math.random() * TIMES_POOL.length)]
+  else if (m.op === '/') curDiv.value = DIV_POOL[Math.floor(Math.random() * DIV_POOL.length)]
+  else if (m.op === 'mix') {
+    curPlus.value = [10, 12][Math.floor(Math.random() * 2)]
+    curTimes.value = [12, 16][Math.floor(Math.random() * 2)]
+  }
+}
+function curTargetText() {
+  const m = MODES[mode.value]
+  if (m.op === '+') return '和=' + curPlus.value
+  if (m.op === '-') return '差=' + curDiff.value
+  if (m.op === '*') return '积=' + curTimes.value
+  if (m.op === '/') return '商=' + curDiv.value
+  return '加' + curPlus.value + '|乘' + curTimes.value
+}
+
+// 配对判定：模式运算下两数字是否成对（目标取当前局随机值）
 function okPair(x, y, m) {
   const [a, b] = x >= y ? [x, y] : [y, x]
-  if (m.op === '+') return a + b === m.target
-  if (m.op === '-') return a - b === m.target
-  if (m.op === '*') return a * b === m.target
-  if (m.op === '/') return b > 0 && a % b === 0 && a / b === m.target
-  if (m.op === 'mix') return a + b === 10 || a * b === 12
+  if (m.op === '+') return a + b === curPlus.value
+  if (m.op === '-') return a - b === curDiff.value
+  if (m.op === '*') return a * b === curTimes.value
+  if (m.op === '/') return b > 0 && a % b === 0 && a / b === curDiv.value
+  if (m.op === 'mix') return a + b === curPlus.value || a * b === curTimes.value
   return false
 }
-// 配对数字池（每层按运算可用对）
+// 配对数字池（按当前随机目标生成）
 function pairPool(m) {
   if (m.op === '+') {
+    const T = curPlus.value
     const pool = []
-    for (let a = 1; a <= m.target - 1; a++) pool.push([a, m.target - a])
+    for (let a = 1; a <= T - 1; a++) pool.push([a, T - a])
     return pool
   }
   if (m.op === '-') {
+    const D = curDiff.value
     const pool = []
-    for (let a = 1; a + m.target <= 12; a++) pool.push([a + m.target, a])
+    for (let a = 1; a + D <= 12; a++) pool.push([a + D, a])
     return pool
   }
   if (m.op === '*') {
+    const T = curTimes.value
     const pool = []
-    for (let d = 1; d * d <= m.target; d++) if (m.target % d === 0) pool.push([d, m.target / d])
+    for (let d = 1; d * d <= T; d++) if (T % d === 0) pool.push([d, T / d])
     return pool
   }
   if (m.op === '/') {
+    const Q = curDiv.value
     const pool = []
-    for (let b = 1; b * m.target <= 12; b++) pool.push([b * m.target, b])
+    for (let b = 1; b * Q <= 12; b++) pool.push([b * Q, b])
     return pool
   }
-  if (m.op === 'mix') return [...pairPool({ op: '+', target: 10 }), ...pairPool({ op: '*', target: 12 })]
+  if (m.op === 'mix') return [...pairPool({ op: '+', target: curPlus.value }), ...pairPool({ op: '*', target: curTimes.value })]
   return []
-}
-// 运算徽标
-function opLabel(m) {
-  if (m.op === '+') return '和=' + m.target
-  if (m.op === '-') return '差=' + m.target
-  if (m.op === '*') return '积=' + m.target
-  if (m.op === '/') return '商=' + m.target
-  return '加10|乘12'
 }
 
 const board = ref([])
@@ -153,6 +178,7 @@ function genBoard() {
   return list
 }
 function reset() {
+  rollTarget() // 目标随机化：每次重开新目标（2026-09-09）
   board.value = genBoard()
   sel.value = null
   activeLayer.value = 1
@@ -301,7 +327,7 @@ reset()
       <span class="m10-chip" style="margin-left: auto">📦 余 <b class="mono">{{ stepsLeft }}</b> 步</span>
       <span class="m10-chip">🔢 剩 <b class="mono">{{ remaining }}</b> 块</span>
       <span class="m10-chip">🪜 第 <b class="mono">{{ activeLayer }}</b> 层</span>
-      <span class="m10-chip">🧮 <b class="mono">{{ opLabel(MODES[mode]) }}</b></span>
+      <span class="m10-chip">🧮 <b class="mono">{{ curTargetText() }}</b></span>
       <span class="m10-chip">💰 <b class="mono">{{ MODES[mode].gold }}</b> 币</span>
       <button class="m10-info-btn" @click="showInfo = true">📖 模式说明</button>
       <button class="m10-exit" @click="exitGame">🚪 退出</button>
