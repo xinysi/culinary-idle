@@ -22,7 +22,7 @@ const PIT_CX = 131.5
 const PIT_CY = 133
 const HOLE_RX = 46 // 命中半径（略小于可见坑口）
 const HOLE_RY = 30
-const POP_MAX = 70 // 冒出高度（升到坑口上方，完全露出来）
+const ITEM_LIFT = 34 // 冒出物显示在坑口上方的高度
 const ITEM_SIZE = 68
 const HOLES = []
 for (const y of [95, 218, 341]) {
@@ -153,16 +153,17 @@ function onDown(e) {
     const h = HOLES[k]
     if (!h.item || h.item.hit) continue
     const it = h.item
-    const cy = h.y + 20 - popOffset(it)
-    if (Math.hypot((p.x - h.x) / HOLE_RX, (p.y - cy) / HOLE_RY) <= 1) { hitHole(h); return }
+    if (popK(it) <= 0.15) continue
+    const cy = h.y - ITEM_LIFT
+    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.92) <= ITEM_SIZE * 0.52) { hitHole(h); return }
   }
 }
-function popOffset(it) {
-  // 0 → 1 弹出，life 末段收回
+// 出现程度 0→1（淡入），life 末段/被点中后淡出
+function popK(it) {
   const t = it.t
-  const inK = clamp(t / 0.14, 0, 1)
-  const outK = it.hit ? clamp(it.hitT / 0.12, 0, 1) : clamp((t - (it.life - 0.18)) / 0.18, 0, 1)
-  return (inK - outK) * POP_MAX
+  const inK = clamp(t / 0.16, 0, 1)
+  const outK = it.hit ? clamp(it.hitT / 0.14, 0, 1) : clamp((t - (it.life - 0.2)) / 0.2, 0, 1)
+  return clamp(inK - outK, 0, 1)
 }
 function hitHole(h) {
   const it = h.item
@@ -259,10 +260,9 @@ function draw() {
   ctx.save()
   if (shake > 0) ctx.translate(rand(-1, 1) * shake * 7, rand(-1, 1) * shake * 7)
   drawField(ctx, dark)
-  // 坑洞分两半画：上半在冒出物之前、下半在之后，形成「从洞里钻出来」的遮挡
-  for (const h of HOLES) drawHoleHalf(ctx, h, false)
+  // 坑洞整张画在下层，冒出物直接淡入显示在坑洞上方（不做切割/遮挡）
+  for (const h of HOLES) drawHole(ctx, h)
   for (const h of HOLES) drawPop(ctx, h)
-  for (const h of HOLES) drawHoleHalf(ctx, h, true)
   drawSparks(ctx)
   drawFloats(ctx)
   drawHud(ctx, dark)
@@ -298,28 +298,24 @@ function drawField(ctx, dark) {
   ctx.fillStyle = vg
   ctx.fillRect(0, 0, W, H)
 }
-// 坑洞精灵：以坑口中心对齐到坑位；front=false 画上半（坑口中线以上），front=true 画下半
-function drawHoleHalf(ctx, h, front) {
+// 坑洞精灵：整张绘制，以坑口中心对齐到坑位
+function drawHole(ctx, h) {
   if (!HOLE_IMG.complete || !HOLE_IMG.naturalWidth) return
-  const k = HOLE_K
-  const x0 = h.x - PIT_CX * k
-  const y0 = h.y - PIT_CY * k
-  if (!front) {
-    ctx.drawImage(HOLE_IMG, 0, 0, 256, PIT_CY, x0, y0, HOLE_S, PIT_CY * k)
-  } else {
-    ctx.drawImage(HOLE_IMG, 0, PIT_CY, 256, 256 - PIT_CY, x0, h.y, HOLE_S, (256 - PIT_CY) * k)
-  }
+  ctx.drawImage(HOLE_IMG, h.x - PIT_CX * HOLE_K, h.y - PIT_CY * HOLE_K, HOLE_S, HOLE_S)
 }
 function drawPop(ctx, h) {
   const it = h.item
   if (!it) return
-  const pop = popOffset(it)
-  if (pop <= 0.02) return
-  const cx = h.x
-  const cy = h.y + 20 - pop
+  const k = popK(it)
+  if (k <= 0.02) return
+  const cy = h.y - ITEM_LIFT
   const wob = Math.sin(waveT * 6 + it.seed) * 1.6
   ctx.save()
-  ctx.translate(cx + wob, cy)
+  ctx.globalAlpha = k
+  ctx.translate(h.x + wob, cy)
+  // 淡入时轻微放大，避免生硬
+  const popScale = 0.86 + 0.14 * k
+  ctx.scale(popScale, popScale)
   if (it.kind === 'rock') { ctx.scale(0.9, 0.9); drawRock(ctx) }
   else if (it.kind === 'bug') { ctx.scale(0.9, 0.9); drawBug(ctx) }
   else {
