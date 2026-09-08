@@ -90,7 +90,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 <template>
   <div class="fs-page">
     <div class="fs-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="fs-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="fs-chip" style="margin-left: auto"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 累计 <b class="mono">{{ mg.rewarded ?? 0 }}</b> 游戏币</span>
       <span class="fs-chip">🏆 最佳 <b class="mono">{{ mg.best ?? 0 }}</b> 碗</span>
       <button class="fs-info-btn" @click="showInfo = true">📖 模式说明</button>

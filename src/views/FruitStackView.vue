@@ -435,7 +435,7 @@ reset()
 <template>
   <div class="gg-page">
     <div class="gg-topbar">
-      <button v-for="(cfg, key) in MODES" :key="key" class="gg-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ cfg.label }}</button>
+      <button v-for="(cfg, key, idx) in MODES" :key="key" class="gg-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="gg-chip" style="margin-left: auto">🍇 场上 <b class="mono">{{ remainBoard }}</b></span>
       <span class="gg-chip">🈵 卡槽 <b class="mono">{{ remainSlot }}</b>/{{ SLOT_MAX }}</span>
       <span v-if="timeLeft !== null" class="gg-chip">⏱ <b class="mono">{{ timeLeft }}</b> 秒</span>

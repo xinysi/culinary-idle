@@ -118,7 +118,7 @@ resetDay()
 <template>
   <div class="mf-page">
     <div class="mf-topbar">
-      <button v-for="(m, key) in MODES" :key="key" class="mf-mode" :class="{ on: mode === key }" @click="mode = key; resetDay()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in MODES" :key="key" class="mf-mode" :class="{ on: mode === key }" @click="mode = key; resetDay()">模式{{ idx + 1 }}</button>
       <span class="mf-chip" style="margin-left: auto">🏆 全清 <b class="mono">{{ buffDays }}</b> 次</span>
       <span v-if="timeLeft !== null" class="mf-chip">⏱ 剩余 <b class="mono">{{ timeLeft }}</b> 秒</span>
       <span v-if="stepsLeft !== null" class="mf-chip">🎯 余 <b class="mono">{{ stepsLeft }}</b> 步</span>

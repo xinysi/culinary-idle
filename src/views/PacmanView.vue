@@ -240,7 +240,7 @@ reset()
 <template>
   <div class="pm-page">
     <div class="pm-topbar">
-      <button v-for="(m, key) in METAS" :key="key" class="pm-mode" :class="{ on: mode === key }" @click="mode = key; reset()">{{ m.label }}</button>
+      <button v-for="(m, key, idx) in METAS" :key="key" class="pm-mode" :class="{ on: mode === key }" @click="mode = key; reset()">模式{{ idx + 1 }}</button>
       <span class="pm-chip" style="margin-left: auto">🟡 剩余 <b class="mono">{{ dots.length }}</b></span>
       <span class="pm-chip">👻 幽灵 <b class="mono">{{ METAS[mode].ghosts }}</b></span>
       <span class="pm-chip">💰 通关 <b class="mono">{{ METAS[mode].gold }}</b> 币</span>
