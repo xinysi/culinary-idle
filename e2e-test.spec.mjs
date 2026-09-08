@@ -63,6 +63,12 @@ test.describe('游戏全流程', () => {
     await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
     await page.waitForTimeout(400)
     for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消']) {
+      // 分页入口（2026-09-09）：目标不在当前页时先翻页（最多 3 次，防死循环）
+      for (let guard = 0; guard < 3; guard++) {
+        if (await page.locator('.mg-entry', { hasText: g }).count() > 0) break
+        await page.locator('.mg-page-btn').last().click() // › 下一页
+        await page.waitForTimeout(300)
+      }
       await page.locator('.mg-entry', { hasText: g }).click()
       await page.waitForTimeout(700)
       await expect(page.locator('.mg-shell')).toBeVisible()
