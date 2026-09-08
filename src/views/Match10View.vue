@@ -13,15 +13,15 @@ const mode = ref('a10')
 // 凑凑消（2026-09-09 扩展）：加法/减法/乘法/除法/混算 五类运算 × 规则/不规则异形棋盘
 const MODES = {
   a10: { label: '加·规', size: 6, op: '+', irregular: false, buffer: 6, gold: 110, desc: '6×6 规则回字 · 两数和 = 随机 10~16 · 容错 6 步 · +110 币' },
-  a12: { label: '加·异', size: 6, op: '+', irregular: true, buffer: 6, gold: 130, desc: '6×6 不规则异形 · 两数和 = 随机 10~16 · 容错 6 步 · +130 币' },
-  a15: { label: '加·大异', size: 8, op: '+', irregular: true, buffer: 10, gold: 260, desc: '8×8 异形 · 两数和 = 随机 10~16 · 容错 10 步 · +260 币' },
-  s5: { label: '差·异', size: 6, op: '-', irregular: true, buffer: 6, gold: 150, desc: '6×6 异形 · 两数差 = 随机 3~9（绝对差）· 容错 6 步 · +150 币' },
-  s7: { label: '差·大异', size: 8, op: '-', irregular: true, buffer: 10, gold: 280, desc: '8×8 异形 · 两数差 = 随机 3~9 · 容错 10 步 · +280 币' },
-  m12: { label: '积·异', size: 6, op: '*', irregular: true, buffer: 6, gold: 210, desc: '6×6 异形 · 两数积 = 随机合数（6~24 中至少 2 组因式）· 容错 6 步 · +210 币' },
-  m18: { label: '积·大异', size: 8, op: '*', irregular: true, buffer: 10, gold: 330, desc: '8×8 异形 · 两数积 = 随机合数（6~24）· 容错 10 步 · +330 币' },
-  d2: { label: '商·异', size: 6, op: '/', irregular: true, buffer: 6, gold: 170, desc: '6×6 异形 · 两数商 = 随机 2~4（整除）· 容错 6 步 · +170 币' },
-  d3: { label: '商·大异', size: 8, op: '/', irregular: true, buffer: 10, gold: 300, desc: '8×8 异形 · 两数商 = 随机 2~4 · 容错 10 步 · +300 币' },
-  mix: { label: '混算·异', size: 6, op: 'mix', irregular: true, buffer: 7, gold: 240, desc: '6×6 异形 · 每对随机「加得 10/12」或「乘得 12/16」· 容错 7 步 · +240 币 —— 要求心算两种运算' },
+  a12: { label: '加·异', size: 6, op: '+', irregular: true, buffer: 6, gold: 120, desc: '6×6 不规则异形 · 两数和 = 随机 10~16 · 容错 6 步 · +120 币' },
+  a15: { label: '加·大异', size: 8, op: '+', irregular: true, buffer: 10, gold: 190, desc: '8×8 异形 · 两数和 = 随机 10~16 · 容错 10 步 · +190 币' },
+  s5: { label: '差·异', size: 6, op: '-', irregular: true, buffer: 6, gold: 130, desc: '6×6 异形 · 两数差 = 随机 3~9（绝对差）· 容错 6 步 · +130 币' },
+  s7: { label: '差·大异', size: 8, op: '-', irregular: true, buffer: 10, gold: 220, desc: '8×8 异形 · 两数差 = 随机 3~9 · 容错 10 步 · +220 币' },
+  m12: { label: '积·异', size: 6, op: '*', irregular: true, buffer: 6, gold: 165, desc: '6×6 异形 · 两数积 = 随机合数（6~24 中至少 2 组因式）· 容错 6 步 · +165 币' },
+  m18: { label: '积·大异', size: 8, op: '*', irregular: true, buffer: 10, gold: 290, desc: '8×8 异形 · 两数积 = 随机合数（6~24）· 容错 10 步 · +290 币' },
+  d2: { label: '商·异', size: 6, op: '/', irregular: true, buffer: 6, gold: 145, desc: '6×6 异形 · 两数商 = 随机 2~4（整除）· 容错 6 步 · +145 币' },
+  d3: { label: '商·大异', size: 8, op: '/', irregular: true, buffer: 10, gold: 250, desc: '8×8 异形 · 两数商 = 随机 2~4 · 容错 10 步 · +250 币' },
+  mix: { label: '混算·异', size: 6, op: 'mix', irregular: true, buffer: 7, gold: 210, desc: '6×6 异形 · 每对随机「加得 10/12」或「乘得 12/16」· 容错 7 步 · +210 币 —— 要求心算两种运算' },
 }
 const showInfo = ref(false)
 

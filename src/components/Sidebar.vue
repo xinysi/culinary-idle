@@ -1,6 +1,6 @@
 <script setup>
 // 左侧技能导航 — 需求文档 §9.1.1：按类别分组，含等级与经验进度条
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SKILL_CATEGORIES, SKILL_DEFS } from '../game/data/skills.js'
@@ -10,6 +10,11 @@ import ProgressBar from './ProgressBar.vue'
 const player = usePlayerStore()
 const ui = useUiStore()
 const avatarInput = ref(null)
+// 商店头像框（2026-09-09）：gold / jade / royal
+const frameCls = computed(() => {
+  const f = player.avatarFrame
+  return f ? { ['avatar-frame-' + f]: true } : {}
+})
 
 function skillsInCategory(catId) {
   return Object.values(SKILL_DEFS).filter((d) => d.category === catId)
@@ -58,15 +63,15 @@ function onAvatarPick(e) {
         v-if="player.avatar"
         :src="player.avatar"
         class="avatar avatar-img"
-        :class="{ 'avatar-frame-gold': player.avatarFrame === 'gold' }"
+        :class="frameCls"
         alt="头像"
         title="点击更换头像"
         @click="openAvatarPicker"
       />
-      <div v-else class="avatar" :class="{ 'avatar-frame-gold': player.avatarFrame === 'gold' }" title="点击更换头像" @click="openAvatarPicker">食</div>
+      <div v-else class="avatar" :class="frameCls" title="点击更换头像" @click="openAvatarPicker">食</div>
       <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatarPick" />
       <div class="sidebar-identity">
-        <div class="player-name">
+        <div class="player-name" :style="player.nameColor ? { color: player.nameColor === 'gold' ? '#eab04a' : '#b8c4cc' } : {}">
           {{ player.name }}
           <span v-if="player.hardcore" class="title-badge" style="background: var(--bad-strong)">☠️硬核</span>
           <span v-if="player.title" class="title-badge">{{ player.title }}</span>
