@@ -9,18 +9,21 @@ import { itemImage } from '../game/data/itemImage.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-// ── 画布与田垄网格 ──
-const W = 420
-const H = 470
-const COLS = 3
-const ROWS = 3
+// ── 画布与坑位 ──
+// 画布比例 = 背景图（2848×1600，16:9），图里的 9 个坑位按实测归一化坐标对齐
+const W = 560
+const H = 315
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
+const HOLE_RX = 33 // 图中坑口半径（按 560/2848 缩放：340×203 → 67×40）
+const HOLE_RY = 20
+const POP_MAX = 44 // 冒出高度
+const ITEM_SIZE = 44
 const HOLES = []
-for (let r = 0; r < ROWS; r++) {
-  for (let c = 0; c < COLS; c++) {
-    HOLES.push({ x: 70 + c * 140, y: 178 + r * 124, item: null, cd: 0 })
+for (const ny of [0.2455, 0.5305, 0.8162]) { // 已按「裁掉底部水印条」后的图重算
+  for (const nx of [0.282, 0.4993, 0.7124]) {
+    HOLES.push({ x: nx * W, y: ny * H, item: null, cd: 0 })
   }
 }
 
@@ -146,9 +149,8 @@ function onDown(e) {
     const h = HOLES[k]
     if (!h.item || h.item.hit) continue
     const it = h.item
-    const pop = popOffset(it)
-    const cy = h.y - 34 - pop
-    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.85) <= 40) { hitHole(h); return }
+    const cy = h.y + 14 - popOffset(it)
+    if (Math.hypot(p.x - h.x, (p.y - cy) * 0.9) <= 32) { hitHole(h); return }
   }
 }
 function popOffset(it) {
@@ -156,7 +158,7 @@ function popOffset(it) {
   const t = it.t
   const inK = clamp(t / 0.14, 0, 1)
   const outK = it.hit ? clamp(it.hitT / 0.12, 0, 1) : clamp((t - (it.life - 0.18)) / 0.18, 0, 1)
-  return (inK - outK) * 46
+  return (inK - outK) * POP_MAX
 }
 function hitHole(h) {
   const it = h.item
@@ -168,14 +170,14 @@ function hitHole(h) {
     if (graceT <= 0) {
       lives.value--
       graceT = 0.6
-      floats.push({ x: h.x, y: h.y - 70, text: it.kind === 'rock' ? '石头！-1 ❤' : '虫子！-1 ❤', life: 0, max: 1.0, color: '#e06a5a' })
+      floats.push({ x: h.x, y: h.y - 42, text: it.kind === 'rock' ? '石头！-1 ❤' : '虫子！-1 ❤', life: 0, max: 1.0, color: '#e06a5a' })
       beep(150, 0.26, 'sawtooth', 0.09)
       if (lives.value <= 0) settle()
     } else {
-      floats.push({ x: h.x, y: h.y - 70, text: '点错了！', life: 0, max: 0.8, color: '#e06a5a' })
+      floats.push({ x: h.x, y: h.y - 42, text: '点错了！', life: 0, max: 0.8, color: '#e06a5a' })
       beep(190, 0.14, 'sawtooth', 0.05)
     }
-    for (let i = 0; i < 10; i++) sparks.push({ x: h.x, y: h.y - 60, vx: rand(-130, 130), vy: rand(-150, 20), life: 0, max: rand(0.3, 0.6), color: '#b9a08a', size: rand(1.5, 3) })
+    for (let i = 0; i < 10; i++) sparks.push({ x: h.x, y: h.y - 30, vx: rand(-130, 130), vy: rand(-150, 20), life: 0, max: rand(0.3, 0.6), color: '#b9a08a', size: rand(1.5, 3) })
     return
   }
   const now = performance.now()
@@ -186,8 +188,8 @@ function hitHole(h) {
   const base = it.kind === 'gold' ? ING[it.i].score * 3 : ING[it.i].score
   const gain = Math.round(base * mult)
   score.value += gain
-  floats.push({ x: h.x, y: h.y - 70, text: `+${gain}`, life: 0, max: 0.9, color: it.kind === 'gold' ? '#ffd65a' : '#eaf6c8' })
-  for (let i = 0; i < 8; i++) sparks.push({ x: h.x, y: h.y - 60, vx: rand(-90, 90), vy: rand(-160, -20), life: 0, max: rand(0.3, 0.6), color: it.kind === 'gold' ? '#ffe08a' : '#bfe08a', size: rand(1.4, 2.6) })
+  floats.push({ x: h.x, y: h.y - 42, text: `+${gain}`, life: 0, max: 0.9, color: it.kind === 'gold' ? '#ffd65a' : '#eaf6c8' })
+  for (let i = 0; i < 8; i++) sparks.push({ x: h.x, y: h.y - 30, vx: rand(-90, 90), vy: rand(-160, -20), life: 0, max: rand(0.3, 0.6), color: it.kind === 'gold' ? '#ffe08a' : '#bfe08a', size: rand(1.4, 2.6) })
   beep(it.kind === 'gold' ? 1180 : 780 + combo.value * 40, 0.06, 'triangle', 0.06)
 }
 
@@ -253,56 +255,22 @@ function draw() {
   ctx.save()
   if (shake > 0) ctx.translate(rand(-1, 1) * shake * 7, rand(-1, 1) * shake * 7)
   drawField(ctx, dark)
-  // 先画洞的底，再画冒出的东西，最后画洞口前沿遮住下半部分
-  for (const h of HOLES) drawHoleBack(ctx, h, dark)
   for (const h of HOLES) drawPop(ctx, h)
-  for (const h of HOLES) drawHoleFront(ctx, h, dark)
   drawSparks(ctx)
   drawFloats(ctx)
   drawHud(ctx, dark)
   ctx.restore()
 }
-// ── 素材：俯视像素草地背景 + 坑洞贴图 ──
-// 坑洞原图是 JPEG（棋盘底烘焙在图里），加载后先做「浅色低饱和 → 透明」去背，得到可叠加的精灵
+// ── 素材：整幅俯视像素草地（坑洞已画在图中）──
 const BG_IMG = (() => {
   const im = new Image()
-  im.src = 'images/wk-bg.jpg'
+  im.src = 'images/wk-bg.jpg?v=2' // 换图后带版本号，避免浏览器沿用旧缓存
   return im
 })()
-let HOLE_SPRITE = null
-;(() => {
-  const im = new Image()
-  im.src = 'images/wk-hole.jpg'
-  im.onload = () => {
-    const c = document.createElement('canvas')
-    c.width = im.naturalWidth
-    c.height = im.naturalHeight
-    const g = c.getContext('2d')
-    g.drawImage(im, 0, 0)
-    const d = g.getImageData(0, 0, c.width, c.height)
-    const px = d.data
-    for (let i = 0; i < px.length; i += 4) {
-      const r = px[i]
-      const gg = px[i + 1]
-      const b = px[i + 2]
-      const mx = Math.max(r, gg, b)
-      const mn = Math.min(r, gg, b)
-      const sat = mx === 0 ? 0 : (mx - mn) / mx
-      if (mx > 205 && sat < 0.1) px[i + 3] = 0 // 棋盘格主体
-      else if (mx > 185 && sat < 0.14) px[i + 3] = Math.round(255 * (1 - (mx - 185) / 20) * 0.7) // 边缘半透明
-    }
-    g.putImageData(d, 0, 0)
-    HOLE_SPRITE = c
-  }
-})()
-const HOLE_W = 152 // 坑洞贴图绘制宽度（含土沿）
 function drawField(ctx, dark) {
-  // 俯视草地背景（cover 铺满）
   if (BG_IMG.complete && BG_IMG.naturalWidth) {
-    const s = Math.max(W / BG_IMG.naturalWidth, H / BG_IMG.naturalHeight)
-    const iw = BG_IMG.naturalWidth * s
-    const ih = BG_IMG.naturalHeight * s
-    ctx.drawImage(BG_IMG, (W - iw) / 2, (H - ih) / 2, iw, ih)
+    // 裁掉底部 60px：去掉生成器水印（坑位坐标已按裁剪后重算）
+    ctx.drawImage(BG_IMG, 0, 0, BG_IMG.naturalWidth, BG_IMG.naturalHeight - 60, 0, 0, W, H)
   } else {
     ctx.fillStyle = dark ? '#1b3320' : '#8bc96c'
     ctx.fillRect(0, 0, W, H)
@@ -312,31 +280,11 @@ function drawField(ctx, dark) {
     ctx.fillRect(0, 0, W, H)
   }
   // 暗角：聚焦中间
-  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.82)
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.34, W / 2, H / 2, H * 0.86)
   vg.addColorStop(0, 'rgba(0,0,0,0)')
   vg.addColorStop(1, dark ? 'rgba(0,0,0,0.35)' : 'rgba(20,50,10,0.16)')
   ctx.fillStyle = vg
   ctx.fillRect(0, 0, W, H)
-}
-function drawHoleBack(ctx, h, dark) {
-  // 落影
-  ctx.fillStyle = dark ? 'rgba(0,0,0,0.32)' : 'rgba(20,40,12,0.22)'
-  ctx.beginPath()
-  ctx.ellipse(h.x + 2, h.y + 6, HOLE_W * 0.46, HOLE_W * 0.2, 0, 0, TAU)
-  ctx.fill()
-  // 贴图上半（后沿），下半留给 drawHoleFront 遮住冒出物的根部
-  if (HOLE_SPRITE) {
-    const sw = HOLE_SPRITE.width
-    const sh = HOLE_SPRITE.height
-    ctx.drawImage(HOLE_SPRITE, 0, 0, sw, sh / 2, h.x - HOLE_W / 2, h.y - HOLE_W / 2, HOLE_W, HOLE_W / 2)
-  }
-}
-function drawHoleFront(ctx, h, dark) {
-  if (HOLE_SPRITE) {
-    const sw = HOLE_SPRITE.width
-    const sh = HOLE_SPRITE.height
-    ctx.drawImage(HOLE_SPRITE, 0, sh / 2, sw, sh / 2, h.x - HOLE_W / 2, h.y, HOLE_W, HOLE_W / 2)
-  }
 }
 function drawPop(ctx, h) {
   const it = h.item
@@ -344,15 +292,20 @@ function drawPop(ctx, h) {
   const pop = popOffset(it)
   if (pop <= 0.02) return
   const cx = h.x
-  const cy = h.y - 34 - pop
+  const cy = h.y + 14 - pop
   const wob = Math.sin(waveT * 6 + it.seed) * 1.6
   ctx.save()
+  // 裁剪：把洞口「前沿」（下半椭圆）挖掉，冒出物的根部就会被洞沿挡住
+  ctx.beginPath()
+  ctx.rect(0, 0, W, H)
+  ctx.ellipse(h.x, h.y + 3, HOLE_RX, HOLE_RY, 0, 0, Math.PI)
+  ctx.clip('evenodd')
   ctx.translate(cx + wob, cy)
-  if (it.kind === 'rock') drawRock(ctx)
-  else if (it.kind === 'bug') drawBug(ctx)
+  if (it.kind === 'rock') { ctx.scale(0.72, 0.72); drawRock(ctx) }
+  else if (it.kind === 'bug') { ctx.scale(0.72, 0.72); drawBug(ctx) }
   else {
     const im = IMGS[it.i]
-    const s = 62
+    const s = ITEM_SIZE
     if (it.kind === 'gold') {
       const g = ctx.createRadialGradient(0, 0, 4, 0, 0, s * 0.62)
       g.addColorStop(0, 'rgba(255,214,90,0.75)')
@@ -603,7 +556,7 @@ onUnmounted(() => { stopLoop() })
 .wk-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
 .wk-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .wk-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.wk-canvas { width: min(420px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
+.wk-canvas { width: min(560px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
 .wk-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
 .wk-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .wk-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
