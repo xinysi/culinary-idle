@@ -39,9 +39,14 @@ jobs:
           npx electron-packager . "美食放置：食之契约" --platform=win32 --arch=x64 --out=release --overwrite --asar
 
       # 3. 压缩 exe 目录为 zip
+      #    注意：GitHub 附件名会剥掉非 ASCII 字符（中文会被整段丢弃，曾出现 "-win32-x64.zip"），
+      #    所以 zip 用 ASCII 文件名上传，中文名改放到 release 资产的 display label 里。
       - name: Zip release
         working-directory: lmewexe
-        run: Compress-Archive -Path "release\美食放置：食之契约-win32-x64" -DestinationPath release\美食放置：食之契约-win32-x64.zip -Force
+        run: |
+          $zip = "culinary-idle-$env:GITHUB_REF_NAME-win32-x64.zip"
+          if (Test-Path "release\$zip") { Remove-Item "release\$zip" -Force }
+          Compress-Archive -Path "release\美食放置：食之契约-win32-x64" -DestinationPath "release\$zip" -Force
 
       # 4. 创建 Release 并上传资产（zip 文件；v0.1.0 教训：只能传文件，不能传目录）
       - name: Create release
@@ -49,9 +54,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          zip_file=$(ls lmewexe/release/*win32-x64.zip | head -1)
+          zip_file=$(ls lmewexe/release/culinary-idle-*-win32-x64.zip | head -1)
           echo "asset: $zip_file"
-          gh release create "${GITHUB_REF_NAME}" "$zip_file" \
+          gh release create "${GITHUB_REF_NAME}" "${zip_file}#美食放置：食之契约 ${GITHUB_REF_NAME} 桌面版" \
             --title "${GITHUB_REF_NAME} — 美食放置：食之契约" \
             --generate-notes \
             --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食之契约.exe 即可游玩。源码与开发说明见仓库根目录。"

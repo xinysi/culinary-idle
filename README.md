@@ -126,6 +126,7 @@ src/
   ```bash
   git tag v0.2.0 && git push origin v0.2.0
   ```
+  > 附件命名：**文件名用 ASCII**（`culinary-idle-<tag>-win32-x64.zip`），中文名放在 release 资产的 **display label**（「美食放置：食之契约 vX.Y.Z 桌面版」）。原因：GitHub 会剥掉附件名里的非 ASCII 字符（早期版本附件名因此变成 `-win32-x64.zip`）。
 - **手动打包**（本机）：`npm.cmd run build` → 复制 `dist/` 到 `lmewexe/dist/` → `python lmewexe/fix_paths.py` → `cd lmewexe && npm run pack`（产物在 `lmewexe/release/`）。
 
 ## 内容扩充（生成器 expansion1.js 产出，勿手改）
