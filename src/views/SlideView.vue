@@ -48,7 +48,6 @@ const elapsed = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.slide?.best ?? 0) // 最少步数（通关时记录）
 const cfg = computed(() => MODES[mode.value])
 const isOrder = computed(() => cfg.value.goal === 'order')
@@ -191,14 +190,12 @@ function reset() {
   over.value = false
   passed.value = false
   started.value = false
-  hint.value = '点击「开始游戏」后，点与空格相邻的菜块滑动'
 }
 function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
   const c = cfg.value
-  hint.value = c.goal === 'order'
     ? '按编号顺序把菜块排好（1 在左上，空格在右下）'
     : `把 ${c.stars.length} 个 ⭐ 主菜分别滑到金框格子里`
   beep(880, 0.08)
@@ -286,8 +283,6 @@ onUnmounted(() => { stopTimer() })
         </div>
       </div>
     </div>
-
-    <div class="sl-hint">{{ hint }}</div>
 
     <div class="sl-keys">
       <button v-if="!started" class="sl-start" @click="startGame()">▶ 开始游戏</button>
@@ -380,14 +375,6 @@ onUnmounted(() => { stopTimer() })
 .sl-tile img { width: 78%; height: 78%; object-fit: contain; pointer-events: none; }
 .sl-num { position: absolute; right: 4px; bottom: 2px; font-size: 11px; font-weight: 800; color: rgba(120, 80, 50, 0.75); }
 .sl-star { position: absolute; left: 4px; top: 2px; font-size: 13px; }
-
-.sl-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 /* 目标排列预览（整盘还原模式） */
 .sl-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sl-preview-title { font-size: 11px; font-weight: 700; color: var(--muted); }

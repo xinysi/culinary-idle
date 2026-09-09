@@ -67,7 +67,6 @@ const maxCombo = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.whack?.best ?? 0)
 const targetText = computed(() => `${score.value}/${MODES[mode.value].target}`)
 const goldText = computed(() => {
@@ -431,7 +430,6 @@ function drawHud(ctx, dark) {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(60,70,40,0.7)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击下方「开始游戏」，然后点食材收获', W / 2, H / 2 + 60)
   }
 }
 
@@ -455,7 +453,6 @@ function reset() {
   overFlag = false
   passed.value = false
   started.value = false
-  hint.value = '点击「开始游戏」后点食材收获'
   running = true
   startLoop()
 }
@@ -464,7 +461,6 @@ function startGame() {
   started.value = true
   timeLeft.value = MODES[mode.value].dur
   timeAccum = 0
-  hint.value = '点中食材得分！别点石头和虫子'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -514,8 +510,6 @@ onUnmounted(() => { stopLoop() })
     </div>
 
     <canvas ref="canvas" class="wk-canvas" :width="W" :height="H" @pointerdown="onDown"></canvas>
-
-    <div class="wk-hint">{{ hint }}</div>
 
     <div class="wk-keys">
       <button v-if="!started" class="wk-start" @click="startGame()">▶ 开始游戏</button>
@@ -602,13 +596,6 @@ onUnmounted(() => { stopLoop() })
   border: none;
 }
 .wk-canvas { width: min(1000px, 98%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: pointer; touch-action: none; }
-.wk-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .wk-keys {
   display: flex;
   gap: 10px;

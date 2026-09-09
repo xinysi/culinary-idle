@@ -530,7 +530,6 @@ reset()
       <button v-if="!started" class="fm-start" @click="startGame()">▶ 开始游戏</button>
       <button v-else class="fm-reset" @click="reset()">🔄 重新开始</button>
     </div>
-    <div v-if="!started && !overRef && !wonRef" class="fm-hint">点击「开始游戏」后，拖动/点击棋盘投放水果</div>
     <div v-if="wonRef" class="fm-done ok">🎉 达标通关！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-else-if="overRef" class="fm-done">💦 溢出红线！本局 {{ scoreRef }} 分{{ MODES[mode].target ? '（未达标）' : '' }}</div>
 
@@ -607,13 +606,6 @@ reset()
   background: linear-gradient(135deg, #e8703f, #c9542e);
   border: none;
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
-}
-.fm-hint {
-  font-size: 12.5px;
-  color: var(--muted);
-  font-weight: 700;
-  text-align: center;
-  min-height: 18px;
 }
 .fm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .fm-done { font-weight: 800; color: var(--bad-strong); }

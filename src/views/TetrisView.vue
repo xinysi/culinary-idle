@@ -73,7 +73,6 @@ const level = ref(1)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const nextType = ref('T')
 const best = computed(() => player.minigames?.tetris?.best ?? 0)
 const targetText = computed(() => `${score.value}/${MODES[mode.value].target}`)
@@ -402,7 +401,6 @@ function draw() {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(90,60,30,0.65)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击下方「开始游戏」', W / 2, H / 2)
   }
   ctx.restore()
 }
@@ -449,7 +447,6 @@ function reset() {
   floats = []
   sparks = []
   nextType.value = randomType()
-  hint.value = '点击「开始游戏」后开始消行'
   running = true
   startLoop()
 }
@@ -464,7 +461,6 @@ function startGame() {
   if (MODES[mode.value].garbage > 0) addGarbage(MODES[mode.value].garbage)
   spawn(nextType.value)
   nextType.value = randomType()
-  hint.value = '← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 直落'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -519,8 +515,6 @@ onUnmounted(() => {
     </div>
 
     <canvas ref="canvas" class="tt-canvas" :width="W" :height="H"></canvas>
-
-    <div class="tt-hint">{{ hint }}</div>
 
     <div class="tt-keys">
       <button v-if="!started" class="tt-start" @click="startGame()">▶ 开始游戏</button>
@@ -610,13 +604,6 @@ onUnmounted(() => {
   border: none;
 }
 .tt-canvas { width: min(360px, 96%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); touch-action: none; }
-.tt-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .tt-keys {
   display: flex;
   gap: 10px;

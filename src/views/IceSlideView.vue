@@ -38,7 +38,6 @@ const elapsed = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const lastDir = ref(-1)
 const sliding = ref(false)
 const holes = ref(new Set()) // 碎冰模式：已碎掉的格子
@@ -275,13 +274,11 @@ function reset() {
   over.value = false
   passed.value = false
   started.value = false
-  hint.value = '点击「开始游戏」后，按方向键让食材滑出去（撞墙/石头才停）'
 }
 function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
-  hint.value = '滑动收集全部 🍒（一滑到底，撞石头/墙才停）'
   beep(880, 0.08)
 }
 
@@ -334,8 +331,6 @@ onUnmounted(() => {
         }"
       >🍎</div>
     </div>
-
-    <div class="ic-hint">{{ hint }}</div>
 
     <div class="ic-keys">
       <button v-if="!started" class="ic-start" @click="startGame()">▶ 开始游戏</button>
@@ -434,14 +429,6 @@ onUnmounted(() => {
 .ic-tile.target { box-shadow: inset 0 0 0 2px rgba(224, 106, 90, 0.5); }
 .ic-cherry { font-size: 20px; line-height: 1; }
 .ic-player { position: absolute; display: flex; align-items: center; justify-content: center; transition: left 0.18s cubic-bezier(0.22, 0.9, 0.35, 1), top 0.18s cubic-bezier(0.22, 0.9, 0.35, 1); filter: drop-shadow(0 3px 4px rgba(40, 70, 90, 0.35)); z-index: 3; pointer-events: none; }
-
-.ic-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .ic-keys {
   display: flex;
   gap: 10px;
