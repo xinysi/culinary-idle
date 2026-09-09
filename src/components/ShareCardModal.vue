@@ -4,6 +4,7 @@ import { computed, ref, nextTick, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
+import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -13,10 +14,11 @@ const generated = ref(false)
 const stats = computed(() => [
   ['对决等级', String(player.combatLevel)],
   ['图鉴完成度', `${player.collectionPct}%`],
-  ['成就解锁', `${player.achievements.length} / 101`],
+  ['成就解锁', `${player.achievements.length} / ${ALL_ACHIEVEMENTS.length}`],
   ['总等级', String(player.totalLevels)],
   ['转生次数', String(player.stats?.prestiges ?? 0)],
   ['挑战塔最高层', String(player.tower?.best ?? 0)],
+  ['秘境最高层', String(player.realm?.best ?? 0)],
   ['厨艺大赛月分', String(player.fest?.score ?? 0)],
   ['锻造套装集齐', `${player.setBonuses?.length ?? 0} / ${COLLECTABLE_SETS.length}`],
   ['餐厅收入总额', (player.stats?.restaurantTotal ?? 0).toLocaleString()],
@@ -65,7 +67,7 @@ function draw() {
     // 卡片行
     const rows = stats.value
     const cardY = 200
-    const cardH = 480
+    const cardH = 524
     ctx.fillStyle = 'rgba(255, 251, 244, 0.97)'
     roundRectPath(ctx, 40, cardY, W - 80, cardH, 16)
     ctx.fill()

@@ -24,7 +24,6 @@ export const useUiStore = defineStore('ui', {
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）
-    topNavPage: 0, // 顶部导航分页（纯 UI，不入存档；每页一组按钮）
     loopTick: 0, // 全局循环计数：每引擎 tick +1，驱动进度条等 UI 刷新
   }),
 
@@ -84,9 +83,6 @@ export const useUiStore = defineStore('ui', {
     },
     closeOfflineReport() {
       this.offlineReport = null
-    },
-    setTopNavPage(p) {
-      this.topNavPage = p
     },
     bumpLoop() {
       this.loopTick++

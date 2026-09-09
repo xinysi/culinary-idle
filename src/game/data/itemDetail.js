@@ -5,6 +5,8 @@ import { SPIRITS } from './spirits.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { gemDef, socketCountOf } from './gems.js'
 import { equipSetOf } from './equipSets.js'
+import { CELLAR_CATEGORIES } from './cellar.js'
+import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -82,6 +84,12 @@ export function itemDetailLines(id) {
   // 宝石（2026-09-09）：可作为宝石镶嵌的矿物
   const gem = gemDef(id)
   if (gem) lines.push(['宝石镶嵌', `${gem.desc}（镶入装备插槽后生效）`])
+  // 地窖陈酿（2026-09-10）：酒类/腌制品可入窖
+  if (CELLAR_CATEGORIES.includes(it.category)) lines.push(['可陈酿', '可放入地窖，按档位成熟后出窖换金币（12h ×1.5 / 24h ×2 / 48h ×3）'])
+  // 交易所（2026-09-10）：价值 20~300 的食材可能出现在货单上
+  if (it.type === 'ingredient' && EXCHANGE_POOL_CATEGORIES.includes(it.category) && (it.value ?? 0) >= 20 && (it.value ?? 0) <= 300) {
+    lines.push(['可交易', '可能出现在交易所货单上（行情价 0.6~1.6× 基准价值，每 4 小时轮换）'])
+  }
   if (it.type === 'equipment') {
     const sockets = socketCountOf(it)
     if (sockets > 0) lines.push(['宝石插槽', `${sockets} 个（可镶入矿物宝石）`])

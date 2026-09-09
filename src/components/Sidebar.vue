@@ -1,6 +1,6 @@
 <script setup>
 // 左侧技能导航 — 需求文档 §9.1.1：按类别分组，含等级与经验进度条
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SKILL_CATEGORIES, SKILL_DEFS } from '../game/data/skills.js'
@@ -35,10 +35,58 @@ function xpText(id) {
   return `${pr.current.toLocaleString()} / ${pr.needed.toLocaleString()}`
 }
 function selectSkill(id) {
+  sideTab.value = 'skills' // 选技能时回到技能页签
   player.setActiveSkill(id)
   ui.setView('skill') // 关键：从餐厅/公会/商店/日志等页面切回技能视图
   ui.toggleMobileSkills(false) // 移动端选择技能后收起抽屉
   ui.pushLog(`切换到技能：${SKILL_DEFS[id]?.name}`)
+}
+
+// ── 功能页分组（2026-09-10）：非高频功能页从顶栏移入左栏折叠分组 ──
+const FEATURE_GROUPS = [
+  {
+    id: 'prod',
+    icon: '🌾',
+    name: '生产与采集',
+    items: [
+      { icon: '🛒', name: '商店', view: 'shop' },
+      { icon: '🍽️', name: '珍馐阁', view: 'deluxe' },
+      { icon: '🧪', name: '炼金', view: 'alchemy' },
+      { icon: '🚢', name: '采集队', view: 'expedition' },
+      { icon: '🐄', name: '牧场', view: 'ranch' },
+      { icon: '🍶', name: '地窖', view: 'cellar' },
+      { icon: '📓', name: '厨房笔记', view: 'kitchenNotes' },
+    ],
+  },
+  {
+    id: 'biz',
+    icon: '🏬',
+    name: '经营与挑战',
+    items: [
+      { icon: '🏬', name: '分店', view: 'branches' },
+      { icon: '💹', name: '交易所', view: 'exchange' },
+      { icon: '🤖', name: '自动化', view: 'automation' },
+      { icon: '📖', name: '常客', view: 'regulars' },
+      { icon: '✨', name: '食灵物语', view: 'spiritStories' },
+      { icon: '🏅', name: '试炼', view: 'trials' },
+      { icon: '🎮', name: '小游戏', view: 'minigames' },
+    ],
+  },
+]
+// 左栏页签（2026-09-10）：技能 / 功能，一次只显示一栏、各自占满高度
+const sideTab = ref('skills')
+const FEATURE_VIEWS = FEATURE_GROUPS.flatMap((g) => g.items.map((i) => i.view))
+watch(
+  () => ui.activeView,
+  (v) => {
+    if (FEATURE_VIEWS.includes(v)) sideTab.value = 'features'
+    else if (v === 'skill') sideTab.value = 'skills'
+  },
+)
+
+function goFeature(item) {
+  ui.setView(item.view)
+  ui.toggleMobileSkills(false)
 }
 
 // 点击头像 → 选择本地图片 → 读为 dataUrl 设为自定义头像
@@ -81,8 +129,14 @@ function onAvatarPick(e) {
       </div>
     </div>
 
+    <!-- 页签：技能 / 功能（2026-09-10） -->
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab" :class="{ active: sideTab === 'skills' }" @click="sideTab = 'skills'">🌾 技能</button>
+      <button class="sidebar-tab" :class="{ active: sideTab === 'features' }" @click="sideTab = 'features'">🧩 功能</button>
+    </div>
+
     <!-- 技能列表（按类别分组，按钮内直接显示等级与经验） -->
-    <nav class="skill-nav">
+    <nav v-show="sideTab === 'skills'" class="skill-nav">
       <template v-for="cat in SKILL_CATEGORIES" :key="cat.id">
         <div class="skill-cat">{{ cat.name }}</div>
         <button
@@ -100,6 +154,26 @@ function onAvatarPick(e) {
           <ProgressBar class="skill-bar" :progress="barProgress(def.id)" />
           <div class="skill-xp dim mono">{{ xpText(def.id) }}</div>
         </button>
+      </template>
+    </nav>
+
+    <!-- 功能页网格（2026-09-10 用户要求：全部展开、方块显示、一行三个） -->
+    <nav v-show="sideTab === 'features'" class="feature-nav">
+      <template v-for="g in FEATURE_GROUPS" :key="g.id">
+        <div class="feature-group-label">{{ g.icon }} {{ g.name }}</div>
+        <div class="feature-grid">
+          <button
+            v-for="it in g.items"
+            :key="it.view"
+            class="feature-tile"
+            :class="{ active: ui.activeView === it.view }"
+            :title="it.name"
+            @click="goFeature(it)"
+          >
+            <span class="feature-icon">{{ it.icon }}</span>
+            <span class="feature-name">{{ it.name }}</span>
+          </button>
+        </div>
       </template>
     </nav>
   </aside>

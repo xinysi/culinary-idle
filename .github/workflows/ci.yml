@@ -28,6 +28,7 @@ jobs:
           node scripts/buff_test.mjs
           node scripts/continuity_test.mjs
           node scripts/audit_sync.mjs
+          node scripts/content_sync_audit.mjs
           node scripts/item_triple_audit.mjs
           node scripts/minigame_ui_audit.mjs
 

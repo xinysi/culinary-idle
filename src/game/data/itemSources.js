@@ -26,6 +26,8 @@ import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { QUESTS } from './quests.js'
 import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL } from './gameShopPools.js'
 import { EXPEDITIONS } from './expeditions.js'
+import { RANCH_ANIMALS } from './ranch.js'
+import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -141,6 +143,18 @@ for (const ex of EXPEDITIONS) {
   for (const s of ex.slots ?? []) for (const id of s.pool ?? []) ids.add(id)
   if (ex.rare?.itemId) ids.add(ex.rare.itemId)
   for (const id of ids) add(id, `远行采集队·${ex.name}（领取）`)
+}
+
+// 牧场养殖（2026-09-10）：驯养动物的周期产出
+for (const an of RANCH_ANIMALS) {
+  for (const id of Object.keys(an.products ?? {})) add(id, `牧场养殖·${an.name}（驯养产出）`)
+}
+
+// 交易所（2026-09-10）：可买入的货品池（按类别与价值区间动态轮换）
+for (const it of Object.values(ITEMS)) {
+  if (it.type !== 'ingredient' || !EXCHANGE_POOL_CATEGORIES.includes(it.category)) continue
+  if ((it.value ?? 0) < 20 || (it.value ?? 0) > 300) continue
+  add(it.id, '交易所（行情买入）')
 }
 
 /** 某物品的获取来源列表（无来源返回 []） */

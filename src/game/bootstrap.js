@@ -198,7 +198,7 @@ export function registerGameEvents() {
   EventBus.on('combat:start', ({ opponent }) => {
     ui.pushLog(`⚔️ 对决开始：${opponent}`, 'info')
   })
-  EventBus.on('combat:end', ({ result, opponent, gold, drops, lost, isBoss }) => {
+  EventBus.on('combat:end', ({ result, opponent, gold, drops, lost, isBoss, turns, hpLeft, hpMax }) => {
     if (result === 'win') {
       const dropText = drops?.length ? '，掉落：' + drops.map((d) => `${itemName(d.itemId)} ×${d.qty}`).join('、') : ''
       ui.pushLog(`🏆 击败 ${opponent}！获得 ${gold} 金币${dropText}`, 'levelup')
@@ -211,8 +211,14 @@ export function registerGameEvents() {
         player.bumpGuild('boss', opponent)
         player.bumpDaily('boss', opponent)
       }
+      // 厨神试炼（2026-09-10）：胜利后判定条件
+      const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
+      if (trial?.passed) ui.pushLog(`🏅 ${trial.label}通关！${trial.first ? '首通奖励' : '重复奖励'} +${trial.gold.toLocaleString()} 金币`, 'levelup')
+      else if (trial?.label) ui.pushLog(`🏅 ${trial.label}`, 'warn')
     } else {
       ui.pushLog(`💀 败给 ${opponent}${lost ? `，失去了 ${itemName(lost)}` : ''}`, 'warn')
+      const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
+      if (trial?.label) ui.pushLog(`🏅 ${trial.label}`, 'warn')
     }
   })
 
@@ -314,6 +320,57 @@ export function registerGameEvents() {
   EventBus.on('expedition:claim', ({ name, gained, gold, rare, tier }) => {
     const parts = Object.entries(gained ?? {}).map(([id, q]) => `${itemName(id)} ×${q}`)
     ui.pushLog(`🚢 ${name}归来：${parts.join('、')}${gold ? `，金币 +${gold}` : ''}${rare ? `（✨稀有：${itemName(rare)}）` : ''}${tier ? ` · 熟练度 ${tier} 档` : ''}`, 'gain')
+  })
+
+  // 地窖陈酿（2026-09-10 时间型放置线）
+  EventBus.on('cellar:claim', ({ itemId, qty, gold, hours, mult }) => {
+    ui.pushLog(`🍶 地窖出窖：${itemName(itemId)} ×${qty}（${hours}h ×${mult}）→ 金币 +${gold.toLocaleString()}`, 'gain')
+  })
+  EventBus.on('cellar:expand', ({ slots, cost }) => {
+    ui.pushLog(`🍶 地窖扩建至 ${slots} 格（-${cost.toLocaleString()} 金币）`, 'info')
+  })
+
+  // 常客名录（2026-09-10）
+  EventBus.on('regular:serve', ({ name, itemId, gold, level, levelUp }) => {
+    ui.pushLog(`📖 ${name}尝了「${itemName(itemId)}」很满意（金币 +${gold}）${levelUp ? ` · 好感升至 Lv${level}` : ''}`, levelUp ? 'levelup' : 'gain')
+  })
+  EventBus.on('regular:gift', ({ name }) => {
+    ui.pushLog(`🎁 ${name}回赠谢礼：神秘调料 ×1`, 'levelup')
+  })
+
+  // 食灵物语（2026-09-10）
+  EventBus.on('spiritStory:claim', ({ name, label }) => {
+    ui.pushLog(`✨ ${name}的物语「${label}」已解锁`, 'levelup')
+  })
+
+  // 自动化中心（2026-09-10）
+  EventBus.on('automation:unlock', ({ name, cost }) => {
+    ui.pushLog(`🤖 已解锁自动化「${name}」（-${cost.toLocaleString()} 金币）`, 'levelup')
+  })
+
+  // 牧场养殖（2026-09-10）
+  EventBus.on('ranch:produce', ({ name, cycles, products }) => {
+    const parts = Object.entries(products ?? {}).map(([id, q]) => `${itemName(id)} ×${q * cycles}`)
+    ui.pushLog(`🐄 牧场：${name} 产出 ${parts.join('、')}`, 'gain')
+  })
+  EventBus.on('ranch:buy', ({ name, cost }) => {
+    ui.pushLog(`🐄 买下了${name}（-${cost.toLocaleString()} 金币）`, 'info')
+  })
+
+  // 餐厅分店（2026-09-10）
+  EventBus.on('branch:open', ({ name, cost }) => {
+    ui.pushLog(`🏬 ${name}开业（-${cost.toLocaleString()} 金币）`, 'levelup')
+  })
+  EventBus.on('branch:manager', ({ name, cost }) => {
+    ui.pushLog(`🏬 ${name}已雇店长（-${cost.toLocaleString()} 金币，时收 +25%）`, 'info')
+  })
+  EventBus.on('branch:income', ({ name, gold, hours }) => {
+    ui.pushLog(`🏬 ${name}入账 ${gold.toLocaleString()} 金币（${hours} 小时）`, 'gain')
+  })
+
+  // 交易所（2026-09-10）
+  EventBus.on('exchange:trade', ({ itemId, qty, gold, side }) => {
+    ui.pushLog(`💹 交易所${side === 'sell' ? '卖出' : '买入'} ${itemName(itemId)} ×${qty}（${side === 'sell' ? '+' : '-'}${gold.toLocaleString()} 金币）`, side === 'sell' ? 'gain' : 'info')
   })
 }
 
