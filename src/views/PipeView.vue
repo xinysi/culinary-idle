@@ -11,7 +11,7 @@ const ui = useUiStore()
 
 // 方向：0 上 / 1 右 / 2 下 / 3 左
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]
-const ICONS = { 0: '🍲', 1: '🍚', 2: '🥘', 3: '🥢' }
+const ICONS = { 0: '🍲', 1: '🍚', 2: '🥘', 3: '🥣' }
 
 // ── 十模式 ──
 const MODES = {
@@ -20,10 +20,10 @@ const MODES = {
   m3: { label: '模式3', n: 4, moves: 22, valves: 1, dual: false, gold: 55, desc: '4×4 · **单向阀**（汤汁只能顺着箭头流）· 22 步 · +55 币' },
   m4: { label: '模式4', n: 5, moves: 30, valves: 0, dual: false, gold: 65, desc: '5×5 · 30 步内接通 · +65 币' },
   m5: { label: '模式5', n: 5, moves: 34, valves: 2, dual: false, gold: 80, desc: '5×5 · 2 个单向阀 · 34 步 · +80 币' },
-  m6: { label: '模式6', n: 5, moves: 44, valves: 0, dual: true, gold: 95, desc: '5×5 · **双锅双碗**（两对都要接通）· 44 步 · +95 币' },
+  m6: { label: '模式6', n: 5, moves: 44, valves: 0, dual: true, gold: 95, desc: '5×5 · **双锅双碗**（🍲🍚 橙对 + 🥘🥣 绿对，同对同色）· 44 步 · +95 币' },
   m7: { label: '模式7', n: 6, moves: 42, valves: 0, dual: false, gold: 110, desc: '6×6 · 42 步内接通 · +110 币' },
   m8: { label: '模式8', n: 6, moves: 46, valves: 3, dual: false, gold: 125, desc: '6×6 · 3 个单向阀 · 46 步 · +125 币' },
-  m9: { label: '模式9', n: 6, moves: 60, valves: 0, dual: true, gold: 140, desc: '6×6 · 双锅双碗 · 60 步 · +140 币' },
+  m9: { label: '模式9', n: 6, moves: 60, valves: 0, dual: true, gold: 140, desc: '6×6 · 双锅双碗（两对颜色不同）· 60 步 · +140 币' },
   m10: { label: '模式10', n: 6, moves: 60, valves: 2, dual: true, timeLimit: 180, gold: 165, desc: '6×6 · 双锅双碗 + 2 个单向阀 · 60 步 + 限时 180 秒 · +165 币' },
 }
 const showInfo = ref(false)
@@ -210,10 +210,12 @@ function buildBoard() {
     }
     const cell = { arms, rot: Math.floor(Math.random() * 4) }
     if (valveSet.has(i)) cell.valve = valveOf.get(i)
-    const pIdx = pairList.findIndex((p) => p.src === i || p.sink === i)
-    if (pIdx >= 0) {
-      cell.pair = pIdx
-      cell.role = pairList[pIdx].src === i ? 'src' : 'sink'
+    const pIdx = paths.findIndex((path) => path.includes(i))
+    if (pIdx >= 0) cell.pair = pIdx
+    const roleIdx = pairList.findIndex((p) => p.src === i || p.sink === i)
+    if (roleIdx >= 0) {
+      cell.pair = roleIdx
+      cell.role = pairList[roleIdx].src === i ? 'src' : 'sink'
       // 锅碗的「正确朝向」= arms（已由路径决定）
     }
     list[i] = cell
@@ -395,7 +397,7 @@ onUnmounted(() => { stopTimer() })
         v-for="(cell, i) in cells"
         :key="i"
         class="pp-cell"
-        :class="{ src: cell.role === 'src', sink: cell.role === 'sink', flow: flowSet.has(i), valve: cell.valve != null, p2: cell.pair === 1 }"
+        :class="{ src: cell.role === 'src', sink: cell.role === 'sink', flow: flowSet.has(i), valve: cell.valve != null, 'pp-p0': cell.pair === 0, 'pp-p1': cell.pair === 1 }"
         :style="{
           left: (i % cfg.n) * (cellSize + 8) + 'px',
           top: Math.floor(i / cfg.n) * (cellSize + 8) + 'px',
@@ -445,7 +447,7 @@ onUnmounted(() => { stopTimer() })
             玩法：<b>点击任意管道让它旋转 90°</b>，把锅（🍲）和碗（🍚）用管道连通。<br />
             管道分直管、弯管、三通等形状；只有<b>两端接口都对准</b>才算连通，汤汁会从锅沿管道一路流到碗。<br />
             <b>单向阀</b>（管道中心带 ➤ 箭头）：汤汁只能顺着箭头方向流过，逆向接不通，需要把阀门转对方向。<br />
-            <b>双锅双碗</b>（🍲🍚 + 🥘🥢）：两对都要接通才算过关。<br />
+            <b>双锅双碗</b>（🍲🍚 一对橙色、🥘🥣 一对绿色）：两对都要接通才算过关——<b>同一对的锅和碗同色</b>，按颜色配对即可。<br />
             每局有<b>步数上限</b>（每转一次算一步），用完还没接通就判负；模式 10 还有限时。<br />
             开局由「随机合法路径 + 干扰管件」生成，<b>保证一定可解</b>；接通即达标发游戏币，并记录同模式最少步数。
           </div>
@@ -470,10 +472,10 @@ onUnmounted(() => { stopTimer() })
 .pp-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); overflow: hidden; }
 .pp-cell { position: absolute; border-radius: 10px; background: rgba(255, 252, 246, 0.92); border: 1px solid rgba(150, 110, 70, 0.3); cursor: pointer; transition: box-shadow 0.12s; }
 .pp-cell:hover { box-shadow: 0 0 0 2px rgba(217, 90, 56, 0.35); }
-.pp-cell.src { background: rgba(255, 238, 214, 0.96); border-color: rgba(217, 90, 56, 0.5); }
-.pp-cell.sink { background: rgba(226, 242, 255, 0.96); border-color: rgba(79, 143, 217, 0.5); }
-.pp-cell.p2.src { border-color: rgba(154, 122, 224, 0.6); }
-.pp-cell.p2.sink { border-color: rgba(114, 184, 100, 0.6); }
+/* 按「对」配色：同一对的锅和碗同色，两对颜色不同（方便分辨谁连谁） */
+.pp-cell.pp-p0 { --pair-bg: rgba(255, 236, 208, 0.96); --pair-border: rgba(217, 90, 56, 0.65); --pair-flow-bg: rgba(244, 176, 96, 0.95); --pair-pipe: #d98a3a; }
+.pp-cell.pp-p1 { --pair-bg: rgba(222, 246, 224, 0.96); --pair-border: rgba(76, 158, 68, 0.65); --pair-flow-bg: rgba(150, 214, 130, 0.95); --pair-pipe: #5fa348; }
+.pp-cell.src, .pp-cell.sink { background: var(--pair-bg, rgba(255, 252, 246, 0.92)); border-color: var(--pair-border, rgba(150, 110, 70, 0.3)); border-width: 2px; }
 .pp-cell.valve .pp-hub { background: #8f7a62; }
 .pp-valve-arrow { color: #ffd65a; font-size: 14px; line-height: 1; }
 /* 管道手臂 */
@@ -488,11 +490,11 @@ onUnmounted(() => { stopTimer() })
 .pp-cell.flow { animation: ppFlow 0.9s ease forwards; animation-delay: var(--flow-delay); }
 @keyframes ppFlow {
   0% { background: rgba(255, 252, 246, 0.92); }
-  40% { background: rgba(240, 190, 110, 0.95); box-shadow: 0 0 14px rgba(224, 161, 58, 0.7); }
-  100% { background: rgba(240, 190, 110, 0.95); box-shadow: 0 0 0 rgba(224, 161, 58, 0); }
+  40% { background: var(--pair-flow-bg, rgba(240, 190, 110, 0.95)); box-shadow: 0 0 14px var(--pair-border, rgba(224, 161, 58, 0.7)); }
+  100% { background: var(--pair-flow-bg, rgba(240, 190, 110, 0.95)); box-shadow: 0 0 0 rgba(224, 161, 58, 0); }
 }
 .pp-cell.flow .pp-arm, .pp-cell.flow .pp-hub { animation: ppPipe 0.9s ease forwards; animation-delay: var(--flow-delay); }
-@keyframes ppPipe { 0% { background: #b9a08a; } 40% { background: #e8a24a; } 100% { background: #d98a3a; } }
+@keyframes ppPipe { 0% { background: #b9a08a; } 40% { background: var(--pair-pipe, #e8a24a); } 100% { background: var(--pair-pipe, #d98a3a); } }
 
 .pp-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
 .pp-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
