@@ -53,6 +53,9 @@ let bumpers = [] // { x, y, r, icon, pts, vx }
 let flippers = [] // { px, py, len, ang, targetAng, dir, active }
 let floats = []
 let guides = [] // 两侧回球导轨：把边路的球导向挡板
+let drops = [] // 掉落靶（打中消失，全清有奖励）
+let topAt = 0 // 顶部通道奖励冷却
+let dropClearAt = 0
 let respawnAt = 0
 let comboAt = 0
 let keyLeft = false
@@ -97,6 +100,12 @@ function buildBoard() {
       }
     }
   }
+  // 掉落靶：一排小方块，打中消失并得分；全清 +200 并 3 秒后重置
+  drops = []
+  const dn = m.bumpers <= 5 ? 3 : m.bumpers <= 9 ? 4 : 5
+  const dw = 44, gap = 18
+  const startX = W / 2 - (dn * dw + (dn - 1) * gap) / 2 + dw / 2
+  for (let i = 0; i < dn; i++) drops.push({ x: startX + i * (dw + gap), y: 398, w: dw, h: 16, alive: true })
   // 两侧弹弓（经典弹珠台元素）：把冲向边路的球弹回场内，保命 + 5 分
   bumpers.push({ x: W / 2 - 156, y: H - 126, r: 27, icon: '🧄', pts: 5, vx: 0, sling: true })
   bumpers.push({ x: W / 2 + 156, y: H - 126, r: 27, icon: '🧅', pts: 5, vx: 0, sling: true })
@@ -104,6 +113,27 @@ function buildBoard() {
     { px: W / 2 - 112, py: H - 58, len: 100 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
     { px: W / 2 + 112, py: H - 58, len: 100 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
   ]
+  // 顶部通道横带
+  ctx.fillStyle = dark ? 'rgba(210,170,120,0.10)' : 'rgba(150,110,70,0.10)'
+  ctx.fillRect(24, 40, W - 48, 26)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.3)' : 'rgba(150,110,70,0.3)'
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([6, 6])
+  ctx.beginPath()
+  ctx.moveTo(24, 66)
+  ctx.lineTo(W - 24, 66)
+  ctx.stroke()
+  ctx.setLineDash([])
+  // 掉落靶
+  for (const d of drops) {
+    if (!d.alive) continue
+    arcTo(ctx, d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 5)
+    ctx.fillStyle = dark ? 'rgba(224,138,90,0.9)' : '#e8a878'
+    ctx.fill()
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.8)' : 'rgba(150,110,70,0.6)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
   // 回球导轨：从侧壁斜下延伸到挡板根部（边路的球会滑到挡板上，而不是直接漏掉）
   guides = [
     { x1: 26, y1: H - 210, x2: W / 2 - 116, y2: H - 62 },
@@ -216,6 +246,39 @@ function step(dt) {
       floats.push({ x: b.x, y: b.y - b.r - 4, life: 0, max: 0.9, text: `+${gain}`, good: true })
       beep(660 + Math.min(8, combo.value) * 60, 0.06, 'triangle', 0.05)
     }
+  }
+  // 掉落靶碰撞
+  for (const d of drops) {
+    if (!d.alive) continue
+    const nx = Math.max(d.x - d.w / 2, Math.min(ball.x, d.x + d.w / 2))
+    const ny = Math.max(d.y - d.h / 2, Math.min(ball.y, d.y + d.h / 2))
+    const dd = Math.hypot(ball.x - nx, ball.y - ny)
+    if (dd < R) {
+      const ux = dd > 0.001 ? (ball.x - nx) / dd : 0
+      const uy = dd > 0.001 ? (ball.y - ny) / dd : -1
+      ball.x = nx + ux * R
+      ball.y = ny + uy * R
+      const dot = ball.vx * ux + ball.vy * uy
+      if (dot < 0) { ball.vx -= 2 * dot * ux * 0.9; ball.vy -= 2 * dot * uy * 0.9 }
+      d.alive = false
+      score.value += 30
+      floats.push({ x: d.x, y: d.y - 16, life: 0, max: 0.9, text: '+30', good: true })
+      beep(740, 0.06, 'triangle', 0.05)
+      if (drops.every((x) => !x.alive)) {
+        score.value += 200
+        floats.push({ x: W / 2, y: 360, life: 0, max: 1.2, text: '全清 +200', good: true })
+        beep(1046, 0.12); setTimeout(() => beep(1568, 0.16), 120)
+        dropClearAt = performance.now() + 3000
+      }
+    }
+  }
+  if (dropClearAt && performance.now() >= dropClearAt) { dropClearAt = 0; for (const d of drops) d.alive = true }
+  // 顶部通道：球穿过顶部横带 +50（2 秒冷却）
+  if (ball.y < 62 && performance.now() - topAt > 2000) {
+    topAt = performance.now()
+    score.value += 50
+    floats.push({ x: ball.x, y: 70, life: 0, max: 0.9, text: '+50', good: true })
+    beep(880, 0.07, 'triangle', 0.05)
   }
   // 回球导轨碰撞
   for (const gd of guides) {
@@ -342,6 +405,16 @@ function settle() {
 }
 
 // ── 绘制 ──
+function arcTo(ctx2, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx2.beginPath()
+  ctx2.moveTo(x + rr, y)
+  ctx2.arcTo(x + w, y, x + w, y + h, rr)
+  ctx2.arcTo(x + w, y + h, x, y + h, rr)
+  ctx2.arcTo(x, y + h, x, y, rr)
+  ctx2.arcTo(x, y, x + w, y, rr)
+  ctx2.closePath()
+}
 function draw() {
   if (!ctx) return
   const dark = document.documentElement.getAttribute('data-theme') === 'dark'
