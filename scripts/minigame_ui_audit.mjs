@@ -16,6 +16,7 @@ const GAMES = [
   ['WhackView', '打地鼠', 'wk'], ['SlideView', '摆盘', 'sl'], ['BreakoutView', '打砖块', 'bk'], ['PipeView', '接汤', 'pp'],
   ['DinerView', '传菜', 'dn'], ['TetrisView', '方块', 'tt'], ['MinesweeperView', '扫雷', 'ms'], ['IceSlideView', '滑冰', 'ic'],
   ['CurlingView', '汤圆冰壶', 'cu'], ['BalanceView', '调味天平', 'ba'], ['RingTossView', '夜市套圈', 'rt'],
+  ['PinballView', '弹珠台', 'pb'],
 ]
 // 例外白名单：游戏名 → 跳过的检查项
 const EXCEPTIONS = { 火候炉: ['开始门控', '结算弹窗'] }
