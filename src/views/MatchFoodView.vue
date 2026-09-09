@@ -39,6 +39,7 @@ function poolFor() {
 
 const board = ref([])
 const selected = ref(null)
+const started = ref(false)
 const failed = ref(false)
 const timeLeft = ref(null) // 限时模式剩余秒数
 const stepsLeft = ref(null) // 限步模式剩余步数
@@ -55,17 +56,8 @@ function resetDay() {
   selected.value = null
   failed.value = false
   if (timerId) clearInterval(timerId)
-  if (kind === 'time') {
-    timeLeft.value = MODES[mode.value].time
-    timerId = setInterval(() => {
-      timeLeft.value--
-      if (timeLeft.value <= 0 && !done.value) {
-        timeLeft.value = 0
-        failed.value = true
-        clearInterval(timerId)
-      }
-    }, 1000)
-  } else timeLeft.value = null
+  started.value = false
+  timeLeft.value = kind === 'time' ? MODES[mode.value].time : null
   stepsLeft.value = kind === 'steps' ? MODES[mode.value].maxSteps : null
 }
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
@@ -74,7 +66,25 @@ function failNow() {
   failed.value = true
   if (timerId) clearInterval(timerId)
 }
+function startTimer() {
+  if (timerId) clearInterval(timerId)
+  if (MODES[mode.value].kind !== 'time') return
+  timerId = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0 && !done.value) {
+      timeLeft.value = 0
+      failed.value = true
+      clearInterval(timerId)
+    }
+  }, 1000)
+}
+function startGame() {
+  if (started.value) return
+  started.value = true
+  startTimer()
+}
 function tap(i) {
+  if (!started.value) return
   const c = board.value[i]
   if (c.cleared || failed.value) return
   const mm = MODES[mode.value]
@@ -137,6 +147,7 @@ resetDay()
     </div>
 
     <div class="mf-keys">
+      <button v-if="!started" class="mf-start" @click="startGame()">▶ 开始游戏</button>
       <button class="mf-reset" @click="resetDay()">🔄 重置本局</button>
     </div>
         <div v-if="done || failed" class="mf-mask">
@@ -291,4 +302,7 @@ resetDay()
 .mf-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .mf-spark { position: absolute; font-size: 22px; color: var(--gold); animation: mfSpark 1.1s ease-out forwards; }
 @keyframes mfSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── mf 开始门控（2026-09-09）── */
+.mf-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

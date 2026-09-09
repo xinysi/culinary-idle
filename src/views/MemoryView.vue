@@ -35,6 +35,7 @@ const board = ref([])
 const memSel = ref(null)
 const busy = ref(false)
 const failed = ref(false)
+const started = ref(false)
 const flips = ref(0)
 const timeLeft = ref(null)
 let timerId = null
@@ -52,17 +53,8 @@ function resetDay() {
   flips.value = 0
   if (timerId) clearInterval(timerId)
   const mm = MODES[mode.value]
-  if (mm.kind === 'time') {
-    timeLeft.value = mm.time
-    timerId = setInterval(() => {
-      timeLeft.value--
-      if (timeLeft.value <= 0 && !done.value) {
-        timeLeft.value = 0
-        failed.value = true
-        clearInterval(timerId)
-      }
-    }, 1000)
-  } else timeLeft.value = null
+  started.value = false
+  timeLeft.value = mm.kind === 'time' ? mm.time : null
 }
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
 
@@ -70,7 +62,26 @@ function failNow() {
   failed.value = true
   if (timerId) clearInterval(timerId)
 }
+function startTimer() {
+  if (timerId) clearInterval(timerId)
+  const mm = MODES[mode.value]
+  if (mm.kind !== 'time') return
+  timerId = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0 && !done.value) {
+      timeLeft.value = 0
+      failed.value = true
+      clearInterval(timerId)
+    }
+  }, 1000)
+}
+function startGame() {
+  if (started.value) return
+  started.value = true
+  startTimer()
+}
 function tap(i) {
+  if (!started.value) return
   const c = board.value[i]
   if (c.cleared || failed.value || busy.value || c.face) return
   c.face = true
@@ -135,6 +146,7 @@ resetDay()
     </div>
 
     <div class="mm-keys">
+      <button v-if="!started" class="mm-start" @click="startGame()">▶ 开始游戏</button>
       <button class="mm-reset" @click="resetDay()">重新洗牌</button>
     </div>
         <div v-if="done || failed" class="mm-mask">
@@ -317,4 +329,7 @@ resetDay()
 .mm-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .mm-spark { position: absolute; font-size: 22px; color: var(--gold); animation: mmSpark 1.1s ease-out forwards; }
 @keyframes mmSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── mm 开始门控（2026-09-09）── */
+.mm-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

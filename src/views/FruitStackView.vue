@@ -56,6 +56,7 @@ const cards = ref([])
 const slots = ref([])
 const won = ref(false)
 const over = ref(false)
+const started = ref(false)
 const busy = ref(false)
 const hintN = ref(2)
 const shuffleN = ref(1)
@@ -188,19 +189,8 @@ function reset() {
   withdrawN.value = 1
   hintIds.value = []
   celebrating.value = false
+  started.value = false
   timeLeft.value = m.value.time ?? null
-  if (m.value.time) {
-    timeTimer = setInterval(() => {
-      timeLeft.value--
-      if (timeLeft.value <= 0 && !won.value && !over.value) { timeLeft.value = 0; fail('⏱ 时间到') }
-    }, 1000)
-  }
-  if (m.value.shift) {
-    shiftTimer = setInterval(() => {
-      if (won.value || over.value) return
-      shiftPositions()
-    }, m.value.shift * 1000)
-  }
 }
 // 移位：未取走的场上卡牌重新随机位置（保持层与种类）
 function shiftPositions() {
@@ -262,7 +252,28 @@ function compactSlots() {
 }
 
 // ── 点击卡牌 ──
+function startTimers() {
+  stopTimers()
+  if (m.value.time) {
+    timeTimer = setInterval(() => {
+      timeLeft.value--
+      if (timeLeft.value <= 0 && !won.value && !over.value) { timeLeft.value = 0; fail('⏱ 时间到') }
+    }, 1000)
+  }
+  if (m.value.shift) {
+    shiftTimer = setInterval(() => {
+      if (won.value || over.value) return
+      shiftPositions()
+    }, m.value.shift * 1000)
+  }
+}
+function startGame() {
+  if (started.value) return
+  started.value = true
+  startTimers()
+}
 function tapCard(card) {
+  if (!started.value) return
   if (!canClick(card)) return
   if (card.locked) { beep(300, 0.08, 'square'); return } // 锁链：被锁卡不可点取（需消除一组解锁）
   const free = slots.value.indexOf(null)
@@ -478,6 +489,7 @@ reset()
     </div>
 
     <div class="gg-keys">
+      <button v-if="!started" class="gg-start" @click="startGame()">▶ 开始游戏</button>
       <button class="gg-reset" @click="reset()">🔄 重置本局</button>
       <button class="gg-prop" :disabled="hintN <= 0 || won || over" @click="useHint()">💡 提示 ×{{ hintN }}</button>
       <button class="gg-prop" :disabled="shuffleN <= 0 || won || over" @click="useShuffle()">🔀 洗牌 ×{{ shuffleN }}</button>
@@ -666,4 +678,7 @@ reset()
 .gg-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .gg-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ggSpark 1.1s ease-out forwards; }
 @keyframes ggSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── gg 开始门控（2026-09-09）── */
+.gg-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

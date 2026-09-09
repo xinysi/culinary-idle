@@ -41,6 +41,7 @@ const score = ref(0)
 const stepsLeft = ref(null)
 const timeLeft = ref(null)
 const over = ref(false)
+const started = ref(false)
 const won = ref(false)
 let timerId = null
 let busy = false
@@ -76,13 +77,8 @@ function reset() {
   won.value = false
   busy = false
   setTimeout(() => { if (myEpoch === epoch) tiles.value.forEach((t) => { t.justIn = false }) }, 420)
-  if (MODES[mode.value].time) {
-    timeLeft.value = MODES[mode.value].time
-    timerId = setInterval(() => {
-      timeLeft.value--
-      if (timeLeft.value <= 0 && !won.value) { timeLeft.value = 0; endNow(false) }
-    }, 1000)
-  } else timeLeft.value = null
+  started.value = false
+  timeLeft.value = MODES[mode.value].time || null
   stepsLeft.value = MODES[mode.value].steps
 }
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
@@ -131,7 +127,21 @@ function findMatchTiles() {
 function scoreOf(matched, chain) {
   return Math.round(matched.length * 15 * Math.pow(1.5, chain - 1))
 }
+function startTimer() {
+  if (timerId) clearInterval(timerId)
+  if (!MODES[mode.value].time) return
+  timerId = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0 && !won.value) { timeLeft.value = 0; endNow(false) }
+  }, 1000)
+}
+function startGame() {
+  if (started.value) return
+  started.value = true
+  startTimer()
+}
 async function tap(t) {
+  if (!started.value) return
   if (over.value || busy || !tiles.value.length) return
   const myEpoch = epoch
   const x = t.col
@@ -260,6 +270,7 @@ reset()
     </div>
 
     <div class="m3-keys">
+      <button v-if="!started" class="m3-start" @click="startGame()">▶ 开始游戏</button>
       <button class="m3-reset" @click="reset()">🔄 重置本局</button>
     </div>
         <div v-if="over" class="m3-mask">
@@ -432,4 +443,7 @@ reset()
 .m3-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .m3-spark { position: absolute; font-size: 22px; color: var(--gold); animation: m3Spark 1.1s ease-out forwards; }
 @keyframes m3Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── m3 开始门控（2026-09-09）── */
+.m3-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

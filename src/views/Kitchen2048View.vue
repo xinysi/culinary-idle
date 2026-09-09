@@ -37,6 +37,7 @@ let earned = 0
 const TILE_BONUS = { 8: 5, 16: 8, 32: 12, 64: 18, 128: 26, 256: 38, 512: 55, 1024: 80, 2048: 120, 4096: 180 }
 const score = ref(0)
 const over = ref(false)
+const started = ref(false)
 const won = ref(false)
 
 const GAP = 8
@@ -84,7 +85,12 @@ function resetBoard() {
   reached.clear() // 本局已领奖档位
   spawn(); spawn()
 }
+function startGame() {
+  if (started.value) return
+  started.value = true
+}
 function reset() {
+  started.value = false
   saveBest()
   resetBoard()
 }
@@ -112,6 +118,7 @@ function canMoveAny() {
   return false
 }
 function move(dir) {
+  if (!started.value) return
   if (over.value) return
   const m = SIZE.value
   // 按方向建索引：每行/列取 tiles 到线，滑动合并
@@ -199,6 +206,7 @@ function switchMode(m) {
   resetBoard()
 }
 function onKey(e) {
+  if (!started.value) return
   const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }
   if (map[e.key]) { e.preventDefault(); move(map[e.key]) }
 }
@@ -256,6 +264,7 @@ function posStyle(t) {
     </div>
 
     <div class="g2048-keys">
+      <button v-if="!started" class="g2048-start" @click="startGame()">▶ 开始游戏</button>
       <button class="g2048-key" @click="move('left')">←</button>
       <button class="g2048-key" @click="move('up')">↑</button>
       <button class="g2048-key" @click="move('down')">↓</button>
@@ -418,4 +427,7 @@ function posStyle(t) {
 .g2048-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .g2048-spark { position: absolute; font-size: 22px; color: var(--gold); animation: g2048Spark 1.1s ease-out forwards; }
 @keyframes g2048Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── g2048 开始门控（2026-09-09）── */
+.g2048-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>
