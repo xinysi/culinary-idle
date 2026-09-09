@@ -121,6 +121,7 @@
 - **注意（重要）**：`gen_smith_sets.mjs` 会 `import ITEMS`，而 `items.js` 已合并上次生成的 `SMITHING_SET_ITEMS`，会造成**自引用污染**（新件因"已存在/重名"被跳过）。**重跑该生成器前必须先清空 `smithSetExt.js`（两个 export 置 `[]`）**，再运行，才能从干净基线重新生成。
 
 ### 校验习惯
+- **小游戏 UI 改动后必须跑 `node scripts/minigame_ui_audit.mjs`**（24 款 × 11 项静态合规，0 失败为准）；标准见《小游戏UI标准.md》（页面骨架/顶栏胶囊/主区域/按钮/弹窗/配色/深色/交互/文案 + 例外清单）。新增或修改小游戏时先读该标准。
 - 改动/平衡后按需重跑生成器：`node scripts/gen_smith_ores.mjs`（同名矿）→ **先清空 `smithSetExt.js` 再** `node scripts/gen_smith_sets.mjs` → `node scripts/gen_farm_seeds.mjs`（农耕）→ `vite build` → `e2e 9/9` → 检查无 `\uFFFD`。
 - 审查超纲可临时写审计脚本：材料锚 vs 产物 reqLevel（忽略矿物），三轮（原貌→平衡后→抬升范围/断供）。
 - 生成器产物文件（`smithSetExt.js`/`smithOres.js`/`farmSeeds.js` 等）**勿手改**，改后重跑对应生成器。
