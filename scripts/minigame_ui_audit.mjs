@@ -15,6 +15,7 @@ const GAMES = [
   ['FruitMergeView', '水果合成', 'fm'], ['FruitStackView', '果了个果', 'gg'], ['FishingView', '垂钓渔翁', 'fh'], ['SliceView', '切菜大师', 'sk'],
   ['WhackView', '打地鼠', 'wk'], ['SlideView', '摆盘', 'sl'], ['PipeView', '接汤', 'pp'], ['DinerView', '传菜', 'dn'],
   ['TetrisView', '方块', 'tt'], ['MinesweeperView', '扫雷', 'ms'], ['IceSlideView', '滑冰', 'ic'], ['CurlingView', '汤圆冰壶', 'cu'],
+  ['GuessDishView', '猜菜名', 'gd'], ['SudokuView', '调味表', 'su'], ['SequenceView', '上菜顺序', 'sv'],
 ]
 // 例外白名单：游戏名 → 跳过的检查项
 const EXCEPTIONS = { 火候炉: ['开始门控', '结算弹窗'] }

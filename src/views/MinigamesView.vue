@@ -31,6 +31,9 @@ const DinerView = defineAsyncComponent(() => import('./DinerView.vue'))
 const TetrisView = defineAsyncComponent(() => import('./TetrisView.vue'))
 const MinesweeperView = defineAsyncComponent(() => import('./MinesweeperView.vue'))
 const IceSlideView = defineAsyncComponent(() => import('./IceSlideView.vue'))
+const GuessDishView = defineAsyncComponent(() => import('./GuessDishView.vue'))
+const SudokuView = defineAsyncComponent(() => import('./SudokuView.vue'))
+const SequenceView = defineAsyncComponent(() => import('./SequenceView.vue'))
 const CurlingView = defineAsyncComponent(() => import('./CurlingView.vue'))
 
 // 商店固定入口（2026-09-09：商店不参与分页，固定在入口行最左）
@@ -59,6 +62,9 @@ const GAMES = [
   { id: 'tetris', emoji: '🧱', name: '方块', comp: TetrisView },
   { id: 'mines', emoji: '💣', name: '扫雷', comp: MinesweeperView },
   { id: 'ice', emoji: '🧊', name: '滑冰', comp: IceSlideView },
+  { id: 'dish', emoji: '🥢', name: '猜菜名', comp: GuessDishView },
+  { id: 'sudoku', emoji: '🔢', name: '调味表', comp: SudokuView },
+  { id: 'serve', emoji: '🍽️', name: '上菜顺序', comp: SequenceView },
   { id: 'curling', emoji: '🍡', name: '汤圆冰壶', comp: CurlingView },
 ]
 
