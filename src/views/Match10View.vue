@@ -99,6 +99,7 @@ const sel = ref(null)
 const activeLayer = ref(1)
 const stepsLeft = ref(0)
 const won = ref(false)
+const started = ref(false)
 const lost = ref(false)
 const busy = ref(false)
 const hintN = ref(2)
@@ -177,7 +178,12 @@ function genBoard() {
   }
   return list
 }
+function startGame() {
+  if (started.value) return
+  started.value = true
+}
 function reset() {
+  started.value = false
   rollTarget() // 目标随机化：每次重开新目标（2026-09-09）
   board.value = genBoard()
   sel.value = null
@@ -246,6 +252,7 @@ function unlockFlash() {
   return t
 }
 function tap(t) {
+  if (!started.value) return
   if (!canTap(t)) return // 锁定方块：彻底禁止，无任何反馈
   if (sel.value == null) { sel.value = t.key; beep(520, 0.08); return }
   if (sel.value === t.key) { sel.value = null; return }
@@ -351,6 +358,7 @@ reset()
     </div>
 
     <div class="m10-keys">
+      <button v-if="!started" class="m10-start" @click="startGame()">▶ 开始游戏</button>
       <button class="m10-reset" @click="reset()">🔄 重置本局</button>
       <button class="m10-hint" :disabled="hintN <= 0 || won || lost" @click="useHint()">💡 提示 ×{{ hintN }}</button>
       <button class="m10-shuffle" :disabled="reshuffleN <= 0 || won || lost" @click="reshuffle()">🔀 重排 ×{{ reshuffleN }}</button>
@@ -530,4 +538,7 @@ reset()
 .m10-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .m10-spark { position: absolute; font-size: 22px; color: var(--gold); animation: m10Spark 1.1s ease-out forwards; }
 @keyframes m10Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── m10 开始门控（2026-09-09）── */
+.m10-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

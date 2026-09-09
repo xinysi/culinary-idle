@@ -56,6 +56,7 @@ const MODES = {
   all18: { label: '综合·大师', spec: { k: 6, c: 6, l: 6 }, pass: 16, gold: 240, desc: '6+6+6 =18 题（对比/连线全库）· ≥16 得徽章 +240 币' },
 }
 const showInfo = ref(false)
+const started = ref(false)
 
 function pickN(pool, n) {
   return [...pool].sort(() => Math.random() - 0.5).slice(0, n)
@@ -92,7 +93,12 @@ const answeredN = computed(() => qlist.value.filter((q) => q.picked !== null).le
 const correctAll = computed(() => qlist.value.filter((q) => q.picked === q.correct).length)
 const doneAll = computed(() => qlist.value.length > 0 && answeredN.value === qlist.value.length)
 
+function startGame() {
+  if (started.value) return
+  started.value = true
+}
 function resetRound() {
+  started.value = false
   qlist.value = buildQuestions(MODES[mode.value].spec)
   idx.value = 0
 }
@@ -104,6 +110,7 @@ function resetWeek() {
   resetRound()
 }
 function pickOpt(opt) {
+  if (!started.value) return
   const q = cur.value
   if (!q || q.picked !== null) return
   q.picked = opt
@@ -171,7 +178,8 @@ resetRound()
         <span class="tv-box-title">{{ MODES[mode].label }}（{{ answeredN }}/{{ totalQ }}）</span>
         <span class="mono dim"> ✅ {{ correctAll }} · 达标 {{ MODES[mode].pass }}</span>
       </div>
-      <template v-if="cur">
+      <div v-if="!started" class="tv-start-row"><button class="tv-start" @click="startGame()">▶ 开始游戏</button></div>
+      <template v-if="cur && started">
         <div class="tv-q">{{ cur.q }}</div>
         <div class="tv-opts">
           <button
@@ -339,4 +347,8 @@ resetRound()
 .tv-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .tv-spark { position: absolute; font-size: 22px; color: var(--gold); animation: tvSpark 1.1s ease-out forwards; }
 @keyframes tvSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── tv 开始门控（2026-09-09）── */
+.tv-start-row { text-align: center; padding: 10px 0; }
+.tv-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>

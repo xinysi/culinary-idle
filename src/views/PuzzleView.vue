@@ -29,6 +29,7 @@ const tiles = ref([])
 const moves = ref(0)
 const won = ref(false)
 const failed = ref(false) // 限步模式步数超限即失败（不结算）
+const started = ref(false)
 
 // 图鉴图片池（有图食物按中文名排序，按 size² 截取）
 const IMG_IDS = Object.values(ITEMS)
@@ -63,7 +64,12 @@ function scrambled() {
   }
   return arr
 }
+function startGame() {
+  if (started.value) return
+  started.value = true
+}
 function resetDay() {
+  started.value = false
   tiles.value = scrambled()
   moves.value = 0
   won.value = false
@@ -78,6 +84,7 @@ function checkWin() {
   return true
 }
 function tap(i) {
+  if (!started.value) return
   if (won.value || failed.value) return
   const size = SIZE.value
   const empty = tiles.value.indexOf(0)
@@ -156,6 +163,7 @@ const cells = computed(() => tiles.value)
     </div>
 
     <div class="pz-keys">
+      <button v-if="!started" class="pz-start" @click="startGame()">▶ 开始游戏</button>
       <button class="pz-reset" @click="resetDay()">🔄 重置本局</button>
     </div>
         <div v-if="won || failed" class="pz-mask">
@@ -320,4 +328,7 @@ const cells = computed(() => tiles.value)
 .pz-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .pz-spark { position: absolute; font-size: 22px; color: var(--gold); animation: pzSpark 1.1s ease-out forwards; }
 @keyframes pzSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
+
+/* ── pz 开始门控（2026-09-09）── */
+.pz-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
 </style>
