@@ -60,6 +60,7 @@ let respawnAt = 0
 let comboAt = 0
 let keyLeft = false
 let keyRight = false
+let stuckAccum = 0
 
 function rand(a, b) { return a + Math.random() * (b - a) }
 
@@ -86,29 +87,63 @@ function buildBoard() {
   const m = cfg.value
   bumpers = []
   floats = []
+  // 机关排布：每局随机选一种图案（网格 / 菱形 / 散点），行列数与抖动随机
   const placed = []
-  const rows = [150, 236, 322]
-  for (let i = 0; i < m.bumpers; i++) {
-    for (let t = 0; t < 160; t++) {
-      const r = rand(15, 23)
-      const y = rows[i % rows.length] + rand(-22, 22)
-      const x = rand(70 + r, W - 70 - r)
-      if (placed.every((p) => Math.hypot(p.x - x, p.y - y) > p.r + r + 14)) {
-        placed.push({ x, y, r })
-        bumpers.push({ x, y, r, icon: FOODS[i % FOODS.length], pts: r < 17 ? 50 : r < 20 ? 20 : 10, vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 3 ? 74 : m.move === 2 ? 54 : 34) : 0 })
-        break
+  const pattern = ['grid', 'diamond', 'scatter'][Math.floor(Math.random() * 3)]
+  const spots = []
+  if (pattern === 'grid') {
+    const cols = Math.max(2, Math.round(Math.sqrt(m.bumpers * 1.5)))
+    const rowsN = Math.ceil(m.bumpers / cols)
+    const x0 = 92, x1 = W - 92, y0 = 150, y1 = 330
+    for (let r0 = 0; r0 < rowsN; r0++) {
+      for (let c0 = 0; c0 < cols; c0++) {
+        if (spots.length >= m.bumpers) break
+        spots.push({ x: x0 + (c0 + 0.5) * ((x1 - x0) / cols) + rand(-16, 16), y: y0 + (r0 + 0.5) * ((y1 - y0) / rowsN) + rand(-14, 14) })
       }
     }
+  } else if (pattern === 'diamond') {
+    const cx = W / 2, cy = 240
+    const step = 74
+    const cells = []
+    for (let gy = -2; gy <= 2; gy++) for (let gx = -3; gx <= 3; gx++) {
+      if (Math.abs(gx) + Math.abs(gy) > 2) continue
+      cells.push({ x: cx + gx * step, y: cy + gy * step * 0.72 })
+    }
+    cells.sort(() => Math.random() - 0.5)
+    for (const c of cells) { if (spots.length >= m.bumpers) break; spots.push({ x: c.x + rand(-12, 12), y: c.y + rand(-10, 10) }) }
+  } else {
+    for (let i = 0; i < m.bumpers; i++) spots.push({ x: rand(90, W - 90), y: rand(140, 340) })
+  }
+  for (const sp of spots) {
+    const r = rand(15, 23)
+    if (!placed.every((p) => Math.hypot(p.x - sp.x, p.y - sp.y) > p.r + r + 12)) continue
+    placed.push({ x: sp.x, y: sp.y, r })
+    bumpers.push({ x: sp.x, y: sp.y, r, icon: FOODS[(placed.length - 1) % FOODS.length], pts: r < 17 ? 50 : r < 20 ? 20 : 10, vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 3 ? 74 : m.move === 2 ? 54 : 34) : 0 })
   }
   // 掉落靶：一排小方块，打中消失并得分；全清 +200 并 3 秒后重置
   drops = []
-  const dn = m.bumpers <= 5 ? 3 : m.bumpers <= 9 ? 4 : 5
-  const dw = 44, gap = 18
-  const startX = W / 2 - (dn * dw + (dn - 1) * gap) / 2 + dw / 2
-  for (let i = 0; i < dn; i++) drops.push({ x: startX + i * (dw + gap), y: 398, w: dw, h: 16, alive: true })
-  // 两侧弹弓（经典弹珠台元素）：把冲向边路的球弹回场内，保命 + 5 分
-  bumpers.push({ x: W / 2 - 156, y: H - 126, r: 27, icon: '🧄', pts: 5, vx: 0, sling: true })
-  bumpers.push({ x: W / 2 + 156, y: H - 126, r: 27, icon: '🧅', pts: 5, vx: 0, sling: true })
+  const dn = 3 + Math.floor(Math.random() * (m.bumpers >= 8 ? 4 : m.bumpers >= 5 ? 3 : 2))
+  const rowsD = m.bumpers >= 8 && Math.random() < 0.45 ? 2 : 1
+  const dw = rand(38, 50), gap = rand(12, 22)
+  const startY = rand(378, 400)
+  for (let r0 = 0; r0 < rowsD; r0++) {
+    const cnt = Math.max(2, Math.round(dn / rowsD))
+    const startX = W / 2 - (cnt * dw + (cnt - 1) * gap) / 2 + dw / 2
+    for (let i = 0; i < cnt; i++) drops.push({ x: startX + i * (dw + gap), y: startY + r0 * (24 + rand(0, 8)), w: dw, h: 16, alive: true })
+  }
+  // 弹弓（经典弹珠台元素）：每局随机 2~4 个、左右不对称、位置与高度随机
+  const slingN = 2 + (m.bumpers >= 9 ? 2 : m.bumpers >= 6 ? 1 : 0) + (Math.random() < 0.4 ? 1 : 0)
+  const slingSpots = []
+  for (let i = 0; i < slingN; i++) {
+    for (let t = 0; t < 80; t++) {
+      const side = Math.random() < 0.5 ? -1 : 1
+      const x = W / 2 + side * rand(148, 238)
+      const y = rand(322, 368)
+      if (x < 66 || x > W - 66) continue
+      if (slingSpots.every((p) => Math.hypot(p.x - x, p.y - y) > 96)) { slingSpots.push({ x, y }); break }
+    }
+  }
+  for (const sp of slingSpots) bumpers.push({ x: sp.x, y: sp.y, r: rand(24, 30), icon: Math.random() < 0.5 ? '🧄' : '🧅', pts: 5, vx: 0, sling: true })
   flippers = [
     { px: W / 2 - 112, py: H - 58, len: 100 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
     { px: W / 2 + 112, py: H - 58, len: 100 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
@@ -128,6 +163,7 @@ function buildBoard() {
   timeAccum = 0
   keyLeft = false
   keyRight = false
+  stuckAccum = 0
   spawnBall()
   draw()
 }
@@ -313,6 +349,17 @@ function step(dt) {
       }
     }
   }
+  // 卡球自救：位置长时间几乎不动（夹在机关/导轨间）就给一脚随机冲量
+  if (Math.abs(ball.vx) < 26 && Math.abs(ball.vy) < 26 && ball.y > 120) {
+    stuckAccum += dt
+    if (stuckAccum > 1.2) {
+      stuckAccum = 0
+      const a0 = Math.random() * Math.PI * 2
+      ball.vx = Math.cos(a0) * 420
+      ball.vy = Math.sin(a0) * 420 - 200
+      beep(240, 0.1, 'square', 0.05)
+    }
+  } else stuckAccum = 0
   // 落球
   if (ball.y > H + 30) {
     ball = null
