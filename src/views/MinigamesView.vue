@@ -29,6 +29,9 @@ const SlideView = defineAsyncComponent(() => import('./SlideView.vue'))
 const BreakoutView = defineAsyncComponent(() => import('./BreakoutView.vue'))
 const PipeView = defineAsyncComponent(() => import('./PipeView.vue'))
 const DinerView = defineAsyncComponent(() => import('./DinerView.vue'))
+const TetrisView = defineAsyncComponent(() => import('./TetrisView.vue'))
+const MinesweeperView = defineAsyncComponent(() => import('./MinesweeperView.vue'))
+const IceSlideView = defineAsyncComponent(() => import('./IceSlideView.vue'))
 
 // 商店固定入口（2026-09-09：商店不参与分页，固定在入口行最左）
 const SHOP = { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView }
@@ -54,6 +57,9 @@ const GAMES = [
   { id: 'breakout', emoji: '🍳', name: '打砖块', comp: BreakoutView },
   { id: 'pipe', emoji: '🥣', name: '接汤', comp: PipeView },
   { id: 'diner', emoji: '🍱', name: '传菜', comp: DinerView },
+  { id: 'tetris', emoji: '🧱', name: '方块', comp: TetrisView },
+  { id: 'mines', emoji: '💣', name: '扫雷', comp: MinesweeperView },
+  { id: 'ice', emoji: '🧊', name: '滑冰', comp: IceSlideView },
 ]
 
 // 游戏分类分页（每页 9 个；新游戏继续往后排，不会被挤到第二行）
