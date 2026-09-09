@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 260, gold: 45, desc: '40 秒 · 目标 260 分 · 3 个食材机关，慢球好控制 · +45 币' },
-  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 330, gold: 55, desc: '45 秒 · 目标 330 分 · 4 个机关 · +55 币' },
-  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 400, gold: 60, desc: '50 秒 · 目标 400 分 · **机关会左右移动** · +60 币' },
-  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 470, gold: 70, desc: '55 秒 · 目标 470 分 · 6 个机关 · +70 币' },
-  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 540, gold: 80, desc: '60 秒 · 目标 540 分 · 球更快，挡板略短 · +80 币' },
-  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 610, gold: 90, desc: '65 秒 · 目标 610 分 · 8 个机关 · +90 币' },
-  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 680, gold: 100, desc: '70 秒 · 目标 680 分 · 机关移动更快 · +100 币' },
-  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 800, gold: 120, desc: '80 秒 · 目标 800 分 · 10 个机关 · +120 币' },
-  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 920, gold: 140, desc: '90 秒 · 目标 920 分 · 12 个机关，挡板更短 · +140 币' },
-  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 1050, gold: 160, desc: '100 秒 · 目标 1050 分 · 满台机关 + 最快球速 · +160 币' },
+  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 390, gold: 45, desc: '40 秒 · 目标 390 分 · 3 个食材机关，慢球好控制 · +45 币' },
+  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 435, gold: 55, desc: '45 秒 · 目标 435 分 · 4 个机关 · +55 币' },
+  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 475, gold: 60, desc: '50 秒 · 目标 475 分 · **机关会左右移动** · +60 币' },
+  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 515, gold: 70, desc: '55 秒 · 目标 515 分 · 6 个机关 · +70 币' },
+  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 555, gold: 80, desc: '60 秒 · 目标 555 分 · 球更快，挡板略短 · +80 币' },
+  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 590, gold: 90, desc: '65 秒 · 目标 590 分 · 8 个机关 · +90 币' },
+  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 625, gold: 100, desc: '70 秒 · 目标 625 分 · 机关移动更快 · +100 币' },
+  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 700, gold: 120, desc: '80 秒 · 目标 700 分 · 10 个机关 · +120 币' },
+  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 775, gold: 140, desc: '90 秒 · 目标 775 分 · 12 个机关，挡板更短 · +140 币' },
+  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 850, gold: 160, desc: '100 秒 · 目标 850 分 · 满台机关 + 最快球速 · +160 币' },
 }
 const FOODS = ['🍅', '🍇', '🍋', '🥕', '🍄', '🌰', '🍑', '🫑', '🥑', '🍆', '🌽', '🍍', '🥦', '🍎']
 const showInfo = ref(false)
@@ -83,21 +83,25 @@ function buildBoard() {
   bumpers = []
   floats = []
   const placed = []
+  const rows = [150, 236, 322]
   for (let i = 0; i < m.bumpers; i++) {
-    for (let t = 0; t < 120; t++) {
-      const r = rand(15, 24)
-      const x = rand(90 + r, W - 90 - r)
-      const y = rand(110 + r, 300)
-      if (placed.every((p) => Math.hypot(p.x - x, p.y - y) > p.r + r + 16)) {
+    for (let t = 0; t < 160; t++) {
+      const r = rand(15, 23)
+      const y = rows[i % rows.length] + rand(-22, 22)
+      const x = rand(70 + r, W - 70 - r)
+      if (placed.every((p) => Math.hypot(p.x - x, p.y - y) > p.r + r + 14)) {
         placed.push({ x, y, r })
-        bumpers.push({ x, y, r, icon: FOODS[i % FOODS.length], pts: r < 18 ? 50 : r < 21 ? 20 : 10, vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 3 ? 74 : m.move === 2 ? 54 : 34) : 0 })
+        bumpers.push({ x, y, r, icon: FOODS[i % FOODS.length], pts: r < 17 ? 50 : r < 20 ? 20 : 10, vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 3 ? 74 : m.move === 2 ? 54 : 34) : 0 })
         break
       }
     }
   }
+  // 两侧弹弓（经典弹珠台元素）：把冲向边路的球弹回场内，保命 + 5 分
+  bumpers.push({ x: W / 2 - 156, y: H - 126, r: 27, icon: '🧄', pts: 5, vx: 0, sling: true })
+  bumpers.push({ x: W / 2 + 156, y: H - 126, r: 27, icon: '🧅', pts: 5, vx: 0, sling: true })
   flippers = [
-    { px: W / 2 - 96, py: H - 58, len: 84 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
-    { px: W / 2 + 96, py: H - 58, len: 84 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
+    { px: W / 2 - 104, py: H - 58, len: 92 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
+    { px: W / 2 + 104, py: H - 58, len: 92 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
   ]
   score.value = 0
   balls.value = 3
@@ -191,7 +195,7 @@ function step(dt) {
       ball.vx -= 2 * dot * nx
       ball.vy -= 2 * dot * ny
       const sp = Math.hypot(ball.vx, ball.vy)
-      const boost = Math.max(sp, 300) * 1.06
+      const boost = Math.max(sp, 300) * (b.sling ? 1.35 : 1.06)
       const cur = Math.max(sp, 1)
       ball.vx = (ball.vx / cur) * boost
       ball.vy = (ball.vy / cur) * boost
@@ -357,6 +361,25 @@ function draw() {
     ctx.fillStyle = dark ? 'rgba(255,185,142,0.85)' : 'rgba(217,90,56,0.85)'
     ctx.font = '700 11px system-ui, sans-serif'
     ctx.fillText(String(b.pts), b.x, b.y + b.r + 13)
+  }
+  // 弹弓（三角）
+  for (const b of bumpers) {
+    if (!b.sling) continue
+    ctx.beginPath()
+    ctx.moveTo(b.x - b.r, b.y + b.r * 0.7)
+    ctx.lineTo(b.x + b.r, b.y + b.r * 0.7)
+    ctx.lineTo(b.x, b.y - b.r)
+    ctx.closePath()
+    ctx.fillStyle = dark ? 'rgba(224,112,74,0.85)' : '#e08a5a'
+    ctx.fill()
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.7)' : 'rgba(150,110,70,0.6)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.font = '18px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(b.icon, b.x, b.y + b.r * 0.25)
+    ctx.textBaseline = 'alphabetic'
   }
   // 挡板
   for (const fl of flippers) {
