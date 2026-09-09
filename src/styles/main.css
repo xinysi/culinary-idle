@@ -4366,3 +4366,43 @@ html[data-theme='dark'] .mg-shell .fh-info-box { background: rgba(44, 35, 28, 0.
 html[data-theme='dark'] .mg-shell .fh-info-row { background: rgba(66, 52, 40, 0.9); border-color: rgba(210, 170, 120, 0.28); }
 html[data-theme='dark'] .mg-shell .fh-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
 html[data-theme='dark'] .mg-shell .fh-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
+
+/* ── 切菜大师/打地鼠/摆盘/打砖块/接汤/传菜/方块/扫雷/滑冰 深色适配（2026-09-09）── */
+html[data-theme='dark'] .mg-shell .sk-mode, html[data-theme='dark'] .mg-shell .wk-mode, html[data-theme='dark'] .mg-shell .sl-mode, html[data-theme='dark'] .mg-shell .bk-mode, html[data-theme='dark'] .mg-shell .pp-mode, html[data-theme='dark'] .mg-shell .dn-mode, html[data-theme='dark'] .mg-shell .tt-mode, html[data-theme='dark'] .mg-shell .ms-mode, html[data-theme='dark'] .mg-shell .ic-mode,
+html[data-theme='dark'] .mg-shell .sk-chip, html[data-theme='dark'] .mg-shell .wk-chip, html[data-theme='dark'] .mg-shell .sl-chip, html[data-theme='dark'] .mg-shell .bk-chip, html[data-theme='dark'] .mg-shell .pp-chip, html[data-theme='dark'] .mg-shell .dn-chip, html[data-theme='dark'] .mg-shell .tt-chip, html[data-theme='dark'] .mg-shell .ms-chip, html[data-theme='dark'] .mg-shell .ic-chip { background: rgba(52, 40, 31, 0.85); border-color: rgba(210, 170, 120, 0.35); color: #d9c9b4; }
+html[data-theme='dark'] .mg-shell .sk-mode.on, html[data-theme='dark'] .mg-shell .wk-mode.on, html[data-theme='dark'] .mg-shell .sl-mode.on, html[data-theme='dark'] .mg-shell .bk-mode.on, html[data-theme='dark'] .mg-shell .pp-mode.on, html[data-theme='dark'] .mg-shell .dn-mode.on, html[data-theme='dark'] .mg-shell .tt-mode.on, html[data-theme='dark'] .mg-shell .ms-mode.on, html[data-theme='dark'] .mg-shell .ic-mode.on { background: rgba(224, 112, 74, 0.3); border-color: rgba(224, 112, 74, 0.8); color: #ffb98e; }
+html[data-theme='dark'] .mg-shell .sk-canvas, html[data-theme='dark'] .mg-shell .wk-canvas, html[data-theme='dark'] .mg-shell .bk-canvas, html[data-theme='dark'] .mg-shell .tt-canvas,
+html[data-theme='dark'] .mg-shell .sk-stage, html[data-theme='dark'] .mg-shell .wk-stage, html[data-theme='dark'] .mg-shell .sl-stage, html[data-theme='dark'] .mg-shell .bk-stage, html[data-theme='dark'] .mg-shell .pp-stage, html[data-theme='dark'] .mg-shell .dn-stage, html[data-theme='dark'] .mg-shell .tt-stage, html[data-theme='dark'] .mg-shell .ms-stage, html[data-theme='dark'] .mg-shell .ic-stage { border-color: rgba(210, 170, 120, 0.35); }
+html[data-theme='dark'] .mg-shell .sl-stage, html[data-theme='dark'] .mg-shell .pp-stage, html[data-theme='dark'] .mg-shell .dn-stage, html[data-theme='dark'] .mg-shell .ms-stage { background: rgba(38, 29, 22, 0.88); }
+html[data-theme='dark'] .mg-shell .ic-stage { background: linear-gradient(135deg, rgba(38, 58, 74, 0.82), rgba(26, 42, 56, 0.78)); }
+html[data-theme='dark'] .mg-shell .sl-tile, html[data-theme='dark'] .mg-shell .pp-cell, html[data-theme='dark'] .mg-shell .ms-cell, html[data-theme='dark'] .mg-shell .dn-cust,
+html[data-theme='dark'] .mg-shell .dn-order, html[data-theme='dark'] .mg-shell .dn-slot, html[data-theme='dark'] .mg-shell .sl-preview-cell { background: rgba(64, 50, 38, 0.92); border-color: rgba(210, 170, 120, 0.25); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .ms-cell.open { background: rgba(48, 38, 30, 0.9); border-color: rgba(210, 170, 120, 0.18); }
+html[data-theme='dark'] .mg-shell .ms-cell.flag { background: rgba(110, 60, 60, 0.85); }
+html[data-theme='dark'] .mg-shell .ms-cell.boom { background: rgba(180, 70, 60, 0.9); }
+html[data-theme='dark'] .mg-shell .ms-cell.mine { background: rgba(140, 70, 60, 0.7); }
+html[data-theme='dark'] .mg-shell .ms-n1 { color: #7fb3e8; }
+html[data-theme='dark'] .mg-shell .ms-n2 { color: #8cd899; }
+html[data-theme='dark'] .mg-shell .ms-n3 { color: #ff8a80; }
+html[data-theme='dark'] .mg-shell .ms-n4 { color: #b79ae8; }
+html[data-theme='dark'] .mg-shell .ms-n5 { color: #e8c34a; }
+html[data-theme='dark'] .mg-shell .ms-n6 { color: #6fd0c8; }
+html[data-theme='dark'] .mg-shell .ms-n7 { color: #e0a88a; }
+html[data-theme='dark'] .mg-shell .ms-n8 { color: #d9b48f; }
+html[data-theme='dark'] .mg-shell .dn-slot.empty { background: rgba(52, 41, 32, 0.5); }
+html[data-theme='dark'] .mg-shell .dn-counter { background: rgba(38, 29, 22, 0.6); border-color: rgba(210, 170, 120, 0.3); }
+html[data-theme='dark'] .mg-shell .sl-preview-grid { background: rgba(38, 29, 22, 0.8); }
+html[data-theme='dark'] .mg-shell .sl-num, html[data-theme='dark'] .mg-shell .sl-preview-num { color: #c9ab84; }
+html[data-theme='dark'] .mg-shell .pp-hub { background: #6e5c4a; }
+html[data-theme='dark'] .mg-shell .pp-cell.pp-p0 { --pair-bg: rgba(70, 52, 34, 0.94); --pair-border: rgba(224, 112, 74, 0.65); --pair-flow-bg: rgba(190, 120, 60, 0.95); --pair-pipe: #e8a35f; }
+html[data-theme='dark'] .mg-shell .pp-cell.pp-p1 { --pair-bg: rgba(40, 66, 42, 0.94); --pair-border: rgba(120, 200, 110, 0.6); --pair-flow-bg: rgba(90, 160, 80, 0.9); --pair-pipe: #8fd07f; }
+html[data-theme='dark'] .mg-shell .ic-tile { background: rgba(64, 50, 38, 0.5); border-color: rgba(210, 170, 120, 0.22); }
+html[data-theme='dark'] .mg-shell .ic-tile.rock { background: linear-gradient(135deg, #7d7d78, #55554f); border-color: #45453f; }
+html[data-theme='dark'] .mg-shell .ic-tile.hole { background: rgba(18, 30, 40, 0.75); border-color: rgba(12, 22, 30, 0.85); }
+html[data-theme='dark'] .mg-shell .ic-order { color: #ff9a7a; }
+html[data-theme='dark'] .mg-shell .ic-dir { background: linear-gradient(135deg, #5f93b5, #3d7089); }
+html[data-theme='dark'] .mg-shell .sk-info-box, html[data-theme='dark'] .mg-shell .wk-info-box, html[data-theme='dark'] .mg-shell .sl-info-box, html[data-theme='dark'] .mg-shell .bk-info-box, html[data-theme='dark'] .mg-shell .pp-info-box, html[data-theme='dark'] .mg-shell .dn-info-box, html[data-theme='dark'] .mg-shell .tt-info-box, html[data-theme='dark'] .mg-shell .ms-info-box, html[data-theme='dark'] .mg-shell .ic-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(210, 170, 120, 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .sk-info-row, html[data-theme='dark'] .mg-shell .wk-info-row, html[data-theme='dark'] .mg-shell .sl-info-row, html[data-theme='dark'] .mg-shell .bk-info-row, html[data-theme='dark'] .mg-shell .pp-info-row, html[data-theme='dark'] .mg-shell .dn-info-row, html[data-theme='dark'] .mg-shell .tt-info-row, html[data-theme='dark'] .mg-shell .ms-info-row, html[data-theme='dark'] .mg-shell .ic-info-row { background: rgba(66, 52, 40, 0.9); border-color: rgba(210, 170, 120, 0.28); }
+html[data-theme='dark'] .mg-shell .sk-info-rule, html[data-theme='dark'] .mg-shell .wk-info-rule, html[data-theme='dark'] .mg-shell .sl-info-rule, html[data-theme='dark'] .mg-shell .bk-info-rule, html[data-theme='dark'] .mg-shell .pp-info-rule, html[data-theme='dark'] .mg-shell .dn-info-rule, html[data-theme='dark'] .mg-shell .tt-info-rule, html[data-theme='dark'] .mg-shell .ms-info-rule, html[data-theme='dark'] .mg-shell .ic-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
+html[data-theme='dark'] .mg-shell .sk-info-close, html[data-theme='dark'] .mg-shell .wk-info-close, html[data-theme='dark'] .mg-shell .sl-info-close, html[data-theme='dark'] .mg-shell .bk-info-close, html[data-theme='dark'] .mg-shell .pp-info-close, html[data-theme='dark'] .mg-shell .dn-info-close, html[data-theme='dark'] .mg-shell .tt-info-close, html[data-theme='dark'] .mg-shell .ms-info-close, html[data-theme='dark'] .mg-shell .ic-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .sk-result, html[data-theme='dark'] .mg-shell .wk-result, html[data-theme='dark'] .mg-shell .sl-result, html[data-theme='dark'] .mg-shell .bk-result, html[data-theme='dark'] .mg-shell .pp-result, html[data-theme='dark'] .mg-shell .dn-result, html[data-theme='dark'] .mg-shell .tt-result, html[data-theme='dark'] .mg-shell .ms-result, html[data-theme='dark'] .mg-shell .ic-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(210, 170, 120, 0.4); color: #f2e6d7; }

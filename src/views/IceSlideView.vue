@@ -391,10 +391,40 @@ onUnmounted(() => {
 <style scoped>
 .ic-page { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 4px 0 12px; }
 .ic-topbar { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; align-items: center; }
-.ic-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
-.ic-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
-.ic-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
-.ic-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.ic-mode {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 252, 246, 0.8);
+  color: var(--muted);
+}
+.ic-mode.on {
+  border-style: solid;
+  border-color: var(--primary-strong);
+  background: rgba(217, 90, 56, 0.14);
+  color: var(--primary-strong);
+}
+.ic-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ic-info-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+  border: none;
+}
 
 .ic-stage { position: relative; border-radius: 16px; background: linear-gradient(135deg, rgba(190, 228, 245, 0.5), rgba(150, 205, 232, 0.42)); border: 1px solid rgba(120, 170, 200, 0.45); box-shadow: 0 10px 28px rgba(60, 100, 130, 0.2); overflow: hidden; }
 .ic-tile { position: absolute; border-radius: 8px; background: linear-gradient(135deg, rgba(240, 252, 255, 0.72), rgba(200, 234, 248, 0.55)); border: 1px solid rgba(255, 255, 255, 0.75); display: flex; align-items: center; justify-content: center; }
@@ -405,9 +435,31 @@ onUnmounted(() => {
 .ic-cherry { font-size: 20px; line-height: 1; }
 .ic-player { position: absolute; display: flex; align-items: center; justify-content: center; transition: left 0.18s cubic-bezier(0.22, 0.9, 0.35, 1), top 0.18s cubic-bezier(0.22, 0.9, 0.35, 1); filter: drop-shadow(0 3px 4px rgba(40, 70, 90, 0.35)); z-index: 3; pointer-events: none; }
 
-.ic-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
-.ic-keys { display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.ic-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.ic-hint {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  min-height: 18px;
+}
+.ic-keys {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ic-start {
+  padding: 12px 34px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #e8703f, #c9542e);
+  border: none;
+  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
+}
 .ic-pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 42px); gap: 6px; }
 .ic-dir { border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #7fb8d9, #4f8fb0); border: none; }
 .ic-up { grid-column: 2; grid-row: 1; }
@@ -427,13 +479,54 @@ onUnmounted(() => {
 @keyframes icSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
 .ic-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.ic-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.ic-info-box {
+  width: min(620px, 92vw);
+  max-height: 76vh;
+  overflow: auto;
+  background: rgba(255, 252, 246, 0.94);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+}
 .ic-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.ic-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.ic-info-close {
+  cursor: pointer;
+  border: none;
+  background: rgba(150, 110, 70, 0.15);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-weight: 700;
+  color: var(--text);
+}
 .ic-info-list { display: flex; flex-direction: column; gap: 8px; }
-.ic-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
-.ic-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
+.ic-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.ic-info-rule {
+  display: block;
+  border-color: rgba(88, 156, 75, 0.35);
+  background: rgba(114, 184, 100, 0.1);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
 .ic-info-rule b { color: var(--primary-strong); }
-.ic-info-name { flex: 0 0 82px; color: var(--primary-strong); }
-.ic-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
+.ic-info-name {
+  flex: 0 0 82px;
+  color: var(--primary-strong);
+}
+.ic-info-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 </style>

@@ -334,10 +334,40 @@ onUnmounted(() => { stopTimer() })
 <style scoped>
 .ms-page { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 4px 0 12px; }
 .ms-topbar { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; align-items: center; }
-.ms-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
-.ms-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
-.ms-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
-.ms-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.ms-mode {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 252, 246, 0.8);
+  color: var(--muted);
+}
+.ms-mode.on {
+  border-style: solid;
+  border-color: var(--primary-strong);
+  background: rgba(217, 90, 56, 0.14);
+  color: var(--primary-strong);
+}
+.ms-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ms-info-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+  border: none;
+}
 
 .ms-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); overflow: hidden; }
 .ms-cell { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(236, 222, 200, 0.95)); border: 1px solid rgba(150, 110, 70, 0.4); box-shadow: 0 2px 3px rgba(93, 64, 55, 0.16); cursor: pointer; font-weight: 800; user-select: none; }
@@ -355,9 +385,31 @@ onUnmounted(() => { stopTimer() })
 .ms-n7 { color: #8a4a2e; }
 .ms-n8 { color: #6b4a2a; }
 
-.ms-hint { font-size: 12.5px; font-weight: 700; color: var(--muted); text-align: center; min-height: 18px; }
-.ms-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.ms-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.ms-hint {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  min-height: 18px;
+}
+.ms-keys {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ms-start {
+  padding: 12px 34px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #e8703f, #c9542e);
+  border: none;
+  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
+}
 .ms-flag { padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
 .ms-flag.on { background: linear-gradient(135deg, #e8703f, #c9542e); }
 .ms-reset { padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
@@ -373,13 +425,54 @@ onUnmounted(() => { stopTimer() })
 @keyframes msSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
 .ms-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.ms-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.ms-info-box {
+  width: min(620px, 92vw);
+  max-height: 76vh;
+  overflow: auto;
+  background: rgba(255, 252, 246, 0.94);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+}
 .ms-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.ms-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.ms-info-close {
+  cursor: pointer;
+  border: none;
+  background: rgba(150, 110, 70, 0.15);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-weight: 700;
+  color: var(--text);
+}
 .ms-info-list { display: flex; flex-direction: column; gap: 8px; }
-.ms-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
-.ms-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
+.ms-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.ms-info-rule {
+  display: block;
+  border-color: rgba(88, 156, 75, 0.35);
+  background: rgba(114, 184, 100, 0.1);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
 .ms-info-rule b { color: var(--primary-strong); }
-.ms-info-name { flex: 0 0 82px; color: var(--primary-strong); }
-.ms-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
+.ms-info-name {
+  flex: 0 0 82px;
+  color: var(--primary-strong);
+}
+.ms-info-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 </style>

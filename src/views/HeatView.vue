@@ -161,10 +161,40 @@ const nextReward = computed(() => {
 <style scoped>
 .hz-page { display: flex; flex-direction: column; gap: 12px; }
 .hz-topbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.hz-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
-.hz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
-.hz-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid rgba(217, 138, 43, 0.3); font-size: 12px; font-weight: 700; }
-.hz-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.hz-mode {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 252, 246, 0.8);
+  color: var(--muted);
+}
+.hz-mode.on {
+  border-style: solid;
+  border-color: var(--primary-strong);
+  background: rgba(217, 90, 56, 0.14);
+  color: var(--primary-strong);
+}
+.hz-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+}
+.hz-info-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+  border: none;
+}
 .hz-box { background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .hz-box-head { display: flex; align-items: center; justify-content: space-between; }
 .hz-box-tag { font-weight: 800; font-size: 14px; }
@@ -188,12 +218,53 @@ const nextReward = computed(() => {
 .hz-dot.good { color: var(--warn-strong); }
 .hz-dot.miss { color: var(--bad-strong); }
 .hz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.hz-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.hz-info-box {
+  width: min(620px, 92vw);
+  max-height: 76vh;
+  overflow: auto;
+  background: rgba(255, 252, 246, 0.94);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+}
 .hz-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.hz-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.hz-info-close {
+  cursor: pointer;
+  border: none;
+  background: rgba(150, 110, 70, 0.15);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-weight: 700;
+  color: var(--text);
+}
 .hz-info-list { display: flex; flex-direction: column; gap: 8px; }
-.hz-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.28); border-radius: 10px; padding: 8px 12px; }
-.hz-info-rule { border-color: rgba(217, 138, 43, 0.45); background: rgba(234, 176, 74, 0.1); color: var(--text); font-size: 12.5px; }
-.hz-info-name { flex: 0 0 96px; color: var(--primary-strong); }
-.hz-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
+.hz-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.hz-info-rule {
+  border-color: rgba(88, 156, 75, 0.35);
+  background: rgba(114, 184, 100, 0.1);
+  color: var(--text);
+  font-size: 12.5px;
+  display: block;
+  line-height: 1.7;
+}
+.hz-info-name {
+  flex: 0 0 82px;
+  color: var(--primary-strong);
+}
+.hz-info-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 </style>

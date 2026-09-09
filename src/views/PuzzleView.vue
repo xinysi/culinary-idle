@@ -177,7 +177,14 @@ const cells = computed(() => tiles.value)
 <style scoped>
 .pz-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
 .pz-topbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
-.pz-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.pz-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+}
 .pz-chip.ok { background: rgba(87, 168, 97, 0.16); border-color: var(--good-strong); color: var(--good-strong); }
 .pz-duo { display: flex; gap: 22px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
 .pz-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }
@@ -187,8 +194,22 @@ const cells = computed(() => tiles.value)
 /* 切割块：背景切片（bgStyle 驱动） */
 .pz-cell { padding: 0; }
 .pz-cell:not(.empty) { background-color: rgba(255, 251, 244, 0.92); background-size: 100% 100%; }
-.pz-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
-.pz-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
+.pz-mode {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 252, 246, 0.8);
+  color: var(--muted);
+}
+.pz-mode.on {
+  border-style: solid;
+  border-color: var(--primary-strong);
+  background: rgba(217, 90, 56, 0.14);
+  color: var(--primary-strong);
+}
 .pz-label { font-size: 12px; font-weight: 700; color: var(--primary-strong); }
 .pz-board {
   width: 450px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
@@ -210,19 +231,75 @@ const cells = computed(() => tiles.value)
 .pz-goal-cell { background: rgba(255, 251, 244, 0.5); }
 .pz-cell.empty { background: transparent; border-color: transparent; cursor: default; }
 .pz-num { position: absolute; right: 6px; bottom: 4px; font-size: 13px; color: var(--muted); font-family: var(--mono); font-weight: 700; }
-.pz-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.pz-keys {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .pz-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
-.pz-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.pz-info-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+  border: none;
+}
 .pz-done { font-weight: 800; color: var(--good-strong); }
 .pz-fail { color: var(--bad-strong); }
 .pz-tip { color: var(--muted); font-size: 12px; }
 .pz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.pz-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.pz-info-box {
+  width: min(620px, 92vw);
+  max-height: 76vh;
+  overflow: auto;
+  background: rgba(255, 252, 246, 0.94);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+}
 .pz-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.pz-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.pz-info-close {
+  cursor: pointer;
+  border: none;
+  background: rgba(150, 110, 70, 0.15);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-weight: 700;
+  color: var(--text);
+}
 .pz-info-list { display: flex; flex-direction: column; gap: 8px; }
-.pz-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
-.pz-info-rule { border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; }
-.pz-info-name { flex: 0 0 96px; color: var(--primary-strong); }
-.pz-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
+.pz-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.pz-info-rule {
+  border-color: rgba(88, 156, 75, 0.35);
+  background: rgba(114, 184, 100, 0.1);
+  color: var(--text);
+  font-size: 12.5px;
+  display: block;
+  line-height: 1.7;
+}
+.pz-info-name {
+  flex: 0 0 82px;
+  color: var(--primary-strong);
+}
+.pz-info-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 </style>
