@@ -260,7 +260,7 @@ reset()
     </div>
 
     <div class="m3-keys">
-      <button class="m3-reset" @click="reset()">重新开始</button>
+      <button class="m3-reset" @click="reset()">🔄 重置本局</button>
     </div>
         <div v-if="over" class="m3-mask">
       <div class="m3-result">

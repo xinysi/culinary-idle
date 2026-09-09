@@ -260,7 +260,7 @@ function posStyle(t) {
       <button class="g2048-key" @click="move('up')">↑</button>
       <button class="g2048-key" @click="move('down')">↓</button>
       <button class="g2048-key" @click="move('right')">→</button>
-      <button class="g2048-reset" @click="reset()">重新开始</button>
+      <button class="g2048-reset" @click="reset()">🔄 重置本局</button>
     </div>
         <div v-if="over" class="g2048-mask">
       <div class="g2048-result">

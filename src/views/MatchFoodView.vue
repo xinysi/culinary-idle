@@ -137,7 +137,7 @@ resetDay()
     </div>
 
     <div class="mf-keys">
-      <button class="mf-reset" @click="resetDay()">重新洗牌</button>
+      <button class="mf-reset" @click="resetDay()">🔄 重置本局</button>
     </div>
         <div v-if="done || failed" class="mf-mask">
       <div class="mf-result">
