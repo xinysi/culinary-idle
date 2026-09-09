@@ -138,11 +138,13 @@ function buildBoard() {
     const visited = new Set([startIdx])
     const stops = []
     const genHoles = new Set()
+    const walk = []
     let cur = startIdx
     for (let step = 0; step < cfg.value.moves; step++) {
       const d = Math.floor(Math.random() * 4)
       const { end, path } = slidePath(cur, d, rockSet, cfg.value.crumble ? genHoles : null)
       if (end === cur) continue
+      walk.push(d)
       if (cfg.value.crumble) {
         genHoles.add(cur)
         for (const j of path) if (j !== end) genHoles.add(j)
@@ -151,7 +153,9 @@ function buildBoard() {
       if (!visited.has(end)) { visited.add(end); stops.push(end) }
     }
     if (stops.length < cfg.value.targets) continue
-    const tgt = stops.sort(() => Math.random() - 0.5).slice(0, cfg.value.targets)
+    const picked = stops.slice().sort(() => Math.random() - 0.5).slice(0, cfg.value.targets)
+    // 顺序模式：目标数组顺序必须是「生成时的访问顺序」，否则玩家按编号收会对不上
+    const tgt = cfg.value.ordered ? picked.slice().sort((a, b) => stops.indexOf(a) - stops.indexOf(b)) : picked
     rocks.value = [...rockSet]
     targets.value = tgt
     playerIdx.value = startIdx
