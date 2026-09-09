@@ -1,6 +1,7 @@
 <script setup>
-// 管道接汤（2026-09-09 新增，第 20 款）：旋转管道把汤汁从锅连到碗
-// 点击管道转 90° · 从锅出发 BFS 连通到碗即通关 · 连通后汤汁沿管道流动 · 十模式（棋盘/步数/限时）
+// 管道接汤（2026-09-09 新增，第 20 款；同日扩展玩法）：旋转管道把汤汁从锅连到碗
+// 点击管道转 90° · 从锅出发 BFS 连通到碗即通关 · 连通后汤汁沿管道流动
+// 十模式花样：4×4/5×5/6×6 × 步数收紧 × 单向阀（只能顺向流） × 双锅双碗（两对都要接通） × 限时
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -10,33 +11,35 @@ const ui = useUiStore()
 
 // 方向：0 上 / 1 右 / 2 下 / 3 左
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+const ICONS = { 0: '🍲', 1: '🍚', 2: '🥘', 3: '🥢' }
 
-// ── 十模式（棋盘 × 步数上限 × 限时）──
+// ── 十模式 ──
 const MODES = {
-  m1: { label: '模式1', n: 4, moves: 20, gold: 30, desc: '4×4 · 20 步内接通 · +30 币' },
-  m2: { label: '模式2', n: 4, moves: 16, gold: 40, desc: '4×4 · 16 步内接通 · +40 币' },
-  m3: { label: '模式3', n: 4, moves: 13, gold: 50, desc: '4×4 · 13 步内接通 · +50 币' },
-  m4: { label: '模式4', n: 5, moves: 30, gold: 65, desc: '5×5 · 30 步内接通 · +65 币' },
-  m5: { label: '模式5', n: 5, moves: 24, gold: 80, desc: '5×5 · 24 步内接通 · +80 币' },
-  m6: { label: '模式6', n: 5, moves: 20, gold: 95, desc: '5×5 · 20 步内接通 · +95 币' },
-  m7: { label: '模式7', n: 6, moves: 42, gold: 110, desc: '6×6 · 42 步内接通 · +110 币' },
-  m8: { label: '模式8', n: 6, moves: 34, gold: 125, desc: '6×6 · 34 步内接通 · +125 币' },
-  m9: { label: '模式9', n: 6, moves: 28, gold: 140, desc: '6×6 · 28 步内接通 · +140 币' },
-  m10: { label: '模式10', n: 6, moves: 24, timeLimit: 150, gold: 165, desc: '6×6 · 24 步 + 限时 150 秒 · +165 币' },
+  m1: { label: '模式1', n: 4, moves: 20, valves: 0, dual: false, gold: 30, desc: '4×4 · 20 步内接通 · +30 币' },
+  m2: { label: '模式2', n: 4, moves: 16, valves: 0, dual: false, gold: 40, desc: '4×4 · 16 步内接通 · +40 币' },
+  m3: { label: '模式3', n: 4, moves: 22, valves: 1, dual: false, gold: 55, desc: '4×4 · **单向阀**（汤汁只能顺着箭头流）· 22 步 · +55 币' },
+  m4: { label: '模式4', n: 5, moves: 30, valves: 0, dual: false, gold: 65, desc: '5×5 · 30 步内接通 · +65 币' },
+  m5: { label: '模式5', n: 5, moves: 34, valves: 2, dual: false, gold: 80, desc: '5×5 · 2 个单向阀 · 34 步 · +80 币' },
+  m6: { label: '模式6', n: 5, moves: 44, valves: 0, dual: true, gold: 95, desc: '5×5 · **双锅双碗**（两对都要接通）· 44 步 · +95 币' },
+  m7: { label: '模式7', n: 6, moves: 42, valves: 0, dual: false, gold: 110, desc: '6×6 · 42 步内接通 · +110 币' },
+  m8: { label: '模式8', n: 6, moves: 46, valves: 3, dual: false, gold: 125, desc: '6×6 · 3 个单向阀 · 46 步 · +125 币' },
+  m9: { label: '模式9', n: 6, moves: 60, valves: 0, dual: true, gold: 140, desc: '6×6 · 双锅双碗 · 60 步 · +140 币' },
+  m10: { label: '模式10', n: 6, moves: 60, valves: 2, dual: true, timeLimit: 180, gold: 165, desc: '6×6 · 双锅双碗 + 2 个单向阀 · 60 步 + 限时 180 秒 · +165 币' },
 }
 const showInfo = ref(false)
 
 // ── 响应式状态 ──
 const mode = ref('m1')
 const cells = ref([])
+const pairs = ref([]) // [{ src, sink }]
 const moves = ref(0)
 const elapsed = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
 const hint = ref('')
-const flowSet = ref(new Set()) // 已通汤的格子
-const flowOrder = ref(new Map()) // 格子 → 流动顺序
+const flowSet = ref(new Set())
+const flowOrder = ref(new Map())
 const best = computed(() => player.minigames?.pipe?.best ?? 0)
 const cfg = computed(() => MODES[mode.value])
 const movesText = computed(() => `${moves.value}/${cfg.value.moves}`)
@@ -48,7 +51,7 @@ let timerId = null
 let elapsedAccum = 0
 let lastTs = 0
 
-// ── 生成：随机自避路径（锅→碗）+ 干扰管件 ──
+// ── 工具 ──
 function neighbors(i, n) {
   const r = Math.floor(i / n)
   const c = i % n
@@ -59,19 +62,31 @@ function neighbors(i, n) {
   if (c < n - 1) out.push(i + 1)
   return out
 }
-function genPath(n) {
-  const target = n * n - 1
-  const visited = new Set([0])
-  const path = [0]
+function dirBetween(a, b, n) {
+  const ra = Math.floor(a / n)
+  const ca = a % n
+  const rb = Math.floor(b / n)
+  const cb = b % n
+  if (rb === ra - 1) return 0
+  if (cb === ca + 1) return 1
+  if (rb === ra + 1) return 2
+  if (cb === ca - 1) return 3
+  return -1
+}
+function neighborInDir(i, d, n) {
+  const r = Math.floor(i / n) + DIRS[d][1]
+  const c = (i % n) + DIRS[d][0]
+  if (r < 0 || c < 0 || r >= n || c >= n) return -1
+  return r * n + c
+}
+// 随机自避路径（from → to，避开 blocked）
+function genPath(n, from, to, blocked) {
+  const visited = new Set([from])
+  const path = [from]
   const dfs = (i) => {
-    if (i === target) return true
-    const cand = neighbors(i, n).filter((j) => !visited.has(j))
-    // 70% 概率优先朝右下（离目标更近），其余随机，路径更自然
-    cand.sort((a, b) => {
-      const da = (a % n) + Math.floor(a / n)
-      const db = (b % n) + Math.floor(b / n)
-      return Math.random() < 0.7 ? db - da : Math.random() - 0.5
-    })
+    if (i === to) return true
+    const cand = neighbors(i, n).filter((j) => !visited.has(j) && !blocked.has(j))
+    cand.sort(() => Math.random() - 0.5)
     for (const j of cand) {
       visited.add(j)
       path.push(j)
@@ -81,40 +96,128 @@ function genPath(n) {
     }
     return false
   }
-  dfs(0)
+  dfs(from)
   return path
 }
+
+function regionsExcept(n, blocked) {
+  const seen = new Set(blocked)
+  const regions = []
+  for (let i = 0; i < n * n; i++) {
+    if (seen.has(i)) continue
+    const reg = []
+    const q = [i]
+    seen.add(i)
+    while (q.length) {
+      const cur = q.shift()
+      reg.push(cur)
+      for (const j of neighbors(cur, n)) if (!seen.has(j)) { seen.add(j); q.push(j) }
+    }
+    regions.push(reg)
+  }
+  return regions
+}
+// 区域内距 start 最远的格子
+function farthestIn(n, cellSet, start) {
+  const seen = new Set([start])
+  const q = [[start, 0]]
+  let best = start
+  let bd = 0
+  while (q.length) {
+    const [cur, d] = q.shift()
+    if (d > bd) { bd = d; best = cur }
+    for (const j of neighbors(cur, n)) {
+      if (seen.has(j) || !cellSet.has(j)) continue
+      seen.add(j)
+      q.push([j, d + 1])
+    }
+  }
+  return best
+}
+
+// ── 生成 ──
 function buildBoard() {
   const n = cfg.value.n
   const total = n * n
-  const path = genPath(n)
-  const onPath = new Map()
-  path.forEach((idx, k) => onPath.set(idx, k))
+  let paths = []
+  let pairList = []
+  // 双对模式：A、B 两条路径都要生成成功，失败就换一条 A 重来（最多 60 次）
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const pathA = genPath(n, 0, total - 1, new Set())
+    if (pathA.length < 2) continue
+    if (!cfg.value.dual) {
+      paths = [pathA]
+      pairList = [{ src: 0, sink: total - 1 }]
+      break
+    }
+    const regs = regionsExcept(n, new Set(pathA)).sort((a, b) => b.length - a.length)
+    const reg = new Set(regs[0] || [])
+    if (reg.size < 4) continue
+    const seed = [...reg][Math.floor(Math.random() * reg.size)]
+    const e1 = farthestIn(n, reg, seed)
+    const e2 = farthestIn(n, reg, e1)
+    if (e1 === e2) continue
+    const pathB = genPath(n, e1, e2, new Set(pathA))
+    if (pathB.length > 1) {
+      paths = [pathA, pathB]
+      pairList = [{ src: 0, sink: total - 1 }, { src: e1, sink: e2 }]
+      break
+    }
+  }
+  if (!paths.length) {
+    // 兜底：单对
+    const pathA = genPath(n, 0, total - 1, new Set())
+    paths = [pathA]
+    pairList = [{ src: 0, sink: total - 1 }]
+  }
+  pairs.value = pairList
+  // 路径格 → 该格的正确接口 / 单向阀方向
+  const armsOf = new Map()
+  const valveOf = new Map()
+  for (const path of paths) {
+    for (let k = 0; k < path.length; k++) {
+      const idx = path[k]
+      const arms = []
+      if (k > 0) arms.push(dirBetween(idx, path[k - 1], n))
+      if (k < path.length - 1) arms.push(dirBetween(idx, path[k + 1], n))
+      armsOf.set(idx, arms)
+      // 单向阀：记录「从本格流向下一格」的方向
+      if (k < path.length - 1) valveOf.set(idx, dirBetween(idx, path[k + 1], n))
+    }
+  }
+  // 抽若干路径格（非锅碗）作为单向阀
+  const valveCand = []
+  for (const path of paths) {
+    for (let k = 1; k < path.length - 1; k++) {
+      const idx = path[k]
+      if (armsOf.get(idx)?.length === 2 && Math.abs(armsOf.get(idx)[0] - armsOf.get(idx)[1]) === 2) valveCand.push(idx)
+    }
+  }
+  valveCand.sort(() => Math.random() - 0.5)
+  const valveSet = new Set(valveCand.slice(0, cfg.value.valves))
+  // 组装
   const list = new Array(total)
   for (let i = 0; i < total; i++) {
     let arms
-    if (onPath.has(i)) {
-      const k = onPath.get(i)
-      arms = []
-      for (const [d, [dx, dy]] of DIRS.entries()) {
-        const r = Math.floor(i / n) + dy
-        const c = (i % n) + dx
-        if (r < 0 || c < 0 || r >= n || c >= n) continue
-        const j = r * n + c
-        if (onPath.has(j) && Math.abs(onPath.get(j) - k) === 1) arms.push(d)
-      }
+    if (armsOf.has(i)) {
+      arms = valveSet.has(i) ? [valveOf.get(i), (valveOf.get(i) + 2) % 4] : armsOf.get(i)
     } else {
-      // 干扰件：多为单头/直管，几乎不构成通路
+      // 干扰件：多为单头/直管
       const roll = Math.random()
       if (roll < 0.6) arms = [Math.floor(Math.random() * 4)]
       else if (roll < 0.85) arms = [0, 2]
       else arms = [0, 1]
     }
-    list[i] = { arms, rot: Math.floor(Math.random() * 4) }
+    const cell = { arms, rot: Math.floor(Math.random() * 4) }
+    if (valveSet.has(i)) cell.valve = valveOf.get(i)
+    const pIdx = pairList.findIndex((p) => p.src === i || p.sink === i)
+    if (pIdx >= 0) {
+      cell.pair = pIdx
+      cell.role = pairList[pIdx].src === i ? 'src' : 'sink'
+      // 锅碗的「正确朝向」= arms（已由路径决定）
+    }
+    list[i] = cell
   }
-  // 锅与碗：保证出口方向正确（锅朝外/碗朝内由路径决定，这里只固定为端点件）
-  list[0] = { arms: list[0].arms, rot: Math.floor(Math.random() * 4), src: true }
-  list[total - 1] = { arms: list[total - 1].arms, rot: Math.floor(Math.random() * 4), sink: true }
   return list
 }
 
@@ -122,24 +225,17 @@ function buildBoard() {
 function curArms(cell) {
   return cell.arms.map((a) => (a + cell.rot) % 4)
 }
-function neighborInDir(i, d) {
-  const n = cfg.value.n
-  const r = Math.floor(i / n)
-  const c = i % n
-  const nr = r + DIRS[d][1]
-  const nc = c + DIRS[d][0]
-  if (nr < 0 || nc < 0 || nr >= n || nc >= n) return -1
-  return nr * n + nc
-}
-// 从锅出发 BFS：返回 { ok, order }（order = 连通到各格的步数）
-function bfsFlow() {
+// 从某个源出发的连通（单向阀只允许沿阀向离开）
+function bfsFrom(src, n) {
   const list = cells.value
-  const seen = new Map([[0, 0]])
-  const q = [0]
+  const seen = new Map([[src, 0]])
+  const q = [src]
   while (q.length) {
     const i = q.shift()
-    for (const d of curArms(list[i])) {
-      const j = neighborInDir(i, d)
+    const cell = list[i]
+    const outs = cell.valve != null ? [cell.valve] : curArms(cell)
+    for (const d of outs) {
+      const j = neighborInDir(i, d, n)
       if (j < 0 || seen.has(j)) continue
       const opp = (d + 2) % 4
       if (!curArms(list[j]).includes(opp)) continue
@@ -147,7 +243,7 @@ function bfsFlow() {
       q.push(j)
     }
   }
-  return { ok: seen.has(list.length - 1), order: seen }
+  return seen
 }
 
 // ── 交互 ──
@@ -158,25 +254,38 @@ function rotate(i) {
   cells.value = list
   moves.value++
   beep(520 + (moves.value % 4) * 70, 0.04, 'triangle', 0.05)
-  const { ok, order } = bfsFlow()
-  if (ok) {
-    // 通汤！
-    flowOrder.value = order
-    const pathSet = new Set()
-    // 取从锅到碗的一条最短路（沿 order 回溯）
-    let cur = list.length - 1
-    while (cur !== 0) {
-      pathSet.add(cur)
+  // 检查所有对是否都接通
+  const n = cfg.value.n
+  const orders = []
+  const pathSets = []
+  let allOk = true
+  for (const p of pairs.value) {
+    const seen = bfsFrom(p.src, n)
+    if (!seen.has(p.sink)) { allOk = false; break }
+    // 回溯出最短路
+    const set = new Set()
+    let cur = p.sink
+    while (cur !== p.src) {
+      set.add(cur)
       let prev = -1
       for (const d of curArms(list[cur])) {
-        const j = neighborInDir(cur, d)
-        if (j >= 0 && order.has(j) && order.get(j) === order.get(cur) - 1) { prev = j; break }
+        const j = neighborInDir(cur, d, n)
+        if (j >= 0 && seen.has(j) && seen.get(j) === seen.get(cur) - 1) { prev = j; break }
       }
       if (prev < 0) break
       cur = prev
     }
-    pathSet.add(0)
-    flowSet.value = pathSet
+    set.add(p.src)
+    orders.push(seen)
+    pathSets.push(set)
+  }
+  if (allOk) {
+    const merged = new Map()
+    const mergedSet = new Set()
+    for (const set of pathSets) for (const idx of set) mergedSet.add(idx)
+    for (const o of orders) for (const [idx, v] of o) merged.set(idx, Math.min(merged.get(idx) ?? 99, v))
+    flowOrder.value = merged
+    flowSet.value = mergedSet
     pass()
     return
   }
@@ -262,7 +371,7 @@ function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
-  hint.value = '点击管道旋转，把锅和碗用管道连通'
+  hint.value = cfg.value.dual ? '两对锅碗都要接通（注意单向阀只能顺着箭头流）' : '点击管道旋转，把锅和碗用管道连通'
   beep(880, 0.08)
 }
 
@@ -286,7 +395,7 @@ onUnmounted(() => { stopTimer() })
         v-for="(cell, i) in cells"
         :key="i"
         class="pp-cell"
-        :class="{ src: i === 0, sink: i === cells.length - 1, flow: flowSet.has(i) }"
+        :class="{ src: cell.role === 'src', sink: cell.role === 'sink', flow: flowSet.has(i), valve: cell.valve != null, p2: cell.pair === 1 }"
         :style="{
           left: (i % cfg.n) * (cellSize + 8) + 'px',
           top: Math.floor(i / cfg.n) * (cellSize + 8) + 'px',
@@ -298,8 +407,8 @@ onUnmounted(() => { stopTimer() })
       >
         <div v-for="d in curArms(cell)" :key="d" class="pp-arm" :class="'pp-d' + d"></div>
         <div class="pp-hub">
-          <span v-if="i === 0" class="pp-icon">🍲</span>
-          <span v-else-if="i === cells.length - 1" class="pp-icon">🍚</span>
+          <span v-if="cell.role" class="pp-icon">{{ ICONS[(cell.pair || 0) * 2 + (cell.role === 'sink' ? 1 : 0)] }}</span>
+          <span v-else-if="cell.valve != null" class="pp-valve-arrow" :style="{ transform: `rotate(${cell.valve * 90}deg)` }">➤</span>
         </div>
       </div>
     </div>
@@ -333,11 +442,12 @@ onUnmounted(() => { stopTimer() })
         <div class="pp-info-head"><b>🥣 管道接汤 · 十模式说明</b><button class="pp-info-close" @click="showInfo = false">✕</button></div>
         <div class="pp-info-list">
           <div class="pp-info-row pp-info-rule">
-            玩法：<b>点击任意管道让它旋转 90°</b>，把左上角的锅（🍲）和右下角的碗（🍚）用管道连通。<br />
+            玩法：<b>点击任意管道让它旋转 90°</b>，把锅（🍲）和碗（🍚）用管道连通。<br />
             管道分直管、弯管、三通等形状；只有<b>两端接口都对准</b>才算连通，汤汁会从锅沿管道一路流到碗。<br />
+            <b>单向阀</b>（管道中心带 ➤ 箭头）：汤汁只能顺着箭头方向流过，逆向接不通，需要把阀门转对方向。<br />
+            <b>双锅双碗</b>（🍲🍚 + 🥘🥢）：两对都要接通才算过关。<br />
             每局有<b>步数上限</b>（每转一次算一步），用完还没接通就判负；模式 10 还有限时。<br />
-            开局由「随机合法路径 + 干扰管件」生成，<b>保证一定可解</b>。<br />
-            结算：在步数（与时限）内接通即达标发游戏币，并记录同模式的最少步数。
+            开局由「随机合法路径 + 干扰管件」生成，<b>保证一定可解</b>；接通即达标发游戏币，并记录同模式最少步数。
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="pp-info-row">
             <b class="pp-info-name">{{ m.label }}</b>
@@ -362,6 +472,10 @@ onUnmounted(() => { stopTimer() })
 .pp-cell:hover { box-shadow: 0 0 0 2px rgba(217, 90, 56, 0.35); }
 .pp-cell.src { background: rgba(255, 238, 214, 0.96); border-color: rgba(217, 90, 56, 0.5); }
 .pp-cell.sink { background: rgba(226, 242, 255, 0.96); border-color: rgba(79, 143, 217, 0.5); }
+.pp-cell.p2.src { border-color: rgba(154, 122, 224, 0.6); }
+.pp-cell.p2.sink { border-color: rgba(114, 184, 100, 0.6); }
+.pp-cell.valve .pp-hub { background: #8f7a62; }
+.pp-valve-arrow { color: #ffd65a; font-size: 14px; line-height: 1; }
 /* 管道手臂 */
 .pp-arm { position: absolute; background: #b9a08a; }
 .pp-d0 { top: 0; left: 50%; width: 14px; height: 50%; margin-left: -7px; }

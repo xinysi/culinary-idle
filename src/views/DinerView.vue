@@ -30,16 +30,16 @@ const IMGS = DISHES.map((d) => {
 
 // ── 十模式（座位 × 耐心 × 菜品数 × 出餐间隔 × 目标分）──
 const MODES = {
-  m1: { label: '模式1', dur: 45, seats: 3, patience: 14, pool: 4, cook: 2.2, slots: 4, target: 300, gold: 35, desc: '45 秒 · 目标 300 分 · 3 位客人 / 耐心 14 秒 / 4 种菜 · +35 币' },
-  m2: { label: '模式2', dur: 50, seats: 3, patience: 12, pool: 5, cook: 2.0, slots: 4, target: 380, gold: 45, desc: '50 秒 · 目标 380 分 · +45 币' },
-  m3: { label: '模式3', dur: 50, seats: 4, patience: 11, pool: 6, cook: 1.9, slots: 4, target: 460, gold: 55, desc: '50 秒 · 目标 460 分 · 4 位客人 · +55 币' },
-  m4: { label: '模式4', dur: 55, seats: 4, patience: 10, pool: 6, cook: 1.8, slots: 4, target: 560, gold: 65, desc: '55 秒 · 目标 560 分 · +65 币' },
-  m5: { label: '模式5', dur: 60, seats: 4, patience: 9, pool: 7, cook: 1.7, slots: 5, target: 660, gold: 75, desc: '60 秒 · 目标 660 分 · 耐心更短 · +75 币' },
-  m6: { label: '模式6', dur: 60, seats: 5, patience: 8.5, pool: 7, cook: 1.6, slots: 5, target: 780, gold: 90, desc: '60 秒 · 目标 780 分 · 5 位客人 · +90 币' },
-  m7: { label: '模式7', dur: 65, seats: 5, patience: 8, pool: 8, cook: 1.5, slots: 5, target: 900, gold: 100, desc: '65 秒 · 目标 900 分 · +100 币' },
-  m8: { label: '模式8', dur: 70, seats: 5, patience: 7, pool: 8, cook: 1.4, slots: 5, target: 1050, gold: 115, desc: '70 秒 · 目标 1050 分 · +115 币' },
-  m9: { label: '模式9', dur: 75, seats: 6, patience: 6.5, pool: 9, cook: 1.3, slots: 6, target: 1200, gold: 130, desc: '75 秒 · 目标 1200 分 · 6 位客人 · +130 币' },
-  m10: { label: '模式10', dur: 80, seats: 6, patience: 6, pool: 10, cook: 1.2, slots: 6, target: 1400, gold: 150, desc: '80 秒 · 目标 1400 分 · 满座高压后厨 · +150 币' },
+  m1: { label: '模式1', dur: 45, seats: 3, patience: 16, pool: 4, cook: 1.8, slots: 4, target: 240, gold: 35, desc: '45 秒 · 目标 240 分 · 3 位客人 / 耐心 16 秒 / 4 种菜 · +35 币' },
+  m2: { label: '模式2', dur: 50, seats: 3, patience: 14, pool: 5, cook: 1.7, slots: 4, target: 290, gold: 45, desc: '50 秒 · 目标 290 分 · +45 币' },
+  m3: { label: '模式3', dur: 50, seats: 4, patience: 13, pool: 6, cook: 1.6, slots: 4, target: 310, gold: 55, desc: '50 秒 · 目标 310 分 · 4 位客人 · +55 币' },
+  m4: { label: '模式4', dur: 55, seats: 4, patience: 12, pool: 6, cook: 1.5, slots: 4, target: 370, gold: 65, desc: '55 秒 · 目标 370 分 · +65 币' },
+  m5: { label: '模式5', dur: 60, seats: 4, patience: 11, pool: 7, cook: 1.5, slots: 5, target: 460, gold: 75, desc: '60 秒 · 目标 460 分 · 耐心更短 · +75 币' },
+  m6: { label: '模式6', dur: 60, seats: 5, patience: 10, pool: 7, cook: 1.4, slots: 5, target: 510, gold: 90, desc: '60 秒 · 目标 510 分 · 5 位客人 · +90 币' },
+  m7: { label: '模式7', dur: 65, seats: 5, patience: 9, pool: 8, cook: 1.3, slots: 5, target: 620, gold: 100, desc: '65 秒 · 目标 620 分 · +100 币' },
+  m8: { label: '模式8', dur: 70, seats: 5, patience: 8, pool: 8, cook: 1.3, slots: 5, target: 735, gold: 115, desc: '70 秒 · 目标 735 分 · +115 币' },
+  m9: { label: '模式9', dur: 75, seats: 6, patience: 7.5, pool: 9, cook: 1.2, slots: 6, target: 860, gold: 130, desc: '75 秒 · 目标 860 分 · 6 位客人 · +130 币' },
+  m10: { label: '模式10', dur: 80, seats: 6, patience: 7, pool: 10, cook: 1.2, slots: 6, target: 960, gold: 150, desc: '80 秒 · 目标 960 分 · 满座高压后厨 · +150 币' },
 }
 const showInfo = ref(false)
 
@@ -119,13 +119,17 @@ function addCustomer() {
   }]
 }
 function addDish() {
-  const m = cfg.value
-  if (slots.value.length >= m.slots) return
+  // 找空位补菜（关键：不能因为「数组已满」就 return——空槽是 null，必须补进去，
+  // 否则客人永远等不到自己的菜）
+  const idx = slots.value.indexOf(null)
+  if (idx < 0) return
   // 优先补上「有客人在等但传菜台没有」的菜
   const onCounter = new Set(slots.value.filter(Boolean))
   const need = customers.value.find((c) => !onCounter.has(c.dish))
   const dish = need ? need.dish : pickDish()
-  slots.value = [...slots.value, dish]
+  const ns = slots.value.slice()
+  ns[idx] = dish
+  slots.value = ns
 }
 function pick(i) {
   if (!started.value || over.value) return
@@ -219,7 +223,7 @@ function reset() {
   stopLoop()
   const m = cfg.value
   customers.value = []
-  slots.value = []
+  slots.value = new Array(m.slots).fill(null)
   sel.value = -1
   score.value = 0
   combo.value = 0
@@ -327,7 +331,6 @@ onUnmounted(() => { stopLoop() })
             <img v-if="d" :src="imgOf(d)" alt="" @error="$event.target.style.display = 'none'" />
             <span v-else class="dn-slot-empty">空</span>
           </div>
-          <div v-for="k in Math.max(0, cfg.slots - slots.length)" :key="'s' + k" class="dn-slot empty"><span class="dn-slot-empty">空</span></div>
         </div>
       </div>
     </div>
