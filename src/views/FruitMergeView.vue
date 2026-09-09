@@ -528,7 +528,7 @@ reset()
 
     <div class="fm-keys">
       <button v-if="!started" class="fm-start" @click="startGame()">▶ 开始游戏</button>
-      <button v-else class="fm-reset" @click="reset()">🔄 重新开始</button>
+      <button v-else class="fm-reset" @click="reset()">🔄 重置本局</button>
     </div>
     <div v-if="wonRef" class="fm-done ok">🎉 达标通关！+{{ MODES[mode].gold }} 游戏币</div>
     <div v-else-if="overRef" class="fm-done">💦 溢出红线！本局 {{ scoreRef }} 分{{ MODES[mode].target ? '（未达标）' : '' }}</div>

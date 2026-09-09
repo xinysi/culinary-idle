@@ -351,7 +351,7 @@ reset()
     </div>
 
     <div class="m10-keys">
-      <button class="m10-reset" @click="reset()">🔁 重置本局</button>
+      <button class="m10-reset" @click="reset()">🔄 重置本局</button>
       <button class="m10-hint" :disabled="hintN <= 0 || won || lost" @click="useHint()">💡 提示 ×{{ hintN }}</button>
       <button class="m10-shuffle" :disabled="reshuffleN <= 0 || won || lost" @click="reshuffle()">🔀 重排 ×{{ reshuffleN }}</button>
     </div>

@@ -156,7 +156,7 @@ const cells = computed(() => tiles.value)
     </div>
 
     <div class="pz-keys">
-      <button class="pz-reset" @click="resetDay()">🔀 重新打乱</button>
+      <button class="pz-reset" @click="resetDay()">🔄 重置本局</button>
     </div>
         <div v-if="won || failed" class="pz-mask">
       <div class="pz-result">
