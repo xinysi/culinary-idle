@@ -113,27 +113,6 @@ function buildBoard() {
     { px: W / 2 - 112, py: H - 58, len: 100 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
     { px: W / 2 + 112, py: H - 58, len: 100 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
   ]
-  // 顶部通道横带
-  ctx.fillStyle = dark ? 'rgba(210,170,120,0.10)' : 'rgba(150,110,70,0.10)'
-  ctx.fillRect(24, 40, W - 48, 26)
-  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.3)' : 'rgba(150,110,70,0.3)'
-  ctx.lineWidth = 1.5
-  ctx.setLineDash([6, 6])
-  ctx.beginPath()
-  ctx.moveTo(24, 66)
-  ctx.lineTo(W - 24, 66)
-  ctx.stroke()
-  ctx.setLineDash([])
-  // 掉落靶
-  for (const d of drops) {
-    if (!d.alive) continue
-    arcTo(ctx, d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 5)
-    ctx.fillStyle = dark ? 'rgba(224,138,90,0.9)' : '#e8a878'
-    ctx.fill()
-    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.8)' : 'rgba(150,110,70,0.6)'
-    ctx.lineWidth = 2
-    ctx.stroke()
-  }
   // 回球导轨：从侧壁斜下延伸到挡板根部（边路的球会滑到挡板上，而不是直接漏掉）
   guides = [
     { x1: 26, y1: H - 210, x2: W / 2 - 116, y2: H - 62 },
@@ -459,6 +438,27 @@ function draw() {
     ctx.fillStyle = dark ? 'rgba(255,185,142,0.85)' : 'rgba(217,90,56,0.85)'
     ctx.font = '700 11px system-ui, sans-serif'
     ctx.fillText(String(b.pts), b.x, b.y + b.r + 13)
+  }
+  // 顶部通道横带
+  ctx.fillStyle = dark ? 'rgba(210,170,120,0.10)' : 'rgba(150,110,70,0.10)'
+  ctx.fillRect(24, 40, W - 48, 26)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.3)' : 'rgba(150,110,70,0.3)'
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([6, 6])
+  ctx.beginPath()
+  ctx.moveTo(24, 66)
+  ctx.lineTo(W - 24, 66)
+  ctx.stroke()
+  ctx.setLineDash([])
+  // 掉落靶
+  for (const d of drops) {
+    if (!d.alive) continue
+    arcTo(ctx, d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 5)
+    ctx.fillStyle = dark ? 'rgba(224,138,90,0.9)' : '#e8a878'
+    ctx.fill()
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.8)' : 'rgba(150,110,70,0.6)'
+    ctx.lineWidth = 2
+    ctx.stroke()
   }
   // 回球导轨
   for (const gd of guides) {
