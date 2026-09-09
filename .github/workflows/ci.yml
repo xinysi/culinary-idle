@@ -49,7 +49,10 @@ jobs:
       - name: Install & browser
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          # apt 镜像偶发 Hash Sum mismatch（2026-09-10 实测一次）→ 最多重试 3 次
+          npx playwright install --with-deps chromium ||
+            (echo '首次安装失败，15s 后重试…' && sleep 15 && npx playwright install --with-deps chromium) ||
+            (echo '二次失败，30s 后再试…' && sleep 30 && npx playwright install --with-deps chromium)
 
       - name: E2E (start dev server then run 9 tests)
         run: |
