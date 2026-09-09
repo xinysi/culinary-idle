@@ -4366,7 +4366,7 @@ html[data-theme='dark'] .mg-shell .fh-info-row { background: rgba(66, 52, 40, 0.
 html[data-theme='dark'] .mg-shell .fh-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
 html[data-theme='dark'] .mg-shell .fh-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
 
-/* ── 切菜大师/打地鼠/摆盘/打砖块/接汤/传菜/方块/扫雷/滑冰 深色适配（2026-09-09）── */
+/* ── 切菜大师/打地鼠/摆盘/接汤/传菜/方块/扫雷/滑冰 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .sk-mode, html[data-theme='dark'] .mg-shell .wk-mode, html[data-theme='dark'] .mg-shell .sl-mode, html[data-theme='dark'] .mg-shell .pp-mode, html[data-theme='dark'] .mg-shell .dn-mode, html[data-theme='dark'] .mg-shell .tt-mode, html[data-theme='dark'] .mg-shell .ms-mode, html[data-theme='dark'] .mg-shell .ic-mode,
 html[data-theme='dark'] .mg-shell .sk-chip, html[data-theme='dark'] .mg-shell .wk-chip, html[data-theme='dark'] .mg-shell .sl-chip, html[data-theme='dark'] .mg-shell .pp-chip, html[data-theme='dark'] .mg-shell .dn-chip, html[data-theme='dark'] .mg-shell .tt-chip, html[data-theme='dark'] .mg-shell .ms-chip, html[data-theme='dark'] .mg-shell .ic-chip { background: rgba(52, 40, 31, 0.85); border-color: rgba(210, 170, 120, 0.35); color: #d9c9b4; }
 html[data-theme='dark'] .mg-shell .sk-mode.on, html[data-theme='dark'] .mg-shell .wk-mode.on, html[data-theme='dark'] .mg-shell .sl-mode.on, html[data-theme='dark'] .mg-shell .pp-mode.on, html[data-theme='dark'] .mg-shell .dn-mode.on, html[data-theme='dark'] .mg-shell .tt-mode.on, html[data-theme='dark'] .mg-shell .ms-mode.on, html[data-theme='dark'] .mg-shell .ic-mode.on { background: rgba(224, 112, 74, 0.3); border-color: rgba(224, 112, 74, 0.8); color: #ffb98e; }
@@ -4409,7 +4409,7 @@ html[data-theme='dark'] .mg-shell .sk-result, html[data-theme='dark'] .mg-shell 
 /* ── 12 款老游戏结算卡深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .fm-result, html[data-theme='dark'] .mg-shell .tv-result, html[data-theme='dark'] .mg-shell .g2048-result, html[data-theme='dark'] .mg-shell .fs-result, html[data-theme='dark'] .mg-shell .pz-result, html[data-theme='dark'] .mg-shell .mf-result, html[data-theme='dark'] .mg-shell .mm-result, html[data-theme='dark'] .mg-shell .sn-result, html[data-theme='dark'] .mg-shell .pm-result, html[data-theme='dark'] .mg-shell .m3-result, html[data-theme='dark'] .mg-shell .fb-result, html[data-theme='dark'] .mg-shell .m10-result, html[data-theme='dark'] .mg-shell .gg-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(210, 170, 120, 0.4); color: #f2e6d7; }
 
-/* ── 汤圆冰壶/调味天平/夜市套圈 深色适配（2026-09-09）── */
+/* ── 汤圆冰壶 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .cu-mode, html[data-theme='dark'] .mg-shell .cu-chip { background: rgba(52, 40, 31, 0.85); border-color: rgba(210, 170, 120, 0.35); color: #d9c9b4; }
 html[data-theme='dark'] .mg-shell .cu-mode.on { background: rgba(224, 112, 74, 0.3); border-color: rgba(224, 112, 74, 0.8); color: #ffb98e; }
 html[data-theme='dark'] .mg-shell .cu-stage { background: rgba(38, 29, 22, 0.88); border-color: rgba(210, 170, 120, 0.35); }
@@ -4420,5 +4420,4 @@ html[data-theme='dark'] .mg-shell .cu-info-row { background: rgba(66, 52, 40, 0.
 html[data-theme='dark'] .mg-shell .cu-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
 html[data-theme='dark'] .mg-shell .cu-info-close { background: rgba(210, 170, 120, 0.18); color: #f2e6d7; }
 html[data-theme='dark'] .mg-shell .cu-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(210, 170, 120, 0.4); color: #f2e6d7; }
-/* ── 汤碗躲避/叠笼塔 深色适配（2026-09-10）── */
 
