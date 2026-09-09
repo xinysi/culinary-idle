@@ -133,7 +133,7 @@ function buildBoard() {
 }
 function spawnBall() {
   // 从右下角发射：沿右侧墙冲上去，撞顶部圆弧后落进机关区（经典弹珠台发球）
-  ball = { x: W / 2 - 190, y: 96, vx: 150 + rand(-30, 30), vy: 30 }
+  ball = { x: W - 47, y: H - 56, vx: -20, vy: -(1240 + (cfg.value.grav - 900) * 0.32) }
   respawnAt = 0
 }
 function startGame() {
@@ -196,6 +196,9 @@ function step(dt) {
   // 侧壁
   if (ball.x < 24 + R) { ball.x = 24 + R; ball.vx = Math.abs(ball.vx) * 0.92 }
   if (ball.x > W - 24 - R) { ball.x = W - 24 - R; ball.vx = -Math.abs(ball.vx) * 0.92 }
+  // 右侧发射道：道内左壁挡住球（球从道底冲到顶部后从左侧进入台面）
+  const laneX = W - 74
+  if (ball.x > laneX - R && ball.y > 210 && ball.x < laneX) { ball.x = laneX - R; ball.vx = Math.abs(ball.vx) * 0.8 }
   // 顶部墙
   if (ball.y < 40 + R) { ball.y = 40 + R; ball.vy = Math.abs(ball.vy) * 0.92 }
   // 机关碰撞
@@ -397,83 +400,113 @@ function arcTo(ctx2, x, y, w, h, r) {
 function draw() {
   if (!ctx) return
   const dark = document.documentElement.getAttribute('data-theme') === 'dark'
-  // 台面
-  const g = ctx.createLinearGradient(0, 0, 0, H)
-  if (dark) { g.addColorStop(0, '#2b1d16'); g.addColorStop(1, '#1a120d') } else { g.addColorStop(0, '#f3e2c8'); g.addColorStop(1, '#dfc39c') }
+  // ── 木质外框 ──
+  ctx.fillStyle = dark ? '#1b120c' : '#7a5230'
+  ctx.fillRect(0, 0, W, H)
+  const fx = 18, fy = 18, fw = W - 36, fh = H - 36
+  // ── 台面 ──
+  const g = ctx.createLinearGradient(0, fy, 0, fy + fh)
+  if (dark) { g.addColorStop(0, '#2c2118'); g.addColorStop(0.55, '#221a13'); g.addColorStop(1, '#17110d') } else { g.addColorStop(0, '#f9ecd4'); g.addColorStop(0.55, '#f0dbba'); g.addColorStop(1, '#e2c69c') }
+  ctx.save()
+  arcTo(ctx, fx, fy, fw, fh, 24)
   ctx.fillStyle = g
-  ctx.fillRect(0, 0, W, H)
-  // 玻璃反光
-  const sheen = ctx.createLinearGradient(0, 0, W, H)
-  sheen.addColorStop(0, dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.22)')
-  sheen.addColorStop(0.45, 'rgba(255,255,255,0)')
-  ctx.fillStyle = sheen
-  ctx.fillRect(0, 0, W, H)
-  // 侧壁
-  ctx.fillStyle = dark ? 'rgba(90,62,42,0.9)' : 'rgba(150,110,70,0.35)'
-  ctx.fillRect(0, 0, 24, H)
-  ctx.fillRect(W - 24, 0, 24, H)
-  // 顶部墙
-  ctx.fillStyle = dark ? 'rgba(90,62,42,0.9)' : 'rgba(150,110,70,0.35)'
-  ctx.fillRect(0, 0, W, 40)
-  // 落球口
-  ctx.fillStyle = dark ? 'rgba(0,0,0,0.5)' : 'rgba(90,60,30,0.25)'
-  ctx.fillRect(W / 2 - 70, H - 16, 140, 16)
-  // 机关
-  for (const b of bumpers) {
-    const bg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.35, 2, b.x, b.y, b.r)
-    bg.addColorStop(0, dark ? 'rgba(255,225,190,0.95)' : 'rgba(255,252,246,0.98)')
-    bg.addColorStop(1, b.pts >= 50 ? '#e8b04a' : b.pts >= 20 ? '#e08a5a' : '#c9a878')
+  ctx.fill()
+  ctx.clip()
+  // 厨房瓷砖纹
+  ctx.strokeStyle = dark ? 'rgba(255,255,255,0.028)' : 'rgba(150,110,70,0.10)'
+  ctx.lineWidth = 1
+  for (let i = 0; i < 30; i++) { ctx.beginPath(); ctx.moveTo(fx, fy + i * 18); ctx.lineTo(fx + fw, fy + i * 18); ctx.stroke() }
+  for (let i = 0; i < 42; i++) { ctx.beginPath(); ctx.moveTo(fx + i * 18, fy); ctx.lineTo(fx + i * 18, fy + fh); ctx.stroke() }
+  // 顶部球道区（半圆）
+  const arcC = { x: W / 2, y: 150 }
+  const arcR = 150
+  ctx.beginPath()
+  ctx.arc(arcC.x, arcC.y, arcR, Math.PI, 0)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.35)' : 'rgba(150,110,70,0.35)'
+  ctx.lineWidth = 3
+  ctx.stroke()
+  // 球道箭头（3 条）
+  for (const a of [-0.55, 0, 0.55]) {
+    const ax = arcC.x + Math.sin(a) * (arcR - 16)
+    const ay = arcC.y - Math.cos(a) * (arcR - 16)
+    ctx.save()
+    ctx.translate(ax, ay)
+    ctx.rotate(a)
     ctx.beginPath()
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
-    ctx.fillStyle = bg
+    ctx.moveTo(-7, 6); ctx.lineTo(0, -7); ctx.lineTo(7, 6)
+    ctx.closePath()
+    ctx.fillStyle = dark ? 'rgba(255,185,142,0.55)' : 'rgba(217,90,56,0.55)'
     ctx.fill()
-    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.7)' : 'rgba(150,110,70,0.6)'
-    ctx.lineWidth = 2
-    ctx.stroke()
-    ctx.font = `${Math.round(b.r * 1.05)}px system-ui, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(b.icon, b.x, b.y + 1)
-    ctx.textBaseline = 'alphabetic'
-    ctx.fillStyle = dark ? 'rgba(255,185,142,0.85)' : 'rgba(217,90,56,0.85)'
-    ctx.font = '700 11px system-ui, sans-serif'
-    ctx.fillText(String(b.pts), b.x, b.y + b.r + 13)
+    ctx.restore()
   }
-  // 顶部通道横带
-  ctx.fillStyle = dark ? 'rgba(210,170,120,0.10)' : 'rgba(150,110,70,0.10)'
-  ctx.fillRect(24, 40, W - 48, 26)
+  // 玻璃反光
+  const sheen = ctx.createLinearGradient(fx, fy, fx + fw * 0.7, fy + fh)
+  sheen.addColorStop(0, dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.30)')
+  sheen.addColorStop(0.35, 'rgba(255,255,255,0)')
+  ctx.fillStyle = sheen
+  ctx.fillRect(fx, fy, fw, fh)
+  ctx.restore()
+  // 台面内描边 + 内阴影
+  ctx.save()
+  arcTo(ctx, fx, fy, fw, fh, 24)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.45)' : 'rgba(120,80,40,0.45)'
+  ctx.lineWidth = 3
+  ctx.stroke()
+  ctx.clip()
+  ctx.shadowColor = dark ? 'rgba(0,0,0,0.55)' : 'rgba(90,60,30,0.30)'
+  ctx.shadowBlur = 22
+  ctx.lineWidth = 12
+  ctx.strokeStyle = 'rgba(0,0,0,0.01)'
+  arcTo(ctx, fx - 6, fy - 6, fw + 12, fh + 12, 28)
+  ctx.stroke()
+  ctx.restore()
+  // ── 右侧发射道 ──
+  const laneX = W - 74
+  ctx.beginPath()
+  ctx.moveTo(laneX, 210)
+  ctx.lineTo(laneX, H - 40)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.5)' : 'rgba(150,110,70,0.55)'
+  ctx.lineWidth = 5
+  ctx.lineCap = 'round'
+  ctx.stroke()
+  // ── 顶部通道横带 ──
+  ctx.fillStyle = dark ? 'rgba(210,170,120,0.10)' : 'rgba(150,110,70,0.12)'
+  ctx.fillRect(fx + 6, 40, fw - 12, 26)
   ctx.strokeStyle = dark ? 'rgba(210,170,120,0.3)' : 'rgba(150,110,70,0.3)'
   ctx.lineWidth = 1.5
   ctx.setLineDash([6, 6])
   ctx.beginPath()
-  ctx.moveTo(24, 66)
-  ctx.lineTo(W - 24, 66)
+  ctx.moveTo(fx + 6, 66)
+  ctx.lineTo(fx + fw - 6, 66)
   ctx.stroke()
   ctx.setLineDash([])
-  // 掉落靶
+  // ── 掉落靶（带框）──
   for (const d of drops) {
     if (!d.alive) continue
     arcTo(ctx, d.x - d.w / 2, d.y - d.h / 2, d.w, d.h, 5)
-    ctx.fillStyle = dark ? 'rgba(224,138,90,0.9)' : '#e8a878'
+    ctx.fillStyle = dark ? 'rgba(224,138,90,0.95)' : '#e8a878'
     ctx.fill()
-    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.8)' : 'rgba(150,110,70,0.6)'
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.9)' : 'rgba(150,110,70,0.7)'
     ctx.lineWidth = 2
     ctx.stroke()
+    arcTo(ctx, d.x - d.w / 2 + 4, d.y - d.h / 2 + 3, d.w - 8, d.h - 8, 3)
+    ctx.fillStyle = dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.35)'
+    ctx.fill()
   }
-  // 回球导轨
+  // ── 回球导轨（木条 + 高光）──
   for (const gd of guides) {
     ctx.beginPath()
     ctx.moveTo(gd.x1, gd.y1)
     ctx.lineTo(gd.x2, gd.y2)
-    ctx.strokeStyle = dark ? 'rgba(150,110,70,0.9)' : 'rgba(163,118,63,0.85)'
+    ctx.strokeStyle = dark ? 'rgba(150,110,70,0.95)' : 'rgba(163,118,63,0.9)'
     ctx.lineWidth = 12
     ctx.lineCap = 'round'
     ctx.stroke()
-    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.35)' : 'rgba(255,255,255,0.35)'
+    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.4)' : 'rgba(255,255,255,0.45)'
     ctx.lineWidth = 3
     ctx.stroke()
   }
-  // 弹弓（三角）
+  // ── 弹弓（三角 + 橡胶带）──
   for (const b of bumpers) {
     if (!b.sling) continue
     ctx.beginPath()
@@ -481,52 +514,102 @@ function draw() {
     ctx.lineTo(b.x + b.r, b.y + b.r * 0.7)
     ctx.lineTo(b.x, b.y - b.r)
     ctx.closePath()
-    ctx.fillStyle = dark ? 'rgba(224,112,74,0.85)' : '#e08a5a'
+    ctx.fillStyle = dark ? 'rgba(190,90,60,0.9)' : '#d9704a'
     ctx.fill()
-    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.7)' : 'rgba(150,110,70,0.6)'
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.75)' : 'rgba(120,60,30,0.55)'
     ctx.lineWidth = 2
+    ctx.stroke()
+    // 橡胶带
+    ctx.beginPath()
+    ctx.moveTo(b.x - b.r * 0.95, b.y + b.r * 0.62)
+    ctx.lineTo(b.x + b.r * 0.95, b.y + b.r * 0.62)
+    ctx.strokeStyle = dark ? 'rgba(255,230,200,0.85)' : 'rgba(255,255,255,0.9)'
+    ctx.lineWidth = 4
     ctx.stroke()
     ctx.font = '18px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(b.icon, b.x, b.y + b.r * 0.25)
+    ctx.fillText(b.icon, b.x, b.y + b.r * 0.22)
     ctx.textBaseline = 'alphabetic'
   }
-  // 挡板
+  // ── 食材机关（立体 + 光晕）──
+  for (const b of bumpers) {
+    if (b.sling) continue
+    const glow = ctx.createRadialGradient(b.x, b.y, b.r * 0.5, b.x, b.y, b.r * 1.9)
+    glow.addColorStop(0, b.pts >= 50 ? 'rgba(232,176,74,0.35)' : b.pts >= 20 ? 'rgba(224,138,90,0.30)' : 'rgba(201,168,120,0.25)')
+    glow.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.beginPath()
+    ctx.arc(b.x, b.y, b.r * 1.9, 0, Math.PI * 2)
+    ctx.fillStyle = glow
+    ctx.fill()
+    const bg = ctx.createRadialGradient(b.x - b.r * 0.35, b.y - b.r * 0.4, 2, b.x, b.y, b.r)
+    bg.addColorStop(0, dark ? 'rgba(255,240,220,1)' : 'rgba(255,255,255,1)')
+    bg.addColorStop(0.55, b.pts >= 50 ? '#f0c060' : b.pts >= 20 ? '#e8955f' : '#d2b184')
+    bg.addColorStop(1, b.pts >= 50 ? '#c08a24' : b.pts >= 20 ? '#b96a3c' : '#a3814f')
+    ctx.beginPath()
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
+    ctx.fillStyle = bg
+    ctx.fill()
+    ctx.strokeStyle = dark ? 'rgba(255,220,180,0.7)' : 'rgba(120,80,40,0.5)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.font = `${Math.round(b.r * 1.05)}px system-ui, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(b.icon, b.x, b.y + 1)
+    ctx.textBaseline = 'alphabetic'
+    ctx.fillStyle = dark ? 'rgba(255,200,160,0.95)' : 'rgba(200,80,50,0.9)'
+    ctx.font = '700 11px system-ui, sans-serif'
+    ctx.fillText(String(b.pts), b.x, b.y + b.r + 14)
+  }
+  // ── 挡板 ──
   for (const fl of flippers) {
     const tx = fl.px + Math.cos(fl.ang) * fl.len
     const ty = fl.py + Math.sin(fl.ang) * fl.len
     ctx.beginPath()
     ctx.moveTo(fl.px, fl.py)
     ctx.lineTo(tx, ty)
-    ctx.strokeStyle = dark ? '#e0704a' : '#d95a38'
-    ctx.lineWidth = 14
+    ctx.strokeStyle = dark ? 'rgba(90,40,20,0.6)' : 'rgba(120,60,30,0.35)'
+    ctx.lineWidth = 18
     ctx.lineCap = 'round'
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(fl.px, fl.py)
+    ctx.lineTo(tx, ty)
+    ctx.strokeStyle = dark ? '#e0704a' : '#d95a38'
+    ctx.lineWidth = 13
+    ctx.stroke()
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+    ctx.lineWidth = 3
     ctx.stroke()
     ctx.beginPath()
     ctx.arc(fl.px, fl.py, 6, 0, Math.PI * 2)
     ctx.fillStyle = dark ? '#8a6a4d' : '#a3763f'
     ctx.fill()
   }
-  // 弹珠
+  // ── 弹珠 ──
   if (ball) {
+    ctx.beginPath()
+    ctx.ellipse(ball.x, ball.y + 9, R * 0.9, R * 0.4, 0, 0, Math.PI * 2)
+    ctx.fillStyle = dark ? 'rgba(0,0,0,0.4)' : 'rgba(90,60,30,0.20)'
+    ctx.fill()
     const bg = ctx.createRadialGradient(ball.x - 4, ball.y - 5, 1, ball.x, ball.y, R)
     bg.addColorStop(0, '#ffffff')
-    bg.addColorStop(0.6, dark ? '#c9d2d8' : '#dfe6ea')
-    bg.addColorStop(1, dark ? '#6d7681' : '#98a4b0')
+    bg.addColorStop(0.55, dark ? '#cfd8de' : '#e4ebef')
+    bg.addColorStop(1, dark ? '#6d7681' : '#94a1ad')
     ctx.beginPath()
     ctx.arc(ball.x, ball.y, R, 0, Math.PI * 2)
     ctx.fillStyle = bg
     ctx.fill()
-    ctx.strokeStyle = 'rgba(90,110,120,0.6)'
+    ctx.strokeStyle = 'rgba(70,90,105,0.7)'
     ctx.lineWidth = 1.5
     ctx.stroke()
   }
-  // 飘字
+  // ── 飘字 ──
   for (const f of floats) {
     const a = Math.max(0, 1 - f.life / f.max)
     ctx.globalAlpha = a
-    ctx.fillStyle = dark ? '#8cd899' : '#4c9c4c'
+    ctx.fillStyle = f.good ? (dark ? '#8cd899' : '#3f8f3f') : (dark ? '#ffb9a8' : '#d95a38')
     ctx.font = '700 16px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(f.text, f.x, f.y)
