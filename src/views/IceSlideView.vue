@@ -14,15 +14,15 @@ const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 // ── 十模式 ──
 const MODES = {
   m1: { label: '模式1', n: 5, targets: 1, rocks: 0, moves: 12, timeLimit: 0, gold: 30, desc: '5×5 · 1 个目标 · 12 步内 · +30 币' },
-  m2: { label: '模式2', n: 5, targets: 2, rocks: 2, moves: 14, timeLimit: 0, gold: 40, desc: '5×5 · 2 个目标 + 2 块石头 · 14 步 · +40 币' },
-  m3: { label: '模式3', n: 6, targets: 2, rocks: 4, moves: 16, timeLimit: 0, gold: 55, desc: '6×6 · 2 个目标 · 16 步 · +55 币' },
-  m4: { label: '模式4', n: 6, targets: 3, rocks: 5, moves: 18, timeLimit: 0, gold: 70, desc: '6×6 · 3 个目标 · 18 步 · +70 币' },
-  m5: { label: '模式5', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 0, gold: 85, desc: '7×7 · 3 个目标 · 20 步 · +85 币' },
-  m6: { label: '模式6', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 90, gold: 100, desc: '7×7 · 3 个目标 · **限时 90 秒** · +100 币' },
-  m7: { label: '模式7', n: 7, targets: 3, rocks: 7, moves: 22, timeLimit: 0, ordered: true, gold: 115, desc: '7×7 · **顺序收集**（必须按 ①②③ 编号依次收）· 22 步 · +115 币' },
-  m8: { label: '模式8', n: 8, targets: 4, rocks: 11, moves: 24, timeLimit: 0, gold: 130, desc: '8×8 · 4 个目标 · 24 步 · +130 币' },
-  m9: { label: '模式9', n: 8, targets: 4, rocks: 11, moves: 26, timeLimit: 0, crumble: true, gold: 145, desc: '8×8 · 4 个目标 · **碎冰**（滑过的格子会碎，不能回头）· 26 步 · +145 币' },
-  m10: { label: '模式10', n: 9, targets: 5, rocks: 15, moves: 30, timeLimit: 150, crumble: true, ordered: true, gold: 165, desc: '9×9 · **碎冰 + 顺序收集 + 限时 150 秒** · 30 步 · +165 币' },
+  m2: { label: '模式2', n: 5, targets: 2, rocks: 2, moves: 14, timeLimit: 0, gold: 35, desc: '5×5 · 2 个目标 + 2 块石头 · 14 步 · +35 币' },
+  m3: { label: '模式3', n: 6, targets: 2, rocks: 4, moves: 16, timeLimit: 0, gold: 40, desc: '6×6 · 2 个目标 · 16 步 · +40 币' },
+  m4: { label: '模式4', n: 6, targets: 3, rocks: 5, moves: 18, timeLimit: 0, gold: 45, desc: '6×6 · 3 个目标 · 18 步 · +45 币' },
+  m5: { label: '模式5', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 0, gold: 50, desc: '7×7 · 3 个目标 · 20 步 · +50 币' },
+  m6: { label: '模式6', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 90, gold: 50, desc: '7×7 · 3 个目标 · **限时 90 秒** · +50 币' },
+  m7: { label: '模式7', n: 7, targets: 3, rocks: 7, moves: 22, timeLimit: 0, ordered: true, gold: 80, desc: '7×7 · **顺序收集**（必须按 ①②③ 编号依次收）· 22 步 · +80 币' },
+  m8: { label: '模式8', n: 8, targets: 4, rocks: 11, moves: 24, timeLimit: 0, gold: 80, desc: '8×8 · 4 个目标 · 24 步 · +80 币' },
+  m9: { label: '模式9', n: 8, targets: 4, rocks: 11, moves: 26, timeLimit: 0, crumble: true, gold: 85, desc: '8×8 · 4 个目标 · **碎冰**（滑过的格子会碎，不能回头）· 26 步 · +85 币' },
+  m10: { label: '模式10', n: 9, targets: 5, rocks: 15, moves: 30, timeLimit: 150, crumble: true, ordered: true, gold: 130, desc: '9×9 · **碎冰 + 顺序收集 + 限时 150 秒** · 30 步 · +130 币' },
 }
 const showInfo = ref(false)
 
