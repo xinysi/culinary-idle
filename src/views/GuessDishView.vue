@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, len: 2, hint: 1, lives: 5, decoy: 6, target: 350, gold: 45, desc: '40 秒 · 目标 350 分 · 2 字菜名 + 1 个提示字，5 条命 · +45 币' },
-  m2: { label: '模式2', dur: 45, len: 2, hint: 1, lives: 4, decoy: 8, target: 420, gold: 55, desc: '45 秒 · 目标 420 分 · 干扰字变多 · +55 币' },
-  m3: { label: '模式3', dur: 50, len: 3, hint: 1, lives: 4, decoy: 8, target: 480, gold: 60, desc: '50 秒 · 目标 480 分 · **3 字菜名** · +60 币' },
-  m4: { label: '模式4', dur: 55, len: 3, hint: 0, lives: 4, decoy: 10, target: 540, gold: 70, desc: '55 秒 · 目标 540 分 · 没有提示字了 · +70 币' },
-  m5: { label: '模式5', dur: 60, len: 4, hint: 1, lives: 4, decoy: 10, target: 600, gold: 80, desc: '60 秒 · 目标 600 分 · **4 字菜名** · +80 币' },
-  m6: { label: '模式6', dur: 65, len: 4, hint: 0, lives: 3, decoy: 12, target: 660, gold: 90, desc: '65 秒 · 目标 660 分 · 只剩 3 条命 · +90 币' },
-  m7: { label: '模式7', dur: 70, len: 5, hint: 1, lives: 3, decoy: 12, target: 720, gold: 100, desc: '70 秒 · 目标 720 分 · **5 字菜名** · +100 币' },
-  m8: { label: '模式8', dur: 80, len: 5, hint: 0, lives: 3, decoy: 14, target: 840, gold: 120, desc: '80 秒 · 目标 840 分 · 无提示 + 满干扰 · +120 币' },
-  m9: { label: '模式9', dur: 90, len: 6, hint: 0, lives: 3, decoy: 16, target: 960, gold: 140, desc: '90 秒 · 目标 960 分 · **6 字菜名** · +140 币' },
-  m10: { label: '模式10', dur: 100, len: 7, hint: 0, lives: 2, decoy: 18, target: 1080, gold: 160, desc: '100 秒 · 目标 1080 分 · 7 字长名 + 2 条命，硬核猜字 · +160 币' },
+  m1: { label: '模式1', dur: 40, len: 2, hint: 1, lives: 5, decoy: 6, target: 1000, gold: 45, desc: '40 秒 · 目标 1000 分 · 2 字菜名 + 1 个提示字，5 条命 · +45 币' },
+  m2: { label: '模式2', dur: 45, len: 2, hint: 1, lives: 4, decoy: 8, target: 975, gold: 55, desc: '45 秒 · 目标 975 分 · 干扰字变多 · +55 币' },
+  m3: { label: '模式3', dur: 50, len: 3, hint: 1, lives: 4, decoy: 8, target: 950, gold: 60, desc: '50 秒 · 目标 950 分 · **3 字菜名** · +60 币' },
+  m4: { label: '模式4', dur: 55, len: 3, hint: 0, lives: 4, decoy: 10, target: 875, gold: 70, desc: '55 秒 · 目标 875 分 · 没有提示字了 · +70 币' },
+  m5: { label: '模式5', dur: 60, len: 4, hint: 1, lives: 4, decoy: 10, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · **4 字菜名** · +80 币' },
+  m6: { label: '模式6', dur: 65, len: 4, hint: 0, lives: 3, decoy: 12, target: 650, gold: 90, desc: '65 秒 · 目标 650 分 · 只剩 3 条命 · +90 币' },
+  m7: { label: '模式7', dur: 70, len: 5, hint: 1, lives: 3, decoy: 12, target: 650, gold: 100, desc: '70 秒 · 目标 650 分 · **5 字菜名** · +100 币' },
+  m8: { label: '模式8', dur: 80, len: 5, hint: 0, lives: 3, decoy: 14, target: 725, gold: 120, desc: '80 秒 · 目标 725 分 · 无提示 + 满干扰 · +120 币' },
+  m9: { label: '模式9', dur: 90, len: 6, hint: 0, lives: 3, decoy: 16, target: 775, gold: 140, desc: '90 秒 · 目标 775 分 · **6 字菜名** · +140 币' },
+  m10: { label: '模式10', dur: 100, len: 7, hint: 0, lives: 2, decoy: 18, target: 800, gold: 160, desc: '100 秒 · 目标 800 分 · 7 字长名 + 2 条命，硬核猜字 · +160 币' },
 }
 const DISHES = [
   '蛋炒饭', '红烧肉', '佛跳墙', '狮子头', '小笼包', '担担面', '麻辣烫', '糖醋鱼', '宫保鸡丁', '麻婆豆腐',

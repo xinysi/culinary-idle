@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, n: 4, keep: 10, lives: 3, target: 350, gold: 45, desc: '40 秒 · 目标 350 分 · 4×4 小盘，留 10 个提示数 · +45 币' },
-  m2: { label: '模式2', dur: 45, n: 4, keep: 8, lives: 3, target: 420, gold: 55, desc: '45 秒 · 目标 420 分 · 4×4，提示更少 · +55 币' },
-  m3: { label: '模式3', dur: 50, n: 4, keep: 6, lives: 2, target: 480, gold: 60, desc: '50 秒 · 目标 480 分 · 4×4 高难 + 2 条命 · +60 币' },
-  m4: { label: '模式4', dur: 55, n: 6, keep: 16, lives: 3, target: 540, gold: 70, desc: '55 秒 · 目标 540 分 · **6×6 中盘** · +70 币' },
-  m5: { label: '模式5', dur: 60, n: 6, keep: 14, lives: 3, target: 600, gold: 80, desc: '60 秒 · 目标 600 分 · 6×6，提示更少 · +80 币' },
-  m6: { label: '模式6', dur: 65, n: 6, keep: 12, lives: 2, target: 660, gold: 90, desc: '65 秒 · 目标 660 分 · 6×6 高难 + 2 条命 · +90 币' },
-  m7: { label: '模式7', dur: 70, n: 9, keep: 34, lives: 3, target: 720, gold: 100, desc: '70 秒 · 目标 720 分 · **9×9 大盘**，留 34 个提示数 · +100 币' },
-  m8: { label: '模式8', dur: 80, n: 9, keep: 30, lives: 3, target: 840, gold: 120, desc: '80 秒 · 目标 840 分 · 9×9，提示减少 · +120 币' },
-  m9: { label: '模式9', dur: 90, n: 9, keep: 26, lives: 2, target: 960, gold: 140, desc: '90 秒 · 目标 960 分 · 9×9 高难 + 2 条命 · +140 币' },
-  m10: { label: '模式10', dur: 100, n: 9, keep: 22, lives: 1, target: 1080, gold: 160, desc: '100 秒 · 目标 1080 分 · 9×9 极难 + **只有 1 条命** · +160 币' },
+  m1: { label: '模式1', dur: 40, n: 4, keep: 10, lives: 3, target: 850, gold: 45, desc: '40 秒 · 目标 850 分 · 4×4 小盘，留 10 个提示数 · +45 币' },
+  m2: { label: '模式2', dur: 45, n: 4, keep: 8, lives: 3, target: 850, gold: 55, desc: '45 秒 · 目标 850 分 · 4×4，提示更少 · +55 币' },
+  m3: { label: '模式3', dur: 50, n: 4, keep: 6, lives: 2, target: 875, gold: 60, desc: '50 秒 · 目标 875 分 · 4×4 高难 + 2 条命 · +60 币' },
+  m4: { label: '模式4', dur: 55, n: 6, keep: 16, lives: 3, target: 825, gold: 70, desc: '55 秒 · 目标 825 分 · **6×6 中盘** · +70 币' },
+  m5: { label: '模式5', dur: 60, n: 6, keep: 14, lives: 3, target: 800, gold: 80, desc: '60 秒 · 目标 800 分 · 6×6，提示更少 · +80 币' },
+  m6: { label: '模式6', dur: 65, n: 6, keep: 12, lives: 2, target: 825, gold: 90, desc: '65 秒 · 目标 825 分 · 6×6 高难 + 2 条命 · +90 币' },
+  m7: { label: '模式7', dur: 70, n: 9, keep: 34, lives: 3, target: 875, gold: 100, desc: '70 秒 · 目标 875 分 · **9×9 大盘**，留 34 个提示数 · +100 币' },
+  m8: { label: '模式8', dur: 80, n: 9, keep: 30, lives: 3, target: 950, gold: 120, desc: '80 秒 · 目标 950 分 · 9×9，提示减少 · +120 币' },
+  m9: { label: '模式9', dur: 90, n: 9, keep: 26, lives: 2, target: 1100, gold: 140, desc: '90 秒 · 目标 1100 分 · 9×9 高难 + 2 条命 · +140 币' },
+  m10: { label: '模式10', dur: 100, n: 9, keep: 22, lives: 1, target: 1340, gold: 160, desc: '100 秒 · 目标 1340 分 · 9×9 极难 + **只有 1 条命** · +160 币' },
 }
 const showInfo = ref(false)
 const mode = ref('m1')
