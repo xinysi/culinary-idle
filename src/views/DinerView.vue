@@ -30,16 +30,16 @@ const IMGS = DISHES.map((d) => {
 
 // ── 十模式（座位 × 耐心 × 菜品数 × 出餐间隔 × 目标分）──
 const MODES = {
-  m1: { label: '模式1', dur: 45, seats: 3, patience: 16, pool: 4, cook: 1.8, slots: 4, target: 240, gold: 35, desc: '45 秒 · 目标 240 分 · 3 位客人 / 耐心 16 秒 / 4 种菜 · +35 币' },
-  m2: { label: '模式2', dur: 50, seats: 3, patience: 14, pool: 5, cook: 1.7, slots: 4, target: 290, gold: 45, desc: '50 秒 · 目标 290 分 · +45 币' },
-  m3: { label: '模式3', dur: 50, seats: 4, patience: 13, pool: 6, cook: 1.6, slots: 4, target: 310, gold: 55, desc: '50 秒 · 目标 310 分 · 4 位客人 · +55 币' },
-  m4: { label: '模式4', dur: 55, seats: 4, patience: 12, pool: 6, cook: 1.5, slots: 4, target: 370, gold: 65, desc: '55 秒 · 目标 370 分 · +65 币' },
-  m5: { label: '模式5', dur: 60, seats: 4, patience: 11, pool: 7, cook: 1.5, slots: 5, target: 460, gold: 75, desc: '60 秒 · 目标 460 分 · 耐心更短 · +75 币' },
-  m6: { label: '模式6', dur: 60, seats: 5, patience: 10, pool: 7, cook: 1.4, slots: 5, target: 510, gold: 90, desc: '60 秒 · 目标 510 分 · 5 位客人 · +90 币' },
-  m7: { label: '模式7', dur: 65, seats: 5, patience: 9, pool: 8, cook: 1.3, slots: 5, target: 620, gold: 100, desc: '65 秒 · 目标 620 分 · +100 币' },
-  m8: { label: '模式8', dur: 70, seats: 5, patience: 8, pool: 8, cook: 1.3, slots: 5, target: 735, gold: 115, desc: '70 秒 · 目标 735 分 · +115 币' },
-  m9: { label: '模式9', dur: 75, seats: 6, patience: 7.5, pool: 9, cook: 1.2, slots: 6, target: 860, gold: 130, desc: '75 秒 · 目标 860 分 · 6 位客人 · +130 币' },
-  m10: { label: '模式10', dur: 80, seats: 6, patience: 7, pool: 10, cook: 1.2, slots: 6, target: 960, gold: 150, desc: '80 秒 · 目标 960 分 · 满座高压后厨 · +150 币' },
+  m1: { label: '模式1', dur: 45, seats: 3, patience: 16, pool: 4, cook: 1.8, slots: 4, target: 240, gold: 50, desc: '45 秒 · 目标 240 分 · 3 位客人 / 耐心 16 秒 / 4 种菜 · +50 币' },
+  m2: { label: '模式2', dur: 50, seats: 3, patience: 14, pool: 5, cook: 1.7, slots: 4, target: 290, gold: 60, desc: '50 秒 · 目标 290 分 · +60 币' },
+  m3: { label: '模式3', dur: 50, seats: 4, patience: 13, pool: 6, cook: 1.6, slots: 4, target: 310, gold: 60, desc: '50 秒 · 目标 310 分 · 4 位客人 · +60 币' },
+  m4: { label: '模式4', dur: 55, seats: 4, patience: 12, pool: 6, cook: 1.5, slots: 4, target: 370, gold: 70, desc: '55 秒 · 目标 370 分 · +70 币' },
+  m5: { label: '模式5', dur: 60, seats: 4, patience: 11, pool: 7, cook: 1.5, slots: 5, target: 460, gold: 80, desc: '60 秒 · 目标 460 分 · 耐心更短 · +80 币' },
+  m6: { label: '模式6', dur: 60, seats: 5, patience: 10, pool: 7, cook: 1.4, slots: 5, target: 510, gold: 85, desc: '60 秒 · 目标 510 分 · 5 位客人 · +85 币' },
+  m7: { label: '模式7', dur: 65, seats: 5, patience: 9, pool: 8, cook: 1.3, slots: 5, target: 620, gold: 95, desc: '65 秒 · 目标 620 分 · +95 币' },
+  m8: { label: '模式8', dur: 70, seats: 5, patience: 8, pool: 8, cook: 1.3, slots: 5, target: 735, gold: 105, desc: '70 秒 · 目标 735 分 · +105 币' },
+  m9: { label: '模式9', dur: 75, seats: 6, patience: 7.5, pool: 9, cook: 1.2, slots: 6, target: 860, gold: 115, desc: '75 秒 · 目标 860 分 · 6 位客人 · +115 币' },
+  m10: { label: '模式10', dur: 80, seats: 6, patience: 7, pool: 10, cook: 1.2, slots: 6, target: 960, gold: 125, desc: '80 秒 · 目标 960 分 · 满座高压后厨 · +125 币' },
 }
 const showInfo = ref(false)
 

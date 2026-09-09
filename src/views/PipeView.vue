@@ -16,15 +16,15 @@ const ICONS = { 0: '🍲', 1: '🍚', 2: '🥘', 3: '🥣' }
 // ── 十模式 ──
 const MODES = {
   m1: { label: '模式1', n: 4, moves: 20, valves: 0, dual: false, gold: 30, desc: '4×4 · 20 步内接通 · +30 币' },
-  m2: { label: '模式2', n: 4, moves: 16, valves: 0, dual: false, gold: 40, desc: '4×4 · 16 步内接通 · +40 币' },
-  m3: { label: '模式3', n: 4, moves: 22, valves: 1, dual: false, gold: 55, desc: '4×4 · **单向阀**（汤汁只能顺着箭头流）· 22 步 · +55 币' },
-  m4: { label: '模式4', n: 5, moves: 30, valves: 0, dual: false, gold: 65, desc: '5×5 · 30 步内接通 · +65 币' },
-  m5: { label: '模式5', n: 5, moves: 34, valves: 2, dual: false, gold: 80, desc: '5×5 · 2 个单向阀 · 34 步 · +80 币' },
-  m6: { label: '模式6', n: 5, moves: 44, valves: 0, dual: true, gold: 95, desc: '5×5 · **双锅双碗**（🍲🍚 橙对 + 🥘🥣 绿对，同对同色）· 44 步 · +95 币' },
-  m7: { label: '模式7', n: 6, moves: 42, valves: 0, dual: false, gold: 110, desc: '6×6 · 42 步内接通 · +110 币' },
-  m8: { label: '模式8', n: 6, moves: 46, valves: 3, dual: false, gold: 125, desc: '6×6 · 3 个单向阀 · 46 步 · +125 币' },
-  m9: { label: '模式9', n: 6, moves: 60, valves: 0, dual: true, gold: 140, desc: '6×6 · 双锅双碗（两对颜色不同）· 60 步 · +140 币' },
-  m10: { label: '模式10', n: 6, moves: 60, valves: 2, dual: true, timeLimit: 180, gold: 165, desc: '6×6 · 双锅双碗 + 2 个单向阀 · 60 步 + 限时 180 秒 · +165 币' },
+  m2: { label: '模式2', n: 4, moves: 16, valves: 0, dual: false, gold: 30, desc: '4×4 · 16 步内接通 · +30 币' },
+  m3: { label: '模式3', n: 4, moves: 22, valves: 1, dual: false, gold: 40, desc: '4×4 · **单向阀**（汤汁只能顺着箭头流）· 22 步 · +40 币' },
+  m4: { label: '模式4', n: 5, moves: 30, valves: 0, dual: false, gold: 45, desc: '5×5 · 30 步内接通 · +45 币' },
+  m5: { label: '模式5', n: 5, moves: 34, valves: 2, dual: false, gold: 55, desc: '5×5 · 2 个单向阀 · 34 步 · +55 币' },
+  m6: { label: '模式6', n: 5, moves: 44, valves: 0, dual: true, gold: 80, desc: '5×5 · **双锅双碗**（🍲🍚 橙对 + 🥘🥣 绿对，同对同色）· 44 步 · +80 币' },
+  m7: { label: '模式7', n: 6, moves: 42, valves: 0, dual: false, gold: 80, desc: '6×6 · 42 步内接通 · +80 币' },
+  m8: { label: '模式8', n: 6, moves: 46, valves: 3, dual: false, gold: 80, desc: '6×6 · 3 个单向阀 · 46 步 · +80 币' },
+  m9: { label: '模式9', n: 6, moves: 60, valves: 0, dual: true, gold: 110, desc: '6×6 · 双锅双碗（两对颜色不同）· 60 步 · +110 币' },
+  m10: { label: '模式10', n: 6, moves: 60, valves: 2, dual: true, timeLimit: 180, gold: 140, desc: '6×6 · 双锅双碗 + 2 个单向阀 · 60 步 + 限时 180 秒 · +140 币' },
 }
 const showInfo = ref(false)
 

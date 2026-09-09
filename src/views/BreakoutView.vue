@@ -33,14 +33,14 @@ const ING = [
 const MODES = {
   m1: { label: '模式1', dur: 40, spd: 300, pw: 150, rows: 3, cols: 5, bh: 46, gap: 8, padX: 46, move: 0, balls: 1, power: 0, target: 100, gold: 45, desc: '40 秒 · 目标 100 分 · 标准玩法：慢球宽铲、3 行大砖 · +45 币' },
   m2: { label: '模式2', dur: 45, spd: 330, pw: 140, rows: 3, cols: 6, bh: 42, gap: 7, padX: 46, move: 0, balls: 1, power: 0.08, target: 120, gold: 55, desc: '45 秒 · 目标 120 分 · 道具登场（加宽铲 / 分身球 / 减速）· +55 币' },
-  m3: { label: '模式3', dur: 50, spd: 360, pw: 130, rows: 4, cols: 7, bh: 38, gap: 6, padX: 40, move: 1, balls: 1, power: 0.08, target: 145, gold: 65, desc: '50 秒 · 目标 145 分 · 顶行砖块左右移动 · +65 币' },
-  m4: { label: '模式4', dur: 55, spd: 390, pw: 122, rows: 4, cols: 8, bh: 36, gap: 6, padX: 36, move: 0, balls: 2, power: 0.1, target: 175, gold: 75, desc: '55 秒 · 目标 175 分 · 双球开局 · +75 币' },
-  m5: { label: '模式5', dur: 60, spd: 420, pw: 114, rows: 5, cols: 8, bh: 34, gap: 6, padX: 36, move: 1, balls: 2, power: 0.1, target: 245, gold: 85, desc: '60 秒 · 目标 245 分 · 双球 + 移动砖 · +85 币' },
-  m6: { label: '模式6', dur: 65, spd: 455, pw: 108, rows: 5, cols: 9, bh: 32, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 310, gold: 95, desc: '65 秒 · 目标 310 分 · 9 列小砖 · +95 币' },
-  m7: { label: '模式7', dur: 70, spd: 490, pw: 102, rows: 6, cols: 9, bh: 30, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 385, gold: 105, desc: '70 秒 · 目标 385 分 · 6 行砖 · +105 币' },
+  m3: { label: '模式3', dur: 50, spd: 360, pw: 130, rows: 4, cols: 7, bh: 38, gap: 6, padX: 40, move: 1, balls: 1, power: 0.08, target: 145, gold: 60, desc: '50 秒 · 目标 145 分 · 顶行砖块左右移动 · +60 币' },
+  m4: { label: '模式4', dur: 55, spd: 390, pw: 122, rows: 4, cols: 8, bh: 36, gap: 6, padX: 36, move: 0, balls: 2, power: 0.1, target: 175, gold: 70, desc: '55 秒 · 目标 175 分 · 双球开局 · +70 币' },
+  m5: { label: '模式5', dur: 60, spd: 420, pw: 114, rows: 5, cols: 8, bh: 34, gap: 6, padX: 36, move: 1, balls: 2, power: 0.1, target: 245, gold: 80, desc: '60 秒 · 目标 245 分 · 双球 + 移动砖 · +80 币' },
+  m6: { label: '模式6', dur: 65, spd: 455, pw: 108, rows: 5, cols: 9, bh: 32, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 310, gold: 90, desc: '65 秒 · 目标 310 分 · 9 列小砖 · +90 币' },
+  m7: { label: '模式7', dur: 70, spd: 490, pw: 102, rows: 6, cols: 9, bh: 30, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 385, gold: 100, desc: '70 秒 · 目标 385 分 · 6 行砖 · +100 币' },
   m8: { label: '模式8', dur: 80, spd: 525, pw: 96, rows: 6, cols: 10, bh: 28, gap: 5, padX: 26, move: 2, balls: 3, power: 0.15, target: 520, gold: 120, desc: '80 秒 · 目标 520 分 · 三球 + 两行移动砖 · +120 币' },
-  m9: { label: '模式9', dur: 90, spd: 560, pw: 90, rows: 7, cols: 10, bh: 26, gap: 5, padX: 26, move: 2, balls: 3, power: 0.15, target: 650, gold: 135, desc: '90 秒 · 目标 650 分 · 7 行细砖 · +135 币' },
-  m10: { label: '模式10', dur: 100, spd: 600, pw: 84, rows: 7, cols: 11, bh: 25, gap: 4, padX: 22, move: 2, balls: 3, power: 0.2, target: 815, gold: 150, desc: '100 秒 · 目标 815 分 · 满砖阵 + 三球 + 移动砖 + 高频道具 · +150 币' },
+  m9: { label: '模式9', dur: 90, spd: 560, pw: 90, rows: 7, cols: 10, bh: 26, gap: 5, padX: 26, move: 2, balls: 3, power: 0.15, target: 650, gold: 140, desc: '90 秒 · 目标 650 分 · 7 行细砖 · +140 币' },
+  m10: { label: '模式10', dur: 100, spd: 600, pw: 84, rows: 7, cols: 11, bh: 25, gap: 4, padX: 22, move: 2, balls: 3, power: 0.2, target: 815, gold: 160, desc: '100 秒 · 目标 815 分 · 满砖阵 + 三球 + 移动砖 + 高频道具 · +160 币' },
 }
 const showInfo = ref(false)
 

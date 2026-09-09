@@ -11,16 +11,16 @@ const ui = useUiStore()
 
 // ── 十模式 ──
 const MODES = {
-  m1: { label: '模式1', n: 6, mines: 5, timeLimit: 0, gold: 30, desc: '6×6 · 5 个烂食材 · 3 条命 · +30 币' },
+  m1: { label: '模式1', n: 6, mines: 5, timeLimit: 0, gold: 20, desc: '6×6 · 5 个烂食材 · 3 条命 · +20 币' },
   m2: { label: '模式2', n: 8, mines: 10, timeLimit: 0, gold: 40, desc: '8×8 · 10 个烂食材 · +40 币' },
   m3: { label: '模式3', n: 10, mines: 18, timeLimit: 0, gold: 55, desc: '10×10 · 18 个烂食材 · +55 币' },
-  m4: { label: '模式4', n: 10, mines: 18, timeLimit: 120, gold: 70, desc: '10×10 · 18 个烂食材 · **限时 120 秒** · +70 币' },
+  m4: { label: '模式4', n: 10, mines: 18, timeLimit: 120, gold: 55, desc: '10×10 · 18 个烂食材 · **限时 120 秒** · +55 币' },
   m5: { label: '模式5', n: 12, mines: 26, timeLimit: 0, gold: 85, desc: '12×12 · 26 个烂食材 · +85 币' },
-  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, lives: 1, gold: 100, desc: '12×12 · 26 个烂食材 · **只有 1 条命**（一踩即负）· +100 币' },
+  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, lives: 1, gold: 115, desc: '12×12 · 26 个烂食材 · **只有 1 条命**（一踩即负）· +115 币' },
   m7: { label: '模式7', n: 12, mines: 26, timeLimit: 0, cluster: true, gold: 115, desc: '12×12 · 26 个烂食材 · **簇状雷区**（成堆聚集，更难拆）· +115 币' },
-  m8: { label: '模式8', n: 14, mines: 36, timeLimit: 0, gold: 130, desc: '14×14 · 36 个烂食材 · +130 币' },
-  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, lives: 1, gold: 145, desc: '16×16 · 40 个烂食材 · **只有 1 条命** · +145 币' },
-  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, lives: 1, cluster: true, gold: 165, desc: '16×16 · 40 个烂食材 · **簇状 + 1 命 + 限时 240 秒** · +165 币' },
+  m8: { label: '模式8', n: 14, mines: 36, timeLimit: 0, gold: 140, desc: '14×14 · 36 个烂食材 · +140 币' },
+  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, lives: 1, gold: 205, desc: '16×16 · 40 个烂食材 · **只有 1 条命** · +205 币' },
+  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, lives: 1, cluster: true, gold: 205, desc: '16×16 · 40 个烂食材 · **簇状 + 1 命 + 限时 240 秒** · +205 币' },
 }
 const showInfo = ref(false)
 

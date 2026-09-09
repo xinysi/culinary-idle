@@ -50,16 +50,16 @@ for (const t of TYPES) {
 
 // ── 十模式 ──
 const MODES = {
-  m1: { label: '模式1', dur: 60, drop: 1.0, garbage: 0, cols: 10, target: 200, gold: 60, desc: '60 秒 · 目标 200 分 · 标准 10 列 · +60 币' },
-  m2: { label: '模式2', dur: 60, drop: 0.75, garbage: 0, cols: 10, target: 260, gold: 60, desc: '60 秒 · 目标 260 分 · 下落更快 · +60 币' },
-  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, cols: 8, target: 340, gold: 70, desc: '70 秒 · 目标 340 分 · **窄井 8 列**（更挤）· +70 币' },
-  m4: { label: '模式4', dur: 70, drop: 0.8, garbage: 0, cols: 6, target: 420, gold: 75, desc: '70 秒 · 目标 420 分 · **极窄井 6 列** · +75 币' },
-  m5: { label: '模式5', dur: 80, drop: 0.7, garbage: 0, cols: 10, noPreview: true, target: 520, gold: 85, desc: '80 秒 · 目标 520 分 · **无预览**（看不到下一个方块）· +85 币' },
-  m6: { label: '模式6', dur: 80, drop: 0.7, garbage: 0, cols: 10, blind: true, target: 640, gold: 90, desc: '80 秒 · 目标 640 分 · **盲盒**（当前方块闪烁难辨）· +90 币' },
-  m7: { label: '模式7', dur: 90, drop: 0.6, garbage: 3, cols: 10, target: 780, gold: 100, desc: '90 秒 · 目标 780 分 · 开局 3 行垃圾 · +100 币' },
-  m8: { label: '模式8', dur: 90, drop: 0.6, garbage: 0, cols: 10, riseSec: 12, target: 920, gold: 110, desc: '90 秒 · 目标 920 分 · **上升垃圾**（每 12 秒底部升一行）· +110 币' },
-  m9: { label: '模式9', dur: 100, drop: 0.5, garbage: 0, cols: 10, pool: ['S', 'Z', 'J', 'L', 'T'], target: 1100, gold: 120, desc: '100 秒 · 目标 1100 分 · **窄池**（只有 S/Z/J/L/T 五种难方块）· +120 币' },
-  m10: { label: '模式10', dur: 120, drop: 0.4, garbage: 0, cols: 8, riseSec: 10, target: 1400, gold: 150, desc: '120 秒 · 目标 1400 分 · **地狱**：窄井 + 每 10 秒上升垃圾 · +150 币' },
+  m1: { label: '模式1', dur: 60, drop: 1.0, garbage: 0, cols: 10, target: 200, gold: 70, desc: '60 秒 · 目标 200 分 · 标准 10 列 · +70 币' },
+  m2: { label: '模式2', dur: 60, drop: 0.75, garbage: 0, cols: 10, target: 260, gold: 70, desc: '60 秒 · 目标 260 分 · 下落更快 · +70 币' },
+  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, cols: 8, target: 340, gold: 85, desc: '70 秒 · 目标 340 分 · **窄井 8 列**（更挤）· +85 币' },
+  m4: { label: '模式4', dur: 70, drop: 0.8, garbage: 0, cols: 6, target: 420, gold: 90, desc: '70 秒 · 目标 420 分 · **极窄井 6 列** · +90 币' },
+  m5: { label: '模式5', dur: 80, drop: 0.7, garbage: 0, cols: 10, noPreview: true, target: 520, gold: 105, desc: '80 秒 · 目标 520 分 · **无预览**（看不到下一个方块）· +105 币' },
+  m6: { label: '模式6', dur: 80, drop: 0.7, garbage: 0, cols: 10, blind: true, target: 640, gold: 110, desc: '80 秒 · 目标 640 分 · **盲盒**（当前方块闪烁难辨）· +110 币' },
+  m7: { label: '模式7', dur: 90, drop: 0.6, garbage: 3, cols: 10, target: 780, gold: 130, desc: '90 秒 · 目标 780 分 · 开局 3 行垃圾 · +130 币' },
+  m8: { label: '模式8', dur: 90, drop: 0.6, garbage: 0, cols: 10, riseSec: 12, target: 920, gold: 135, desc: '90 秒 · 目标 920 分 · **上升垃圾**（每 12 秒底部升一行）· +135 币' },
+  m9: { label: '模式9', dur: 100, drop: 0.5, garbage: 0, cols: 10, pool: ['S', 'Z', 'J', 'L', 'T'], target: 1100, gold: 155, desc: '100 秒 · 目标 1100 分 · **窄池**（只有 S/Z/J/L/T 五种难方块）· +155 币' },
+  m10: { label: '模式10', dur: 120, drop: 0.4, garbage: 0, cols: 8, riseSec: 10, target: 1400, gold: 190, desc: '120 秒 · 目标 1400 分 · **地狱**：窄井 + 每 10 秒上升垃圾 · +190 币' },
 }
 const showInfo = ref(false)
 
