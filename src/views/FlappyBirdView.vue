@@ -245,7 +245,7 @@ reset()
 
     <div class="fb-keys">
       <button class="fb-reset" @click="reset()">🔄 重置本局</button>
-      <button class="fb-start" @click="flap()">{{ over ? '🏁 再来一局' : running ? '🦅 扑翼（空格/点击画面）' : '▶ 开始' }}</button>
+      <button class="fb-start" @click="flap()">{{ over ? '🏁 再来一局' : running ? '🦅 扑翼（空格/点击画面）' : '▶ 开始游戏' }}</button>
     </div>
         <div v-if="over" class="fb-mask">
       <div class="fb-result">

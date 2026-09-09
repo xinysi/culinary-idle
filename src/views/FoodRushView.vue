@@ -108,7 +108,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 
     <div class="fs-play">
       <button v-if="RUNNING" class="fs-finish" @click="finish">🏁 提前结算</button>
-      <button v-if="!RUNNING" class="fs-btn" @click="start">🍖 开始挑战（{{ MODES[mode].dur }} 秒）</button>
+      <button v-if="!RUNNING" class="fs-btn" @click="start">▶ 开始游戏（{{ MODES[mode].dur }} 秒）</button>
       <button v-else class="fs-btn fs-eat" :class="{ 'fs-rage': raging }" @click="eat">
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
       </button>
