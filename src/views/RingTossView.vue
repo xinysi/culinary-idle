@@ -159,14 +159,15 @@ function stopLoop() { if (loopId) clearInterval(loopId); loopId = null }
 function resolveThrow(f) {
   const m = cfg.value
   throws.value++
-  // 落点（含风偏）
-  let lx = f.tx + (m.wind ? wind * (f.dur / 0.9) * 0.9 : 0)
+  // 落点（含风偏；与绘制中的落点完全一致）
+  const windOff = m.wind ? wind : 0
+  let lx = f.tx + windOff
   let ly = f.ty
   let best = null
   let bestD = 1e9
   for (const t of targets) {
     const d = Math.hypot(t.x - lx, t.y - ly)
-    if (d < t.r * 0.8 && d < bestD) { best = t; bestD = d }
+    if (d < t.r * 0.85 && d < bestD) { best = t; bestD = d }
   }
   if (best) {
     hits.value++
@@ -316,28 +317,31 @@ function draw() {
   }
   // 目标（盘子 + 食材）
   for (const t of targets) {
+    // 盘子投影
     ctx.beginPath()
-    ctx.ellipse(t.x, t.y, t.r, t.r * 0.42, 0, 0, Math.PI * 2)
-    ctx.fillStyle = dark ? 'rgba(255,255,255,0.10)' : 'rgba(150,110,70,0.16)'
+    ctx.ellipse(t.x, t.y + t.r * 0.28, t.r * 0.95, t.r * 0.34, 0, 0, Math.PI * 2)
+    ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.14)'
     ctx.fill()
+    // 盘面
     ctx.beginPath()
     ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2)
-    ctx.fillStyle = dark ? 'rgba(255,252,246,0.14)' : 'rgba(255,252,246,0.72)'
+    ctx.fillStyle = dark ? 'rgba(255,252,246,0.20)' : 'rgba(255,252,246,0.88)'
     ctx.fill()
-    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.5)' : 'rgba(150,110,70,0.5)'
-    ctx.lineWidth = 2
+    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.65)' : 'rgba(150,110,70,0.55)'
+    ctx.lineWidth = 2.5
     ctx.stroke()
+    // 计分圈（实线细描边 = 判定范围）
     ctx.beginPath()
-    ctx.arc(t.x, t.y, t.r * 0.8, 0, Math.PI * 2)
-    ctx.strokeStyle = dark ? 'rgba(140, 216, 153, 0.4)' : 'rgba(76, 156, 76, 0.4)'
+    ctx.arc(t.x, t.y, t.r * 0.85, 0, Math.PI * 2)
+    ctx.strokeStyle = dark ? 'rgba(140,216,153,0.55)' : 'rgba(76,156,76,0.5)'
     ctx.lineWidth = 1.5
-    ctx.setLineDash([4, 4])
     ctx.stroke()
-    ctx.setLineDash([])
+    ctx.globalAlpha = dark ? 1 : 0.95
     ctx.font = `${Math.round(t.r * 1.05)}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(t.icon, t.x, t.y + 1)
+    ctx.globalAlpha = 1
     ctx.textBaseline = 'alphabetic'
     ctx.fillStyle = dark ? 'rgba(255,185,142,0.9)' : 'rgba(217,90,56,0.85)'
     ctx.font = '700 12px system-ui, sans-serif'
@@ -370,12 +374,13 @@ function draw() {
   // 飞行中的圈（带抛物线与缩放）
   if (fly) {
     const k = Math.min(1, fly.t / fly.dur)
-    const x = fly.sx + (fly.tx - fly.sx) * k
+    const wOff = cfg.value.wind ? wind * k : 0
+    const x = fly.sx + (fly.tx - fly.sx) * k + wOff
     const y = fly.sy + (fly.ty - fly.sy) * k - Math.sin(k * Math.PI) * 70
     const scale = 1 - 0.14 * k
     // 影子
     ctx.beginPath()
-    ctx.ellipse(fly.sx + (fly.tx - fly.sx) * k, fly.sy + (fly.ty - fly.sy) * k, 24 * scale, 10 * scale, 0, 0, Math.PI * 2)
+    ctx.ellipse(fly.sx + (fly.tx - fly.sx) * k + wOff, fly.sy + (fly.ty - fly.sy) * k, 24 * scale, 10 * scale, 0, 0, Math.PI * 2)
     ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.18)'
     ctx.fill()
     ctx.beginPath()
