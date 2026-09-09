@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 300, gold: 45, desc: '40 秒 · 目标 300 分 · 3 个食材机关，慢球好控制 · +45 币' },
-  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 340, gold: 55, desc: '45 秒 · 目标 340 分 · 4 个机关 · +55 币' },
-  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 375, gold: 60, desc: '50 秒 · 目标 375 分 · **机关会左右移动** · +60 币' },
-  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 415, gold: 70, desc: '55 秒 · 目标 415 分 · 6 个机关 · +70 币' },
-  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 450, gold: 80, desc: '60 秒 · 目标 450 分 · 球更快，挡板略短 · +80 币' },
-  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 490, gold: 90, desc: '65 秒 · 目标 490 分 · 8 个机关 · +90 币' },
-  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 525, gold: 100, desc: '70 秒 · 目标 525 分 · 机关移动更快 · +100 币' },
-  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 600, gold: 120, desc: '80 秒 · 目标 600 分 · 10 个机关 · +120 币' },
-  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 675, gold: 140, desc: '90 秒 · 目标 675 分 · 12 个机关，挡板更短 · +140 币' },
-  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 750, gold: 160, desc: '100 秒 · 目标 750 分 · 满台机关 + 最快球速 · +160 币' },
+  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 200, gold: 45, desc: '40 秒 · 目标 200 分 · 3 个食材机关，慢球好控制 · +45 币' },
+  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 225, gold: 55, desc: '45 秒 · 目标 225 分 · 4 个机关 · +55 币' },
+  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 250, gold: 60, desc: '50 秒 · 目标 250 分 · **机关会左右移动** · +60 币' },
+  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 275, gold: 70, desc: '55 秒 · 目标 275 分 · 6 个机关 · +70 币' },
+  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 300, gold: 80, desc: '60 秒 · 目标 300 分 · 球更快，挡板略短 · +80 币' },
+  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 325, gold: 90, desc: '65 秒 · 目标 325 分 · 8 个机关 · +90 币' },
+  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 350, gold: 100, desc: '70 秒 · 目标 350 分 · 机关移动更快 · +100 币' },
+  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 400, gold: 120, desc: '80 秒 · 目标 400 分 · 10 个机关 · +120 币' },
+  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 450, gold: 140, desc: '90 秒 · 目标 450 分 · 12 个机关，挡板更短 · +140 币' },
+  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 500, gold: 160, desc: '100 秒 · 目标 500 分 · 满台机关 + 最快球速 · +160 币' },
 }
 const FOODS = ['🍅', '🍇', '🍋', '🥕', '🍄', '🌰', '🍑', '🫑', '🥑', '🍆', '🌽', '🍍', '🥦', '🍎']
 const showInfo = ref(false)
@@ -133,7 +133,7 @@ function buildBoard() {
 }
 function spawnBall() {
   // 从右下角发射：沿右侧墙冲上去，撞顶部圆弧后落进机关区（经典弹珠台发球）
-  ball = { x: W - 47, y: H - 56, vx: -20, vy: -(1240 + (cfg.value.grav - 900) * 0.32) }
+  ball = { x: W / 2 + rand(-170, 170), y: 128, vx: rand(-130, 130), vy: 70 }
   respawnAt = 0
 }
 function startGame() {
