@@ -35,6 +35,7 @@ const IceSlideView = defineAsyncComponent(() => import('./IceSlideView.vue'))
 const CurlingView = defineAsyncComponent(() => import('./CurlingView.vue'))
 const BalanceView = defineAsyncComponent(() => import('./BalanceView.vue'))
 const RingTossView = defineAsyncComponent(() => import('./RingTossView.vue'))
+const PinballView = defineAsyncComponent(() => import('./PinballView.vue'))
 
 // 商店固定入口（2026-09-09：商店不参与分页，固定在入口行最左）
 const SHOP = { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView }
@@ -66,6 +67,7 @@ const GAMES = [
   { id: 'curling', emoji: '🍡', name: '汤圆冰壶', comp: CurlingView },
   { id: 'balance', emoji: '⚖️', name: '调味天平', comp: BalanceView },
   { id: 'ringtoss', emoji: '🎯', name: '夜市套圈', comp: RingTossView },
+  { id: 'pinball', emoji: '🎱', name: '弹珠台', comp: PinballView },
 ]
 
 // 游戏分类分页（每页 9 个；新游戏继续往后排，不会被挤到第二行）
