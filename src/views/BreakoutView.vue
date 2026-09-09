@@ -1,6 +1,6 @@
 <script setup>
-// 锅铲打砖块（2026-09-09 新增，第 19 款）：经典 Breakout——锅铲当挡板，食材当砖块
-// 挡板接球（打点角度影响反弹）· 砖块按食材稀有度给分/耐久 · 清空一波自动刷新下一波（球速微增）· 十模式
+// 锅铲打砖块（2026-09-09 新增，第 19 款；同日扩展玩法）：经典 Breakout——锅铲当挡板，食材当砖块
+// 十模式差异：砖块随模式变小变多、砖阵离锅铲更远；道具掉落 / 移动砖块 / 多球 逐步加入
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -11,35 +11,36 @@ const ui = useUiStore()
 
 // ── 画布 ──
 const W = 760
-const H = 520
+const H = 640
 const TAU = Math.PI * 2
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
 const rand = (a, b) => a + Math.random() * (b - a)
 
 // ── 砖块食材（分值 / 耐久 / 权重）──
 const ING = [
-  { id: 'apple', name: '苹果', score: 10, hp: 1, w: 22, size: 52 },
-  { id: 'carrot', name: '胡萝卜', score: 12, hp: 1, w: 20, size: 52 },
-  { id: 'tomato', name: '番茄', score: 15, hp: 1, w: 18, size: 52 },
-  { id: 'strawberry', name: '草莓', score: 18, hp: 1, w: 15, size: 50 },
-  { id: 'grape', name: '葡萄', score: 25, hp: 2, w: 10, size: 50 },
-  { id: 'banana', name: '香蕉', score: 30, hp: 2, w: 8, size: 50 },
-  { id: 'pineapple', name: '菠萝', score: 40, hp: 2, w: 5, size: 54 },
-  { id: 'mango', name: '芒果', score: 50, hp: 3, w: 2, size: 54 },
+  { id: 'apple', name: '苹果', score: 10, hp: 1, w: 22 },
+  { id: 'carrot', name: '胡萝卜', score: 12, hp: 1, w: 20 },
+  { id: 'tomato', name: '番茄', score: 15, hp: 1, w: 18 },
+  { id: 'strawberry', name: '草莓', score: 18, hp: 1, w: 15 },
+  { id: 'grape', name: '葡萄', score: 25, hp: 2, w: 10 },
+  { id: 'banana', name: '香蕉', score: 30, hp: 2, w: 8 },
+  { id: 'pineapple', name: '菠萝', score: 40, hp: 2, w: 5 },
+  { id: 'mango', name: '芒果', score: 50, hp: 3, w: 2 },
 ]
 
-// ── 十模式（时长 × 球速 × 挡板宽 × 砖块行列 × 目标分）──
+// ── 十模式 ──
+// rows/cols/bh/gap/padX：砖块数量与大小（越高越多越小）；move：顶部第几行左右移动；balls：初始球数；power：破砖掉道具概率
 const MODES = {
-  m1: { label: '模式1', dur: 40, spd: 300, pw: 150, rows: 3, cols: 5, target: 130, gold: 45, desc: '40 秒 · 目标 130 分 · 慢球宽铲、3 行砖 · +45 币' },
-  m2: { label: '模式2', dur: 45, spd: 330, pw: 140, rows: 3, cols: 6, target: 150, gold: 55, desc: '45 秒 · 目标 150 分 · +55 币' },
-  m3: { label: '模式3', dur: 50, spd: 360, pw: 130, rows: 4, cols: 6, target: 175, gold: 65, desc: '50 秒 · 目标 175 分 · 4 行砖 · +65 币' },
-  m4: { label: '模式4', dur: 55, spd: 390, pw: 122, rows: 4, cols: 6, target: 200, gold: 75, desc: '55 秒 · 目标 200 分 · +75 币' },
-  m5: { label: '模式5', dur: 60, spd: 420, pw: 114, rows: 4, cols: 7, target: 230, gold: 85, desc: '60 秒 · 目标 230 分 · 球速提升 · +85 币' },
-  m6: { label: '模式6', dur: 65, spd: 455, pw: 108, rows: 5, cols: 7, target: 290, gold: 95, desc: '65 秒 · 目标 290 分 · 5 行砖 · +95 币' },
-  m7: { label: '模式7', dur: 70, spd: 490, pw: 102, rows: 5, cols: 7, target: 385, gold: 105, desc: '70 秒 · 目标 385 分 · +105 币' },
-  m8: { label: '模式8', dur: 80, spd: 525, pw: 96, rows: 5, cols: 8, target: 520, gold: 120, desc: '80 秒 · 目标 520 分 · 窄铲快球 · +120 币' },
-  m9: { label: '模式9', dur: 90, spd: 560, pw: 90, rows: 6, cols: 8, target: 720, gold: 135, desc: '90 秒 · 目标 720 分 · +135 币' },
-  m10: { label: '模式10', dur: 100, spd: 600, pw: 84, rows: 6, cols: 8, target: 1080, gold: 150, desc: '100 秒 · 目标 1080 分 · 满砖阵极速球 · +150 币' },
+  m1: { label: '模式1', dur: 40, spd: 300, pw: 150, rows: 3, cols: 5, bh: 46, gap: 8, padX: 46, move: 0, balls: 1, power: 0, target: 100, gold: 45, desc: '40 秒 · 目标 100 分 · 标准玩法：慢球宽铲、3 行大砖 · +45 币' },
+  m2: { label: '模式2', dur: 45, spd: 330, pw: 140, rows: 3, cols: 6, bh: 42, gap: 7, padX: 46, move: 0, balls: 1, power: 0.08, target: 120, gold: 55, desc: '45 秒 · 目标 120 分 · 道具登场（加宽铲 / 分身球 / 减速）· +55 币' },
+  m3: { label: '模式3', dur: 50, spd: 360, pw: 130, rows: 4, cols: 7, bh: 38, gap: 6, padX: 40, move: 1, balls: 1, power: 0.08, target: 145, gold: 65, desc: '50 秒 · 目标 145 分 · 顶行砖块左右移动 · +65 币' },
+  m4: { label: '模式4', dur: 55, spd: 390, pw: 122, rows: 4, cols: 8, bh: 36, gap: 6, padX: 36, move: 0, balls: 2, power: 0.1, target: 175, gold: 75, desc: '55 秒 · 目标 175 分 · 双球开局 · +75 币' },
+  m5: { label: '模式5', dur: 60, spd: 420, pw: 114, rows: 5, cols: 8, bh: 34, gap: 6, padX: 36, move: 1, balls: 2, power: 0.1, target: 245, gold: 85, desc: '60 秒 · 目标 245 分 · 双球 + 移动砖 · +85 币' },
+  m6: { label: '模式6', dur: 65, spd: 455, pw: 108, rows: 5, cols: 9, bh: 32, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 310, gold: 95, desc: '65 秒 · 目标 310 分 · 9 列小砖 · +95 币' },
+  m7: { label: '模式7', dur: 70, spd: 490, pw: 102, rows: 6, cols: 9, bh: 30, gap: 5, padX: 30, move: 1, balls: 2, power: 0.12, target: 385, gold: 105, desc: '70 秒 · 目标 385 分 · 6 行砖 · +105 币' },
+  m8: { label: '模式8', dur: 80, spd: 525, pw: 96, rows: 6, cols: 10, bh: 28, gap: 5, padX: 26, move: 2, balls: 3, power: 0.15, target: 520, gold: 120, desc: '80 秒 · 目标 520 分 · 三球 + 两行移动砖 · +120 币' },
+  m9: { label: '模式9', dur: 90, spd: 560, pw: 90, rows: 7, cols: 10, bh: 26, gap: 5, padX: 26, move: 2, balls: 3, power: 0.15, target: 650, gold: 135, desc: '90 秒 · 目标 650 分 · 7 行细砖 · +135 币' },
+  m10: { label: '模式10', dur: 100, spd: 600, pw: 84, rows: 7, cols: 11, bh: 25, gap: 4, padX: 22, move: 2, balls: 3, power: 0.2, target: 815, gold: 150, desc: '100 秒 · 目标 815 分 · 满砖阵 + 三球 + 移动砖 + 高频道具 · +150 币' },
 }
 const showInfo = ref(false)
 
@@ -61,16 +62,25 @@ const goldText = computed(() => {
   const m = MODES[mode.value]
   return m.gold + Math.round(m.gold * 0.5 * Math.min(1, Math.max(0, (score.value - m.target) / m.target)))
 })
+const effectText = computed(() => {
+  const t = []
+  if (wideT > 0) t.push('宽铲')
+  if (slowT > 0) t.push('减速')
+  return t.join(' · ')
+})
 
 // ── 内部状态 ──
 let bricks = []
+let balls = []
+let drops = []
 let sparks = []
 let floats = []
-let paddle = { x: W / 2, w: 150, h: 16 }
-let ball = { x: W / 2, y: H - 120, vx: 0, vy: 0, r: 8, stuck: true }
+let rowOff = []
+let rowVel = []
+let paddle = { x: W / 2, w: 150, h: 16, baseW: 150 }
 let wave = 1
-let pointerX = W / 2
-let keyDir = 0
+let wideT = 0
+let slowT = 0
 let timeAccum = 0
 let waveT = 0
 let shake = 0
@@ -79,6 +89,7 @@ let running = false
 let overFlag = false
 let lastTs = 0
 let loopId = null
+let keyDir = 0
 
 const IMGS = ING.map((f) => {
   const im = new Image()
@@ -106,50 +117,50 @@ function beep(freq, dur, type = 'sine', vol = 0.06) {
 }
 
 // ── 砖块布局 ──
-function brickGeom() {
+function buildWave() {
   const m = MODES[mode.value]
-  const padX = 46
-  const padY = 74
-  const gap = 8
-  const bw = (W - padX * 2 - gap * (m.cols - 1)) / m.cols
-  const bh = 46
-  return { padX, padY, gap, bw, bh }
-}
-function buildWave(speedUp) {
-  const m = MODES[mode.value]
-  const { padX, padY, gap, bw, bh } = brickGeom()
+  const padY = 62
+  const bw = (W - m.padX * 2 - m.gap * (m.cols - 1)) / m.cols
   bricks = []
-  const total = m.rows * m.cols
-  // 按权重抽食材；越靠上越硬
+  rowOff = new Array(m.rows).fill(0)
+  rowVel = new Array(m.rows).fill(0)
   const pool = []
   for (let i = 0; i < ING.length; i++) for (let k = 0; k < ING[i].w; k++) pool.push(i)
   for (let r = 0; r < m.rows; r++) {
+    if (r < m.move) rowVel[r] = (r % 2 ? 1 : -1) * rand(34, 58)
     for (let c = 0; c < m.cols; c++) {
       let i = pool[Math.floor(Math.random() * pool.length)]
-      // 上层更容易出硬砖
       if (r === 0 && Math.random() < 0.5) i = Math.min(ING.length - 1, i + 3)
       const ing = ING[i]
       bricks.push({
-        i, x: padX + c * (bw + gap), y: padY + r * (bh + gap), w: bw, h: bh,
-        hp: ing.hp + (speedUp ? 0 : 0), maxHp: ing.hp, score: ing.score,
+        i, row: r, bx: m.padX + c * (bw + m.gap), y: padY + r * (m.bh + m.gap),
+        w: bw, h: m.bh, hp: ing.hp, maxHp: ing.hp, score: ing.score,
       })
     }
   }
   wave = (wave || 0) + 1
 }
-function resetBall() {
-  ball.x = paddle.x
-  ball.y = H - 120
-  ball.vx = 0
-  ball.vy = 0
-  ball.stuck = true
-}
-function launchBall() {
+function brickX(b) {
   const m = MODES[mode.value]
-  const ang = rand(-0.5, 0.5)
-  ball.vx = Math.sin(ang) * m.spd
-  ball.vy = -Math.cos(ang) * m.spd
-  ball.stuck = false
+  return b.bx + (b.row < m.move ? rowOff[b.row] : 0)
+}
+function resetBalls() {
+  const m = MODES[mode.value]
+  balls = []
+  for (let i = 0; i < m.balls; i++) {
+    balls.push({ x: paddle.x + (i - (m.balls - 1) / 2) * 26, y: H - 130, vx: 0, vy: 0, r: 8, stuck: true })
+  }
+}
+function launchBalls() {
+  const m = MODES[mode.value]
+  for (const b of balls) {
+    if (!b.stuck) continue
+    const ang = rand(-0.5, 0.5)
+    const sp = m.spd
+    b.vx = Math.sin(ang) * sp
+    b.vy = -Math.cos(ang) * sp
+    b.stuck = false
+  }
 }
 
 // ── 输入 ──
@@ -158,22 +169,23 @@ function toCanvasX(e) {
   const rect = cv.getBoundingClientRect()
   return ((e.clientX - rect.left) / rect.width) * W
 }
+function movePaddle(x) {
+  paddle.x = clamp(x, paddle.w / 2, W - paddle.w / 2)
+}
 function onDown(e) {
   if (!running || overFlag || !started.value) return
-  pointerX = toCanvasX(e)
-  paddle.x = clamp(pointerX, paddle.w / 2, W - paddle.w / 2)
-  if (ball.stuck) launchBall()
+  movePaddle(toCanvasX(e))
+  if (balls.some((b) => b.stuck)) launchBalls()
 }
 function onMove(e) {
   if (!running || overFlag || !started.value) return
-  pointerX = toCanvasX(e)
-  paddle.x = clamp(pointerX, paddle.w / 2, W - paddle.w / 2)
+  movePaddle(toCanvasX(e))
 }
 function onKey(e) {
   if (!running || overFlag || !started.value) return
   if (e.key === 'ArrowLeft') keyDir = -1
   else if (e.key === 'ArrowRight') keyDir = 1
-  else if (e.key === ' ' || e.key === 'ArrowUp') { if (ball.stuck) launchBall() }
+  else if (e.key === ' ' || e.key === 'ArrowUp') launchBalls()
 }
 function onKeyUp(e) {
   if (e.key === 'ArrowLeft' && keyDir < 0) keyDir = 0
@@ -196,25 +208,46 @@ function loop() {
         if (timeLeft.value <= 0) settle()
       }
       if (combo.value > 0 && performance.now() - comboAt > 2000) combo.value = 0
-      // 键盘移动挡板
-      if (keyDir) paddle.x = clamp(paddle.x + keyDir * 620 * dt, paddle.w / 2, W - paddle.w / 2)
+      // 道具计时
+      if (wideT > 0) {
+        wideT -= dt
+        if (wideT <= 0) paddle.w = paddle.baseW
+      }
+      if (slowT > 0) slowT -= dt
+      if (keyDir) movePaddle(paddle.x + keyDir * 620 * dt)
+      // 移动砖块行
+      for (let r = 0; r < m.move; r++) {
+        rowOff[r] += rowVel[r] * dt
+        let minX = 1e9
+        let maxX = -1e9
+        for (const b of bricks) {
+          if (b.row !== r) continue
+          minX = Math.min(minX, b.bx + rowOff[r])
+          maxX = Math.max(maxX, b.bx + rowOff[r] + b.w)
+        }
+        if (minX < 6 && rowVel[r] < 0) rowVel[r] = -rowVel[r]
+        if (maxX > W - 6 && rowVel[r] > 0) rowVel[r] = -rowVel[r]
+      }
       // 球
-      if (ball.stuck) {
-        ball.x = paddle.x
-        ball.y = H - 120
-      } else {
-        ball.x += ball.vx * dt
-        ball.y += ball.vy * dt
-        // 墙
+      const py = H - 70
+      const spdMul = slowT > 0 ? 0.75 : 1
+      for (let bi = balls.length - 1; bi >= 0; bi--) {
+        const ball = balls[bi]
+        if (ball.stuck) {
+          ball.x = paddle.x + (bi - (balls.length - 1) / 2) * 26
+          ball.y = H - 130
+          continue
+        }
+        ball.x += ball.vx * spdMul * dt
+        ball.y += ball.vy * spdMul * dt
         if (ball.x < ball.r) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); beep(500, 0.04) }
         if (ball.x > W - ball.r) { ball.x = W - ball.r; ball.vx = -Math.abs(ball.vx); beep(500, 0.04) }
         if (ball.y < ball.r) { ball.y = ball.r; ball.vy = Math.abs(ball.vy); beep(500, 0.04) }
         // 挡板
-        const py = H - 64
         if (ball.vy > 0 && ball.y + ball.r >= py && ball.y - ball.r <= py + paddle.h && Math.abs(ball.x - paddle.x) <= paddle.w / 2 + ball.r) {
           const off = clamp((ball.x - paddle.x) / (paddle.w / 2), -1, 1)
           const ang = off * (Math.PI / 3)
-          const sp = Math.hypot(ball.vx, ball.vy)
+          const sp = Math.hypot(ball.vx, ball.vy) || m.spd
           ball.vx = Math.sin(ang) * sp
           ball.vy = -Math.cos(ang) * sp
           ball.y = py - ball.r
@@ -223,35 +256,46 @@ function loop() {
         // 砖块
         for (let k = bricks.length - 1; k >= 0; k--) {
           const b = bricks[k]
-          const cx = clamp(ball.x, b.x, b.x + b.w)
+          const bx = brickX(b)
+          const cx = clamp(ball.x, bx, bx + b.w)
           const cy = clamp(ball.y, b.y, b.y + b.h)
           const dx = ball.x - cx
           const dy = ball.y - cy
           if (dx * dx + dy * dy <= ball.r * ball.r) {
-            // 按穿透小的轴反弹
-            const ox = (ball.r + b.w / 2) - Math.abs(ball.x - (b.x + b.w / 2))
+            const ox = (ball.r + b.w / 2) - Math.abs(ball.x - (bx + b.w / 2))
             const oy = (ball.r + b.h / 2) - Math.abs(ball.y - (b.y + b.h / 2))
-            if (ox < oy) ball.vx = ball.x < b.x + b.w / 2 ? -Math.abs(ball.vx) : Math.abs(ball.vx)
+            if (ox < oy) ball.vx = ball.x < bx + b.w / 2 ? -Math.abs(ball.vx) : Math.abs(ball.vx)
             else ball.vy = ball.y < b.y + b.h / 2 ? -Math.abs(ball.vy) : Math.abs(ball.vy)
             hitBrick(b)
             break
           }
         }
-        // 掉落
-        if (ball.y > H + ball.r) {
-          lives.value--
-          shake = 1
-          floats.push({ x: W / 2, y: H - 140, text: '掉球！-1 ❤', life: 0, max: 1.2, color: '#e06a5a' })
-          beep(160, 0.3, 'sawtooth', 0.08)
-          if (lives.value <= 0) settle()
-          else resetBall()
+        if (ball.y > H + ball.r) balls.splice(bi, 1)
+      }
+      if (balls.length === 0 && !overFlag) {
+        lives.value--
+        shake = 1
+        floats.push({ x: W / 2, y: H - 150, text: '掉球！-1 ❤', life: 0, max: 1.2, color: '#e06a5a' })
+        beep(160, 0.3, 'sawtooth', 0.08)
+        if (lives.value <= 0) settle()
+        else resetBalls()
+      }
+      // 道具下落
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i]
+        d.y += 220 * dt
+        if (d.y > H + 20) { drops.splice(i, 1); continue }
+        if (d.y + 12 >= py && d.y - 12 <= py + paddle.h && Math.abs(d.x - paddle.x) <= paddle.w / 2 + 14) {
+          applyDrop(d)
+          drops.splice(i, 1)
         }
       }
-      // 清空一波 → 下一波（球速 +6%）
+      // 清空一波 → 下一波
       if (bricks.length === 0 && started.value && !overFlag) {
-        buildWave(true)
-        m.spd = Math.round(m.spd * 1.06)
-        floats.push({ x: W / 2, y: 60, text: `第 ${wave} 波！球速提升`, life: 0, max: 1.4, color: '#ffd65a' })
+        buildWave()
+        m.spd = Math.round(m.spd * 1.05)
+        resetBalls()
+        floats.push({ x: W / 2, y: 50, text: `第 ${wave} 波！球速提升`, life: 0, max: 1.4, color: '#ffd65a' })
         beep(880, 0.1)
         setTimeout(() => beep(1175, 0.12), 100)
       }
@@ -264,24 +308,51 @@ function loop() {
   if (shake > 0) shake = Math.max(0, shake - dt * 3)
   draw()
 }
+function applyDrop(d) {
+  if (d.kind === 'wide') {
+    wideT = 9
+    paddle.w = paddle.baseW * 1.45
+    floats.push({ x: d.x, y: d.y - 20, text: '宽铲 9 秒', life: 0, max: 1.2, color: '#7fd08a' })
+    beep(980, 0.08)
+  } else if (d.kind === 'slow') {
+    slowT = 7
+    floats.push({ x: d.x, y: d.y - 20, text: '减速 7 秒', life: 0, max: 1.2, color: '#8fc0e8' })
+    beep(760, 0.08)
+  } else {
+    const src = balls.find((b) => !b.stuck) || balls[0]
+    if (src && balls.length < 6) {
+      const sp = Math.hypot(src.vx, src.vy) || MODES[mode.value].spd
+      const a = Math.atan2(src.vy, src.vx) + rand(-0.6, 0.6)
+      balls.push({ x: src.x, y: src.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 8, stuck: false })
+    }
+    floats.push({ x: d.x, y: d.y - 20, text: '分身球！', life: 0, max: 1.2, color: '#ffd65a' })
+    beep(1180, 0.09)
+  }
+}
 function hitBrick(b) {
   b.hp--
-  const now = performance.now()
+  const bx = brickX(b)
   if (b.hp > 0) {
-    for (let i = 0; i < 5; i++) sparks.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, vx: rand(-90, 90), vy: rand(-120, 20), life: 0, max: rand(0.25, 0.5), color: '#ffe08a', size: rand(1.2, 2.4) })
+    for (let i = 0; i < 5; i++) sparks.push({ x: bx + b.w / 2, y: b.y + b.h / 2, vx: rand(-90, 90), vy: rand(-120, 20), life: 0, max: rand(0.25, 0.5), color: '#ffe08a', size: rand(1.2, 2.4) })
     beep(720, 0.05, 'square', 0.05)
     return
   }
+  const now = performance.now()
   combo.value = now - comboAt < 2000 ? combo.value + 1 : 1
   comboAt = now
   maxCombo.value = Math.max(maxCombo.value, combo.value)
   const mult = 1 + Math.min(0.5, 0.1 * (combo.value - 1))
   const gain = Math.round(b.score * mult)
   score.value += gain
-  floats.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, text: `+${gain}`, life: 0, max: 0.8, color: '#ffd65a' })
-  for (let i = 0; i < 10; i++) sparks.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, vx: rand(-150, 150), vy: rand(-150, 30), life: 0, max: rand(0.3, 0.6), color: '#ffe08a', size: rand(1.4, 2.8) })
+  floats.push({ x: bx + b.w / 2, y: b.y + b.h / 2, text: `+${gain}`, life: 0, max: 0.8, color: '#ffd65a' })
+  for (let i = 0; i < 10; i++) sparks.push({ x: bx + b.w / 2, y: b.y + b.h / 2, vx: rand(-150, 150), vy: rand(-150, 30), life: 0, max: rand(0.3, 0.6), color: '#ffe08a', size: rand(1.4, 2.8) })
   bricks.splice(bricks.indexOf(b), 1)
   beep(880 + combo.value * 30, 0.06, 'triangle')
+  const m = MODES[mode.value]
+  if (m.power > 0 && Math.random() < m.power) {
+    const kinds = ['wide', 'slow', 'multi']
+    drops.push({ x: bx + b.w / 2, y: b.y + b.h / 2, vy: 0, kind: kinds[Math.floor(Math.random() * kinds.length)] })
+  }
 }
 function startLoop() {
   if (loopId) clearInterval(loopId)
@@ -303,12 +374,10 @@ function draw() {
   ctx.save()
   if (shake > 0) ctx.translate(rand(-1, 1) * shake * 6, rand(-1, 1) * shake * 6)
   drawBackdrop(ctx, dark)
-  // 砖块
   for (const b of bricks) drawBrick(ctx, b)
-  // 挡板
+  drawDrops(ctx)
   drawPaddle(ctx, dark)
-  // 球
-  drawBall(ctx)
+  for (const b of balls) drawBall(ctx, b)
   drawSparks(ctx)
   drawFloats(ctx)
   drawHud(ctx, dark)
@@ -319,23 +388,20 @@ function drawBackdrop(ctx, dark) {
   if (dark) { g.addColorStop(0, '#241a14'); g.addColorStop(1, '#15100c') } else { g.addColorStop(0, '#f7ecdc'); g.addColorStop(1, '#e2cbaa') }
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
-  // 台面木纹
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.04)' : 'rgba(120,80,40,0.10)'
   ctx.lineWidth = 1
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 34; i++) {
     const y = i * 22 + 8
     ctx.beginPath()
     ctx.moveTo(0, y)
     for (let x = 0; x <= W; x += 30) ctx.lineTo(x, y + Math.sin(x * 0.02 + i) * 2)
     ctx.stroke()
   }
-  // 顶部光
-  const rg = ctx.createRadialGradient(W / 2, 40, 20, W / 2, 40, 420)
+  const rg = ctx.createRadialGradient(W / 2, 40, 20, W / 2, 40, 460)
   rg.addColorStop(0, dark ? 'rgba(255,210,150,0.06)' : 'rgba(255,255,255,0.3)')
   rg.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = rg
   ctx.fillRect(0, 0, W, H)
-  // 底线
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.08)' : 'rgba(120,80,40,0.2)'
   ctx.lineWidth = 2
   ctx.beginPath()
@@ -345,38 +411,56 @@ function drawBackdrop(ctx, dark) {
 }
 function drawBrick(ctx, b) {
   const im = IMGS[b.i]
-  const x = b.x
+  const x = brickX(b)
   const y = b.y
   ctx.save()
-  // 底板
   ctx.fillStyle = 'rgba(255,252,246,0.9)'
   ctx.beginPath()
-  ctx.roundRect ? ctx.roundRect(x, y, b.w, b.h, 10) : ctx.rect(x, y, b.w, b.h)
+  ctx.roundRect ? ctx.roundRect(x, y, b.w, b.h, 8) : ctx.rect(x, y, b.w, b.h)
   ctx.fill()
   ctx.strokeStyle = 'rgba(150,110,70,0.45)'
-  ctx.lineWidth = 1.5
+  ctx.lineWidth = 1.4
   ctx.stroke()
-  // 图
-  const s = Math.min(b.h - 8, 40)
+  const s = Math.min(b.h - 6, b.w - 10, 40)
   if (im && im.complete && im.naturalWidth) ctx.drawImage(im, x + (b.w - s) / 2, y + (b.h - s) / 2, s, s)
-  // 耐久角标
   if (b.maxHp > 1) {
     ctx.fillStyle = 'rgba(217,90,56,0.9)'
     ctx.beginPath()
-    ctx.arc(x + b.w - 12, y + 12, 9, 0, TAU)
+    ctx.arc(x + b.w - 11, y + 11, 8, 0, TAU)
     ctx.fill()
     ctx.fillStyle = '#fff'
-    ctx.font = 'bold 11px system-ui, sans-serif'
+    ctx.font = 'bold 10px system-ui, sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText(String(b.hp), x + b.w - 12, y + 16)
+    ctx.fillText(String(b.hp), x + b.w - 11, y + 15)
   }
   ctx.restore()
 }
+function drawDrops(ctx) {
+  for (const d of drops) {
+    ctx.save()
+    ctx.translate(d.x, d.y)
+    const col = d.kind === 'wide' ? '#7fd08a' : d.kind === 'slow' ? '#8fc0e8' : '#ffd65a'
+    const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 15)
+    g.addColorStop(0, 'rgba(255,255,255,0.95)')
+    g.addColorStop(1, col)
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.arc(0, 0, 13, 0, TAU)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(90,60,20,0.5)'
+    ctx.lineWidth = 1.4
+    ctx.stroke()
+    ctx.fillStyle = '#3a2a10'
+    ctx.font = 'bold 13px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(d.kind === 'wide' ? '↔' : d.kind === 'slow' ? '🐢' : '●', 0, 5)
+    ctx.restore()
+  }
+}
 function drawPaddle(ctx, dark) {
-  const py = H - 64
+  const py = H - 70
   ctx.save()
   ctx.translate(paddle.x, py)
-  // 锅铲：铲面 + 手柄
   const g = ctx.createLinearGradient(0, -8, 0, 10)
   g.addColorStop(0, dark ? '#b9c3cc' : '#d8e0e8')
   g.addColorStop(1, dark ? '#6d7681' : '#98a4b0')
@@ -384,26 +468,24 @@ function drawPaddle(ctx, dark) {
   ctx.beginPath()
   ctx.roundRect ? ctx.roundRect(-paddle.w / 2, 0, paddle.w, paddle.h, 8) : ctx.rect(-paddle.w / 2, 0, paddle.w, paddle.h)
   ctx.fill()
-  ctx.strokeStyle = 'rgba(60,70,80,0.5)'
-  ctx.lineWidth = 1.5
+  ctx.strokeStyle = wideT > 0 ? '#7fd08a' : 'rgba(60,70,80,0.5)'
+  ctx.lineWidth = wideT > 0 ? 2.4 : 1.5
   ctx.stroke()
-  // 铲面高光
   ctx.fillStyle = 'rgba(255,255,255,0.35)'
   ctx.beginPath()
   ctx.roundRect ? ctx.roundRect(-paddle.w / 2 + 6, 3, paddle.w - 12, 4, 2) : ctx.rect(-paddle.w / 2 + 6, 3, paddle.w - 12, 4)
   ctx.fill()
-  // 手柄
   ctx.fillStyle = '#7a5230'
   ctx.beginPath()
   ctx.roundRect ? ctx.roundRect(-7, paddle.h - 2, 14, 16, 5) : ctx.rect(-7, paddle.h - 2, 14, 16)
   ctx.fill()
   ctx.restore()
 }
-function drawBall(ctx) {
+function drawBall(ctx, ball) {
   ctx.save()
   const g = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, ball.r)
   g.addColorStop(0, '#fff7e6')
-  g.addColorStop(1, '#e0a13a')
+  g.addColorStop(1, slowT > 0 ? '#7fc0e8' : '#e0a13a')
   ctx.fillStyle = g
   ctx.beginPath()
   ctx.arc(ball.x, ball.y, ball.r, 0, TAU)
@@ -443,6 +525,11 @@ function drawHud(ctx, dark) {
   ctx.fillStyle = dark ? 'rgba(255,255,255,0.4)' : 'rgba(90,60,30,0.55)'
   ctx.font = '12px system-ui, sans-serif'
   ctx.fillText(`第 ${wave} 波`, 10, 48)
+  if (effectText.value) {
+    ctx.fillStyle = '#7fd08a'
+    ctx.font = 'bold 12px system-ui, sans-serif'
+    ctx.fillText('⚡ ' + effectText.value, 10, 66)
+  }
   if (combo.value >= 2) {
     ctx.textAlign = 'center'
     ctx.fillStyle = 'rgba(20,30,44,0.4)'
@@ -456,11 +543,11 @@ function drawHud(ctx, dark) {
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(90,60,30,0.65)'
     ctx.font = '13px system-ui, sans-serif'
     ctx.fillText('点击下方「开始游戏」，移动鼠标控制锅铲', W / 2, H / 2)
-  } else if (ball.stuck && !overFlag) {
+  } else if (balls.some((b) => b.stuck) && !overFlag) {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(90,60,30,0.7)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击/空格 发球', W / 2, H - 120)
+    ctx.fillText('点击/空格 发球', W / 2, H - 130)
   }
 }
 
@@ -470,10 +557,15 @@ function reset() {
   const m = MODES[mode.value]
   wave = 0
   bricks = []
+  balls = []
+  drops = []
   sparks = []
   floats = []
-  paddle = { x: W / 2, w: m.pw, h: 16 }
-  ball = { x: W / 2, y: H - 120, vx: 0, vy: 0, r: 8, stuck: true }
+  rowOff = []
+  rowVel = []
+  paddle = { x: W / 2, w: m.pw, h: 16, baseW: m.pw }
+  wideT = 0
+  slowT = 0
   score.value = 0
   combo.value = 0
   maxCombo.value = 0
@@ -496,8 +588,8 @@ function startGame() {
   started.value = true
   timeLeft.value = MODES[mode.value].dur
   timeAccum = 0
-  buildWave(false)
-  resetBall()
+  buildWave()
+  resetBalls()
   hint.value = '移动锅铲接球 · 点击/空格 发球'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
@@ -584,11 +676,12 @@ onUnmounted(() => {
         <div class="bk-info-list">
           <div class="bk-info-row bk-info-rule">
             玩法：<b>移动鼠标/手指</b>控制锅铲（← → 也可，空格发球），点击发球；球碰到砖块得分，
-            <b>清空一波自动刷新下一波</b>（球速再涨 6%）。<br />
+            <b>清空一波自动刷新下一波</b>（球速再涨 5%）。<br />
             砖块耐久：普通食材 1 下，葡萄/香蕉/菠萝 2 下，芒果 3 下（右上角数字是剩余耐久）；分越高越硬。<br />
-            挡板接球位置影响反弹角度（中间直上、两侧斜飞）；球掉下去扣 1 条命（共 3 条）。<br />
-            连击：2 秒内连续破砖累计连击，单块得分最高 ×1.5。<br />
-            限时结束后按得分结算，达标发游戏币（超出目标最多 +50%）。
+            挡板接球位置影响反弹角度；球全部掉下去扣 1 条命（共 3 条）。<br />
+            <b>模式变化</b>：模式越高砖块越多越小、砖阵离锅铲越远；2 起有<b>道具</b>（↔ 加宽铲 9 秒 / 🐢 减速 7 秒 / ● 分身球）、
+            3 起顶行<b>砖块左右移动</b>、4 起<b>多球</b>开局（掉光所有球才扣命）。<br />
+            连击：2 秒内连续破砖累计连击，单块得分最高 ×1.5；限时结束按得分结算（超出目标最多 +50%）。
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="bk-info-row">
             <b class="bk-info-name">{{ m.label }}</b>
