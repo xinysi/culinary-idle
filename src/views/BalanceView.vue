@@ -133,7 +133,10 @@ function startLoop() {
 }
 function stopLoop() { if (loopId) clearInterval(loopId); loopId = null }
 
-function onHold(key) {
+function onHold(key, e) {
+  if (e && e.target && e.target.setPointerCapture) {
+    try { e.target.setPointerCapture(e.pointerId) } catch { /* 指针捕获不可用时靠全局 pointerup 兜底 */ }
+  }
   if (!started.value || overFlag || !recipe.value) return
   holding.value = key
 }
@@ -204,8 +207,16 @@ function errText(it) {
   return `${it.actual.toFixed(0)} / ${it.target} g`
 }
 
-onMounted(() => { reset() })
-onUnmounted(() => stopLoop())
+onMounted(() => {
+  window.addEventListener('pointerup', onRelease)
+  window.addEventListener('pointercancel', onRelease)
+  reset()
+})
+onUnmounted(() => {
+  window.removeEventListener('pointerup', onRelease)
+  window.removeEventListener('pointercancel', onRelease)
+  stopLoop()
+})
 </script>
 
 <template>
@@ -224,10 +235,18 @@ onUnmounted(() => stopLoop())
       <!-- 天平（倾角显示总误差） -->
       <div class="ba-scale">
         <div class="ba-beam" :style="{ transform: `rotate(${tiltDeg}deg)` }">
-          <span class="ba-pan ba-pan-l">🥣</span>
-          <span class="ba-pan ba-pan-r">🥣</span>
+          <span class="ba-hang ba-hang-l">
+            <span class="ba-chain" :style="{ transform: `rotate(${-tiltDeg}deg)` }"></span>
+            <span class="ba-pan" :style="{ transform: `rotate(${-tiltDeg}deg)` }">🥣</span>
+          </span>
+          <span class="ba-hang ba-hang-r">
+            <span class="ba-chain" :style="{ transform: `rotate(${-tiltDeg}deg)` }"></span>
+            <span class="ba-pan" :style="{ transform: `rotate(${-tiltDeg}deg)` }">🥣</span>
+          </span>
+          <span class="ba-pivot"></span>
         </div>
-        <div class="ba-pole"></div>
+        <div class="ba-pillar"></div>
+        <div class="ba-base"></div>
       </div>
 
       <div class="ba-tubes">
@@ -242,7 +261,7 @@ onUnmounted(() => stopLoop())
       </div>
 
       <div v-if="lastResult" class="ba-result-chip" :class="{ ok: lastResult.pts > 0 }">
-        {{ lastResult.perfect ? '✨ 完美配比！' : lastResult.pts > 0 ? '✅ 不错' : '💦 偏太多' }} +{{ lastResult.pts }}
+        {{ lastResult.perfect ? '✨ 完美配比！' : lastResult.pts > 0 ? '✅ 不错' : '💦 偏太多' }} +{{ lastResult.pts }}<span class="ba-err">（误差 {{ (lastResult.err * 100).toFixed(1) }}%）</span>
       </div>
     </div>
 
@@ -254,11 +273,11 @@ onUnmounted(() => stopLoop())
           :key="it.key"
           class="ba-bottle"
           :class="{ on: holding === it.key }"
-          @pointerdown="onHold(it.key)"
+          @pointerdown="onHold(it.key, $event)"
           @pointerup="onRelease"
           @pointerleave="onRelease"
           @pointercancel="onRelease"
-        >🧂 {{ it.name }}</button>
+        ><span class="ba-bottle-ico" :style="{ background: it.color }"></span>{{ it.name }}</button>
         <button class="ba-ok" @click="confirm()">✅ 确认配比</button>
         <button class="ba-reset" @click="reset()">🔄 重置本局</button>
       </template>
@@ -302,12 +321,18 @@ onUnmounted(() => stopLoop())
 .ba-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .ba-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .ba-stage { width: min(720px, 98%); border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); padding: 18px 16px 22px; display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; }
-.ba-scale { position: relative; width: 200px; height: 62px; display: flex; align-items: flex-end; justify-content: center; }
-.ba-beam { position: relative; width: 180px; height: 10px; border-radius: 999px; background: linear-gradient(180deg, #c89a6b, #9a6b40); transition: transform 0.12s linear; }
-.ba-pan { position: absolute; top: -14px; font-size: 24px; }
-.ba-pan-l { left: -6px; }
-.ba-pan-r { right: -6px; }
-.ba-pole { position: absolute; bottom: -14px; width: 10px; height: 22px; border-radius: 4px; background: rgba(150, 110, 70, 0.55); }
+.ba-scale { position: relative; width: 250px; height: 92px; }
+.ba-beam { position: absolute; left: 26px; right: 26px; top: 20px; height: 9px; border-radius: 999px; background: linear-gradient(180deg, #dcb888, #a3763f); box-shadow: 0 2px 5px rgba(90, 60, 30, 0.28); transform-origin: 50% 50%; transition: transform 0.12s linear; }
+.ba-hang { position: absolute; top: 5px; width: 0; }
+.ba-hang-l { left: 2px; }
+.ba-hang-r { right: 2px; }
+.ba-chain { position: absolute; left: -1px; top: 0; width: 2px; height: 24px; background: linear-gradient(180deg, rgba(150, 110, 70, 0.75), rgba(150, 110, 70, 0.45)); transform-origin: 50% 0; }
+.ba-pan { position: absolute; left: -15px; top: 24px; font-size: 26px; filter: drop-shadow(0 3px 4px rgba(90, 60, 30, 0.3)); }
+.ba-pivot { position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: linear-gradient(180deg, #e8c34a, #c9942a); box-shadow: 0 1px 3px rgba(90, 60, 30, 0.35); }
+.ba-pillar { position: absolute; left: 50%; top: 24px; width: 12px; height: 50px; margin-left: -6px; border-radius: 5px; background: linear-gradient(180deg, #c89a6b, #8f6438); box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.15); }
+.ba-base { position: absolute; left: 50%; bottom: 4px; width: 96px; height: 14px; margin-left: -48px; border-radius: 7px; background: linear-gradient(180deg, #bb8f5f, #865c33); box-shadow: 0 5px 10px rgba(90, 60, 30, 0.28); }
+.ba-err { margin-left: 6px; font-weight: 700; font-size: 12.5px; color: var(--muted); }
+.ba-bottle-ico { display: inline-block; width: 10px; height: 16px; margin-right: 6px; border-radius: 3px 3px 4px 4px; vertical-align: -3px; box-shadow: inset 0 -5px 0 rgba(255, 255, 255, 0.28); }
 .ba-tubes { display: flex; gap: 26px; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
 .ba-tube-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .ba-tube { position: relative; width: 46px; height: 150px; border-radius: 10px 10px 14px 14px; background: rgba(255, 252, 246, 0.75); border: 1px solid rgba(150, 110, 70, 0.35); overflow: hidden; }

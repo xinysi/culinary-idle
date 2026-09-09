@@ -97,7 +97,7 @@ function buildBoard() {
       if (placed.every((p) => Math.hypot(p.x - x, p.y - y) > p.r + r + 18)) {
         placed.push({ x, y, r })
         const pts = r < baseR * 0.75 ? 60 : r < baseR * 0.95 ? 40 : 25
-        targets.push({ x, y, r, pts, icon: FOODS[i % FOODS.length], vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 2 ? 78 : 44) : 0, phase: Math.random() * 6.28 })
+        targets.push({ x, y, r, pts, icon: FOODS[i % FOODS.length], vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 2 ? 60 : 34) : 0, phase: Math.random() * 6.28 })
         break
       }
     }
@@ -166,7 +166,7 @@ function resolveThrow(f) {
   let bestD = 1e9
   for (const t of targets) {
     const d = Math.hypot(t.x - lx, t.y - ly)
-    if (d < t.r * 0.72 && d < bestD) { best = t; bestD = d }
+    if (d < t.r * 0.8 && d < bestD) { best = t; bestD = d }
   }
   if (best) {
     hits.value++
@@ -327,6 +327,13 @@ function draw() {
     ctx.strokeStyle = dark ? 'rgba(210,170,120,0.5)' : 'rgba(150,110,70,0.5)'
     ctx.lineWidth = 2
     ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(t.x, t.y, t.r * 0.8, 0, Math.PI * 2)
+    ctx.strokeStyle = dark ? 'rgba(140, 216, 153, 0.4)' : 'rgba(76, 156, 76, 0.4)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([4, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
     ctx.font = `${Math.round(t.r * 1.05)}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
@@ -339,9 +346,9 @@ function draw() {
   // 待发的竹圈
   if (canThrow()) {
     ctx.beginPath()
-    ctx.arc(LAUNCH.x, LAUNCH.y, 22, 0, Math.PI * 2)
+    ctx.arc(LAUNCH.x, LAUNCH.y, 26, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(217,90,56,0.85)'
-    ctx.lineWidth = 5
+    ctx.lineWidth = 6
     ctx.stroke()
   }
   // 瞄准虚线
@@ -355,7 +362,7 @@ function draw() {
     ctx.stroke()
     ctx.setLineDash([])
     ctx.beginPath()
-    ctx.arc(aim.tx, aim.ty, 22, 0, Math.PI * 2)
+    ctx.arc(aim.tx, aim.ty, 26, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(217,90,56,0.45)'
     ctx.lineWidth = 2
     ctx.stroke()
@@ -365,16 +372,16 @@ function draw() {
     const k = Math.min(1, fly.t / fly.dur)
     const x = fly.sx + (fly.tx - fly.sx) * k
     const y = fly.sy + (fly.ty - fly.sy) * k - Math.sin(k * Math.PI) * 70
-    const scale = 1 - 0.32 * k
+    const scale = 1 - 0.14 * k
     // 影子
     ctx.beginPath()
-    ctx.ellipse(fly.sx + (fly.tx - fly.sx) * k, fly.sy + (fly.ty - fly.sy) * k, 20 * scale, 8 * scale, 0, 0, Math.PI * 2)
+    ctx.ellipse(fly.sx + (fly.tx - fly.sx) * k, fly.sy + (fly.ty - fly.sy) * k, 24 * scale, 10 * scale, 0, 0, Math.PI * 2)
     ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.18)'
     ctx.fill()
     ctx.beginPath()
-    ctx.arc(x, y, 22 * scale, 0, Math.PI * 2)
+    ctx.arc(x, y, 26 * scale, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(217,90,56,0.95)'
-    ctx.lineWidth = 5 * scale
+    ctx.lineWidth = 6 * scale
     ctx.stroke()
   }
   // 飘字
