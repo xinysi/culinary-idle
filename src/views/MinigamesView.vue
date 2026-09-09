@@ -26,6 +26,9 @@ const FishingView = defineAsyncComponent(() => import('./FishingView.vue'))
 const SliceView = defineAsyncComponent(() => import('./SliceView.vue'))
 const WhackView = defineAsyncComponent(() => import('./WhackView.vue'))
 const SlideView = defineAsyncComponent(() => import('./SlideView.vue'))
+const BreakoutView = defineAsyncComponent(() => import('./BreakoutView.vue'))
+const PipeView = defineAsyncComponent(() => import('./PipeView.vue'))
+const DinerView = defineAsyncComponent(() => import('./DinerView.vue'))
 
 // 商店固定入口（2026-09-09：商店不参与分页，固定在入口行最左）
 const SHOP = { id: 'shop', emoji: '🛒', name: '商店', comp: GameShopView }
@@ -48,6 +51,9 @@ const GAMES = [
   { id: 'slice', emoji: '🔪', name: '切菜大师', comp: SliceView },
   { id: 'whack', emoji: '🌾', name: '打地鼠', comp: WhackView },
   { id: 'slide', emoji: '🍽️', name: '摆盘', comp: SlideView },
+  { id: 'breakout', emoji: '🍳', name: '打砖块', comp: BreakoutView },
+  { id: 'pipe', emoji: '🥣', name: '接汤', comp: PipeView },
+  { id: 'diner', emoji: '🍱', name: '传菜', comp: DinerView },
 ]
 
 // 游戏分类分页（每页 9 个；新游戏继续往后排，不会被挤到第二行）
