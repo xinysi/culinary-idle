@@ -18,11 +18,11 @@ const MODES = {
   m3: { label: '模式3', n: 6, targets: 2, rocks: 4, moves: 16, timeLimit: 0, gold: 55, desc: '6×6 · 2 个目标 · 16 步 · +55 币' },
   m4: { label: '模式4', n: 6, targets: 3, rocks: 5, moves: 18, timeLimit: 0, gold: 70, desc: '6×6 · 3 个目标 · 18 步 · +70 币' },
   m5: { label: '模式5', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 0, gold: 85, desc: '7×7 · 3 个目标 · 20 步 · +85 币' },
-  m6: { label: '模式6', n: 7, targets: 4, rocks: 9, moves: 22, timeLimit: 0, gold: 100, desc: '7×7 · 4 个目标 · 22 步 · +100 币' },
-  m7: { label: '模式7', n: 8, targets: 4, rocks: 11, moves: 24, timeLimit: 0, gold: 115, desc: '8×8 · 4 个目标 · 24 步 · +115 币' },
-  m8: { label: '模式8', n: 8, targets: 5, rocks: 13, moves: 26, timeLimit: 0, gold: 130, desc: '8×8 · 5 个目标 · 26 步 · +130 币' },
-  m9: { label: '模式9', n: 9, targets: 5, rocks: 15, moves: 28, timeLimit: 0, gold: 145, desc: '9×9 · 5 个目标 · 28 步 · +145 币' },
-  m10: { label: '模式10', n: 9, targets: 6, rocks: 17, moves: 30, timeLimit: 150, gold: 165, desc: '9×9 · 6 个目标 + **限时 150 秒** · 30 步 · +165 币' },
+  m6: { label: '模式6', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 90, gold: 100, desc: '7×7 · 3 个目标 · **限时 90 秒** · +100 币' },
+  m7: { label: '模式7', n: 7, targets: 3, rocks: 7, moves: 22, timeLimit: 0, ordered: true, gold: 115, desc: '7×7 · **顺序收集**（必须按 ①②③ 编号依次收）· 22 步 · +115 币' },
+  m8: { label: '模式8', n: 8, targets: 4, rocks: 11, moves: 24, timeLimit: 0, gold: 130, desc: '8×8 · 4 个目标 · 24 步 · +130 币' },
+  m9: { label: '模式9', n: 8, targets: 4, rocks: 11, moves: 26, timeLimit: 0, crumble: true, gold: 145, desc: '8×8 · 4 个目标 · **碎冰**（滑过的格子会碎，不能回头）· 26 步 · +145 币' },
+  m10: { label: '模式10', n: 9, targets: 5, rocks: 15, moves: 30, timeLimit: 150, crumble: true, ordered: true, gold: 165, desc: '9×9 · **碎冰 + 顺序收集 + 限时 150 秒** · 30 步 · +165 币' },
 }
 const showInfo = ref(false)
 
@@ -41,6 +41,7 @@ const started = ref(false)
 const hint = ref('')
 const lastDir = ref(-1)
 const sliding = ref(false)
+const holes = ref(new Set()) // 碎冰模式：已碎掉的格子
 const best = computed(() => player.minigames?.ice?.best ?? 0)
 const cfg = computed(() => MODES[mode.value])
 const cellSize = computed(() => (cfg.value.n <= 6 ? 62 : cfg.value.n <= 7 ? 56 : cfg.value.n <= 8 ? 50 : 44))
@@ -77,7 +78,7 @@ function cellRC(i) { return [Math.floor(i / n.value), i % n.value] }
 function idxOf(r, c) { return r * n.value + c }
 function rockSet() { return new Set(rocks.value) }
 // 从 i 向 d 滑到底，返回 { end, path }（path 含经过的格，不含起点）
-function slidePath(i, d, rockSetRef) {
+function slidePath(i, d, rockSetRef, holesRef) {
   // DIRS 是 [dx, dy]：0 上(0,-1) / 1 右(1,0) / 2 下(0,1) / 3 左(-1,0)
   const [dx, dy] = DIRS[d]
   let [r, c] = cellRC(i)
@@ -87,7 +88,7 @@ function slidePath(i, d, rockSetRef) {
     const nc = c + dx
     if (nr < 0 || nc < 0 || nr >= n.value || nc >= n.value) break
     const j = idxOf(nr, nc)
-    if (rockSetRef.has(j)) break
+    if (rockSetRef.has(j) || (holesRef && holesRef.has(j))) break
     r = nr
     c = nc
     path.push(j)
@@ -136,11 +137,16 @@ function buildBoard() {
     const startIdx = free[Math.floor(Math.random() * free.length)]
     const visited = new Set([startIdx])
     const stops = []
+    const genHoles = new Set()
     let cur = startIdx
     for (let step = 0; step < cfg.value.moves; step++) {
       const d = Math.floor(Math.random() * 4)
-      const { end } = slidePath(cur, d, rockSet)
+      const { end, path } = slidePath(cur, d, rockSet, cfg.value.crumble ? genHoles : null)
       if (end === cur) continue
+      if (cfg.value.crumble) {
+        genHoles.add(cur)
+        for (const j of path) if (j !== end) genHoles.add(j)
+      }
       cur = end
       if (!visited.has(end)) { visited.add(end); stops.push(end) }
     }
@@ -164,17 +170,30 @@ function buildBoard() {
 function move(d) {
   if (!started.value || over.value || sliding.value) return
   const rockSetRef = rockSet()
-  const { end, path } = slidePath(playerIdx.value, d, rockSetRef)
+  const { end, path } = slidePath(playerIdx.value, d, rockSetRef, cfg.value.crumble ? holes.value : null)
   if (end === playerIdx.value) { beep(220, 0.08, 'sawtooth', 0.04); return }
   lastDir.value = d
   sliding.value = true
+  // 碎冰：离开的格子与滑过的格子碎掉（终点不碎）
+  if (cfg.value.crumble) {
+    const nh = new Set(holes.value)
+    nh.add(playerIdx.value)
+    for (const j of path) if (j !== end) nh.add(j)
+    holes.value = nh
+  }
   playerIdx.value = end
   moves.value++
-  // 收集
+  // 收集（顺序模式：只能按编号依次收）
   let got = 0
   for (const j of path) {
     const k = targets.value.indexOf(j)
-    if (k >= 0 && !(collected.value & (1 << k))) { collected.value |= (1 << k); got++ }
+    if (k < 0) continue
+    if (cfg.value.ordered) {
+      if (k === collectedCount.value && !(collected.value & (1 << k))) { collected.value |= (1 << k); got++ }
+    } else if (!(collected.value & (1 << k))) {
+      collected.value |= (1 << k)
+      got++
+    }
   }
   if (got > 0) {
     beep(880, 0.08)
@@ -243,6 +262,7 @@ function reset() {
   stopTimer()
   buildBoard()
   collected.value = 0
+  holes.value = new Set()
   moves.value = 0
   elapsed.value = 0
   elapsedAccum = 0
@@ -290,14 +310,14 @@ onUnmounted(() => {
         v-for="i in n * n"
         :key="i"
         class="ic-tile"
-        :class="{ rock: rocks.includes(i - 1), target: targets.includes(i - 1) }"
+        :class="{ rock: rocks.includes(i - 1), target: targets.includes(i - 1), hole: holes.has(i - 1) }"
         :style="{
           left: ((i - 1) % n) * (cellSize + 3) + 'px',
           top: Math.floor((i - 1) / n) * (cellSize + 3) + 'px',
           width: cellSize + 'px',
           height: cellSize + 'px',
         }"
-      ><span v-if="targets.includes(i - 1)" class="ic-cherry">{{ (collected & (1 << targets.indexOf(i - 1))) ? '·' : '🍒' }}</span></div>
+      ><span v-if="targets.includes(i - 1)" class="ic-cherry">{{ (collected & (1 << targets.indexOf(i - 1))) ? '·' : '🍒' }}</span><span v-if="cfg.ordered && targets.includes(i - 1) && !(collected & (1 << targets.indexOf(i - 1)))" class="ic-order">{{ targets.indexOf(i - 1) + 1 }}</span></div>
       <!-- 玩家（滑动动画） -->
       <div
         class="ic-player"
@@ -352,7 +372,7 @@ onUnmounted(() => {
             滑过 🍒 就把它收走，<b>把所有 🍒 收齐即通关</b>。<br />
             每局有<b>步数上限</b>（每滑一次算一步），用完还没收齐就判负；模式 10 还有限时。<br />
             棋盘由随机石头 + 玩家 + 目标生成，并用 BFS 穷举<b>验证必定可解</b>（不可解就重新生成）。<br />
-            结算：在步数（与时限）内收齐即达标发游戏币，并记录同模式最少步数。
+            模式 7/10 为<b>顺序收集</b>（必须按 ①②③ 编号依次收，收错顺序不算）；模式 9/10 为<b>碎冰</b>（滑过的格子会碎掉，不能回头再走）；模式 6/10 限时。<br />结算：在步数（与时限）内收齐即达标发游戏币，并记录同模式最少步数。
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="ic-info-row">
             <b class="ic-info-name">{{ m.label }}</b>
@@ -375,6 +395,8 @@ onUnmounted(() => {
 .ic-stage { position: relative; border-radius: 16px; background: linear-gradient(135deg, rgba(190, 228, 245, 0.5), rgba(150, 205, 232, 0.42)); border: 1px solid rgba(120, 170, 200, 0.45); box-shadow: 0 10px 28px rgba(60, 100, 130, 0.2); overflow: hidden; }
 .ic-tile { position: absolute; border-radius: 8px; background: linear-gradient(135deg, rgba(240, 252, 255, 0.72), rgba(200, 234, 248, 0.55)); border: 1px solid rgba(255, 255, 255, 0.75); display: flex; align-items: center; justify-content: center; }
 .ic-tile.rock { background: linear-gradient(135deg, #9a9a94, #6e6e68); border-color: #5a5a55; }
+.ic-tile.hole { background: rgba(40, 70, 90, 0.55); border-color: rgba(30, 60, 80, 0.6); }
+.ic-order { position: absolute; right: 3px; top: 1px; font-size: 10px; font-weight: 800; color: #d95a38; }
 .ic-tile.target { box-shadow: inset 0 0 0 2px rgba(224, 106, 90, 0.5); }
 .ic-cherry { font-size: 20px; line-height: 1; }
 .ic-player { position: absolute; display: flex; align-items: center; justify-content: center; transition: left 0.18s cubic-bezier(0.22, 0.9, 0.35, 1), top 0.18s cubic-bezier(0.22, 0.9, 0.35, 1); filter: drop-shadow(0 3px 4px rgba(40, 70, 90, 0.35)); z-index: 3; pointer-events: none; }

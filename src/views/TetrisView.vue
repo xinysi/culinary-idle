@@ -10,13 +10,15 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 // ── 棋盘 ──
-const COLS = 10
+const MAX_COLS = 10
 const ROWS = 20
 const CELL = 26
 const PAD = 16
 const PANEL_W = 92
-const W = PAD * 2 + COLS * CELL + PANEL_W
+const W = PAD * 2 + MAX_COLS * CELL + PANEL_W
 const H = PAD * 2 + ROWS * CELL
+let cols = MAX_COLS // 每模式可变（窄井）
+function wellX() { return PAD + (MAX_COLS - cols) * CELL / 2 }
 const TAU = Math.PI * 2
 
 // ── 方块（7 种，对应 7 种食材）──
@@ -48,16 +50,16 @@ for (const t of TYPES) {
 
 // ── 十模式 ──
 const MODES = {
-  m1: { label: '模式1', dur: 60, drop: 1.0, garbage: 0, target: 200, gold: 60, desc: '60 秒 · 目标 200 分 · 慢速下落、无垃圾行 · +60 币' },
-  m2: { label: '模式2', dur: 60, drop: 0.9, garbage: 0, target: 260, gold: 60, desc: '60 秒 · 目标 260 分 · +60 币' },
-  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, target: 340, gold: 70, desc: '70 秒 · 目标 340 分 · 下落加快 · +70 币' },
-  m4: { label: '模式4', dur: 70, drop: 0.7, garbage: 0, target: 420, gold: 75, desc: '70 秒 · 目标 420 分 · +75 币' },
-  m5: { label: '模式5', dur: 80, drop: 0.62, garbage: 2, target: 520, gold: 85, desc: '80 秒 · 目标 520 分 · **开局 2 行垃圾** · +85 币' },
-  m6: { label: '模式6', dur: 80, drop: 0.55, garbage: 3, target: 640, gold: 90, desc: '80 秒 · 目标 640 分 · 3 行垃圾 · +90 币' },
-  m7: { label: '模式7', dur: 90, drop: 0.5, garbage: 4, target: 780, gold: 100, desc: '90 秒 · 目标 780 分 · 4 行垃圾 · +100 币' },
-  m8: { label: '模式8', dur: 90, drop: 0.45, garbage: 5, target: 920, gold: 110, desc: '90 秒 · 目标 920 分 · 5 行垃圾 · +110 币' },
-  m9: { label: '模式9', dur: 100, drop: 0.4, garbage: 6, target: 1100, gold: 120, desc: '100 秒 · 目标 1100 分 · 6 行垃圾 · +120 币' },
-  m10: { label: '模式10', dur: 120, drop: 0.34, garbage: 8, target: 1400, gold: 150, desc: '120 秒 · 目标 1400 分 · 8 行垃圾 + 极速下落 · +150 币' },
+  m1: { label: '模式1', dur: 60, drop: 1.0, garbage: 0, cols: 10, target: 200, gold: 60, desc: '60 秒 · 目标 200 分 · 标准 10 列 · +60 币' },
+  m2: { label: '模式2', dur: 60, drop: 0.75, garbage: 0, cols: 10, target: 260, gold: 60, desc: '60 秒 · 目标 260 分 · 下落更快 · +60 币' },
+  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, cols: 8, target: 340, gold: 70, desc: '70 秒 · 目标 340 分 · **窄井 8 列**（更挤）· +70 币' },
+  m4: { label: '模式4', dur: 70, drop: 0.8, garbage: 0, cols: 6, target: 420, gold: 75, desc: '70 秒 · 目标 420 分 · **极窄井 6 列** · +75 币' },
+  m5: { label: '模式5', dur: 80, drop: 0.7, garbage: 0, cols: 10, noPreview: true, target: 520, gold: 85, desc: '80 秒 · 目标 520 分 · **无预览**（看不到下一个方块）· +85 币' },
+  m6: { label: '模式6', dur: 80, drop: 0.7, garbage: 0, cols: 10, blind: true, target: 640, gold: 90, desc: '80 秒 · 目标 640 分 · **盲盒**（当前方块闪烁难辨）· +90 币' },
+  m7: { label: '模式7', dur: 90, drop: 0.6, garbage: 3, cols: 10, target: 780, gold: 100, desc: '90 秒 · 目标 780 分 · 开局 3 行垃圾 · +100 币' },
+  m8: { label: '模式8', dur: 90, drop: 0.6, garbage: 0, cols: 10, riseSec: 12, target: 920, gold: 110, desc: '90 秒 · 目标 920 分 · **上升垃圾**（每 12 秒底部升一行）· +110 币' },
+  m9: { label: '模式9', dur: 100, drop: 0.5, garbage: 0, cols: 10, pool: ['S', 'Z', 'J', 'L', 'T'], target: 1100, gold: 120, desc: '100 秒 · 目标 1100 分 · **窄池**（只有 S/Z/J/L/T 五种难方块）· +120 币' },
+  m10: { label: '模式10', dur: 120, drop: 0.4, garbage: 0, cols: 8, riseSec: 10, target: 1400, gold: 150, desc: '120 秒 · 目标 1400 分 · **地狱**：窄井 + 每 10 秒上升垃圾 · +150 币' },
 }
 const showInfo = ref(false)
 
@@ -94,6 +96,7 @@ let overFlag = false
 let lastTs = 0
 let loopId = null
 let softDrop = false
+let riseAccum = 0
 
 // ── 音效 ──
 let soundCtx = null
@@ -116,7 +119,7 @@ function beep(freq, dur, type = 'sine', vol = 0.06) {
 
 // ── 方块逻辑 ──
 function emptyBoard() {
-  return Array.from({ length: ROWS }, () => new Array(COLS).fill(null))
+  return Array.from({ length: ROWS }, () => new Array(cols).fill(null))
 }
 function rotateMatrix(m) {
   const n = m.length
@@ -124,10 +127,14 @@ function rotateMatrix(m) {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) out[c][n - 1 - r] = m[r][c]
   return out
 }
+function randomType() {
+  const pool = MODES[mode.value].pool || TYPES
+  return pool[Math.floor(Math.random() * pool.length)]
+}
 function spawn(type) {
-  const t = type || TYPES[Math.floor(Math.random() * TYPES.length)]
+  const t = type || randomType()
   const m = SHAPES[t].map((row) => row.slice())
-  const x = Math.floor((COLS - m[0].length) / 2)
+  const x = Math.floor((cols - m[0].length) / 2)
   const p = { type: t, m, x, y: 0 }
   // 起始位置若已冲突 → 游戏结束
   if (collide(p, 0, 0)) { settle(); return }
@@ -140,7 +147,7 @@ function collide(p, dx, dy, mat) {
       if (!m[r][c]) continue
       const nx = p.x + c + dx
       const ny = p.y + r + dy
-      if (nx < 0 || nx >= COLS || ny >= ROWS) return true
+      if (nx < 0 || nx >= cols || ny >= ROWS) return true
       if (ny >= 0 && board[ny][nx]) return true
     }
   }
@@ -181,14 +188,14 @@ function lockPiece() {
   }
   piece = null
   clearLines()
-  if (!overFlag) { spawn(nextType.value); nextType.value = TYPES[Math.floor(Math.random() * TYPES.length)] }
+  if (!overFlag) { spawn(nextType.value); nextType.value = randomType() }
 }
 function clearLines() {
   let cleared = 0
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every((c) => c)) {
       board.splice(r, 1)
-      board.unshift(new Array(COLS).fill(null))
+      board.unshift(new Array(cols).fill(null))
       cleared++
       r++
     }
@@ -199,9 +206,9 @@ function clearLines() {
   score.value += gain
   lines.value += cleared
   level.value = 1 + Math.floor(lines.value / 8)
-  floats.push({ x: PAD + COLS * CELL / 2, y: PAD + 40, text: `消 ${cleared} 行 +${gain}`, life: 0, max: 1.1, color: '#ffd65a' })
+  floats.push({ x: wellX() + cols * CELL / 2, y: PAD + 40, text: `消 ${cleared} 行 +${gain}`, life: 0, max: 1.1, color: '#ffd65a' })
   for (let i = 0; i < 12 * cleared; i++) {
-    sparks.push({ x: PAD + Math.random() * COLS * CELL, y: PAD + Math.random() * ROWS * CELL, vx: rand(-80, 80), vy: rand(-160, -40), life: 0, max: rand(0.3, 0.7), color: '#ffe08a', size: rand(1.4, 2.6) })
+    sparks.push({ x: wellX() + Math.random() * cols * CELL, y: PAD + Math.random() * ROWS * CELL, vx: rand(-80, 80), vy: rand(-160, -40), life: 0, max: rand(0.3, 0.7), color: '#ffe08a', size: rand(1.4, 2.6) })
   }
   shake = Math.min(1, 0.4 + cleared * 0.2)
   beep(880 + cleared * 120, 0.08)
@@ -219,14 +226,23 @@ function hardDrop() {
   beep(420, 0.05, 'square', 0.05)
   lockPiece()
 }
+function garbageRow() {
+  const row = new Array(cols).fill(null)
+  const hole = Math.floor(Math.random() * cols)
+  for (let c = 0; c < cols; c++) if (c !== hole) row[c] = TYPES[Math.floor(Math.random() * TYPES.length)]
+  return row
+}
 function addGarbage(n) {
-  for (let i = 0; i < n; i++) {
-    const row = new Array(COLS).fill(null)
-    const hole = Math.floor(Math.random() * COLS)
-    for (let c = 0; c < COLS; c++) if (c !== hole) row[c] = TYPES[Math.floor(Math.random() * TYPES.length)]
-    board.push(row)
-  }
+  for (let i = 0; i < n; i++) board.push(garbageRow())
   while (board.length > ROWS) board.shift()
+}
+// 上升垃圾：底部升一行，顶部被顶出的行若有方块则判负
+function riseGarbage() {
+  const top = board.shift()
+  if (top.some((c) => c)) { settle(); return }
+  board.push(garbageRow())
+  shake = 0.7
+  beep(200, 0.18, 'sawtooth', 0.06)
 }
 
 // ── 输入 ──
@@ -257,6 +273,11 @@ function loop() {
         timeAccum -= 1
         timeLeft.value = Math.max(0, timeLeft.value - 1)
         if (timeLeft.value <= 0) settle()
+      }
+      // 上升垃圾
+      if (m.riseSec) {
+        riseAccum += dt
+        if (riseAccum >= m.riseSec) { riseAccum = 0; riseGarbage() }
       }
       // 下落
       if (piece) {
@@ -300,33 +321,38 @@ function draw() {
   if (dark) { g.addColorStop(0, '#241a14'); g.addColorStop(1, '#15100c') } else { g.addColorStop(0, '#f7ecdc'); g.addColorStop(1, '#e2cbaa') }
   ctx.fillStyle = g
   ctx.fillRect(0, 0, W, H)
-  // 井
+  // 井（按 cols 居中）
+  const wx = wellX()
   ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.12)'
-  ctx.fillRect(PAD - 2, PAD - 2, COLS * CELL + 4, ROWS * CELL + 4)
+  ctx.fillRect(wx - 2, PAD - 2, cols * CELL + 4, ROWS * CELL + 4)
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.12)' : 'rgba(120,80,40,0.35)'
   ctx.lineWidth = 2
-  ctx.strokeRect(PAD - 2, PAD - 2, COLS * CELL + 4, ROWS * CELL + 4)
+  ctx.strokeRect(wx - 2, PAD - 2, cols * CELL + 4, ROWS * CELL + 4)
   // 网格
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.05)' : 'rgba(120,80,40,0.12)'
   ctx.lineWidth = 1
-  for (let c = 1; c < COLS; c++) { ctx.beginPath(); ctx.moveTo(PAD + c * CELL, PAD); ctx.lineTo(PAD + c * CELL, PAD + ROWS * CELL); ctx.stroke() }
-  for (let r = 1; r < ROWS; r++) { ctx.beginPath(); ctx.moveTo(PAD, PAD + r * CELL); ctx.lineTo(PAD + COLS * CELL, PAD + r * CELL); ctx.stroke() }
+  for (let c = 1; c < cols; c++) { ctx.beginPath(); ctx.moveTo(wx + c * CELL, PAD); ctx.lineTo(wx + c * CELL, PAD + ROWS * CELL); ctx.stroke() }
+  for (let r = 1; r < ROWS; r++) { ctx.beginPath(); ctx.moveTo(wx, PAD + r * CELL); ctx.lineTo(wx + cols * CELL, PAD + r * CELL); ctx.stroke() }
   // 已落方块
   for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (board[r][c]) drawCell(ctx, PAD + c * CELL, PAD + r * CELL, board[r][c])
+    for (let c = 0; c < cols; c++) {
+      if (board[r][c]) drawCell(ctx, wx + c * CELL, PAD + r * CELL, board[r][c])
     }
   }
-  // 当前方块
+  // 当前方块（盲盒模式闪烁）
   if (piece) {
+    const isBlind = MODES[mode.value].blind
+    ctx.save()
+    if (isBlind) ctx.globalAlpha = 0.22 + 0.5 * (Math.sin(waveT * 7) > 0 ? 1 : 0)
     for (let r = 0; r < piece.m.length; r++) {
       for (let c = 0; c < piece.m[r].length; c++) {
-        if (piece.m[r][c]) drawCell(ctx, PAD + (piece.x + c) * CELL, PAD + (piece.y + r) * CELL, piece.type)
+        if (piece.m[r][c]) drawCell(ctx, wx + (piece.x + c) * CELL, PAD + (piece.y + r) * CELL, piece.type)
       }
     }
+    ctx.restore()
   }
   // 右侧面板：下一个 + 等级
-  const px = PAD + COLS * CELL + 12
+  const px = PAD + MAX_COLS * CELL + 12
   ctx.fillStyle = dark ? 'rgba(0,0,0,0.3)' : 'rgba(255,252,246,0.75)'
   ctx.beginPath()
   ctx.roundRect ? ctx.roundRect(px, PAD, PANEL_W - 20, 130, 12) : ctx.rect(px, PAD, PANEL_W - 20, 130)
@@ -337,17 +363,19 @@ function draw() {
   ctx.fillStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(90,60,30,0.7)'
   ctx.font = 'bold 11px system-ui, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('下一个', px + (PANEL_W - 20) / 2, PAD + 18)
-  // 预览
-  const pm = SHAPES[nextType.value]
+  ctx.fillText(MODES[mode.value].noPreview ? '? ? ?' : '下一个', px + (PANEL_W - 20) / 2, PAD + 18)
+  // 预览（无预览模式跳过）
+  const pm = SHAPES[MODES[mode.value].noPreview ? 'O' : nextType.value]
   const ps = 18
   const pw = pm[0].length * ps
   const ph = pm.length * ps
   const ox = px + (PANEL_W - 20 - pw) / 2
   const oy = PAD + 34 + (60 - ph) / 2
-  for (let r = 0; r < pm.length; r++) {
-    for (let c = 0; c < pm[r].length; c++) {
-      if (pm[r][c]) drawCell(ctx, ox + c * ps, oy + r * ps, nextType.value, ps)
+  if (!MODES[mode.value].noPreview) {
+    for (let r = 0; r < pm.length; r++) {
+      for (let c = 0; c < pm[r].length; c++) {
+        if (pm[r][c]) drawCell(ctx, ox + c * ps, oy + r * ps, nextType.value, ps)
+      }
     }
   }
   ctx.fillStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(90,60,30,0.7)'
@@ -403,6 +431,7 @@ function drawCell(ctx, x, y, type, size) {
 function reset() {
   stopLoop()
   const m = MODES[mode.value]
+  cols = m.cols || MAX_COLS
   board = emptyBoard()
   piece = null
   dropAccum = 0
@@ -419,7 +448,7 @@ function reset() {
   started.value = false
   floats = []
   sparks = []
-  nextType.value = TYPES[Math.floor(Math.random() * TYPES.length)]
+  nextType.value = randomType()
   hint.value = '点击「开始游戏」后开始消行'
   running = true
   startLoop()
@@ -427,11 +456,14 @@ function reset() {
 function startGame() {
   if (overFlag) return
   started.value = true
+  cols = MODES[mode.value].cols || MAX_COLS
+  board = emptyBoard()
   timeLeft.value = MODES[mode.value].dur
   timeAccum = 0
+  riseAccum = 0
   if (MODES[mode.value].garbage > 0) addGarbage(MODES[mode.value].garbage)
   spawn(nextType.value)
-  nextType.value = TYPES[Math.floor(Math.random() * TYPES.length)]
+  nextType.value = randomType()
   hint.value = '← → 移动 · ↑ 旋转 · ↓ 软降 · 空格 直落'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)

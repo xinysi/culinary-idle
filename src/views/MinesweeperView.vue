@@ -11,16 +11,16 @@ const ui = useUiStore()
 
 // ── 十模式 ──
 const MODES = {
-  m1: { label: '模式1', n: 6, mines: 5, timeLimit: 0, gold: 30, desc: '6×6 · 5 个烂食材 · 不限时 · +30 币' },
-  m2: { label: '模式2', n: 7, mines: 8, timeLimit: 0, gold: 40, desc: '7×7 · 8 个烂食材 · +40 币' },
-  m3: { label: '模式3', n: 8, mines: 10, timeLimit: 0, gold: 50, desc: '8×8 · 10 个烂食材 · +50 币' },
-  m4: { label: '模式4', n: 9, mines: 14, timeLimit: 0, gold: 65, desc: '9×9 · 14 个烂食材 · +65 币' },
-  m5: { label: '模式5', n: 10, mines: 18, timeLimit: 0, gold: 80, desc: '10×10 · 18 个烂食材 · +80 币' },
-  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, gold: 95, desc: '12×12 · 26 个烂食材 · +95 币' },
-  m7: { label: '模式7', n: 12, mines: 26, timeLimit: 180, gold: 110, desc: '12×12 · 26 个烂食材 · **限时 180 秒** · +110 币' },
-  m8: { label: '模式8', n: 14, mines: 36, timeLimit: 0, gold: 125, desc: '14×14 · 36 个烂食材 · +125 币' },
-  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, gold: 140, desc: '16×16 · 40 个烂食材 · +140 币' },
-  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, gold: 165, desc: '16×16 · 40 个烂食材 · **限时 240 秒** · +165 币' },
+  m1: { label: '模式1', n: 6, mines: 5, timeLimit: 0, gold: 30, desc: '6×6 · 5 个烂食材 · 3 条命 · +30 币' },
+  m2: { label: '模式2', n: 8, mines: 10, timeLimit: 0, gold: 40, desc: '8×8 · 10 个烂食材 · +40 币' },
+  m3: { label: '模式3', n: 10, mines: 18, timeLimit: 0, gold: 55, desc: '10×10 · 18 个烂食材 · +55 币' },
+  m4: { label: '模式4', n: 10, mines: 18, timeLimit: 120, gold: 70, desc: '10×10 · 18 个烂食材 · **限时 120 秒** · +70 币' },
+  m5: { label: '模式5', n: 12, mines: 26, timeLimit: 0, gold: 85, desc: '12×12 · 26 个烂食材 · +85 币' },
+  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, lives: 1, gold: 100, desc: '12×12 · 26 个烂食材 · **只有 1 条命**（一踩即负）· +100 币' },
+  m7: { label: '模式7', n: 12, mines: 26, timeLimit: 0, cluster: true, gold: 115, desc: '12×12 · 26 个烂食材 · **簇状雷区**（成堆聚集，更难拆）· +115 币' },
+  m8: { label: '模式8', n: 14, mines: 36, timeLimit: 0, gold: 130, desc: '14×14 · 36 个烂食材 · +130 币' },
+  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, lives: 1, gold: 145, desc: '16×16 · 40 个烂食材 · **只有 1 条命** · +145 币' },
+  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, lives: 1, cluster: true, gold: 165, desc: '16×16 · 40 个烂食材 · **簇状 + 1 命 + 限时 240 秒** · +165 币' },
 }
 const showInfo = ref(false)
 
@@ -93,9 +93,24 @@ function buildBoard() {
   const n = cfg.value.n
   const total = n * n
   const list = Array.from({ length: total }, () => ({ mine: false, near: 0, open: false, flag: false }))
-  // 随机布雷
-  const idxs = Array.from({ length: total }, (_, i) => i).sort(() => Math.random() - 0.5)
-  for (let k = 0; k < cfg.value.mines; k++) list[idxs[k]].mine = true
+  // 布雷：普通随机 / 簇状（2×2 成堆）
+  if (cfg.value.cluster) {
+    let placed = 0
+    let guard = 0
+    while (placed < cfg.value.mines && guard++ < 3000) {
+      const r = Math.floor(Math.random() * (n - 1))
+      const c = Math.floor(Math.random() * (n - 1))
+      for (let dr = 0; dr < 2; dr++) {
+        for (let dc = 0; dc < 2; dc++) {
+          const i = (r + dr) * n + (c + dc)
+          if (!list[i].mine && placed < cfg.value.mines) { list[i].mine = true; placed++ }
+        }
+      }
+    }
+  } else {
+    const idxs = Array.from({ length: total }, (_, i) => i).sort(() => Math.random() - 0.5)
+    for (let k = 0; k < cfg.value.mines; k++) list[idxs[k]].mine = true
+  }
   // 计算周围数
   for (let i = 0; i < total; i++) {
     if (list[i].mine) continue
@@ -214,7 +229,7 @@ function stopTimer() {
 function reset() {
   stopTimer()
   cells.value = buildBoard()
-  lives.value = 3
+  lives.value = cfg.value.lives || 3
   elapsed.value = 0
   elapsedAccum = 0
   firstClick = true
@@ -304,7 +319,7 @@ onUnmounted(() => { stopTimer() })
             踩到烂食材扣 1 条命（共 3 条命，命耗尽判负），该格会自动插旗标记。<br />
             <b>🚩 标记模式</b>：打开后点格子是插旗/取消（标记你判断是烂食材的位置），再点一次关闭。<br />
             第一次点击一定安全（若点到烂食材会自动挪走）。<b>把所有安全格都挖开即通关</b>。<br />
-            模式 7/10 有限时，超时判负；通关发游戏币，并记录同模式最快用时。
+            模式 4/10 有限时，超时判负；模式 6/9/10 <b>只有 1 条命</b>；模式 7/10 的烂食材是<b>簇状聚集</b>（成 2×2 堆），拆起来更难。通关发游戏币，并记录同模式最快用时。
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="ms-info-row">
             <b class="ms-info-name">{{ m.label }}</b>
