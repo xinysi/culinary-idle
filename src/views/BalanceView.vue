@@ -232,23 +232,42 @@ onUnmounted(() => {
     </div>
 
     <div class="ba-stage">
-      <!-- 天平（倾角显示总误差） -->
-      <div class="ba-scale">
-        <div class="ba-beam" :style="{ transform: `rotate(${tiltDeg}deg)` }">
-          <span class="ba-hang ba-hang-l">
-            <span class="ba-chain" :style="{ transform: `rotate(${-tiltDeg}deg)` }"></span>
-            <span class="ba-pan" :style="{ transform: `rotate(${-tiltDeg}deg)` }">🥣</span>
-          </span>
-          <span class="ba-hang ba-hang-r">
-            <span class="ba-chain" :style="{ transform: `rotate(${-tiltDeg}deg)` }"></span>
-            <span class="ba-pan" :style="{ transform: `rotate(${-tiltDeg}deg)` }">🥣</span>
-          </span>
-          <span class="ba-pivot"></span>
-        </div>
-        <div class="ba-pillar"></div>
-        <div class="ba-base"></div>
-      </div>
-
+      <!-- 天平（SVG 绘制，倾角显示总误差） -->
+      <svg class="ba-scale" viewBox="0 0 260 116" aria-hidden="true">
+        <defs>
+          <linearGradient id="baBeamG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e0bd8c" /><stop offset="1" stop-color="#a3763f" />
+          </linearGradient>
+          <linearGradient id="baPillarG" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#d8b183" /><stop offset="0.5" stop-color="#b98d5e" /><stop offset="1" stop-color="#8a5f36" />
+          </linearGradient>
+          <linearGradient id="baPanG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f0e2cc" /><stop offset="1" stop-color="#c9a878" />
+          </linearGradient>
+          <radialGradient id="baKnobG" cx="0.4" cy="0.35" r="0.7">
+            <stop offset="0" stop-color="#ffe9a8" /><stop offset="1" stop-color="#c9942a" />
+          </radialGradient>
+        </defs>
+        <!-- 底座 -->
+        <path d="M78 108 h104 l-16 -14 h-72 z" fill="url(#baPillarG)" />
+        <ellipse cx="130" cy="108" rx="62" ry="7" fill="rgba(90,60,30,0.18)" />
+        <!-- 立柱 -->
+        <rect x="124" y="36" width="12" height="60" rx="6" fill="url(#baPillarG)" />
+        <!-- 横梁 + 吊盘（绕支点旋转；吊盘反向旋转保持水平） -->
+        <g :transform="'rotate(' + tiltDeg + ' 130 34)'">
+          <rect x="26" y="30" width="208" height="8" rx="4" fill="url(#baBeamG)" />
+          <g :transform="'rotate(' + (-tiltDeg) + ' 36 34)'">
+            <line x1="36" y1="34" x2="36" y2="60" stroke="#a3763f" stroke-width="2" />
+            <path d="M12 60 h48 a24 16 0 0 1 -48 0 z" fill="url(#baPanG)" stroke="rgba(150,110,70,0.55)" stroke-width="1.5" />
+          </g>
+          <g :transform="'rotate(' + (-tiltDeg) + ' 224 34)'">
+            <line x1="224" y1="34" x2="224" y2="60" stroke="#a3763f" stroke-width="2" />
+            <path d="M200 60 h48 a24 16 0 0 1 -48 0 z" fill="url(#baPanG)" stroke="rgba(150,110,70,0.55)" stroke-width="1.5" />
+          </g>
+        </g>
+        <!-- 支点 -->
+        <circle cx="130" cy="34" r="8" fill="url(#baKnobG)" stroke="rgba(150,110,70,0.6)" stroke-width="1.5" />
+      </svg>
       <div class="ba-tubes">
         <div v-for="it in (recipe ? recipe.items : [])" :key="it.key" class="ba-tube-wrap">
           <div class="ba-tube">
@@ -321,16 +340,7 @@ onUnmounted(() => {
 .ba-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .ba-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
 .ba-stage { width: min(720px, 98%); border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); padding: 18px 16px 22px; display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; }
-.ba-scale { position: relative; width: 250px; height: 92px; }
-.ba-beam { position: absolute; left: 26px; right: 26px; top: 20px; height: 9px; border-radius: 999px; background: linear-gradient(180deg, #dcb888, #a3763f); box-shadow: 0 2px 5px rgba(90, 60, 30, 0.28); transform-origin: 50% 50%; transition: transform 0.12s linear; }
-.ba-hang { position: absolute; top: 5px; width: 0; }
-.ba-hang-l { left: 2px; }
-.ba-hang-r { right: 2px; }
-.ba-chain { position: absolute; left: -1px; top: 0; width: 2px; height: 24px; background: linear-gradient(180deg, rgba(150, 110, 70, 0.75), rgba(150, 110, 70, 0.45)); transform-origin: 50% 0; }
-.ba-pan { position: absolute; left: -15px; top: 24px; font-size: 26px; filter: drop-shadow(0 3px 4px rgba(90, 60, 30, 0.3)); }
-.ba-pivot { position: absolute; left: 50%; top: -7px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: linear-gradient(180deg, #e8c34a, #c9942a); box-shadow: 0 1px 3px rgba(90, 60, 30, 0.35); }
-.ba-pillar { position: absolute; left: 50%; top: 24px; width: 12px; height: 50px; margin-left: -6px; border-radius: 5px; background: linear-gradient(180deg, #c89a6b, #8f6438); box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.15); }
-.ba-base { position: absolute; left: 50%; bottom: 4px; width: 96px; height: 14px; margin-left: -48px; border-radius: 7px; background: linear-gradient(180deg, #bb8f5f, #865c33); box-shadow: 0 5px 10px rgba(90, 60, 30, 0.28); }
+.ba-scale { width: 260px; height: 116px; display: block; overflow: visible; }
 .ba-err { margin-left: 6px; font-weight: 700; font-size: 12.5px; color: var(--muted); }
 .ba-bottle-ico { display: inline-block; width: 10px; height: 16px; margin-right: 6px; border-radius: 3px 3px 4px 4px; vertical-align: -3px; box-shadow: inset 0 -5px 0 rgba(255, 255, 255, 0.28); }
 .ba-tubes { display: flex; gap: 26px; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
