@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 200, gold: 45, desc: '40 秒 · 目标 200 分 · 3 个食材机关，慢球好控制 · +45 币' },
-  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 225, gold: 55, desc: '45 秒 · 目标 225 分 · 4 个机关 · +55 币' },
-  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 250, gold: 60, desc: '50 秒 · 目标 250 分 · **机关会左右移动** · +60 币' },
-  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 275, gold: 70, desc: '55 秒 · 目标 275 分 · 6 个机关 · +70 币' },
-  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 300, gold: 80, desc: '60 秒 · 目标 300 分 · 球更快，挡板略短 · +80 币' },
-  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 325, gold: 90, desc: '65 秒 · 目标 325 分 · 8 个机关 · +90 币' },
-  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 350, gold: 100, desc: '70 秒 · 目标 350 分 · 机关移动更快 · +100 币' },
-  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 400, gold: 120, desc: '80 秒 · 目标 400 分 · 10 个机关 · +120 币' },
-  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 450, gold: 140, desc: '90 秒 · 目标 450 分 · 12 个机关，挡板更短 · +140 币' },
-  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 500, gold: 160, desc: '100 秒 · 目标 500 分 · 满台机关 + 最快球速 · +160 币' },
+  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 555, gold: 45, desc: '40 秒 · 目标 555 分 · 3 个食材机关，慢球好控制 · +45 币' },
+  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 625, gold: 55, desc: '45 秒 · 目标 625 分 · 4 个机关 · +55 币' },
+  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 695, gold: 60, desc: '50 秒 · 目标 695 分 · **机关会左右移动** · +60 币' },
+  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 760, gold: 70, desc: '55 秒 · 目标 760 分 · 6 个机关 · +70 币' },
+  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 830, gold: 80, desc: '60 秒 · 目标 830 分 · 球更快，挡板略短 · +80 币' },
+  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 900, gold: 90, desc: '65 秒 · 目标 900 分 · 8 个机关 · +90 币' },
+  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 970, gold: 100, desc: '70 秒 · 目标 970 分 · 机关移动更快 · +100 币' },
+  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 1110, gold: 120, desc: '80 秒 · 目标 1110 分 · 10 个机关 · +120 币' },
+  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 1245, gold: 140, desc: '90 秒 · 目标 1245 分 · 12 个机关，挡板更短 · +140 币' },
+  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 1385, gold: 160, desc: '100 秒 · 目标 1385 分 · 满台机关 + 最快球速 · +160 币' },
 }
 const FOODS = ['🍅', '🍇', '🍋', '🥕', '🍄', '🌰', '🍑', '🫑', '🥑', '🍆', '🌽', '🍍', '🥦', '🍎']
 const showInfo = ref(false)
@@ -54,6 +54,8 @@ let flippers = [] // { px, py, len, ang, targetAng, dir, active }
 let floats = []
 let guides = [] // 两侧回球导轨：把边路的球导向挡板
 let drops = [] // 掉落靶（打中消失，全清有奖励）
+let spinners = [] // 旋转风车（撞到加分并加速旋转）
+let kickers = [] // 弹射孔（吸入 0.5 秒后弹出 +60）
 let topAt = 0 // 顶部通道奖励冷却
 let dropClearAt = 0
 let respawnAt = 0
@@ -89,30 +91,37 @@ function buildBoard() {
   floats = []
   // 机关排布：每局随机选一种图案（网格 / 菱形 / 散点），行列数与抖动随机
   const placed = []
-  const pattern = ['grid', 'diamond', 'scatter'][Math.floor(Math.random() * 3)]
+  // 对称图案（每局随机一种）：弧阵 / 菱形 / 双翼 / 三角
+  const pattern = ['arc', 'diamond', 'wings', 'tri'][Math.floor(Math.random() * 4)]
   const spots = []
-  if (pattern === 'grid') {
-    const cols = Math.max(2, Math.round(Math.sqrt(m.bumpers * 1.5)))
-    const rowsN = Math.ceil(m.bumpers / cols)
-    const x0 = 92, x1 = W - 92, y0 = 150, y1 = 330
-    for (let r0 = 0; r0 < rowsN; r0++) {
-      for (let c0 = 0; c0 < cols; c0++) {
-        if (spots.length >= m.bumpers) break
-        spots.push({ x: x0 + (c0 + 0.5) * ((x1 - x0) / cols) + rand(-16, 16), y: y0 + (r0 + 0.5) * ((y1 - y0) / rowsN) + rand(-14, 14) })
-      }
+  const cx = W / 2
+  if (pattern === 'arc') {
+    for (let i = 0; i < m.bumpers; i++) {
+      const a = -1.05 + (i / Math.max(1, m.bumpers - 1)) * 2.1
+      spots.push({ x: cx + Math.sin(a) * 250, y: 300 - Math.cos(a) * 150 })
     }
   } else if (pattern === 'diamond') {
-    const cx = W / 2, cy = 240
-    const step = 74
+    const step = 76
     const cells = []
     for (let gy = -2; gy <= 2; gy++) for (let gx = -3; gx <= 3; gx++) {
       if (Math.abs(gx) + Math.abs(gy) > 2) continue
-      cells.push({ x: cx + gx * step, y: cy + gy * step * 0.72 })
+      cells.push({ x: cx + gx * step, y: 240 + gy * step * 0.7 })
     }
-    cells.sort(() => Math.random() - 0.5)
-    for (const c of cells) { if (spots.length >= m.bumpers) break; spots.push({ x: c.x + rand(-12, 12), y: c.y + rand(-10, 10) }) }
+    cells.sort((a, b) => (Math.abs(a.x - cx) + Math.abs(a.y - 240)) - (Math.abs(b.x - cx) + Math.abs(b.y - 240)))
+    for (const c of cells) { if (spots.length >= m.bumpers) break; spots.push(c) }
+  } else if (pattern === 'wings') {
+    const half = Math.ceil(m.bumpers / 2)
+    for (let i = 0; i < m.bumpers; i++) {
+      const side = i % 2 === 0 ? -1 : 1
+      const k = Math.floor(i / 2)
+      spots.push({ x: cx + side * (120 + (k % 3) * 78), y: 170 + Math.floor(k / 3) * 84 + (k % 3) * 8 })
+    }
   } else {
-    for (let i = 0; i < m.bumpers; i++) spots.push({ x: rand(90, W - 90), y: rand(140, 340) })
+    let k = 0
+    for (let row = 0; k < m.bumpers; row++) {
+      const cnt = row + 1
+      for (let i = 0; i < cnt && k < m.bumpers; i++, k++) spots.push({ x: cx + (i - (cnt - 1) / 2) * 92, y: 168 + row * 82 })
+    }
   }
   for (const sp of spots) {
     const r = rand(15, 23)
@@ -130,6 +139,18 @@ function buildBoard() {
     const cnt = Math.max(2, Math.round(dn / rowsD))
     const startX = W / 2 - (cnt * dw + (cnt - 1) * gap) / 2 + dw / 2
     for (let i = 0; i < cnt; i++) drops.push({ x: startX + i * (dw + gap), y: startY + r0 * (24 + rand(0, 8)), w: dw, h: 16, alive: true })
+  }
+  // 旋转风车：模式 4 起 1 个、模式 7 起 2 个
+  spinners = []
+  const spinN = m.bumpers >= 11 ? 2 : m.bumpers >= 7 ? 2 : m.bumpers >= 4 ? 1 : 0
+  for (let i = 0; i < spinN; i++) {
+    spinners.push({ x: cx + (spinN === 1 ? 0 : (i === 0 ? -1 : 1) * rand(120, 190)), y: rand(196, 268), ang: Math.random() * 6.28, spin: 0 })
+  }
+  // 弹射孔：模式 6 起 1 个、模式 9 起 2 个
+  kickers = []
+  const kickN = m.bumpers >= 12 ? 2 : m.bumpers >= 8 ? 1 : 0
+  for (let i = 0; i < kickN; i++) {
+    kickers.push({ x: cx + (kickN === 1 ? rand(-200, 200) : (i === 0 ? -1 : 1) * rand(150, 210)), y: rand(150, 230), r: 21, hold: 0 })
   }
   // 弹弓（经典弹珠台元素）：每局随机 2~4 个、左右不对称、位置与高度随机
   const slingN = 2 + (m.bumpers >= 9 ? 2 : m.bumpers >= 6 ? 1 : 0) + (Math.random() < 0.4 ? 1 : 0)
@@ -264,6 +285,49 @@ function step(dt) {
       floats.push({ x: b.x, y: b.y - b.r - 4, life: 0, max: 0.9, text: `+${gain}`, good: true })
       beep(660 + Math.min(8, combo.value) * 60, 0.06, 'triangle', 0.05)
     }
+  }
+  // 旋转风车：持续自转，撞到则加速 + 15 分
+  for (const sp of spinners) {
+    sp.ang += (2.2 + sp.spin) * dt
+    sp.spin = Math.max(0, sp.spin - dt * 3)
+    const hw = 34, hh = 7
+    const ca = Math.cos(sp.ang), sa = Math.sin(sp.ang)
+    for (const sgn of [-1, 1]) {
+      const tx = sp.x + ca * hw * sgn
+      const ty = sp.y + sa * hw * sgn
+      const segX = tx - sp.x, segY = ty - sp.y
+      const segL2 = segX * segX + segY * segY
+      let t = ((ball.x - sp.x) * segX + (ball.y - sp.y) * segY) / segL2
+      t = Math.max(0, Math.min(1, t))
+      const px = sp.x + segX * t, py = sp.y + segY * t
+      const d = Math.hypot(ball.x - px, ball.y - py)
+      const rad = R + hh
+      if (d < rad && d > 0.001) {
+        const nx = (ball.x - px) / d, ny = (ball.y - py) / d
+        ball.x = px + nx * rad; ball.y = py + ny * rad
+        const dot = ball.vx * nx + ball.vy * ny
+        if (dot < 0) { ball.vx -= 2 * dot * nx * 0.9; ball.vy -= 2 * dot * ny * 0.9 }
+        sp.spin = Math.min(9, sp.spin + 3)
+        score.value += 15
+        floats.push({ x: sp.x, y: sp.y - 20, life: 0, max: 0.8, text: '+15', good: true })
+        beep(560, 0.05, 'square', 0.04)
+      }
+    }
+  }
+  // 弹射孔：球进入后 0.5 秒弹出 + 60 分
+  for (const k of kickers) {
+    if (k.hold > 0) {
+      k.hold -= dt
+      ball.x = k.x; ball.y = k.y; ball.vx = 0; ball.vy = 0
+      if (k.hold <= 0) {
+        ball.vx = rand(-180, 180); ball.vy = -680
+        score.value += 60
+        floats.push({ x: k.x, y: k.y - 26, life: 0, max: 1, text: '+60', good: true })
+        beep(1046, 0.1); setTimeout(() => beep(1568, 0.12), 90)
+      }
+      break
+    }
+    if (Math.hypot(ball.x - k.x, ball.y - k.y) < k.r && Math.abs(ball.vy) < 520) { k.hold = 0.5; beep(320, 0.08, 'sine', 0.05) }
   }
   // 掉落靶碰撞
   for (const d of drops) {
@@ -552,6 +616,37 @@ function draw() {
     ctx.strokeStyle = dark ? 'rgba(210,170,120,0.4)' : 'rgba(255,255,255,0.45)'
     ctx.lineWidth = 3
     ctx.stroke()
+  }
+  // ── 旋转风车 ──
+  for (const sp of spinners) {
+    ctx.save()
+    ctx.translate(sp.x, sp.y)
+    ctx.rotate(sp.ang)
+    ctx.fillStyle = dark ? 'rgba(210,170,120,0.9)' : 'rgba(163,118,63,0.9)'
+    arcTo(ctx, -34, -7, 68, 14, 7)
+    ctx.fill()
+    ctx.fillStyle = dark ? 'rgba(255,220,180,0.85)' : 'rgba(255,255,255,0.75)'
+    arcTo(ctx, -34, -7, 68, 5, 3)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0, 0, 6, 0, Math.PI * 2)
+    ctx.fillStyle = '#d95a38'
+    ctx.fill()
+    ctx.restore()
+  }
+  // ── 弹射孔 ──
+  for (const k of kickers) {
+    ctx.beginPath()
+    ctx.arc(k.x, k.y, k.r, 0, Math.PI * 2)
+    ctx.fillStyle = dark ? 'rgba(0,0,0,0.55)' : 'rgba(90,60,30,0.45)'
+    ctx.fill()
+    ctx.strokeStyle = dark ? 'rgba(255,185,142,0.7)' : 'rgba(217,90,56,0.7)'
+    ctx.lineWidth = 3
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(k.x, k.y, k.r * 0.55, 0, Math.PI * 2)
+    ctx.fillStyle = k.hold > 0 ? 'rgba(255,200,120,0.9)' : 'rgba(0,0,0,0.35)'
+    ctx.fill()
   }
   // ── 弹弓（三角 + 橡胶带）──
   for (const b of bumpers) {
