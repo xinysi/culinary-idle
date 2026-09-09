@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 555, gold: 45, desc: '40 秒 · 目标 555 分 · 3 个食材机关，慢球好控制 · +45 币' },
-  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 625, gold: 55, desc: '45 秒 · 目标 625 分 · 4 个机关 · +55 币' },
-  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 695, gold: 60, desc: '50 秒 · 目标 695 分 · **机关会左右移动** · +60 币' },
-  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 760, gold: 70, desc: '55 秒 · 目标 760 分 · 6 个机关 · +70 币' },
-  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 830, gold: 80, desc: '60 秒 · 目标 830 分 · 球更快，挡板略短 · +80 币' },
-  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 900, gold: 90, desc: '65 秒 · 目标 900 分 · 8 个机关 · +90 币' },
-  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 970, gold: 100, desc: '70 秒 · 目标 970 分 · 机关移动更快 · +100 币' },
-  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 1110, gold: 120, desc: '80 秒 · 目标 1110 分 · 10 个机关 · +120 币' },
-  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 1245, gold: 140, desc: '90 秒 · 目标 1245 分 · 12 个机关，挡板更短 · +140 币' },
-  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 1385, gold: 160, desc: '100 秒 · 目标 1385 分 · 满台机关 + 最快球速 · +160 币' },
+  m1: { label: '模式1', dur: 40, bumpers: 3, grav: 900, fl: 1, move: 0, target: 785, gold: 45, desc: '40 秒 · 目标 785 分 · 3 个食材机关，慢球好控制 · +45 币' },
+  m2: { label: '模式2', dur: 45, bumpers: 4, grav: 950, fl: 1, move: 0, target: 880, gold: 55, desc: '45 秒 · 目标 880 分 · 4 个机关 · +55 币' },
+  m3: { label: '模式3', dur: 50, bumpers: 5, grav: 1000, fl: 1, move: 1, target: 980, gold: 60, desc: '50 秒 · 目标 980 分 · **机关会左右移动** · +60 币' },
+  m4: { label: '模式4', dur: 55, bumpers: 6, grav: 1050, fl: 0.95, move: 1, target: 1070, gold: 70, desc: '55 秒 · 目标 1070 分 · 6 个机关 · +70 币' },
+  m5: { label: '模式5', dur: 60, bumpers: 7, grav: 1100, fl: 0.92, move: 1, target: 1170, gold: 80, desc: '60 秒 · 目标 1170 分 · 球更快，挡板略短 · +80 币' },
+  m6: { label: '模式6', dur: 65, bumpers: 8, grav: 1150, fl: 0.88, move: 1, target: 1270, gold: 90, desc: '65 秒 · 目标 1270 分 · 8 个机关 · +90 币' },
+  m7: { label: '模式7', dur: 70, bumpers: 9, grav: 1200, fl: 0.85, move: 2, target: 1370, gold: 100, desc: '70 秒 · 目标 1370 分 · 机关移动更快 · +100 币' },
+  m8: { label: '模式8', dur: 80, bumpers: 10, grav: 1250, fl: 0.82, move: 2, target: 1565, gold: 120, desc: '80 秒 · 目标 1565 分 · 10 个机关 · +120 币' },
+  m9: { label: '模式9', dur: 90, bumpers: 12, grav: 1300, fl: 0.78, move: 2, target: 1755, gold: 140, desc: '90 秒 · 目标 1755 分 · 12 个机关，挡板更短 · +140 币' },
+  m10: { label: '模式10', dur: 100, bumpers: 14, grav: 1350, fl: 0.72, move: 3, target: 1955, gold: 160, desc: '100 秒 · 目标 1955 分 · 满台机关 + 最快球速 · +160 币' },
 }
 const FOODS = ['🍅', '🍇', '🍋', '🥕', '🍄', '🌰', '🍑', '🫑', '🥑', '🍆', '🌽', '🍍', '🥦', '🍎']
 const showInfo = ref(false)
@@ -55,7 +55,10 @@ let floats = []
 let guides = [] // 两侧回球导轨：把边路的球导向挡板
 let drops = [] // 掉落靶（打中消失，全清有奖励）
 let spinners = [] // 旋转风车（撞到加分并加速旋转）
-let kickers = [] // 弹射孔（吸入 0.5 秒后弹出 +60）
+let kickers = [] // 弹射孔 / 旋涡 / 回球器
+let lanes = { left: 0, right: 0 } // 车道灯（左右各 3 颗，全亮开倍率）
+let multUntil = 0 // 倍率剩余时间（performance.now 时间戳）
+let plunger = { charge: 0, holding: false, ball: null } // 发射杆
 let topAt = 0 // 顶部通道奖励冷却
 let dropClearAt = 0
 let respawnAt = 0
@@ -87,92 +90,49 @@ function beep(freq, dur, type = 'sine', vol = 0.06) {
 
 function buildBoard() {
   const m = cfg.value
-  bumpers = []
-  floats = []
-  // 机关排布：每局随机选一种图案（网格 / 菱形 / 散点），行列数与抖动随机
-  const placed = []
-  // 对称图案（每局随机一种）：弧阵 / 菱形 / 双翼 / 三角
-  const pattern = ['arc', 'diamond', 'wings', 'tri'][Math.floor(Math.random() * 4)]
-  const spots = []
   const cx = W / 2
-  if (pattern === 'arc') {
-    for (let i = 0; i < m.bumpers; i++) {
-      const a = -1.05 + (i / Math.max(1, m.bumpers - 1)) * 2.1
-      spots.push({ x: cx + Math.sin(a) * 250, y: 300 - Math.cos(a) * 150 })
-    }
-  } else if (pattern === 'diamond') {
-    const step = 76
-    const cells = []
-    for (let gy = -2; gy <= 2; gy++) for (let gx = -3; gx <= 3; gx++) {
-      if (Math.abs(gx) + Math.abs(gy) > 2) continue
-      cells.push({ x: cx + gx * step, y: 240 + gy * step * 0.7 })
-    }
-    cells.sort((a, b) => (Math.abs(a.x - cx) + Math.abs(a.y - 240)) - (Math.abs(b.x - cx) + Math.abs(b.y - 240)))
-    for (const c of cells) { if (spots.length >= m.bumpers) break; spots.push(c) }
-  } else if (pattern === 'wings') {
-    const half = Math.ceil(m.bumpers / 2)
-    for (let i = 0; i < m.bumpers; i++) {
-      const side = i % 2 === 0 ? -1 : 1
-      const k = Math.floor(i / 2)
-      spots.push({ x: cx + side * (120 + (k % 3) * 78), y: 170 + Math.floor(k / 3) * 84 + (k % 3) * 8 })
-    }
-  } else {
-    let k = 0
-    for (let row = 0; k < m.bumpers; row++) {
-      const cnt = row + 1
-      for (let i = 0; i < cnt && k < m.bumpers; i++, k++) spots.push({ x: cx + (i - (cnt - 1) / 2) * 92, y: 168 + row * 82 })
-    }
-  }
-  for (const sp of spots) {
-    const r = rand(15, 23)
-    if (!placed.every((p) => Math.hypot(p.x - sp.x, p.y - sp.y) > p.r + r + 12)) continue
-    placed.push({ x: sp.x, y: sp.y, r })
-    bumpers.push({ x: sp.x, y: sp.y, r, icon: FOODS[(placed.length - 1) % FOODS.length], pts: r < 17 ? 50 : r < 20 ? 20 : 10, vx: m.move ? (Math.random() < 0.5 ? -1 : 1) * (m.move === 3 ? 74 : m.move === 2 ? 54 : 34) : 0 })
-  }
-  // 掉落靶：一排小方块，打中消失并得分；全清 +200 并 3 秒后重置
+  bumpers = []
   drops = []
-  const dn = 3 + Math.floor(Math.random() * (m.bumpers >= 8 ? 4 : m.bumpers >= 5 ? 3 : 2))
-  const rowsD = m.bumpers >= 8 && Math.random() < 0.45 ? 2 : 1
-  const dw = rand(38, 50), gap = rand(12, 22)
-  const startY = rand(378, 400)
-  for (let r0 = 0; r0 < rowsD; r0++) {
-    const cnt = Math.max(2, Math.round(dn / rowsD))
-    const startX = W / 2 - (cnt * dw + (cnt - 1) * gap) / 2 + dw / 2
-    for (let i = 0; i < cnt; i++) drops.push({ x: startX + i * (dw + gap), y: startY + r0 * (24 + rand(0, 8)), w: dw, h: 16, alive: true })
-  }
-  // 旋转风车：模式 4 起 1 个、模式 7 起 2 个
   spinners = []
-  const spinN = m.bumpers >= 11 ? 2 : m.bumpers >= 7 ? 2 : m.bumpers >= 4 ? 1 : 0
-  for (let i = 0; i < spinN; i++) {
-    spinners.push({ x: cx + (spinN === 1 ? 0 : (i === 0 ? -1 : 1) * rand(120, 190)), y: rand(196, 268), ang: Math.random() * 6.28, spin: 0 })
-  }
-  // 弹射孔：模式 6 起 1 个、模式 9 起 2 个
   kickers = []
-  const kickN = m.bumpers >= 12 ? 2 : m.bumpers >= 8 ? 1 : 0
-  for (let i = 0; i < kickN; i++) {
-    kickers.push({ x: cx + (kickN === 1 ? rand(-200, 200) : (i === 0 ? -1 : 1) * rand(150, 210)), y: rand(150, 230), r: 21, hold: 0 })
+  lanes = { left: 0, right: 0 }
+  multUntil = 0
+  floats = []
+  // ── 顶部 3 个主缓冲器（三角排布，PRD §2）──
+  const by = 148
+  bumpers.push({ x: cx - 96, y: by + 30, r: 25, icon: '🍅', pts: 20, vx: 0 })
+  bumpers.push({ x: cx, y: by, r: 25, icon: '🍇', pts: 20, vx: 0 })
+  bumpers.push({ x: cx + 96, y: by + 30, r: 25, icon: '🍋', pts: 20, vx: 0 })
+  // 高模式追加缓冲器（左右外圈）
+  for (let i = 0; i < (m.bumpers >= 8 ? 4 : m.bumpers >= 6 ? 2 : 0); i++) {
+    const side = i % 2 === 0 ? -1 : 1
+    const k = Math.floor(i / 2)
+    bumpers.push({ x: cx + side * (150 + k * 46), y: by + 62 + k * 40, r: 21, icon: ['🥕', '🍄', '🌰', '🍑'][i % 4], pts: 10, vx: m.move ? side * (m.move === 3 ? 64 : m.move === 2 ? 46 : 28) : 0 })
   }
-  // 弹弓（经典弹珠台元素）：每局随机 2~4 个、左右不对称、位置与高度随机
-  const slingN = 2 + (m.bumpers >= 9 ? 2 : m.bumpers >= 6 ? 1 : 0) + (Math.random() < 0.4 ? 1 : 0)
-  const slingSpots = []
-  for (let i = 0; i < slingN; i++) {
-    for (let t = 0; t < 80; t++) {
-      const side = Math.random() < 0.5 ? -1 : 1
-      const x = W / 2 + side * rand(148, 238)
-      const y = rand(322, 368)
-      if (x < 66 || x > W - 66) continue
-      if (slingSpots.every((p) => Math.hypot(p.x - x, p.y - y) > 96)) { slingSpots.push({ x, y }); break }
-    }
-  }
-  for (const sp of slingSpots) bumpers.push({ x: sp.x, y: sp.y, r: rand(24, 30), icon: Math.random() < 0.5 ? '🧄' : '🧅', pts: 5, vx: 0, sling: true })
+  // ── 立靶组（5 块，中靶 = 任务靶）PRD §3 ──
+  const dn = 5
+  const dw = 46, gap = 16
+  const startX = cx - (dn * dw + (dn - 1) * gap) / 2 + dw / 2
+  for (let i = 0; i < dn; i++) drops.push({ x: startX + i * (dw + gap), y: 302, w: dw, h: 16, alive: true, mission: i === 2 })
+  // ── 旋涡星体洞（中央偏上，吸入后从左侧弹出）──
+  kickers.push({ x: cx, y: 232, r: 23, hold: 0, vortex: true })
+  // ── 两侧回球 Kicker（下部陷阱，防直接落水）──
+  kickers.push({ x: cx - 246, y: H - 122, r: 21, hold: 0, save: true })
+  kickers.push({ x: cx + 246, y: H - 122, r: 21, hold: 0, save: true })
+  // ── 两侧弹弓（橡胶三角）──
+  bumpers.push({ x: cx - 186, y: 362, r: 26, icon: '🧄', pts: 5, vx: 0, sling: true })
+  bumpers.push({ x: cx + 186, y: 362, r: 26, icon: '🧅', pts: 5, vx: 0, sling: true })
+  // ── 旋转风车（模式 4 起）──
+  if (m.bumpers >= 6) spinners.push({ x: cx - 168, y: 196, ang: Math.random() * 6.28, spin: 0 })
+  if (m.bumpers >= 10) spinners.push({ x: cx + 168, y: 196, ang: Math.random() * 6.28, spin: 0 })
+  // ── 挡板 ──
   flippers = [
-    { px: W / 2 - 112, py: H - 58, len: 100 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
-    { px: W / 2 + 112, py: H - 58, len: 100 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
+    { px: cx - 112, py: H - 58, len: 100 * m.fl, ang: 0.42, targetAng: 0.42, dir: 1 },
+    { px: cx + 112, py: H - 58, len: 100 * m.fl, ang: Math.PI - 0.42, targetAng: Math.PI - 0.42, dir: -1 },
   ]
-  // 回球导轨：从侧壁斜下延伸到挡板根部（边路的球会滑到挡板上，而不是直接漏掉）
   guides = [
-    { x1: 26, y1: H - 210, x2: W / 2 - 116, y2: H - 62 },
-    { x1: W - 26, y1: H - 210, x2: W / 2 + 116, y2: H - 62 },
+    { x1: 26, y1: H - 210, x2: cx - 116, y2: H - 62 },
+    { x1: W - 26, y1: H - 210, x2: cx + 116, y2: H - 62 },
   ]
   score.value = 0
   balls.value = 3
@@ -185,6 +145,8 @@ function buildBoard() {
   keyLeft = false
   keyRight = false
   stuckAccum = 0
+  // 球进发射槽待发射（PRD §1：右侧发射槽蓄力发射）
+  plunger = { charge: 0, holding: false, ball: { x: W - 47, y: H - 92 } }
   spawnBall()
   draw()
 }
@@ -213,6 +175,8 @@ function loop() {
   if (started.value && !overFlag) {
     timeAccum += dt
     if (timeAccum >= 1) { timeAccum -= 1; timeLeft.value = Math.max(0, timeLeft.value - 1); if (timeLeft.value <= 0) { settle(); return } }
+    if (plunger && plunger.holding) plunger.charge = Math.min(1, plunger.charge + dt * 1.4)
+    if (multUntil && performance.now() > multUntil) multUntil = 0
     step(dt)
   }
   for (const f of floats) { f.life += dt; f.y -= 44 * dt }
@@ -280,7 +244,7 @@ function step(dt) {
       else combo.value = 1
       comboAt = now
       const mult = 1 + Math.min(0.5, Math.max(0, combo.value - 1) * 0.1)
-      const gain = Math.round(b.pts * mult)
+      const gain = Math.round(b.pts * mult * (multUntil ? 3 : 1))
       score.value += gain
       floats.push({ x: b.x, y: b.y - b.r - 4, life: 0, max: 0.9, text: `+${gain}`, good: true })
       beep(660 + Math.min(8, combo.value) * 60, 0.06, 'triangle', 0.05)
@@ -413,6 +377,22 @@ function step(dt) {
       }
     }
   }
+  // 车道灯：球穿过底部左右车道点亮（左右各 3 颗，全亮 ×3 持续 15 秒）
+  if (ball && ball.y > H - 168 && ball.y < H - 60) {
+    if (ball.x < W / 2 - 150) {
+      const want = Math.min(3, lanes.left + 1)
+      if (lanes.left < 3 && Math.random() < 0.5) { lanes.left = want; beep(700 + want * 80, 0.05, 'triangle', 0.04) }
+    } else if (ball.x > W / 2 + 150) {
+      const want = Math.min(3, lanes.right + 1)
+      if (lanes.right < 3 && Math.random() < 0.5) { lanes.right = want; beep(700 + want * 80, 0.05, 'triangle', 0.04) }
+    }
+    if (lanes.left >= 3 && lanes.right >= 3 && !multUntil) {
+      multUntil = performance.now() + 15000
+      lanes = { left: 0, right: 0 }
+      floats.push({ x: W / 2, y: H - 220, life: 0, max: 1.4, text: '×3 倍率!', good: true })
+      beep(1046, 0.12); setTimeout(() => beep(1568, 0.16), 120)
+    }
+  }
   // 卡球自救：位置长时间几乎不动（夹在机关/导轨间）就给一脚随机冲量
   if (Math.abs(ball.vx) < 26 && Math.abs(ball.vy) < 26 && ball.y > 120) {
     stuckAccum += dt
@@ -430,12 +410,26 @@ function step(dt) {
     balls.value--
     beep(180, 0.25, 'sawtooth', 0.07)
     if (balls.value <= 0) { settle(); return }
-    respawnAt = performance.now() + 700
+    spawnBall()
   }
 }
 
 // ── 输入 ──
+function launchBall() {
+  if (!plunger || !plunger.ball || ball) return
+  const p = Math.max(0.25, plunger.charge)
+  ball = { x: W / 2 + rand(-170, 170), y: 128, vx: rand(-130, 130), vy: 70 }
+  plunger.charge = 0
+  plunger.holding = false
+  beep(520 + p * 400, 0.09, 'square', 0.06)
+}
 function onKey(e, down) {
+  if (e.key === ' ' || e.code === 'Space') {
+    e.preventDefault()
+    if (down) { if (!ball && plunger && plunger.ball) plunger.holding = true }
+    else if (plunger && plunger.holding) launchBall()
+    return
+  }
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { keyLeft = down; e.preventDefault() }
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { keyRight = down; e.preventDefault() }
   applyFlip()
@@ -617,6 +611,48 @@ function draw() {
     ctx.lineWidth = 3
     ctx.stroke()
   }
+  // ── 发射槽（右侧）──
+  ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.16)'
+  ctx.fillRect(W - 66, H - 132, 40, 96)
+  ctx.strokeStyle = dark ? 'rgba(210,170,120,0.5)' : 'rgba(150,110,70,0.5)'
+  ctx.lineWidth = 3
+  ctx.strokeRect(W - 66, H - 132, 40, 96)
+  // 弹簧
+  if (plunger && plunger.ball && !ball) {
+    ctx.beginPath()
+    const sx = W - 46, sy0 = H - 44
+    ctx.moveTo(sx, sy0)
+    for (let i = 0; i < 7; i++) ctx.lineTo(sx + (i % 2 ? 9 : -9), sy0 - 6 - i * 5 - plunger.charge * 16)
+    ctx.strokeStyle = dark ? 'rgba(210,170,120,0.8)' : 'rgba(163,118,63,0.85)'
+    ctx.lineWidth = 3
+    ctx.stroke()
+    // 待发球
+    const bx = plunger.ball.x, by = plunger.ball.y - plunger.charge * 16
+    const bg2 = ctx.createRadialGradient(bx - 4, by - 5, 1, bx, by, R)
+    bg2.addColorStop(0, '#ffffff'); bg2.addColorStop(0.55, dark ? '#cfd8de' : '#e4ebef'); bg2.addColorStop(1, dark ? '#6d7681' : '#94a1ad')
+    ctx.beginPath(); ctx.arc(bx, by, R, 0, Math.PI * 2); ctx.fillStyle = bg2; ctx.fill()
+    ctx.strokeStyle = 'rgba(70,90,105,0.7)'; ctx.lineWidth = 1.5; ctx.stroke()
+    // 蓄力条
+    if (plunger.charge > 0.02) {
+      ctx.fillStyle = dark ? 'rgba(255,255,255,0.2)' : 'rgba(150,110,70,0.2)'
+      ctx.fillRect(W - 92, H - 140, 10, 104)
+      ctx.fillStyle = '#e8703f'
+      ctx.fillRect(W - 92, H - 36 - plunger.charge * 104, 10, plunger.charge * 104)
+    }
+  }
+  // ── 车道灯（底部左右各 3 颗）──
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const lx = W / 2 + side * (196 + i * 30), ly = H - 116
+      const lit = (side < 0 ? lanes.left : lanes.right) > i
+      ctx.beginPath(); ctx.arc(lx, ly, 7, 0, Math.PI * 2)
+      ctx.fillStyle = lit ? '#8cd899' : (dark ? 'rgba(255,255,255,0.16)' : 'rgba(150,110,70,0.22)')
+      ctx.fill()
+      ctx.strokeStyle = dark ? 'rgba(210,170,120,0.5)' : 'rgba(150,110,70,0.45)'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    }
+  }
   // ── 旋转风车 ──
   for (const sp of spinners) {
     ctx.save()
@@ -786,6 +822,8 @@ onUnmounted(() => {
       <span class="pb-chip" style="margin-left: auto">⏱ <b class="mono">{{ timeLeft }}</b> 秒</span>
       <span class="pb-chip">🎯 <b class="mono">{{ targetText }}</b></span>
       <span class="pb-chip">⚪ 弹珠 <b class="mono">{{ balls }}</b></span>
+      <span class="pb-chip">⚡ 倍率 <b class="mono">×{{ multUntil ? 3 : 1 }}</b></span>
+      <span class="pb-chip">🚦 车道 <b class="mono">{{ lanes.left }}+{{ lanes.right }}/6</b></span>
       <span class="pb-chip">💰 <b class="mono">{{ coinPreview }}</b> 币</span>
       <span class="pb-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       <button class="pb-info-btn" @click="showInfo = true">📖 模式说明</button>
