@@ -8,6 +8,8 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { fmtStat } from '../game/data/itemDetail.js'
 import { fmtMod, REROLL_COST } from '../game/data/gearMods.js'
+import { equipSetBonuses } from '../game/data/equipSets.js'
+import { GEM_DEFS, gemDef, socketCountOf } from '../game/data/gems.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -38,6 +40,30 @@ const statEntries = computed(() =>
     .filter((s) => s.value)
     .map((s) => ({ ...s, value: fmtStat(s.value) }))
 )
+// 套装效果（2026-09-09）：同套穿戴 2/4/6 件叠加
+const activeSets = computed(() => equipSetBonuses(player.equipment).active)
+// 宝石镶嵌（2026-09-09）：选中装备的插槽状态 + 背包可用宝石
+const selectedSockets = computed(() => {
+  const id = selectedEquip.value
+  const slot = id ? wornSlotOf(id) : null
+  if (!slot) return null
+  const rec = player.gemSockets?.[slot]
+  return rec && rec.itemId === id ? { slot, gems: rec.gems } : null
+})
+const ownedGems = computed(() => GEM_DEFS.filter((g) => (player.inventory[g.itemId] ?? 0) > 0))
+const gemPick = ref({})
+function gemName(id) { return getItem(id)?.name ?? id }
+function gemDesc(id) { return gemDef(id)?.desc ?? '' }
+function doSocket(slot, index) {
+  const gemId = gemPick.value[`${slot}:${index}`]
+  if (!gemId) { ui.pushLog('请先选择宝石', 'warn'); return }
+  const r = player.socketGem(slot, index, gemId)
+  ui.pushLog(r.ok ? `💎 镶嵌 ${gemName(gemId)}（${gemDesc(gemId)}）` : r.msg, r.ok ? 'gain' : 'warn')
+}
+function doUnsocket(slot, index) {
+  const r = player.unsocketGem(slot, index)
+  ui.pushLog(r.ok ? `💎 取下 ${gemName(r.itemId)}` : r.msg, r.ok ? 'info' : 'warn')
+}
 
 // 选中装备详情（点当前穿戴/背包可穿戴均可选中）
 const selectedEquip = ref(null)
@@ -176,6 +202,12 @@ function close() { ui.toggleEquipModal(false) }
             <span v-if="!statEntries.length" class="dim" style="grid-column: 1 / -1">未穿戴任何装备</span>
           </div>
           <div class="dim" style="font-size: 11px; margin-top: 8px">已穿戴 {{ wornCount }}/8 槽 · 强化总等级 +{{ totalUpgrades }}</div>
+          <div v-if="activeSets.length" style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px">
+            <div v-for="s in activeSets" :key="s.key" class="gather-card-row">
+              <span><span class="badge badge-on">{{ s.count }} 件</span> {{ s.name }}</span>
+              <span class="dim">套件等级 {{ s.level }}</span>
+            </div>
+          </div>
         </div>
         <div class="equip-footer-col equip-footer-detail">
           <div class="equip-section-title">装备详情</div>
@@ -202,6 +234,29 @@ function close() { ui.toggleEquipModal(false) }
                 style="margin-top: 6px"
                 :title="`重随词条（费用 ${REROLL_COST[getItem(selectedEquip)?.quality] ?? REROLL_COST['普通']} 金币）`"
               >✨ 洗练（{{ REROLL_COST[getItem(selectedEquip)?.quality] ?? REROLL_COST['普通'] }} 金）</button>
+            </template>
+            <!-- 宝石镶嵌（2026-09-09）：按品质提供 0~3 个插槽；换装自动退回宝石 -->
+            <template v-if="socketCountOf(getItem(selectedEquip)) > 0">
+              <div class="dim" style="font-size: 12px; margin-top: 8px">💎 宝石插槽（{{ socketCountOf(getItem(selectedEquip)) }}）</div>
+              <template v-if="selectedSockets">
+                <div v-for="(g, i) in selectedSockets.gems" :key="i" class="gather-card-row" style="margin-top: 4px">
+                  <span v-if="g" class="mono">{{ gemName(g) }} <span class="dim">{{ gemDesc(g) }}</span></span>
+                  <span v-else class="dim">空插槽 {{ i + 1 }}</span>
+                  <span style="display: flex; gap: 6px; align-items: center">
+                    <button v-if="g" class="btn btn-sm" @click="doUnsocket(selectedSockets.slot, i)">拆卸</button>
+                    <template v-else>
+                      <select v-model="gemPick[selectedSockets.slot + ':' + i]" style="max-width: 150px">
+                        <option :value="null">选择宝石</option>
+                        <option v-for="gd in ownedGems" :key="gd.itemId" :value="gd.itemId">
+                          {{ getItem(gd.itemId)?.name }}（{{ gd.desc }}）×{{ player.inventory[gd.itemId] }}
+                        </option>
+                      </select>
+                      <button class="btn btn-sm btn-primary" @click="doSocket(selectedSockets.slot, i)">镶嵌</button>
+                    </template>
+                  </span>
+                </div>
+              </template>
+              <p v-else class="dim" style="font-size: 11px">穿戴后可镶嵌（换装/卸下会自动退回宝石）</p>
             </template>
           </template>
           <p v-else class="dim">点击左侧/右侧装备查看详情。</p>

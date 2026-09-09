@@ -1,5 +1,5 @@
 // 平衡模拟 — 用真实 Combat 引擎验证：区域/BOSS 解锁节奏 + 关键对局胜率
-// 运行：node .toolchain/balance_sim.mjs
+// 运行：node scripts/balance_sim.mjs
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { Combat } from '../src/game/combat/Combat.js'

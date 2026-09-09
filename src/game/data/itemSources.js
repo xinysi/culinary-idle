@@ -25,6 +25,7 @@ import { SPIRITS } from './spirits.js'
 import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { QUESTS } from './quests.js'
 import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL } from './gameShopPools.js'
+import { EXPEDITIONS } from './expeditions.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -105,10 +106,11 @@ for (const sp of SPIRITS) {
 for (const a of ALL_ACHIEVEMENTS) for (const id of Object.keys(a.reward?.items ?? {})) add(id, `成就「${a.name}」奖励`)
 for (const q of QUESTS) for (const id of Object.keys(q.reward?.items ?? {})) add(id, `主线任务「${q.name}」奖励`)
 
-// 附产物（固定机制）
-add('wood', '采摘附产物（8%）')
-add('copperOre', '挖掘附产物（6%）')
-add('fossil', '挖掘附产物（2%）')
+// 附产物（固定机制；百分比与技能内常量一致：采摘木材 50%、挖掘铜矿 50%/铁矿 30%/化石 2%、狩猎野鸡蛋 15%）
+add('wood', '采摘附产物（50%）')
+add('copperOre', '挖掘附产物（50%）')
+add('ironOre', '挖掘附产物（30%）')
+add('fossilIngredient', '挖掘附产物（2%）')
 add('pheasantEgg', '狩猎野鸡附产物（15%）')
 
 // 觅珍抽卡（2026-09-06）：三池物品来源
@@ -133,11 +135,18 @@ for (const id of FOOD_POOL) add(id, '游戏商店·珍馐料理礼包（游戏�
 for (const id of SPICE_POOL) add(id, '游戏商店·精酿调料礼包（游戏币购买）')
 for (const id of MINERAL_POOL) add(id, '游戏商店·锻造矿材礼包（游戏币购买）')
 
+// 远行采集队（2026-09-09 长线挂机线）：各线路产出池 + 稀有掉落
+for (const ex of EXPEDITIONS) {
+  const ids = new Set()
+  for (const s of ex.slots ?? []) for (const id of s.pool ?? []) ids.add(id)
+  if (ex.rare?.itemId) ids.add(ex.rare.itemId)
+  for (const id of ids) add(id, `远行采集队·${ex.name}（领取）`)
+}
+
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {
   return SOURCES[id] ?? []
 }
-
 /** 有来源索引的物品数（图鉴覆盖率统计用） */
 export function sourcedCount() {
   return Object.keys(SOURCES).length

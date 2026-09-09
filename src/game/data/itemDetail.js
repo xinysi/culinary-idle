@@ -3,6 +3,8 @@ import { getItem } from './items.js'
 import { itemSources } from './itemSources.js'
 import { SPIRITS } from './spirits.js'
 import { CROPS } from '../skills/FarmingSkill.js'
+import { gemDef, socketCountOf } from './gems.js'
+import { equipSetOf } from './equipSets.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -77,6 +79,15 @@ export function itemDetailLines(id) {
   }
   if (it.drunk) lines.push(['醉酒', '准确率 -15%（5 回合）'])
   if (it.stats) lines.push(['装备属性', Object.entries(it.stats).map(([k, v]) => `${STAT_LABEL[k] ?? k} ${fmtStat(v)}`).join('、')])
+  // 宝石（2026-09-09）：可作为宝石镶嵌的矿物
+  const gem = gemDef(id)
+  if (gem) lines.push(['宝石镶嵌', `${gem.desc}（镶入装备插槽后生效）`])
+  if (it.type === 'equipment') {
+    const sockets = socketCountOf(it)
+    if (sockets > 0) lines.push(['宝石插槽', `${sockets} 个（可镶入矿物宝石）`])
+    const set = equipSetOf(id)
+    if (set) lines.push(['所属套装', `${set.name}（穿戴 2/4/6 件触发加成）`])
+  }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])
   if (it.use?.buffYield) lines.push(['产量增益', `×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`])

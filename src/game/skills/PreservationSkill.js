@@ -15,7 +15,14 @@ const FERTILIZER_RECIPES = [
   { id: 'richCompost', name: '肥沃堆肥', category: '肥料', reqLevel: 35, xp: 220, successChance: 0.85, ingredients: { compost: 2, chili: 2, apple: 3 }, output: { itemId: 'richCompost', qty: 1 } },
 ]
 
-export const PRESERVATION_RECIPES = [...FERTILIZER_RECIPES, ...PRESERVE_TIER_RECIPES]
+// 入门配方（2026-09-09）：本技能原最低配方为 Lv5（保鲜剂·Ⅰ，需盐矿+稻米），而技能从 Lv1 起步，
+// 导致 Lv1-4 无任何可做配方、永久卡 1 级。补一条纯 Lv1 材料（土豆）的入门配方，
+// 不改动既有保鲜配方 / 保鲜物品 / 保鲜效果（数据铁律）。
+const ENTRY_RECIPES = [
+  { id: 'compostEntry', name: '厨余堆肥', category: '肥料', reqLevel: 1, xp: 20, successChance: 0.95, ingredients: { potato: 2 }, output: { itemId: 'compost', qty: 1 } },
+]
+
+export const PRESERVATION_RECIPES = [...ENTRY_RECIPES, ...FERTILIZER_RECIPES, ...PRESERVE_TIER_RECIPES]
 
 export class PreservationSkill extends ProductionSkill {
   constructor(player) {

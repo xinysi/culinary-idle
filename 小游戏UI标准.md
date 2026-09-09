@@ -1,6 +1,6 @@
 # 小游戏 UI 标准（2026-09-09 定稿）
 
-> 适用范围：`MinigamesView.GAMES` 注册的 24 款小游戏 + 游戏商店 `GameShopView`。
+> 适用范围：`MinigamesView.GAMES` 注册的 27 款小游戏 + 游戏商店 `GameShopView`。
 > 每款游戏的样式写在各自 `<style scoped>` 里，类名统一用「前缀 + 元素名」（如 `.sk-mode`），深色规则集中在 `src/styles/main.css` 末尾。
 > 改完用 §11 的自检跑一遍。
 
@@ -113,7 +113,7 @@
 ## 11. 自检
 
 ```bash
-node scripts/minigame_ui_audit.mjs      # 静态合规：24 款 × 11 项（本标准的机器检查）
+node scripts/minigame_ui_audit.mjs      # 静态合规：27 款 × 11 项（本标准的机器检查）
 node scripts/item_triple_audit.mjs      # 图鉴三查（物品作用/制作/来源）
 node scripts/system_test.mjs            # 241 项系统测试
 npx playwright test e2e-test.spec.mjs   # 9 项 e2e（含无未捕获控制台错误）

@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
+import { INSIGHT_NODES, INSIGHT_BRANCHES, getInsightNode } from '../game/data/insightTree.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -33,6 +34,23 @@ function filteredAojis() {
 function catCount(c) {
   if (!c) return AOJIS.length
   return AOJIS.filter((a) => a.category === c).length
+}
+
+// ── 菜系图谱（2026-09-09 永久天赋树）──
+function nodesOf(branch) {
+  return INSIGHT_NODES.filter((n) => n.branch === branch)
+}
+function isUnlocked(id) {
+  return (player.insights ?? []).includes(id)
+}
+function nodeState(n) {
+  if (isUnlocked(n.id)) return 'done'
+  for (const r of n.requires) if (!isUnlocked(r)) return 'locked'
+  return player.insightPoints() >= n.cost ? 'ready' : 'poor'
+}
+function unlockNode(id) {
+  const r = player.unlockInsight(id)
+  if (!r.ok) ui.pushLog(r.msg ?? '解锁失败', 'warn')
 }
 </script>
 
@@ -80,5 +98,43 @@ function catCount(c) {
         </div>
       </div>
     </div>
+    <!-- 菜系图谱（2026-09-09 永久天赋树）：用「美食见闻」解锁永久加成 -->
+    <div class="card">
+      <div class="insight-head">
+        <h3>🗺️ 菜系图谱</h3>
+        <span class="badge badge-on">美食见闻 <span class="mono">{{ player.insightPoints() }}</span></span>
+        <span class="dim">见闻来源：图鉴首次收集 +1 · 成就 +5 · 赛季领档 +3 · 首次击败首领 +2</span>
+      </div>
+      <div v-for="br in INSIGHT_BRANCHES" :key="br.id" class="insight-branch">
+        <div class="insight-branch-title">{{ br.icon }} {{ br.name }}</div>
+        <div class="insight-row">
+          <button
+            v-for="n in nodesOf(br.id)"
+            :key="n.id"
+            class="btn btn-sm insight-node"
+            :class="{ 'btn-primary': nodeState(n) === 'done', 'insight-ready': nodeState(n) === 'ready', 'insight-locked': nodeState(n) === 'locked' }"
+            :disabled="nodeState(n) !== 'ready'"
+            :title="`${n.desc}（需 ${n.cost} 见闻）`"
+            @click="unlockNode(n.id)"
+          >
+            {{ n.name }}<span class="dim"> · {{ n.cost }}</span>
+          </button>
+        </div>
+      </div>
+      <p class="dim" style="font-size: 12px; margin: 8px 0 0">
+        已解锁 {{ (player.insights ?? []).length }}/{{ INSIGHT_NODES.length }} 个节点；加成永久生效（经验/产量/制作成功率/对决攻防）。
+      </p>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* 菜系图谱（2026-09-09） */
+.insight-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.insight-head h3 { margin: 0; }
+.insight-branch { margin-top: 8px; }
+.insight-branch-title { font-weight: 700; margin-bottom: 6px; }
+.insight-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.insight-node.insight-ready { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft) inset; }
+.insight-node.insight-locked { opacity: 0.55; }
+</style>

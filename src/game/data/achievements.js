@@ -5,6 +5,7 @@
 
 import { SKILL_DEFS } from './skills.js'
 import { ITEMS } from './items.js'
+import { equipSetBonuses } from './equipSets.js'
 
 const LEVEL_TIERS = [
   { level: 10, suffix: '学徒', gold: 100 },
@@ -79,6 +80,19 @@ export const ACHIEVEMENTS = [
   { id: 'hardcoreDay7', name: '硬核一周', category: '特殊', desc: '硬核模式生存满 7 天', reward: { gold: 2000, items: { mysterySpice: 1 } }, check: (p) => p.hardcoreDayCount() >= 7 },
   { id: 'hardcoreDay30', name: '硬核一月', category: '特殊', desc: '硬核模式生存满 30 天', title: '硬核幸存者', reward: { gold: 8000, items: { energyBiscuit: 1 } }, check: (p) => p.hardcoreDayCount() >= 30 },
   { id: 'hardcoreDay100', name: '硬核传说', category: '特殊', desc: '硬核模式生存满 100 天', title: '硬核传说', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => p.hardcoreDayCount() >= 100 },
+  // ── 2026-09-09 新增玩法（秘境 / 远行采集队 / 美食评论家 / 宝石镶嵌 / 套装 / 菜系图谱 / 每周挑战 / 挂机计划）──
+  { id: 'realm5', name: '秘境初探', category: '特殊', desc: '食神秘境到达第 5 层', reward: { gold: 1000 }, check: (p) => (p.realm?.best ?? 0) >= 5 },
+  { id: 'realm15', name: '秘境行者', category: '特殊', desc: '食神秘境到达第 15 层', title: '秘境行者', reward: { gold: 5000, items: { mysterySpice: 1 } }, check: (p) => (p.realm?.best ?? 0) >= 15 },
+  { id: 'realm30', name: '秘境之主', category: '特殊', desc: '食神秘境到达第 30 层', title: '秘境之主', reward: { gold: 15000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => (p.realm?.best ?? 0) >= 30 },
+  { id: 'expedition10', name: '远行初捷', category: '特殊', desc: '远行采集队累计完成 10 轮', reward: { gold: 800 }, check: (p) => Object.values(p.expeditions ?? {}).reduce((a, e) => a + (e?.completions ?? 0), 0) >= 10 },
+  { id: 'expedition100', name: '远行老手', category: '特殊', desc: '远行采集队累计完成 100 轮', title: '远行领队', reward: { gold: 6000, items: { energyBiscuit: 1 } }, check: (p) => Object.values(p.expeditions ?? {}).reduce((a, e) => a + (e?.completions ?? 0), 0) >= 100 },
+  { id: 'critic10', name: '好评如潮', category: '特殊', desc: '满足美食评论家 10 次', title: '名厨', reward: { gold: 4000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.criticServed ?? 0) >= 10 },
+  { id: 'gems10', name: '镶嵌入门', category: '特殊', desc: '累计镶嵌 10 颗宝石', reward: { gold: 2000 }, check: (p) => (p.stats?.gemsSocketed ?? 0) >= 10 },
+  { id: 'set2', name: '套装初成', category: '特殊', desc: '同时激活 2 个套装效果', reward: { gold: 2500 }, check: (p) => equipSetBonuses(p.equipment).active.length >= 2 },
+  { id: 'insight6', name: '图谱学者', category: '特殊', desc: '解锁 6 个菜系图谱节点', title: '图谱学者', reward: { gold: 5000, items: { mysterySpice: 1 } }, check: (p) => (p.insights?.length ?? 0) >= 6 },
+  { id: 'insight12', name: '图谱宗师', category: '特殊', desc: '解锁全部 12 个菜系图谱节点', title: '菜系宗师', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => (p.insights?.length ?? 0) >= 12 },
+  { id: 'challenge4', name: '挑战达人', category: '特殊', desc: '完成 4 次每周挑战', reward: { gold: 4000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.challengesDone ?? 0) >= 4 },
+  { id: 'plan3', name: '计划执行者', category: '特殊', desc: '完成 3 次挂机计划', reward: { gold: 3000 }, check: (p) => (p.stats?.plansDone ?? 0) >= 3 },
 ]
 
 export const ALL_ACHIEVEMENTS = [...buildSkillAchievements(), ...ACHIEVEMENTS]

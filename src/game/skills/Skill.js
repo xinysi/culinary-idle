@@ -69,8 +69,11 @@ export class Skill {
     const spiritPct = this.player.spiritEffects?.()?.xpPct?.[this.id] ?? 0
     // 奥义「海量知识」全经验加成（%）
     const aojiPct = this.player.gastronomyEffects?.()?.xpPct ?? 0
-    // 公会被动经验加成（§13）
-    const guildPct = this.player.guildEffects?.()?.xpPct?.[this.id] ?? 0
+    // 公会被动经验加成（§13）：辅助型公会写数值型 xpPct（全技能），其余公会写 { skillId: pct }
+    const guildXp = this.player.guildEffects?.()?.xpPct
+    const guildPct = typeof guildXp === 'number' ? guildXp : (guildXp?.[this.id] ?? 0)
+    // 菜系图谱永久加成（2026-09-09）
+    const insightPct = this.player.insightEffects?.()?.xpPct ?? 0
     // 转生加成（每层 +20%）
     const prestigeMult = 1 + this.prestiges * PRESTIGE_XP_BONUS
     // 增益剂经验倍率（§3.4.2）
@@ -90,7 +93,7 @@ export class Skill {
       : this.def.category === 'production' ? (market.craftXp ?? 1)
       : 1
 
-    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
+    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
     let level = this.level
     let leveled = false
     while (level < this.maxLevel && exp >= this.player.xpTotalForLevel(level + 1)) {

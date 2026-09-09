@@ -348,7 +348,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
   <div class="gs-page">
     <div class="gs-topbar">
       <span class="gs-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 余额 <b class="mono">{{ coins }}</b> 游戏币</span>
-      <span class="gs-chip">🕹️ 七款小游戏奖励均为游戏币</span>
+      <span class="gs-chip">🕹️ 27 款小游戏奖励均为游戏币</span>
       <span class="gs-chip" style="margin-left: auto">🛒 购买即生效 · 一次性外观购后可在已拥有间免费佩戴切换</span>
     </div>
 

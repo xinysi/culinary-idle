@@ -7,7 +7,7 @@
 
 import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
-import { masteryLevelFromCount, masteryDoubleChance, masteryIntervalFactor, masteryFixedInterval, masteryXpMultiplier, masteryLevelProgress } from '../core/mastery.js'
+import { masteryLevelFromCount, masteryDoubleChance, masteryIntervalFactor, masteryFixedInterval, masteryXpMultiplier, masteryLevelProgress, masteryYieldBonus } from '../core/mastery.js'
 import { applyGatherXp } from './xpBalance.js'
 
 export const BASE_DOUBLE_CHANCE = 0.01 // 1%
@@ -91,15 +91,17 @@ export class GatheringSkill extends Skill {
     return Math.max(BASE_DOUBLE_CHANCE, masteryDoubleChance(mLevel))
   }
 
-  /** 产量加成后的数量：奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）+ 公会被动（§13），以额外产出几率折算 */
-  yieldQuantity(qty) {
+  /** 产量加成后的数量：精通保底批量（2026-09-09）+ 奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）+ 公会被动（§13），以额外产出几率折算 */
+  yieldQuantity(qty, target = this.currentTarget) {
+    const batch = target ? masteryYieldBonus(this.masteryLevel(target)) : 0
     const aoji = this.player.gastronomyEffects?.() ?? {}
     const yPct = aoji.yieldPct ?? 0
     const guildPct = this.player.guildEffects?.()?.yieldPct ?? 0
+    const insightPct = this.player.insightEffects?.()?.yieldPct ?? 0 // 菜系图谱（2026-09-09）
     const yMult = this.player.getYieldMultiplier?.() ?? 1
-    const extraChance = yPct / 100 + guildPct / 100 + (yMult - 1)
-    if (extraChance <= 0) return qty
-    return qty + (Math.random() < extraChance ? 1 : 0)
+    const extraChance = yPct / 100 + guildPct / 100 + insightPct / 100 + (yMult - 1)
+    if (extraChance <= 0) return qty + batch
+    return qty + batch + (Math.random() < extraChance ? 1 : 0)
   }
 
   /** 弹药是否充足 */

@@ -6,6 +6,7 @@ import { SMITHING_RECIPES } from '../src/game/skills/CraftsmithingSkill.js'
 import { SMITHING_EXT } from '../src/game/data/expansion1.js'
 import { SMITHING_EXT2 } from '../src/game/data/expansion2.js'
 import { ITEMS } from '../src/game/data/items.js'
+import { equipTierFor, equipQualityFor } from '../src/game/data/equipTierCurve.js'
 
 const SLOT_CN = { weapon: '刀', offhand: '锅', body: '围裙', helmet: '厨师帽', amulet: '调味瓶', legs: '腿甲', boots: '靴子', ring: '戒指' }
 const OFFSET = { weapon: 0, offhand: 1, body: 2, helmet: 3, amulet: 2, legs: 3, boots: 4, ring: 4 }
@@ -36,8 +37,11 @@ for (const r of raw) {
 
 const outRecipes = []
 const outItems = []
-// 品牌名牌（非 smith_ 生成件）不可重名；smith_ 旧件会被覆盖，不纳入
-const usedNames = new Set(Object.values(ITEMS).filter((i) => !String(i.id).startsWith('smith_')).map((i) => i.name))
+// 本脚本产出的生成件 id（smith_{套名}_{槽} / inip{矿名}_{槽}）：重跑时 ITEMS 里已含上次产物，
+// 必须从「已用」集合中排除，否则补槽件会被判为「已存在」而静默丢弃（自引用污染，曾丢 168 件）。
+const isPrevOutput = (id) => /^smith_/.test(id) || /^inip/.test(id)
+// 品牌名牌（非生成件）不可重名；生成件会被本次重新产出，不纳入
+const usedNames = new Set(Object.values(ITEMS).filter((i) => !isPrevOutput(i.id)).map((i) => i.name))
 
 SETS.forEach(([prefix, seg, ore], idx) => {
   const baseLv = (seg - 1) * 5 + 1
@@ -85,8 +89,8 @@ SETS.forEach(([prefix, seg, ore], idx) => {
     })
     const stats = slot === 'weapon' || slot === 'ring' ? { attack: 1 } : { defense: 1 }
     outItems.push({
-      id: itemId, name, type: 'equipment', category: slot, tier: Math.ceil(seg * 0.6),
-      value: 30 + seg * 30, stackable: false, slot, quality: '神话', stats,
+      id: itemId, name, type: 'equipment', category: slot, tier: equipTierFor(lv),
+      value: 30 + seg * 30, stackable: false, slot, quality: equipQualityFor(lv), stats,
     })
   }
 })
@@ -106,7 +110,7 @@ const INDIE_SLOTS = [
   ['boots', '靴子', 'boots'],
   ['ring', '戒指', 'ring'],
 ]
-const USED_IDS = new Set(Object.keys(ITEMS))
+const USED_IDS = new Set(Object.keys(ITEMS).filter((id) => !isPrevOutput(id)))
 for (const r of orphanRaw) {
   const outIt = ITEMS[r.output?.itemId]
   const existSlot = outIt?.slot ?? 'ring'
@@ -139,7 +143,7 @@ for (const r of orphanRaw) {
       output: { itemId: newItemId, qty: 1 },
     })
     outItems.push({
-      id: newItemId, name: newName, type: 'equipment', category: realSlot, tier: Math.max(1, Math.ceil(lv / 10)),
+      id: newItemId, name: newName, type: 'equipment', category: realSlot, tier: equipTierFor(lv),
       value: 30 + Math.ceil(lv / 10) * 30, stackable: false, slot: realSlot, quality,
       stats: realSlot === 'weapon' || realSlot === 'offhand' || realSlot === 'ring' ? { attack: 1 } : { defense: 1 },
     })

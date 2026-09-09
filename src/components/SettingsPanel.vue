@@ -58,6 +58,23 @@ applyUiScale(player.settings.uiScale ?? 1)
         <input type="range" min="10" max="90" step="10" v-model.number="player.settings.autoEatThreshold" style="flex: 1" />
       </div>
       <div class="settings-row">
+        <label class="switch-row">
+          <input type="checkbox" v-model="player.settings.autoFarm" />
+          <span>农耕自动收种（成熟即收获并补种同种种子）</span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label class="switch-row">
+          <input type="checkbox" v-model="player.settings.autoSupply" />
+          <span>自动补给（陷阱/装饰食材低于 50 时自动从杂货铺补到 200）</span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <span class="dim">补给保留金币：</span>
+        <input type="number" min="0" step="500" v-model.number="player.settings.autoSupplyReserve" style="flex: 1" />
+        <span class="dim" style="font-size: 11px">低于该金币不自动购买</span>
+      </div>
+      <div class="settings-row">
         <span class="dim">挂机并行上限：</span>
         <select v-model.number="player.settings.maxParallelIdle" style="flex: 1">
           <option :value="0">无限制（全部已选目标并行）</option>

@@ -1,6 +1,6 @@
 // 图鉴三查审计（2026-09-06 用户要求：任何新增功能/调整后必须运行）
 // 检查全部物品的：详细作用完整性 / 可用于制作（用途坏链）/ 获取来源与跳转覆盖 / 重名 / 交叉引用
-// 运行：node .toolchain/item_triple_audit.mjs （CI 亦执行；失败退出码 1）
+// 运行：node scripts/item_triple_audit.mjs （CI 亦执行；失败退出码 1）
 import { ITEMS, getItem } from '../src/game/data/items.js'
 import { CATEGORY_LABEL, itemDetailLines } from '../src/game/data/itemDetail.js'
 import { itemSources } from '../src/game/data/itemSources.js'

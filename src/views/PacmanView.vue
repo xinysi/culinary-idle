@@ -179,6 +179,7 @@ function lose() {
 }
 const keyMap = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
 function onKey(e) {
+  if (!running.value || over.value) return // 未开始/已结束时不拦截方向键（保留页面滚动）
   const d = keyMap[e.key]
   if (!d) return
   e.preventDefault()

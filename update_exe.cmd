@@ -23,6 +23,6 @@ if errorlevel 1 (echo 打包失败！ & pause & exit /b 1)
 
 echo.
 echo 完成！EXE 位置：
-echo   lmewexeelease\美食放置：食之契约-win32-x64\美食放置：食之契约.exe
+echo   lmewexe\release\美食放置：食之契约-win32-x64\美食放置：食之契约.exe
 echo.
 pause

@@ -59,6 +59,17 @@ onMounted(() => {
 })
 
 // 日志页直达（图鉴/卡牌/成就）：导航按钮设置 ui.logInitialTab
+// （watch 定义在 sub 声明之后，immediate 执行时 sub 已初始化）
+
+// ── 图鉴子页 ──
+const sub = ref('items')
+const typeFilter = ref('ingredient') // 默认选中第一个具体分类（「全部」已隐藏，避免默认展示全部）；二级 catFilter 默认 'all'
+const catFilter = ref('all') // 二级分类：category 细分
+const detailItem = ref(null) // 点击物品 → 详情弹窗
+const bossDetail = ref(null) // 点击首领图鉴行 → 详情弹窗
+const seasonTip = ref(null) // 赛季图鉴格子点击固定浮框
+
+// immediate：顶栏图标进入时 LogView 是全新挂载（v-else-if 卸载重建），不 immediate 会停在默认「任务」页
 watch(
   () => ui.logInitialTab,
   (t) => {
@@ -68,15 +79,8 @@ watch(
       ui.logInitialTab = null
     }
   },
+  { immediate: true },
 )
-
-// ── 图鉴子页 ──
-const sub = ref('items')
-const typeFilter = ref('ingredient') // 默认选中第一个具体分类（「全部」已隐藏，避免默认展示全部）；二级 catFilter 默认 'all'
-const catFilter = ref('all') // 二级分类：category 细分
-const detailItem = ref(null) // 点击物品 → 详情弹窗
-const bossDetail = ref(null) // 点击首领图鉴行 → 详情弹窗
-const seasonTip = ref(null) // 赛季图鉴格子点击固定浮框
 
 const TYPE_LABELS = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 // 一级分类（type 大类）；二级分类 = 该大类下的 category 细分（动态生成）
@@ -397,7 +401,7 @@ function storyCur(kind) {
     case 'prestiges': return p.stats.prestiges ?? 0
     case 'signin': return p.signIn?.day ?? 0
     case 'gold': return p.stats.totalGoldEarned ?? 0
-    case 'alchemy': return p.stats.totalGoldEarned > 1000 ? 1 : 0
+    case 'alchemy': return p.stats.alchemyCrafts ?? 0
     case 'hardcore': return p.hardcore ? 1 : 0
     case 'collection': return p.collectionPct
     default: return 0
@@ -567,6 +571,10 @@ const prestigeItems = [
   { t: '永久经验加成——每层 +20%', d: '每转一层<b class="hl">永久 +20%</b>该技能经验，可叠加（1 转 +20%、2 转 +40%、3 转 +60%…）；与食灵、奥义、公会被动、增益剂、设置全局倍率<b class="hl">乘法叠加</b>。', tags: ['每层 +20%', '乘法叠加'] },
   { t: '等级上限——突破至 120', d: '转生后该技能等级上限由 100 提升到 <b class="hl">120</b>，可继续练到 120 级。', tags: ['转生上限：120 级'] },
   { t: '不受影响——只回炉该技能', d: '转生不清空该技能<b class="hl">专精</b>，也不影响其它技能、物品、金币、图鉴、装备、赛季、餐厅、公会、存档。', tags: ['专精保留', '不绑定其它系统'] },
+  { t: '转生后——菜系图谱与见闻全保留', d: '菜系图谱节点、美食见闻、成就/称号、图鉴收集、食灵羁绊、餐厅与赛季进度<b class="hl">全部不受转生影响</b>；只有被转生的那个技能回 1 级。', tags: ['图谱/见闻保留', '成就称号保留'] },
+  { t: '转生后——宝石与套装仍在装备上', d: '装备（含<b class="hl">镶嵌的宝石</b>与<b class="hl">套装加成</b>）不随转生重置；宝石在换装/拆卸时自动返还，不会因转生丢失。', tags: ['宝石保留', '套装保留'] },
+  { t: '转生后——挂机计划按新等级重判', d: '挂机计划本身不会被清空，但「等级 / 熟练度」达成条件按转生后的新等级重新判定；若计划里排了 100 级条件，转生后会从头再练。建议转生后重排计划。', tags: ['计划不重置', '条件重判'] },
+  { t: '转生后——秘境/竞技场对手同步变弱', d: '对决等级 =（品鉴力 + 最高攻击技能 + 火候）/ 3，转生会让它下降，<b class="hl">食神秘境与竞技场镜像对手随之变弱</b>，评论家要求的 tier 也同步降低——转生期反而是刷秘境层数的窗口。', tags: ['对手变弱', '刷秘境窗口'] },
   { t: '转生后——重练到 120', d: '带每层 <b class="hl">+20%</b> 加成从 1 级重练该技能到 <b class="hl">120</b>；可继续转其它技能各自拿 +20% 与上限 120；满 120 挑战封顶内容。', tags: ['重练', '冲 120 级'] },
   { t: '优先转生——刀工 / 品鉴力', d: '优先转对<b class="hl">对决等级</b>影响大的技能（刀工、品鉴力等），更快提升对决战力、解锁更多区域。', tags: ['对决等级', '对决'] },
   { t: '平衡说明——偏肝长线', d: '99→100 级 = <b class="hl">3 亿经验</b>为基准；100→120 级全程约需 <b class="hl">199 亿经验</b>（120 级总经验约 231 亿）。每层 +20% 已缓解，仍属长线目标，建议配合全局经验倍率/增益剂加速。', tags: ['99→100 级 = 3 亿', '100→120 级 ≈ 199 亿'] },
@@ -676,6 +684,18 @@ function scrollToTalesSeries(series) {
             @click="player.claimWeekly()"
           >{{ player.weekly.claimed ? '已领取' : player.weekly.progress >= player.weekly.task.qty ? '领取' : '进行中' }}</button>
         </div>
+        <!-- 每周挑战赛（2026-09-09）：难度型周目标，与产量型周常互补 -->
+        <div v-if="player.challengeDef()" class="weekly-row" :class="{ done: player.challenge.progress >= player.challengeDef().target }">
+          <strong>⚔️ 每周挑战：{{ player.challengeDef().name }}</strong>
+          <span class="dim">{{ player.challengeDef().desc }}</span>
+          <span class="mono dim">{{ player.challenge.progress }}/{{ player.challengeDef().target }}</span>
+          <span class="dim">+{{ player.challengeDef().gold.toLocaleString() }} 金币<template v-if="player.challengeBest[player.challengeDef().id]"> · 历史最佳 {{ player.challengeBest[player.challengeDef().id] }}</template></span>
+          <button
+            class="btn btn-sm"
+            :disabled="player.challenge.progress < player.challengeDef().target || player.challenge.done"
+            @click="player.claimChallenge()"
+          >{{ player.challenge.done ? '已领取' : player.challenge.progress >= player.challengeDef().target ? '领取' : '进行中' }}</button>
+        </div>
       </div>
 
       <!-- ── 任务（§7.2）── -->
@@ -683,7 +703,7 @@ function scrollToTalesSeries(series) {
         <div class="gather-grid grid-n-6 grid-equal">
           <template v-for="(v, qi) in questView" :key="v.q?.id ?? 'pad-' + qi">
           <div
-            v-if="!v.q?._pad"
+            v-if="!v._pad"
             v-tilt
             class="gather-card"
             :class="{ locked: v.state.locked, selected: v.state.current }"
@@ -722,7 +742,7 @@ function scrollToTalesSeries(series) {
         <div class="gather-grid grid-n-6 grid-equal">
           <template v-for="(v, ai) in achieveView" :key="v.a?.id ?? 'pad-' + ai">
           <div
-            v-if="!v.a?._pad"
+            v-if="!v._pad"
             v-tilt
             class="gather-card"
             :class="{ locked: !v.unlocked }"
@@ -1242,9 +1262,9 @@ function scrollToTalesSeries(series) {
               <tr><td class="dim" style="width: 90px">等级</td><td>{{ bossDetail.level }}</td></tr>
               <tr><td class="dim">风格</td><td>{{ bossDetail.style === 'knife' ? '刀工' : bossDetail.style === 'plating' ? '摆盘' : '调味' }}</td></tr>
               <tr><td class="dim">生命值</td><td class="mono">{{ bossDetail.hp }}</td></tr>
-              <tr><td class="dim">攻击 / 防御</td><td class="mono">{{ bossDetail.atk.toFixed(1) }} / {{ bossDetail.def }}</td></tr>
-              <tr><td class="dim">命中 / 闪避</td><td class="mono">{{ bossDetail.acc.toFixed(2) }} / {{ bossDetail.eva.toFixed(2) }}</td></tr>
-              <tr><td class="dim">暴击 / 攻速</td><td class="mono">{{ (bossDetail.crit * 100).toFixed(2) }}% / {{ (bossDetail.speedMs / 1000).toFixed(2) }}s</td></tr>
+              <tr><td class="dim">攻击 / 防御</td><td class="mono">{{ Math.round(bossDetail.atk) }} / {{ Math.round(bossDetail.def) }}</td></tr>
+              <tr><td class="dim">命中 / 闪避</td><td class="mono">{{ Math.round(bossDetail.acc) }} / {{ Math.round(bossDetail.eva) }}</td></tr>
+              <tr><td class="dim">暴击 / 攻速</td><td class="mono">{{ (bossDetail.crit * 100).toFixed(1) }}% / {{ (bossDetail.speedMs / 1000).toFixed(1) }}s</td></tr>
               <tr><td class="dim">机制</td><td>{{ mechText(bossDetail) }}</td></tr>
               <tr><td class="dim">状态</td><td>{{ bossStatus(bossDetail.name) ? '已击败）' : '未击败' }}</td></tr>
             </tbody>

@@ -14,6 +14,7 @@ import { PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
 import { SMITHING_SET_RECIPES } from './smithSetExt.js'
 import { balanceRecipeLevels, raiseRecipeLevels } from '../skills/recipeBalance.js'
+import { equipTierFor, equipQualityFor } from './equipTierCurve.js'
 import { LEGENDARY_LEVEL } from './combatLoot.js'
 import { SEASONS } from './seasons.js'
 
@@ -148,6 +149,23 @@ export function applyItemBalance() {
   }
   // 传说/神话专属装备：定级为其等效等级（对决 BOSS 档位）
   for (const [id, lvl] of Object.entries({ ...LEGENDARY_LEVEL, ...SEASON_LEVEL })) levelOf[id] = lvl
+
+  // 锻造装备「档位/品质」归一（2026-09-09 修复）：tier = ceil(制作等级/10)（1~10）；
+  // 20 品质套的品质同步按等级曲线（修复补齐件硬编码 神话 / 既有件 tier 停在旧索引，与制作等级脱钩最多 57 级）。
+  // 21 独立矿套的品质沿用「宝石/矿名」设计（只统一档位，不改其稀有度身份）。
+  {
+    const ALL_SET_IDS = new Set(SMITHING_SET_RECIPES.map((r) => r.output?.itemId).filter(Boolean))
+    const SMITHING_20SET_IDS = new Set(
+      SMITHING_SET_RECIPES.filter((r) => !String(r.id).startsWith('ext-')).map((r) => r.output?.itemId).filter(Boolean)
+    )
+    for (const id of ALL_SET_IDS) {
+      const lv = levelOf[id]
+      const it = ITEMS[id]
+      if (lv == null || it?.type !== 'equipment') continue
+      it.tier = equipTierFor(lv)
+      if (SMITHING_20SET_IDS.has(id)) it.quality = equipQualityFor(lv)
+    }
+  }
   const LEGEND_ID = new Set([...Object.keys(LEGENDARY_LEVEL), ...Object.keys(SEASON_LEVEL)])
   // 非装备（食物/饮品/增益剂）主维度走平衡组（保留同级 ±30% 梯度）
   const dims = {}

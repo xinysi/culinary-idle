@@ -1,5 +1,5 @@
 // 内容扩充二期生成器 — 各系统再 +30 不重复条目（数值/掉落/限定装备同步）
-// 运行：node .toolchain/gen_expansion2.mjs  → 产出 src/game/data/expansion2.js
+// 运行：node scripts/gen_expansion2.mjs  → 产出 src/game/data/expansion2.js
 // 规则：所有 id/名称唯一；食谱材料引用已存在物品；等级递增；赛季任务目标从「未用过」物品池分配
 import { writeFileSync } from 'node:fs'
 import { ITEMS } from '../src/game/data/items.js'

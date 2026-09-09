@@ -3,14 +3,17 @@
 // 按料理 value + tier×5 + heal×0.1 计分；月累计里程碑 1000/3000/6000 发一次性奖励。
 // 纯新增层：不动料理数值（value/heal/tier 均读取现有 ITEMS），奖励用现有物品。
 
+import { getItem } from './items.js'
+import { getAllSkillInstances } from '../skills/registry.js'
+
 export const FEST_THEMES = [
   { id: 'hotpot', name: '火锅季', desc: '热汤沸腾，滚煮百味。提交「汤品/主菜」主题料理。', cats: ['汤品', '主菜'] },
   { id: 'sweets', name: '甜品月', desc: '甜在心头，幸福加倍。提交「甜点/烘焙」主题料理。', cats: ['甜点', 'baking'] },
-  { id: 'sea', name: '海鲜节', desc: '浪花拍岸，鲜味无边。提交「海鲜」主题料理。', cats: ['seafood'] },
-  { id: 'meat', name: '烤肉狂欢', desc: '炭火与油脂的协奏曲。提交「肉类」主题料理。', cats: ['meat'] },
-  { id: 'veg', name: '素食周', desc: '让蔬菜成为主角。提交「蔬菜/根茎/水果」主题料理。', cats: ['vegetable', 'root', 'fruit'] },
+  { id: 'sea', name: '海鲜节', desc: '浪花拍岸，鲜味无边。提交含「海鲜」食材的料理。', cats: ['seafood'] },
+  { id: 'meat', name: '烤肉狂欢', desc: '炭火与油脂的协奏曲。提交含「肉类」食材的料理。', cats: ['meat'] },
+  { id: 'veg', name: '素食周', desc: '让蔬菜成为主角。提交含「蔬菜/根茎/水果」食材的料理。', cats: ['vegetable', 'root', 'fruit'] },
   { id: 'noodle', name: '面点风云', desc: '一揉一擀皆是功夫。提交「主食/烘焙」主题料理。', cats: ['主食', 'baking'] },
-  { id: 'sour', name: '酸味挑战', desc: '酸爽开胃，万物皆可酸。提交「腌制/酱料」主题料理。', cats: ['pickled', 'sauce'] },
+  { id: 'sour', name: '酸味挑战', desc: '酸爽开胃，万物皆可酸。提交含「腌制/酱料」食材的料理。', cats: ['pickled', 'sauce'] },
   { id: 'spicy', name: '麻辣江湖', desc: '无辣不欢！提交「腌制/酱料/主菜」主题料理。', cats: ['pickled', 'sauce', '主菜'] },
   { id: 'tea', name: '茶点雅集', desc: '清茶一盏，点心为伴。提交「糕点/饮品」主题料理。', cats: ['甜点', 'baking'] },
   { id: 'legend', name: '传奇食谱', desc: '只有最传说的料理才配得上这个月！提交任何料理。', cats: ['any'] },
@@ -23,9 +26,37 @@ export function festThemeFor(yearMonthNum) {
   return FEST_THEMES[Math.max(0, yearMonthNum % FEST_THEMES.length)]
 }
 
-/** 主题是否接受该料理（category 匹配；'any' 接受一切） */
-export function festAccepts(theme, category) {
-  return theme.cats.includes('any') || theme.cats.includes(category)
+/** 料理 → 其配方用到的食材类别集合（惰性构建并缓存；技能实例尚未创建时先返回空表，下次调用再建） */
+let _dishIngredientCats = null
+function dishIngredientCats() {
+  if (_dishIngredientCats?.size) return _dishIngredientCats
+  const map = new Map()
+  for (const inst of getAllSkillInstances()) {
+    for (const r of inst?.recipes ?? []) {
+      const out = r?.output?.itemId
+      if (!out) continue
+      let set = map.get(out)
+      if (!set) { set = new Set(); map.set(out, set) }
+      for (const mid of Object.keys(r.ingredients ?? {})) {
+        const c = getItem(mid)?.category
+        if (c) set.add(c)
+      }
+    }
+  }
+  if (map.size) _dishIngredientCats = map
+  return map
+}
+
+/** 主题是否接受该料理：先按料理自身 category 匹配；主题写的是食材类别（海鲜/肉类/蔬菜/腌制…）时，
+ *  回退为「该料理的任一配方用到此类食材」判定。第二参数传 category 字符串或物品对象都兼容。 */
+export function festAccepts(theme, categoryOrItem) {
+  if (theme.cats.includes('any')) return true
+  const cat = typeof categoryOrItem === 'string' ? categoryOrItem : categoryOrItem?.category
+  if (theme.cats.includes(cat)) return true
+  const id = typeof categoryOrItem === 'string' ? null : categoryOrItem?.id
+  if (!id) return false
+  const ing = dishIngredientCats().get(id)
+  return !!ing && theme.cats.some((c) => ing.has(c))
 }
 
 /** 大赛评分：料理 value + tier×5 + heal×0.1（仅读取现有数值，不改动） */

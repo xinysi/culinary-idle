@@ -45,7 +45,12 @@ function confirmAlchemy(n) {
     player.gainItem(r.out, 1)
     ok++
   }
-  if (ok > 0) ui.pushLog(`🧪 炼金融合 ${getItem(r.out)?.name} ×${ok}`, 'gain')
+  if (ok > 0) {
+    ui.pushLog(`🧪 炼金融合 ${getItem(r.out)?.name} ×${ok}`, 'gain')
+    // 每日/周常「炼金」任务进度（每融合 1 次计 1 次）+ 故事「炼金体验」计数
+    for (let i = 0; i < ok; i++) player.bumpDaily('alchemy', 'any')
+    player.stats.alchemyCrafts = (player.stats.alchemyCrafts ?? 0) + ok
+  }
 }
 
 // 配方名显示：链式配方 name 存英文 id（fishing_ext2_03→fishing_ext2_04），转为中文名
@@ -176,7 +181,7 @@ const anyCraftable = computed(() => secList.value.some((r) => maxAlchemy(r) > 0)
       </div>
       <div class="gather-grid grid-n-6 grid-equal">
         <template v-for="(v, ei) in listPaged" :key="v.r?.id ?? 'pad-' + ei">
-          <div v-if="!v.r?._pad" v-tilt class="gather-card alchemy-card" :class="{ locked: v.max <= 0 }">
+          <div v-if="!v._pad" v-tilt class="gather-card alchemy-card" :class="{ locked: v.max <= 0 }">
           <div class="alchemy-flow">
             <div class="alchemy-side">
               <template v-for="m in v.inputs.main" :key="m.id">

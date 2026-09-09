@@ -1,6 +1,6 @@
 <script setup>
 // 小游戏（2026-09-06 全面重构）：顶部入口行 + 下方自然流游戏区（与全站普通页面一致）
-// 2026-09-09：商店入口固定在最左；右侧游戏分类分页（每页 6 个，支持 ‹ › 翻页与自动跟随）
+// 2026-09-09：商店入口固定在最左；右侧游戏分类分页（每页 9 个，支持 ‹ › 翻页与自动跟随）
 import { ref, computed, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { EventBus } from '../game/core/EventBus.js'

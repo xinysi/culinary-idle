@@ -124,7 +124,7 @@ export const COMBAT_BOSSES = [
   opp(99, '初代食神', 'knife', { mechanic: { phases: true }, drops: [...REGION_DROP_BASIC, { itemId: 'godCrown', chance: 0.15 }] }),
 ]
 
-// 内容扩充：每区域 +10 对手、首领 +10（生成器 expansion1.js）
+// 内容扩充：两期各 +20 对手、首领 +20（生成器 expansion1.js / expansion2.js）
 // 扩充数据为裸条目（name/level/style），此处用 opp() 补全 hp/攻/防/命中/闪避/暴击/攻速/风格名
 import { REGION_EXT, BOSS_EXT } from './expansion1.js'
 import { REGION_EXT2, BOSS_EXT2 } from './expansion2.js'
@@ -175,8 +175,20 @@ for (const b of COMBAT_BOSSES) b.isBoss = true
 // 去掉超纲/低纲/无等级占位掉落；传说/神话装备为专属掉落，保留 itemId 交由档位定级。
 // 只改掉落物 id（保留 chance/qty），不改物品本身、不改敌人等级。
 function tierOf(lv) { return Math.min(100, Math.floor(lv / 5) * 5) }
+// 档位兜底：等级超出池的最大档（如 100/101 级终局 BOSS）时，回退到不高于该等级的最高可用档，
+// 避免取不到池而把掉落整个丢弃（只修掉落分配函数，不动敌人等级/掉落数据本身）
+function nearestTier(pool, lv) {
+  const t = tierOf(lv)
+  if (pool[t]) return t
+  let best = null
+  for (const k of Object.keys(pool)) {
+    const n = Number(k)
+    if (n <= t && (best === null || n > best)) best = n
+  }
+  return best ?? t
+}
 function pickEquip(slot, lv, seed) {
-  const pool = EQUIP_POOL[tierOf(lv)]
+  const pool = EQUIP_POOL[nearestTier(EQUIP_POOL, lv)]
   const list = pool?.[slot] ?? []
   const all = pool ? Object.values(pool).flat() : []
   const arr = list.length ? list : all
@@ -184,7 +196,7 @@ function pickEquip(slot, lv, seed) {
   return arr[seed % arr.length]
 }
 function pickMat(lv, seed) {
-  const pool = MAT_POOL[tierOf(lv)]
+  const pool = MAT_POOL[nearestTier(MAT_POOL, lv)]
   return pool?.[seed % pool.length] ?? null
 }
 const LEGENDARY_SET = new Set(LEGENDARY)

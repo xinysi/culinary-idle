@@ -1,5 +1,5 @@
 // 系统测试 — 对照《美食放置：食之契约》需求文档的全面回归
-// 运行：node .toolchain/system_test.mjs
+// 运行：node scripts/system_test.mjs
 // 覆盖：技能经验/产出、联动链、对决（伤害/克制/命中/暴击/胜负）、装备、
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
@@ -9,6 +9,10 @@ import { createSkillInstances, getSkillInstance } from '../src/game/skills/regis
 import { Combat } from '../src/game/combat/Combat.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE } from '../src/game/data/combat.js'
 import { ForagingSkill } from '../src/game/skills/ForagingSkill.js'
+import { countForMasteryLevel } from '../src/game/core/mastery.js'
+import { EXPEDITIONS } from '../src/game/data/expeditions.js'
+import { EQUIPMENT_SETS, equipSetBonuses } from '../src/game/data/equipSets.js'
+import { realmOpponent } from '../src/game/data/mysticRealm.js'
 import { FishingSkill } from '../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../src/game/skills/HuntingSkill.js'
 import { ExcavationSkill } from '../src/game/skills/ExcavationSkill.js'
@@ -354,7 +358,9 @@ console.log('══ D. 装备系统 ══')
   const st = p.equippedStats
   const kStats = getItem('ironKnife').stats
   const hStats = getItem('ironHat').stats
-  check('装备', '属性合计（铁刀+铁帽 = 装备属性之和）', st.attack === kStats.attack + (hStats.attack ?? 0) && st.defense === (kStats.defense ?? 0) + (hStats.defense ?? 0) && st.accuracy === (kStats.accuracy ?? 0) + (hStats.accuracy ?? 0), JSON.stringify(st))
+  // 2026-09-09：铁刀+铁帽同属铁套 → 额外叠加 2 件套加成（套装效果见下方「套装」段）
+  const ironSetBonus = equipSetBonuses(p.equipment).attack
+  check('装备', '属性合计（铁刀+铁帽 = 装备属性之和 + 2 件套加成）', st.attack === kStats.attack + (hStats.attack ?? 0) + ironSetBonus && st.defense === (kStats.defense ?? 0) + (hStats.defense ?? 0) + ironSetBonus && st.accuracy === (kStats.accuracy ?? 0) + (hStats.accuracy ?? 0), JSON.stringify(st))
   // 品质差异（§5.2）：普通 vs 传说
   const copper = getItem('copperKnife').stats.attack
   const gold = getItem('goldKnife').stats.attack
@@ -377,6 +383,189 @@ console.log('══ E. 离线进度 ══')
   const r1 = computeOfflineProgress(f, 3600_000) // 1h，3s 间隔
   check('离线', '1h 动作数 = floor(1200×0.8)=960', r1.actions === Math.floor((3600_000 / 3000) * 0.8), `actions=${r1.actions}`)
   check('离线', '1h 经验 = 14400（xpBalance 基准 10+5lv）', r1.exp === 14400, `exp=${r1.exp}`)
+  // 精通保底产量档位（2026-09-09，参照 Rocky Idle 的 batch：档位同时给经验与产出）
+  {
+    const py = freshPlayer({ foraging: 50 })
+    const fy = new ForagingSkill(py)
+    const apple = fy.targets.find((t) => t.itemId === 'apple')
+    const q0 = fy.yieldQuantity(1, apple)
+    py.skills.foraging.mastery.apple = countForMasteryLevel(50)
+    const q50 = fy.yieldQuantity(1, apple)
+    py.skills.foraging.mastery.apple = countForMasteryLevel(100)
+    const q100 = fy.yieldQuantity(1, apple)
+    check('精通', '保底产量档位（精通 0/50/100 → 1/2/3 个）', q0 === 1 && q50 === 2 && q100 === 3, `${q0}/${q50}/${q100}`)
+  }
+  // 远行采集队（2026-09-09 长线挂机线，参照 Rocky Idle 的 Runs）
+  {
+    check('采集队', '线路解锁按技能等级（垂钓 25）', freshPlayer({ fishing: 40 }).expeditionUnlocked('fishery') === true && freshPlayer({ fishing: 1 }).expeditionUnlocked('fishery') === false)
+    check('采集队', '槽位 2 需垂钓 30', freshPlayer({ fishing: 30 }).expeditionSlotUnlocked('fishery', 1) === true && freshPlayer({ fishing: 25 }).expeditionSlotUnlocked('fishery', 1) === false)
+    const pe = freshPlayer({ fishing: 40 })
+    const r0 = pe.expeditionStart('fishery', 0)
+    check('采集队', '出发占用槽位', r0.ok === true && !!pe.expeditionState('fishery').slots[0])
+    check('采集队', '未到期不可领取', pe.expeditionClaim('fishery', 0) === null)
+    const st = pe.expeditionState('fishery')
+    st.slots[0].readyAt = Date.now() - 1 // 视为到期
+    const claim = pe.expeditionClaim('fishery', 0)
+    const gained = Object.values(claim?.gained ?? {}).reduce((a, b) => a + b, 0)
+    check('采集队', '领取产出（1 小时 ≈ 5 个 + 金币）', claim?.ok === true && gained >= 5 && claim.gold > 0, `gained=${gained} gold=${claim?.gold}`)
+    check('采集队', '领取后自动开始下一轮 + 完成数 +1', !!st.slots[0] && st.slots[0].readyAt > Date.now() && st.completions === 1)
+    check('采集队', '撤回清空槽位', pe.expeditionStop('fishery', 0) === true && pe.expeditionState('fishery').slots[0] === null)
+    check('采集队', '产出池与稀有掉落均为既有物品', EXPEDITIONS.every((e) => e.slots.every((s) => s.pool.every((id) => !!ITEMS[id])) && (!e.rare || !!ITEMS[e.rare.itemId])))
+  }
+  // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限
+  {
+    const pa = freshPlayer()
+    pa.settings.autoSupplyReserve = 1000
+    pa.gold = 5000
+    pa.inventory.trap = 10
+    pa.inventory.garnish = 200 // 隔离：只验证陷阱补货
+    pa._tickAutoSupply(6000)
+    check('自动补给', '陷阱低于阈值自动补到 200', (pa.inventory.trap ?? 0) === 200 && pa.gold === 5000 - 190 * 5, `trap=${pa.inventory.trap} gold=${pa.gold}`)
+    const pb = freshPlayer()
+    pb.settings.autoSupplyReserve = 1000
+    pb.gold = 1100
+    pb.inventory.trap = 200 // 隔离：只验证装饰食材补货
+    pb.inventory.garnish = 0
+    pb._tickAutoSupply(6000)
+    check('自动补给', '保留金币下限（仅买得起 20 个）', (pb.inventory.garnish ?? 0) === 20 && pb.gold === 1000, `garnish=${pb.inventory.garnish} gold=${pb.gold}`)
+    const pc = freshPlayer()
+    pc.settings.autoSupply = false
+    pc.gold = 5000
+    pc.inventory.trap = 0
+    pc._tickAutoSupply(6000)
+    check('自动补给', '关闭开关不自动购买', (pc.inventory.trap ?? 0) === 0 && pc.gold === 5000)
+  }
+  // 套装效果（2026-09-09）：同套穿戴 2/4/6 件叠加属性
+  {
+    check('套装', '套装库覆盖品质套/独立矿套/赛季套', EQUIPMENT_SETS.length >= 80, `n=${EQUIPMENT_SETS.length}`)
+    const set = EQUIPMENT_SETS.find((s) => s.ids.length === 8)
+    const eqOf = (n) => { const e = {}; for (let i = 0; i < n; i++) e['s' + i] = set.ids[i]; return e }
+    const b1 = equipSetBonuses(eqOf(1))
+    const b2 = equipSetBonuses(eqOf(2))
+    const b4 = equipSetBonuses(eqOf(4))
+    const b6 = equipSetBonuses(eqOf(6))
+    const lv = Math.max(...set.ids.slice(0, 6).map((id) => (ITEMS[id]?.tier ?? 1) * 10))
+    check('套装', '2 件触发攻防加成', b1.active.length === 0 && b2.active.length === 1 && Math.abs(b2.attack - lv * 0.12) < 1e-9, `${b1.attack}/${b2.attack}`)
+    check('套装', '4 件再加生命/命中', b4.hpBonus > 0 && b4.accuracy > 0 && b2.hpBonus === 0)
+    check('套装', '6 件再加暴击/攻速', b6.critChance > 0 && b6.speedBonus > 0 && b4.critChance === 0)
+    check('套装', '加成进入装备总属性', (() => {
+      const pw = freshPlayer()
+      pw.equipment = eqOf(6)
+      const st = pw.equippedStats
+      return st.attack >= b6.attack && st.hpBonus >= b6.hpBonus
+    })())
+  }
+  // 宝石镶嵌（2026-09-09）：插槽按品质、镶嵌消耗、拆卸/换装返还、加成进入属性
+  {
+    const pg = freshPlayer()
+    pg.gainItem('crystalKnife', 1) // 史诗 → 2 插槽
+    pg.equip('crystalKnife')
+    const rec = pg.gemSockets?.weapon
+    check('宝石', '插槽数按品质（史诗 2）', !!rec && rec.gems.length === 2, JSON.stringify(rec))
+    pg.gainItem('goldOre', 2)
+    check('宝石', '镶嵌消耗宝石并生效', pg.socketGem('weapon', 0, 'goldOre').ok && pg.inventory.goldOre === 1 && rec.gems[0] === 'goldOre')
+    check('宝石', '拆卸返还宝石', pg.unsocketGem('weapon', 0).ok && pg.inventory.goldOre === 2 && rec.gems[0] === null)
+    pg.socketGem('weapon', 0, 'goldOre')
+    pg.gainItem('ironKnife', 1)
+    pg.equip('ironKnife') // 普通 → 0 插槽
+    check('宝石', '换装自动退回宝石', pg.inventory.goldOre === 2 && !pg.gemSockets.weapon, JSON.stringify(pg.gemSockets))
+    const pg2 = freshPlayer()
+    pg2.gainItem('crystalKnife', 1)
+    pg2.equip('crystalKnife')
+    pg2.gainItem('goldOre', 1)
+    const a0 = pg2.equippedStats.attack
+    pg2.socketGem('weapon', 0, 'goldOre')
+    check('宝石', '镶嵌加成进入装备总属性', pg2.equippedStats.attack === a0 + 5, `${a0} → ${pg2.equippedStats.attack}`)
+  }
+  // 美食评论家（2026-09-09）：高要求食客
+  {
+    const pc = freshPlayer()
+    const cs = pc.criticState()
+    cs.order = { name: '测试评论家', category: '主菜', minTier: 5, reward: 500, createdMs: Date.now(), expireAt: Date.now() + 3600000 }
+    const bad = Object.values(ITEMS).find((it) => it.type === 'food' && (it.category !== '主菜' || (it.tier ?? 0) < 5))
+    pc.inventory[bad.id] = 1
+    check('评论家', '不符合要求的料理被拒', pc.serveCritic(bad.id).ok === false)
+    const good = Object.values(ITEMS).find((it) => it.type === 'food' && it.category === '主菜' && (it.tier ?? 0) >= 5)
+    pc.inventory[good.id] = 1
+    const g0 = pc.gold
+    const r = pc.serveCritic(good.id)
+    check('评论家', '提交符合要求的料理给大奖', r.ok && pc.gold === g0 + 500 && (pc.inventory.mysterySpice ?? 0) === 1 && pc.criticState().order === null, JSON.stringify({ gold: pc.gold - g0 }))
+    const pc2 = freshPlayer()
+    pc2.criticState().order = { name: 'X', category: '主菜', minTier: 1, reward: 1, createdMs: Date.now(), expireAt: Date.now() - 1 }
+    pc2._tickCritic(1000)
+    check('评论家', '超时自动离开', pc2.criticState().order === null)
+  }
+  // 挂机计划（2026-09-09）：顺序挂机 + 条件换目标 + 完成自动暂停
+  {
+    const pp = freshPlayer()
+    pp.planAddStep('foraging', 'apple', 'mastery', 5)
+    pp.planAddStep('fishing', 'crucian', 'level', 3)
+    check('计划', '添加两步', pp.planState().steps.length === 2)
+    pp.planToggle()
+    check('计划', '启用后应用第 1 步', pp.planState().active === true && pp.getSkillTarget('foraging') === 'apple', JSON.stringify(pp.planState()))
+    pp.skills.foraging.mastery.apple = countForMasteryLevel(5)
+    pp._tickPlan()
+    check('计划', '条件满足自动进入第 2 步', pp.planState().index === 1 && pp.getSkillTarget('fishing') === 'crucian')
+    pp.setSkillState('fishing', { level: 3, exp: 0 })
+    pp._tickPlan()
+    check('计划', '全部完成自动暂停', pp.planState().active === false && pp.isSkillPaused('foraging') === true)
+  }
+  // 每周挑战赛（2026-09-09）：确定性轮换 + 进度累计 + 领奖
+  {
+    const pw = freshPlayer()
+    const def = pw.challengeDef()
+    check('周挑战', '按周确定性选 1 个挑战', !!def && pw.challenge.week === pw._weekNum() && pw.challenge.progress === 0, def?.id)
+    // 按该挑战的 kind 累计到目标
+    for (let i = 0; i < def.target; i++) pw.bumpChallenge(def.kind, i + 1)
+    check('周挑战', `进度累计到 ${def.target}`, pw.challenge.progress >= def.target, `${pw.challenge.progress}/${def.target}`)
+    const g0 = pw.gold
+    const r = pw.claimChallenge()
+    check('周挑战', '达成领奖（一次性）', r?.gold === def.gold && pw.gold === g0 + def.gold && pw.claimChallenge() === null)
+    check('周挑战', '历史最佳记录', (pw.challengeBest[def.id] ?? 0) >= def.target, JSON.stringify(pw.challengeBest))
+  }
+  // 食神秘境（2026-09-09 roguelike 局内模式）
+  {
+    const pr = freshPlayer({ knife: 20, tasteAcumen: 20, heatControl: 20 })
+    pr.realmStart()
+    const st = pr.realmState()
+    check('秘境', '进入秘境初始化', st.active === true && st.floor === 0 && st.buffs.length === 0)
+    const mods0 = pr.realmModifiers()
+    check('秘境', '初始无增益', mods0.attackPct === 0 && mods0.maxHpPct === 0)
+    pr.realmAdvance()
+    check('秘境', '胜一层给 3 选 1', st.floor === 1 && st.pending?.length === 3)
+    const pick = st.pending[0]
+    pr.realmPickBuff(pick.id)
+    check('秘境', '选中增益生效', st.buffs.includes(pick.id) && st.pending === null)
+    const mods1 = pr.realmModifiers()
+    check('秘境', '增益进入属性乘区', Object.keys(pick.mod).every((k) => mods1[k] === pick.mod[k]), JSON.stringify(mods1))
+    const o1 = realmOpponent(0, 50)
+    const o30 = realmOpponent(30, 50)
+    check('秘境', '对手等级随层上浮且封顶 99', o1.level <= 99 && o30.level <= 99 && o30.level >= o1.level, `${o1.level}/${o30.level}`)
+    const g0 = pr.gold
+    const r = pr.realmEnd()
+    check('秘境', '阵亡/放弃按层结算并清零', r?.floor === 1 && pr.gold > g0 && pr.realmState().active === false && pr.realmState().buffs.length === 0, JSON.stringify(r))
+  }
+  // 菜系图谱（2026-09-09 永久天赋树）
+  {
+    const pi = freshPlayer()
+    check('图谱', '初始 0 见闻', pi.insightPoints() === 0)
+    pi.gainItem('apple', 1)
+    const p1 = pi.insightPoints()
+    pi.gainItem('apple', 5) // 已收集过 → 不再给
+    check('图谱', '图鉴首次收集 +1（重复不给）', p1 === 1 && pi.insightPoints() === 1)
+    check('图谱', '见闻不足时拒绝解锁', pi.unlockInsight('g1').ok === false)
+    pi.gainInsight(200)
+    check('图谱', '前置未解锁时拒绝', pi.unlockInsight('g3').ok === false)
+    const u1 = pi.unlockInsight('g1')
+    check('图谱', '解锁 g1 扣见闻', u1.ok && (pi.insights ?? []).includes('g1') && pi.insightPoints() === 201 - 10, JSON.stringify({ left: pi.insightPoints() }))
+    check('图谱', '效果进入聚合层', pi.insightEffects().yieldPct === 3)
+    pi.unlockInsight('g2')
+    check('图谱', '经验加成聚合', pi.insightEffects().xpPct === 3 && pi.insightEffects().yieldPct === 3)
+    const pb2 = freshPlayer()
+    pb2.gainInsight(20)
+    pb2.unlockInsight('b1')
+    check('图谱', '对决线加成聚合', pb2.insightEffects().attackPct === 3)
+  }
   // 12h 上限
   const r13 = computeOfflineProgress(f, 13 * 3600_000)
   check('离线', '13h 截断为 12h', r13.durationMs === 12 * 3600_000, `dur=${r13.durationMs}`)
@@ -411,6 +600,20 @@ console.log('══ E. 离线进度 ══')
   Date.now = () => realNow() + 95_000 // 跳 95s（小麦 90s）
   check('离线', '农耕时间戳生长（离线等价）', farm.isMature(0) === true)
   Date.now = realNow
+  // 农耕自动收种（2026-09-09 放置化）：成熟即收获 + 补种同种种子
+  {
+    const pf = freshPlayer({ farming: 1 })
+    const farmAuto = new FarmingSkill(pf)
+    pf.settings.autoFarm = true
+    pf.inventory.wheatSeed = 3
+    pf.setPlot(0, { seedId: 'wheatSeed', plantedAt: Date.now(), witherRolled: true }) // 预置已判定枯萎，规避 3% 随机
+    const now0 = Date.now
+    Date.now = () => now0() + 95_000 // 跳 95s（小麦 90s）
+    const wheat0 = pf.inventory.wheat ?? 0
+    farmAuto.tick(100)
+    Date.now = now0
+    check('离线', '农耕自动收种：成熟即收获并补种同种种子', (pf.inventory.wheat ?? 0) > wheat0 && pf.farming.plots[0]?.seedId === 'wheatSeed' && pf.inventory.wheatSeed === 2, `wheat=${pf.inventory.wheat} seed=${pf.inventory.wheatSeed}`)
+  }
   // 探索离线：gold 在报告中（200 目标重构后取首个目标；旧 streetVendor 已不在实例列表）
   const p5 = freshPlayer({ exploration: 5 })
   const ex = new ExplorationSkill(p5)
@@ -745,7 +948,23 @@ console.log('══ N. 补齐功能验证 ══')
   // ── 史诗品质（§5.2：六品质齐全）──
   const qualities = new Set(Object.values(ITEMS).filter((it) => it.type === 'equipment').map((it) => it.quality))
   check('品质', '六档品质齐全（普通~神话）', ['普通', '精良', '稀有', '史诗', '传说', '神话'].every((q) => qualities.has(q)), JSON.stringify([...qualities]))
-  check('品质', '史诗装备 12 件存在（水晶+精金）', Object.values(ITEMS).filter((it) => it.quality === '史诗').length === 12)
+  // 史诗档 = 精金/水晶套（Lv36-45，含补齐件）；2026-09-09 tier/品质归一后由 12 件变为 18 件
+  const epics = Object.values(ITEMS).filter((it) => it.type === 'equipment' && it.quality === '史诗')
+  check('品质', '史诗装备 18 件（精金/水晶套，含补齐件）', epics.length === 18, `${epics.length} 件`)
+  check('品质', '史诗档全部落在精金/水晶套（品质随等级）', epics.every((it) => /精金|水晶/.test(it.name)), epics.filter((it) => !/精金|水晶/.test(it.name)).map((it) => it.name).join(','))
+  // 锻造装备档位随制作等级（2026-09-09 修复：补齐件 ceil(seg×0.6)/既有件旧索引/手写段位 三套口径并存，最多脱钩 57 级）
+  {
+    const lvOf = new Map()
+    for (const r of getSkillInstance('craftsmithing')?.recipes ?? []) {
+      const o = r.output?.itemId
+      if (!o) continue
+      const cur = lvOf.get(o)
+      if (cur == null || r.reqLevel < cur) lvOf.set(o, r.reqLevel)
+    }
+    const wantTier = (lv) => Math.max(1, Math.min(10, Math.ceil(lv / 10)))
+    const bad = [...lvOf].filter(([id, lv]) => ITEMS[id]?.type === 'equipment' && ITEMS[id].tier !== wantTier(lv))
+    check('品质', '锻造装备档位随制作等级（tier = ceil(lv/10)）', bad.length === 0, bad.slice(0, 3).map(([id, lv]) => `${ITEMS[id]?.name}(Lv${lv},T${ITEMS[id]?.tier})`).join(','))
+  }
   const ck = getItem('crystalKnife')
   check('品质', '史诗属性 > 稀有（34 > 24）', ck.stats.attack > getItem('goldKnife').stats.attack)
 
@@ -911,7 +1130,14 @@ console.log('══ S. 内容扩充完整性 ══')
   check('扩充', '采集四技能目标数（142/72/70/83）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 72 && insts.hunting.targets.length === 70 && insts.excavation.targets.length === 83, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length }))
   check('扩充', '制作五技能食谱数（294/97/90/127/97）', insts.cooking.recipes.length === 294 && insts.baking.recipes.length === 97 && insts.preserving.recipes.length === 90 && insts.brewing.recipes.length === 127 && insts.spiceMixing.recipes.length === 97, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 365 配方（20 品质套 + 独立矿套）', insts.craftsmithing.recipes.length === 365, `n=${insts.craftsmithing.recipes.length}`)
-  check('扩充', '食材保鲜 17 配方（肥料 2 + 保鲜/增益剂 15）', insts.preservation.recipes.length === 17, `n=${insts.preservation.recipes.length}`)
+  // 18 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
+  check('扩充', '食材保鲜 18 配方（入门 1 + 肥料 2 + 保鲜/增益剂 15）', insts.preservation.recipes.length === 18, `n=${insts.preservation.recipes.length}`)
+  // 制作技能入口保护（2026-09-09）：每个制作技能必须至少有一个 Lv1 配方，否则技能永远无法起步
+  {
+    const noEntry = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
+      .filter((id) => !getSkillInstance(id).recipes.some((r) => r.reqLevel <= 1))
+    check('扩充', '每个制作技能都有 Lv1 入口配方（不可再出现永久卡 1 级）', noEntry.length === 0, noEntry.join(','))
+  }
   check('扩充', '美食知识 32 奥义', AOJIS.length === 32, `n=${AOJIS.length}`)
   check('扩充', '食灵 160 个', SPIRITS.length === 160, `n=${SPIRITS.length}`)
   check('扩充', '探索 200 目标', insts.exploration.targets.length === 200, `n=${insts.exploration.targets.length}`)
@@ -979,6 +1205,19 @@ console.log('══ U. 图鉴数据 ══')
   p.onCombatWin({ isBoss: true, name: '面条之王' })
   p.onCombatWin({ isBoss: true, name: '面条之王' })
   check('图鉴', 'BOSS 击杀记录去重', p.stats.bosses.length === 1 && p.stats.bosses[0] === '面条之王')
+  // 美食知识经验来源（2026-09-09 修复：此前全仓无经验来源 → 永久 Lv1，但其等级计入辅助公会门槛）
+  {
+    const g0 = p.skills.gastronomy.exp
+    p.onCombatWin({ name: '测试对手', level: 40, isBoss: false })
+    check('图鉴', '美食知识随对决胜利获得经验', p.skills.gastronomy.exp > g0, `${g0} → ${p.skills.gastronomy.exp}`)
+  }
+  // 探索经验口径（2026-09-09 修复）：必须走 addCardXp（×60 卡片系数），与采集/制作一致
+  {
+    const ex = getSkillInstance('exploration')
+    const e0 = p.skills.exploration.exp
+    ex.addCardXp(100, 1)
+    check('图鉴', '探索经验走卡片系数（100 → 6000）', p.skills.exploration.exp - e0 === 6000, `${p.skills.exploration.exp - e0}`)
+  }
   check('图鉴', 'bossAll 成就阈值同步为 28', ALL_ACHIEVEMENTS.find((a) => a.id === 'bossAll').check({ stats: { bosses: Array(28).fill('x') } }) === true && ALL_ACHIEVEMENTS.find((a) => a.id === 'bossAll').check({ stats: { bosses: [] } }) === false)
 }
 

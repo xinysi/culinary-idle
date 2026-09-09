@@ -1,6 +1,6 @@
 // 赛季装备套件生成器 — 每赛季一套 8 件（武器/头盔/身体/腿部/脚部/副手/饰品1/饰品2）
-// 装备名 = 赛季名（去「季」）+ 槽位词缀；套件分 4 档奖励发放（每档 2 件 + 原限定并入末档）
-// 运行：node .toolchain/gen_season_gear.mjs → 产出 src/game/data/expansion_gear.js
+// 装备名 = 赛季名（去「季」）+ 槽位词缀；套件按 10 档奖励发放（每档 1 件 + 原限定并入末档）
+// 运行：node scripts/gen_season_gear.mjs → 产出 src/game/data/expansion_gear.js
 import { writeFileSync } from 'node:fs'
 import { SEASONS } from '../src/game/data/seasons.js'
 
@@ -81,7 +81,7 @@ for (const s of SEASONS) {
 }
 
 const out = `// 赛季装备套件（生成器产出，勿手改）— ${new Date().toISOString().slice(0, 10)}
-// 每赛季一套 8 件（武器/头盔/身体/腿部/脚部/副手/饰品1/饰品2），名字随赛季适配，分 4 档奖励发放
+// 每赛季一套 8 件（武器/头盔/身体/腿部/脚部/副手/饰品1/饰品2），名字随赛季适配，按 10 档奖励发放
 export const EXPANSION_GEAR_ITEMS = ${JSON.stringify(gearItems, null, 1)}
 export const SEASONS_GEAR = ${JSON.stringify(seasonGear, null, 1)}
 `

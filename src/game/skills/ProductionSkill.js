@@ -4,7 +4,7 @@
 
 import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
-import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier } from '../core/mastery.js'
+import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { getSkillDef } from '../data/skills.js'
 import { applyCraftXp } from './xpBalance.js'
 
@@ -35,7 +35,8 @@ export class ProductionSkill extends Skill {
   successChance(recipe) {
     const guild = this.player.guildEffects?.() ?? {}
     const craftBonus = (guild.craftPct ?? 0) / 100
-    return Math.min(recipe.successChance + (this.level - recipe.reqLevel) * BASE_SUCCESS_LEVEL_BONUS + craftBonus, MAX_SUCCESS)
+    const insightBonus = (this.player.insightEffects?.()?.craftPct ?? 0) / 100 // 菜系图谱（2026-09-09）
+    return Math.min(recipe.successChance + (this.level - recipe.reqLevel) * BASE_SUCCESS_LEVEL_BONUS + craftBonus + insightBonus, MAX_SUCCESS)
   }
 
   /** 材料是否足够 + 等级是否满足 */
@@ -68,7 +69,8 @@ export class ProductionSkill extends Skill {
     if (Math.random() < this.successChance(recipe)) {
       const out = recipe.output
       const doubled = Math.random() < masteryDoubleChance(this.masteryLevel(recipe))
-      const qty = doubled ? out.qty * 2 : out.qty
+      const batch = masteryYieldBonus(this.masteryLevel(recipe)) // 精通保底批量（2026-09-09）
+      const qty = (doubled ? out.qty * 2 : out.qty) + batch
       // 食灵召唤：产物直接入「食灵阁」（不占背包格，2026-09-06）
       if (this.id === 'spiritSummoning') this.player.gainSpirit(out.itemId, qty)
       else this.player.gainItem(out.itemId, qty)

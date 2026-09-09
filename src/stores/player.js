@@ -9,7 +9,7 @@ import { SKILL_DEFS } from '../game/data/skills.js'
 import { totalXpForLevel } from '../game/core/Experience.js'
 import { getItem } from '../game/data/items.js'
 import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
-import { getAllSkillInstances } from '../game/skills/registry.js'
+import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { SPIRITS, SPIRIT_SLOTS } from '../game/data/spirits.js'
@@ -19,18 +19,26 @@ import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { COMBAT_REGIONS } from '../game/data/combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
+import { countForMasteryLevel } from '../game/core/mastery.js'
 import { MAX_LEVEL, PRESTIGE_MAX_LEVEL } from '../game/skills/Skill.js'
 import { getGuild, GUILD_SHOP } from '../game/data/guilds.js'
 import { getSeason, activeSeasonId } from '../game/data/seasons.js'
 import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
+import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyChallenge.js'
+import { REALM_BUFFS, rollRealmChoices, realmReward } from '../game/data/mysticRealm.js'
+import { INSIGHT_NODES, insightEffectSum, canUnlockInsight } from '../game/data/insightTree.js'
 import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
+import { equipSetBonuses } from '../game/data/equipSets.js'
+import { gemDef, socketCountOf, gemsBonus } from '../game/data/gems.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
 import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
-import { makeOrder, nextOrderDelay, MAX_ORDERS } from '../game/data/restaurantOrders.js'
+import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay } from '../game/data/restaurantOrders.js'
+import { SHOP_ITEMS } from '../game/data/shop.js'
+import { EXPEDITIONS, getExpedition, expeditionTier, expeditionYieldMult, expeditionRareBonus } from '../game/data/expeditions.js'
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
 let _restaurantAccumMs = 0
@@ -163,6 +171,13 @@ const defaultState = () => ({
     // 每日/周常任务（2026-09-06 长线日活钩子）：daily.tasks 为 [{...模板, progress, claimed}]
     daily: { day: null, streak: 0, tasks: [], claimedAll: false },
     weekly: { week: null, task: null, progress: 0, claimed: false },
+    // 每周挑战赛（2026-09-09）：{ week, id, progress, done } + 历史最佳
+    challenge: { week: null, id: null, progress: 0, done: false },
+    challengeBest: {},
+    // 食神秘境（2026-09-09 roguelike 局内模式）：{ active, floor, buffs: [id], best, pending: [def] | null }
+    realm: { active: false, floor: 0, buffs: [], best: 0, pending: null },
+    // 菜系图谱（2026-09-09 永久天赋树）：已解锁节点 id；货币见 stats.insights
+    insights: [],
     // 无尽挑战塔（对决 99 解锁）：floor=当前挑战层，best=已通最高层，rewarded=已发里程碑层
     tower: { floor: 1, best: 0, rewarded: [] },
     // 月度厨艺大赛：month=YYYYMM，score=当月累计分，entries=提交记录，rewarded=已领里程碑序号
@@ -181,8 +196,16 @@ const defaultState = () => ({
     craftQueues: {},
     // 装备词条（2026-09-06）：{ slot: { itemId, mods: [{stat,label,value}] } }
     gearMods: {},
+    // 宝石镶嵌（2026-09-09）：{ slot: { itemId, gems: [gemId|null, ...] } }
+    gemSockets: {},
     // 食客订单（2026-09-06）：list=[{id,name,itemId,qty,reward,createdMs,expireAt}]；nextAt=下一单生成时刻
     orders: { list: [], nextAt: 0 },
+    // 远行采集队（2026-09-09 长线挂机线）：{ [lineId]: { completions, slots: [null | {startedAt, readyAt}] } }
+    expeditions: {},
+    // 美食评论家（2026-09-09）：{ order: null | {...}, nextAt }
+    critic: { order: null, nextAt: 0 },
+    // 挂机计划（2026-09-09）：按顺序挂机，条件满足自动换目标，全部完成自动暂停
+    plan: { active: false, index: 0, steps: [] },
     // 小游戏（2026-09-06 顶部第三页）：火候炉/美食讲堂/厨心2048/大胃王
     minigames: {
       heat: { day: 0, streak: 0, bestStreak: 0 },
@@ -193,7 +216,7 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）
+    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
   })
 
@@ -234,6 +257,17 @@ export const usePlayerStore = defineStore('player', {
         for (const mod of m.mods) {
           sum[mod.stat] = (sum[mod.stat] ?? 0) + (Number(mod.value) || 0)
         }
+      }
+      // 套装效果（2026-09-09）：同套穿戴 2/4/6 件的叠加加成
+      const setB = equipSetBonuses(s.equipment)
+      for (const k of ['attack', 'defense', 'hpBonus', 'accuracy', 'critChance', 'speedBonus']) {
+        sum[k] = (sum[k] ?? 0) + (setB[k] ?? 0)
+      }
+      // 宝石镶嵌（2026-09-09）：仅对「仍穿戴同一件」的槽位生效
+      for (const [slot, rec] of Object.entries(s.gemSockets ?? {})) {
+        if (!rec?.gems?.length || s.equipment[slot] !== rec.itemId) continue
+        const gb = gemsBonus(rec.gems)
+        for (const [k, v] of Object.entries(gb)) sum[k] = (sum[k] ?? 0) + v
       }
       return sum
     },
@@ -451,6 +485,10 @@ export const usePlayerStore = defineStore('player', {
         upgrades: saved.upgrades ?? {},
         daily: saved.daily ?? { day: null, streak: 0, tasks: [], claimedAll: false },
         weekly: saved.weekly ?? { week: null, task: null, progress: 0, claimed: false },
+        challenge: saved.challenge ?? { week: null, id: null, progress: 0, done: false },
+        challengeBest: saved.challengeBest ?? {},
+        realm: saved.realm ?? { active: false, floor: 0, buffs: [], best: 0, pending: null },
+        insights: Array.isArray(saved.insights) ? saved.insights : [],
         tower: saved.tower ?? { floor: 1, best: 0, rewarded: [] },
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
@@ -460,7 +498,11 @@ export const usePlayerStore = defineStore('player', {
         mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
         gearMods: saved.gearMods ?? {}, // 装备词条：{ slot: { itemId, mods } }
+        gemSockets: saved.gemSockets ?? {}, // 宝石镶嵌：{ slot: { itemId, gems } }
         orders: saved.orders ?? { list: [], nextAt: 0 }, // 食客订单
+        expeditions: saved.expeditions ?? {}, // 远行采集队
+        critic: saved.critic ?? { order: null, nextAt: 0 }, // 美食评论家
+        plan: saved.plan ?? { active: false, index: 0, steps: [] }, // 挂机计划
         minigames: saved.minigames ?? { heat: { day: 0, streak: 0, bestStreak: 0 }, trivia: { week: '', answered: 0, correct: 0, badges: 0 }, kitchen2048: { best: 0 }, foodrush: { day: 0, best: 0, rewarded: 0 }, puzzle: { day: '', done: 0 }, matchfood: { day: '', buffed: 0 } },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
@@ -475,6 +517,7 @@ export const usePlayerStore = defineStore('player', {
         }
       }
       if (migrated > 0) this.spirits = { ...(this.spirits ?? {}), owned }
+      this.syncGemSockets() // 读档后补全镶嵌记录（2026-09-09）
     },
 
     serialize() {
@@ -520,6 +563,10 @@ export const usePlayerStore = defineStore('player', {
         upgrades: this.upgrades,
         daily: this.daily,
         weekly: this.weekly,
+        challenge: this.challenge,
+        challengeBest: this.challengeBest,
+        realm: this.realm,
+        insights: this.insights,
         tower: this.tower,
         fest: this.fest,
         spiritBonds: this.spiritBonds,
@@ -529,7 +576,11 @@ export const usePlayerStore = defineStore('player', {
         mijian: this.mijian,
         craftQueues: this.craftQueues,
         gearMods: this.gearMods,
+        gemSockets: this.gemSockets,
         orders: this.orders,
+        expeditions: this.expeditions,
+        critic: this.critic,
+        plan: this.plan,
         minigames: this.minigames,
         lastOnlineAt: this.lastOnlineAt,
       }
@@ -606,6 +657,7 @@ export const usePlayerStore = defineStore('player', {
       const have = this.inventory[itemId] ?? 0
       const add = Math.max(0, Math.min(qty, cap - have))
       if (add > 0) this.inventory[itemId] = have + add
+      if (!this.collected[itemId]) this.gainInsight(1) // 菜系图谱：图鉴首次收集 +1（2026-09-09）
       this.collected[itemId] = true
       if (item?.spoilMs) this.spoilage[itemId] = Date.now() + this.freshMsFor(item)
       return add > 0
@@ -835,6 +887,12 @@ export const usePlayerStore = defineStore('player', {
       if (!cur || cur.itemId !== itemId) {
         this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
       }
+      // 宝石插槽（2026-09-09）：同件保留；换件先退回旧宝石，再按新装备品质初始化
+      if (!this.gemSockets) this.gemSockets = {}
+      const prevSock = this.gemSockets[slot]
+      if (prevSock && prevSock.itemId !== itemId) this._returnGemSockets(slot)
+      const sockN = socketCountOf(item)
+      if (sockN > 0 && !this.gemSockets[slot]) this.gemSockets[slot] = { itemId, gems: new Array(sockN).fill(null) }
       return true
     },
 
@@ -843,7 +901,72 @@ export const usePlayerStore = defineStore('player', {
       if (!itemId) return false
       this.equipment[slot] = null
       this.gainItem(itemId, 1)
+      this._returnGemSockets(slot) // 卸下时退回镶嵌的宝石（不丢失）
       return true
+    },
+
+    /** 清空某槽位镶嵌记录并把宝石退回背包（换装/卸下调用） */
+    _returnGemSockets(slot) {
+      const rec = this.gemSockets?.[slot]
+      if (!rec) return
+      for (const id of rec.gems ?? []) if (id) this.gainItem(id, 1)
+      delete this.gemSockets[slot]
+    },
+
+    /** 补全穿戴物状态（读档/旧档后调用）：缺失的词条记录重掷、按品质初始化宝石插槽、槽数不符时截断/补齐 */
+    syncGemSockets() {
+      if (!this.gemSockets) this.gemSockets = {}
+      if (!this.gearMods) this.gearMods = {}
+      for (const [slot, itemId] of Object.entries(this.equipment ?? {})) {
+        if (!itemId) {
+          if (this.gemSockets[slot]) this._returnGemSockets(slot)
+          continue
+        }
+        const item = getItem(itemId)
+        // 词条：存档里已穿戴但没有词条记录（旧档/直存）→ 补掷（与 equip() 同口径）
+        if (!this.gearMods[slot] || this.gearMods[slot].itemId !== itemId) {
+          this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
+        }
+        const n = socketCountOf(item)
+        const rec = this.gemSockets[slot]
+        if (n <= 0) {
+          if (rec) this._returnGemSockets(slot)
+          continue
+        }
+        if (!rec || rec.itemId !== itemId) {
+          if (rec) this._returnGemSockets(slot)
+          this.gemSockets[slot] = { itemId, gems: new Array(n).fill(null) }
+        } else if (rec.gems.length !== n) {
+          rec.gems = rec.gems.slice(0, n)
+          while (rec.gems.length < n) rec.gems.push(null)
+        }
+      }
+    },
+
+    /** 镶嵌宝石（消耗 1 个宝石物品；插槽状态与穿戴物绑定） */
+    socketGem(slot, index, gemId) {
+      const itemId = this.equipment[slot]
+      const item = itemId ? getItem(itemId) : null
+      if (!item || item.type !== 'equipment') return { ok: false, msg: '该槽位没有穿戴装备' }
+      if (!gemDef(gemId)) return { ok: false, msg: '该物品不能作为宝石镶嵌' }
+      const rec = this.gemSockets?.[slot]
+      if (!rec || rec.itemId !== itemId) return { ok: false, msg: '插槽状态异常（请重新穿戴）' }
+      if (!(index >= 0 && index < rec.gems.length)) return { ok: false, msg: '插槽不存在' }
+      if (rec.gems[index]) return { ok: false, msg: '该插槽已有宝石' }
+      if (!this.spendItem(gemId, 1)) return { ok: false, msg: '没有该宝石' }
+      rec.gems[index] = gemId
+      this.stats.gemsSocketed = (this.stats.gemsSocketed ?? 0) + 1
+      return { ok: true }
+    },
+
+    /** 拆卸宝石（返还物品；背包满时拒绝） */
+    unsocketGem(slot, index) {
+      const rec = this.gemSockets?.[slot]
+      const id = rec?.gems?.[index]
+      if (!id) return { ok: false, msg: '该插槽为空' }
+      if (!this.gainItem(id, 1)) return { ok: false, msg: '背包已满，无法拆卸' }
+      rec.gems[index] = null
+      return { ok: true, itemId: id }
     },
 
     /** 装备词条洗练（重随词条数量/类型/数值） */
@@ -1013,6 +1136,7 @@ export const usePlayerStore = defineStore('player', {
         if (def.reward?.gold) this.gainGold(def.reward.gold)
         if (def.reward?.items) this.gainItems(def.reward.items)
         if (def.title && !this.title) this.title = def.title
+        this.gainInsight(5) // 菜系图谱：成就解锁 +5（2026-09-09）
         EventBus.emit('achievement:unlock', { id: def.id, name: def.name, reward: def.reward })
       }
     },
@@ -1083,8 +1207,12 @@ export const usePlayerStore = defineStore('player', {
       this.stats.combatWins++
       if (opponent.isBoss && !this.stats.bosses.includes(opponent.name)) {
         this.stats.bosses.push(opponent.name)
+        this.gainInsight(2) // 菜系图谱：首次击败首领 +2（2026-09-09）
       }
       this.gainTastePoints(Math.floor(opponent.level * 1.5)) // 品鉴点数（§3.4.1 来源；乘 1.5 缓解奥义持久消耗）
+      // 美食知识（2026-09-09）：原无任何经验来源 → 永久 Lv1（但其等级计入辅助公会入会门槛）。
+      // 改为随对决胜利积累（与品鉴力同源，按敌人等级），使其与对决线同步成长。
+      getSkillInstance('gastronomy')?.addCardXp(Math.floor(opponent.level * 6))
       this.bumpQuest('combatWin', 'any')
       // 对决·战斗：所有敌人单独计次（含普通对手与首领）
       this.bumpStory('battle', 'battle:' + opponent.name)
@@ -1308,6 +1436,7 @@ export const usePlayerStore = defineStore('player', {
       if (!tier || st.claimed.includes(index) || st.points < tier.points) return false
       st.claimed.push(index)
       st.points -= tier.points // 领取奖励扣除对应赛季点（积分兑换语义）
+      this.gainInsight(3) // 菜系图谱：赛季领档 +3（2026-09-09）
       if (tier.reward?.gold) this.gainGold(tier.reward.gold)
       if (tier.reward?.items) this.gainItems(tier.reward.items)
       EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `奖励 ${index + 1}` })
@@ -1355,7 +1484,236 @@ export const usePlayerStore = defineStore('player', {
         a.currentStreak = 0
       }
       this.stats.arena = a
+      this.bumpChallenge('arena', a.currentStreak) // 每周挑战赛：连胜（2026-09-09）
       return reward
+    },
+
+    // ── 挂机计划（2026-09-09）：按顺序挂机 → 条件满足自动换目标 → 全部完成自动暂停 ──
+    planState() {
+      if (!this.plan || !Array.isArray(this.plan.steps)) this.plan = { active: false, index: 0, steps: [] }
+      return this.plan
+    },
+    /** 追加一步：{ skill, target, until: 'mastery'|'level', value } */
+    planAddStep(skill, target, until, value) {
+      const st = this.planState()
+      if (!skill || !target) return { ok: false, msg: '请选择技能与目标' }
+      st.steps.push({ skill, target, until: until === 'level' ? 'level' : 'mastery', value: Math.max(1, Math.min(100, Number(value) || 100)) })
+      return { ok: true }
+    },
+    planRemoveStep(i) {
+      const st = this.planState()
+      if (i >= 0 && i < st.steps.length) {
+        st.steps.splice(i, 1)
+        if (st.index > st.steps.length) st.index = st.steps.length
+      }
+      return true
+    },
+    planClear() {
+      this.plan = { active: false, index: 0, steps: [] }
+      return true
+    },
+    /** 启用/停用计划（启用时从第一步开始） */
+    planToggle() {
+      const st = this.planState()
+      st.active = !st.active
+      if (st.active) {
+        st.index = 0
+        if (!this._applyPlanStep(st)) st.active = false
+      }
+      return st.active
+    },
+    /** 应用第 index 步（设置目标 + 取消暂停 + 切到该技能页） */
+    _applyPlanStep(st) {
+      const step = st.steps[st.index]
+      if (!step) return false
+      this.setSkillTarget(step.skill, step.target)
+      this.reopenIdleTask(step.skill)
+      this.setSkillPaused(step.skill, false)
+      this.setActiveSkill(step.skill)
+      EventBus.emit('plan:step', { index: st.index, step })
+      return true
+    },
+    /** 每帧：计划推进（条件满足 → 下一步；全部完成 → 暂停全部挂机） */
+    _tickPlan() {
+      const st = this.planState()
+      if (!st.active) return
+      const step = st.steps[st.index]
+      if (!step) { st.active = false; return }
+      const done = (() => {
+        if (step.until === 'level') return (this.skills[step.skill]?.level ?? 1) >= step.value
+        const inst = getAllSkillInstances().find((x) => x.id === step.skill)
+        const count = inst?.mastery?.[step.target] ?? 0
+        return count >= countForMasteryLevel(step.value)
+      })()
+      if (!done) return
+      st.index++
+      if (st.index >= st.steps.length) {
+        st.active = false
+        st.index = 0
+        for (const inst of getAllSkillInstances()) {
+          if (['gathering', 'exploration'].includes(inst.type)) this.setSkillPaused(inst.id, true)
+        }
+        this.stats.plansDone = (this.stats.plansDone ?? 0) + 1
+        EventBus.emit('plan:done', {})
+        return
+      }
+      this._applyPlanStep(st)
+    },
+
+    // ── 美食评论家（2026-09-09）：随机到访的高要求食客 ──
+    criticState() {
+      if (!this.critic) this.critic = { order: null, nextAt: 0 }
+      return this.critic
+    },
+    /** 每帧：到访计时 / 超时离开（在线生成，与食客订单同节奏） */
+    _tickCritic(deltaMs) {
+      const c = this.criticState()
+      const now = Date.now()
+      if (c.order && now >= c.order.expireAt) {
+        const name = c.order.name
+        c.order = null
+        try { useUiStore().pushLog(`📝 ${name}等待超时离开了（错过本次大奖）`, 'warn') } catch (e) { /* ignore */ }
+        return
+      }
+      if (c.order) return
+      if (c.nextAt <= 0) { c.nextAt = now + criticDelay(); return }
+      this._criticAccum = (this._criticAccum ?? 0) + deltaMs
+      if (this._criticAccum < 1000) return
+      this._criticAccum = 0
+      if (now < c.nextAt) return
+      c.order = makeCriticOrder(this)
+      c.nextAt = now + criticDelay()
+      try { useUiStore().pushLog(`📝 美食评论家「${c.order.name}」到访：想要 tier ≥ ${c.order.minTier} 的${c.order.category}`, 'info') } catch (e) { /* ignore */ }
+    },
+    /** 提交料理给评论家（消耗 1 件，给大奖 + 好感） */
+    serveCritic(itemId) {
+      const c = this.criticState()
+      const o = c.order
+      if (!o) return { ok: false, msg: '当前没有评论家到访' }
+      const item = getItem(itemId)
+      if (!item || item.type !== 'food') return { ok: false, msg: '只能提交料理' }
+      if (item.category !== o.category || (item.tier ?? 0) < o.minTier) {
+        return { ok: false, msg: `不符合要求（需 tier ≥ ${o.minTier} 的${o.category}）` }
+      }
+      if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
+      this.spendItem(itemId, 1)
+      this.gainGold(o.reward)
+      this.gainItem('mysterySpice', 1)
+      const favor = this.restaurant.favor ?? { xp: 0 }
+      favor.xp = (favor.xp ?? 0) + 30
+      this.restaurant.favor = favor
+      const name = o.name
+      c.order = null
+      this.stats.criticServed = (this.stats.criticServed ?? 0) + 1
+      EventBus.emit('critic:served', { name, itemId, reward: o.reward })
+      return { ok: true, reward: o.reward }
+    },
+
+    // ── 远行采集队（2026-09-09 长线挂机线，参照 Rocky Idle 的 Runs）──
+    /** 某线路的运行时状态（惰性初始化 { completions, slots }） */
+    expeditionState(lineId) {
+      const def = getExpedition(lineId)
+      if (!def) return null
+      if (!this.expeditions) this.expeditions = {}
+      let st = this.expeditions[lineId]
+      if (!st || !Array.isArray(st.slots)) st = this.expeditions[lineId] = { completions: 0, slots: def.slots.map(() => null) }
+      while (st.slots.length < def.slots.length) st.slots.push(null)
+      if (typeof st.completions !== 'number') st.completions = 0
+      return st
+    },
+    /** 线路是否解锁（对应采集技能等级） */
+    expeditionUnlocked(lineId) {
+      const def = getExpedition(lineId)
+      if (!def) return false
+      return (this.skills[def.skill]?.level ?? 1) >= def.reqLevel
+    },
+    /** 槽位是否解锁（线路已解锁 + 技能等级达标） */
+    expeditionSlotUnlocked(lineId, index) {
+      const def = getExpedition(lineId)
+      if (!def || !this.expeditionUnlocked(lineId)) return false
+      const slot = def.slots[index]
+      return !!slot && (this.skills[def.skill]?.level ?? 1) >= slot.reqLevel
+    },
+    /** 出发：占用一个空槽位 */
+    expeditionStart(lineId, index) {
+      const def = getExpedition(lineId)
+      const st = this.expeditionState(lineId)
+      const slot = def?.slots?.[index]
+      if (!def || !st || !slot) return { ok: false, msg: '槽位不存在' }
+      if (!this.expeditionSlotUnlocked(lineId, index)) return { ok: false, msg: `需要${SKILL_DEFS[def.skill]?.name ?? def.skill} ${slot.reqLevel} 级` }
+      if (st.slots[index]) return { ok: false, msg: '该槽位已在运行' }
+      const now = Date.now()
+      st.slots[index] = { startedAt: now, readyAt: now + slot.hours * 3600_000 }
+      return { ok: true }
+    },
+    /** 领取：结算产出并自动开始下一轮（未到期返回 null） */
+    expeditionClaim(lineId, index) {
+      const def = getExpedition(lineId)
+      const st = this.expeditionState(lineId)
+      const slotDef = def?.slots?.[index]
+      const slot = st?.slots?.[index]
+      if (!def || !st || !slotDef || !slot) return null
+      if (Date.now() < slot.readyAt) return null
+      const tier = expeditionTier(st.completions)
+      const count = Math.max(1, Math.round(slotDef.hours * 5 * expeditionYieldMult(tier)))
+      const gained = {}
+      for (let i = 0; i < count; i++) {
+        const id = slotDef.pool[Math.floor(Math.random() * slotDef.pool.length)]
+        gained[id] = (gained[id] ?? 0) + 1
+      }
+      const gold = Math.round(slotDef.goldPerHour * slotDef.hours)
+      let rare = null
+      if (def.rare && Math.random() < def.rare.chance + expeditionRareBonus(tier)) {
+        rare = def.rare.itemId
+        gained[rare] = (gained[rare] ?? 0) + 1
+      }
+      this.gainItems(gained)
+      this.gainGold(gold)
+      st.completions++
+      // 任务/赛季/公会/每日计次（与采集同一条事件链；按产出物逐个计次）
+      for (const id of Object.keys(gained)) {
+        this.bumpQuest('gather', id)
+        this.bumpSeason('gather', id)
+        this.bumpGuild('gather', id, def.skill)
+        this.bumpDaily('gather', id, def.skill)
+      }
+      const now = Date.now()
+      st.slots[index] = { startedAt: now, readyAt: now + slotDef.hours * 3600_000 } // 自动开始下一轮
+      const tierAfter = expeditionTier(st.completions)
+      EventBus.emit('expedition:claim', { lineId, name: def.name, gained, gold, rare, tier: tierAfter })
+      return { ok: true, gained, gold, rare, tier: tierAfter, nextReadyAt: st.slots[index].readyAt }
+    },
+    /** 撤回：清空槽位（放弃本轮进度，下一轮需重新出发） */
+    expeditionStop(lineId, index) {
+      const st = this.expeditionState(lineId)
+      if (!st || !st.slots[index]) return false
+      st.slots[index] = null
+      return true
+    },
+
+    /** 自动补给（2026-09-09 放置化）：狩猎陷阱 / 摆盘装饰食材低于阈值时，自动从杂货铺补货（保留金币下限） */
+    _tickAutoSupply(deltaMs) {
+      if (this.settings?.autoSupply === false) return
+      this._supplyAccum = (this._supplyAccum ?? 0) + deltaMs
+      if (this._supplyAccum < 5000) return
+      this._supplyAccum = 0
+      const LOW = 50
+      const TARGET = 200
+      const reserve = Math.max(0, this.settings?.autoSupplyReserve ?? 2000)
+      for (const id of ['trap', 'garnish']) {
+        const have = this.inventory[id] ?? 0
+        if (have >= LOW) continue
+        if (!(id in this.inventory) && this.inventorySlotsUsed >= this.inventoryCap) continue // 背包满且是新种类
+        const entry = SHOP_ITEMS.find((s) => s.itemId === id)
+        if (!entry) continue
+        const affordable = Math.floor((this.gold - reserve) / entry.price)
+        if (affordable <= 0) continue
+        const want = Math.min(TARGET - have, affordable)
+        if (want <= 0) continue
+        if (!this.spendGold(entry.price * want)) continue
+        this.gainItem(id, want)
+        EventBus.emit('supply:auto', { itemId: id, qty: want, cost: entry.price * want })
+      }
     },
 
     setCombat(patch) {
@@ -1374,6 +1732,9 @@ export const usePlayerStore = defineStore('player', {
       if (reward.gold) this.gold += reward.gold
       for (const [itemId, qty] of Object.entries(reward.items ?? {})) this.gainItem(itemId, qty)
       EventBus.emit('signin:claimed', { day, reward })
+      // 每日/周常任务「每日签到」进度（需当日任务已生成，先确保一次）
+      this.ensureDailyTasks()
+      this.bumpDaily('signin', 'any')
       return { ok: true, day, reward }
     },
     canSignInToday() {
@@ -1419,6 +1780,7 @@ export const usePlayerStore = defineStore('player', {
         t.progress = Math.min(t.qty, (t.progress ?? 0) + 1)
       }
       this.bumpWeekly(kind, param, skillId)
+      this.bumpChallenge(kind, 1) // 每周挑战赛同步计次（2026-09-09）
     },
     bumpWeekly(kind, param, skillId) {
       const w = this.weekly
@@ -1463,6 +1825,134 @@ export const usePlayerStore = defineStore('player', {
       return this.daily.tasks.filter((t) => t.claimed).length
     },
 
+    // ── 菜系图谱（2026-09-09 永久天赋树）──
+    /** 美食见闻余额 */
+    insightPoints() {
+      return this.stats?.insights ?? 0
+    },
+    /** 获得美食见闻（图鉴首收集 +1 / 成就 +5 / 赛季领档 +3 / 首次击败首领 +2） */
+    gainInsight(n) {
+      if (!(n > 0)) return 0
+      if (!this.stats) this.stats = {}
+      this.stats.insights = (this.stats.insights ?? 0) + n
+      return this.stats.insights
+    },
+    /** 已解锁节点的效果合计 */
+    insightEffects() {
+      return insightEffectSum(this.insights ?? [])
+    },
+    /** 解锁节点（消耗美食见闻；前置必须已解锁） */
+    unlockInsight(id) {
+      const chk = canUnlockInsight(id, this.insights ?? [], this.insightPoints())
+      if (!chk.ok) return chk
+      const def = INSIGHT_NODES.find((n) => n.id === id)
+      if (!this.stats) this.stats = {}
+      this.stats.insights = (this.stats.insights ?? 0) - def.cost
+      this.insights = [...(this.insights ?? []), id]
+      EventBus.emit('insight:unlock', { name: def.name, desc: def.desc })
+      return { ok: true, node: def }
+    },
+
+    // ── 食神秘境（2026-09-09 roguelike 局内模式）──
+    realmState() {
+      if (!this.realm || !Array.isArray(this.realm.buffs)) this.realm = { active: false, floor: 0, buffs: [], best: 0, pending: null }
+      return this.realm
+    },
+    /** 本局增益聚合（未进入秘境返回 null，避免影响普通对决） */
+    realmModifiers() {
+      const st = this.realm
+      if (!st?.active) return null
+      const out = { attackPct: 0, defensePct: 0, maxHpPct: 0, critChance: 0, accuracyPct: 0, evasionPct: 0, speedPct: 0, healPerTurnPct: 0, goldPct: 0 }
+      for (const id of st.buffs ?? []) {
+        const def = REALM_BUFFS.find((b) => b.id === id)
+        if (!def) continue
+        for (const [k, v] of Object.entries(def.mod)) out[k] = (out[k] ?? 0) + v
+      }
+      return out
+    },
+    realmStart() {
+      const st = this.realmState()
+      st.active = true
+      st.floor = 0
+      st.buffs = []
+      st.pending = null
+      EventBus.emit('realm:start', {})
+      return true
+    },
+    /** 胜一层：层数 +1，并给出 3 选 1 增益 */
+    realmAdvance() {
+      const st = this.realmState()
+      if (!st.active) return null
+      st.floor++
+      st.best = Math.max(st.best ?? 0, st.floor)
+      st.pending = rollRealmChoices(3)
+      EventBus.emit('realm:floor', { floor: st.floor })
+      return st.pending
+    },
+    realmPickBuff(id) {
+      const st = this.realmState()
+      if (!st.pending?.length) return false
+      const def = st.pending.find((b) => b.id === id)
+      if (!def) return false
+      st.buffs = [...(st.buffs ?? []), def.id]
+      st.pending = null
+      return true
+    },
+    /** 结算本局（阵亡或主动放弃）：按层数发奖，增益清零 */
+    realmEnd() {
+      const st = this.realmState()
+      if (!st.active) return null
+      const floor = st.floor
+      const mult = 1 + (this.realmModifiers()?.goldPct ?? 0) / 100
+      const r = realmReward(floor)
+      const gold = Math.round(r.gold * mult)
+      st.active = false
+      st.pending = null
+      st.floor = 0
+      st.buffs = []
+      if (floor > 0) {
+        this.gainGold(gold)
+        for (const [id, q] of Object.entries(r.items ?? {})) if (q > 0) this.gainItem(id, q)
+        EventBus.emit('realm:end', { floor, gold, items: r.items })
+      }
+      return { floor, gold }
+    },
+
+    // ── 每周挑战赛（2026-09-09）：难度型周目标（与产量型周常任务互补）──
+    ensureWeeklyChallenge() {
+      const wk = this._weekNum()
+      if (this.challenge?.week === wk && this.challenge.id) return this.challenge
+      const c = challengeForWeek(wk)
+      this.challenge = { week: wk, id: c.id, progress: 0, done: false }
+      return this.challenge
+    },
+    challengeDef() {
+      this.ensureWeeklyChallenge()
+      return getChallenge(this.challenge.id)
+    },
+    /** 进度累计：数值型（塔层/连胜）取最大值，其余计数累加 */
+    bumpChallenge(kind, value = 1) {
+      const st = this.ensureWeeklyChallenge()
+      const def = getChallenge(st.id)
+      if (!def || st.done || def.kind !== kind) return
+      if (def.kind === 'tower' || def.kind === 'arena') st.progress = Math.max(st.progress, value)
+      else st.progress += 1
+      if (!this.challengeBest) this.challengeBest = {}
+      this.challengeBest[def.id] = Math.max(this.challengeBest[def.id] ?? 0, st.progress)
+    },
+    /** 领奖（达成后一次性） */
+    claimChallenge() {
+      const st = this.ensureWeeklyChallenge()
+      const def = getChallenge(st.id)
+      if (!def || st.done || st.progress < def.target) return null
+      st.done = true
+      this.stats.challengesDone = (this.stats.challengesDone ?? 0) + 1
+      this.gainGold(def.gold)
+      for (const [id, q] of Object.entries(def.items ?? {})) this.gainItem(id, q)
+      EventBus.emit('challenge:done', { name: def.name, gold: def.gold })
+      return { gold: def.gold }
+    },
+
     // ── 无尽挑战塔（对决 99 解锁，毕业长期线）──
     towerUnlocked() {
       return this.combatLevel >= TOWER_UNLOCK_LEVEL
@@ -1474,6 +1964,7 @@ export const usePlayerStore = defineStore('player', {
     },
     /** 塔层胜利结算：推进层数 + 里程碑一次性奖励 */
     onTowerWin(floor) {
+      this.bumpChallenge('tower', floor) // 每周挑战赛：塔层（2026-09-09）
       const t = this.tower ?? { floor: 1, best: 0, rewarded: [] }
       t.best = Math.max(t.best ?? 0, floor)
       t.floor = floor + 1
@@ -1640,7 +2131,7 @@ export const usePlayerStore = defineStore('player', {
       const f = this.festState()
       const item = getItem(itemId)
       if (!item || item.type !== 'food') return { ok: false, msg: '只能提交料理' }
-      if (!festAccepts(this.festTheme(), item.category)) return { ok: false, msg: '这道菜不符合本月主题' }
+      if (!festAccepts(this.festTheme(), item)) return { ok: false, msg: '这道菜不符合本月主题' }
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
       if (this.fest.todayEntries >= FEST_DAILY_ENTRIES) return { ok: false, msg: `今日 ${FEST_DAILY_ENTRIES} 次提交已用完` }
       this.spendItem(itemId, 1)
@@ -1742,6 +2233,8 @@ export const usePlayerStore = defineStore('player', {
       this._tickRestaurant(deltaMs) // 餐厅放置收入（§13）
       this._tickOrders(deltaMs) // 食客订单（2026-09-06）
       this._tickSpiritBonds(deltaMs) // 食灵羁绊出战时长（2026-09-06）
+      this._tickAutoSupply(deltaMs) // 弹药自动补给（2026-09-09）
+      this._tickCritic(deltaMs) // 美食评论家到访（2026-09-09）
 
       // 周期任务：腐坏 / 成就 / 任务同步 / 赛季同步
       this._periodicAccum = (this._periodicAccum ?? 0) + deltaMs
@@ -1753,8 +2246,10 @@ export const usePlayerStore = defineStore('player', {
         this.checkSetBonuses()
         this.syncQuestProgress()
         this.syncSeasonProgress()
+        this._tickPlan() // 挂机计划推进（2026-09-09）
         this.ensureDailyTasks()
         this.ensureWeeklyTask()
+        this.ensureWeeklyChallenge() // 每周挑战赛（2026-09-09）
         this._tickHardcoreDay() // 硬核生存天数（跨日 +1，同日防重）
       }
 

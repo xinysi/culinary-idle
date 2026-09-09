@@ -7,7 +7,7 @@
 
 import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
-import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier } from '../core/mastery.js'
+import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
 
 const CROPS_15 = [
@@ -142,12 +142,14 @@ export class FarmingSkill extends Skill {
     return true
   }
 
-  /** 每帧：成熟瞬间判定枯萎（每块地只判定一次，防止成熟后每帧重复掷 3%） */
+  /** 每帧：成熟瞬间判定枯萎（每块地只判定一次，防止成熟后每帧重复掷 3%）；
+   *  另按设置自动收种（2026-09-09 放置化）：成熟即收获，并用同种种子自动补种（无种子则留空） */
   tick(deltaMs) {
+    const autoFarm = this.player.settings?.autoFarm !== false
     for (let i = 0; i < this.plots.length; i++) {
       const p = this.plots[i]
-      if (!p || p.withered || p.witherRolled) continue
-      if (this.isMature(i)) {
+      if (!p) continue
+      if (!p.withered && !p.witherRolled && this.isMature(i)) {
         p.witherRolled = true // 成熟后首次判定即锁死，后续帧不再掷
         if (Math.random() < this.witherChance(i)) {
           this.player.setPlot(i, { ...p, withered: true })
@@ -159,6 +161,11 @@ export class FarmingSkill extends Skill {
             timestamp: Date.now(),
           })
         }
+      }
+      if (autoFarm && this.isMature(i)) {
+        const seedId = this.plotAt(i)?.seedId
+        this.harvest(i) // 成熟地块收获（枯萎地块清理）
+        if (seedId && this.canPlant(i, seedId)) this.plant(i, seedId)
       }
     }
   }
@@ -222,7 +229,8 @@ export class FarmingSkill extends Skill {
     const aoji = this.player.gastronomyEffects?.() ?? {}
     const extraChance = (aoji.yieldPct ?? 0) / 100 + ((this.player.getYieldMultiplier?.() ?? 1) - 1)
     const fertBonus = this.plotFertilizer(i)?.bonusQty ?? 0 // 肥沃堆肥收获 +1
-    let qty = 1 + farmBonus + fertBonus + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
+    const batch = masteryYieldBonus(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)) // 精通保底批量（2026-09-09）
+    let qty = 1 + farmBonus + fertBonus + batch + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
     // 精通档位双倍（新表：5→1%…100→80%）
     if (Math.random() < masteryDoubleChance(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0))) qty *= 2
     this.player.gainItem(crop.itemId, qty)

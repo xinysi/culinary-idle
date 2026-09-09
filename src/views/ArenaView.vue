@@ -95,7 +95,7 @@ const battleFrame = computed(() => {
     turnPct: combat?.inFight ? Math.min(1, (combat.turnTimer ?? 0) / Math.max(1, combat.playerStats().speedMs)) : 0,
     turnStartAt: combat?.inFight ? (combat.turnStartAt ?? performance.now()) : 0,
     turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
-    turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(2) : '0.00',
+    turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(1) : '0.0',
     log: combat?.log ?? [],
   }
 })
@@ -265,13 +265,13 @@ function fmtDate(ts) {
         <h3>属性面板</h3>
         <div class="stat-row">
           <div class="stat"><div class="stat-num mono">{{ combatLevel }}</div><div class="stat-label">对决等级</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.maxHp.toFixed(2) }}</div><div class="stat-label">最大品鉴值</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.attack.toFixed(2) }}</div><div class="stat-label">攻击伤害</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.accuracy.toFixed(2) }}</div><div class="stat-label">准确率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.defense.toFixed(2) }}</div><div class="stat-label">防御力</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.evasion.toFixed(2) }}</div><div class="stat-label">闪避率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.critChance * 100).toFixed(2) }}%</div><div class="stat-label">暴击率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.speedMs / 1000).toFixed(2) }}s</div><div class="stat-label">回合间隔</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.maxHp) }}</div><div class="stat-label">最大品鉴值</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.attack) }}</div><div class="stat-label">攻击伤害</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.accuracy) }}</div><div class="stat-label">准确率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.defense) }}</div><div class="stat-label">防御力</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.evasion) }}</div><div class="stat-label">闪避率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ (pStats.critChance * 100).toFixed(1) }}%</div><div class="stat-label">暴击率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ (pStats.speedMs / 1000).toFixed(1) }}s</div><div class="stat-label">回合间隔</div></div>
           <div class="stat"><div class="stat-num mono">{{ pStats.flavorEnergy }}</div><div class="stat-label">调味能量</div></div>
         </div>
         <p class="dim" style="margin-top: 4px">调味冲击每次消耗 10 调味能量；每回合自动回复 +5，战斗中喝果茶/香草茶可大幅恢复（调酒制作）。</p>
@@ -296,11 +296,11 @@ function fmtDate(ts) {
             <h3>对决中（第 {{ battleFrame.turn }} 回合）</h3>
             <div class="hp-row">
               <div class="hp-col">
-                <div class="hp-label"><strong>你</strong> <span class="mono">{{ battleFrame.playerHp }} / {{ battleFrame.playerHpMax }}</span></div>
+                <div class="hp-label"><strong>你</strong> <span class="mono">{{ Math.round(battleFrame.playerHp) }} / {{ Math.round(battleFrame.playerHpMax) }}</span></div>
                 <div class="hp-bar"><div class="hp-fill" :class="{ low: battleFrame.playerHp / battleFrame.playerHpMax < 0.3 }" :style="{ width: Math.max(0, battleFrame.playerHp / battleFrame.playerHpMax * 100) + '%' }"></div></div>
               </div>
               <div class="hp-col">
-                <div class="hp-label"><strong>{{ battleFrame.opponentName }}</strong> <span class="mono">{{ battleFrame.opponentHp }} / {{ battleFrame.opponentHpMax }}</span></div>
+                <div class="hp-label"><strong>{{ battleFrame.opponentName }}</strong> <span class="mono">{{ Math.round(battleFrame.opponentHp) }} / {{ Math.round(battleFrame.opponentHpMax) }}</span></div>
                 <div class="hp-bar opp"><div class="hp-fill opp" :style="{ width: Math.max(0, battleFrame.opponentHp / battleFrame.opponentHpMax * 100) + '%' }"></div></div>
               </div>
             </div>
@@ -372,7 +372,7 @@ function fmtDate(ts) {
             <strong v-else>{{ o.name }}</strong>
             <span class="dim">等级 {{ o.level }} · {{ o.styleName }}<template v-if="challenged.has(oppKey(o))"> · 已挑战（下次刷新恢复）</template></span>
           </div>
-          <div class="opp-stats dim mono">生命值 {{ o.hp }} · 攻 {{ o.atk.toFixed(1) }} · 防 {{ o.def }}</div>
+          <div class="opp-stats dim mono">生命值 {{ o.hp }} · 攻 {{ Math.round(o.atk) }} · 防 {{ Math.round(o.def) }}</div>
           <button v-if="!challenged.has(oppKey(o))" class="btn btn-sm btn-primary" :disabled="battleFrame.inFight" @click="startFight(o)">对决</button>
           <button v-else class="btn btn-sm" disabled>已挑战</button>
         </div>

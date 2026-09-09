@@ -44,6 +44,7 @@ const FoodRushView = defineAsyncComponent(() => import('./views/FoodRushView.vue
 const PuzzleView = defineAsyncComponent(() => import('./views/PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./views/MatchFoodView.vue'))
 const MinigamesView = defineAsyncComponent(() => import('./views/MinigamesView.vue'))
+const ExpeditionView = defineAsyncComponent(() => import('./views/ExpeditionView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -92,6 +93,7 @@ const TOP_PAGES = [
     { label: '🛒商店', view: 'shop', onClick: () => ui.setView('shop') },
     { label: '🍽️珍馐阁', view: 'deluxe', onClick: () => ui.setView('deluxe') },
     { label: '🧪炼金', view: 'alchemy', onClick: () => ui.setView('alchemy') },
+    { label: '🚢采集队', view: 'expedition', onClick: () => ui.setView('expedition') },
   ],
   [
     { label: '🎮小游戏', view: 'minigames', onClick: () => ui.setView('minigames') },
@@ -246,6 +248,7 @@ onMounted(() => {
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />
+          <ExpeditionView v-else-if="ui.activeView === 'expedition'" />
           <HeatView v-else-if="ui.activeView === 'heat'" />
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />
@@ -270,7 +273,7 @@ onMounted(() => {
         <nav class="bottom-nav">
           <div class="bottom-nav-col">
             <div class="bottom-nav-stats">
-              <div class="bottom-nav-stat"><span class="dim">品鉴力 / 生命</span><span class="mono">{{ player.maxHp.toFixed(2) }}</span></div>
+              <div class="bottom-nav-stat"><span class="dim">品鉴力 / 生命</span><span class="mono">{{ Math.round(player.maxHp) }}</span></div>
               <div class="bottom-nav-stat"><span class="dim">品鉴点数</span><span class="mono">{{ Math.floor(player.tastePoints) }}</span></div>
               <div class="bottom-nav-stat"><span class="dim">调味能量</span><span class="mono">{{ player.combat.flavorEnergy }}</span></div>
               <div class="bottom-nav-stat"><span class="dim">金币</span><span class="mono gold">{{ player.gold.toLocaleString() }}</span></div>

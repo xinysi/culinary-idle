@@ -5860,7 +5860,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 60,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "defense": 1
   }
@@ -5874,7 +5874,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 60,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "defense": 1
   }
@@ -5888,7 +5888,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 60,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "attack": 1
   }
@@ -5898,11 +5898,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "铁腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 2,
+  "tier": 1,
   "value": 90,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "defense": 1
   }
@@ -5912,11 +5912,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "铁靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 2,
+  "tier": 1,
   "value": 90,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "defense": 1
   }
@@ -5926,11 +5926,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "铁戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 2,
+  "tier": 1,
   "value": 90,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "普通",
   "stats": {
    "attack": 1
   }
@@ -5944,7 +5944,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 120,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -5958,7 +5958,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 120,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -5972,7 +5972,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 120,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "attack": 1
   }
@@ -5982,11 +5982,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "钢腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 3,
+  "tier": 2,
   "value": 150,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -5996,11 +5996,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "钢靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 3,
+  "tier": 2,
   "value": 150,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -6010,11 +6010,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "钢戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 3,
+  "tier": 2,
   "value": 150,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "attack": 1
   }
@@ -6028,7 +6028,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 180,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -6042,7 +6042,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 180,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "defense": 1
   }
@@ -6056,7 +6056,7 @@ export const SMITHING_SET_ITEMS = [
   "value": 180,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "精良",
   "stats": {
    "attack": 1
   }
@@ -6066,11 +6066,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "秘银腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 4,
+  "tier": 3,
   "value": 210,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "defense": 1
   }
@@ -6080,11 +6080,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "秘银靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 4,
+  "tier": 3,
   "value": 210,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "defense": 1
   }
@@ -6094,11 +6094,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "秘银戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 4,
+  "tier": 3,
   "value": 210,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "attack": 1
   }
@@ -6108,11 +6108,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "金腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 5,
+  "tier": 4,
   "value": 240,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "defense": 1
   }
@@ -6122,11 +6122,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "金靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 5,
+  "tier": 4,
   "value": 240,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "defense": 1
   }
@@ -6136,11 +6136,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "金戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 5,
+  "tier": 4,
   "value": 240,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "稀有",
   "stats": {
    "attack": 1
   }
@@ -6150,11 +6150,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "精金腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 5,
+  "tier": 4,
   "value": 270,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "defense": 1
   }
@@ -6164,11 +6164,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "精金靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 5,
+  "tier": 4,
   "value": 270,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "defense": 1
   }
@@ -6178,11 +6178,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "精金戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 5,
+  "tier": 4,
   "value": 270,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "attack": 1
   }
@@ -6192,11 +6192,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "水晶腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 6,
+  "tier": 5,
   "value": 300,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "defense": 1
   }
@@ -6206,11 +6206,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "水晶靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 6,
+  "tier": 5,
   "value": 300,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "defense": 1
   }
@@ -6220,11 +6220,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "水晶戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 6,
+  "tier": 5,
   "value": 300,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "史诗",
   "stats": {
    "attack": 1
   }
@@ -6234,11 +6234,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "玄铁腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 6,
+  "tier": 5,
   "value": 330,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6248,11 +6248,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "玄铁靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 6,
+  "tier": 5,
   "value": 330,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6262,11 +6262,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "玄铁戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 6,
+  "tier": 5,
   "value": 330,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "attack": 1
   }
@@ -6276,11 +6276,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "寒铁腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 7,
+  "tier": 6,
   "value": 360,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6290,11 +6290,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "寒铁靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 7,
+  "tier": 6,
   "value": 360,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6304,11 +6304,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "寒铁戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 7,
+  "tier": 6,
   "value": 360,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "attack": 1
   }
@@ -6318,11 +6318,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "陨铁腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 8,
+  "tier": 6,
   "value": 390,
   "stackable": false,
   "slot": "legs",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6332,11 +6332,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "陨铁靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 8,
+  "tier": 6,
   "value": 390,
   "stackable": false,
   "slot": "boots",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "defense": 1
   }
@@ -6346,11 +6346,11 @@ export const SMITHING_SET_ITEMS = [
   "name": "陨铁戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 8,
+  "tier": 6,
   "value": 390,
   "stackable": false,
   "slot": "ring",
-  "quality": "神话",
+  "quality": "传说",
   "stats": {
    "attack": 1
   }
@@ -6360,7 +6360,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "星辰腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 8,
+  "tier": 7,
   "value": 420,
   "stackable": false,
   "slot": "legs",
@@ -6374,7 +6374,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "星辰靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 8,
+  "tier": 7,
   "value": 420,
   "stackable": false,
   "slot": "boots",
@@ -6388,7 +6388,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "星辰戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 8,
+  "tier": 7,
   "value": 420,
   "stackable": false,
   "slot": "ring",
@@ -6402,7 +6402,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "龙鳞腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 9,
+  "tier": 7,
   "value": 450,
   "stackable": false,
   "slot": "legs",
@@ -6416,7 +6416,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "龙鳞靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 9,
+  "tier": 7,
   "value": 450,
   "stackable": false,
   "slot": "boots",
@@ -6430,7 +6430,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "龙鳞戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 9,
+  "tier": 7,
   "value": 450,
   "stackable": false,
   "slot": "ring",
@@ -6444,7 +6444,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "琉璃腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 9,
+  "tier": 8,
   "value": 480,
   "stackable": false,
   "slot": "legs",
@@ -6458,7 +6458,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "琉璃靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 9,
+  "tier": 8,
   "value": 480,
   "stackable": false,
   "slot": "boots",
@@ -6472,7 +6472,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "琉璃戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 9,
+  "tier": 8,
   "value": 480,
   "stackable": false,
   "slot": "ring",
@@ -6486,7 +6486,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "鎏金腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 10,
+  "tier": 8,
   "value": 510,
   "stackable": false,
   "slot": "legs",
@@ -6500,7 +6500,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "鎏金靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 10,
+  "tier": 8,
   "value": 510,
   "stackable": false,
   "slot": "boots",
@@ -6514,7 +6514,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "鎏金戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 10,
+  "tier": 8,
   "value": 510,
   "stackable": false,
   "slot": "ring",
@@ -6528,7 +6528,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨刀",
   "type": "equipment",
   "category": "weapon",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "weapon",
@@ -6542,7 +6542,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨锅",
   "type": "equipment",
   "category": "offhand",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "offhand",
@@ -6556,7 +6556,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨围裙",
   "type": "equipment",
   "category": "body",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "body",
@@ -6570,7 +6570,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨厨师帽",
   "type": "equipment",
   "category": "helmet",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "helmet",
@@ -6584,7 +6584,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "legs",
@@ -6598,7 +6598,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "boots",
@@ -6612,7 +6612,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钨戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 11,
+  "tier": 9,
   "value": 540,
   "stackable": false,
   "slot": "ring",
@@ -6626,7 +6626,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰刀",
   "type": "equipment",
   "category": "weapon",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "weapon",
@@ -6640,7 +6640,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰锅",
   "type": "equipment",
   "category": "offhand",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "offhand",
@@ -6654,7 +6654,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰围裙",
   "type": "equipment",
   "category": "body",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "body",
@@ -6668,7 +6668,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰厨师帽",
   "type": "equipment",
   "category": "helmet",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "helmet",
@@ -6682,7 +6682,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "legs",
@@ -6696,7 +6696,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "boots",
@@ -6710,7 +6710,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "锰戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 11,
+  "tier": 9,
   "value": 570,
   "stackable": false,
   "slot": "ring",
@@ -6724,7 +6724,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒刀",
   "type": "equipment",
   "category": "weapon",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "weapon",
@@ -6738,7 +6738,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒锅",
   "type": "equipment",
   "category": "offhand",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "offhand",
@@ -6752,7 +6752,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒围裙",
   "type": "equipment",
   "category": "body",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "body",
@@ -6766,7 +6766,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒厨师帽",
   "type": "equipment",
   "category": "helmet",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "helmet",
@@ -6780,7 +6780,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "legs",
@@ -6794,7 +6794,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "boots",
@@ -6808,7 +6808,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "钒戒指",
   "type": "equipment",
   "category": "ring",
-  "tier": 12,
+  "tier": 10,
   "value": 600,
   "stackable": false,
   "slot": "ring",
@@ -6822,7 +6822,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤刀",
   "type": "equipment",
   "category": "weapon",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "weapon",
@@ -6836,7 +6836,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤锅",
   "type": "equipment",
   "category": "offhand",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "offhand",
@@ -6850,7 +6850,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤围裙",
   "type": "equipment",
   "category": "body",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "body",
@@ -6864,7 +6864,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤厨师帽",
   "type": "equipment",
   "category": "helmet",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "helmet",
@@ -6878,7 +6878,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤调味瓶",
   "type": "equipment",
   "category": "amulet",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "amulet",
@@ -6892,7 +6892,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤腿甲",
   "type": "equipment",
   "category": "legs",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "legs",
@@ -6906,7 +6906,7 @@ export const SMITHING_SET_ITEMS = [
   "name": "萤靴子",
   "type": "equipment",
   "category": "boots",
-  "tier": 12,
+  "tier": 10,
   "value": 630,
   "stackable": false,
   "slot": "boots",

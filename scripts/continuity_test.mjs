@@ -1,5 +1,5 @@
 // 挂机连续性测试 — 验证切页/切后台不中断（引擎 setInterval 驱动 + 全局循环计数）
-// 运行：node .toolchain/continuity_test.mjs
+// 运行：node scripts/continuity_test.mjs
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { useUiStore } from '../src/stores/ui.js'

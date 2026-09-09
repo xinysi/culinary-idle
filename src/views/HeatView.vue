@@ -71,6 +71,8 @@ function judge() {
   if (slot.vTimer) clearTimeout(slot.vTimer)
   slot.vTimer = setTimeout(() => { slot.verdict.value = null }, 1200)
   if (type !== 'miss') stopOne()
+  // 旧档/异常兜底：缺 minigames.heat 时补默认结构，避免定火即崩
+  if (!player.minigames.heat) player.minigames.heat = { day: 0, streak: 0, bestStreak: 0 }
   const mg = player.minigames.heat
   mg.history = [...(mg.history ?? []), type].slice(-12)
   if (type === 'perfect') {

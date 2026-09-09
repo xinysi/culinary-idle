@@ -2,7 +2,7 @@
 // 料理对决视图 — 需求文档 §4 / §9.1.2
 // 对决风格选择（§4.3）、属性面板（§4.2）、对手区域与 首领（§4.4）、
 // 自动回合战斗、战斗日志、道具使用（§4.5：料理/酱料/饮品）
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
@@ -10,6 +10,7 @@ import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_INFO, STYLE_ADVANTAGE, COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { sfx } from '../game/core/sound.js'
+import { realmOpponent, realmReward, REALM_BUFFS, REALM_MAX_FLOOR } from '../game/data/mysticRealm.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -52,7 +53,7 @@ const battleFrame = computed(() => {
     turnPct: combat?.inFight ? Math.min(1, (combat.turnTimer ?? 0) / Math.max(1, combat.playerStats().speedMs)) : 0,
     turnStartAt: combat?.inFight ? (combat.turnStartAt ?? performance.now()) : 0,
     turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
-    turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(2) : '0.00',
+    turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(1) : '0.0',
     log: combat?.log ?? [],
   }
 })
@@ -76,16 +77,52 @@ watch(
   },
 )
 
+// ── 食神秘境（2026-09-09 roguelike 局内模式）：逐层挑战 + 3 选 1 临时增益 ──
+const realm = computed(() => {
+  ui.loopTick
+  const st = player.realmState()
+  return { ...st, buffDefs: (st.buffs ?? []).map((id) => REALM_BUFFS.find((b) => b.id === id)).filter(Boolean) }
+})
+function startRealm() {
+  player.realmStart()
+  fightRealmFloor()
+}
+function fightRealmFloor() {
+  const st = player.realmState()
+  if (!st.active || !combat) return
+  if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
+  combat.start(realmOpponent(st.floor, player.combatLevel))
+}
+function pickRealmBuff(id) {
+  if (player.realmPickBuff(id)) fightRealmFloor()
+}
+function abandonRealm() {
+  if (!confirm('放弃本次秘境？按当前层数结算奖励，本局增益清零。')) return
+  const r = player.realmEnd()
+  combat?.stop()
+  if (r) ui.pushLog(`🏯 秘境结算：第 ${r.floor} 层，+${r.gold} 金币`, 'gain')
+}
+
 // ── 持久战：胜利后自动重新挑战当前敌人 ──
-let persistListenerRegistered = false
-if (!persistListenerRegistered) {
-  persistListenerRegistered = true // 模块级去重
-  EventBus.on('combat:end', ({ result }) => {
+// 监听随组件挂载注册、卸载解除（避免每次进出对决页叠加一个永不解除的 combat:end 监听）
+let persistOff = null
+onMounted(() => {
+  persistOff = EventBus.on('combat:end', ({ result }) => {
+    // 食神秘境（2026-09-09）：秘境局内由 realm 流程接管，不走持久战
+    if (player.realmState().active) {
+      if (result === 'win') player.realmAdvance()
+      else player.realmEnd()
+      return
+    }
     if (result === 'win' && persistent.value && combat) {
       setTimeout(() => startNextOpponent(), 500) // 小延迟，让胜利结算/日志先落
     }
   })
-}
+})
+onBeforeUnmount(() => {
+  persistOff?.()
+  persistOff = null
+})
 function togglePersistent() {
   persistent.value = !persistent.value
   if (persistent.value) ui.pushLog('⚡ 持久战开启：胜利后自动重新挑战当前敌人', 'info')
@@ -183,6 +220,40 @@ function buffText() {
 
 <template>
   <div class="combat-view">
+    <!-- 食神秘境（2026-09-09 roguelike）：逐层挑战 + 3 选 1 临时增益（仅本局生效） -->
+    <div class="card realm-card">
+      <div class="realm-head">
+        <h3>🏯 食神秘境</h3>
+        <span class="dim">逐层挑战随机对手，每胜一层 3 选 1 临时增益（仅本局生效）；阵亡按层数结算奖励</span>
+        <div class="realm-head-right">
+          <span v-if="realm.best" class="dim">历史最佳 {{ realm.best }} 层</span>
+          <template v-if="realm.active">
+            <span class="badge badge-on">第 {{ realm.floor + 1 }} 层</span>
+            <button class="btn btn-sm btn-danger" @click="abandonRealm()">放弃并结算</button>
+          </template>
+          <button v-else class="btn btn-sm btn-primary" @click="startRealm()">进入秘境</button>
+        </div>
+      </div>
+      <div v-if="realm.active && realm.buffDefs.length" class="realm-buffs">
+        <span v-for="b in realm.buffDefs" :key="b.id" class="mod-chip">{{ b.name }}（{{ b.desc }}）</span>
+      </div>
+    </div>
+
+    <!-- 3 选 1 增益弹窗 -->
+    <div v-if="realm.pending?.length" class="modal-backdrop">
+      <div class="modal realm-modal">
+        <div class="modal-head">
+          <h3>🏯 第 {{ realm.floor }} 层通过！选择一项祝福</h3>
+        </div>
+        <div class="realm-choices">
+          <button v-for="b in realm.pending" :key="b.id" class="btn realm-choice" @click="pickRealmBuff(b.id)">
+            <strong>{{ b.name }}</strong>
+            <span class="dim">{{ b.desc }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 组合框：左「对决风格」+ 中间虚线 + 右「属性面板」 -->
     <div class="card combat-combo">
       <div class="combo-left">
@@ -205,13 +276,13 @@ function buffText() {
         <h3>属性面板</h3>
         <div class="stat-row">
           <div class="stat"><div class="stat-num mono">{{ combatLevel }}</div><div class="stat-label">对决等级</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.maxHp.toFixed(2) }}</div><div class="stat-label">最大品鉴值</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.attack.toFixed(2) }}</div><div class="stat-label">攻击伤害</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.accuracy.toFixed(2) }}</div><div class="stat-label">准确率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.defense.toFixed(2) }}</div><div class="stat-label">防御力</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.evasion.toFixed(2) }}</div><div class="stat-label">闪避率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.critChance * 100).toFixed(2) }}%</div><div class="stat-label">暴击率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.speedMs / 1000).toFixed(2) }}s</div><div class="stat-label">回合间隔</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.maxHp) }}</div><div class="stat-label">最大品鉴值</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.attack) }}</div><div class="stat-label">攻击伤害</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.accuracy) }}</div><div class="stat-label">准确率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.defense) }}</div><div class="stat-label">防御力</div></div>
+          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.evasion) }}</div><div class="stat-label">闪避率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ (pStats.critChance * 100).toFixed(1) }}%</div><div class="stat-label">暴击率</div></div>
+          <div class="stat"><div class="stat-num mono">{{ (pStats.speedMs / 1000).toFixed(1) }}s</div><div class="stat-label">回合间隔</div></div>
           <div class="stat"><div class="stat-num mono">{{ pStats.flavorEnergy }}</div><div class="stat-label">调味能量</div></div>
         </div>
         <p class="dim" style="margin-top: 4px">调味冲击每次消耗 10 调味能量；每回合自动回复 +5，战斗中喝果茶/香草茶可大幅恢复（调酒制作）。</p>
@@ -236,11 +307,11 @@ function buffText() {
             <h3>对决中（第 {{ battleFrame.turn }} 回合）</h3>
             <div class="hp-row">
               <div class="hp-col">
-                <div class="hp-label"><strong>你</strong> <span class="mono">{{ battleFrame.playerHp }} / {{ battleFrame.playerHpMax }}</span></div>
+                <div class="hp-label"><strong>你</strong> <span class="mono">{{ Math.round(battleFrame.playerHp) }} / {{ Math.round(battleFrame.playerHpMax) }}</span></div>
                 <div class="hp-bar"><div class="hp-fill" :class="{ low: battleFrame.playerHp / battleFrame.playerHpMax < 0.3 }" :style="{ width: Math.max(0, battleFrame.playerHp / battleFrame.playerHpMax * 100) + '%' }"></div></div>
               </div>
               <div class="hp-col">
-                <div class="hp-label"><strong>{{ battleFrame.opponentName }}</strong> <span class="mono">{{ battleFrame.opponentHp }} / {{ battleFrame.opponentHpMax }}</span></div>
+                <div class="hp-label"><strong>{{ battleFrame.opponentName }}</strong> <span class="mono">{{ Math.round(battleFrame.opponentHp) }} / {{ Math.round(battleFrame.opponentHpMax) }}</span></div>
                 <div class="hp-bar opp"><div class="hp-fill opp" :style="{ width: Math.max(0, battleFrame.opponentHp / battleFrame.opponentHpMax * 100) + '%' }"></div></div>
               </div>
             </div>
@@ -335,10 +406,10 @@ function buffText() {
           </div>
           <div class="gather-card-row"><span>风格</span><span>{{ o.styleName }}{{ advantageText(player.combat.style, o.style) }}</span></div>
           <div class="gather-card-row"><span>生命值</span><span class="mono">{{ o.hp }}</span></div>
-          <div class="gather-card-row"><span>攻击</span><span class="mono">{{ o.atk.toFixed(1) }}</span></div>
-          <div class="gather-card-row"><span>防御</span><span class="mono">{{ o.def.toFixed(2) }}</span></div>
-          <div class="gather-card-row"><span>命中 / 闪避</span><span class="mono">{{ o.acc.toFixed(2) }} / {{ o.eva.toFixed(2) }}</span></div>
-          <div class="gather-card-row"><span>暴击</span><span class="mono">{{ (o.crit * 100).toFixed(2) }}%</span></div>
+          <div class="gather-card-row"><span>攻击</span><span class="mono">{{ Math.round(o.atk) }}</span></div>
+          <div class="gather-card-row"><span>防御</span><span class="mono">{{ Math.round(o.def) }}</span></div>
+          <div class="gather-card-row"><span>命中 / 闪避</span><span class="mono">{{ Math.round(o.acc) }} / {{ Math.round(o.eva) }}</span></div>
+          <div class="gather-card-row"><span>暴击</span><span class="mono">{{ (o.crit * 100).toFixed(1) }}%</span></div>
           <button class="btn btn-sm btn-primary" :disabled="battleFrame.inFight" @click.stop="startFight(o)">对决</button>
         </div>
       </div>
@@ -365,7 +436,7 @@ function buffText() {
           </div>
           <div class="gather-card-row"><span>风格</span><span>{{ b.styleName }}<template v-if="!bossUnlocked(b)">（对决{{ b.level }}级解锁）</template></span></div>
           <div class="gather-card-row"><span>生命值</span><span class="mono">{{ b.hp }}</span></div>
-          <div class="gather-card-row"><span>攻击</span><span class="mono">{{ b.atk.toFixed(1) }}</span></div>
+          <div class="gather-card-row"><span>攻击</span><span class="mono">{{ Math.round(b.atk) }}</span></div>
           <div class="gather-card-row"><span>防御</span><span class="mono">{{ b.def }}</span></div>
           <div class="gather-card-row"><span>机制</span><span class="dim" style="font-size: 11px">{{ mechText(b) }}</span></div>
           <button class="btn btn-sm btn-danger" :disabled="battleFrame.inFight || !bossUnlocked(b)" @click.stop="startFight(b)">挑战</button>
