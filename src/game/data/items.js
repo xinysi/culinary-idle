@@ -122,8 +122,8 @@ export const ITEMS = {
   ginseng: it('ginseng', '人参', 'ingredient', 'root', 7, 150),
   dragonRoot: it('dragonRoot', '龙根', 'ingredient', 'root', 9, 280),
   fossilIngredient: it('fossilIngredient', '化石食材', 'ingredient', 'fossil', 10, 500),
-  copperOre: it('copperOre', '铜矿', 'ingredient', 'mineral', 1, 6), // 挖掘 6% 附带产出
-  ironOre: it('ironOre', '铁矿', 'ingredient', 'mineral', 3, 25), // 挖掘 3% 附带产出
+  copperOre: it('copperOre', '铜矿', 'ingredient', 'mineral', 1, 6), // 挖掘 50% 附带产出
+  ironOre: it('ironOre', '铁矿', 'ingredient', 'mineral', 3, 25), // 挖掘 30% 附带产出
   // ── 农耕 §3.1.5（15 种作物）──
   wheat: it('wheat', '小麦', 'ingredient', 'vegetable', 1, 8),
   rice: it('rice', '稻米', 'ingredient', 'vegetable', 1, 12),

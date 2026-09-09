@@ -1,6 +1,6 @@
-// 赛季数据完整性校验（§13）：20 赛季 / 唯一性 / 任务参数存在性
-// 运行：node .toolchain/season_check.mjs
-import { SEASONS, activeSeasonId } from '../src/game/data/seasons.js'
+// 赛季数据完整性校验（§13）：40 赛季 / 唯一性 / 任务参数存在性
+// 运行：node scripts/season_check.mjs
+import { SEASONS, activeSeasonId, getSeason } from '../src/game/data/seasons.js'
 import { ITEMS } from '../src/game/data/items.js'
 import { COMBAT_BOSSES } from '../src/game/data/combat.js'
 
@@ -16,7 +16,8 @@ const check = (name, cond, detail = '') => {
 const ids = SEASONS.map((s) => s.id)
 const names = SEASONS.map((s) => s.name)
 const lims = SEASONS.map((s) => s.limitedItem)
-const misIds = SEASONS.flatMap((s) => s.missions.map((m) => m.id))
+const misIds = SEASONS.flatMap((s) => getSeason(s.id).missions.map((m) => m.id)) // 生效任务（getSeason 覆盖后）
+const effCount = (s) => getSeason(s.id).missions.length
 const bossNames = COMBAT_BOSSES.map((b) => b.name)
 
 check('赛季总数 40', SEASONS.length === 40, `got ${SEASONS.length}`)
@@ -24,7 +25,7 @@ check('赛季 id 唯一', new Set(ids).size === ids.length)
 check('赛季名称唯一', new Set(names).size === names.length)
 check('限定装备唯一', new Set(lims).size === lims.length)
 check('任务 id 全局唯一', new Set(misIds).size === misIds.length)
-check('每季 ≥8 个任务（2026-09 铁律：10 任务为目标结构，季主题衍生 9-10 个）', SEASONS.every((s) => s.missions.length >= 8), SEASONS.filter((s) => s.missions.length !== 8).map((s) => `${s.id}:${s.missions.length}`).join(','))
+check('每季恒 10 个任务（AGENTS 铁律：seasonMissions 恒生成 10 个）', SEASONS.every((s) => effCount(s) === 10), SEASONS.filter((s) => effCount(s) !== 10).map((s) => `${s.id}:${effCount(s)}`).join(','))
 check('每季 10 档奖励', SEASONS.every((s) => s.tiers.length === 10), SEASONS.filter((s) => s.tiers.length !== 10).map((s) => `${s.id}:${s.tiers.length}`).join(','))
 check('轮换返回有效赛季', SEASONS.some((s) => s.id === activeSeasonId()))
 
@@ -35,7 +36,7 @@ check('点数经济：任务总和 ≥ 档位总和 1100（2026-09 铁律：积�
   return missionSum >= tierSum
 }), SEASONS.map((s) => `${s.id}:${s.missions.reduce((a, m) => a + m.points, 0) - s.tiers.reduce((a, t) => a + t.points, 0)}`).join(','))
 check('任务点数均为正且有限', SEASONS.every((s) => s.missions.every((m) => m.points > 0 && Number.isFinite(m.points))))
-check('采集/制作/收获任务需求 1000-5000', SEASONS.every((s) => s.missions.every((m) => !['gather', 'craft', 'harvest'].includes(m.kind) || (m.qty >= 1000 && m.qty <= 5000))), SEASONS.flatMap((s) => s.missions.filter((m) => ['gather', 'craft', 'harvest'].includes(m.kind) && (m.qty < 1000 || m.qty > 5000))).map((m) => m.qty).join(','))
+check('采集/制作任务需求 100~1000（2026-09 平衡量，可按需调整）', SEASONS.every((s) => getSeason(s.id).missions.every((m) => !['gather', 'craft', 'harvest'].includes(m.kind) || (m.qty >= 100 && m.qty <= 1000))), SEASONS.flatMap((s) => getSeason(s.id).missions.filter((m) => ['gather', 'craft', 'harvest'].includes(m.kind) && (m.qty < 100 || m.qty > 1000))).map((m) => m.qty).join(','))
 
 // 赛季装备套件：每季 8 件（八槽位），名字随赛季适配且全局唯一
 const gearIds = SEASONS.flatMap((s) => s.limitedItems ?? [])
@@ -62,10 +63,12 @@ check('套件分 10 档发放（8 件分散 + 末档原限定）', SEASONS.every
 const missingLims = lims.filter((id) => !ITEMS[id])
 check('限定装备全部存在于物品库', missingLims.length === 0, JSON.stringify(missingLims))
 
-// 任务参数存在性：gather/craft/harvest → 物品 id；boss → BOSS 名
+// 任务参数存在性（按生效任务）：通配 'any' 直接通过（bumpSeason/syncSeasonProgress 按 kind 累计）；
+// gather/craft/harvest → 物品 id；boss → BOSS 名
 const badParams = []
 for (const s of SEASONS) {
-  for (const m of s.missions) {
+  for (const m of getSeason(s.id).missions) {
+    if (m.param === 'any') continue
     if (m.kind === 'gather' || m.kind === 'craft' || m.kind === 'harvest') {
       if (!ITEMS[m.param]) badParams.push(`${s.id}:${m.id} → ${m.param}`)
     }
@@ -74,11 +77,11 @@ for (const s of SEASONS) {
     }
   }
 }
-check('任务参数全部有效（物品/BOSS 存在）', badParams.length === 0, badParams.join('; '))
+check('任务参数全部有效（物品/BOSS 存在，any 通配）', badParams.length === 0, badParams.join('; '))
 
-// 各季任务目标不重复（gather/craft/harvest 的 param 全局不重复）
-const itemParams = SEASONS.flatMap((s) => s.missions.filter((m) => ['gather', 'craft', 'harvest'].includes(m.kind)).map((m) => m.param))
-check('任务目标物品均有效', itemParams.every((p) => !!p))
+// 各季任务目标 param 均有效（生效任务）
+const itemParams = SEASONS.flatMap((s) => getSeason(s.id).missions.filter((m) => ['gather', 'craft', 'harvest'].includes(m.kind)).map((m) => m.param))
+check('任务目标物品均有效', itemParams.every((p) => p === 'any' || !!ITEMS[p]), itemParams.filter((p) => p !== 'any' && !ITEMS[p]).join(','))
 
 // 奖励档位引用有效物品
 const rewardBad = []

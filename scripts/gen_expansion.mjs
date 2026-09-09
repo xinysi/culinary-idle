@@ -1,5 +1,5 @@
 // 内容扩充生成器 — 为各系统确定性生成 30+ 个不重复条目
-// 运行：node .toolchain/gen_expansion.mjs  → 产出 src/game/data/expansion1.js
+// 运行：node scripts/gen_expansion.mjs  → 产出 src/game/data/expansion1.js
 // 规则：所有 id/名称唯一；食谱材料引用已存在或本批新增的物品；等级递增
 import { writeFileSync } from 'node:fs'
 

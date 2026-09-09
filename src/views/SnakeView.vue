@@ -98,6 +98,7 @@ function die() {
 }
 const keyMap = { ArrowUp: [0, -1], w: [0, -1], W: [0, -1], ArrowDown: [0, 1], s: [0, 1], S: [0, 1], ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0], ArrowRight: [1, 0], d: [1, 0], D: [1, 0] }
 function onKey(e) {
+  if (!running.value) return // 未开始/已结束时不拦截方向键（保留页面滚动）
   const d = keyMap[e.key]
   if (!d) return
   e.preventDefault()

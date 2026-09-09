@@ -1,5 +1,5 @@
 // 二期扩充 + 新增功能专项测试（竞技场随机/奥义/食灵/赛季任务点/新锻造装备/数值安全/公会/肥料/奖励/签到/强化/装饰）
-// 运行：node .toolchain/system_test2.mjs
+// 运行：node scripts/system_test2.mjs
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { createSkillInstances, getSkillInstance } from '../src/game/skills/registry.js'
@@ -75,6 +75,18 @@ console.log('══ W3. 公会扩展 ══')
   const base = Math.min(recipe.successChance + (30 - recipe.reqLevel) * 0.02, 0.98)
   const buffed = cooking.successChance(recipe)
   check('公会', '制作型 buff 提升成功率 5%', Math.abs(buffed - base - 0.05) < 1e-9, `base=${base} buffed=${buffed}`)
+  // 辅助型公会「全技能经验」为数值型 xpPct（2026-09-09 修复：此前按对象下标取值，恒为 0）
+  {
+    const p3 = freshPlayer({ foraging: 50 })
+    const b0 = p3.skills.foraging.exp
+    getSkillInstance('foraging').addCardXp(100, 1)
+    const noGuild = p3.skills.foraging.exp - b0
+    p3.guild = { id: 'sageKitchen', points: 0, day: null, taskProgress: {} } // 辅助型：全技能经验 +9%
+    const b1 = p3.skills.foraging.exp
+    getSkillInstance('foraging').addCardXp(100, 1)
+    const withGuild = p3.skills.foraging.exp - b1
+    check('公会', '辅助型公会全技能经验 +9% 生效（数值型 xpPct）', Math.abs(withGuild - noGuild * 1.09) < 1, `无公会=${noGuild} 有公会=${withGuild}`)
+  }
   // 商店 20 项全部有效
   check('公会商店 24 种且物品全部存在', GUILD_SHOP.length === 24 && GUILD_SHOP.every((s) => !!ITEMS[s.itemId] && s.price > 0), GUILD_SHOP.filter((s) => !ITEMS[s.itemId]).map((s) => s.itemId).join(','))
 }

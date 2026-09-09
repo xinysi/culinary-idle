@@ -1,5 +1,5 @@
 // 全游戏内容同步审计 — 检查跨系统引用一致性与攻略数值
-// 运行：node .toolchain/audit_sync.mjs
+// 运行：node scripts/audit_sync.mjs
 import { ITEMS, itemName } from '../src/game/data/items.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS, STYLE_INFO, STYLE_ADVANTAGE } from '../src/game/data/combat.js'
 import { SEASONS } from '../src/game/data/seasons.js'
@@ -80,7 +80,7 @@ const check = (name, cond, detail = '') => {
   check('攻略', '能量饼干 +4h 上限 +12h 表述', t.includes('+4h') && t.includes('12h'))
   check('攻略', '背包 20 格/100 表述', t.includes('20 格') && t.includes('100'))
   check('攻略', '转生 99/+10%/120 表述', t.includes('99 级') && t.includes('+10%') && t.includes('120'))
-  check('攻略', '锻造金刀 74/水晶 86 表述', t.includes('74') && t.includes('86'))
+  check('攻略：金刀 74 / 水晶刀 86 表述', t.includes('74') && t.includes('86'), '攻略未提及金刀 74 / 水晶刀 86 的锻造等级')
 }
 
 // ── 8. 图鉴来源索引：所有有来源的物品 id 有效 ──

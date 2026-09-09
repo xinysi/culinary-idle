@@ -14,7 +14,7 @@ const state = computed(() => player.festState())
 // 背包中可参赛料理（type=food 且符合当月主题），按得分预估排序
 const candidates = computed(() =>
   Object.entries(player.inventory)
-    .filter(([id, qty]) => qty > 0 && getItem(id)?.type === 'food' && festAccepts(theme.value, getItem(id).category))
+    .filter(([id, qty]) => qty > 0 && getItem(id)?.type === 'food' && festAccepts(theme.value, getItem(id)))
     .map(([id, qty]) => ({ id, qty, item: getItem(id), score: festScore(getItem(id)) }))
     .sort((a, b) => b.score - a.score)
 )

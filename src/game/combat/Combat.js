@@ -24,6 +24,8 @@ const MYSTERY_BUFFS = [
 // 获胜经验分段倍率（2026-09-06 曲线修正）：经验产出 O(L²) 跟不上经验需求 2^(L/7) 指数，
 // 后期（60+）按对手等级逐段补强，使 ×1 基准下 99 级从 ~6600 小时压到 ~700 小时量级：
 // L≤40 维持原速率（前期体验不动），40 之后每 10 级档位递进。
+// 2026-09-09 二次修正（对齐采集线）：90-99 档 9→12、100+ 档 12→16，配合下方 0.25→0.45 的二次项，
+// 使战斗三技能满级从 ~14 天压到 ~6 天量级（此前战斗比采集慢 25 倍，是唯一长板）。
 function winXpBoost(level) {
   if (level <= 40) return 1
   if (level <= 50) return 1.1
@@ -31,8 +33,8 @@ function winXpBoost(level) {
   if (level <= 70) return 2.2
   if (level <= 80) return 3.5
   if (level <= 90) return 6
-  if (level <= 99) return 9
-  return 12
+  if (level <= 99) return 12
+  return 16
 }
 
 let instance = null
@@ -79,24 +81,29 @@ export class Combat {
     return STYLE_INFO[this.styleId].name
   }
 
-  /** 玩家实时属性（§4.2） */
+  /** 玩家实时属性（§4.2）；食神秘境局内增益（2026-09-09）仅在秘境激活时叠加 */
   playerStats() {
     const eq = this.player.equippedStats
     const sl = this.styleLevel
     const heat = this.player.skills.heatControl?.level ?? 1
     const drunkPenalty = this.drunkTurns > 0 ? 0.15 : 0
     const gEff = this.player.gastronomyEffects?.() ?? {}
-    const speedPct = Number(gEff.speedPct) || 0
+    const realm = this.player.realmModifiers?.() ?? null
+    const insight = this.player.insightEffects?.() ?? {} // 菜系图谱永久加成（2026-09-09）
+    const atkPct = (realm?.attackPct ?? 0) + (insight.attackPct ?? 0)
+    const defPct = (realm?.defensePct ?? 0) + (insight.defensePct ?? 0)
+    const hpPct = (realm?.maxHpPct ?? 0) + (insight.maxHpPct ?? 0)
+    const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0)
     const speedBonus = Number(eq.speedBonus) || 0
     const baseSpeed = Math.max(1.2, (2.4 - sl * 0.02 - speedBonus) * (1 - speedPct / 100))
     return {
       hp: this.player.combat.hp,
-      maxHp: this.player.maxHp,
-      attack: sl * 3 + eq.attack + this.buffs.atk,
-      accuracy: Math.max(1, Math.floor((10 + sl + eq.accuracy + this.buffs.accuracy) * (1 - drunkPenalty))),
-      defense: heat + eq.defense + this.buffs.defense,
-      evasion: Math.floor(5 + heat * 0.5 + eq.evasion + this.buffs.evasion),
-      critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance, 0.8),
+      maxHp: this.player.maxHp * (1 + hpPct / 100),
+      attack: (sl * 3 + eq.attack + this.buffs.atk) * (1 + atkPct / 100),
+      accuracy: Math.max(1, Math.floor((10 + sl + eq.accuracy + this.buffs.accuracy) * (1 - drunkPenalty) * (1 + (realm?.accuracyPct ?? 0) / 100))),
+      defense: (heat + eq.defense + this.buffs.defense) * (1 + defPct / 100),
+      evasion: Math.floor((5 + heat * 0.5 + eq.evasion + this.buffs.evasion) * (1 + (realm?.evasionPct ?? 0) / 100)),
+      critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance + (realm?.critChance ?? 0), 0.8),
       speedMs: Math.floor(baseSpeed * 1000 * (this.slowTurns > 0 ? 1.5 : 1)),
       flavorEnergy: this.player.combat.flavorEnergy,
     }
@@ -189,6 +196,13 @@ export class Combat {
       const cost = Math.max(1, Math.floor(p.maxHp * -seff.loseHpPerTurnPct / 100))
       this.damagePlayer(cost, '🐉 龙息精灵代价')
       if (!this.inFight) return
+    }
+    // 食神秘境增益：每回合回血（2026-09-09）
+    const realmHeal = this.player.realmModifiers?.()?.healPerTurnPct ?? 0
+    if (realmHeal > 0) {
+      const heal = Math.max(1, Math.floor(p.maxHp * realmHeal / 100))
+      this.player.setCombat({ hp: Math.min(p.maxHp, this.player.combat.hp + heal) })
+      this.logLine(`🏯 秘境祝福回复 ${heal} 生命值`, 'dim')
     }
 
     // 甜品女王：每回合回血
@@ -355,12 +369,12 @@ export class Combat {
     const o = this.opponent
     const gold = 5 + o.level * 3
     this.player.gainGold(gold)
-    // 击杀经验（2026-09-06 曲线修正）：三技能系数拉齐为 0.25/0.25/0.25（总量仍为 0.75L²，
+    // 击杀经验（2026-09-06 曲线修正，2026-09-09 二次项 0.25→0.45 对齐采集线）：三技能系数拉齐（总量 1.35L²，
     // 消除“火候 0.2 系数拖慢对决等级”的隐性瓶颈），并按 winXpBoost 分段补强后期产出
     const boost = winXpBoost(o.level)
-    const xpStyle = Math.floor((o.level * 9.7 + o.level * o.level * 0.25) * boost)
-    const xpTaste = Math.floor((o.level * 9.7 + o.level * o.level * 0.25) * boost)
-    const xpHeat = Math.floor((o.level * 9.7 + o.level * o.level * 0.25) * boost)
+    const xpStyle = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
+    const xpTaste = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
+    const xpHeat = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
     getSkillInstance(this.styleSkillId)?.addXp(xpStyle)
     getSkillInstance('tasteAcumen')?.addXp(xpTaste)
     getSkillInstance('heatControl')?.addXp(xpHeat)
@@ -399,7 +413,7 @@ export class Combat {
     const o = this.opponent
     if (o) {
       const boost = winXpBoost(o.level)
-      const lostXp = Math.floor((o.level * 9.7 + o.level * o.level * 0.25) * boost * 0.3)
+      const lostXp = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost * 0.3)
       getSkillInstance(this.styleSkillId)?.addXp(lostXp)
       getSkillInstance('tasteAcumen')?.addXp(lostXp)
       getSkillInstance('heatControl')?.addXp(lostXp)

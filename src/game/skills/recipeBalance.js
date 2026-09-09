@@ -47,6 +47,10 @@ for (const [arrLike, keys] of PROD_ANCHORS) {
 }
 // 嫩替代食材采集等级
 for (const t of FRESH_TARGETS.foraging ?? []) add(t.itemId, t.reqLevel)
+// 盐矿豁免（2026-09-09）：盐是腌制/保鲜的通用基础材料（与 valueBalance 对矿物的豁免同理），
+// 但它的采集等级 Lv10 会把所有用到盐矿的低阶配方抬到 Lv5+，导致「腌制」「食材保鲜」在 Lv1-4
+// 无任何可做配方、技能永久卡在 1 级。故盐矿不作为材料锚参与抬级判定（配方内容与物品等级均不变）。
+delete minLevel.saltOre
 // 基础配方产物锚（进阶加工品按产出它的配方 reqLevel 计；此前漏掉基础配方，导致低配方配高材料失衡）。
 // 注意：只能在函数内使用（周期依赖——CookingSkill 等反向 import 本模块；顶层访问会因未初始化而崩溃）。
 let _baseInited = false

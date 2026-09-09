@@ -147,6 +147,17 @@ function recipeCategory(r) {
   return CATEGORY_LABEL[r.category] ?? r.category
 }
 
+// 成品品质徽章（仅装备有 quality 字段 → 只在锻造卡片显示；配色与图鉴/物品详情一致）
+const QUALITY_COLOR = { 普通: 'var(--muted)', 精良: 'var(--good-strong)', 稀有: 'var(--info)', 史诗: '#7b1fa2', 传说: 'var(--warn-strong)', 神话: 'var(--bad-strong)' }
+const qualityOf = computed(() => {
+  const m = {}
+  for (const r of props.instance.recipes) {
+    const q = getItem(r.output?.itemId)?.quality
+    if (q) m[r.id] = { text: q, color: QUALITY_COLOR[q] ?? 'var(--muted)' }
+  }
+  return m
+})
+
 function have(itemId) {
   return player.inventory[itemId] ?? 0
 }
@@ -442,6 +453,7 @@ function scrollToSection(label) {
               <ItemImg :item-id="r.output.itemId" />
               <div>
                 <strong>{{ r.name }}</strong>
+                <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
                 <div class="dim" style="font-size: 11px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
             </div>
@@ -524,4 +536,17 @@ function scrollToSection(label) {
   50% { box-shadow: 0 0 20px rgba(217, 138, 43, 0.85); }
 }
 .gather-card.flash { animation: recipeFlash 0.8s ease-in-out 2; }
+/* 装备品质徽章（仅锻造卡片；配色与图鉴/物品详情一致） */
+.quality-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  vertical-align: middle;
+  opacity: 0.92;
+}
 </style>

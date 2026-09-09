@@ -26,6 +26,25 @@ function deliverOrder(o) {
   else ui.pushLog(r.msg ?? '交付失败', 'warn')
 }
 
+// ── 美食评论家（2026-09-09）：高要求食客 ──
+const critic = computed(() => player.criticState().order)
+const criticRemainMin = computed(() => (critic.value ? Math.max(0, Math.ceil((critic.value.expireAt - nowMs.value) / 60000)) : 0))
+const criticPick = ref(null)
+const criticCandidates = computed(() => {
+  const o = critic.value
+  if (!o) return []
+  return Object.entries(player.inventory)
+    .filter(([id, q]) => q > 0 && getItem(id)?.type === 'food' && getItem(id).category === o.category && (getItem(id).tier ?? 0) >= o.minTier)
+    .map(([id, q]) => ({ id, qty: q, item: getItem(id) }))
+    .sort((a, b) => (b.item.tier ?? 0) - (a.item.tier ?? 0))
+})
+function serveCriticNow() {
+  if (!criticPick.value) { ui.pushLog('请先选择一道符合要求的料理', 'warn'); return }
+  const r = player.serveCritic(criticPick.value)
+  if (!r.ok) ui.pushLog(r.msg ?? '提交失败', 'warn')
+  else criticPick.value = null
+}
+
 // 装饰：分类 tab + 分页
 const activeCat = ref('all')
 const page = ref(1)
@@ -141,6 +160,26 @@ function hourlyOf(dishId) {
         </div>
       </div>
       <p v-else class="dim" style="margin-top: 4px">暂无食客订单——在菜单中挂上料理，食客会慕名而来；到访后交货可得金币并提升好感。</p>
+    </div>
+
+    <!-- 美食评论家（2026-09-09）：随机到访的高要求食客，满足给大奖 -->
+    <div v-if="critic" class="card critic-card">
+      <div class="decor-title-row">
+        <h3>📝 美食评论家到访</h3>
+        <span class="dim mono" :class="{ 'order-urgent': criticRemainMin <= 10 }">⏳ 还有 {{ criticRemainMin }} 分钟</span>
+      </div>
+      <div class="gather-card-row">
+        <span><b>{{ critic.name }}</b> 想要一份 <b>tier ≥ {{ critic.minTier }}</b> 的 <b>{{ critic.category }}</b></span>
+        <span class="dim">赏金 <b class="mono" style="color: var(--gold)">{{ critic.reward.toLocaleString() }}</b> 金 + 神秘调料 ×1 + 好感 +30</span>
+      </div>
+      <div v-if="criticCandidates.length" class="critic-row">
+        <select v-model="criticPick" style="flex: 1; max-width: 320px">
+          <option :value="null">选择一道符合要求的料理</option>
+          <option v-for="c in criticCandidates" :key="c.id" :value="c.id">{{ c.item.name }}（tier {{ c.item.tier }}）×{{ c.qty }}</option>
+        </select>
+        <button class="btn btn-sm btn-primary" @click="serveCriticNow()">提交</button>
+      </div>
+      <p v-else class="dim" style="font-size: 12px">背包中没有符合要求的料理——去做一道 <b>tier ≥ {{ critic.minTier }}</b> 的{{ critic.category }}再来。</p>
     </div>
 
     <!-- 餐厅装饰（§13）：分类 tab + 分页 -->

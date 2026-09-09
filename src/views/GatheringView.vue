@@ -8,7 +8,7 @@ import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { xpProgress } from '../game/core/Experience.js'
-import { masteryXpMultiplier } from '../game/core/mastery.js'
+import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const props = defineProps({
@@ -41,6 +41,8 @@ function successRate(itemId) {
 function masteryLevelOf(t) { return props.instance.masteryLevel(t) }
 // 当前精通档位经验倍数（≥5 级才有 >1）
 function masteryMult(t) { return masteryXpMultiplier(props.instance.masteryLevel(t)) }
+// 当前精通档位的保底产量加成（50 级 +1、100 级 +2；0 表示无）
+function masteryBatch(t) { return masteryYieldBonus(props.instance.masteryLevel(t)) }
 // 卡片显示间隔：精通≥5 级用精通后的实际间隔（秒）；否则用基础间隔
 function cardIntervalSec(t) {
   if (props.instance.masteryLevel(t) >= 5) return props.instance.intervalMs(t) / 1000
@@ -55,17 +57,17 @@ const ammoWarn = ref(false) // 弹药不足提示弹窗
 // ── 精通档位说明弹窗（2026-09 新档表）──
 const masteryModalOpen = ref(false)
 const masteryTiers = [
-  { lv: '5 级', xp: '×1.5', dbl: '1%', inv: '减 1/3' },
-  { lv: '10 级', xp: '×2', dbl: '5%', inv: '减半' },
-  { lv: '20 级', xp: '×3', dbl: '10%', inv: '固定 1.2s' },
-  { lv: '30 级', xp: '×4', dbl: '15%', inv: '固定 1.2s' },
-  { lv: '40 级', xp: '×5', dbl: '20%', inv: '固定 0.8s' },
-  { lv: '50 级', xp: '×6', dbl: '30%', inv: '固定 0.8s' },
-  { lv: '60 级', xp: '×8', dbl: '40%', inv: '固定 0.6s' },
-  { lv: '70 级', xp: '×10', dbl: '50%', inv: '固定 0.6s' },
-  { lv: '80 级', xp: '×12', dbl: '60%', inv: '固定 0.4s' },
-  { lv: '90 级', xp: '×15', dbl: '70%', inv: '固定 0.4s' },
-  { lv: '100 级', xp: '×20', dbl: '80%', inv: '固定 0.2s' },
+  { lv: '5 级', xp: '×1.1', dbl: '1%', batch: '—', inv: '减 1/3' },
+  { lv: '10 级', xp: '×1.2', dbl: '5%', batch: '—', inv: '减半' },
+  { lv: '20 级', xp: '×1.4', dbl: '10%', batch: '—', inv: '固定 3.6s' },
+  { lv: '30 级', xp: '×1.6', dbl: '15%', batch: '—', inv: '固定 3.2s' },
+  { lv: '40 级', xp: '×1.9', dbl: '20%', batch: '—', inv: '固定 3.0s' },
+  { lv: '50 级', xp: '×2.2', dbl: '30%', batch: '+1', inv: '固定 2.8s' },
+  { lv: '60 级', xp: '×2.5', dbl: '40%', batch: '+1', inv: '固定 2.6s' },
+  { lv: '70 级', xp: '×2.8', dbl: '50%', batch: '+1', inv: '固定 2.4s' },
+  { lv: '80 级', xp: '×3.2', dbl: '60%', batch: '+1', inv: '固定 2.2s' },
+  { lv: '90 级', xp: '×3.6', dbl: '70%', batch: '+1', inv: '固定 2.1s' },
+  { lv: '100 级', xp: '×4', dbl: '80%', batch: '+2', inv: '固定 2.0s' },
 ]
 function selectTarget(itemId) {
   // 已在采集中的目标再点 = 删除挂机任务：停止并隐藏（从右侧“挂机中”列表消失，卡片恢复默认状态）
@@ -208,7 +210,7 @@ function scrollToSection(label) {
             </div>
             <div class="gather-card-row">
               <span>精通</span>
-              <span class="mono">{{ instance.masteryLevel(t) }} / 100 级</span>
+              <span class="mono">{{ instance.masteryLevel(t) }} / 100 级<span v-if="masteryBatch(t)" class="mastery-hl">&nbsp;· 保底 +{{ masteryBatch(t) }}</span></span>
             </div>
             <ProgressBar :progress="instance.masteryProgress(t).progress" class="mastery-bar" />
             <div class="dim mono" style="font-size: 10px; text-align: right">
@@ -256,21 +258,22 @@ function scrollToSection(label) {
           <h3>📖 卡片精通档位说明</h3>
           <button class="btn btn-sm" @click="masteryModalOpen = false">✕</button>
         </div>
-        <p class="dim" style="margin-bottom: 8px">精通等级由该卡片累计采集/制作次数提升；达到对应档位解锁经验、双倍与间隔加成。</p>
+        <p class="dim" style="margin-bottom: 8px">精通等级由该卡片累计采集/制作次数提升；达到对应档位解锁经验、双倍产出、<b>保底产量</b>与间隔加成。</p>
         <table class="target-table">
           <thead>
-            <tr><th>精通</th><th>基础经验</th><th>双倍产出</th><th>采集间隔</th></tr>
+            <tr><th>精通</th><th>基础经验</th><th>双倍产出</th><th>保底产量</th><th>采集间隔</th></tr>
           </thead>
           <tbody>
             <tr v-for="t in masteryTiers" :key="t.lv">
               <td class="mono">{{ t.lv }}</td>
               <td class="mono">{{ t.xp }}</td>
               <td class="mono">{{ t.dbl }}</td>
+              <td class="mono">{{ t.batch }}</td>
               <td class="mono">{{ t.inv }}</td>
             </tr>
           </tbody>
         </table>
-        <p class="dim" style="margin-top: 8px">精通低于 5 级：经验 ×1、双倍 1%、间隔不变（基础 1% 双倍）。</p>
+        <p class="dim" style="margin-top: 8px">精通低于 5 级：经验 ×1、双倍 1%、无保底产量、间隔不变（基础 1% 双倍）。保底产量为每次动作额外固定产出的数量（50 级 +1、100 级 +2），与双倍可叠加。</p>
         <p class="dim" style="margin-top: 5px">经验倍率与「设置经验倍率」<b>不叠加</b>（取较大）：当精通倍数 &gt; 设置倍率时用精通倍数（精通为独立成长线）；当设置倍率 &gt; 精通倍数（或无精通）时用设置倍率（作用于非精通部分）。</p>
       </div>
     </div>

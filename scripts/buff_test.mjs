@@ -1,5 +1,5 @@
 // Buff 效果全面测试 — 物品 buff/regen/醉酒/食灵/奥义/增益剂/公会被动
-// 运行：node .toolchain/buff_test.mjs
+// 运行：node scripts/buff_test.mjs
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { createSkillInstances, getSkillInstance } from '../src/game/skills/registry.js'
@@ -103,9 +103,12 @@ console.log('══ D. 醉酒 ══')
   const c2 = startFight(freshPlayer({ tasteAcumen: 10 }))
   const accBefore = c2.playerStats().accuracy
   check('醉酒中准确率下降（-15%）', accAfter < accBefore, `before=${accBefore} after=${accAfter}`)
-  // 5 回合后解除
-  for (let i = 0; i < 12; i++) c.tick(3000)
-  check('醉酒回合结束后解除', c.drunkTurns === 0)
+  // 5 回合后解除（确定性验证：drunkTurns 设 1 → 1 回合后归零；不依赖战斗跑满 5 回合——
+  // 高配置玩家 3 回合就击杀对手，战斗提前结束时 tick 不再推进回合，会造成随机失败）
+  c.drunkTurns = 1
+  if (!c.inFight) c.start(c.opponent) // 战斗已结束则重开一局（仅用于推进回合）
+  c.tick(3000)
+  check('醉酒回合结束后解除', c.drunkTurns === 0, `drunkTurns=${c.drunkTurns}`)
 }
 
 // ── E. 持续回血 regen ──

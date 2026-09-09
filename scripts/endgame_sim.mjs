@@ -1,5 +1,5 @@
 // 端局 BOSS 曲线验证 — 满配玩家（99 级 + 5 转生 + 神话装）挑战 90-101 级 BOSS
-// 运行：node .toolchain/endgame_sim.mjs
+// 运行：node scripts/endgame_sim.mjs
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { createSkillInstances } from '../src/game/skills/registry.js'

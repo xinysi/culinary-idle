@@ -29,6 +29,7 @@ jobs:
           node scripts/continuity_test.mjs
           node scripts/audit_sync.mjs
           node scripts/item_triple_audit.mjs
+          node scripts/minigame_ui_audit.mjs
 
       - name: Web build
         run: npm run build

@@ -291,6 +291,30 @@ export function registerGameEvents() {
   EventBus.on('gastronomy:off', () => {
     ui.pushLog('品鉴点数耗尽，全部奥义已关闭', 'warn')
   })
+  // 自动补给（2026-09-09 放置化）
+  EventBus.on('supply:auto', ({ itemId, qty, cost }) => {
+    ui.pushLog(`🛒 自动补给：${itemName(itemId)} ×${qty}（-${cost} 金币）`, 'info')
+  })
+  // 菜系图谱（2026-09-09 永久天赋树）
+  EventBus.on('insight:unlock', ({ name, desc }) => ui.pushLog(`🗺️ 菜系图谱解锁「${name}」：${desc}`, 'levelup'))
+  // 食神秘境（2026-09-09 roguelike 局内模式）
+  EventBus.on('realm:end', ({ floor, gold }) => ui.pushLog(`🏯 食神秘境结束：第 ${floor} 层，+${gold} 金币`, 'gain'))
+  // 每周挑战赛（2026-09-09）
+  EventBus.on('challenge:done', ({ name, gold }) => ui.pushLog(`⚔️ 每周挑战「${name}」达成：+${gold} 金币`, 'levelup'))
+  // 挂机计划（2026-09-09）
+  EventBus.on('plan:step', ({ index, step }) => {
+    ui.pushLog(`🗓 挂机计划：进入第 ${index + 1} 步 —— ${getSkillDef(step.skill)?.name ?? step.skill} · ${itemName(step.target)}`, 'info')
+  })
+  EventBus.on('plan:done', () => ui.pushLog('🗓 挂机计划全部完成，挂机已自动暂停', 'levelup'))
+  // 美食评论家（2026-09-09）
+  EventBus.on('critic:served', ({ name, itemId, reward }) => {
+    ui.pushLog(`📝 ${name}对「${itemName(itemId)}」赞不绝口！赏金 +${reward} 金币、神秘调料 ×1、餐厅好感 +30`, 'levelup')
+  })
+  // 远行采集队（2026-09-09 长线挂机线）
+  EventBus.on('expedition:claim', ({ name, gained, gold, rare, tier }) => {
+    const parts = Object.entries(gained ?? {}).map(([id, q]) => `${itemName(id)} ×${q}`)
+    ui.pushLog(`🚢 ${name}归来：${parts.join('、')}${gold ? `，金币 +${gold}` : ''}${rare ? `（✨稀有：${itemName(rare)}）` : ''}${tier ? ` · 熟练度 ${tier} 档` : ''}`, 'gain')
+  })
 }
 
 // ── 进入游戏（由启动界面选择存档后调用）──────────

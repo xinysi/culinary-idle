@@ -209,7 +209,7 @@ function move(d) {
   if (moves.value >= cfg.value.moves) settle(false)
 }
 function onKey(e) {
-  if (!running) return
+  if (!started.value || over.value) return // 未开始/已结束时不拦截方向键（保留页面滚动）
   if (e.key === 'ArrowUp') { e.preventDefault(); move(0) }
   else if (e.key === 'ArrowRight') { e.preventDefault(); move(1) }
   else if (e.key === 'ArrowDown') { e.preventDefault(); move(2) }
@@ -282,7 +282,6 @@ function startGame() {
   beep(880, 0.08)
 }
 
-let running = true
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   reset()
