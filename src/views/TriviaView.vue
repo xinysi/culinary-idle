@@ -191,8 +191,15 @@ resetRound()
       <div v-else class="tv-flag">✅ 本模式完成</div>
     </div>
 
-    <div v-if="doneAll" class="tv-result" :class="{ ok: correctAll >= MODES[mode].pass }">
-      {{ correctAll >= MODES[mode].pass ? `🏅 通过！徽章 +1（共 ${mg.badges} 枚）+${MODES[mode].gold} 金` : `${correctAll}/${totalQ} —— 未达标，重新开始本周再来！` }}
+        <div v-if="doneAll" class="tv-mask">
+      <div class="tv-result">
+        <div class="tv-result-head"><b>{{ correctAll >= MODES[mode].pass ? '🏅 通过！' : '💦 未达标' }}</b></div>
+        <div class="tv-result-score"><span>答对 <b class="mono">{{ correctAll }}</b>/{{ totalQ }}</span><span v-if="correctAll >= MODES[mode].pass">徽章 +1（共 {{ mg.badges }} 枚）</span><span v-if="correctAll >= MODES[mode].pass" class="tv-gold">+{{ MODES[mode].gold }} 金</span></div>
+        <button class="tv-again" @click="resetWeek()">🔄 再来一局</button>
+      </div>
+      <div v-if="correctAll >= MODES[mode].pass" class="tv-fire">
+        <span v-for="i in 20" :key="i" class="tv-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
     </div>
 
     <div class="tv-exchange">
@@ -266,8 +273,6 @@ resetRound()
 .tv-opt.tv-wrong { background: rgba(217, 75, 63, 0.16); border-color: var(--bad-strong); color: var(--bad-strong); }
 .tv-next { align-self: flex-end; padding: 5px 12px; border: none; border-radius: 999px; color: #fff; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #d95a38, #b8442a); font-size: 12px; }
 .tv-flag { text-align: center; color: var(--good-strong); font-weight: 800; padding: 20px 0; }
-.tv-result { text-align: center; padding: 12px; border-radius: 12px; font-weight: 800; background: rgba(217, 75, 63, 0.12); color: var(--bad-strong); }
-.tv-result.ok { background: rgba(87, 168, 97, 0.15); color: var(--good-strong); }
 .tv-exchange { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tv-exchange-title { font-size: 13px; font-weight: 800; color: var(--primary-strong); }
 .tv-ex { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; cursor: pointer; background: rgba(255, 251, 244, 0.85); border: 1px solid rgba(150, 110, 70, 0.35); font-weight: 700; font-size: 13px; }
@@ -323,4 +328,15 @@ resetRound()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── tv 结算弹窗（2026-09-09 统一）── */
+.tv-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.tv-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.tv-result-head { font-size: 18px; }
+.tv-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.tv-gold { color: var(--good-strong); font-weight: 800; }
+.tv-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.tv-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.tv-spark { position: absolute; font-size: 22px; color: var(--gold); animation: tvSpark 1.1s ease-out forwards; }
+@keyframes tvSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

@@ -262,7 +262,13 @@ function posStyle(t) {
       <button class="g2048-key" @click="move('right')">→</button>
       <button class="g2048-reset" @click="reset()">重新开始</button>
     </div>
-    <div v-if="over" class="g2048-over">💀 无路可走了！本局已入账 {{ earned }} 游戏币</div>
+        <div v-if="over" class="g2048-mask">
+      <div class="g2048-result">
+        <div class="g2048-result-head"><b>💀 无路可走了！</b></div>
+        <div class="g2048-result-score"><span>本局已入账 <b class="mono">{{ earned }}</b> 游戏币</span></div>
+        <button class="g2048-again" @click="reset()">🔄 再来一局</button>
+      </div>
+    </div>
     <div v-if="showInfo" class="g2048-info-mask" @click.self="showInfo = false">
       <div class="g2048-info-box">
         <div class="g2048-info-head"><b>厨心 2048 · 十种模式说明</b><button class="g2048-info-close" @click="showInfo = false">✕</button></div>
@@ -401,5 +407,15 @@ function posStyle(t) {
   font-size: 12.5px;
   color: var(--muted);
 }
-.g2048-over { font-weight: 800; color: var(--bad-strong); }
+
+/* ── g2048 结算弹窗（2026-09-09 统一）── */
+.g2048-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.g2048-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.g2048-result-head { font-size: 18px; }
+.g2048-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.g2048-gold { color: var(--good-strong); font-weight: 800; }
+.g2048-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.g2048-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.g2048-spark { position: absolute; font-size: 22px; color: var(--gold); animation: g2048Spark 1.1s ease-out forwards; }
+@keyframes g2048Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

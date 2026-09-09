@@ -483,8 +483,17 @@ reset()
       <button class="gg-prop" :disabled="shuffleN <= 0 || won || over" @click="useShuffle()">🔀 洗牌 ×{{ shuffleN }}</button>
       <button class="gg-prop" :disabled="withdrawN <= 0 || won || over" @click="useWithdraw()">↩️ 撤回 ×{{ withdrawN }}</button>
     </div>
-    <div v-if="won" class="gg-done ok">🎉 全部消除通关！+{{ m.gold }} 游戏币</div>
-    <div v-else-if="over" class="gg-done">💦 本局失败 —— 重置本局再来</div>
+        <div v-if="won || over" class="gg-mask">
+      <div class="gg-result">
+        <div class="gg-result-head"><b>{{ won ? '🎉 全部消除通关！' : '💦 本局失败' }}</b></div>
+        <div class="gg-result-score"><span v-if="won" class="gg-gold">+{{ m.gold }} 游戏币</span><span v-else>再来一局</span></div>
+        <button class="gg-again" @click="reset()">🔄 再来一局</button>
+      </div>
+      <div v-if="won" class="gg-fire">
+        <span v-for="i in 20" :key="i" class="gg-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
+    
 
     <!-- 通关礼花 -->
     <div v-if="celebrating" class="gg-fire">
@@ -593,8 +602,6 @@ reset()
 .gg-reset { padding: 9px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .gg-prop { padding: 9px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
 .gg-prop:disabled { opacity: 0.45; cursor: not-allowed; }
-.gg-done { font-weight: 800; color: var(--bad-strong); }
-.gg-done.ok { color: var(--good-strong); }
 .gg-fire { position: fixed; inset: 0; z-index: 320; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .gg-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ggSpark 1.1s ease-out forwards; }
 @keyframes ggSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
@@ -648,4 +655,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── gg 结算弹窗（2026-09-09 统一）── */
+.gg-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.gg-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.gg-result-head { font-size: 18px; }
+.gg-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.gg-gold { color: var(--good-strong); font-weight: 800; }
+.gg-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.gg-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.gg-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ggSpark 1.1s ease-out forwards; }
+@keyframes ggSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

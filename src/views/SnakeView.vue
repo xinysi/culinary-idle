@@ -151,7 +151,13 @@ reset()
       <button class="sn-reset" @click="reset()">重新开始</button>
       <button class="sn-start" @click="start()">{{ running ? '⏸ 进行中…' : over ? '🏁 再来一局' : '▶ 开始' }}</button>
     </div>
-    <div v-if="over" class="sn-done">🐍 本局吃到 {{ eaten }} 个食物</div>
+        <div v-if="over" class="sn-mask">
+      <div class="sn-result">
+        <div class="sn-result-head"><b>🐍 本局结束</b></div>
+        <div class="sn-result-score">本局吃到 <b class="mono">{{ eaten }}</b> 个食物</div>
+        <button class="sn-again" @click="reset(); start()">🔄 再来一局</button>
+      </div>
+    </div>
 
     <div v-if="showInfo" class="sn-info-mask" @click.self="showInfo = false">
       <div class="sn-info-box">
@@ -225,7 +231,6 @@ reset()
   font-size: 15px;
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
 }
-.sn-done { font-weight: 800; color: var(--good-strong); }
 .sn-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .sn-info-box {
   width: min(620px, 92vw);
@@ -276,4 +281,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── sn 结算弹窗（2026-09-09 统一）── */
+.sn-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.sn-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.sn-result-head { font-size: 18px; }
+.sn-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.sn-gold { color: var(--good-strong); font-weight: 800; }
+.sn-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.sn-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.sn-spark { position: absolute; font-size: 22px; color: var(--gold); animation: snSpark 1.1s ease-out forwards; }
+@keyframes snSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

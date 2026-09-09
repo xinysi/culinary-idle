@@ -257,7 +257,16 @@ reset()
       <button class="pm-reset" @click="reset()">重新开始</button>
       <button class="pm-start" @click="start()">{{ running ? '⏸ 进行中…' : over ? '🏁 再来一局' : '▶ 开始' }}</button>
     </div>
-    <div v-if="over" class="pm-done">{{ !dots.length ? '👻 通关！奖励已结算' : '💦 被幽灵抓住！' }}</div>
+        <div v-if="over" class="pm-mask">
+      <div class="pm-result">
+        <div class="pm-result-head"><b>{{ !dots.length ? '👻 通关！' : '💦 被幽灵抓住！' }}</b></div>
+        <div class="pm-result-score"><span>{{ !dots.length ? '奖励已结算' : '再来一局' }}</span></div>
+        <button class="pm-again" @click="reset(); start()">🔄 再来一局</button>
+      </div>
+      <div v-if="!dots.length" class="pm-fire">
+        <span v-for="i in 20" :key="i" class="pm-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
 
     <div v-if="showInfo" class="pm-info-mask" @click.self="showInfo = false">
       <div class="pm-info-box">
@@ -331,8 +340,6 @@ reset()
   font-size: 15px;
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
 }
-.pm-done { font-weight: 800; color: var(--good-strong); }
-.pm-done:not(.ok) { }
 .pm-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .pm-info-box {
   width: min(620px, 92vw);
@@ -383,4 +390,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── pm 结算弹窗（2026-09-09 统一）── */
+.pm-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.pm-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.pm-result-head { font-size: 18px; }
+.pm-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.pm-gold { color: var(--good-strong); font-weight: 800; }
+.pm-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.pm-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.pm-spark { position: absolute; font-size: 22px; color: var(--gold); animation: pmSpark 1.1s ease-out forwards; }
+@keyframes pmSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>
