@@ -42,28 +42,31 @@ test.describe('游戏全流程', () => {
     await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
     await expect(page.locator('.app-layout')).toBeVisible()
 
-    // 顶部导航分 3 页（2026-09-06）：点击目标按钮前先翻到所在页（最多翻 2 次）
-    // 统计/图鉴/攻略已固定到右侧图标钮（title 定位）；其余在翻页页中
-    const iconMenus = [['统计', '📊'], ['图鉴', '📖'], ['攻略', '🗺️']]
-    const menus = ['商店', '珍馐阁', '炼金', '公会', '赛季', '竞技场', '餐厅', '试炼塔', '大赛', '小游戏']
-    for (const m of menus) {
-      let clicked = false
-      for (let p = 0; p < 3 && !clicked; p++) {
-        try {
-          await page.locator('.top-nav-btn', { hasText: m }).click({ timeout: 1500 })
-          clicked = true
-        } catch {
-          await page.locator('.top-nav-pager').nth(1).click() // 翻下一页再试
-          await page.waitForTimeout(200)
-        }
-      }
-      if (!clicked) throw new Error('菜单未找到: ' + m)
-      await page.waitForTimeout(400)
+    // 顶部导航（2026-09-10）：只保留 7 个高频入口（不再分页）
+    const topMenus = ['餐厅', '公会', '赛季', '竞技场', '试炼塔', '大赛', '觅珍']
+    for (const m of topMenus) {
+      await page.locator('.top-nav-btn', { hasText: m }).first().click({ timeout: 3000 })
+      await page.waitForTimeout(350)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
-    // 小游戏：入口行点击 → 游戏内容视图
-    await page.locator('.top-nav-btn', { hasText: '小游戏' }).click()
-    await page.waitForTimeout(400)
+    // 其余功能页在左侧栏「功能」折叠分组中（生产与采集 / 经营与挑战）
+    const featureGroups = [
+      ['生产与采集', ['商店', '珍馐阁', '炼金', '采集队', '牧场', '地窖', '厨房笔记']],
+      ['经营与挑战', ['分店', '交易所', '自动化', '常客', '食灵物语', '试炼']],
+    ]
+    // 左栏页签（2026-09-10）：功能页在「🧩 功能」页签下，方块磁贴一行三个、全部展开
+    await page.locator('.sidebar-tab', { hasText: '功能' }).click()
+    await page.waitForTimeout(250)
+    for (const [, items] of featureGroups) {
+      for (const it of items) {
+        await page.locator('.feature-tile', { hasText: it }).first().click({ timeout: 3000 })
+        await page.waitForTimeout(350)
+        await expect(page.locator('.main-scroll')).toBeVisible()
+      }
+    }
+    // 小游戏（经营与挑战组内）：进入后逐个点开游戏入口
+    await page.locator('.feature-tile', { hasText: '小游戏' }).first().click()
+    await page.waitForTimeout(500)
     for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消', '水果合成', '果了个果', '垂钓渔翁', '切菜大师', '打地鼠', '摆盘', '接汤', '传菜', '方块', '扫雷', '滑冰', '猜菜名', '调味表', '上菜顺序', '汤圆冰壶']) {
       // 分页入口（2026-09-09）：目标不在当前页时先翻页（最多 3 次，防死循环）
       for (let guard = 0; guard < 3; guard++) {
@@ -76,14 +79,13 @@ test.describe('游戏全流程', () => {
       await expect(page.locator('.mg-shell')).toBeVisible()
       await expect(page.locator('.mg-entry-on')).toContainText(g)
     }
+    // 右侧固定图标钮（统计/图鉴/攻略）
+    const iconMenus = [['统计', '📊'], ['图鉴', '📖'], ['攻略', '🗺️']]
     for (const [title, icon] of iconMenus) {
       await page.locator(`.top-nav-btn[title="${title}"]`).click()
       await page.waitForTimeout(400)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
-    // 分页控件可循环翻页（‹ › 按钮存在且可点）
-    await page.locator('.top-nav-pager').nth(0).click()
-    await expect(page.locator('.top-nav-pagenum')).toBeVisible()
   })
 
   test('背包/设置/存档弹窗可打开并关闭', async ({ page }) => {
@@ -97,14 +99,14 @@ test.describe('游戏全流程', () => {
     await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } }) // 点遮罩空白处关闭
     await expect(page.locator('.modal-backdrop')).toHaveCount(0)
 
-    // 设置
-    await page.locator('.top-nav-btn', { hasText: '设置' }).click()
+    // 设置（2026-09-10 起按钮只显示 ⚙️，用 title 定位）
+    await page.locator('.top-nav-btn[title="设置"]').click()
     await expect(page.locator('.modal-backdrop')).toBeVisible()
     await page.locator('.modal-backdrop').click({ position: { x: 8, y: 8 } })
     await expect(page.locator('.modal-backdrop')).toHaveCount(0)
 
-    // 存档面板
-    await page.locator('.top-nav-btn', { hasText: '存档' }).click()
+    // 存档面板（按钮只显示 💾）
+    await page.locator('.top-nav-btn[title="存档"]').click()
     await expect(page.locator('.modal-backdrop')).toBeVisible()
   })
 

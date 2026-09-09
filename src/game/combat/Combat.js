@@ -401,7 +401,7 @@ export class Combat {
     const dropText = drops.length ? '，掉落：' + drops.map((d) => `${itemName(d.itemId)} ×${d.qty}`).join('、') : ''
     const xpText = `，经验：${STYLE_INFO[this.styleId].name} +${xpStyle}、品鉴力 +${xpTaste}、火候 +${xpHeat}`
     this.logLine(`🏆 胜利！获得 ${gold} 金币${xpText}${dropText}`, 'win')
-    EventBus.emit('combat:end', { result: 'win', opponent: o.name, gold, drops, isBoss: !!o.isBoss })
+    EventBus.emit('combat:end', { result: 'win', opponent: o.name, gold, drops, isBoss: !!o.isBoss, turns: this.turnCount, hpLeft: this.playerHp, hpMax: this.playerStats().maxHp, oppLevel: o.level })
   }
 
   /** 失败：随机丢失一件已装备装备（§4.1 非硬核），品鉴值恢复 */
@@ -434,7 +434,7 @@ export class Combat {
       EventBus.emit('hardcore:death', {})
       this.logLine('☠️ 硬核模式：死亡即删档！', 'lose')
     }
-    EventBus.emit('combat:end', { result: 'lose', opponent: this.opponent.name, lost })
+    EventBus.emit('combat:end', { result: 'lose', opponent: this.opponent.name, lost, turns: this.turnCount, hpLeft: 0, hpMax: this.playerStats().maxHp, oppLevel: this.opponent.level })
   }
 
   /** 使用料理：回血 + 持续回血（§4.5，冷却 3 回合） */

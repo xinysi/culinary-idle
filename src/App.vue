@@ -45,6 +45,15 @@ const PuzzleView = defineAsyncComponent(() => import('./views/PuzzleView.vue'))
 const MatchFoodView = defineAsyncComponent(() => import('./views/MatchFoodView.vue'))
 const MinigamesView = defineAsyncComponent(() => import('./views/MinigamesView.vue'))
 const ExpeditionView = defineAsyncComponent(() => import('./views/ExpeditionView.vue'))
+const KitchenNotesView = defineAsyncComponent(() => import('./views/KitchenNotesView.vue'))
+const CellarView = defineAsyncComponent(() => import('./views/CellarView.vue'))
+const RegularsView = defineAsyncComponent(() => import('./views/RegularsView.vue'))
+const SpiritStoriesView = defineAsyncComponent(() => import('./views/SpiritStoriesView.vue'))
+const AutomationView = defineAsyncComponent(() => import('./views/AutomationView.vue'))
+const RanchView = defineAsyncComponent(() => import('./views/RanchView.vue'))
+const BranchesView = defineAsyncComponent(() => import('./views/BranchesView.vue'))
+const ExchangeView = defineAsyncComponent(() => import('./views/ExchangeView.vue'))
+const TrialsView = defineAsyncComponent(() => import('./views/TrialsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -77,41 +86,17 @@ const marketSummary = computed(() => {
   }
 })
 
-// ── 顶部导航分页（2026-09-06）：主功能按钮分 3 页，翻页浏览；右侧功能组固定 ──
-// 每页按钮：{ label, view, onClick, dot? }；view 用于激活高亮与自动跳页
-const TOP_PAGES = [
-  [
-    { label: '🏮餐厅', view: 'restaurant', onClick: () => ui.setView('restaurant') },
-    { label: '🤝公会', view: 'guild', onClick: () => ui.setView('guild') },
-    { label: '🎪赛季', view: 'season', onClick: () => ui.setView('season'), dot: () => seasonDot.value },
-    { label: '⚔️竞技场', view: 'arena', onClick: () => ui.setView('arena') },
-    { label: '🗼试炼塔', view: 'tower', onClick: () => ui.setView('tower'), dot: () => player.combatLevel >= 99 && (player.tower?.best ?? 0) === 0 },
-    { label: '🏆大赛', view: 'fest', onClick: () => ui.setView('fest'), dot: () => (player.fest?.todayEntries ?? 0) === 0 && (player.fest?.score ?? 0) < 1000 },
-    { label: '🎴觅珍', view: 'mijian', onClick: () => ui.setView('mijian') },
-  ],
-  [
-    { label: '🛒商店', view: 'shop', onClick: () => ui.setView('shop') },
-    { label: '🍽️珍馐阁', view: 'deluxe', onClick: () => ui.setView('deluxe') },
-    { label: '🧪炼金', view: 'alchemy', onClick: () => ui.setView('alchemy') },
-    { label: '🚢采集队', view: 'expedition', onClick: () => ui.setView('expedition') },
-  ],
-  [
-    { label: '🎮小游戏', view: 'minigames', onClick: () => ui.setView('minigames') },
-  ],
+// ── 顶部导航（2026-09-10）：只保留 7 个高频功能页；其余功能页移入左侧栏「功能」折叠分组 ──
+// 每项：{ label, view, onClick, dot? }；view 用于激活高亮
+const TOP_NAV = [
+  { label: '🏮餐厅', view: 'restaurant', onClick: () => ui.setView('restaurant') },
+  { label: '🤝公会', view: 'guild', onClick: () => ui.setView('guild') },
+  { label: '🎪赛季', view: 'season', onClick: () => ui.setView('season'), dot: () => seasonDot.value },
+  { label: '⚔️竞技场', view: 'arena', onClick: () => ui.setView('arena') },
+  { label: '🗼试炼塔', view: 'tower', onClick: () => ui.setView('tower'), dot: () => player.combatLevel >= 99 && (player.tower?.best ?? 0) === 0 },
+  { label: '🏆大赛', view: 'fest', onClick: () => ui.setView('fest'), dot: () => (player.fest?.todayEntries ?? 0) === 0 && (player.fest?.score ?? 0) < 1000 },
+  { label: '🎴觅珍', view: 'mijian', onClick: () => ui.setView('mijian') },
 ]
-function navPage(dir) {
-  const n = TOP_PAGES.length
-  ui.setTopNavPage((ui.topNavPage + dir + n) % n)
-}
-// 切视图自动跳到所在页（用户从右栏/弹窗跳转时也能看到对应按钮）
-watch(
-  () => ui.activeView,
-  (v) => {
-    const idx = TOP_PAGES.findIndex((p) => p.some((i) => i.view === v))
-    if (idx >= 0 && ui.topNavPage !== idx) ui.setTopNavPage(idx)
-  },
-)
-
 // 界面缩放（§10.2.3 uiScale）：启动/读档后应用（整页等比缩放；放大后的导航观感由 CSS 紧凑设计保障）
 function applyUiScale() {
   const v = player.settings?.uiScale ?? 1
@@ -211,7 +196,7 @@ onMounted(() => {
       <main class="app-main">
         <!-- 顶部功能导航：主功能按页翻页（左对齐弹性区），翻页控件+功能组固定贴右不动 -->
         <nav class="top-nav">
-          <template v-for="item in TOP_PAGES[ui.topNavPage]" :key="item.view">
+          <template v-for="item in TOP_NAV" :key="item.view">
             <button class="top-nav-btn" :class="{ active: ui.activeView === item.view, 'has-dot': !!item.dot, 'dot-on': item.dot?.() }" @click="item.onClick()">
               {{ item.label }}
             </button>
@@ -228,17 +213,14 @@ onMounted(() => {
             <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊</button>
             <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖</button>
             <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️</button>
-            <button class="top-nav-btn top-nav-pager" title="上一页" @click="navPage(-1)">‹</button>
-            <span class="top-nav-pagenum mono">{{ ui.topNavPage + 1 }}/{{ TOP_PAGES.length }}</span>
-            <button class="top-nav-btn top-nav-pager" title="下一页" @click="navPage(1)">›</button>
             <span class="top-nav-sep"></span>
             <button class="top-nav-btn has-dot" :class="{ 'dot-on': signInDot }" @click="ui.toggleSignIn(true)">🎁签到</button>
             <button class="top-nav-btn" @click="ui.toggleSearch(true)">🔍搜索</button>
             <button class="top-nav-btn" @click="ui.toggleBagModal(true, 'bag')">🧺厨藏</button>
             <button class="top-nav-btn" @click="ui.toggleEquipModal(true)">⚔️装备</button>
             <span class="top-nav-sep"></span>
-            <button class="top-nav-btn" @click="ui.toggleSettingsPanel(true)">⚙️设置</button>
-            <button class="top-nav-btn" @click="ui.toggleSavePanel(true)">💾存档</button>
+            <button class="top-nav-btn" title="设置" @click="ui.toggleSettingsPanel(true)">⚙️</button>
+            <button class="top-nav-btn" title="存档" @click="ui.toggleSavePanel(true)">💾</button>
           </div>
         </nav>
 
@@ -249,6 +231,15 @@ onMounted(() => {
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />
           <ExpeditionView v-else-if="ui.activeView === 'expedition'" />
+          <CellarView v-else-if="ui.activeView === 'cellar'" />
+          <KitchenNotesView v-else-if="ui.activeView === 'kitchenNotes'" />
+          <RegularsView v-else-if="ui.activeView === 'regulars'" />
+          <SpiritStoriesView v-else-if="ui.activeView === 'spiritStories'" />
+          <AutomationView v-else-if="ui.activeView === 'automation'" />
+          <RanchView v-else-if="ui.activeView === 'ranch'" />
+          <BranchesView v-else-if="ui.activeView === 'branches'" />
+          <ExchangeView v-else-if="ui.activeView === 'exchange'" />
+          <TrialsView v-else-if="ui.activeView === 'trials'" />
           <HeatView v-else-if="ui.activeView === 'heat'" />
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />

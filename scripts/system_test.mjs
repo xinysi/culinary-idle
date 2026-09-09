@@ -12,6 +12,7 @@ import { ForagingSkill } from '../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel } from '../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../src/game/data/expeditions.js'
 import { EQUIPMENT_SETS, equipSetBonuses } from '../src/game/data/equipSets.js'
+import { regularLevelFromServes } from '../src/game/data/regulars.js'
 import { realmOpponent } from '../src/game/data/mysticRealm.js'
 import { FishingSkill } from '../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../src/game/skills/HuntingSkill.js'
@@ -411,6 +412,225 @@ console.log('══ E. 离线进度 ══')
     check('采集队', '领取后自动开始下一轮 + 完成数 +1', !!st.slots[0] && st.slots[0].readyAt > Date.now() && st.completions === 1)
     check('采集队', '撤回清空槽位', pe.expeditionStop('fishery', 0) === true && pe.expeditionState('fishery').slots[0] === null)
     check('采集队', '产出池与稀有掉落均为既有物品', EXPEDITIONS.every((e) => e.slots.every((s) => s.pool.every((id) => !!ITEMS[id])) && (!e.rare || !!ITEMS[e.rare.itemId])))
+  }
+  // 地窖陈酿（2026-09-10 时间型放置线）：酒类/腌制品入窖 → 到期领金币（价值×倍率）
+  {
+    check('地窖', '未解锁（调酒 <10）', freshPlayer({ brewing: 5 }).cellarUnlocked() === false)
+    const pc = freshPlayer({ brewing: 20 })
+    check('地窖', '调酒 20 解锁 + 初始 3 槽', pc.cellarUnlocked() === true && pc.cellarSlots() === 3)
+    pc.inventory.riceWine = 20
+    pc.inventory.apple = 20 // 苹果（水果）不可陈酿
+    check('地窖', '仅酒类/腌制品可陈酿', pc.isAgeable('riceWine') === true && pc.isAgeable('apple') === false)
+    check('地窖', '非陈酿物入窖被拒', pc.cellarPut(0, 'apple', 5, 12).ok === false)
+    const r = pc.cellarPut(0, 'riceWine', 10, 12)
+    check('地窖', '入窖扣物品 + 占槽', r.ok === true && pc.inventory.riceWine === 10 && !!pc.cellarState().slots[0])
+    check('地窖', '未成熟不可领取', pc.cellarClaim(0) === null)
+    const slot = pc.cellarState().slots[0]
+    const g0 = pc.gold
+    slot.readyAt = Date.now() - 1
+    const c = pc.cellarClaim(0)
+    const expectGold = Math.max(1, Math.round((ITEMS.riceWine.value ?? 0) * 10 * 1.5))
+    check('地窖', '到期出窖按价值×倍率给金币', c?.ok === true && c.gold === expectGold && pc.gold === g0 + expectGold, `gold=${c?.gold} expect=${expectGold}`)
+    check('地窖', '出窖后槽位清空 + 计数', pc.cellarState().slots[0] === null && (pc.stats.cellarRounds ?? 0) === 1)
+    // 撤回无损
+    pc.cellarPut(1, 'riceWine', 3, 24)
+    const before = pc.inventory.riceWine
+    pc.cellarTakeBack(1)
+    check('地窖', '撤回无损取回原物', pc.inventory.riceWine === before + 3 && pc.cellarState().slots[1] === null)
+    // 价值上限与扩建
+    check('地窖', '单槽价值上限拦截', pc.cellarPut(0, 'riceWine', 99, 48).ok === false)
+    const slots0 = pc.cellarSlots()
+    pc.gold = 1e6
+    const ex = pc.cellarExpand()
+    check('地窖', '扩建 +3 格', ex.ok === true && pc.cellarSlots() === slots0 + 3)
+  }
+  // 常客名录（2026-09-10）：每日招待偏好料理 → 好感等级换小费加成
+  {
+    const pr = freshPlayer()
+    pr.restaurant.level = 3
+    check('常客', '解锁按餐厅等级', pr.regularUnlocked('r_oldman') === true && pr.regularUnlocked('r_master') === false)
+    check('常客', '偏好类别不符被拒', pr.regularServe('r_oldman', 'apple').ok === false)
+    // 造一道符合要求的料理：主菜 tier ≥1
+    const dish = Object.values(ITEMS).find((it) => it.type === 'food' && it.category === '主菜' && (it.tier ?? 0) >= 1)
+    pr.inventory[dish.id] = 5
+    const s1 = pr.regularServe('r_oldman', dish.id)
+    check('常客', '招待成功扣料理 + 给金币', s1.ok === true && pr.inventory[dish.id] === 4 && s1.gold === 220, JSON.stringify(s1))
+    check('常客', '同日重复招待被拒', pr.regularServe('r_oldman', dish.id).ok === false)
+    // 好感等级：3 次升 1 级、7 次升 2 级
+    pr.regularState('r_oldman').serves = 3
+    check('常客', '好感门槛（3 次 = Lv1）', regularLevelFromServes(3) === 1 && regularLevelFromServes(7) === 2)
+    pr.regularState('r_oldman').serves = 25
+    check('常客', '满好感 Lv5 + 小费加成', regularLevelFromServes(25) === 5 && pr.regularTipPct() === 10)
+    const gift = pr.regularClaimGift('r_oldman')
+    check('常客', '满级谢礼只可领一次', gift.ok === true && pr.inventory.mysterySpice === 1 && pr.regularClaimGift('r_oldman').ok === false)
+  }
+  // 食灵物语（2026-09-10）：羁绊等级解锁心声片段 + 一次性奖励
+  {
+    const ps = freshPlayer()
+    ps.spirits.owned.appleSpirit_1 = 1
+    check('食灵物语', '未达羁绊不可领取', ps.spiritStoryClaim('appleSpirit_1', 2).ok === false)
+    ps.spiritBonds = { appleSpirit_1: 3 * 86400000 } // 3 天 → 羁绊 Lv1（未达片段门槛 2）
+    check('食灵物语', '羁绊 Lv1 未解锁任何片段', ps.spiritStoryStage('appleSpirit_1') === 0 && ps.spiritStoryClaim('appleSpirit_1', 2).ok === false)
+    ps.spiritBonds.appleSpirit_1 = 7 * 86400000 // 7 天 → 羁绊 Lv2
+    check('食灵物语', '羁绊 Lv2 解锁首段、Lv3 仍锁', ps.spiritStoryStage('appleSpirit_1') === 2 && ps.spiritStoryClaim('appleSpirit_1', 3).ok === false)
+    const g0 = ps.gold
+    const c1 = ps.spiritStoryClaim('appleSpirit_1', 2)
+    check('食灵物语', '领取片段给奖励 + 计数', c1.ok === true && ps.gold === g0 + 500 && ps.stats.spiritStoryClaims === 1)
+    check('食灵物语', '同片段不可重复领取', ps.spiritStoryClaim('appleSpirit_1', 2).ok === false)
+    ps.spiritBonds.appleSpirit_1 = 31 * 86400000 // 31 天 → 羁绊满级
+    check('食灵物语', '满羁绊解锁全部 4 段', ps.spiritStoryStage('appleSpirit_1') === 5 && ps.spiritStoryPending() === 3)
+    const before = { ...ps.inventory }
+    ps.spiritStoryClaim('appleSpirit_1', 3)
+    ps.spiritStoryClaim('appleSpirit_1', 4)
+    ps.spiritStoryClaim('appleSpirit_1', 5)
+    check('食灵物语', '四段奖励全发（含神秘调料/能量饼干）', (ps.inventory.mysterySpice ?? 0) - (before.mysterySpice ?? 0) === 3 && (ps.inventory.energyBiscuit ?? 0) - (before.energyBiscuit ?? 0) === 1)
+  }
+  // 自动化中心（2026-09-10）：三项金币解锁自动化
+  {
+    const pa = freshPlayer()
+    pa.gold = 30000
+    check('自动化', '未解锁时自动出售不生效', pa.automationUnlocked('sell') === false)
+    const u1 = pa.automationUnlock('sell')
+    check('自动化', '解锁扣金币 + 标记', u1.ok === true && pa.gold === 25000 && pa.automationUnlocked('sell') === true)
+    check('自动化', '重复解锁被拒', pa.automationUnlock('sell').ok === false)
+    // 自动出售：价值 ≤ 阈值的采集食材，每种保留 1 件；矿物不参与
+    pa.setSellThreshold(30)
+    pa.inventory.apple = 10      // 苹果 value 10
+    pa.inventory.saltOre = 10    // 矿物：不参与
+    const gold0 = pa.gold
+    pa._autoSell()
+    check('自动化', '自动出售低价值食材（保留 1 件）', pa.inventory.apple === 1 && pa.inventory.saltOre === 10 && pa.gold > gold0, `apple=${pa.inventory.apple} saltOre=${pa.inventory.saltOre}`)
+    check('自动化', '自动出售计数', (pa.stats.autoSold ?? 0) === 9)
+    // 自动领取：地窖到期自动结算
+    pa.skills.brewing.level = 20
+    pa.inventory.riceWine = 5
+    pa.cellarPut(0, 'riceWine', 2, 12)
+    pa.cellarState().slots[0].readyAt = Date.now() - 1
+    pa.automationUnlock('claim')
+    pa._autoClaim()
+    check('自动化', '自动领取地窖（成熟即结算）', pa.cellarState().slots[0] === null && (pa.stats.cellarRounds ?? 0) === 1)
+    // 自动续队：常驻配方补队列
+    const inst = getSkillInstance('cooking')
+    inst.player.skills.cooking.level = 99
+    const recipe = inst.recipes.find((r) => Object.keys(r.ingredients).length === 1)
+    if (recipe) {
+      for (const [id, q] of Object.entries(recipe.ingredients)) pa.inventory[id] = q * 3
+      pa.setStandbyRecipe('cooking', recipe.id)
+      pa.automationUnlock('queue')
+      inst.clearQueue()
+      pa._autoRefillQueue()
+      check('自动化', '自动续队（队列空时补常驻配方）', inst.craftQueue.length === 1 && inst.craftQueue[0].recipeId === recipe.id)
+    }
+    check('自动化', '三项全解锁 → 成就条件成立', ['sell', 'queue', 'claim'].every((k) => pa.automationUnlocked(k)))
+  }
+  // 牧场养殖（2026-09-10）：买动物 → 周期消耗饲料产出蛋/奶/肉
+  {
+    const pm = freshPlayer({ farming: 20 })
+    pm.gold = 100000
+    check('牧场', '农耕 20 解锁 + 初始 2 栏', pm.ranchUnlocked() === true && pm.ranchPens() === 2)
+    const b1 = pm.ranchBuy(0, 'chicken')
+    check('牧场', '买下野鸡扣金币 + 占栏', b1.ok === true && pm.gold === 92000 && !!pm.ranchState().pens[0])
+    check('牧场', '同栏重复购买被拒', pm.ranchBuy(0, 'boar').ok === false)
+    // 无饲料不产出
+    pm.ranchState().pens[0].lastAt = Date.now() - 5 * 3600_000
+    pm._tickRanch()
+    check('牧场', '饲料不足不产出', (pm.inventory.pheasantEgg ?? 0) === 0 && (pm.stats.ranchCycles ?? 0) === 0)
+    // 有饲料：4 小时 1 周期 → 野鸡蛋 ×2 + 野鸡肉 ×1，消耗玉米 ×3
+    pm.inventory.corn = 10
+    pm.ranchState().pens[0].lastAt = Date.now() - 4.5 * 3600_000
+    pm._tickRanch()
+    check('牧场', '周期产出蛋/肉 + 扣饲料', (pm.inventory.pheasantEgg ?? 0) === 2 && (pm.inventory.pheasantMeat ?? 0) === 1 && pm.inventory.corn === 7, `egg=${pm.inventory.pheasantEgg} corn=${pm.inventory.corn}`)
+    // 离线补算上限：48 小时只补 12 小时 = 3 个周期
+    const before = pm.stats.ranchCycles ?? 0
+    pm.inventory.corn = 100
+    pm.ranchState().pens[0].lastAt = Date.now() - 48 * 3600_000
+    pm._tickRanch()
+    check('牧场', '离线补算上限 12h（4h 周期 = 3 次）', (pm.stats.ranchCycles ?? 0) - before === 3)
+    const ex = pm.ranchExpand()
+    check('牧场', '扩建 +1 栏', ex.ok === true && pm.ranchPens() === 3)
+    check('牧场', '移出动物清空栏位', pm.ranchRemove(0) === true && pm.ranchState().pens[0] === null)
+  }
+  // 餐厅分店（2026-09-10）：金币开店 → 每小时入账（店长 +25%）
+  {
+    const pb = freshPlayer()
+    pb.gold = 200000
+    check('分店', '餐厅等级不足未解锁', freshPlayer().branchUnlocked() === false)
+    pb.restaurant.level = 5
+    check('分店', '餐厅 5 级解锁', pb.branchUnlocked() === true)
+    const o1 = pb.branchOpen('east')
+    check('分店', '开店扣金币', o1.ok === true && pb.gold === 150000 && !!pb.branches.east)
+    check('分店', '重复开店被拒', pb.branchOpen('east').ok === false)
+    check('分店', '餐厅 5 级时收 = 800×1.4', pb.branchHourlyOf('east') === 1120, String(pb.branchHourlyOf('east')))
+    // 1.5 小时后入账 1 小时
+    const g0 = pb.gold
+    pb.branches.east.lastAt = Date.now() - 1.5 * 3600_000
+    pb._tickBranches()
+    check('分店', '整点入账（1.5h → 1 小时）', pb.gold === g0 + 1120 && (pb.stats.branchGold ?? 0) === 1120)
+    // 离线 48h 只补 12h
+    const g1 = pb.gold
+    pb.branches.east.lastAt = Date.now() - 48 * 3600_000
+    pb._tickBranches()
+    check('分店', '离线补算上限 12h', pb.gold === g1 + 1120 * 12)
+    // 店长 +25%
+    const hire = pb.branchHireManager('east')
+    check('分店', '雇店长扣费 + 时收 +25%', hire.ok === true && pb.branchHourlyOf('east') === Math.floor(800 * 1.4 * 1.25))
+  }
+  // 交易所（2026-09-10）：动态价格买低卖高 + 每日限额
+  {
+    check('交易所', '调料调配不足未解锁', freshPlayer({ spiceMixing: 5 }).exchangeUnlocked() === false)
+    const px = freshPlayer({ spiceMixing: 20 })
+    const goods = px.exchangeGoods()
+    check('交易所', '本期货单 6 件且均为既有食材', goods.length === 6 && goods.every((g) => !!ITEMS[g.item.id]))
+    check('交易所', '同期货价确定（两次一致）', goods.every((g, i) => g.sell === px.exchangeGoods()[i].sell))
+    check('交易所', '买卖价差 35%', goods.every((g) => g.buy === Math.round(g.sell * 1.35)))
+    const g0 = goods[0]
+    px.inventory[g0.item.id] = 10
+    const gold0 = px.gold
+    const s1 = px.exchangeSell(g0.item.id, 4)
+    check('交易所', '卖出扣货 + 入账', s1.ok === true && px.inventory[g0.item.id] === 6 && px.gold === gold0 + g0.sell * 4)
+    check('交易所', '成交计入每日额度', px.exchangeTradedToday(g0.item.id) === 4)
+    px.gold = 1e7
+    const b1 = px.exchangeBuy(g0.item.id, 3)
+    check('交易所', '买入扣金币 + 入包', b1.ok === true && px.inventory[g0.item.id] === 9 && px.exchangeTradedToday(g0.item.id) === 7)
+    check('交易所', '超出每日额度被拒', px.exchangeSell(g0.item.id, 999).ok === false)
+    const offGoods = Object.values(ITEMS).find((it) => it.type === 'ingredient' && !goods.some((g) => g.item.id === it.id))
+    check('交易所', '非本期货品不可交易', px.exchangeSell(offGoods.id, 1).ok === false)
+  }
+  // 厨神试炼（2026-09-10）：限制条件判定 + 首通/重复奖励
+  {
+    const pt = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 }) // 对决等级 = (40+40+40)/3 = 40
+    check('试炼', '对决 30 级解锁', pt.combatLevel === 40 && pt.trialsUnlocked() === true && freshPlayer().trialsUnlocked() === false, `combatLevel=${pt.combatLevel}`)
+    // 速攻：12 回合内 → 通关
+    pt.trialStart('t_speed')
+    const r1 = pt.onCombatEndTrial({ result: 'win', turns: 8, hpLeft: 50, hpMax: 100 })
+    check('试炼', '速攻达标通关 + 首通奖励', r1?.passed === true && r1.first === true && pt.trialState('t_speed').clears === 1)
+    // 速攻：13 回合 → 不达标并退出
+    pt.trialStart('t_speed')
+    const r2 = pt.onCombatEndTrial({ result: 'win', turns: 13, hpLeft: 50, hpMax: 100 })
+    check('试炼', '超出回合数不达标', r2?.passed === false && pt.activeTrial === null)
+    // 无伤：95% 血量 → 通关；80% → 不达标
+    pt.trialStart('t_flawless')
+    const r3 = pt.onCombatEndTrial({ result: 'win', turns: 30, hpLeft: 95, hpMax: 100 })
+    check('试炼', '无伤达标（≥90% 血量）', r3?.passed === true)
+    pt.trialStart('t_flawless')
+    const r4 = pt.onCombatEndTrial({ result: 'win', turns: 30, hpLeft: 80, hpMax: 100 })
+    check('试炼', '血量不足不达标', r4?.passed === false)
+    // 连胜：3 连胜才通关，中间失败清零
+    pt.trialStart('t_streak')
+    pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    check('试炼', '连胜进度累计', pt.trialState('t_streak').streak === 2)
+    const r5 = pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    check('试炼', '3 连胜通关 + 清零', r5?.passed === true && pt.trialState('t_streak').streak === 0)
+    // 重复通关给 30% 金币
+    const g0 = pt.gold
+    pt.trialStart('t_speed')
+    const r6 = pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    check('试炼', '重复通关 30% 金币', r6?.passed === true && r6.first === false && pt.gold - g0 === Math.round(4000 * 0.3))
+    // 失败退出
+    pt.trialStart('t_overlevel')
+    const r7 = pt.onCombatEndTrial({ result: 'lose', turns: 3, hpLeft: 0, hpMax: 100 })
+    check('试炼', '失败自动退出', r7?.passed === false && pt.activeTrial === null)
   }
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限
   {

@@ -4,7 +4,7 @@
 
 import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
-import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
+import { masteryLevelFromCount, masteryLevelProgress, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { getSkillDef } from '../data/skills.js'
 import { applyCraftXp } from './xpBalance.js'
 
@@ -51,6 +51,16 @@ export class ProductionSkill extends Skill {
   /** 制作配方卡片的精通等级（0~100），按配方 id 累计获得次数反推 */
   masteryLevel(recipe) {
     return masteryLevelFromCount(this.mastery[recipe.id] ?? 0)
+  }
+
+  /** 该配方的精通累计次数（厨房笔记 / 图鉴展示用） */
+  masteryCount(recipe) {
+    return this.mastery[recipe.id] ?? 0
+  }
+
+  /** 该配方的精通进度：{ level, current(本级内次数), needed(升下 1 级需次数), progress(0~1) } */
+  masteryProgress(recipe) {
+    return masteryLevelProgress(this.mastery[recipe.id] ?? 0)
   }
 
   /**

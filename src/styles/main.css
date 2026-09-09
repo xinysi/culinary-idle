@@ -626,10 +626,108 @@ h2 {
   vertical-align: middle;
 }
 
+/* 左栏页签（2026-09-10）：技能 / 功能 */
+.sidebar-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 8px 0;
+  flex-shrink: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(255, 252, 246, 0.30);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px dashed rgba(74, 47, 38, 0.18);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sidebar-tab:hover {
+  background: rgba(255, 252, 246, 0.62);
+  border-color: rgba(217, 90, 56, 0.45);
+}
+
+.sidebar-tab.active {
+  background: rgba(217, 90, 56, 0.25);
+  border-color: rgba(217, 90, 56, 0.55);
+  color: var(--primary-strong);
+}
+
 .skill-nav {
   flex: 1;
   padding: 8px;
   overflow-y: auto;
+}
+
+/* ── 左栏功能页分组（2026-09-10）：非高频功能页从顶栏移入此处 ── */
+.feature-nav {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.feature-group-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 4px 2px 6px;
+}
+
+/* 功能页方块网格（2026-09-10）：全部展开、一行三个、正方形磁贴 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.feature-tile {
+  aspect-ratio: 1;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  text-align: center;
+  background: rgba(255, 252, 246, 0.30);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px dashed rgba(74, 47, 38, 0.14);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.feature-tile:hover {
+  background: rgba(255, 252, 246, 0.66);
+  border-color: rgba(217, 90, 56, 0.45);
+  transform: translateY(-2px);
+}
+
+.feature-tile.active {
+  background: rgba(217, 90, 56, 0.25);
+  border-color: rgba(217, 90, 56, 0.55);
+  color: var(--primary-strong);
+}
+
+.feature-tile .feature-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.feature-tile .feature-name {
+  font-size: 10px;
+  line-height: 1.15;
+  word-break: break-all;
 }
 
 .skill-cat {
@@ -2461,6 +2559,45 @@ h2 {
 }
 
 /* ── 攻略（GuideView）───────────────────────────── */
+.guide-overview .ov-card {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+}
+
+.guide-overview .ov-item {
+  border-top: 1px dashed var(--border);
+  padding: 8px 0 6px;
+}
+
+.guide-overview .ov-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.guide-overview .ov-icon {
+  font-size: 16px;
+}
+
+.guide-overview .ov-name {
+  font-size: 13px;
+}
+
+.guide-overview .ov-stage {
+  font-size: 10px;
+}
+
+.guide-overview .ov-unlock {
+  font-size: 11px;
+}
+
+.guide-overview .ov-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .guide-list {
   margin: 4px 0 12px;
   padding-left: 20px;

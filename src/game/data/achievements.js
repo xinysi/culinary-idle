@@ -6,6 +6,21 @@
 import { SKILL_DEFS } from './skills.js'
 import { ITEMS } from './items.js'
 import { equipSetBonuses } from './equipSets.js'
+import { masteryLevelFromCount } from '../core/mastery.js'
+import { REGULARS, regularLevelFromServes } from './regulars.js'
+
+// 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
+const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
+
+/** 全部配方的精通等级列表（0~100） */
+function recipeMasteryLevels(p) {
+  const out = []
+  for (const id of PROD_SKILL_IDS) {
+    const m = p?.skills?.[id]?.mastery ?? {}
+    for (const v of Object.values(m)) out.push(masteryLevelFromCount(v ?? 0))
+  }
+  return out
+}
 
 const LEVEL_TIERS = [
   { level: 10, suffix: '学徒', gold: 100 },
@@ -93,6 +108,26 @@ export const ACHIEVEMENTS = [
   { id: 'insight12', name: '图谱宗师', category: '特殊', desc: '解锁全部 12 个菜系图谱节点', title: '菜系宗师', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => (p.insights?.length ?? 0) >= 12 },
   { id: 'challenge4', name: '挑战达人', category: '特殊', desc: '完成 4 次每周挑战', reward: { gold: 4000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.challengesDone ?? 0) >= 4 },
   { id: 'plan3', name: '计划执行者', category: '特殊', desc: '完成 3 次挂机计划', reward: { gold: 3000 }, check: (p) => (p.stats?.plansDone ?? 0) >= 3 },
+  // ── 2026-09-10 新增页面（厨房笔记 / 名人堂 / 地窖 / 常客 / 食灵物语 / 自动化 / 牧场 / 分店 / 交易所 / 试炼）──
+  { id: 'note20', name: '笔记入门', category: '特殊', desc: '20 张配方精通达到 50 级', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => recipeMasteryLevels(p).filter((l) => l >= 50).length >= 20 },
+  { id: 'note100', name: '笔记宗师', category: '特殊', desc: '100 张配方精通达到 50 级', title: '笔记宗师', reward: { gold: 12000, items: { mysterySpice: 2 } }, check: (p) => recipeMasteryLevels(p).filter((l) => l >= 50).length >= 100 },
+  { id: 'noteMax', name: '专精一菜', category: '特殊', desc: '任一配方精通达到 100 级', reward: { gold: 5000, items: { mysterySpice: 1 } }, check: (p) => recipeMasteryLevels(p).some((l) => l >= 100) },
+  { id: 'cellar1', name: '初入酒窖', category: '特殊', desc: '完成 1 次地窖陈酿出窖', reward: { gold: 800 }, check: (p) => (p.stats?.cellarRounds ?? 0) >= 1 },
+  { id: 'cellar50', name: '酒窖大师', category: '特殊', desc: '累计地窖出窖 50 次', title: '酒窖大师', reward: { gold: 6000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.cellarRounds ?? 0) >= 50 },
+  { id: 'regular20', name: '熟客满堂', category: '特殊', desc: '累计招待常客 20 次', reward: { gold: 1500, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.regularServes ?? 0) >= 20 },
+  { id: 'regular1', name: '常客盈门', category: '特殊', desc: '1 位常客好感达到满级', reward: { gold: 3000, items: { mysterySpice: 1 } }, check: (p) => REGULARS.some((r) => regularLevelFromServes(p.regulars?.[r.id]?.serves ?? 0) >= 5) },
+  { id: 'regularAll', name: '宾至如归', category: '特殊', desc: '全部 8 位常客好感满级', title: '宾至如归', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => REGULARS.every((r) => regularLevelFromServes(p.regulars?.[r.id]?.serves ?? 0) >= 5) },
+  { id: 'story1', name: '物语初章', category: '特殊', desc: '解锁并领取 1 段食灵物语', reward: { gold: 600 }, check: (p) => (p.stats?.spiritStoryClaims ?? 0) >= 1 },
+  { id: 'story40', name: '食灵知音', category: '特殊', desc: '累计领取 40 段食灵物语', title: '食灵知音', reward: { gold: 8000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.spiritStoryClaims ?? 0) >= 40 },
+  { id: 'auto3', name: '自动化大师', category: '特殊', desc: '解锁全部 3 项自动化', title: '自动化大师', reward: { gold: 6000, items: { energyBiscuit: 1 } }, check: (p) => ['sell', 'queue', 'claim'].every((k) => p.automation?.unlocked?.[k]) },
+  { id: 'ranch1', name: '牧场开张', category: '特殊', desc: '首次买下动物', reward: { gold: 1200 }, check: (p) => (p.ranch?.pens ?? []).some((x) => x?.animalId) },
+  { id: 'ranch50', name: '牧场主', category: '特殊', desc: '牧场累计产出 50 个周期', title: '牧场主', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.ranchCycles ?? 0) >= 50 },
+  { id: 'branch1', name: '首开分店', category: '特殊', desc: '开设第一家分店', reward: { gold: 3000 }, check: (p) => Object.keys(p.branches ?? {}).length >= 1 },
+  { id: 'branchAll', name: '连锁帝国', category: '特殊', desc: '四家分店全部开业并雇满店长', title: '连锁帝国', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => ['east', 'west', 'south', 'north'].every((id) => p.branches?.[id]?.manager) },
+  { id: 'ex10', name: '第一桶金', category: '特殊', desc: '交易所累计成交 10 件', reward: { gold: 1500 }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 10 },
+  { id: 'ex500', name: '行情老手', category: '特殊', desc: '交易所累计成交 500 件', title: '行情老手', reward: { gold: 9000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 500 },
+  { id: 'trial1', name: '初次试炼', category: '特殊', desc: '通关任意一条厨神试炼', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.trialClears ?? 0) >= 1 },
+  { id: 'trialAll', name: '厨神之证', category: '特殊', desc: '四条试炼各通关至少 1 次', title: '厨神之证', reward: { gold: 25000, items: { mysterySpice: 2 } }, check: (p) => ['t_speed', 't_flawless', 't_overlevel', 't_streak'].every((id) => (p.trials?.[id]?.clears ?? 0) >= 1) },
 ]
 
 export const ALL_ACHIEVEMENTS = [...buildSkillAchievements(), ...ACHIEVEMENTS]
