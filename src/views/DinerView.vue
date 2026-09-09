@@ -56,7 +56,6 @@ const maxCombo = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.diner?.best ?? 0)
 const cfg = computed(() => MODES[mode.value])
 const targetText = computed(() => `${score.value}/${cfg.value.target}`)
@@ -138,7 +137,7 @@ function pick(i) {
 }
 function serve(c) {
   if (!started.value || over.value) return
-  if (sel.value < 0) { hint.value = '先点下方的菜，再点客人上菜'; return }
+  if (sel.value < 0) { return }
   const dish = slots.value[sel.value]
   if (!dish) return
   if (dish === c.dish) {
@@ -149,7 +148,6 @@ function serve(c) {
     const mult = 1 + Math.min(0.5, 0.1 * (combo.value - 1))
     const gain = Math.round(dishScore(dish) * mult)
     score.value += gain
-    hint.value = `${dishName(dish)} 上菜成功 +${gain}${combo.value >= 2 ? '（连击 ×' + combo.value + '）' : ''}`
     beep(880, 0.07)
     setTimeout(() => beep(1175, 0.08), 70)
     // 移除客人与该盘菜
@@ -162,7 +160,6 @@ function serve(c) {
   } else {
     combo.value = 0
     comboAt = 0
-    hint.value = `上错菜了！客人要的是 ${dishName(c.dish)}`
     beep(180, 0.2, 'sawtooth', 0.07)
     customers.value = customers.value.map((x) => x.key === c.key ? { ...x, flash: 0.5 } : x)
   }
@@ -195,7 +192,6 @@ function loop() {
       if (lost > 0) {
         lives.value -= lost
         combo.value = 0
-        hint.value = '客人等急了走了！-1 ❤'
         beep(150, 0.3, 'sawtooth', 0.09)
         if (lives.value <= 0) settle()
       }
@@ -238,7 +234,6 @@ function reset() {
   cookAccum = 0
   spawnAccum = 0
   comboAt = 0
-  hint.value = '点击「开始游戏」后，先点下方的菜，再点客人上菜'
   running = true
   startLoop()
 }
@@ -250,7 +245,6 @@ function startGame() {
   // 开局先来 2 位客人 + 2 盘菜
   addCustomer(); addCustomer()
   addDish(); addDish()
-  hint.value = '先点下方的菜，再点对应客人上菜'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -334,8 +328,6 @@ onUnmounted(() => { stopLoop() })
         </div>
       </div>
     </div>
-
-    <div class="dn-hint">{{ hint }}</div>
 
     <div class="dn-keys">
       <button v-if="!started" class="dn-start" @click="startGame()">▶ 开始游戏</button>
@@ -443,14 +435,6 @@ onUnmounted(() => { stopLoop() })
 .dn-slot.sel { border-color: var(--primary-strong); box-shadow: 0 0 0 3px rgba(217, 90, 56, 0.25); transform: translateY(-3px); }
 .dn-slot.empty { background: rgba(255, 255, 255, 0.45); border-style: dashed; cursor: default; }
 .dn-slot-empty { font-size: 11px; color: var(--muted); }
-
-.dn-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .dn-keys {
   display: flex;
   gap: 10px;

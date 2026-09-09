@@ -55,7 +55,6 @@ const maxCombo = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.breakout?.best ?? 0)
 const targetText = computed(() => `${score.value}/${MODES[mode.value].target}`)
 const goldText = computed(() => {
@@ -542,12 +541,10 @@ function drawHud(ctx, dark) {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(90,60,30,0.65)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击下方「开始游戏」，移动鼠标控制锅铲', W / 2, H / 2)
   } else if (balls.some((b) => b.stuck) && !overFlag) {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(90,60,30,0.7)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击/空格 发球', W / 2, H - 130)
   }
 }
 
@@ -579,7 +576,6 @@ function reset() {
   shake = 0
   comboAt = 0
   keyDir = 0
-  hint.value = '点击「开始游戏」后，移动鼠标控制锅铲'
   running = true
   startLoop()
 }
@@ -590,7 +586,6 @@ function startGame() {
   timeAccum = 0
   buildWave()
   resetBalls()
-  hint.value = '移动锅铲接球 · 点击/空格 发球'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -645,8 +640,6 @@ onUnmounted(() => {
     </div>
 
     <canvas ref="canvas" class="bk-canvas" :width="W" :height="H" @pointerdown="onDown" @pointermove="onMove"></canvas>
-
-    <div class="bk-hint">{{ hint }}</div>
 
     <div class="bk-keys">
       <button v-if="!started" class="bk-start" @click="startGame()">▶ 开始游戏</button>
@@ -734,13 +727,6 @@ onUnmounted(() => {
   border: none;
 }
 .bk-canvas { width: min(760px, 98%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: none; touch-action: none; }
-.bk-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .bk-keys {
   display: flex;
   gap: 10px;

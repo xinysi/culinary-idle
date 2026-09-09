@@ -102,7 +102,6 @@ const over = ref(false)
 const passed = ref(false)
 const caughtList = ref([]) // { id, name, r, score, n }
 const showInfo = ref(false)
-const hint = ref('')
 const started = ref(false)
 const combo = ref(0)
 const maxCombo = ref(0)
@@ -231,7 +230,6 @@ function onDown(e) {
     phase = 'charge'
     charge = 0
     aimX = clamp(p.x, 44, W - 44)
-    hint.value = '松手抛竿！（蓄力越满抛得越深，深水鱼更稀有）'
     beep(520, 0.05)
   } else if (phase === 'bite') {
     strike()
@@ -268,7 +266,6 @@ function reelIn() {
   reelT = 0
   reelFrom = { x: hook.x, y: hook.y }
   hook.inWater = false
-  hint.value = '收杆中…'
   beep(320, 0.1, 'sine', 0.05)
 }
 
@@ -282,7 +279,6 @@ function cast() {
   hook.t = 0
   hook.inWater = false
   phase = 'sink'
-  hint.value = '鱼钩下潜中…'
   beep(720, 0.07)
 }
 function splash(x, y, n = 8, kind = 'drop') {
@@ -302,7 +298,6 @@ function startBite(f) {
   biteMax = m.win * (bait ? 1.3 : 1)
   biteT = biteMax
   f.state = 'nibble'
-  hint.value = '！咬钩了 —— 点击提竿！'
   beep(980, 0.06, 'square', 0.06)
 }
 function missStrike() {
@@ -312,7 +307,6 @@ function missStrike() {
   streak = 0
   combo.value = 0
   phase = 'wait'
-  hint.value = '鱼跑了…再来一次'
   floats.push({ x: hook.x, y: hook.y - 14, text: '跑掉了', life: 0, max: 0.9, color: '#e06a5a' })
   beep(220, 0.18, 'sawtooth', 0.05)
 }
@@ -336,7 +330,6 @@ function strike() {
   f.state = 'hooked'
   phase = 'fight'
   biteFish = null
-  hint.value = '按住让绿条上浮，把鱼保持在绿条内！'
   beep(620, 0.08, 'triangle')
 }
 
@@ -384,7 +377,6 @@ function escapeFish() {
   hook.inWater = false
   floats.push({ x: hook.x, y: hook.y - 10, text: '断线！', life: 0, max: 1.0, color: '#e06a5a' })
   splash(hook.x, hook.y, 10)
-  hint.value = '线断了…连击清零'
   beep(180, 0.26, 'sawtooth', 0.06)
 }
 
@@ -420,7 +412,6 @@ function loop() {
         hook.inWater = true
         hook.y = hook.ty
         phase = 'wait'
-        hint.value = '静待鱼咬钩（拖动移动鱼钩 · 点击水面收杆）'
         splash(hook.x, WATER_TOP, 7)
         beep(420, 0.09, 'sine', 0.05)
       }
@@ -443,7 +434,6 @@ function loop() {
         fight = null
         landFrom = null
         resetHook()
-        hint.value = '按住水面蓄力抛竿'
       }
     }
     if (phase === 'escape') {
@@ -451,7 +441,6 @@ function loop() {
       if (escapeT <= 0) {
         phase = 'ready'
         resetHook()
-        hint.value = '按住水面蓄力抛竿'
       }
     }
     // 收杆动画
@@ -465,7 +454,6 @@ function loop() {
         phase = 'ready'
         reelFrom = null
         resetHook()
-        hint.value = '按住水面蓄力抛竿'
       }
     }
     // 鱼群
@@ -1243,7 +1231,6 @@ function drawHud(ctx, pal) {
     ctx.fillStyle = 'rgba(255,255,255,0.55)'
     ctx.font = '11px system-ui, sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText(started.value ? '按住水面蓄力抛竿' : '点击下方「开始游戏」', W / 2, H - 16)
   }
 }
 function drawVignette(ctx) {
@@ -1289,7 +1276,6 @@ function reset() {
   downPos = null
   reelFrom = null
   started.value = false
-  hint.value = '点击「开始游戏」后，按住水面蓄力抛竿'
   running = true
   for (let i = 0; i < 8; i++) spawnFish()
   startLoop()
@@ -1300,7 +1286,6 @@ function startGame() {
   started.value = true
   timeLeft.value = MODES[mode.value].dur
   timeAccum = 0
-  hint.value = '按住水面蓄力抛竿'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -1383,8 +1368,6 @@ onUnmounted(() => {
     </div>
 
     <canvas ref="canvas" class="fh-canvas" :width="W" :height="H" @pointerdown="onDown" @pointermove="onMove"></canvas>
-
-    <div class="fh-hint">{{ hint }}</div>
 
     <div class="fh-keys">
       <button v-if="!started" class="fh-start" @click="startGame()">▶ 开始游戏</button>
@@ -1487,13 +1470,6 @@ onUnmounted(() => {
   border: none;
 }
 .fh-canvas { width: min(420px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: crosshair; touch-action: none; }
-.fh-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .fh-keys {
   display: flex;
   gap: 10px;

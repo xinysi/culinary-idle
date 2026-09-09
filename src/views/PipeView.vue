@@ -37,7 +37,6 @@ const elapsed = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const flowSet = ref(new Set())
 const flowOrder = ref(new Map())
 const best = computed(() => player.minigames?.pipe?.best ?? 0)
@@ -367,13 +366,11 @@ function reset() {
   started.value = false
   flowSet.value = new Set()
   flowOrder.value = new Map()
-  hint.value = '点击「开始游戏」后，点击管道旋转 90°，把汤汁从锅接到碗'
 }
 function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
-  hint.value = cfg.value.dual ? '两对锅碗都要接通（注意单向阀只能顺着箭头流）' : '点击管道旋转，把锅和碗用管道连通'
   beep(880, 0.08)
 }
 
@@ -414,8 +411,6 @@ onUnmounted(() => { stopTimer() })
         </div>
       </div>
     </div>
-
-    <div class="pp-hint">{{ hint }}</div>
 
     <div class="pp-keys">
       <button v-if="!started" class="pp-start" @click="startGame()">▶ 开始游戏</button>
@@ -525,14 +520,6 @@ onUnmounted(() => { stopTimer() })
 }
 .pp-cell.flow .pp-arm, .pp-cell.flow .pp-hub { animation: ppPipe 0.9s ease forwards; animation-delay: var(--flow-delay); }
 @keyframes ppPipe { 0% { background: #b9a08a; } 40% { background: var(--pair-pipe, #e8a24a); } 100% { background: var(--pair-pipe, #d98a3a); } }
-
-.pp-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .pp-keys {
   display: flex;
   gap: 10px;

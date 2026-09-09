@@ -33,7 +33,6 @@ const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
 const flagMode = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.mines?.best ?? 0)
 const cfg = computed(() => MODES[mode.value])
 const cellSize = computed(() => {
@@ -155,7 +154,6 @@ function tap(i) {
     cells.value = ns
     lives.value--
     beep(150, 0.3, 'sawtooth', 0.09)
-    hint.value = '踩到烂食材！-1 ❤'
     if (lives.value <= 0) { settle(false); return }
   } else {
     // 展开（0 格连锁）
@@ -171,7 +169,6 @@ function tap(i) {
     }
     cells.value = ns
     beep(660 + Math.min(6, opened) * 40, 0.05, 'triangle', 0.05)
-    hint.value = opened > 1 ? `展开 ${opened} 格` : '继续推理'
   }
   checkWin()
 }
@@ -237,13 +234,11 @@ function reset() {
   over.value = false
   passed.value = false
   started.value = false
-  hint.value = '点击「开始游戏」后开格子，数字 = 周围 8 格的烂食材数'
 }
 function startGame() {
   if (over.value) return
   started.value = true
   startTimer()
-  hint.value = '点格子挖开 · 数字表示周围烂食材数 · 可切「🚩 标记」插旗'
   beep(880, 0.08)
 }
 
@@ -283,8 +278,6 @@ onUnmounted(() => { stopTimer() })
         <template v-else-if="c.flag">🚩</template>
       </div>
     </div>
-
-    <div class="ms-hint">{{ hint }}</div>
 
     <div class="ms-keys">
       <button v-if="!started" class="ms-start" @click="startGame()">▶ 开始游戏</button>
@@ -384,14 +377,6 @@ onUnmounted(() => { stopTimer() })
 .ms-n6 { color: #2f8f88; }
 .ms-n7 { color: #8a4a2e; }
 .ms-n8 { color: #6b4a2a; }
-
-.ms-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .ms-keys {
   display: flex;
   gap: 10px;

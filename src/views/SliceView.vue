@@ -83,7 +83,6 @@ const maxCombo = ref(0)
 const over = ref(false)
 const passed = ref(false)
 const started = ref(false)
-const hint = ref('')
 const best = computed(() => player.minigames?.slice?.best ?? 0)
 const targetText = computed(() => `${score.value}/${MODES[mode.value].target}`)
 const goldText = computed(() => {
@@ -660,7 +659,6 @@ function drawHud(ctx, dark) {
     ctx.textAlign = 'center'
     ctx.fillStyle = dark ? 'rgba(255,255,255,0.5)' : 'rgba(90,60,30,0.65)'
     ctx.font = '13px system-ui, sans-serif'
-    ctx.fillText('点击下方「开始游戏」，然后按住拖动切菜', W / 2, H / 2)
   }
 }
 
@@ -688,7 +686,6 @@ function reset() {
   overFlag = false
   passed.value = false
   started.value = false
-  hint.value = '点击「开始游戏」后按住拖动切菜'
   running = true
   startLoop()
 }
@@ -697,7 +694,6 @@ function startGame() {
   started.value = true
   timeLeft.value = MODES[mode.value].dur
   timeAccum = 0
-  hint.value = '按住拖动划开食材！别切到锅盖'
   beep(880, 0.08)
   setTimeout(() => beep(1175, 0.1), 90)
 }
@@ -752,8 +748,6 @@ onUnmounted(() => {
     </div>
 
     <canvas ref="canvas" class="sk-canvas" :width="W" :height="H" @pointerdown="onDown" @pointermove="onMove"></canvas>
-
-    <div class="sk-hint">{{ hint }}</div>
 
     <div class="sk-keys">
       <button v-if="!started" class="sk-start" @click="startGame()">▶ 开始游戏</button>
@@ -842,13 +836,6 @@ onUnmounted(() => {
   border: none;
 }
 .sk-canvas { width: min(420px, 94%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); cursor: crosshair; touch-action: none; }
-.sk-hint {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-  min-height: 18px;
-}
 .sk-keys {
   display: flex;
   gap: 10px;
