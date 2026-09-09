@@ -196,7 +196,7 @@ resetRound()
         </div>
         <button v-if="cur.picked != null && idx < qlist.length - 1" class="tv-next" @click="nextQ">下一题 →</button>
       </template>
-      <div v-else class="tv-flag">✅ 本模式完成</div>
+      <div v-else-if="started" class="tv-flag">✅ 本模式完成</div>
     </div>
 
         <div v-if="doneAll" class="tv-mask">

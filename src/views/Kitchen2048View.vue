@@ -364,7 +364,7 @@ function posStyle(t) {
 }
 .g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text); }
 .g2048-key:hover { border-color: var(--primary-strong); }
-.g2048-reset { padding: 0 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
+.g2048-reset { padding: 0 24px; height: 46px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .g2048-info-btn {
   padding: 5px 12px;
   border-radius: 999px;

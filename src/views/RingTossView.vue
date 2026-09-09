@@ -317,11 +317,6 @@ function draw() {
   }
   // 目标（盘子 + 食材）
   for (const t of targets) {
-    // 盘子投影
-    ctx.beginPath()
-    ctx.ellipse(t.x, t.y + t.r * 0.28, t.r * 0.95, t.r * 0.34, 0, 0, Math.PI * 2)
-    ctx.fillStyle = dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,60,30,0.14)'
-    ctx.fill()
     // 盘面
     ctx.beginPath()
     ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2)
