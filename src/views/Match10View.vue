@@ -355,8 +355,17 @@ reset()
       <button class="m10-hint" :disabled="hintN <= 0 || won || lost" @click="useHint()">💡 提示 ×{{ hintN }}</button>
       <button class="m10-shuffle" :disabled="reshuffleN <= 0 || won || lost" @click="reshuffle()">🔀 重排 ×{{ reshuffleN }}</button>
     </div>
-    <div v-if="won" class="m10-done ok">🎉 全清通关！+{{ MODES[mode].gold }} 游戏币</div>
-    <div v-else-if="lost" class="m10-done">💦 无可配对或步数耗尽 —— 重置本局再来</div>
+        <div v-if="won || lost" class="m10-mask">
+      <div class="m10-result">
+        <div class="m10-result-head"><b>{{ won ? '🎉 全清通关！' : '💦 本局失败' }}</b></div>
+        <div class="m10-result-score"><span v-if="won" class="m10-gold">+{{ MODES[mode].gold }} 游戏币</span><span v-else>无可配对或步数耗尽</span></div>
+        <button class="m10-again" @click="reset()">🔄 再来一局</button>
+      </div>
+      <div v-if="won" class="m10-fire">
+        <span v-for="i in 20" :key="i" class="m10-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
+    
 
     <!-- 通关礼花 -->
     <div v-if="celebrating" class="m10-fire">
@@ -457,8 +466,6 @@ reset()
 .m10-hint { padding: 9px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
 .m10-hint:disabled, .m10-shuffle:disabled { opacity: 0.45; cursor: not-allowed; }
 .m10-shuffle { padding: 9px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #5b8fd9, #3b6cb0); border: none; }
-.m10-done { font-weight: 800; color: var(--bad-strong); }
-.m10-done.ok { color: var(--good-strong); }
 .m10-fire { position: fixed; inset: 0; z-index: 320; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .m10-spark { position: absolute; font-size: 22px; color: var(--gold); animation: m10spark 1.1s ease-out forwards; }
 @keyframes m10spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
@@ -512,4 +519,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── m10 结算弹窗（2026-09-09 统一）── */
+.m10-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.m10-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.m10-result-head { font-size: 18px; }
+.m10-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.m10-gold { color: var(--good-strong); font-weight: 800; }
+.m10-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.m10-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.m10-spark { position: absolute; font-size: 22px; color: var(--gold); animation: m10Spark 1.1s ease-out forwards; }
+@keyframes m10Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

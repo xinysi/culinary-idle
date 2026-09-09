@@ -137,8 +137,17 @@ resetDay()
     <div class="mm-keys">
       <button class="mm-reset" @click="resetDay()">重新洗牌</button>
     </div>
-    <div v-if="done" class="mm-done">🧠 全部配对！+{{ MODES[mode].gold }} 游戏币</div>
-    <div v-if="failed" class="mm-done mm-fail">💦 超限未清！重新洗牌再来</div>
+        <div v-if="done || failed" class="mm-mask">
+      <div class="mm-result">
+        <div class="mm-result-head"><b>{{ done ? '🧠 全部配对！' : '💦 超限未清！' }}</b></div>
+        <div class="mm-result-score"><span v-if="done" class="mm-gold">+{{ MODES[mode].gold }} 游戏币</span><span v-else>再来一局</span></div>
+        <button class="mm-again" @click="resetDay()">🔄 再来一局</button>
+      </div>
+      <div v-if="done" class="mm-fire">
+        <span v-for="i in 20" :key="i" class="mm-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
+    
 
     <div v-if="showInfo" class="mm-info-mask" @click.self="showInfo = false">
       <div class="mm-info-box">
@@ -247,8 +256,6 @@ resetDay()
   flex-wrap: wrap;
 }
 .mm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
-.mm-done { font-weight: 800; color: var(--good-strong); }
-.mm-fail { color: var(--bad-strong); }
 .mm-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .mm-info-box {
   width: min(620px, 92vw);
@@ -299,4 +306,15 @@ resetDay()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── mm 结算弹窗（2026-09-09 统一）── */
+.mm-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.mm-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.mm-result-head { font-size: 18px; }
+.mm-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.mm-gold { color: var(--good-strong); font-weight: 800; }
+.mm-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.mm-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.mm-spark { position: absolute; font-size: 22px; color: var(--gold); animation: mmSpark 1.1s ease-out forwards; }
+@keyframes mmSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

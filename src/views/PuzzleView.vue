@@ -158,8 +158,17 @@ const cells = computed(() => tiles.value)
     <div class="pz-keys">
       <button class="pz-reset" @click="resetDay()">🔀 重新打乱</button>
     </div>
-    <div v-if="won" class="pz-done">🎉 复原完成！+{{ MODES[mode].gold }} 游戏币</div>
-    <div v-if="failed" class="pz-done pz-fail">💦 步数超限！本局未完成 —— 重新打乱再来</div>
+        <div v-if="won || failed" class="pz-mask">
+      <div class="pz-result">
+        <div class="pz-result-head"><b>{{ won ? '🎉 复原完成！' : '💦 步数超限！' }}</b></div>
+        <div class="pz-result-score"><span v-if="won" class="pz-gold">+{{ MODES[mode].gold }} 游戏币</span><span v-else>本局未完成</span></div>
+        <button class="pz-again" @click="resetDay()">🔄 再来一局</button>
+      </div>
+      <div v-if="won" class="pz-fire">
+        <span v-for="i in 20" :key="i" class="pz-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
+    
     <div v-if="showInfo" class="pz-info-mask" @click.self="showInfo = false">
       <div class="pz-info-box">
         <div class="pz-info-head"><b>🧩 美食拼图 · 十种模式说明</b><button class="pz-info-close" @click="showInfo = false">✕</button></div>
@@ -249,8 +258,6 @@ const cells = computed(() => tiles.value)
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.pz-done { font-weight: 800; color: var(--good-strong); }
-.pz-fail { color: var(--bad-strong); }
 .pz-tip { color: var(--muted); font-size: 12px; }
 .pz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .pz-info-box {
@@ -302,4 +309,15 @@ const cells = computed(() => tiles.value)
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── pz 结算弹窗（2026-09-09 统一）── */
+.pz-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.pz-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.pz-result-head { font-size: 18px; }
+.pz-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.pz-gold { color: var(--good-strong); font-weight: 800; }
+.pz-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.pz-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.pz-spark { position: absolute; font-size: 22px; color: var(--gold); animation: pzSpark 1.1s ease-out forwards; }
+@keyframes pzSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

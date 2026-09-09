@@ -247,7 +247,13 @@ reset()
       <button class="fb-reset" @click="reset()">重新开始</button>
       <button class="fb-start" @click="flap()">{{ over ? '🏁 再来一局' : running ? '🦅 扑翼（空格/点击画面）' : '▶ 开始' }}</button>
     </div>
-    <div v-if="over" class="fb-done">🐦 本局穿过 {{ passed }} 根管道</div>
+        <div v-if="over" class="fb-mask">
+      <div class="fb-result">
+        <div class="fb-result-head"><b>🐦 本局结束</b></div>
+        <div class="fb-result-score">穿过 <b class="mono">{{ passed }}</b> 根管道</div>
+        <button class="fb-again" @click="reset(); start()">🔄 再来一局</button>
+      </div>
+    </div>
 
     <div v-if="showInfo" class="fb-info-mask" @click.self="showInfo = false">
       <div class="fb-info-box">
@@ -326,7 +332,6 @@ reset()
   font-size: 15px;
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
 }
-.fb-done { font-weight: 800; color: var(--good-strong); }
 .fb-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .fb-info-box {
   width: min(620px, 92vw);
@@ -377,4 +382,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── fb 结算弹窗（2026-09-09 统一）── */
+.fb-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.fb-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.fb-result-head { font-size: 18px; }
+.fb-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.fb-gold { color: var(--good-strong); font-weight: 800; }
+.fb-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.fb-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.fb-spark { position: absolute; font-size: 22px; color: var(--gold); animation: fbSpark 1.1s ease-out forwards; }
+@keyframes fbSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

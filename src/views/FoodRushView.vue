@@ -113,8 +113,15 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
         {{ raging ? '🤯 暴食中！每口 ×2' : '🍚 干饭！' }}
       </button>
     </div>
-    <div v-if="done" class="fs-done" :class="{ ok: bowls >= TIERS[0].need }">
-      {{ bowls >= TIERS[0].need ? `🍖 达成 ${[...TIERS].reverse().find((t) => bowls >= t.need)?.need ?? ''} 碗档！奖励已结算` : '💪 惜败！差一点就达标了' }}
+        <div v-if="done" class="fs-mask">
+      <div class="fs-result">
+        <div class="fs-result-head"><b>{{ bowls >= TIERS[0].need ? '🍖 达标！' : '💪 惜败' }}</b></div>
+        <div class="fs-result-score"><span>本局 <b class="mono">{{ bowls }}</b> 碗</span><span v-if="bowls >= TIERS[0].need">奖励已结算</span></div>
+        <button class="fs-again" @click="reset(); start()">🔄 再来一局</button>
+      </div>
+      <div v-if="bowls >= TIERS[0].need" class="fs-fire">
+        <span v-for="i in 20" :key="i" class="fs-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
     </div>
     <div v-if="showInfo" class="fs-info-mask" @click.self="showInfo = false">
       <div class="fs-info-box">
@@ -201,8 +208,6 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.fs-done { font-weight: 800; color: var(--bad-strong); }
-.fs-done.ok { color: var(--good-strong); }
 .fs-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .fs-info-box {
   width: min(620px, 92vw);
@@ -253,4 +258,15 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── fs 结算弹窗（2026-09-09 统一）── */
+.fs-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.fs-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.fs-result-head { font-size: 18px; }
+.fs-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.fs-gold { color: var(--good-strong); font-weight: 800; }
+.fs-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.fs-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.fs-spark { position: absolute; font-size: 22px; color: var(--gold); animation: fsSpark 1.1s ease-out forwards; }
+@keyframes fsSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

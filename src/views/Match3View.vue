@@ -262,7 +262,16 @@ reset()
     <div class="m3-keys">
       <button class="m3-reset" @click="reset()">重新开始</button>
     </div>
-    <div v-if="over" class="m3-done" :class="{ ok: won }">{{ won ? `🍬 达标成功！+${MODES[mode].gold} 游戏币` : '💦 未达标，重新开始再来' }}</div>
+        <div v-if="over" class="m3-mask">
+      <div class="m3-result">
+        <div class="m3-result-head"><b>{{ won ? '🍬 达标成功！' : '💦 未达标' }}</b></div>
+        <div class="m3-result-score"><span v-if="won" class="m3-gold">+{{ MODES[mode].gold }} 游戏币</span><span v-else>再来一局</span></div>
+        <button class="m3-again" @click="reset()">🔄 再来一局</button>
+      </div>
+      <div v-if="won" class="m3-fire">
+        <span v-for="i in 20" :key="i" class="m3-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
 
     <div v-if="showInfo" class="m3-info-mask" @click.self="showInfo = false">
       <div class="m3-info-box">
@@ -362,8 +371,6 @@ reset()
   flex-wrap: wrap;
 }
 .m3-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
-.m3-done { font-weight: 800; color: var(--bad-strong); }
-.m3-done.ok { color: var(--good-strong); }
 .m3-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .m3-info-box {
   width: min(620px, 92vw);
@@ -414,4 +421,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── m3 结算弹窗（2026-09-09 统一）── */
+.m3-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.m3-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.m3-result-head { font-size: 18px; }
+.m3-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.m3-gold { color: var(--good-strong); font-weight: 800; }
+.m3-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.m3-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.m3-spark { position: absolute; font-size: 22px; color: var(--gold); animation: m3Spark 1.1s ease-out forwards; }
+@keyframes m3Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

@@ -139,8 +139,17 @@ resetDay()
     <div class="mf-keys">
       <button class="mf-reset" @click="resetDay()">重新洗牌</button>
     </div>
-    <div v-if="done" class="mf-done">🍽 全清！+{{ MODES[mode].gold }} 游戏币</div>
-    <div v-if="failed" class="mf-done mf-fail">💦 超限未清！重新洗牌再来</div>
+        <div v-if="done || failed" class="mf-mask">
+      <div class="mf-result">
+        <div class="mf-result-head"><b>{{ done ? '🍽 全清！' : '💦 超限未清！' }}</b></div>
+        <div class="mf-result-score"><span v-if="done" class="mf-gold">+{{ MODES[mode].gold }} 游戏币</span><span v-else>再来一局</span></div>
+        <button class="mf-again" @click="resetDay()">🔄 再来一局</button>
+      </div>
+      <div v-if="done" class="mf-fire">
+        <span v-for="i in 20" :key="i" class="mf-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
+    
     <div v-if="showInfo" class="mf-info-mask" @click.self="showInfo = false">
       <div class="mf-info-box">
         <div class="mf-info-head"><b>🀄 食材连连看 · 十种模式说明</b><button class="mf-info-close" @click="showInfo = false">✕</button></div>
@@ -221,8 +230,6 @@ resetDay()
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.mf-done { font-weight: 800; color: var(--good-strong); }
-.mf-fail { color: var(--bad-strong); }
 .mf-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .mf-info-box {
   width: min(620px, 92vw);
@@ -273,4 +280,15 @@ resetDay()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── mf 结算弹窗（2026-09-09 统一）── */
+.mf-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.mf-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.mf-result-head { font-size: 18px; }
+.mf-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.mf-gold { color: var(--good-strong); font-weight: 800; }
+.mf-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.mf-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.mf-spark { position: absolute; font-size: 22px; color: var(--gold); animation: mfSpark 1.1s ease-out forwards; }
+@keyframes mfSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>
