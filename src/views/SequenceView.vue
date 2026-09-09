@@ -9,16 +9,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const MODES = {
-  m1: { label: '模式1', dur: 40, start: 3, grow: 1, speed: 0.6, lives: 3, target: 320, gold: 45, desc: '40 秒 · 目标 320 分 · 从 3 步开始，亮灯慢，3 条命 · +45 币' },
-  m2: { label: '模式2', dur: 45, start: 3, grow: 1, speed: 0.5, lives: 3, target: 390, gold: 55, desc: '45 秒 · 目标 390 分 · 亮灯加快 · +55 币' },
-  m3: { label: '模式3', dur: 50, start: 4, grow: 1, speed: 0.45, lives: 3, target: 450, gold: 60, desc: '50 秒 · 目标 450 分 · **从 4 步开始** · +60 币' },
-  m4: { label: '模式4', dur: 55, start: 4, grow: 1, speed: 0.4, lives: 2, target: 510, gold: 70, desc: '55 秒 · 目标 510 分 · 只有 2 条命 · +70 币' },
-  m5: { label: '模式5', dur: 60, start: 4, grow: 2, speed: 0.38, lives: 3, target: 570, gold: 80, desc: '60 秒 · 目标 570 分 · **每轮加 2 步**，涨得快 · +80 币' },
-  m6: { label: '模式6', dur: 65, start: 5, grow: 1, speed: 0.34, lives: 3, target: 630, gold: 90, desc: '65 秒 · 目标 630 分 · **从 5 步开始** · +90 币' },
-  m7: { label: '模式7', dur: 70, start: 5, grow: 2, speed: 0.32, lives: 2, target: 690, gold: 100, desc: '70 秒 · 目标 690 分 · 加 2 步 + 2 条命 · +100 币' },
-  m8: { label: '模式8', dur: 80, start: 5, grow: 2, speed: 0.3, lives: 2, target: 810, gold: 120, desc: '80 秒 · 目标 810 分 · 亮灯很快 · +120 币' },
-  m9: { label: '模式9', dur: 90, start: 5, grow: 2, speed: 0.28, lives: 1, target: 930, gold: 140, desc: '90 秒 · 目标 930 分 · **只有 1 条命** · +140 币' },
-  m10: { label: '模式10', dur: 100, start: 5, grow: 2, speed: 0.25, lives: 1, target: 1050, gold: 160, desc: '100 秒 · 目标 1050 分 · 1 条命 + 最快亮灯，记忆极限 · +160 币' },
+  m1: { label: '模式1', dur: 40, start: 3, grow: 1, speed: 0.6, lives: 3, target: 385, gold: 45, desc: '40 秒 · 目标 385 分 · 从 3 步开始，亮灯慢，3 条命 · +45 币' },
+  m2: { label: '模式2', dur: 45, start: 3, grow: 1, speed: 0.5, lives: 3, target: 420, gold: 55, desc: '45 秒 · 目标 420 分 · 亮灯加快 · +55 币' },
+  m3: { label: '模式3', dur: 50, start: 4, grow: 1, speed: 0.45, lives: 3, target: 455, gold: 60, desc: '50 秒 · 目标 455 分 · **从 4 步开始** · +60 币' },
+  m4: { label: '模式4', dur: 55, start: 4, grow: 1, speed: 0.4, lives: 2, target: 500, gold: 70, desc: '55 秒 · 目标 500 分 · 只有 2 条命 · +70 币' },
+  m5: { label: '模式5', dur: 60, start: 4, grow: 2, speed: 0.38, lives: 3, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · **每轮加 2 步**，涨得快 · +80 币' },
+  m6: { label: '模式6', dur: 65, start: 5, grow: 1, speed: 0.34, lives: 3, target: 700, gold: 90, desc: '65 秒 · 目标 700 分 · **从 5 步开始** · +90 币' },
+  m7: { label: '模式7', dur: 70, start: 5, grow: 2, speed: 0.32, lives: 2, target: 750, gold: 100, desc: '70 秒 · 目标 750 分 · 加 2 步 + 2 条命 · +100 币' },
+  m8: { label: '模式8', dur: 80, start: 5, grow: 2, speed: 0.3, lives: 2, target: 900, gold: 120, desc: '80 秒 · 目标 900 分 · 亮灯很快 · +120 币' },
+  m9: { label: '模式9', dur: 90, start: 5, grow: 2, speed: 0.28, lives: 1, target: 1100, gold: 140, desc: '90 秒 · 目标 1100 分 · **只有 1 条命** · +140 币' },
+  m10: { label: '模式10', dur: 100, start: 5, grow: 2, speed: 0.25, lives: 1, target: 1355, gold: 160, desc: '100 秒 · 目标 1355 分 · 1 条命 + 最快亮灯，记忆极限 · +160 币' },
 }
 const TILES = [
   { icon: '🍜', cls: 't0' }, { icon: '🍚', cls: 't1' }, { icon: '🥟', cls: 't2' },
