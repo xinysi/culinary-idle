@@ -149,7 +149,7 @@ reset()
       <button class="sn-key" @click="onKey({ key: 'ArrowDown', preventDefault() {} })">↓</button>
       <button class="sn-key" @click="onKey({ key: 'ArrowRight', preventDefault() {} })">→</button>
       <button class="sn-reset" @click="reset()">🔄 重置本局</button>
-      <button class="sn-start" @click="start()">{{ running ? '⏸ 进行中…' : over ? '🏁 再来一局' : '▶ 开始' }}</button>
+      <button class="sn-start" @click="start()">{{ running ? '⏸ 进行中…' : over ? '🏁 再来一局' : '▶ 开始游戏' }}</button>
     </div>
         <div v-if="over" class="sn-mask">
       <div class="sn-result">
