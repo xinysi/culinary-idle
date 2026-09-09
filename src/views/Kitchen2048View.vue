@@ -279,10 +279,31 @@ function posStyle(t) {
 <style scoped>
 .g2048-page { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 4px 0 12px; }
 .g2048-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
-.g2048-mode { padding: 7px 16px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 13px; border: 1px solid rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.85); color: var(--muted); }
-.g2048-mode.on { background: var(--primary-strong); color: #fff; border-color: var(--primary-strong); }
+.g2048-mode {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 252, 246, 0.8);
+  color: var(--muted);
+}
+.g2048-mode.on {
+  background: rgba(217, 90, 56, 0.14);
+  color: var(--primary-strong);
+  border-color: var(--primary-strong);
+  border-style: solid;
+}
 .g2048-stats { margin-left: auto; display: flex; gap: 8px; }
-.g2048-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; }
+.g2048-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.8);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+}
 .g2048-board2 {
   position: relative; /* 方块绝对定位容器 */
   background: rgba(150, 110, 70, 0.3);
@@ -318,18 +339,67 @@ function posStyle(t) {
 .g2048-cell2.v128 { background: #efb669; } .g2048-cell2.v256 { background: #e8a24e; }
 .g2048-cell2.v512 { background: #dd8f3c; } .g2048-cell2.v1024 { background: #e0704a; }
 .g2048-cell2.v2048, .g2048-cell2.v4096 { background: #d95a38; color: #fff; }
-.g2048-keys { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.g2048-keys {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
 .g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text); }
 .g2048-key:hover { border-color: var(--primary-strong); }
 .g2048-reset { padding: 0 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
-.g2048-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
+.g2048-info-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #72b864, #589c4b);
+  border: none;
+}
 .g2048-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.g2048-info-box { width: min(560px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.g2048-info-box {
+  width: min(620px, 92vw);
+  max-height: 76vh;
+  overflow: auto;
+  background: rgba(255, 252, 246, 0.94);
+  border: 1px solid rgba(150, 110, 70, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+}
 .g2048-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.g2048-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.g2048-info-close {
+  cursor: pointer;
+  border: none;
+  background: rgba(150, 110, 70, 0.15);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-weight: 700;
+  color: var(--text);
+}
 .g2048-info-list { display: flex; flex-direction: column; gap: 8px; }
-.g2048-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
-.g2048-info-name { flex: 0 0 96px; color: var(--primary-strong); }
-.g2048-info-desc { flex: 1; font-size: 12.5px; color: var(--muted); }
+.g2048-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  background: rgba(255, 251, 244, 0.8);
+  border: 1px solid rgba(150, 110, 70, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.g2048-info-name {
+  flex: 0 0 82px;
+  color: var(--primary-strong);
+}
+.g2048-info-desc {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 .g2048-over { font-weight: 800; color: var(--bad-strong); }
 </style>
