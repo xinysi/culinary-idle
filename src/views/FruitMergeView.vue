@@ -530,8 +530,16 @@ reset()
       <button v-if="!started" class="fm-start" @click="startGame()">▶ 开始游戏</button>
       <button v-else class="fm-reset" @click="reset()">🔄 重置本局</button>
     </div>
-    <div v-if="wonRef" class="fm-done ok">🎉 达标通关！+{{ MODES[mode].gold }} 游戏币</div>
-    <div v-else-if="overRef" class="fm-done">💦 溢出红线！本局 {{ scoreRef }} 分{{ MODES[mode].target ? '（未达标）' : '' }}</div>
+    <div v-if="wonRef || overRef" class="fm-mask">
+      <div class="fm-result">
+        <div class="fm-result-head"><b>{{ wonRef ? '🎉 达标通关！' : '💦 溢出红线！' }}</b></div>
+        <div class="fm-result-score"><span>本局 <b class="mono">{{ scoreRef }}</b> 分</span><span v-if="wonRef" class="fm-gold">+{{ MODES[mode].gold }} 游戏币</span></div>
+        <button class="fm-again" @click="reset()">🔄 再来一局</button>
+      </div>
+      <div v-if="wonRef" class="fm-fire">
+        <span v-for="i in 20" :key="i" class="fm-spark" :style="{ '--dx': ((i * 41) % 220) - 110 + 'px', '--dy': ((i * 67) % 180) - 90 + 'px', animationDelay: (i % 6) * 0.05 + 's' }">✦</span>
+      </div>
+    </div>
 
     <div v-if="showInfo" class="fm-info-mask" @click.self="showInfo = false">
       <div class="fm-info-box">
@@ -608,8 +616,6 @@ reset()
   box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
 }
 .fm-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
-.fm-done { font-weight: 800; color: var(--bad-strong); }
-.fm-done.ok { color: var(--good-strong); }
 .fm-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .fm-info-box {
   width: min(620px, 92vw);
@@ -660,4 +666,15 @@ reset()
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* ── fm 结算弹窗（2026-09-09 统一）── */
+.fm-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.fm-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.fm-result-head { font-size: 18px; }
+.fm-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.fm-gold { color: var(--good-strong); font-weight: 800; }
+.fm-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.fm-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.fm-spark { position: absolute; font-size: 22px; color: var(--gold); animation: fmSpark 1.1s ease-out forwards; }
+@keyframes fmSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 </style>

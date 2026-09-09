@@ -282,6 +282,7 @@ function posStyle(t) {
       <div class="g2048-info-box">
         <div class="g2048-info-head"><b>厨心 2048 · 十种模式说明</b><button class="g2048-info-close" @click="showInfo = false">✕</button></div>
         <div class="g2048-info-list">
+        <div class="g2048-info-row g2048-info-rule">通用规则：方向键 / 下方按钮滑动整盘，相同数字相撞合并 · 每步生成一个新块 · 首次合出某档位即得该档游戏币（越高越多，按模式倍率）· 无路可走即结束</div>
           <div v-for="(m, id) in MODES" :key="id" class="g2048-info-row">
             <b class="g2048-info-name">{{ m.label }}</b>
             <span class="g2048-info-desc">{{ m.desc }}</span>
@@ -430,4 +431,5 @@ function posStyle(t) {
 
 /* ── g2048 开始门控（2026-09-09）── */
 .g2048-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.g2048-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
 </style>
