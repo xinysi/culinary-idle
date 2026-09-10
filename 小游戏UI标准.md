@@ -113,9 +113,9 @@
 ## 11. 自检
 
 ```bash
-node scripts/minigame_ui_audit.mjs      # 静态合规：27 款 × 11 项（本标准的机器检查）
-node scripts/item_triple_audit.mjs      # 图鉴三查（物品作用/制作/来源）
-node scripts/system_test.mjs            # 241 项系统测试
+node scripts/ci/minigame_ui_audit.mjs      # 静态合规：27 款 × 11 项（本标准的机器检查）
+node scripts/ci/item_triple_audit.mjs      # 图鉴三查（物品作用/制作/来源）
+node scripts/ci/system_test.mjs            # 241 项系统测试
 npx playwright test e2e-test.spec.mjs   # 9 项 e2e（含无未捕获控制台错误）
 ```
 

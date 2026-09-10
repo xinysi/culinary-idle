@@ -1,5 +1,5 @@
 // 餐厅装饰基线（100 件，仅 id + name 固定层，勿改名字）
-// 生成器 scripts/gen_restaurant_decor.mjs 读取本文件，重铺 price/effect/category 并补充 200 件，产出 restaurantDecor.js
+// 生成器 scripts/gen/gen_restaurant_decor.mjs 读取本文件，重铺 price/effect/category 并补充 200 件，产出 restaurantDecor.js
 // 本文件是「名称基线」，只保留名称与 id；数值（price/effect/category）由生成器统一计算
 export const RESTAURANT_DECOR_BASE = [
   { id: 'decor_candle', name: '🕯️ 烛台' },

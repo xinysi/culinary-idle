@@ -1,4 +1,4 @@
-// 程序化生成的传闻 · 轶事 — 由 scripts/gen_tales.mjs 生成，勿手改
+// 程序化生成的传闻 · 轶事 — 由 scripts/gen/gen_tales.mjs 生成，勿手改
 export const TALES_EXT = [
   { id: "tale_ext_1", title: "星坠落灶", series: "采集", unlock: { kind: "gather", need: 60, needText: "采集技艺达到 60", flavor: "" }, body: "据说某位厨神在山巅见过一枚「苹果」形状的星坠。他追了一夜，天亮时只捡到一颗露珠——可那露珠里，倒映着全部星坠。" },
   { id: "tale_ext_2", title: "古井一夜", series: "制作", unlock: { kind: "craft", need: 80, needText: "制作技艺达到 80", flavor: "" }, body: "老井的井沿刻着一排看不懂的食谱。有人说那是初代厨神留下的考题：能读懂其间滋味的人，才有资格续写下一章。" },

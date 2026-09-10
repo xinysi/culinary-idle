@@ -1,5 +1,5 @@
 // 农耕种子扩充（生成器产出，勿手改）— 2026-08-30
-// 覆盖：所有可采集/可挖掘非矿物食材的种子与农耕作物条目。改后重跑 scripts/gen_farm_seeds.mjs。
+// 覆盖：所有可采集/可挖掘非矿物食材的种子与农耕作物条目。改后重跑 scripts/gen/gen_farm_seeds.mjs。
 export const FARM_SEEDS = {
  "appleSeed": {
   "id": "appleSeed",

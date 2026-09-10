@@ -56,7 +56,7 @@
   - **每 5 连胜开宝箱**：`player.onArenaEnd` 连胜 `%5 === 0` 触发宝箱（金币 `100×连胜档位` + 神秘调料，10 连胜起 + 能量饼干）；**破纪录奖励不得覆盖连胜宝箱提示**（用 `reward.record` 分离两段，且 `onArenaEnd` 幂等去重）。
   - 改动竞技场任何玩法前，先问「是否触碰上述已固定规格」；拿不准先向用户确认。
 - 🔒 **物品「图鉴三查」铁律（2026-09 新增）**：**任何涉及物品获取来源、掉落、产出的改动**（新增/修改采集目标、配方、农耕、商店、探索掉落、赛季/成就/任务奖励、首领/竞技场掉落、炼金、食灵契约材料等），**必须同步全面排查图鉴**（`itemDetailLines` 详细作用 + `itemSources` 获取来源 + 「可用于制作」引用），确保该物品在图鉴里的**详细作用、可用于制作、获取来源**三者都完整、准确、无遗漏。排查不得只改掉落/获取而漏掉图鉴展示；图鉴索引是与掉落/获取同级的必查项（如：竞技场对手掉落的物品，必须在 `itemSources` 里补对应来源，且不改竞技场 `arena.js` 掉落数据本身）。
-- 🔒 **「内容同步审计」前置流程（2026-09-10 用户新增，图鉴三查之前必须跑）**：**任何新增功能或调整完成后，必须先运行 `node scripts/content_sync_audit.mjs`（CI 亦执行）**，逐项确认 **任务 / 成就 / 故事 / 称号 / 统计 / 游玩攻略** 六项同步到位：
+- 🔒 **「内容同步审计」前置流程（2026-09-10 用户新增，图鉴三查之前必须跑）**：**任何新增功能或调整完成后，必须先运行 `node scripts/ci/content_sync_audit.mjs`（CI 亦执行）**，逐项确认 **任务 / 成就 / 故事 / 称号 / 统计 / 游玩攻略** 六项同步到位：
   - **任务**：全部目标 kind 有处理（`bumpQuest/bumpDaily/bumpSeason/bumpGuild` 事件或 `case` 开关），引用物品/BOSS 存在；
   - **成就**：id 唯一、奖励物品存在、**每个 check 都能在新档上执行且返回布尔**；
   - **故事**：每章需求 kind 有 storyCur 分支、每段标题/正文非空；
@@ -64,7 +64,7 @@
   - **统计**：StatsView 引用的每个 `player.stats.*` 字段都有来源（defaultState 或运行期赋值）；
   - **攻略**：总览覆盖全部功能关键词（49 个）、总览条目字段完整、六阶段结构完整、**导航入口均已注册视图**（新增页面漏注册会 FAIL）。
   通过后再跑「图鉴三查」，顺序不可颠倒。
-- 🔒 **「图鉴三查」必检流程（2026-09-06 用户重申，升级为每次改动强制项）**：**任何新增功能或调整（含 UI 改动）完成后，必须运行 `wuguan/.toolchain/node/node.exe scripts/item_triple_audit.mjs`（CI 亦执行）**，检查并确保全部物品的 **①详细作用（itemDetailLines）②可用于制作（itemUses，无幽灵产物引用）③获取来源（含跳转缺口）** 无缺失/错误/跳转缺失，另含重名与全系统交叉引用校验。已知炼金幽灵配方基线（62 条，已从 UI/图鉴过滤）只允许为零：**新增引用不存在物品的炼金配方将 FAIL**。新增/修改炼金/图鉴/任务/成就/赛季/掉落等数据时同样先跑此脚本（参考 §「校验习惯」）。
+- 🔒 **「图鉴三查」必检流程（2026-09-06 用户重申，升级为每次改动强制项）**：**任何新增功能或调整（含 UI 改动）完成后，必须运行 `wuguan/.toolchain/node/node.exe scripts/ci/item_triple_audit.mjs`（CI 亦执行）**，检查并确保全部物品的 **①详细作用（itemDetailLines）②可用于制作（itemUses，无幽灵产物引用）③获取来源（含跳转缺口）** 无缺失/错误/跳转缺失，另含重名与全系统交叉引用校验。已知炼金幽灵配方基线（62 条，已从 UI/图鉴过滤）只允许为零：**新增引用不存在物品的炼金配方将 FAIL**。新增/修改炼金/图鉴/任务/成就/赛季/掉落等数据时同样先跑此脚本（参考 §「校验习惯」）。
 
 ## 项目技术要点
 - Vue 3 + Pinia + Vite；源文件在 `src/`；`main.css` 的 `:root` 用 CSS 变量定义主题色板。
@@ -111,7 +111,7 @@
 - 采集经验基准 `10 + 等级×5`（`applyGatherXp` 作用于采集目标 `xpPerAction`）、制作经验基准 `25 + 等级×13`（`applyCraftXp` 作用于配方 `xp`）。
 - 只把低于基准的抬到基准（不降低，不破坏升级节奏），消除"高等级给低经验"的倒挂。
 
-### 农耕种子扩充（`src/game/data/farmSeeds.js`，生成器 `scripts/gen_farm_seeds.mjs`，勿手改产物）
+### 农耕种子扩充（`src/game/data/farmSeeds.js`，生成器 `scripts/gen/gen_farm_seeds.mjs`，勿手改产物）
 - **覆盖**：所有可采集（采摘 foraging）/可挖掘（挖掘 excavation）的**非矿物**食材（含 expansion1/2 与 27 种嫩食材），共 **184 种**各生成一个种子物品 + 农耕作物条目（可种）。矿物（盐矿/石硝/硫磺/紫石英/各 ext 矿等）一律不加种子。
 - **种子物件**（`FARM_SEEDS`）：id=`{食材id}Seed`、name=`{食材名}种子`、type=`seed`、category=`种植产物`；**不配图片**（前端 `itemImage()` 返回空 URL 由 `@error` 隐藏），现有 15 种手写种子已配图的保留不动。
 - **作物条目**（`FARM_CROPS`，`FarmingSkill.CROPS = [...15 基线, ...FARM_CROPS]` 按 reqLevel 升序）：`reqLevel` = 对应食材采集等级；`growSec = 90+级×10`；`xp = 25+级×7.5`。
@@ -119,9 +119,9 @@
 - **种子来源**：采摘/挖掘本次动作 **10% 概率掉落对应种子**（`ForagingSkill/ExcavationSkill.performAction`，矿物目标自动跳过；`computeOffline` 按期望产出）；采集卡 UI 显示「种子掉落 10% 掉 X」。
 - **购买**：`shop.js` 合并 `SHOP_SEED_ENTRIES`（杂货铺 207 条）；珍馐阁遍历 `ITEMS`(type=seed) 自动同步；`ShopView.vue` 复刻珍馐阁式 type tab 分类（全部/弹药原料/肥料/种子/容量扩展）+ 搜索框。
 - **映射**：`SEED_MAP`（食材id→种子id）供掉落与卡片提示使用。
-- 改动 `farmSeeds.js` 需重跑 `node scripts/gen_farm_seeds.mjs`（勿手改）；生成器用固定基线 15 作物，不读取合并后的 CROPS（避免重跑清空）。
+- 改动 `farmSeeds.js` 需重跑 `node scripts/gen/gen_farm_seeds.mjs`（勿手改）；生成器用固定基线 15 作物，不读取合并后的 CROPS（避免重跑清空）。
 
-### 厨具锻造"同名矿 == 套品质"（生成器 `scripts/gen_smith_sets.mjs` + `gen_smith_ores.mjs`，勿手改产物 `smithSetExt.js`/`smithOres.js`）
+### 厨具锻造"同名矿 == 套品质"（生成器 `scripts/gen/gen_smith_sets.mjs` + `gen_smith_ores.mjs`，勿手改产物 `smithSetExt.js`/`smithOres.js`）
 - **20 品质套**（铜1-5…鎏金76-80、钨81-85、锰86-90、钒91-95、萤96-100），每套 8 槽（刀/锅/砧板/围裙/厨师帽/调味瓶/腿甲/靴子/戒指）。
 - **材料与套名对应**：钢→鎏金（段4-16）用各自**同名矿**（钢矿 steelOre…鎏金矿 giltOre，由 `gen_smith_ores.mjs` 生成、挖掘可得，等级=套段首级 ≤ 装备+5）；钨/锰/钒/萤用**命名匹配高端矿**（ext2_25/27/28/30）；铜/铁/青铜沿用铜矿/铁矿（本就同名）。
 - **21 种独立矿**（紫石英/绿松石/红宝石/祖母绿/钻石/锡/铅/锌/镍/钴/钛/石墨/石膏/硝石/硫磺/明矾/云母/石英/翡翠/玛瑙/蓝晶）各成**完整 8 槽套**（9 件，含手写的戒指/护符那件），命名沿用宝石名/矿名，等级=原配方 reqLevel。
@@ -144,8 +144,8 @@
   所以重跑后 `git diff` 至少有 1 行日期变化——这是**预期内**的，不是数据漂移。
 
 ### 校验习惯
-- **小游戏 UI 改动后必须跑 `node scripts/minigame_ui_audit.mjs`**（27 款 × 11 项静态合规，0 失败为准）；标准见《小游戏UI标准.md》（页面骨架/顶栏胶囊/主区域/按钮/弹窗/配色/深色/交互/文案 + 例外清单）。新增或修改小游戏时先读该标准。
-- 改动/平衡后按需重跑生成器：`node scripts/gen_smith_ores.mjs`（同名矿）→ **先清空 `smithSetExt.js` 再** `node scripts/gen_smith_sets.mjs` → `node scripts/gen_farm_seeds.mjs`（农耕）→ `vite build` → `e2e 9/9` → 检查无 `\uFFFD`。
+- **小游戏 UI 改动后必须跑 `node scripts/ci/minigame_ui_audit.mjs`**（27 款 × 11 项静态合规，0 失败为准）；标准见《小游戏UI标准.md》（页面骨架/顶栏胶囊/主区域/按钮/弹窗/配色/深色/交互/文案 + 例外清单）。新增或修改小游戏时先读该标准。
+- 改动/平衡后按需重跑生成器：`node scripts/gen/gen_smith_ores.mjs`（同名矿）→ **先清空 `smithSetExt.js` 再** `node scripts/gen/gen_smith_sets.mjs` → `node scripts/gen/gen_farm_seeds.mjs`（农耕）→ `vite build` → `e2e 9/9` → 检查无 `\uFFFD`。
 - 审查超纲可临时写审计脚本：材料锚 vs 产物 reqLevel（忽略矿物），三轮（原貌→平衡后→抬升范围/断供）。
 - 生成器产物文件（`smithSetExt.js`/`smithOres.js`/`farmSeeds.js` 等）**勿手改**，改后重跑对应生成器。
 - **改了生成器/扩充了数据规模后，务必同步维护 `README.md` 与《美食放置：食之契约》设计文档（当前版本）.md 里的对应数字/描述**（物品/装备/食谱/采集目标/作物/矿/种子等），避免文档与实现脱节。
