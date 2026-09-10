@@ -702,10 +702,10 @@ console.log('══ E. 离线进度 ══')
     const pf = freshPlayer()
     check('风味册', '初始未点亮任何搭配', pf.flavorProgress().found === 0 && pf.flavorProgress().total === FLAVOR_PAIRS.length)
     const g0 = pf.gold
-    const fresh = pf.discoverFlavors(['tomato', 'basil'])
+    const fresh = pf.discoverFlavors(['tomato', 'garlic'])
     check('风味册', '命中组合即点亮并给奖励', fresh.length === 1 && fresh[0].id === 'fp_tomato_basil' && pf.gold > g0)
-    check('风味册', '重复命中不再奖励', pf.discoverFlavors(['tomato', 'basil']).length === 0)
-    check('风味册', '顺序无关 / 多余食材不影响', pf.discoverFlavors(['basil', 'salt', 'tomato']).length === 0)
+    check('风味册', '重复命中不再奖励', pf.discoverFlavors(['tomato', 'garlic']).length === 0)
+    check('风味册', '顺序无关 / 多余食材不影响', pf.discoverFlavors(['garlic', 'salt', 'tomato']).length === 0)
     const trio = pf.discoverFlavors(['chili', 'peppercorn', 'ginger', 'salt'])
     check('风味册', '三食材组合可点亮', trio.some((p) => p.id === 'fp_three_peppers'))
     // 制作成功会触发检测
@@ -1297,9 +1297,17 @@ console.log('══ E. 离线进度 ══')
     }))
     check('风味反查', '同一输入结果稳定（有缓存也不串）', easiestRecipeForPair(p0.items)?.name === rs[0]?.name)
     check('风味反查', '空输入返回空', recipesForPair([]).length === 0 && recipesForPair(null).length === 0)
-    // 已知基线：当前只有部分搭配能被现有配方点亮（其余为不可点亮项，见页面提示）
-    const litCount = FLAVOR_PAIRS.filter((q) => recipesForPair(q.items).length > 0).length
-    check('风味反查', `可点亮搭配数不下降（当前 ${litCount}/${FLAVOR_PAIRS.length}）`, litCount >= 7, `lit=${litCount}`)
+    // 硬约束（2026-09-10 修正后）：每条搭配都必须能在现有配方里做出来，
+    // 否则玩家永远点不亮它（首版 28 条里有 21 条无解，已按真实共现食材重写）
+    const dead = FLAVOR_PAIRS.filter((q) => recipesForPair(q.items).length === 0)
+    check('风味搭配', `全部 ${FLAVOR_PAIRS.length} 条均可在现有配方中点亮`, dead.length === 0, `无解: ${dead.map((q) => q.name).join('、')}`)
+    const pairIds = FLAVOR_PAIRS.map((q) => q.id)
+    check('风味搭配', 'id 唯一', new Set(pairIds).size === pairIds.length)
+    const itemSets = FLAVOR_PAIRS.map((q) => [...q.items].sort().join('|'))
+    check('风味搭配', '食材组合互不重复', new Set(itemSets).size === itemSets.length)
+    check('风味搭配', '每条组合 2~3 味食材', FLAVOR_PAIRS.every((q) => q.items.length >= 2 && q.items.length <= 3))
+    check('风味搭配', '每条都有名称/说明/奖励', FLAVOR_PAIRS.every((q) => q.name && q.desc && (q.reward?.gold ?? 0) > 0))
+    check('风味搭配', '引用的食材全部存在', FLAVOR_PAIRS.every((q) => q.items.every((id) => !!ITEMS[id])))
   }
 
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限
