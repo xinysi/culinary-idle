@@ -2366,7 +2366,8 @@ export const usePlayerStore = defineStore('player', {
     trialState(id) {
       if (!this.trials) this.trials = {}
       let st = this.trials[id]
-      if (!st) st = this.trials[id] = { clears: 0, best: 0, streak: 0 }
+      // bestTurns / bestHp：精确最佳成绩（2026-09-10 补；best 是 0~100 综合分，含义随条件类型而变，不便于展示）
+      if (!st) st = this.trials[id] = { clears: 0, best: 0, streak: 0, bestTurns: null, bestHp: null }
       return st
     },
     /** 开始试炼（标记当前试炼；对手由视图生成） */
@@ -2418,6 +2419,13 @@ export const usePlayerStore = defineStore('player', {
       const reward = first ? def.reward : repeatReward(def)
       st.clears = (st.clears ?? 0) + 1
       st.best = Math.max(st.best ?? 0, cond.type === 'turns' ? Math.max(0, 100 - (info.turns ?? 0)) : Math.round(hpPct))
+      // 精确记录：回合制记最少回合，其余记最高剩余品鉴值
+      if (cond.type === 'turns') {
+        const t = info.turns ?? 999
+        st.bestTurns = st.bestTurns == null ? t : Math.min(st.bestTurns, t)
+      } else {
+        st.bestHp = Math.max(st.bestHp ?? 0, Math.round(hpPct))
+      }
       if (cond.type === 'streak') st.streak = 0
       if (reward.gold) this.gainGold(reward.gold)
       for (const [itemId, qty] of Object.entries(reward.items ?? {})) this.gainItem(itemId, qty)
@@ -2523,24 +2531,36 @@ export const usePlayerStore = defineStore('player', {
       const W = GEAR_SCORE_WEIGHTS
       let score = 0
       const parts = []
+      // 按评分因子汇总（2026-09-10 补）：让玩家看清分数从哪来、该强化哪一项
+      const f = { value: 0, stats: 0, crit: 0, speed: 0, mods: 0, gems: 0, upgrade: 0 }
       for (const [slot, itemId] of Object.entries(this.equipment ?? {})) {
         if (!itemId) continue
         const it = getItem(itemId)
         if (!it) continue
-        let s = (it.value ?? 0) * W.value
+        const fValue = (it.value ?? 0) * W.value
         const stats = it.stats ?? {}
-        for (const k of ['attack', 'defense', 'accuracy', 'evasion', 'hpBonus']) s += (stats[k] ?? 0) * W.stats
-        s += (stats.critChance ?? 0) * 100 * W.crit
-        s += (stats.speedBonus ?? 0) * 100 * W.speed
+        let fStats = 0
+        for (const k of ['attack', 'defense', 'accuracy', 'evasion', 'hpBonus']) fStats += (stats[k] ?? 0) * W.stats
+        const fCrit = (stats.critChance ?? 0) * 100 * W.crit
+        const fSpeed = (stats.speedBonus ?? 0) * 100 * W.speed
         const mods = this.gearMods?.[slot]?.itemId === itemId ? (this.gearMods[slot].mods?.length ?? 0) : 0
-        s += mods * W.mods
+        const fMods = mods * W.mods
         const gems = this.gemSockets?.[slot]?.itemId === itemId ? (this.gemSockets[slot].gems ?? []).filter(Boolean).length : 0
-        s += gems * W.gems
-        s += (this.upgrades?.[itemId] ?? 0) * W.upgrade
+        const fGems = gems * W.gems
+        const fUp = (this.upgrades?.[itemId] ?? 0) * W.upgrade
+        const s = fValue + fStats + fCrit + fSpeed + fMods + fGems + fUp
+        f.value += fValue; f.stats += fStats; f.crit += fCrit; f.speed += fSpeed
+        f.mods += fMods; f.gems += fGems; f.upgrade += fUp
         score += Math.round(s)
         parts.push({ slot, itemId, name: it.name, points: Math.round(s) })
       }
-      return { score: Math.round(score), parts, week: contestWeek(), theme: themeOfWeek(contestWeek()) }
+      return {
+        score: Math.round(score),
+        parts,
+        factors: Object.entries(f).map(([id, points]) => ({ id, points: Math.round(points) })),
+        week: contestWeek(),
+        theme: themeOfWeek(contestWeek()),
+      }
     },
     /** 本届是否已参赛 */
     gearContestDoneThisWeek() {
@@ -2930,6 +2950,7 @@ export const usePlayerStore = defineStore('player', {
       this.gainGold(reward.gold)
       for (const [itemId, qty] of Object.entries(reward.items)) this.gainItem(itemId, qty)
       this.stats.mascotPets = (this.stats.mascotPets ?? 0) + 1
+      this.stats.mascotGold = (this.stats.mascotGold ?? 0) + reward.gold // 累计蹭到的金币（2026-09-10 补，供页面统计）
       const levelUp = mascotBondLevel(st.pets[id]) > mascotBondLevel(pets)
       EventBus.emit('mascot:pet', { id, name: def.name, gold: reward.gold, items: reward.items, levelUp })
       return { ok: true, reward, levelUp }

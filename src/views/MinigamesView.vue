@@ -91,6 +91,9 @@ watch(active, (id) => {
 function onBack() { active.value = 'heat' }
 onMounted(() => EventBus.on('mg:back', onBack))
 onUnmounted(() => EventBus.off('mg:back', onBack))
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', label: '📖 图鉴/统计' }]
 </script>
 
 <template>
@@ -120,5 +123,6 @@ onUnmounted(() => EventBus.off('mg:back', onBack))
     </div>
     <!-- 游戏区域：自然流 -->
     <component :is="activeComp" />
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>

@@ -49,6 +49,9 @@ function abort() {
   player.chefAbort()
   ui.pushLog('已退出名厨挑战', 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', label: '🏆 竞技场' }, { view: 'gearContest', label: '🃏 厨具赛' }]
 </script>
 
 <template>
@@ -136,7 +139,8 @@ function abort() {
     <p class="dim" style="margin-top: 10px">
       提示：名厨沿用你的自动进食/料理策略；开打前记得在<b>班底</b>与<b>信仰</b>页确认加成、备足高回血料理。
     </p>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

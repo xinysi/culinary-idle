@@ -5,7 +5,7 @@
 //       成就图鉴、数值安全（除零/NaN/越界）
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
-import { createSkillInstances, getSkillInstance } from '../src/game/skills/registry.js'
+import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../src/game/skills/registry.js'
 import { Combat } from '../src/game/combat/Combat.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE } from '../src/game/data/combat.js'
 import { ForagingSkill } from '../src/game/skills/ForagingSkill.js'
@@ -25,6 +25,7 @@ import { PATRONS, patronCost, PATRON_SWITCH_GOLD } from '../src/game/data/patron
 import { MILESTONES, milestoneSummary } from '../src/game/data/milestones.js'
 import { CHRONICLE_CAP, groupByDay } from '../src/game/data/chronicle.js'
 import { QUIRK_CAT_DEFS, quirkCategoryStats } from '../src/game/data/tales.js'
+import { recipesForPair, easiestRecipeForPair } from '../src/game/data/flavorRecipes.js'
 import { weatherForDay } from '../src/game/data/weather.js'
 import { MASCOTS, mascotBondLevel, mascotReward } from '../src/game/data/mascots.js'
 import { banquetTierFor } from '../src/game/data/banquets.js'
@@ -1242,6 +1243,63 @@ console.log('══ E. 离线进度 ══')
     check('轶事', '全量大类合计 = 轶事总数', full.defs.reduce((a, d) => a + d.total, 0) === QUIRKS.length)
     check('轶事', '全量子类合计 = 轶事总数', [...full.subMap.values()].reduce((a, x) => a + x.total, 0) === QUIRKS.length)
     check('轶事', '全量大类均非空', full.defs.every((d) => d.total > 0))
+  }
+
+
+  // 功能页补内容（2026-09-10）：新的可见数据与反查，守住「显示与结算一致」
+  {
+    // ① 试炼最佳成绩：回合制记最少回合、其余记最高剩余品鉴值
+    const pt = freshPlayer({ knife: 30, tasteAcumen: 30, heatControl: 30 })
+    pt.trialStart('t_speed')
+    pt.onCombatEndTrial({ result: 'win', turns: 12, hpLeft: 60, hpMax: 100 })
+    pt.trialStart('t_speed')
+    pt.onCombatEndTrial({ result: 'win', turns: 9, hpLeft: 60, hpMax: 100 })
+    const stS = pt.trialState('t_speed')
+    check('试炼记录', '回合制记最少回合（9 而非 12）', stS.bestTurns === 9, `bestTurns=${stS.bestTurns}`)
+    pt.trialStart('t_flawless')
+    pt.onCombatEndTrial({ result: 'win', turns: 40, hpLeft: 92, hpMax: 100 })
+    pt.trialStart('t_flawless')
+    pt.onCombatEndTrial({ result: 'win', turns: 40, hpLeft: 96, hpMax: 100 })
+    const stF = pt.trialState('t_flawless')
+    check('试炼记录', '非回合制记最高剩余品鉴值（96）', stF.bestHp === 96, `bestHp=${stF.bestHp}`)
+    check('试炼记录', '未通关时不写精确记录', (freshPlayer().trialState('t_speed').bestTurns ?? null) === null)
+
+    // ② 厨具赛因子明细：各因子之和 = 总分（显示与评分同源）
+    const pg = freshPlayer()
+    pg.equipment.weapon = 'copperKnife'
+    pg.inventory.copperKnife = 1
+    pg.upgrades.copperKnife = 3
+    const gs = pg.gearScore()
+    const fSum = (gs.factors ?? []).reduce((a, f) => a + f.points, 0)
+    check('厨具赛因子', '因子合计 ≈ 总分（±件数取整）', Math.abs(fSum - gs.score) <= (gs.parts?.length ?? 1), `factors=${fSum} score=${gs.score}`)
+    check('厨具赛因子', '因子覆盖全部 7 项权重', (gs.factors ?? []).length === 7)
+    check('厨具赛因子', '未穿戴装备时全为 0', (() => { const q = freshPlayer(); return (q.gearScore().factors ?? []).every((f) => f.points === 0) })())
+
+    // ③ 吉祥物累计金币：蹭一次即累加
+    const pm = freshPlayer()
+    pm.gold = 0
+    pm.mascots = { owned: { cat: { boughtAt: Date.now() } }, active: 'cat', pets: {}, lastPetDay: null }
+    const goldBefore = pm.stats?.mascotGold ?? 0
+    const pet = pm.mascotPet()
+    check('吉祥物累计', '蹭一次累加 mascotGold', pet.ok === true && (pm.stats.mascotGold ?? 0) === goldBefore + pet.reward.gold, `mascotGold=${pm.stats.mascotGold}`)
+    check('吉祥物累计', '金币进账与统计一致', pm.gold === pet.reward.gold)
+
+    // ④ 风味搭配反查：只返回真正同时用到全部食材的配方，且按等级升序
+    const pf = freshPlayer()
+    const p0 = FLAVOR_PAIRS[0]
+    const rs = recipesForPair(p0.items)
+    check('风味反查', '结果按配方等级升序', rs.every((r, i) => i === 0 || r.reqLevel >= rs[i - 1].reqLevel))
+    check('风味反查', '每条结果都真的含全部食材', rs.every((r) => {
+      const inst = getAllSkillInstances().find((x) => x.id === r.skillId)
+      if (!inst) return false
+      const rec = (inst.recipes ?? []).find((x) => x.name === r.name)
+      return !!rec && p0.items.every((id) => (rec.ingredients ?? {})[id])
+    }))
+    check('风味反查', '同一输入结果稳定（有缓存也不串）', easiestRecipeForPair(p0.items)?.name === rs[0]?.name)
+    check('风味反查', '空输入返回空', recipesForPair([]).length === 0 && recipesForPair(null).length === 0)
+    // 已知基线：当前只有部分搭配能被现有配方点亮（其余为不可点亮项，见页面提示）
+    const litCount = FLAVOR_PAIRS.filter((q) => recipesForPair(q.items).length > 0).length
+    check('风味反查', `可点亮搭配数不下降（当前 ${litCount}/${FLAVOR_PAIRS.length}）`, litCount >= 7, `lit=${litCount}`)
   }
 
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限

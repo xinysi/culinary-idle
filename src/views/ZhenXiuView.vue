@@ -82,6 +82,9 @@ function confirmBuy(n) {
   }
   ui.pushLog(`🛍️ 珍馐阁购买 ${getItem(t.id)?.name} ×${n}（${t.price * n} 金币）`, 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'alchemy', label: '🧪 炼金' }]
 </script>
 
 <template>
@@ -138,5 +141,6 @@ function confirmBuy(n) {
       @close="buyTarget = null"
       @confirm="confirmBuy"
     />
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>

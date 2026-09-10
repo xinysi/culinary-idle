@@ -92,6 +92,9 @@ const summary = computed(() => {
 })
 
 const skillTabs = computed(() => PROD_SKILLS.map((id) => ({ id, name: getSkillDef(id)?.name ?? id })))
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'flavorBook', label: '📔 风味册' }, { view: 'schools', label: '📜 菜系研究' }]
 </script>
 
 <template>
@@ -157,7 +160,8 @@ const skillTabs = computed(() => PROD_SKILLS.map((id) => ({ id, name: getSkillDe
     </div>
 
     <Pagination v-if="pages > 1" :current="Math.min(page, pages)" :pages="pages" @update:current="(p) => (page = p)" />
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

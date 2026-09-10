@@ -11,6 +11,10 @@ import ProgressBar from '../components/ProgressBar.vue'
 const player = usePlayerStore()
 const ui = useUiStore()
 
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'michelin', label: '⭐ 米其林评级' }, { view: 'branches', label: '🏬 餐厅分店' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals', label: '🍱 套餐与定食' }]
+
 const board = computed(() => player.rivalBoard())
 // 含自己在内的完整榜单（按分数降序）
 const rows = computed(() => {
@@ -132,13 +136,7 @@ function claim() {
       </p>
     </div>
 
-    <div class="card status-line">
-      <span class="dim">相关页面：</span>
-      <button class="btn btn-sm" @click="ui.setView('michelin')">⭐ 米其林评级</button>
-      <button class="btn btn-sm" @click="ui.setView('branches')">🏬 餐厅分店</button>
-      <button class="btn btn-sm" @click="ui.setView('restaurant')">🏮 餐厅</button>
-      <button class="btn btn-sm" @click="ui.setView('setMeals')">🍱 套餐与定食</button>
-    </div>
+    <RelatedPages :links="RELATED" />
   </div>
 </template>
 

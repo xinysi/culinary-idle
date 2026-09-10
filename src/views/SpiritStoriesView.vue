@@ -56,6 +56,9 @@ function claim(r, stage) {
   const res = player.spiritStoryClaim(r.id, stage)
   if (!res.ok) ui.pushLog(res.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'codexExchange', label: '📖 图鉴兑换' }]
 </script>
 
 <template>
@@ -116,7 +119,8 @@ function claim(r, stage) {
         </div>
       </div>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

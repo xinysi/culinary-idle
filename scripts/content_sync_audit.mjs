@@ -156,6 +156,24 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const registered = new Set([...appSrc.matchAll(/ui\.activeView === '([a-zA-Z]+)'/g)].map((m) => m[1]))
   const unregistered = [...navViews].filter((v) => !registered.has(v))
   check(`攻略：导航入口均已注册视图（${navViews.size} 个）`, unregistered.length === 0, `未注册: ${unregistered.join(',')}`)
+
+  // 每个功能页都要有「相关页面」跳转条（2026-09-10 补）：把 navViews 落到具体 .vue 文件后逐个检查
+  const viewFiles = new Map()
+  for (const m of appSrc.matchAll(/const (\w+View) = defineAsyncComponent/g)) viewFiles.set(m[1], m[1])
+  const viewTagToName = {}
+  for (const m of appSrc.matchAll(/<([A-Za-z0-9]+View)\s+v-else-if="ui\.activeView === '([a-zA-Z]+)'"/g)) viewTagToName[m[2]] = m[1]
+  // 只查左栏「功能」页签里的页面（顶栏 7 个高频入口是主功能区，不在此范围）
+  const sideViews = [...new Set([...sidebarSrc.matchAll(/view: '([a-zA-Z]+)'/g)].map((m) => m[1]))]
+  const noRel = []
+  for (const v of sideViews) {
+    const comp = viewTagToName[v]
+    if (!comp) continue
+    let src = ''
+    try { src = read(`src/views/${comp}.vue`) } catch { continue }
+    if (!src.includes('<RelatedPages')) noRel.push(v)
+  }
+  const checked = sideViews.filter((v) => !!viewTagToName[v]).length
+  check(`攻略：左栏功能页均含「相关页面」跳转条（${checked} 页）`, noRel.length === 0, `缺跳转条: ${noRel.join(',')}`)
 }
 
 console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称号/统计/攻略）' : `\n${fail} FAILURES`)

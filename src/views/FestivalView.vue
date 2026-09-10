@@ -29,6 +29,9 @@ function boostText(b) {
   if ((b.combatXp ?? 1) !== 1) parts.push(`对决经验 ×${b.combatXp}`)
   return parts.join(' · ') || '无加成'
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'weather', label: '🌤 天气运势' }, { view: 'restaurant', label: '🏮 餐厅' }]
 </script>
 
 <template>
@@ -88,7 +91,8 @@ function boostText(b) {
         </tbody>
       </table>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

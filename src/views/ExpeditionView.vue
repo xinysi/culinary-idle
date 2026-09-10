@@ -68,6 +68,9 @@ function claim(lineId, i) {
 function stop(lineId, i) {
   if (player.expeditionStop(lineId, i)) ui.pushLog('已撤回该槽位（本轮进度放弃）', 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automation', label: '🤖 自动化' }]
 </script>
 
 <template>
@@ -148,7 +151,8 @@ function stop(lineId, i) {
         </div>
       </div>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

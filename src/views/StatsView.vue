@@ -108,7 +108,7 @@ const sections = computed(() => [
       { label: '里程碑', value: msSummary.value.done, sub: ` / ${msSummary.value.total} 项（${msSummary.value.pct}%）` },
       { label: '年鉴记录', value: (player.chronicle ?? []).length, sub: ' 条（首次达成时间线）' },
       { label: '今日天气', value: player.todayWeather().name, sub: ` · 幸运食材 ${getItem(player.todayFortune().luckyItem)?.name ?? '—'}` },
-      { label: '吉祥物', value: Object.keys(player.mascotState().owned).length, sub: ` / 5 位 · 累计蹭过 ${player.stats?.mascotPets ?? 0} 次` },
+      { label: '吉祥物', value: Object.keys(player.mascotState().owned).length, sub: ` / 5 位 · 累计蹭过 ${player.stats?.mascotPets ?? 0} 次 · 累计 ${(player.stats?.mascotGold ?? 0).toLocaleString()} 金币` },
       { label: '宴会承办', value: player.stats?.banquets ?? 0, sub: ` 场 · 作废 ${player.banquetState().failed ?? 0} 场` },
       { label: '外卖接单', value: player.stats?.takeoutSold ?? 0, sub: ` 单 · Lv${player.takeoutLevel()} · 流水 ${(player.takeout?.gold ?? 0).toLocaleString()} 金币` },
       { label: '交易所成交', value: player.stats?.exchangeTrades ?? 0, sub: ` 件 · 流水 ${(player.stats?.exchangeGold ?? 0).toLocaleString()} 金币` },
@@ -120,7 +120,8 @@ const sections = computed(() => [
       { label: '图鉴点数', value: player.codexPoints().points, sub: ` 可用 · 已发放 ${player.codexPoints().total} / 已花费 ${player.codexPoints().spent}（兑换 ${player.codexOwnedIds().length} 件）` },
       { label: '餐厅套餐', value: player.setMealState().meal ? `+${player.setMealBonus()}%` : '无', sub: ` ${player.setMealState().meal?.name ?? '菜单未凑齐任何套餐'}` },
       { label: '同业榜名次', value: `#${player.rivalBoard().rank}`, sub: ` 本月 · 经营分 ${player.rivalBoard().score.toLocaleString()} · 历史最佳 #${player.stats?.rivalBestRank ?? '—'}` },
-      { label: '厨神试炼通关', value: player.stats?.trialClears ?? 0, sub: ' 次' },
+      { label: '厨神试炼通关', value: player.stats?.trialClears ?? 0, sub: ` 次 · 最佳记录 ${player.trialState('t_speed').bestTurns ? player.trialState('t_speed').bestTurns + ' 回合（速攻）' : '—'}` },
+      { label: '师徒传承', value: `Lv${player.apprenticeState().level}`, sub: ` 徒弟 · 转生 ${player.stats?.prestiges ?? 0} 次 · 传承合计 ${Object.values(player.legacy?.carry ?? {}).reduce((a, n) => a + (n ?? 0), 0)} 级` },
     ],
   },
   {

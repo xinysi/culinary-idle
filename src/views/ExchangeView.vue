@@ -47,6 +47,9 @@ function buy(g) {
   const r = player.exchangeBuy(g.item.id, q(g.item.id))
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'suppliers', label: '🤝 供应商' }, { view: 'rivals', label: '🏪 同业榜' }]
 </script>
 
 <template>
@@ -99,7 +102,8 @@ function buy(g) {
         </div>
       </div>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

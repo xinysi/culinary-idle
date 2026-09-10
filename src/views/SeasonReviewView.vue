@@ -96,6 +96,9 @@ function rewardText(reward) {
   for (const [id, q] of Object.entries(reward?.items ?? {})) parts.push(`${getItem(id)?.name ?? id} ×${q}`)
   return parts.join('、') || '—'
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'season', label: '🎪 赛季' }, { view: 'chronicle', label: '📜 年鉴' }, { view: 'milestones', label: '🗺 里程碑' }]
 </script>
 
 <template>
@@ -211,7 +214,8 @@ function rewardText(reward) {
         </div>
       </div>
     </div>
-  </div>
+      <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>
