@@ -100,6 +100,7 @@ function useItem(kind, id) {
   else if (kind === 'sauce') combat.useSauce(id)
   else if (kind === 'drink') combat.useDrink(id)
   else if (kind === 'spice') combat.useMysterySpice()
+  else if (kind === 'biscuit') combat.useEnergyBiscuit()
 }
 function startFight() {
   if (fighting.value || !unlocked.value || combat?.inFight) return
@@ -246,6 +247,11 @@ function fmt(g) { return g.toLocaleString() }
                 </div>
                 <div v-if="(player.inventory.mysterySpice ?? 0) > 0" class="item-group">
                   <button class="btn btn-sm" @click="useItem('spice')">🪄 神秘调料 ×{{ player.inventory.mysterySpice }}</button>
+                </div>
+                <div v-if="(player.inventory.energyBiscuit ?? 0) > 0" class="item-group">
+                  <button class="btn btn-sm" :disabled="combat.biscuitCooldown > 0" @click="useItem('biscuit')">
+                    🍪 能量补给 ×{{ player.inventory.energyBiscuit }}<span v-if="combat.biscuitCooldown > 0" class="dim">（冷却 {{ combat.biscuitCooldown }} 回合）</span>
+                  </button>
                 </div>
               </div>
             </div>

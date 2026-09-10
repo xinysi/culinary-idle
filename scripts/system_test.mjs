@@ -7,7 +7,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../src/game/skills/registry.js'
 import { Combat } from '../src/game/combat/Combat.js'
-import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE } from '../src/game/data/combat.js'
+import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../src/game/data/combat.js'
 import { ForagingSkill } from '../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel } from '../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../src/game/data/expeditions.js'
@@ -26,6 +26,7 @@ import { MILESTONES, milestoneSummary } from '../src/game/data/milestones.js'
 import { CHRONICLE_CAP, groupByDay } from '../src/game/data/chronicle.js'
 import { QUIRK_CAT_DEFS, quirkCategoryStats } from '../src/game/data/tales.js'
 import { recipesForPair, easiestRecipeForPair } from '../src/game/data/flavorRecipes.js'
+import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS, BISCUIT_TASTE_RATE } from '../src/game/data/biscuitUse.js'
 import { weatherForDay } from '../src/game/data/weather.js'
 import { MASCOTS, mascotBondLevel, mascotReward } from '../src/game/data/mascots.js'
 import { banquetTierFor } from '../src/game/data/banquets.js'
@@ -1308,6 +1309,64 @@ console.log('══ E. 离线进度 ══')
     check('风味搭配', '每条组合 2~3 味食材', FLAVOR_PAIRS.every((q) => q.items.length >= 2 && q.items.length <= 3))
     check('风味搭配', '每条都有名称/说明/奖励', FLAVOR_PAIRS.every((q) => q.name && q.desc && (q.reward?.gold ?? 0) > 0))
     check('风味搭配', '引用的食材全部存在', FLAVOR_PAIRS.every((q) => q.items.every((id) => !!ITEMS[id])))
+  }
+
+
+  // 能量饼干的第二用途（2026-09-10）：解决「离线加时封顶 +12h 后饼干失效」的溢出
+  {
+    // ① 前提确认：离线加时确实只有 3 块的额度（物品效果固定，不可改）
+    const pb = freshPlayer()
+    pb.inventory.energyBiscuit = 20
+    let used = 0
+    while (pb.consumeEnergyBiscuit()) used++
+    check('能量饼干', '离线加时只用得上 3 块（+12h 封顶）', used === 3 && pb.offlineBonusH === 12, `used=${used} bonus=${pb.offlineBonusH}`)
+    check('能量饼干', '封顶后基础用途失败且不消耗', pb.consumeEnergyBiscuit() === false && pb.inventory.energyBiscuit === 17)
+    check('能量饼干', '满上限可被识别（供页面提示）', pb.biscuitOfflineMaxed() === true && freshPlayer().biscuitOfflineMaxed() === false)
+
+    // ② A：战斗内补给（回血 + 命中/攻速增益 + 自身冷却），不封顶
+    const pc = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 })
+    pc.inventory.energyBiscuit = 10
+    createSkillInstances(pc)
+    const cb = new Combat(pc)
+    const oppB = opp(20, '练手对手', 'knife')
+    cb.start(oppB)
+    pc.setCombat({ hp: 10 })
+    const hpBefore = pc.combat.hp
+    const okB = cb.useEnergyBiscuit()
+    check('能量饼干', '战斗内使用：回血 + 扣 1 块', okB === true && pc.combat.hp > hpBefore && pc.inventory.energyBiscuit === 9, `hp ${hpBefore}→${pc.combat.hp}`)
+    check('能量饼干', `回血量为最大品鉴值的 ${Math.round(BISCUIT_HEAL_PCT * 100)}%（封顶不超上限）`, pc.combat.hp <= pc.maxHp)
+    check('能量饼干', '给命中与攻速增益', cb.buffs.accuracy >= BISCUIT_ACC && cb.biscuitSpeedPct === BISCUIT_SPEED_PCT)
+    check('能量饼干', `增益持续 ${BISCUIT_BUFF_TURNS} 回合`, cb.buffTurns >= BISCUIT_BUFF_TURNS)
+    check('能量饼干', '自身冷却期不可再用', cb.useEnergyBiscuit() === false && pc.inventory.energyBiscuit === 9)
+    check('能量饼干', '计入使用统计', (pc.stats.biscuitsUsed ?? 0) === 1)
+    // 冷却走完后可再用（证明不封顶）
+    for (let i = 0; i < BISCUIT_COOLDOWN_TURNS + 1; i++) cb.resolveTurn()
+    check('能量饼干', '冷却结束后可反复使用（不封顶）', cb.useEnergyBiscuit() === true && (pc.stats.biscuitsUsed ?? 0) === 2)
+    // 增益到期要清掉攻速，不能永久加成
+    for (let i = 0; i < BISCUIT_BUFF_TURNS + 1; i++) cb.resolveTurn()
+    check('能量饼干', '增益到期后攻速加成归零', cb.biscuitSpeedPct === 0 && cb.buffs.accuracy === 0)
+    const noBiscuit = freshPlayer()
+    createSkillInstances(noBiscuit)
+    const cb2 = new Combat(noBiscuit)
+    cb2.start(opp(5, '空手对手', 'knife'))
+    check('能量饼干', '没有饼干时使用失败', cb2.useEnergyBiscuit() === false)
+
+    // ③ C：常驻回收（不限量，反复兑换）
+    const pd = freshPlayer()
+    pd.inventory.energyBiscuit = 37
+    check('能量饼干', '回收预览给出块数与品鉴点', (() => { const v = pd.biscuitExchangePreview(10); return v.count === 10 && v.taste === 10 * BISCUIT_TASTE_RATE && v.rate === BISCUIT_TASTE_RATE })())
+    check('能量饼干', '空背包不可回收', pd.inventory.energyBiscuit === 0 ? pd.exchangeBiscuitForTaste().ok === false : true)
+    const t0 = pd.tastePoints
+    const r1 = pd.exchangeBiscuitForTaste(10)
+    check('能量饼干', '回收扣饼干发品鉴点', r1.ok === true && pd.inventory.energyBiscuit === 27 && pd.tastePoints === t0 + 10 * BISCUIT_TASTE_RATE)
+    const r2 = pd.exchangeBiscuitForTaste() // 全部
+    check('能量饼干', '一键回收全部', r2.ok === true && r2.count === 27 && (pd.inventory.energyBiscuit ?? 0) === 0) // spendItem 会把归零键删掉 → ?? 0
+    check('能量饼干', '回收计入统计', (pd.stats.biscuitsRecycled ?? 0) === 37)
+    check('能量饼干', '回收后仍可再刷再兑（不封顶）', (() => { pd.inventory.energyBiscuit = 5; return pd.exchangeBiscuitForTaste().ok === true && (pd.inventory.energyBiscuit ?? 0) === 0 })())
+    check('能量饼干', '超量请求被夹到持有量', (() => { pd.inventory.energyBiscuit = 3; return pd.biscuitExchangePreview(999).count === 3 })())
+
+    // ④ 不改固定数据：物品效果与离线上限仍是原值
+    check('能量饼干', '物品效果未被改动（offlineBonusH = 4）', ITEMS.energyBiscuit.offlineBonusH === 4)
   }
 
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限

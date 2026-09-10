@@ -176,6 +176,8 @@ export const ACHIEVEMENTS = [
   { id: 'codexAll', name: '图鉴藏家', category: '特殊', desc: '兑完图鉴兑换所全部商品', title: '图鉴藏家', reward: { gold: 40000, items: { mysterySpice: 3 } }, check: (p) => (p.codexOwned ?? []).length >= CODEX_REWARDS.length },
   { id: 'meal1', name: '配餐入门', category: '特殊', desc: '菜单凑齐任意一套套餐', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => p.setMealBonus() > 0 },
   { id: 'mealGrand', name: '一桌全席', category: '特殊', desc: '菜单凑齐「豪华全席」套餐', title: '全席掌勺', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => p.setMealState().meal?.id === 'sm_grand' },
+  { id: 'biscuitUse', name: '应急加餐', category: '特殊', desc: '对决中首次使用能量饼干进行补给', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.biscuitsUsed ?? 0) >= 1 },
+  { id: 'biscuitRecycle', name: '循环利用', category: '特殊', desc: '累计回收能量饼干 50 块', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.biscuitsRecycled ?? 0) >= 50 },
   { id: 'rival1', name: '榜上有名', category: '特殊', desc: '首次领取同业竞争榜名次奖励', reward: { gold: 5000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.rivalClaims ?? 0) >= 1 },
   { id: 'rivalTop', name: '同业之首', category: '特殊', desc: '在任何一月登上同业竞争榜第 1 名', title: '同业之首', reward: { gold: 45000, items: { mysterySpice: 3 } }, check: (p) => (p.stats?.rivalBestRank ?? 99) === 1 },
 ]

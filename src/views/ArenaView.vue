@@ -78,6 +78,7 @@ function useItem(kind, id) {
   else if (kind === 'sauce') combat.useSauce(id)
   else if (kind === 'drink') combat.useDrink(id)
   else if (kind === 'spice') combat.useMysterySpice()
+  else if (kind === 'biscuit') combat.useEnergyBiscuit()
 }
 
 // 战斗帧：依赖全局引擎循环计数（ui.loopTick），每 tick 重算 → 对战框逐帧刷新
@@ -337,6 +338,11 @@ function fmtDate(ts) {
               </div>
               <div v-if="(player.inventory.mysterySpice ?? 0) > 0" class="item-group">
                 <button class="btn btn-sm" @click="useItem('spice')">🪄 神秘调料 ×{{ player.inventory.mysterySpice }}</button>
+              </div>
+              <div v-if="(player.inventory.energyBiscuit ?? 0) > 0" class="item-group">
+                <button class="btn btn-sm" :disabled="combat.biscuitCooldown > 0" @click="useItem('biscuit')">
+                  🍪 能量补给 ×{{ player.inventory.energyBiscuit }}<span v-if="combat.biscuitCooldown > 0" class="dim">（冷却 {{ combat.biscuitCooldown }} 回合）</span>
+                </button>
               </div>
             </div>
             <button class="btn btn-sm" @click="combat.stop()" style="margin-top: auto">停止对决</button>
