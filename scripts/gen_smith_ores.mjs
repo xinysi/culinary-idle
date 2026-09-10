@@ -2,6 +2,10 @@
 // 覆盖：钢→鎏金（段4-16，等级16-80）各套的“同名矿”，使锻造装备用与自己名字相关的矿制造。
 // 每矿一个物品（type=ingredient, category=mineral，被 valueBalance 忽略）+ 一个挖掘目标（等级=套段首级，保证材料≤装备+5）。
 import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 
 // [套前缀, 段号, 英文id, 中文名]
 const ORES = [
@@ -48,6 +52,6 @@ export const SMITH_ORES = ${JSON.stringify(SMITH_ORES, null, 1)}
 export const SMITH_ORE_TARGETS = ${JSON.stringify(SMITH_ORE_TARGETS, null, 1)}
 `
 
-writeFileSync('src/game/data/smithOres.js', out, 'utf8')
+writeFileSync(join(__OUT_DIR, 'smithOres.js'), out, 'utf8')
 console.log(`已生成 smithOres.js：矿石 ${Object.keys(SMITH_ORES).length}，挖掘目标 ${SMITH_ORE_TARGETS.length}`)
 for (const t of SMITH_ORE_TARGETS) console.log(` ${t.itemId} lv${t.reqLevel}`)

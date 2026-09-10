@@ -3,6 +3,10 @@
 // 产物：src/game/data/spiritTiers.js（SPIRITS / SPIRIT_TIER / ITEMS_SUPPLEMENT / GET_SPIRIT_TIER_META）
 import fs from 'node:fs'
 import { MAT_POOL } from '../src/game/data/combatLoot.js'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 
 // ── 5 技能域（每阶级一个）──
 const TIERS = [
@@ -162,7 +166,7 @@ ${items.map((it) => `  { id: '${it.id}', name: '${it.name}', type: 'spirit', cat
 export function getSpirit(id) { return SPIRITS.find((s) => s.id === id) ?? null }
 export const SPIRIT_SLOTS = 2 // 同时可携带 2 个出战（§3.3.6）
 `
-fs.writeFileSync('src/game/data/spiritTiers.js', outText, 'utf-8')
+fs.writeFileSync(join(__OUT_DIR, 'spiritTiers.js'), outText, 'utf-8')
 console.log('已生成 spiritTiers.js，精灵数:', spirits.length, '物品数:', items.length)
 // 校验 reqLevel 范围 / 覆盖
 const lv = spirits.map((s) => s.reqLevel)

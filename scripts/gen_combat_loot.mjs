@@ -14,6 +14,10 @@ import { SPICE_RECIPES } from '../src/game/skills/SpiceMixingSkill.js'
 import { SMITHING_SET_RECIPES } from '../src/game/data/smithSetExt.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from '../src/game/data/expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '../src/game/data/expansion2.js'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 
 const level = {}
 const addLv = (id, lv) => { if (id != null && (level[id] == null || lv < level[id])) level[id] = lv }
@@ -85,5 +89,5 @@ export const EQUIP_SLOT = ${js(EQUIP_SLOT)}
 export const LEGENDARY = ${js(LEGENDARY)}
 export const LEGENDARY_LEVEL = ${js(LEGENDARY_LEVEL)}
 `
-writeFileSync('src/game/data/combatLoot.js', file, 'utf8')
+writeFileSync(join(__OUT_DIR, 'combatLoot.js'), file, 'utf8')
 console.log('combatLoot.js 已生成。装备池段数:', Object.keys(EQUIP_POOL).length, ' 材料池段数:', Object.keys(MAT_POOL).length, ' ITEM_LEVEL:', Object.keys(ITEM_LEVEL).length)

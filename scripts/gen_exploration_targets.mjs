@@ -24,6 +24,10 @@ import { PRESERVATION_RECIPES } from '../src/game/skills/PreservationSkill.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from '../src/game/data/expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '../src/game/data/expansion2.js'
 import { raiseRecipeLevels, balanceRecipeLevels } from '../src/game/skills/recipeBalance.js'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 // 注意：ALCHEMY_RECIPES 是横向转化表（{in:{...}, out:"itemId"}，无 reqLevel/output.itemId），
 // 其"产物等级"应取被转化物品自身在采集/配方中的等级，故不在此处作为等级锚点。
 // 等级锚点必须同步「图鉴/运行时」口径（itemBalance.js）：配方等级先经 raiseRecipeLevels / balanceRecipeLevels
@@ -379,5 +383,5 @@ const out = `// 美食探索目标扩充（生成器产出，勿手改）— ${n
 // 修改后重跑 scripts/gen_exploration_targets.mjs。
 export const EXPLORATION_TARGETS_ALL = ${JSON.stringify(targets, null, 1)}
 `
-writeFileSync('src/game/data/explorationTargets.js', out, 'utf8')
+writeFileSync(join(__OUT_DIR, 'explorationTargets.js'), out, 'utf8')
 console.log('已生成 src/game/data/explorationTargets.js')

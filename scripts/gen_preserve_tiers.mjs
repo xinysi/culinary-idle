@@ -4,6 +4,10 @@
 // 阶级等级段（同食灵）：Ⅰ=1~19, Ⅱ=20~39, Ⅲ=40~59, Ⅳ=60~79, Ⅴ=80~99。
 // 契约材料（食灵阶级规则）：低阶通用 盐矿/稻米，数量随 reqLevel 递增；材料锚≈低阶，满足 balanceRecipeLevels 不抬等级。
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 
 const TIERS = [
   { n: 1, roman: 'Ⅰ', lo: 1, hi: 19, req: 5 },
@@ -89,7 +93,7 @@ ${recJs}
 ]
 export const PRESERV_TIER_META = ${metaJs}
 `
-fs.writeFileSync('src/game/data/preserveTiers.js', outText, 'utf-8')
+fs.writeFileSync(join(__OUT_DIR, 'preserveTiers.js'), outText, 'utf-8')
 console.log('已生成 preserveTiers.js，物品数:', ITEMS.length, '配方数:', RECIPES.length)
 const lv = ITEMS.map((i) => i.id)
 console.log('物品:', lv.join(', '))
