@@ -2,7 +2,7 @@
 // 设计约束（纯读取层）：
 //   ① 称号数据本身（名称/来源）一律不改，本模块只做「名称 → 被动」的映射与荣誉等级推导；
 //   ② 被动只接既有聚合点（技能经验 / 采集产量 / 制作成功率 / 餐厅与分店收入），不新增数值层；
-//   ③ 称号数 = 成就称号 69（ALL_ACHIEVEMENTS 里带 title 的项）+ 游戏商店称号 7。
+//   ③ 称号数 = 成就称号 73（ALL_ACHIEVEMENTS 里带 title 的项）+ 游戏商店称号 7 + 图鉴兑换所称号 2。
 import { ACHIEVEMENT_TITLES, SHOP_TITLES, CODEX_SHOP_TITLES } from './titles.js'
 
 /** 每个称号的被动数值（百分比） */
