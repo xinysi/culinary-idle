@@ -100,6 +100,13 @@ export function itemDetailLines(id) {
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])
   if (it.use?.buffYield) lines.push(['产量增益', `×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`])
   if (it.spoilMs) lines.push(['腐坏时间', `${it.spoilMs / 3600000} 小时`])
+  // 离线时长加成（2026-09-10 补）：能量饼干的固有效果此前在图鉴里从未描述过
+  if (it.offlineBonusH) {
+    lines.push(['离线时长', `上限 +${it.offlineBonusH} 小时（最多累计 +12 小时，3 块即饱和）`])
+    // 饱和后的两个不封顶出口（2026-09-10 新增，见 biscuitUse.js）
+    lines.push(['战斗用途', '对决中可作「能量补给」：回 25% 品鉴值 + 5 回合命中/攻速增益（自身冷却 4 回合）'])
+    lines.push(['可回收', '在美食知识页不限量回收成品鉴点（10 点/块）'])
+  }
   if (it.type === 'spirit') {
     const sp = SPIRITS.find((s) => s.id === id)
     if (sp) lines.push(['食灵效果', spiritEffectText(sp)])

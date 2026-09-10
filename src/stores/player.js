@@ -1670,7 +1670,9 @@ export const usePlayerStore = defineStore('player', {
           this.gainItem('energyBiscuit', 1)
           const record = { kind: 'record', streak: a.currentStreak, gold: 200, items: ['energyBiscuit'] }
           EventBus.emit('arena:reward', record)
-          reward = { ...(reward ?? {}), record: true, gold: (reward?.gold ?? 0) + 200, items: [...(reward?.items ?? []), 'energyBiscuit'] }
+          // 展开基底用 record 而不是 {}：否则「只有破纪录、没开宝箱」时会丢掉 kind:'record'
+          // （宝箱与破纪录同场时为 kind:'streak' + record:true，两段信息都保留）
+          reward = { ...(reward ?? record), record: true, gold: (reward?.gold ?? 0) + 200, items: [...(reward?.items ?? []), 'energyBiscuit'] }
         }
       } else {
         a.currentStreak = 0

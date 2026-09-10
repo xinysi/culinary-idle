@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { itemDetailLines, itemSourcesOf } from '../game/data/itemDetail.js'
+import { jumpForSource } from '../game/data/sourceJump.js'
 import { itemUses } from '../game/data/itemUses.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -15,38 +16,12 @@ const emit = defineEmits(['close'])
 const player = usePlayerStore()
 const ui = useUiStore()
 
-// 获取来源 → 可跳转界面（按字符串关键词识别）
-function jumpForSource(s) {
-  if (s.includes('采摘')) return { view: 'skill', skill: 'foraging' }
-  if (s.includes('垂钓')) return { view: 'skill', skill: 'fishing' }
-  if (s.includes('狩猎')) return { view: 'skill', skill: 'hunting' }
-  if (s.includes('挖掘')) return { view: 'skill', skill: 'excavation' }
-  if (s.includes('农耕')) return { view: 'skill', skill: 'farming' }
-  if (s.includes('烹饪')) return { view: 'skill', skill: 'cooking' }
-  if (s.includes('烘焙')) return { view: 'skill', skill: 'baking' }
-  if (s.includes('腌制')) return { view: 'skill', skill: 'preserving' }
-  if (s.includes('调酒')) return { view: 'skill', skill: 'brewing' }
-  if (s.includes('调料') || s.includes('香料')) return { view: 'skill', skill: 'spiceMixing' }
-  if (s.includes('锻造')) return { view: 'skill', skill: 'craftsmithing' }
-  if (s.includes('保鲜')) return { view: 'skill', skill: 'preservation' }
-  if (s.includes('探索')) return { view: 'skill', skill: 'exploration' }
-  if (s.includes('游戏商店')) return { view: 'minigames' } // 小游戏游戏币商店（须先于通用「商店」判定）
-  if (s.includes('商店') || s.includes('购买')) return { view: 'shop' }
-  if (s.includes('赛季')) return { view: 'season' }
-  if (s.includes('BOSS') || s.includes('首领') || s.includes('击败')) return { view: 'skill', skill: 'knife' }
-  if (s.includes('炼金')) return { view: 'alchemy' }
-  if (s.includes('成就')) return { view: 'log' }
-  if (s.includes('主线任务') || s.includes('任务')) return { view: 'log' }
-  if (s.includes('契约') || s.includes('食灵')) return { view: 'skill', skill: 'spiritSummoning' }
-  if (s.includes('觅珍') || s.includes('抽卡')) return { view: 'mijian' }
-  if (s.includes('竞技场')) return { view: 'arena' }
-  return null
-}
+// 获取来源 → 可跳转界面：映射表已抽到 data/sourceJump.js（与图鉴三查审计共用同一份，避免漂移）
 function jumpSource(s) {
   const t = jumpForSource(s)
   if (!t) return
   if (t.skill) player.activeSkill = t.skill
-  if (t.view === 'log') ui.openLogTab('log')
+  if (t.view === 'log') ui.openLogTab(t.logTab ?? 'log')
   else ui.setView(t.view)
   emit('close')
 }
