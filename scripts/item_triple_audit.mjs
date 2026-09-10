@@ -6,6 +6,8 @@ import { CATEGORY_LABEL, itemDetailLines } from '../src/game/data/itemDetail.js'
 import { itemSources } from '../src/game/data/itemSources.js'
 import { itemUses } from '../src/game/data/itemUses.js'
 import { jumpForSource } from '../src/game/data/sourceJump.js'
+import { itemImage } from '../src/game/data/itemImage.js'
+import fsSync from 'node:fs'
 import { ALCHEMY_RECIPES } from '../src/game/data/alchemy.js'
 import { getAllSkillInstances } from '../src/game/skills/registry.js'
 import { FORAGING_TARGETS } from '../src/game/skills/ForagingSkill.js'
@@ -143,6 +145,19 @@ const KNOWN_GHOST_RECIPE_IDS = new Set(['al36', 'al37', 'al1918', 'al1919', 'al1
   const ghost = ALCHEMY_RECIPES.filter((r) => !ITEMS[r.out] || Object.keys(r.in ?? {}).some((k) => !ITEMS[k]))
   const newGhost = ghost.filter((r) => !KNOWN_GHOST_RECIPE_IDS.has(r.id))
   check('炼金', newGhost.length === 0, `新增幽灵配方 ${newGhost.map((r) => r.id).filter(Boolean).join(',')}（已知基线 ${ghost.length} 条已从 UI 过滤）`)
+}
+
+// ── 6. 物品图片齐备（2026-09-10 新增）──
+// 起因：图鉴里 16 个物品长期没有图片（旱芹/烟熏腊肉/薄荷凉茶…），但游戏用 @error 静默隐藏破图，
+// 没有任何检查会发现。这里对每个物品解析出图片路径并确认文件存在。
+{
+  const noImg = []
+  for (const it of items) {
+    const u = itemImage(it.id)
+    if (!u) { noImg.push(`${it.id}(无图路径)`); continue }
+    if (!fsSync.existsSync('public/' + decodeURIComponent(u))) noImg.push(`${it.name}[${it.id}]`)
+  }
+  check(`图片：全部 ${items.length} 件物品均能找到图片文件`, noImg.length === 0, `缺图: ${noImg.slice(0, 8).join('、')}`)
 }
 
 console.log(`══ 图鉴三查审计：${fail === 0 ? 'PASS' : 'FAIL'}（${items.length} 件物品）══`)
