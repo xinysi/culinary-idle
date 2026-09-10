@@ -1,4 +1,4 @@
-// 小游戏 UI 标准 · 静态合规检查（24 款 × 11 项）
+// 小游戏 UI 标准 · 静态合规检查（27 款 × 11 项）
 // 标准见《小游戏UI标准.md》§11。用法：node scripts/minigame_ui_audit.mjs
 // 例外（见标准 §10）：火候炉无开始门控/结算弹窗；大胃王开始按钮类名为 .fs-btn。
 import { readFileSync } from 'node:fs'
