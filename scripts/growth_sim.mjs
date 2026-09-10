@@ -12,7 +12,7 @@ import { usePlayerStore } from '../src/stores/player.js'
 import { createSkillInstances, getSkillInstance } from '../src/game/skills/registry.js'
 import { Combat } from '../src/game/combat/Combat.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES } from '../src/game/data/combat.js'
-import { SPIRITS } from '../src/game/data/spirits.js'
+import { SPIRITS } from '../src/game/data/spiritTiers.js'
 import { AOJIS } from '../src/game/data/aojis.js'
 import { CROPS } from '../src/game/skills/FarmingSkill.js'
 

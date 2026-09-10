@@ -34,8 +34,3 @@ export function maxExchangeable(owned) {
   return Math.max(0, Math.min(BISCUIT_EXCHANGE_MAX, Math.floor(owned ?? 0)))
 }
 
-/** A：战斗内一次补给的效果预览（页面提示用） */
-export function biscuitCombatText(maxHp) {
-  const heal = Math.floor((maxHp ?? 0) * BISCUIT_HEAL_PCT)
-  return `回复 ${heal} 品鉴值 · 命中 +${BISCUIT_ACC} · 攻速 +${BISCUIT_SPEED_PCT}%（${BISCUIT_BUFF_TURNS} 回合）`
-}

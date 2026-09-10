@@ -138,8 +138,20 @@ const tierMap = {}
 for (const t of TIERS) tierMap[`__${t.n}`] = t.name
 const tierObj = spirits.map((s) => { const n = parseInt(s.id.split('_').pop()); return `${s.id}: ${n}` }).join(', ')
 
-const outText = `// 食灵 160 只（32 base × 5 阶级）— 生成器 gen_spirit_tiers.mjs 产出，勿手改。
-// 每阶级覆盖一个技能域 + 一个等级段；5 阶级合起来覆盖所有技能，等级从 1 起连续。
+const outText = `// 食灵数据（§3.3.6）— 生成器 gen_spirit_tiers.mjs 产出，勿手改。
+// 制作「食灵契约」（消耗高级食材+调料）召唤食灵，同时可携带 2 个出战；食灵提供被动增益。
+// effect 字段含义：
+//   xpPct: {skillId: pct} 某技能经验加成（%）
+//   dmgPct: 全对决伤害加成（%）
+//   styleDmgPct: {style: pct} 指定流派伤害加成（%）
+//   healPerTurnPct: 每回合回复最大 生命值 百分比
+//   loseHpPerTurnPct: 每回合损失最大 生命值 百分比（龙息精灵的代价）
+//   fishingAccPct: 垂钓成功率加成（%）
+//   farmYieldBonus: 农耕收获额外数量
+//
+// 共 160 只（32 位主题 × 5 阶级）。每阶级覆盖一个技能域 + 一个等级段：
+//   Ⅰ采耕(1~19)、Ⅱ烹制(20~39)、Ⅲ饮藏(40~59)、Ⅳ御对(60~79)、Ⅴ超凡(80~99)，
+//   5 阶级合起来覆盖所有技能，等级从 1 起连续（任何等级都有精灵可召唤）。
 export const SPIRIT_TIER = { ${tierObj} }
 export const SPIRITS = [
 ${literals}
@@ -148,6 +160,7 @@ export const ITEMS_SUPPLEMENT = [
 ${items.map((it) => `  { id: '${it.id}', name: '${it.name}', type: 'spirit', category: 'spirit', tier: ${it.tier}, value: ${it.value} },`).join('\n')}
 ]
 export function getSpirit(id) { return SPIRITS.find((s) => s.id === id) ?? null }
+export const SPIRIT_SLOTS = 2 // 同时可携带 2 个出战（§3.3.6）
 `
 fs.writeFileSync('src/game/data/spiritTiers.js', outText, 'utf-8')
 console.log('已生成 spiritTiers.js，精灵数:', spirits.length, '物品数:', items.length)

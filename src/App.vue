@@ -37,12 +37,6 @@ const GuideView = defineAsyncComponent(() => import('./views/GuideView.vue'))
 const TowerView = defineAsyncComponent(() => import('./views/TowerView.vue'))
 const FestView = defineAsyncComponent(() => import('./views/FestView.vue'))
 const MijianView = defineAsyncComponent(() => import('./views/MijianView.vue'))
-const HeatView = defineAsyncComponent(() => import('./views/HeatView.vue'))
-const TriviaView = defineAsyncComponent(() => import('./views/TriviaView.vue'))
-const Kitchen2048View = defineAsyncComponent(() => import('./views/Kitchen2048View.vue'))
-const FoodRushView = defineAsyncComponent(() => import('./views/FoodRushView.vue'))
-const PuzzleView = defineAsyncComponent(() => import('./views/PuzzleView.vue'))
-const MatchFoodView = defineAsyncComponent(() => import('./views/MatchFoodView.vue'))
 const MinigamesView = defineAsyncComponent(() => import('./views/MinigamesView.vue'))
 const ExpeditionView = defineAsyncComponent(() => import('./views/ExpeditionView.vue'))
 const KitchenNotesView = defineAsyncComponent(() => import('./views/KitchenNotesView.vue'))
@@ -290,12 +284,8 @@ onMounted(() => {
           <CodexExchangeView v-else-if="ui.activeView === 'codexExchange'" />
           <SetMealView v-else-if="ui.activeView === 'setMeals'" />
           <RivalsView v-else-if="ui.activeView === 'rivals'" />
-          <HeatView v-else-if="ui.activeView === 'heat'" />
-          <TriviaView v-else-if="ui.activeView === 'trivia'" />
-          <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />
-          <FoodRushView v-else-if="ui.activeView === 'foodrush'" />
-          <PuzzleView v-else-if="ui.activeView === 'puzzle'" />
-          <MatchFoodView v-else-if="ui.activeView === 'matchfood'" />
+          <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
+               这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />
           <StatsView v-else-if="ui.activeView === 'stats'" />
           <LogView v-else-if="ui.activeView === 'log'" />

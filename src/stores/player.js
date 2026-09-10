@@ -12,7 +12,7 @@ import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getCombat } from '../game/combat/Combat.js'
-import { SPIRITS, SPIRIT_SLOTS, getSpirit } from '../game/data/spirits.js'
+import { SPIRITS, SPIRIT_SLOTS, getSpirit } from '../game/data/spiritTiers.js'
 import { SPIRIT_STORY_STAGES, STAGE_INFO } from '../game/data/spiritStories.js'
 import { AOJIS } from '../game/data/aojis.js'
 import { ALL_ACHIEVEMENTS, collectionTotal } from '../game/data/achievements.js'
@@ -274,7 +274,8 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
+    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
+    // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
   })
 

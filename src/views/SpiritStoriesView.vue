@@ -3,7 +3,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { SPIRITS, getSpirit } from '../game/data/spirits.js'
+import { SPIRITS, getSpirit } from '../game/data/spiritTiers.js'
 import { SPIRIT_STORY_STAGES, STAGE_INFO, storyLine, domainOf } from '../game/data/spiritStories.js'
 import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'

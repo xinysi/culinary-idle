@@ -47,27 +47,3 @@ export function jumpForSource(s) {
   return null
 }
 
-/** 跳转目标 → 界面名（提示文案用） */
-export const JUMP_VIEW_LABEL = {
-  skill: '对应技能页',
-  shop: '商店',
-  deluxe: '珍馐阁',
-  alchemy: '炼金',
-  expedition: '采集队',
-  regions: '产地',
-  ranch: '牧场',
-  cellar: '地窖',
-  automation: '自动化',
-  exchange: '交易所',
-  suppliers: '供应商合约',
-  chefs: '名厨挑战',
-  chefChallenge: '名厨挑战',
-  arena: '竞技场',
-  season: '赛季',
-  mijian: '觅珍',
-  minigames: '小游戏',
-  michelin: '评级',
-  branches: '分店',
-  codexExchange: '图鉴兑换所',
-  log: '图鉴/任务页',
-}

@@ -1,4 +1,4 @@
-// 传闻 · 轶事 批量生成脚本 — 程序化生成 44 篇传闻(TALES_EXT) + 400 篇轶事(QUIRKS)
+// 传闻 · 轶事 批量生成脚本 — 程序化生成 500 篇传闻(TALES_EXT) + 3588 篇轶事(QUIRKS)
 // 运行：node scripts/gen_tales.mjs
 // 产出：src/game/data/tales_ext.js（导出 TALES_EXT 与 QUIRKS）
 import { writeFileSync } from 'node:fs'
@@ -2107,7 +2107,7 @@ const CRAFT_SUBS = [
 ]
 
 // 对决大类 → 子子类：战斗（所有敌人单独计数，敌人>200 则×2）与 食灵召唤（食灵）×200
-const spiritModule = await load('game/data/spirits.js')
+const spiritModule = await load('game/data/spiritTiers.js') // 2026-09-10：spirits.js 中间层已合并进 spiritTiers.js
 const SPIRITS = spiritModule?.SPIRITS ?? []
 const DUEL_SUBS = [
   {

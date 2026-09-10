@@ -60,7 +60,7 @@ import { cardPoolFrom, cardStrength, simulateBattle, settleBattle, DIFFICULTIES 
 import { ALL_ACHIEVEMENTS } from '../src/game/data/achievements.js'
 import { QUESTS } from '../src/game/data/quests.js'
 import { SHOP_ITEMS } from '../src/game/data/shop.js'
-import { SPIRITS } from '../src/game/data/spirits.js'
+import { SPIRITS } from '../src/game/data/spiritTiers.js'
 import { AOJIS } from '../src/game/data/aojis.js'
 import { SEASONS } from '../src/game/data/seasons.js'
 
