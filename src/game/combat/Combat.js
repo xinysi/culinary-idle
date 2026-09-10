@@ -453,6 +453,12 @@ export class Combat {
     // 奥义「盛宴之主」：料理回血 +50%（§3.4.1）
     const healPct = this.player.gastronomyEffects?.()?.healPct ?? 0
     if (healPct > 0) heal = Math.floor(heal * (1 + healPct / 100))
+    // 菜系研究（2026-09-10）：该学派料理回血加成
+    const schoolPct = this.player.schoolHealPct?.(item.category) ?? 0
+    if (schoolPct > 0) heal = Math.floor(heal * (1 + schoolPct / 100))
+    // 食神信仰：灶君料理回血（2026-09-10）
+    const patronHealPct = this.player.patronEffects?.()?.healPct ?? 0
+    if (patronHealPct > 0) heal = Math.floor(heal * (1 + patronHealPct / 100))
     const old = this.player.combat.hp
     const newHp = Math.min(this.player.maxHp, old + heal)
     this.player.setCombat({ hp: newHp })

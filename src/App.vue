@@ -54,6 +54,15 @@ const RanchView = defineAsyncComponent(() => import('./views/RanchView.vue'))
 const BranchesView = defineAsyncComponent(() => import('./views/BranchesView.vue'))
 const ExchangeView = defineAsyncComponent(() => import('./views/ExchangeView.vue'))
 const TrialsView = defineAsyncComponent(() => import('./views/TrialsView.vue'))
+const MichelinView = defineAsyncComponent(() => import('./views/MichelinView.vue'))
+const FlavorBookView = defineAsyncComponent(() => import('./views/FlavorBookView.vue'))
+const GearContestView = defineAsyncComponent(() => import('./views/GearContestView.vue'))
+const FestivalView = defineAsyncComponent(() => import('./views/FestivalView.vue'))
+const SchoolsView = defineAsyncComponent(() => import('./views/SchoolsView.vue'))
+const StaffView = defineAsyncComponent(() => import('./views/StaffView.vue'))
+const RegionsView = defineAsyncComponent(() => import('./views/RegionsView.vue'))
+const LegacyView = defineAsyncComponent(() => import('./views/LegacyView.vue'))
+const PatronsView = defineAsyncComponent(() => import('./views/PatronsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -105,6 +114,11 @@ function applyUiScale() {
   if (v === 1) delete document.documentElement.dataset.scale
   else document.documentElement.dataset.scale = String(Math.round(v * 100))
 }
+// 高清晰模式（2026-09-10）：<html data-crisp="1"> 关闭全部 backdrop-filter、抬高遮罩、加深文字
+function applyCrisp() {
+  if (player.settings?.crispMode) document.documentElement.dataset.crisp = '1'
+  else delete document.documentElement.dataset.crisp
+}
 // 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
 function applyTheme() {
   const t = player.settings?.theme === 'dark' ? 'dark' : ''
@@ -114,6 +128,7 @@ function applyTheme() {
 onMounted(() => {
   applyUiScale()
   applyTheme()
+  applyCrisp()
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
@@ -240,6 +255,15 @@ onMounted(() => {
           <BranchesView v-else-if="ui.activeView === 'branches'" />
           <ExchangeView v-else-if="ui.activeView === 'exchange'" />
           <TrialsView v-else-if="ui.activeView === 'trials'" />
+          <MichelinView v-else-if="ui.activeView === 'michelin'" />
+          <FlavorBookView v-else-if="ui.activeView === 'flavorBook'" />
+          <GearContestView v-else-if="ui.activeView === 'gearContest'" />
+          <FestivalView v-else-if="ui.activeView === 'festival'" />
+          <SchoolsView v-else-if="ui.activeView === 'schools'" />
+          <StaffView v-else-if="ui.activeView === 'staff'" />
+          <RegionsView v-else-if="ui.activeView === 'regions'" />
+          <LegacyView v-else-if="ui.activeView === 'legacy'" />
+          <PatronsView v-else-if="ui.activeView === 'patrons'" />
           <HeatView v-else-if="ui.activeView === 'heat'" />
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />

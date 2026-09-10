@@ -290,7 +290,7 @@ function closeAoji(id) {
             >
               强化
             </button>
-            <p class="dim" style="font-size: 11px; margin-top: 4px">💡 建议：强化适合中后期装备（金装/史诗/神话），前期铜铁装收益低、成本高</p>
+            <p class="dim" style="font-size: 12px; margin-top: 4px">💡 建议：强化适合中后期装备（金装/史诗/神话），前期铜铁装收益低、成本高</p>
           </div>
           <div
             v-for="o in slotOptions"

@@ -139,7 +139,7 @@ function close() { ui.toggleEquipModal(false) }
             <span class="dim">{{ SLOT_NAMES[slot] }}</span>
             <span class="equip-name" :class="{ dim: !itemId }">
               {{ itemId ? getItem(itemId)?.name : '—' }}
-              <span v-if="itemId && (player.upgrades[itemId] ?? 0) > 0" class="dim mono" style="font-size: 11px; margin-left: 4px">⚒️+{{ player.upgrades[itemId] }}</span>
+              <span v-if="itemId && (player.upgrades[itemId] ?? 0) > 0" class="dim mono" style="font-size: 12px; margin-left: 4px">⚒️+{{ player.upgrades[itemId] }}</span>
             </span>
             <button class="btn btn-sm" :disabled="!itemId" @click.stop="itemId && unequipSlot(slot)">卸下</button>
             <button class="btn btn-sm btn-primary" :disabled="!itemId" @click.stop="itemId && setUpgradeTarget(itemId)">强化</button>
@@ -201,7 +201,7 @@ function close() { ui.toggleEquipModal(false) }
             </div>
             <span v-if="!statEntries.length" class="dim" style="grid-column: 1 / -1">未穿戴任何装备</span>
           </div>
-          <div class="dim" style="font-size: 11px; margin-top: 8px">已穿戴 {{ wornCount }}/8 槽 · 强化总等级 +{{ totalUpgrades }}</div>
+          <div class="dim" style="font-size: 12px; margin-top: 8px">已穿戴 {{ wornCount }}/8 槽 · 强化总等级 +{{ totalUpgrades }}</div>
           <div v-if="activeSets.length" style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px">
             <div v-for="s in activeSets" :key="s.key" class="gather-card-row">
               <span><span class="badge badge-on">{{ s.count }} 件</span> {{ s.name }}</span>
@@ -214,8 +214,8 @@ function close() { ui.toggleEquipModal(false) }
           <template v-if="selectedEquip">
             <div class="equip-detail-head">
               <span class="equip-detail-name">{{ getItem(selectedEquip)?.name }}</span>
-              <span v-if="(player.upgrades[selectedEquip] ?? 0) > 0" class="badge" style="background: var(--warn-soft); color: var(--warn-strong); font-size: 10px">⚒️+{{ player.upgrades[selectedEquip] }}</span>
-              <span v-if="getItem(selectedEquip)?.quality" class="badge" style="background: var(--sidebar-bg); color: var(--muted); font-size: 10px">{{ getItem(selectedEquip)?.quality }}</span>
+              <span v-if="(player.upgrades[selectedEquip] ?? 0) > 0" class="badge" style="background: var(--warn-soft); color: var(--warn-strong); font-size: 12px">⚒️+{{ player.upgrades[selectedEquip] }}</span>
+              <span v-if="getItem(selectedEquip)?.quality" class="badge" style="background: var(--sidebar-bg); color: var(--muted); font-size: 12px">{{ getItem(selectedEquip)?.quality }}</span>
             </div>
             <div class="equip-detail-list">
               <div v-for="l in itemDetailLines(selectedEquip)" :key="l.label" class="equip-detail-row"><span class="dim">{{ l.label }}</span><span class="mono">{{ l.value }}<template v-if="l.label === '暴击'">%</template></span></div>
@@ -256,7 +256,7 @@ function close() { ui.toggleEquipModal(false) }
                   </span>
                 </div>
               </template>
-              <p v-else class="dim" style="font-size: 11px">穿戴后可镶嵌（换装/卸下会自动退回宝石）</p>
+              <p v-else class="dim" style="font-size: 12px">穿戴后可镶嵌（换装/卸下会自动退回宝石）</p>
             </template>
           </template>
           <p v-else class="dim">点击左侧/右侧装备查看详情。</p>

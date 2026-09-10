@@ -30,6 +30,13 @@ function applyUiScale(v) {
 }
 // 打开面板时同步当前缩放
 applyUiScale(player.settings.uiScale ?? 1)
+
+// 高清晰模式（2026-09-10）
+function applyCrispMode(on) {
+  player.settings.crispMode = !!on
+  if (on) document.documentElement.dataset.crisp = '1'
+  else delete document.documentElement.dataset.crisp
+}
 </script>
 
 <template>
@@ -44,7 +51,7 @@ applyUiScale(player.settings.uiScale ?? 1)
         <span class="dim">玩家名字</span>
         <input v-model="nameDraft" maxlength="16" style="flex: 1" @keyup.enter="saveName" />
         <button class="btn btn-sm" @click="saveName">保存</button>
-        <span v-if="nameMsg" class="dim" style="font-size: 11px">{{ nameMsg }}</span>
+        <span v-if="nameMsg" class="dim" style="font-size: 12px">{{ nameMsg }}</span>
       </div>
 
       <div class="settings-row">
@@ -72,7 +79,7 @@ applyUiScale(player.settings.uiScale ?? 1)
       <div class="settings-row">
         <span class="dim">补给保留金币：</span>
         <input type="number" min="0" step="500" v-model.number="player.settings.autoSupplyReserve" style="flex: 1" />
-        <span class="dim" style="font-size: 11px">低于该金币不自动购买</span>
+        <span class="dim" style="font-size: 12px">低于该金币不自动购买</span>
       </div>
       <div class="settings-row">
         <span class="dim">挂机并行上限：</span>
@@ -106,6 +113,13 @@ applyUiScale(player.settings.uiScale ?? 1)
           style="flex: 1"
           @input="applyScale($event.target.value)"
         />
+      </div>
+      <div class="settings-row">
+        <label class="switch-row">
+          <input type="checkbox" :checked="player.settings.crispMode" @change="applyCrispMode($event.target.checked)" />
+          <span>高清晰模式</span>
+        </label>
+        <span class="dim" style="flex: 1">关闭毛玻璃模糊、抬高不透明度、加深次要文字——文字更锐利（界面缩放 100% 时效果最好）</span>
       </div>
       <div class="settings-row">
         <span class="dim">界面主题</span>

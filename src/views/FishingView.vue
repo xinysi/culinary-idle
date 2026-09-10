@@ -1503,7 +1503,7 @@ onUnmounted(() => {
 .fh-caught-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border-radius: 12px; background: rgba(255, 251, 244, 0.9); border: 2px solid rgba(150, 110, 70, 0.25); }
 .fh-caught-item img { width: 44px; height: 44px; object-fit: contain; }
 .fh-caught-name { font-size: 12px; font-weight: 700; }
-.fh-caught-meta { font-size: 11px; font-weight: 700; }
+.fh-caught-meta { font-size: 12px; font-weight: 700; }
 .fh-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
 .fh-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .fh-spark { position: absolute; font-size: 22px; color: var(--gold); animation: fhSpark 1.1s ease-out forwards; }

@@ -109,7 +109,7 @@ function stop(lineId, i) {
           <div class="gather-card-head">
             <div>
               <strong>槽位 {{ s.index + 1 }}</strong>
-              <div class="dim" style="font-size: 11px">周期 {{ s.slot.hours }} 小时 · 需 {{ getSkillDef(line.def.skill)?.name }} Lv{{ s.slot.reqLevel }}</div>
+              <div class="dim" style="font-size: 12px">周期 {{ s.slot.hours }} 小时 · 需 {{ getSkillDef(line.def.skill)?.name }} Lv{{ s.slot.reqLevel }}</div>
             </div>
             <span v-if="s.ready" class="badge badge-on">可领取</span>
           </div>
@@ -164,7 +164,7 @@ function stop(lineId, i) {
 .exp-slot { display: flex; flex-direction: column; gap: 8px; }
 .exp-slot.ready { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft) inset; }
 .exp-pool { display: flex; flex-wrap: wrap; gap: 8px; }
-.exp-pool-item { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.exp-pool-item { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .exp-btn { margin-top: auto; }
 .exp-slot-locked { font-size: 12px; padding: 8px 0; }
 </style>

@@ -200,7 +200,7 @@ const nextReward = computed(() => {
 .hz-box { background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .hz-box-head { display: flex; align-items: center; justify-content: space-between; }
 .hz-box-tag { font-weight: 800; font-size: 14px; }
-.hz-box-reward { font-size: 11px; color: var(--warn-strong); font-weight: 700; }
+.hz-box-reward { font-size: 12px; color: var(--warn-strong); font-weight: 700; }
 .hz-track { position: relative; width: 100%; height: 22px; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #f3dcc0, #ffe9d2 30%, #ffe9d2 70%, #f3dcc0); box-shadow: inset 0 1px 4px rgba(120, 84, 50, 0.18); }
 .hz-tiny { height: 16px; }
 .hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #f2a25c, #d95a38); box-shadow: 0 0 12px rgba(217, 90, 56, 0.8); border-radius: 999px; }

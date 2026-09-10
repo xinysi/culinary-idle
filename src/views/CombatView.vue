@@ -220,7 +220,7 @@ function closeDrops() {
         >
           <div class="gather-card-head">
             <strong>{{ o.name }}</strong>
-            <span class="dim mono" style="font-size: 11px">Lv{{ o.level }}</span>
+            <span class="dim mono" style="font-size: 12px">Lv{{ o.level }}</span>
           </div>
           <div class="gather-card-row"><span>风格</span><span>{{ o.styleName }}{{ advantageText(player.combat.style, o.style) }}</span></div>
           <div class="gather-card-row"><span>生命值</span><span class="mono">{{ o.hp }}</span></div>
@@ -250,13 +250,13 @@ function closeDrops() {
         >
           <div class="gather-card-head">
             <strong>👑 {{ b.name }}</strong>
-            <span class="dim mono" style="font-size: 11px">Lv{{ b.level }}</span>
+            <span class="dim mono" style="font-size: 12px">Lv{{ b.level }}</span>
           </div>
           <div class="gather-card-row"><span>风格</span><span>{{ b.styleName }}<template v-if="!bossUnlocked(b)">（对决{{ b.level }}级解锁）</template></span></div>
           <div class="gather-card-row"><span>生命值</span><span class="mono">{{ b.hp }}</span></div>
           <div class="gather-card-row"><span>攻击</span><span class="mono">{{ Math.round(b.atk) }}</span></div>
           <div class="gather-card-row"><span>防御</span><span class="mono">{{ b.def }}</span></div>
-          <div class="gather-card-row"><span>机制</span><span class="dim" style="font-size: 11px">{{ mechText(b) }}</span></div>
+          <div class="gather-card-row"><span>机制</span><span class="dim" style="font-size: 12px">{{ mechText(b) }}</span></div>
           <button class="btn btn-sm btn-danger" :disabled="battleFrame.inFight || !bossUnlocked(b)" @click.stop="startFight(b)">挑战</button>
         </div>
       </div>

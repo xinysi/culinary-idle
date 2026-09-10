@@ -8,6 +8,10 @@ import { ITEMS } from './items.js'
 import { equipSetBonuses } from './equipSets.js'
 import { masteryLevelFromCount } from '../core/mastery.js'
 import { REGULARS, regularLevelFromServes } from './regulars.js'
+import { FLAVOR_PAIRS } from './flavorPairs.js'
+import { SCHOOLS } from './schools.js'
+import { STAFF } from './staff.js'
+import { REGIONS } from './regions.js'
 
 // 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
 const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
@@ -124,6 +128,24 @@ export const ACHIEVEMENTS = [
   { id: 'ranch50', name: '牧场主', category: '特殊', desc: '牧场累计产出 50 个周期', title: '牧场主', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.ranchCycles ?? 0) >= 50 },
   { id: 'branch1', name: '首开分店', category: '特殊', desc: '开设第一家分店', reward: { gold: 3000 }, check: (p) => Object.keys(p.branches ?? {}).length >= 1 },
   { id: 'branchAll', name: '连锁帝国', category: '特殊', desc: '四家分店全部开业并雇满店长', title: '连锁帝国', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => ['east', 'west', 'south', 'north'].every((id) => p.branches?.[id]?.manager) },
+  { id: 'michelin1', name: '初登榜单', category: '特殊', desc: '餐厅获得米其林一星', reward: { gold: 4000, items: { mysterySpice: 1 } }, check: (p) => (p.michelin?.best ?? 0) >= 1 },
+  { id: 'michelin3', name: '三星食府', category: '特殊', desc: '餐厅获得米其林三星', title: '三星食府', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => (p.michelin?.best ?? 0) >= 3 },
+  { id: 'flavor5', name: '初尝搭配', category: '收集', desc: '点亮 5 条风味搭配', reward: { gold: 1500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= 5 },
+  { id: 'flavorAll', name: '风味百科', category: '收集', desc: '点亮全部风味搭配', title: '风味百科', reward: { gold: 18000, items: { mysterySpice: 3 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= FLAVOR_PAIRS.length },
+  { id: 'gearContest3', name: '初登赛场', category: '特殊', desc: '厨具大赛累计参赛 3 届', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.gearContestRuns ?? 0) >= 3 },
+  { id: 'gearContestS', name: '至尊厨具', category: '特殊', desc: '厨具大赛取得 S 档', title: '至尊厨具', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => p.gearContest?.rank === 'S' },
+  { id: 'school1', name: '初入学派', category: '特殊', desc: '完成 1 级菜系研究', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.schoolLevels ?? 0) >= 1 },
+  { id: 'school15', name: '六艺通才', category: '特殊', desc: '累计研究 15 级（六派共 30 级）', title: '六艺通才', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.schoolLevels ?? 0) >= 15 },
+  { id: 'schoolAll', name: '一代宗匠', category: '特殊', desc: '六大流派全部研究满级', title: '一代宗匠', reward: { gold: 40000, items: { mysterySpice: 3, energyBiscuit: 2 } }, check: (p) => SCHOOLS.every((s) => (p.schools?.[s.id]?.level ?? 0) >= 5) },
+  { id: 'staff1', name: '初雇人手', category: '特殊', desc: '雇下第一位雇工', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => STAFF.some((s) => (p.staff?.[s.id]?.level ?? 0) > 0) },
+  { id: 'staffAll', name: '名店班底', category: '特殊', desc: '三种岗位全部满级在岗', title: '名店班底', reward: { gold: 25000, items: { mysterySpice: 2 } }, check: (p) => STAFF.every((s) => (p.staff?.[s.id]?.level ?? 0) >= 5) },
+  { id: 'region1', name: '初次远行', category: '探索', desc: '考察 1 个产地', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.regions ?? {}).length >= 1 },
+  { id: 'regionAll', name: '踏遍四方', category: '探索', desc: '考察全部 5 个产地', title: '踏遍四方', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => REGIONS.every((r) => p.regions?.[r.id]) },
+  { id: 'carry1', name: '留一手', category: '特殊', desc: '首次转生保留传承等级', reward: { gold: 3000, items: { mysterySpice: 1 } }, check: (p) => Object.values(p.legacy?.carry ?? {}).some((lv) => (lv ?? 0) > 0) },
+  { id: 'apprentice30', name: '桃李成蹊', category: '特殊', desc: '徒弟成长到 Lv30', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => (p.legacy?.apprentice?.level ?? 0) >= 30 },
+  { id: 'apprentice50', name: '衣钵传人', category: '特殊', desc: '徒弟成长到满级 Lv50', title: '衣钵传人', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => (p.legacy?.apprentice?.level ?? 0) >= 50 },
+  { id: 'patron1', name: '初选定信仰', category: '特殊', desc: '首次选定一位守护神', reward: { gold: 2500, items: { mysterySpice: 1 } }, check: (p) => !!p.patron?.active },
+  { id: 'patronMax', name: '神眷之人', category: '特殊', desc: '任一守护神供奉满级 Lv3', title: '神眷之人', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => Object.values(p.patron?.levels ?? {}).some((lv) => (lv ?? 0) >= 3) },
   { id: 'ex10', name: '第一桶金', category: '特殊', desc: '交易所累计成交 10 件', reward: { gold: 1500 }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 10 },
   { id: 'ex500', name: '行情老手', category: '特殊', desc: '交易所累计成交 500 件', title: '行情老手', reward: { gold: 9000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 500 },
   { id: 'trial1', name: '初次试炼', category: '特殊', desc: '通关任意一条厨神试炼', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.trialClears ?? 0) >= 1 },

@@ -89,7 +89,11 @@ export class ProductionSkill extends Skill {
       if (this.id === 'preservation') this.player.bumpStory('support', 'preservation:' + out.itemId)
       // 对决·食灵召唤：按食灵 id 单独计次
       if (this.id === 'spiritSummoning') this.player.bumpStory('spirit', 'spirit:' + out.itemId)
-      const expGained = this.addCardXp(recipe.xp, masteryXpMultiplier(this.masteryLevel(recipe)))
+      // 风味搭配册（2026-09-10）：成功制作时检测食材组合
+      this.player.discoverFlavors?.(Object.keys(recipe.ingredients ?? {}))
+      // 菜系研究（2026-09-10）：该学派配方经验加成
+      const schoolMult = 1 + (this.player.schoolCraftXpPct?.(recipe.category) ?? 0) / 100
+      const expGained = this.addCardXp(recipe.xp * schoolMult, masteryXpMultiplier(this.masteryLevel(recipe)))
       EventBus.emit('skill:action', {
         skillId: this.id,
         itemId: out.itemId,

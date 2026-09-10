@@ -454,7 +454,7 @@ function scrollToSection(label) {
               <div>
                 <strong>{{ r.name }}</strong>
                 <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
-                <div class="dim" style="font-size: 11px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
+                <div class="dim" style="font-size: 12px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
             </div>
             <div class="gather-card-row effect-row">
@@ -541,7 +541,7 @@ function scrollToSection(label) {
   display: inline-block;
   margin-left: 6px;
   padding: 2px 7px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   border: 1px solid currentColor;

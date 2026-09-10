@@ -205,7 +205,7 @@ function taskProgress(task) {
   flex: 1; font-size: 13px; line-height: 1.35; word-break: break-word;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.season-task-pts { flex-shrink: 0; white-space: nowrap; font-size: 11px; }
+.season-task-pts { flex-shrink: 0; white-space: nowrap; font-size: 12px; }
 .season-task-bar { display: flex; align-items: center; gap: 8px; margin-top: auto; }
 .season-task-bar :deep(.progress-bar) { flex: 1; }
 .season-task-num { flex-shrink: 0; font-size: 12px; }
@@ -237,7 +237,7 @@ function taskProgress(task) {
 .guild-shop-card { align-items: center; text-align: center; }
 .guild-shop-card .item-label { flex-direction: column; align-items: center; gap: 2px; justify-content: center; }
 .guild-shop-name { font-weight: 600; font-size: 13px; text-align: center; min-height: 34px; display: flex; align-items: center; }
-.guild-shop-price { font-size: 11px; }
+.guild-shop-price { font-size: 12px; }
 .guild-shop-card .season-tier-claim { margin-top: auto; width: 100%; }
 /* 买得起 / 买不起 动态状态 */
 .guild-shop-card.buyable { border-color: var(--primary-soft); }

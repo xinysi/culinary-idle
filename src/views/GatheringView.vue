@@ -193,7 +193,7 @@ function scrollToSection(label) {
               <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
               <div>
                 <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
-                <div class="dim" style="font-size: 11px">Lv {{ t.reqLevel }} 解锁</div>
+                <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>
             <div class="gather-card-row">
@@ -213,7 +213,7 @@ function scrollToSection(label) {
               <span class="mono">{{ instance.masteryLevel(t) }} / 100 级<span v-if="masteryBatch(t)" class="mastery-hl">&nbsp;· 保底 +{{ masteryBatch(t) }}</span></span>
             </div>
             <ProgressBar :progress="instance.masteryProgress(t).progress" class="mastery-bar" />
-            <div class="dim mono" style="font-size: 10px; text-align: right">
+            <div class="dim mono" style="font-size: 12px; text-align: right">
               {{ instance.masteryProgress(t).current }} / {{ instance.masteryProgress(t).needed }} 次
             </div>
             <div v-if="isFishing" class="gather-card-row">

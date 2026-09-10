@@ -122,7 +122,7 @@ function buy(g) {
 }
 .ex-mood {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .mood-high {
@@ -132,7 +132,7 @@ function buy(g) {
   color: var(--info);
 }
 .ex-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .ex-prices {

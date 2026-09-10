@@ -219,7 +219,7 @@ function doClaim(i, ev) {
   flex: 1; font-size: 13px; line-height: 1.35; word-break: break-word;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.season-task-pts { flex-shrink: 0; white-space: nowrap; font-size: 11px; }
+.season-task-pts { flex-shrink: 0; white-space: nowrap; font-size: 12px; }
 .season-task-bar { display: flex; align-items: center; gap: 8px; margin-top: auto; }
 .season-task-bar :deep(.progress-bar) { flex: 1; }
 .season-task-num { flex-shrink: 0; font-size: 12px; }
@@ -251,7 +251,7 @@ function doClaim(i, ev) {
 /* ── 奖励卡 ── */
 .season-tier-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .season-tier-head strong { font-size: 13px; }
-.season-tier-pts { font-size: 11px; white-space: nowrap; }
+.season-tier-pts { font-size: 12px; white-space: nowrap; }
 .season-tier-reward {
   font-size: 12px; color: var(--muted); line-height: 1.5; word-break: break-word;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: 36px;
@@ -287,7 +287,7 @@ function doClaim(i, ev) {
 }
 .season-pts-icon { width: 26px; height: 26px; image-rendering: pixelated; flex-shrink: 0; }
 .season-pts-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
-.season-pts-label { font-size: 11px; color: var(--muted); }
+.season-pts-label { font-size: 12px; color: var(--muted); }
 /* 数字复用进度条流光：底层主色渐变 + 上层彩色高光(彩虹)滑过(background-clip:text)；200%宽、200%→0 无缝循环 */
 .season-pts-num {
   font-size: 22px;

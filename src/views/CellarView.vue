@@ -114,7 +114,7 @@ function maxQtyFor(itemId) {
         <div v-for="s in slots" :key="s.index" class="card cellar-slot">
           <div class="cellar-head">
             <strong>槽位 {{ s.index + 1 }}</strong>
-            <span v-if="s.state" class="dim mono" style="font-size: 11px">{{ s.state.hours }}h ×{{ s.state.mult }}</span>
+            <span v-if="s.state" class="dim mono" style="font-size: 12px">{{ s.state.hours }}h ×{{ s.state.mult }}</span>
           </div>
 
           <template v-if="s.state">
@@ -181,7 +181,7 @@ function maxQtyFor(itemId) {
   font-size: 13px;
 }
 .cellar-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .cellar-actions {

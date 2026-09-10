@@ -137,7 +137,7 @@ const skillTabs = computed(() => PROD_SKILLS.map((id) => ({ id, name: getSkillDe
         <div v-if="!r._pad" class="card note-card" :class="{ locked: !r.unlocked }">
           <div class="note-head">
             <strong>{{ r.name }}</strong>
-            <span class="dim mono" style="font-size: 11px">{{ r.skillName }} · Lv{{ r.reqLevel }}</span>
+            <span class="dim mono" style="font-size: 12px">{{ r.skillName }} · Lv{{ r.reqLevel }}</span>
           </div>
           <div class="note-row">
             <span class="dim">精通</span>
@@ -189,7 +189,7 @@ const skillTabs = computed(() => PROD_SKILLS.map((id) => ({ id, name: getSkillDe
   font-size: 13px;
 }
 .note-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 </style>

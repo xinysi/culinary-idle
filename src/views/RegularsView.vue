@@ -158,7 +158,7 @@ function claimGift(r) {
   font-size: 24px;
 }
 .regular-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .regular-row {

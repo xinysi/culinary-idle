@@ -373,11 +373,11 @@ onUnmounted(() => { stopTimer() })
 .sl-tile:hover { box-shadow: 0 4px 12px rgba(184, 68, 42, 0.3); }
 .sl-tile.star { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(224, 161, 58, 0.35), 0 2px 6px rgba(93, 64, 55, 0.18); }
 .sl-tile img { width: 78%; height: 78%; object-fit: contain; pointer-events: none; }
-.sl-num { position: absolute; right: 4px; bottom: 2px; font-size: 11px; font-weight: 800; color: rgba(120, 80, 50, 0.75); }
+.sl-num { position: absolute; right: 4px; bottom: 2px; font-size: 12px; font-weight: 800; color: rgba(120, 80, 50, 0.75); }
 .sl-star { position: absolute; left: 4px; top: 2px; font-size: 13px; }
 /* 目标排列预览（整盘还原模式） */
 .sl-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.sl-preview-title { font-size: 11px; font-weight: 700; color: var(--muted); }
+.sl-preview-title { font-size: 12px; font-weight: 700; color: var(--muted); }
 .sl-preview-grid { display: grid; gap: 2px; background: rgba(120, 84, 50, 0.2); padding: 3px; border-radius: 8px; }
 .sl-preview-cell { position: relative; aspect-ratio: 1; border-radius: 4px; background: rgba(255, 252, 246, 0.88); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .sl-preview-cell.gap { background: rgba(120, 84, 50, 0.4); }

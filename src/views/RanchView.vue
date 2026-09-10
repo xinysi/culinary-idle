@@ -97,7 +97,7 @@ function expand() {
         <div v-for="p in pens" :key="p.index" class="card ranch-pen">
           <div class="ranch-head">
             <strong>栏位 {{ p.index + 1 }}</strong>
-            <span v-if="p.def" class="dim mono" style="font-size: 11px">{{ p.def.hours }}h / 周期</span>
+            <span v-if="p.def" class="dim mono" style="font-size: 12px">{{ p.def.hours }}h / 周期</span>
           </div>
 
           <template v-if="p.def">
@@ -174,11 +174,11 @@ function expand() {
   font-size: 24px;
 }
 .ranch-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .ranch-warn {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--warn-strong);
 }
 .ranch-select {
