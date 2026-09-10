@@ -53,6 +53,14 @@ src/
 ├── views/                # 82 个视图：技能/采集/农耕/制作/商店/对决/竞技场/塔/秘境/
 │                         #   图鉴/攻略/统计/赛季/公会/餐厅/各长线功能页/小游戏（27 款）等
 └── components/           # 24 个组件：Sidebar / StatusPanel / CombatPanel / 各类弹窗 / 分页 / 进度条
+
+scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 个文件平铺）
+├── ci/                   # 10 个 CI 门禁：system_test / system_test2 / buff_test / continuity_test /
+│                         #   season_check / audit_sync / content_sync_audit / item_triple_audit /
+│                         #   minigame_ui_audit / verify_modules.cjs
+├── gen/                  # 13 个内容生成器（gen_*）：产物勿手改，改后重跑（注意自引用陷阱，见 AGENTS.md）
+├── sim/                  # 3 个标定模拟：balance_sim / growth_sim / endgame_sim（不进 CI，按需手动跑）
+└── legacy/               # smoke_test.mjs（早期真机回归，旧曲线快照，非门禁）
 ```
 
 ## 与需求文档的对照
