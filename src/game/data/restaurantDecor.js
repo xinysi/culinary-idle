@@ -1,6 +1,6 @@
 // 餐厅装饰（生成器自动生成，勿手改）：300 件（基线 100 + 新增 200）
 // 曲线：price 500→750000 单调；effect 随 price 从 +0.5% → +3% 递增（收入%梯度，无倒挂）
-// 生成：node scripts/gen_restaurant_decor.mjs
+// 生成：node scripts/gen/gen_restaurant_decor.mjs
 import { RESTAURANT_DECOR_BASE } from './restaurantDecorBase.js'
 
 // 类别显示名

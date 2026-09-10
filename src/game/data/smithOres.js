@@ -1,5 +1,5 @@
 // 厨具锻造同名矿（生成器产出，勿手改）— 2026-08-30
-// 覆盖：钢→鎏金（段4-16，等级16-80）各套同名矿的物品 + 挖掘目标。改后重跑 scripts/gen_smith_ores.mjs。
+// 覆盖：钢→鎏金（段4-16，等级16-80）各套同名矿的物品 + 挖掘目标。改后重跑 scripts/gen/gen_smith_ores.mjs。
 export const SMITH_ORES = {
  "steelOre": {
   "id": "steelOre",

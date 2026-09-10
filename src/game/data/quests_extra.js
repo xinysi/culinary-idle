@@ -1,4 +1,4 @@
-// 程序化生成的任务（q49 起）— 由 scripts/gen_quests.mjs 生成，勿手改
+// 程序化生成的任务（q49 起）— 由 scripts/gen/gen_quests.mjs 生成，勿手改
 export const QUESTS_EXT = [
   {
     id: 'q49', name: "采撷苹果",

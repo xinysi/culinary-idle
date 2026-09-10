@@ -1,7 +1,7 @@
 // 厨具锻造品质套 + 独立矿套（生成器产出，勿手改）
 // 覆盖：20 品质套 + 21 独立矿套，每套 8 槽（刀/锅/砧板/围裙/厨师帽/调味瓶/腿甲/靴子），
 //       21 独立矿套另含手写的戒指/护符，共 9 件。
-// 改后重跑：node scripts/gen_smith_sets.mjs
+// 改后重跑：node scripts/gen/gen_smith_sets.mjs
 // ⚠️ 重跑前必须先清空本文件的两个导出（置 []）——生成器会 import ITEMS，
 //    而 ITEMS 已合并上次的产物，不清空会因「已存在/重名」跳过全部条目（自引用污染）。
 export const SMITHING_SET_RECIPES = [

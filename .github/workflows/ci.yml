@@ -22,15 +22,15 @@ jobs:
 
       - name: Simulation suites
         run: |
-          node scripts/system_test.mjs
-          node scripts/season_check.mjs
-          node scripts/system_test2.mjs
-          node scripts/buff_test.mjs
-          node scripts/continuity_test.mjs
-          node scripts/audit_sync.mjs
-          node scripts/content_sync_audit.mjs
-          node scripts/item_triple_audit.mjs
-          node scripts/minigame_ui_audit.mjs
+          node scripts/ci/system_test.mjs
+          node scripts/ci/season_check.mjs
+          node scripts/ci/system_test2.mjs
+          node scripts/ci/buff_test.mjs
+          node scripts/ci/continuity_test.mjs
+          node scripts/ci/audit_sync.mjs
+          node scripts/ci/content_sync_audit.mjs
+          node scripts/ci/item_triple_audit.mjs
+          node scripts/ci/minigame_ui_audit.mjs
 
       - name: Web build
         run: npm run build
