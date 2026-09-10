@@ -434,7 +434,7 @@ onUnmounted(() => { stopLoop() })
 .dn-slot img { width: 50px; height: 50px; object-fit: contain; }
 .dn-slot.sel { border-color: var(--primary-strong); box-shadow: 0 0 0 3px rgba(217, 90, 56, 0.25); transform: translateY(-3px); }
 .dn-slot.empty { background: rgba(255, 255, 255, 0.45); border-style: dashed; cursor: default; }
-.dn-slot-empty { font-size: 11px; color: var(--muted); }
+.dn-slot-empty { font-size: 12px; color: var(--muted); }
 .dn-keys {
   display: flex;
   gap: 10px;

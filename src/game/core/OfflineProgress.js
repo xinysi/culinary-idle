@@ -17,7 +17,10 @@ export function computeOfflineProgress(instance, elapsedMs, maxOfflineMs = DEFAU
   const durationMs = Math.min(Math.max(elapsedMs, 0), maxOfflineMs)
   if (durationMs < 1_000) return null
 
-  const result = instance.computeOffline(durationMs, OFFLINE_EFFICIENCY)
+  // 师徒传承（2026-09-10）：徒弟等级提升离线收益效率（0.8 → 最高 1.0）
+  const bonus = instance.player?.apprenticeOfflineBonus?.() ?? 0
+  const efficiency = Math.min(1, OFFLINE_EFFICIENCY + bonus)
+  const result = instance.computeOffline(durationMs, efficiency)
   if (!result) return null
   return { durationMs, ...result }
 }

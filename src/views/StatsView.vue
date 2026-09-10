@@ -9,6 +9,7 @@ import { ITEMS } from '../game/data/items.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
+import { REGIONS } from '../game/data/regions.js'
 import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
 
 const player = usePlayerStore()
@@ -92,6 +93,15 @@ const sections = computed(() => [
       { label: '自动出售', value: player.stats?.autoSold ?? 0, sub: ` 件 · 回收 ${(player.stats?.autoSoldGold ?? 0).toLocaleString()} 金币` },
       { label: '牧场产出周期', value: player.stats?.ranchCycles ?? 0, sub: ` 次 · ${player.ranchPens()} 个栏位` },
       { label: '分店入账', value: (player.stats?.branchGold ?? 0).toLocaleString(), sub: ` 金币 · ${Object.keys(player.branches ?? {}).length} 家分店` },
+      { label: '米其林星级', value: '★'.repeat(player.michelin?.stars ?? 0) || '—', sub: ` 当前 ${player.michelin?.score ?? 0} 分 · 最高 ${player.michelin?.best ?? 0} 星` },
+      { label: '风味搭配', value: player.flavorProgress().found, sub: ` / ${player.flavorProgress().total} 条` },
+      { label: '厨具大赛', value: player.gearScore().score, sub: ` 分 · 历史最高 ${player.gearContest?.best ?? 0}` },
+      { label: '今日节庆', value: player.festivalBoost().active.map((f) => f.name).join('、') || '无', sub: player.festivalBoost().active.length ? '（加成已生效）' : '（见节庆日历）' },
+      { label: '菜系研究', value: player.schoolTotalLevels(), sub: ' / 30 级（六派 ×5）' },
+      { label: '雇工班底', value: player.staffWagePerHour().toLocaleString(), sub: ` 金币/时 · 收入 +${player.staffIncomePct()}%` },
+      { label: '产地考察', value: Object.keys(player.regions ?? {}).length, sub: ` / ${REGIONS.length} 个 · 派驻 ${Object.keys(player.regionPosting ?? {}).length} 条线路` },
+      { label: '徒弟', value: `Lv${player.apprenticeState().level}`, sub: ` ${player.apprenticeRankName()} · 离线效率 ${Math.round((0.8 + player.apprenticeOfflineBonus()) * 100)}%` },
+      { label: '守护神信仰', value: player.patronActiveId() ? `Lv${player.patronLevel(player.patronActiveId())}` : '无', sub: ' 信仰等级（供奉永久保留）' },
       { label: '交易所成交', value: player.stats?.exchangeTrades ?? 0, sub: ` 件 · 流水 ${(player.stats?.exchangeGold ?? 0).toLocaleString()} 金币` },
       { label: '厨神试炼通关', value: player.stats?.trialClears ?? 0, sub: ' 次' },
     ],

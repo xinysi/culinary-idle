@@ -89,7 +89,7 @@ function claim(r, stage) {
       <div v-for="r in list" :key="r.id" class="card story-card">
         <div class="story-head">
           <strong>{{ r.def.name }}</strong>
-          <span class="dim mono" style="font-size: 11px">{{ r.domain }} · 羁绊 Lv{{ r.bond.level }}</span>
+          <span class="dim mono" style="font-size: 12px">{{ r.domain }} · 羁绊 Lv{{ r.bond.level }}</span>
         </div>
         <ProgressBar :progress="r.bond.level >= 5 ? 1 : Math.min(1, r.bond.days / (r.bond.nextDays || 1))" />
         <div class="dim story-sub mono">
@@ -105,7 +105,7 @@ function claim(r, stage) {
               class="btn btn-sm btn-primary"
               @click="claim(r, s)"
             >领取</button>
-            <span v-else-if="player.spiritStoryClaimed(r.id, s)" class="dim" style="font-size: 11px">已领取</span>
+            <span v-else-if="player.spiritStoryClaimed(r.id, s)" class="dim" style="font-size: 12px">已领取</span>
           </div>
           <p class="story-text">
             {{ player.spiritStoryStage(r.id) >= s ? storyLine(r.def, s) : '🔒 羁绊达标后解锁…' }}
@@ -139,7 +139,7 @@ function claim(r, stage) {
   gap: 8px;
 }
 .story-sub {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .story-line {

@@ -12,7 +12,16 @@ import { ForagingSkill } from '../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel } from '../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../src/game/data/expeditions.js'
 import { EQUIPMENT_SETS, equipSetBonuses } from '../src/game/data/equipSets.js'
-import { regularLevelFromServes } from '../src/game/data/regulars.js'
+import { regularLevelFromServes, REGULARS } from '../src/game/data/regulars.js'
+import { starFromScore } from '../src/game/data/michelin.js'
+import { FLAVOR_PAIRS } from '../src/game/data/flavorPairs.js'
+import { rankFromScore, contestWeek } from '../src/game/data/gearContest.js'
+import { festivalBoost } from '../src/game/data/festivals.js'
+import { SCHOOLS, schoolCost } from '../src/game/data/schools.js'
+import { STAFF, staffCost, staffWage } from '../src/game/data/staff.js'
+import { REGIONS } from '../src/game/data/regions.js'
+import { carryFromLevel } from '../src/game/data/legacy.js'
+import { PATRONS, patronCost, PATRON_SWITCH_GOLD } from '../src/game/data/patrons.js'
 import { realmOpponent } from '../src/game/data/mysticRealm.js'
 import { FishingSkill } from '../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../src/game/skills/HuntingSkill.js'
@@ -78,6 +87,8 @@ function freshPlayer(skills = {}) {
   const realMarketBoost = p.marketBoost.bind(p)
   const realActive = p.activeMarketEvents.bind(p)
   p.marketBoost = (...a) => (a.length ? realMarketBoost(...a) : { restaurant: 1, combatXp: 1, gatherXp: 1, craftXp: 1 })
+  // 节庆（按日期生效）同样会污染产量/收入断言 → 测试内固定为无节庆
+  p.festivalBoost = () => ({ restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1, gatherYield: 1, active: [] })
   p.activeMarketEvents = (...a) => (a.length ? realActive(...a) : [])
   for (const [id, lv] of Object.entries(skills)) p.setSkillState(id, { level: lv, exp: totalXpForLevel(lv) })
   createSkillInstances(p)
@@ -631,6 +642,254 @@ console.log('══ E. 离线进度 ══')
     pt.trialStart('t_overlevel')
     const r7 = pt.onCombatEndTrial({ result: 'lose', turns: 3, hpLeft: 0, hpMax: 100 })
     check('试炼', '失败自动退出', r7?.passed === false && pt.activeTrial === null)
+  }
+  // 米其林评级（2026-09-10）：六维评分 → 每日评审 → 星级收益
+  {
+    const pm = freshPlayer()
+    check('米其林', '餐厅等级不足未解锁', pm.michelinUnlocked() === false)
+    pm.restaurant.level = 5
+    check('米其林', '餐厅 5 级解锁', pm.michelinUnlocked() === true)
+    const s0 = pm.michelinScore().score
+    check('米其林', '新档 0 星', starFromScore(s0).star === 0 && pm.michelinIncomePct() === 0)
+    // 造分：菜单放高 tier 料理 + 装饰 + 评论家好评 + 分店 + 常客好感
+    const dish = Object.values(ITEMS).find((it) => it.type === 'food' && (it.tier ?? 0) >= 6)
+    pm.restaurant.menu = [dish.id, dish.id, dish.id, dish.id]
+    pm.restaurant.decor = Array(50).fill('rdecor_1')
+    pm.stats.criticServed = 4
+    pm.stats.ordersServed = 30
+    pm.branches = { east: { lastAt: Date.now(), manager: true }, west: { lastAt: Date.now(), manager: false } }
+    for (const r of REGULARS) pm.regularState(r.id).serves = 25
+    const s1 = pm.michelinScore().score
+    check('米其林', '多维加分后达 3 星', starFromScore(s1).star === 3, `score=${s1}`)
+    // 收益取「已评审」星级（评审前维持旧星级）
+    pm.michelin.lastReviewDay = null
+    pm._tickMichelin(6000)
+    check('米其林', '每日评审写入分数/星级/最高', pm.michelin.stars === 3 && pm.michelin.score === s1 && pm.michelin.best === 3)
+    check('米其林', '评审后星级收益（收入 +35% / 经验 +6%）', pm.michelinIncomePct() === 35 && pm.michelinXpPct() === 6)
+    // 掉星：撤掉装饰与菜单后次日重评
+    pm.restaurant.decor = []
+    pm.restaurant.menu = []
+    pm.stats.criticServed = 0
+    pm.stats.ordersServed = 0
+    for (const r of REGULARS) pm.regularState(r.id).serves = 0
+    pm.branches = {}
+    pm.michelin.lastReviewDay = null
+    pm._tickMichelin(6000)
+    check('米其林', '分数滑落会掉星（best 保留）', pm.michelin.stars === 0 && pm.michelin.best === 3)
+  }
+  // 风味搭配册（2026-09-10）：制作成功时按食材组合点亮
+  {
+    const pf = freshPlayer()
+    check('风味册', '初始未点亮任何搭配', pf.flavorProgress().found === 0 && pf.flavorProgress().total === FLAVOR_PAIRS.length)
+    const g0 = pf.gold
+    const fresh = pf.discoverFlavors(['tomato', 'basil'])
+    check('风味册', '命中组合即点亮并给奖励', fresh.length === 1 && fresh[0].id === 'fp_tomato_basil' && pf.gold > g0)
+    check('风味册', '重复命中不再奖励', pf.discoverFlavors(['tomato', 'basil']).length === 0)
+    check('风味册', '顺序无关 / 多余食材不影响', pf.discoverFlavors(['basil', 'salt', 'tomato']).length === 0)
+    const trio = pf.discoverFlavors(['chili', 'peppercorn', 'ginger', 'salt'])
+    check('风味册', '三食材组合可点亮', trio.some((p) => p.id === 'fp_three_peppers'))
+    // 制作成功会触发检测
+    const pc = freshPlayer()
+    const inst = getSkillInstance('cooking')
+    inst.player.skills.cooking.level = 99
+    const recipe = inst.recipes.find((r) => r.id === 'tomatoEgg') || inst.recipes.find((r) => (r.ingredients?.tomato ?? 0) > 0)
+    if (recipe) {
+      for (const [id, q] of Object.entries(recipe.ingredients)) pc.inventory[id] = q * 5
+      let found = 0
+      for (let i = 0; i < 20 && found === 0; i++) { inst.craft(recipe); found = pc.flavorProgress().found }
+      check('风味册', '制作配方会触发搭配检测', typeof pc.flavorProgress().found === 'number')
+    }
+  }
+  // 厨具大赛（2026-09-10）：每周一届，按全身装备评分取名次
+  {
+    const pg = freshPlayer()
+    check('厨具赛', '对决等级不足未解锁', pg.gearContestUnlocked() === false)
+    const pg2 = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 })
+    check('厨具赛', '空装备时评分为 0', pg2.gearScore().score === 0 && pg2.gearScore().parts.length === 0)
+    // 穿上装备：铜刀 + 强化 + 词条 + 宝石
+    pg2.equipment.weapon = 'copperKnife'
+    const s1 = pg2.gearScore().score
+    pg2.upgrades.copperKnife = 3
+    const s2 = pg2.gearScore().score
+    check('厨具赛', '强化会加分', s2 > s1, `${s1} → ${s2}`)
+    pg2.gearMods.weapon = { itemId: 'copperKnife', mods: [{ stat: 'attack', value: 5 }, { stat: 'defense', value: 5 }] }
+    const s3 = pg2.gearScore().score
+    check('厨具赛', '词条会加分', s3 > s2, `${s2} → ${s3}`)
+    check('厨具赛', '评分可映射档位', rankFromScore(s3).id.length === 1)
+    const g0 = pg2.gold
+    const r1 = pg2.gearContestRun()
+    check('厨具赛', '参赛发奖 + 记录届次', r1.ok === true && pg2.gold > g0 && pg2.gearContest.week === contestWeek() && pg2.stats.gearContestRuns === 1)
+    check('厨具赛', '同届不可重复参赛', pg2.gearContestRun().ok === false)
+    // 跨届后可再参赛
+    pg2.gearContest.week = contestWeek() - 1
+    check('厨具赛', '换届后可再参赛', pg2.gearContestRun().ok === true && pg2.stats.gearContestRuns === 2)
+    check('厨具赛', '历史最高分保留', pg2.gearContest.best >= s3)
+  }
+  // 节庆日历（2026-09-10）：按日期命中的全服加成
+  {
+    const pfest = freshPlayer()
+    check('节庆', '无节庆日全为 1 倍', festivalBoost(new Date(2026, 8, 3)).restaurant === 1 && festivalBoost(new Date(2026, 8, 3)).gatherYield === 1)
+    check('节庆', '开市日（1 日）餐厅 ×1.5', festivalBoost(new Date(2026, 8, 1)).restaurant === 1.5)
+    check('节庆', '丰收祭（8~10 日）采集产量 ×1.25', festivalBoost(new Date(2026, 8, 9)).gatherYield === 1.25)
+    check('节庆', '月末夜市命中当月最后两天（9 月 30 天 → 29/30）', festivalBoost(new Date(2026, 8, 30)).restaurant === 1.6 && festivalBoost(new Date(2026, 8, 29)).restaurant === 1.6 && festivalBoost(new Date(2026, 8, 28)).restaurant === 1)
+    // marketBoost 叠加节庆（无参路径）
+    const real = pfest.marketBoost.bind(pfest)
+    pfest.marketBoost = () => real()
+    const mb = pfest.marketBoost()
+    const fest = pfest.festivalBoost()
+    check('节庆', 'marketBoost 已乘入节庆倍率', Math.abs(mb.restaurant - fest.restaurant) < 1e-9, `mb=${mb.restaurant} fest=${fest.restaurant}`)
+    check('节庆', '显式传参走纯函数（不受节庆影响）', typeof pfest.marketBoost(12, 1) === 'object')
+    check('节庆', '未来预告只含命中日期', pfest.festivalUpcoming(40).every((u) => u.festivals.length > 0))
+  }
+  // 菜系研究（2026-09-10）：材料 + 计时 → 学派等级 → 该类料理加成
+  {
+    const ps = freshPlayer()
+    ps.gold = 200000
+    const def = SCHOOLS[0]
+    const cost = schoolCost(def, 1)
+    check('学派', '材料不足无法开研究', ps.schoolStart(def.id).ok === false)
+    for (const [id, q] of Object.entries(cost.mats)) ps.inventory[id] = q
+    const g0 = ps.gold
+    const r1 = ps.schoolStart(def.id)
+    check('学派', '开研究扣材料与金币', r1.ok === true && ps.gold === g0 - cost.gold && (ps.inventory[def.mats[0]] ?? 0) === 0, JSON.stringify(r1))
+    check('学派', '同时只能研究一个学派', ps.schoolStart(SCHOOLS[1].id).ok === false && ps.schoolBusy() === def.id)
+    check('学派', '未完成不可领取', ps.schoolClaim(def.id).ok === false)
+    ps.schoolState(def.id).research.readyAt = Date.now() - 1
+    const c1 = ps.schoolClaim(def.id)
+    check('学派', '到期领取升级 + 计数', c1.ok === true && ps.schoolState(def.id).level === 1 && ps.stats.schoolLevels === 1)
+    check('学派', '加成按学派等级生效', ps.schoolCraftXpPct(def.cats[0]) === 5 && ps.schoolHealPct(def.cats[0]) === 6 && ps.schoolIncomePct(def.cats[0]) === 8)
+    check('学派', '未研究的类别无加成', ps.schoolCraftXpPct(SCHOOLS[3].cats[0]) === 0)
+    // 餐厅收入贡献：菜单放该类主菜 → 收入高于无加成
+    const dish = Object.values(ITEMS).find((it) => it.type === 'food' && it.category === def.cats[0])
+    ps.restaurant.menu = [dish.id, dish.id]
+    const incWith = ps.restaurantHourlyIncome
+    ps.schoolState(def.id).level = 0
+    const incWithout = ps.restaurantHourlyIncome
+    check('学派', '餐厅收入按学派加成加权', incWith > incWithout, `${incWithout} → ${incWith}`)
+    // 满级封顶
+    ps.schoolState(def.id).level = 5
+    check('学派', '满级后不可再研究', ps.schoolStart(def.id).ok === false)
+  }
+  // 雇工班底（2026-09-10）：一次性雇佣费 + 每小时工资，欠薪停工
+  {
+    const ph = freshPlayer()
+    ph.gold = 500000
+    check('雇工', '未雇佣时无加成无工资', ph.staffIncomePct() === 0 && ph.staffWagePerHour() === 0 && ph.staffActive('chef') === false)
+    const cost1 = staffCost(1)
+    const h1 = ph.staffHire('chef')
+    check('雇工', '雇佣扣金币 + 等级 1 + 在岗', h1.ok === true && ph.gold === 500000 - cost1.gold && ph.staffLevelOf('chef') === 1 && ph.staffActive('chef') === true)
+    check('雇工', '在岗加成生效（掌勺 +8%）', ph.staffIncomePct() === 8 && ph.staffWagePerHour() === staffWage(STAFF[0], 1))
+    // 工资：1 小时扣一次
+    const g0 = ph.gold
+    ph.staff.chef.lastPayAt = Date.now() - 3600_000 * 2
+    ph._tickStaff()
+    check('雇工', '整点扣工资（2 小时）', ph.gold === g0 - staffWage(STAFF[0], 1) * 2 && (ph.stats.staffWages ?? 0) > 0)
+    // 金币不足 → 欠薪停工
+    ph.gold = 0
+    ph.staff.chef.lastPayAt = Date.now() - 3600_000 * 2
+    ph._tickStaff()
+    check('雇工', '欠薪停工（保留等级）', ph.staff.chef.unpaid === true && ph.staffLevelOf('chef') === 1 && ph.staffActive('chef') === false && ph.staffIncomePct() === 0)
+    // 补足金币 → 复岗
+    ph.gold = 100000
+    ph.staff.chef.lastPayAt = Date.now() - 3600_000
+    ph._tickStaff()
+    check('雇工', '补足金币自动复岗', ph.staff.chef.unpaid === false && ph.staffActive('chef') === true)
+    check('雇工', '解雇清零', ph.staffFire('chef') === true && ph.staffLevelOf('chef') === 0)
+    // 跑堂加成作用于订单
+    ph.gold = 200000
+    ph.staffHire('waiter')
+    check('雇工', '跑堂给订单加成', ph.staffOrderPct() === 10 && ph.staffIncomePct() === 0)
+  }
+  // 产地与风土（2026-09-10）：考察 + 派驻采集队线路
+  {
+    const prg = freshPlayer({ fishing: 40 })
+    prg.gold = 300000
+    const rg = REGIONS[0]
+    check('产地', '未考察时不可派驻', prg.regionPost('fishery', rg.id).ok === false)
+    check('产地', '金币不足不可考察', freshPlayer().regionStudy(rg.id).ok === false)
+    const g0 = prg.gold
+    const st1 = prg.regionStudy(rg.id)
+    check('产地', '考察扣金币 + 记录', st1.ok === true && prg.gold === g0 - rg.cost && prg.regionUnlocked(rg.id) === true)
+    check('产地', '重复考察被拒', prg.regionStudy(rg.id).ok === false)
+    const post = prg.regionPost('fishery', rg.id)
+    check('产地', '派驻线路成功', post.ok === true && prg.regionPosting.fishery === rg.id)
+    const line = prg.lineRegion('fishery')
+    check('产地', '派驻加成可读取（当季 ×1.5）', line.def?.id === rg.id && line.bonus.qtyPct >= Math.round(rg.qtyPct), JSON.stringify(line.bonus))
+    check('产地', '取消派驻', prg.regionPost('fishery', null).ok === true && prg.regionPosting.fishery === undefined)
+    // 派驻后采集队产出仍为既有物品
+    prg.regionPost('fishery', rg.id)
+    const r0 = prg.expeditionStart('fishery', 0)
+    prg.expeditionState('fishery').slots[0].readyAt = Date.now() - 1
+    const claim = prg.expeditionClaim('fishery', 0)
+    const ids = Object.keys(claim?.gained ?? {})
+    check('产地', '派驻后产出仍为既有物品', r0.ok === true && claim?.ok === true && ids.every((id) => !!ITEMS[id]), ids.join(','))
+    check('产地', '当季产地判定存在', typeof prg.regionsInSeason() === 'object')
+  }
+  // 师徒传承（2026-09-10）：转生留一手 + 徒弟按日成长
+  {
+    const pl = freshPlayer()
+    pl.skills.knife.level = 100
+    check('传承', '传承等级 = 等级 ×5%（上限 20）', carryFromLevel(100) === 5 && carryFromLevel(400) === 20 && carryFromLevel(19) === 0)
+    const ok = pl.prestigeSkill('knife')
+    check('传承', '转生后从 1+传承 级起步', ok === true && pl.skills.knife.level === 6 && pl.skills.knife.prestiges === 1, `lv=${pl.skills.knife.level}`)
+    check('传承', '传承记录写入', pl.legacyCarryOf('knife') === 5)
+    // 二次转生取历史最高
+    pl.skills.knife.level = 100
+    pl.prestigeSkill('knife')
+    check('传承', '传承取历史最高不降低', pl.legacyCarryOf('knife') === 5)
+    // 徒弟：首日只记录、跨日成长
+    const pa2 = freshPlayer()
+    pa2.legacy.apprentice.lastDay = null
+    pa2._tickApprentice()
+    const first = pa2.legacy.apprentice.level
+    check('传承', '徒弟首日只记录不补历史', first === 0 && !!pa2.legacy.apprentice.lastDay)
+    pa2.legacy.apprentice.lastDay = '2026-01-01'
+    pa2.todayKey = '2026-01-04'
+    pa2._tickApprentice()
+    check('传承', '跨日按天数成长', pa2.legacy.apprentice.level === 3, `lv=${pa2.legacy.apprentice.level}`)
+    pa2.legacy.apprentice.level = 50
+    pa2.legacy.apprentice.lastDay = '2026-01-04'
+    pa2.todayKey = '2026-02-04'
+    pa2._tickApprentice()
+    check('传承', '徒弟满级封顶 50', pa2.legacy.apprentice.level === 50)
+    check('传承', '离线效率加成（满级 +20% → 100%）', Math.abs((0.8 + pa2.apprenticeOfflineBonus()) - 1.0) < 1e-9)
+    check('传承', '徒弟称号随等级', freshPlayer().apprenticeRankName() === '新入门弟子')
+  }
+  // 食神信仰（2026-09-10）：供奉永久、切换需金币 + 冷却、效果挂在既有聚合点
+  {
+    const pp = freshPlayer()
+    pp.gold = 500000
+    const def = PATRONS[0] // 灶君：料理回血 +8%/级
+    check('信仰', '未信仰时供奉被拒', pp.patronWorship(def.id).ok === false)
+    check('信仰', '初始无加成', pp.patronEffects().healPct === 0)
+    const sw = pp.patronSwitch(def.id)
+    check('信仰', '切换信仰扣金币 + 记录冷却', sw.ok === true && pp.gold === 500000 - PATRON_SWITCH_GOLD && pp.patronSwitchCdMs() > 0)
+    check('信仰', '冷却中不可再切', pp.patronSwitch(PATRONS[1].id).ok === false)
+    const cost = patronCost(def, 1)
+    check('信仰', '供品不足不可供奉', pp.patronWorship(def.id).ok === false)
+    for (const [id, q] of Object.entries(cost.mats)) pp.inventory[id] = q
+    const g0 = pp.gold
+    const w1 = pp.patronWorship(def.id)
+    check('信仰', '供奉扣供品与金币 + 升级', w1.ok === true && pp.gold === g0 - cost.gold && pp.patronLevel(def.id) === 1)
+    check('信仰', '效果按等级展开', pp.patronEffects().healPct === 8)
+    check('信仰', '只能向当前信仰供奉', pp.patronWorship(PATRONS[1].id).ok === false)
+    pp.patron.lastSwitchAt = Date.now() - 25 * 3600_000
+    check('信仰', '冷却结束可切换', pp.patronSwitch(PATRONS[1].id).ok === true && pp.patronLevel(def.id) === 1)
+    check('信仰', '切换后旧加成失效（新神未供奉 = 无加成）', pp.patronEffects().healPct === 0 && pp.patronEffects().cellarPct === 0)
+    // 供奉酒神到 1 级后再验证地窖加成
+    const cost2 = patronCost(PATRONS[1], 1)
+    for (const [id, q] of Object.entries(cost2.mats)) pp.inventory[id] = q
+    pp.patronWorship(PATRONS[1].id)
+    check('信仰', '酒神供奉后窖藏加成生效', pp.patronEffects().cellarPct === 12)
+    pp.skills.brewing.level = 20
+    pp.inventory.riceWine = 10
+    pp.cellarPut(0, 'riceWine', 4, 12)
+    pp.cellarState().slots[0].readyAt = Date.now() - 1
+    const gold0 = pp.gold
+    pp.cellarClaim(0)
+    const base = Math.round((ITEMS.riceWine.value ?? 0) * 4 * 1.5)
+    const expect = Math.round(base * 1.12)
+    check('信仰', '窖神加成生效（+12%）', pp.gold === gold0 + expect, `got=${pp.gold - gold0} expect=${expect}`)
   }
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限
   {

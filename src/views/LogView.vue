@@ -711,7 +711,7 @@ function scrollToTalesSeries(series) {
             <div class="gather-card-head">
               <div>
                 <strong>{{ v.q.name }}</strong>
-                <div class="dim" style="font-size: 11px">{{ v.q.desc }}</div>
+                <div class="dim" style="font-size: 12px">{{ v.q.desc }}</div>
               </div>
               <span v-if="v.state.done" class="badge" style="background: var(--good-soft); color: var(--good-strong)">✔</span>
               <span v-else-if="v.state.current" class="badge badge-on">进行中</span>
@@ -751,7 +751,7 @@ function scrollToTalesSeries(series) {
               <span class="achieve-mark">{{ v.unlocked ? '✔' : '○' }}</span>
               <div>
                 <strong>{{ v.a.name }}</strong>
-                <div class="dim" style="font-size: 11px">{{ v.a.category }} · {{ v.a.desc }}</div>
+                <div class="dim" style="font-size: 12px">{{ v.a.category }} · {{ v.a.desc }}</div>
               </div>
             </div>
             <div v-if="!v.unlocked && v.prog" class="gather-card-row">
@@ -826,7 +826,7 @@ function scrollToTalesSeries(series) {
                 <span class="item-cell-name">{{ getItem(id)?.name }}<span v-if="!player.collected[id]" class="lock-flag" title="尚未获得">🔒</span></span>
               </div>
               <div class="item-cell-sub">
-                <span v-if="!player.collected[id]" class="badge" style="background: var(--lock-bg); color: var(--muted); font-size: 10px; padding: 1px 6px">未获得</span>
+                <span v-if="!player.collected[id]" class="badge" style="background: var(--lock-bg); color: var(--muted); font-size: 12px; padding: 1px 6px">未获得</span>
               </div>
               <div class="dim item-cell-sub">
                 <span v-if="qualityBadge(id)" :style="{ color: qualityBadge(id).color }">{{ qualityBadge(id).text }}</span>
@@ -1039,7 +1039,7 @@ function scrollToTalesSeries(series) {
                 <ItemImg :item-id="r.output.itemId" />
                 <div>
                   <strong>{{ r.name }}</strong>
-                  <div class="dim" style="font-size: 11px">{{ CATEGORY_LABEL[r.category] ?? r.category }} · Lv {{ r.reqLevel }}</div>
+                  <div class="dim" style="font-size: 12px">{{ CATEGORY_LABEL[r.category] ?? r.category }} · Lv {{ r.reqLevel }}</div>
                 </div>
               </div>
               <div class="gather-card-row">
@@ -1101,7 +1101,7 @@ function scrollToTalesSeries(series) {
                 <span class="dim story-req-label">{{ r.label }}</span>
                 <ProgressBar :progress="r.cur / r.need" />
                 <span class="mono dim story-req-num">{{ r.cur }}/{{ r.need }}</span>
-                <span v-if="r.cur >= r.need" class="badge" style="background: var(--good-soft); color: var(--good-strong); font-size: 10px">✔</span>
+                <span v-if="r.cur >= r.need" class="badge" style="background: var(--good-soft); color: var(--good-strong); font-size: 12px">✔</span>
               </div>
               <p class="dim story-lock-note" style="margin-top: 4px">全部达标后通过本章 → 解锁下一章</p>
             </div>
@@ -1216,7 +1216,7 @@ function scrollToTalesSeries(series) {
               <div>
                 <strong>{{ a.title }}</strong>
                 <span v-if="player.title === a.title" class="title-eq-badge">佩戴中</span>
-                <div class="dim" style="font-size: 11px">{{ a.desc }}</div>
+                <div class="dim" style="font-size: 12px">{{ a.desc }}</div>
               </div>
             </div>
           </div>
@@ -1236,7 +1236,7 @@ function scrollToTalesSeries(series) {
               <div>
                 <strong>{{ t.icon }} {{ t.name }}</strong>
                 <span v-if="player.title === t.name" class="title-eq-badge">佩戴中</span>
-                <div class="dim" style="font-size: 11px">
+                <div class="dim" style="font-size: 12px">
                   {{ player.shopOwned?.[t.key] ? '已拥有 · 点击佩戴' : `未拥有 · 游戏商店 ${t.price} 游戏币` }}
                 </div>
               </div>
@@ -1361,7 +1361,7 @@ function scrollToTalesSeries(series) {
   font-weight: 600;
   font-size: 13px;
 }
-.season-card-sub { font-size: 11px; margin: 3px 0 8px; }
+.season-card-sub { font-size: 12px; margin: 3px 0 8px; }
 .season-gear-list { display: flex; flex-direction: column; gap: 3px; }
 .season-gear-row {
   display: flex;
@@ -1373,7 +1373,7 @@ function scrollToTalesSeries(series) {
 }
 .season-gear-row:last-child { border-bottom: none; }
 .season-gear-row.got { color: var(--good-strong); }
-.season-gear-slot { color: var(--muted); white-space: nowrap; min-width: 58px; font-size: 11px; }
+.season-gear-slot { color: var(--muted); white-space: nowrap; min-width: 58px; font-size: 12px; }
 .season-gear-name { flex: 1; }
 .season-gear-flag { font-weight: 700; }
 </style>

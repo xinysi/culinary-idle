@@ -285,7 +285,7 @@ resetRound()
 .tv-exchange-title { font-size: 13px; font-weight: 800; color: var(--primary-strong); }
 .tv-ex { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; cursor: pointer; background: rgba(255, 251, 244, 0.85); border: 1px solid rgba(150, 110, 70, 0.35); font-weight: 700; font-size: 13px; }
 .tv-ex:disabled { opacity: 0.5; cursor: not-allowed; }
-.tv-ex-cost { font-size: 11px; color: var(--muted); }
+.tv-ex-cost { font-size: 12px; color: var(--muted); }
 .tv-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .tv-info-box {
   width: min(620px, 92vw);

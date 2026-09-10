@@ -287,7 +287,7 @@ function typeLabel(id) {
 }
 .pool-mini-icon { font-size: 24px; }
 .pool-mini-name { font-size: 13px; font-weight: 700; color: rgb(var(--pc1)); }
-.pool-mini-price { font-size: 11px; color: rgba(var(--pc1), 0.7); }
+.pool-mini-price { font-size: 12px; color: rgba(var(--pc1), 0.7); }
 
 /* ── 卡池展示横幅：轮播（两端渐隐）+ 池名徽章 + 保底徽章 ── */
 .pool-banner {
@@ -323,7 +323,7 @@ function typeLabel(id) {
 }
 .pool-banner-icon { font-size: 18px; }
 .pool-banner-title b { font-size: 14px; color: var(--primary-strong); }
-.pool-banner-title em { font-style: normal; font-size: 11px; color: var(--muted); }
+.pool-banner-title em { font-style: normal; font-size: 12px; color: var(--muted); }
 .pool-banner-pity {
   position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
   z-index: 2;
@@ -443,7 +443,7 @@ function typeLabel(id) {
   box-shadow: 0 4px 14px rgba(var(--tglow, 183, 110, 121), 0.4);
 }
 .gacha-btn-tag {
-  font-style: normal; font-size: 11px; font-weight: 800;
+  font-style: normal; font-size: 12px; font-weight: 800;
   background: rgba(255, 245, 224, 0.3); border: 1px solid rgba(255, 245, 224, 0.55);
   border-radius: 999px; padding: 2px 10px; margin-left: 6px; vertical-align: 2px;
 }
@@ -530,7 +530,7 @@ function typeLabel(id) {
   color: rgb(var(--tsh2, 245, 217, 168));
 }
 .gacha-back-mark { font-size: 34px; font-weight: 800; text-shadow: 0 0 12px rgba(var(--tsh2, 255, 200, 120), 0.6); }
-.gacha-back-sub { font-size: 11px; opacity: 0.8; letter-spacing: 3px; }
+.gacha-back-sub { font-size: 12px; opacity: 0.8; letter-spacing: 3px; }
 @keyframes backGlow {
   0%, 100% { box-shadow: 0 0 6px rgba(var(--tsh2, 255, 190, 90), 0.3); }
   50% { box-shadow: 0 0 16px rgba(var(--tsh2, 255, 190, 90), 0.6); }
@@ -543,7 +543,7 @@ function typeLabel(id) {
 }
 .gacha-img { width: 56px; height: 56px; object-fit: contain; }
 .gacha-front-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
-.gacha-front-sub { font-size: 10px; color: var(--muted); }
+.gacha-front-sub { font-size: 12px; color: var(--muted); }
 
 /* 品质光晕（边框 + 阴影随稀有度增强） */
 .gacha-card.q-common .gacha-front { border-color: #b9a993; }

@@ -424,7 +424,7 @@ onUnmounted(() => {
 .ic-tile { position: absolute; border-radius: 8px; background: linear-gradient(135deg, rgba(240, 252, 255, 0.72), rgba(200, 234, 248, 0.55)); border: 1px solid rgba(255, 255, 255, 0.75); display: flex; align-items: center; justify-content: center; }
 .ic-tile.rock { background: linear-gradient(135deg, #9a9a94, #6e6e68); border-color: #5a5a55; }
 .ic-tile.hole { background: rgba(40, 70, 90, 0.55); border-color: rgba(30, 60, 80, 0.6); }
-.ic-order { position: absolute; right: 3px; top: 1px; font-size: 10px; font-weight: 800; color: #d95a38; }
+.ic-order { position: absolute; right: 3px; top: 1px; font-size: 12px; font-weight: 800; color: #d95a38; }
 .ic-tile.target { box-shadow: inset 0 0 0 2px rgba(224, 106, 90, 0.5); }
 .ic-cherry { font-size: 20px; line-height: 1; }
 .ic-player { position: absolute; display: flex; align-items: center; justify-content: center; transition: left 0.18s cubic-bezier(0.22, 0.9, 0.35, 1), top 0.18s cubic-bezier(0.22, 0.9, 0.35, 1); filter: drop-shadow(0 3px 4px rgba(40, 70, 90, 0.35)); z-index: 3; pointer-events: none; }

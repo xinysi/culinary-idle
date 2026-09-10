@@ -64,7 +64,7 @@ function weekdayText(ev) {
 .market-row.active { border-color: var(--primary); background: rgba(217, 90, 56, 0.1); }
 .market-icon { font-size: 24px; }
 .market-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.market-schedule { font-size: 11px; }
+.market-schedule { font-size: 12px; }
 .market-foot { margin-top: 10px; font-size: 12px; }
 :global([data-theme='dark']) .market-row { background: rgba(44, 31, 22, 0.85); color: #e8dccb; }
 </style>

@@ -357,6 +357,62 @@ export function registerGameEvents() {
     ui.pushLog(`🐄 买下了${name}（-${cost.toLocaleString()} 金币）`, 'info')
   })
 
+  // 食神信仰（2026-09-10）
+  EventBus.on('patron:switch', ({ name, gold }) => {
+    ui.pushLog(`🏛 改信「${name}」（-${gold.toLocaleString()} 金币，24 小时内不可再切）`, 'levelup')
+  })
+  EventBus.on('patron:worship', ({ name, level }) => {
+    ui.pushLog(`🏛 向「${name}」供奉完成 → 信仰 Lv${level}`, 'levelup')
+  })
+
+  // 师徒传承（2026-09-10）
+  EventBus.on('player:prestige', ({ carry }) => {
+    if (carry > 0) ui.pushLog(`♻️ 转生留一手：本技能从 Lv${1 + carry} 起步（传承 ${carry} 级）`, 'levelup')
+  })
+  EventBus.on('apprentice:grow', ({ level, days }) => {
+    ui.pushLog(`🎓 徒弟成长 +${days} 级 → Lv${level}`, 'info')
+  })
+
+  // 产地与风土（2026-09-10）
+  EventBus.on('region:study', ({ name, cost }) => {
+    ui.pushLog(`🗺️ 已考察产地「${name}」（-${cost.toLocaleString()} 金币），可派驻采集队`, 'levelup')
+  })
+
+  // 雇工班底（2026-09-10）
+  EventBus.on('staff:hire', ({ name, level, cost }) => {
+    ui.pushLog(`👨‍🍳 ${name}到岗 Lv${level}（-${cost.toLocaleString()} 金币）`, 'levelup')
+  })
+  EventBus.on('staff:unpaid', ({ name, due }) => {
+    ui.pushLog(`💸 ${name}工资不足（应发 ${due.toLocaleString()}），已停工——补足金币后自动复岗`, 'warn')
+  })
+  EventBus.on('staff:resume', ({ name }) => {
+    ui.pushLog(`👨‍🍳 ${name}已复岗`, 'info')
+  })
+
+  // 菜系研究（2026-09-10）
+  EventBus.on('school:start', ({ name, toLevel, hours }) => {
+    ui.pushLog(`📜 ${name}开始研究 Lv${toLevel}（${hours} 小时）`, 'info')
+  })
+  EventBus.on('school:done', ({ name, level }) => {
+    ui.pushLog(`📜 ${name}研究完成 → Lv${level}`, 'levelup')
+  })
+
+  // 厨具大赛（2026-09-10）
+  EventBus.on('gearContest:done', ({ score, rank, rankName, gold }) => {
+    ui.pushLog(`🃏 厨具大赛：${score.toLocaleString()} 分 → ${rank} 档「${rankName}」，奖励 +${(gold ?? 0).toLocaleString()} 金币`, 'levelup')
+  })
+
+  // 风味搭配册（2026-09-10）
+  EventBus.on('flavor:found', ({ name, desc }) => {
+    ui.pushLog(`📔 发现风味搭配「${name}」：${desc}`, 'levelup')
+  })
+
+  // 米其林评级（2026-09-10）
+  EventBus.on('michelin:review', ({ stars, prev, score }) => {
+    const names = ['未入榜', '一星', '二星', '三星']
+    ui.pushLog(`⭐ 米其林评审：${score} 分 → ${names[stars] ?? stars} 星` + (stars > prev ? '（升级！）' : '（降级）'), stars > prev ? 'levelup' : 'warn')
+  })
+
   // 餐厅分店（2026-09-10）
   EventBus.on('branch:open', ({ name, cost }) => {
     ui.pushLog(`🏬 ${name}开业（-${cost.toLocaleString()} 金币）`, 'levelup')

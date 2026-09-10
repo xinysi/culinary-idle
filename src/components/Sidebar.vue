@@ -42,34 +42,71 @@ function selectSkill(id) {
   ui.pushLog(`切换到技能：${SKILL_DEFS[id]?.name}`)
 }
 
-// ── 功能页分组（2026-09-10）：非高频功能页从顶栏移入左栏折叠分组 ──
+// ── 功能页分组（2026-09-10 细分）：非高频功能页从顶栏移入左栏，按玩法角色分成六组 ──
 const FEATURE_GROUPS = [
   {
-    id: 'prod',
-    icon: '🌾',
-    name: '生产与采集',
+    id: 'buy',
+    icon: '🛒',
+    name: '采买与转化',
     items: [
       { icon: '🛒', name: '商店', view: 'shop' },
       { icon: '🍽️', name: '珍馐阁', view: 'deluxe' },
       { icon: '🧪', name: '炼金', view: 'alchemy' },
+    ],
+  },
+  {
+    id: 'idle',
+    icon: '🌾',
+    name: '挂机产线',
+    items: [
       { icon: '🚢', name: '采集队', view: 'expedition' },
+      { icon: '🗺️', name: '产地', view: 'regions' },
       { icon: '🐄', name: '牧场', view: 'ranch' },
       { icon: '🍶', name: '地窖', view: 'cellar' },
+      { icon: '🤖', name: '自动化', view: 'automation' },
+    ],
+  },
+  {
+    id: 'study',
+    icon: '📚',
+    name: '研究与收集',
+    items: [
       { icon: '📓', name: '厨房笔记', view: 'kitchenNotes' },
+      { icon: '📔', name: '风味册', view: 'flavorBook' },
+      { icon: '📜', name: '菜系研究', view: 'schools' },
     ],
   },
   {
     id: 'biz',
-    icon: '🏬',
-    name: '经营与挑战',
+    icon: '🏮',
+    name: '餐厅经营',
     items: [
+      { icon: '⭐', name: '评级', view: 'michelin' },
+      { icon: '👨‍🍳', name: '班底', view: 'staff' },
       { icon: '🏬', name: '分店', view: 'branches' },
       { icon: '💹', name: '交易所', view: 'exchange' },
-      { icon: '🤖', name: '自动化', view: 'automation' },
       { icon: '📖', name: '常客', view: 'regulars' },
-      { icon: '✨', name: '食灵物语', view: 'spiritStories' },
+    ],
+  },
+  {
+    id: 'fight',
+    icon: '⚔️',
+    name: '挑战与休闲',
+    items: [
       { icon: '🏅', name: '试炼', view: 'trials' },
+      { icon: '🃏', name: '厨具赛', view: 'gearContest' },
       { icon: '🎮', name: '小游戏', view: 'minigames' },
+    ],
+  },
+  {
+    id: 'grow',
+    icon: '✨',
+    name: '成长与信仰',
+    items: [
+      { icon: '✨', name: '食灵物语', view: 'spiritStories' },
+      { icon: '♻️', name: '传承', view: 'legacy' },
+      { icon: '🏛', name: '信仰', view: 'patrons' },
+      { icon: '🌗', name: '节庆', view: 'festival' },
     ],
   },
 ]

@@ -109,7 +109,7 @@ function seedName(seedId) {
               <div class="plot-title item-label">
                 <img v-if="itemImage(instance.plotCrop(i - 1)?.itemId)" :src="itemImage(instance.plotCrop(i - 1)?.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
                 {{ getItem(instance.plotCrop(i - 1)?.itemId)?.name }}
-                <span v-if="instance.plotAt(i - 1).fertilizer" class="badge" style="background: var(--good-soft); color: var(--good-strong); font-size: 10px">
+                <span v-if="instance.plotAt(i - 1).fertilizer" class="badge" style="background: var(--good-soft); color: var(--good-strong); font-size: 12px">
                   {{ instance.plotAt(i - 1).fertilizer === 'richCompost' ? '🌿 肥沃堆肥' : '🌱 堆肥' }}
                 </span>
               </div>
@@ -167,7 +167,7 @@ function seedName(seedId) {
               <span>Lv.{{ c.reqLevel }}</span>
               <span class="mono">×{{ player.inventory[c.seedId] ?? 0 }}</span>
             </div>
-            <div class="item-cell-sub" style="font-size: 11px">
+            <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ c.growSec }}s 生长</span>
               <span class="dim">{{ c.xp }} 经验</span>
             </div>

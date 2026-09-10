@@ -6,10 +6,10 @@
   --primary-strong: #b8442a;
   --primary-soft: #f8dccd;
   --text: #4a2f26;
-  --text-dim: #8c7266;
+  --text-dim: #6b5347;
   --bg: #f8f1e8;
   --card: #fffdf9;
-  --border: #e6d4c3;
+  --border: #dcc6b1;
   --good: #57a861;
   --good-strong: #3a7f45;
   --good-soft: #e2f0e2;
@@ -23,7 +23,7 @@
   --sidebar-bg: #f5e6d5;
   --bg-soft: #fffaf4;
   --gold: #a8780b;
-  --muted: #9d938c;
+  --muted: #7a6f68;
   --lock-bg: #f0eae2;
   --scrollbar: #d2b294;
   --mono: 'Roboto Mono', Consolas, 'Courier New', monospace;
@@ -309,7 +309,7 @@ body {
   /* 性能：不用 backdrop-filter 动态模糊。实测动态进度条 fill 在带 blur 的层内每帧动画会触发
      Chromium 对背景的模糊重采样，把主线程拖到 ~20fps；改用静态半透明磨砂底遮罩背景——
      0.78 磨砂：既透出启动页背景图、又保证文字对比度（AGENTS.md 口径），且不牺牲进度条 ~60fps。 */
-  background: rgba(255, 251, 244, 0.86);
+  background: rgba(255, 251, 244, 0.92);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -415,7 +415,7 @@ body {
 }
 
 .mobile-nav-btn span {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .mobile-nav-btn.active {
@@ -454,6 +454,8 @@ body {
   border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 12px;
+  /* 2026-09-10 清晰度：1px 落影 + 顶部内高光，让卡片边界不再发虚 */
+  box-shadow: 0 1px 2px rgba(74, 47, 38, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* 含实时动画进度条的卡片：去掉 backdrop-filter，避免进度条 fill 每帧动画触发 blur 重采样（→ 保持 ~60fps）。
@@ -673,7 +675,7 @@ h2 {
 }
 
 .feature-group-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
   font-weight: 600;
   padding: 4px 2px 6px;
@@ -725,13 +727,13 @@ h2 {
 }
 
 .feature-tile .feature-name {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.15;
   word-break: break-all;
 }
 
 .skill-cat {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
   padding: 8px 4px 4px;
   font-weight: 600;
@@ -780,7 +782,7 @@ h2 {
 
 /* 侧栏技能按钮：等级一行、经验一行（等级在上、经验数值靠右） */
 .skill-xp {
-  font-size: 10px;
+  font-size: 12px;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -807,7 +809,7 @@ h2 {
 
 .skill-level {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 
@@ -957,7 +959,7 @@ h2 {
   border-radius: 6px;
   padding: 4px 8px;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .eq-row {
@@ -1008,7 +1010,7 @@ h2 {
 
 .log-ts {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -1288,7 +1290,7 @@ h2 {
 }
 
 .guild-type {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .guild-locked .guild-type {
@@ -1323,7 +1325,7 @@ h2 {
 }
 
 .guild-shop-price {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 公会商店卡片动态样式：按当前点数是否够买实时切换 */
@@ -1544,7 +1546,7 @@ h2 {
 .story-req-num {
   width: 52px;
   text-align: right;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 物品图片 */
@@ -1695,7 +1697,7 @@ h2 {
 
 /* 未解锁目标：锁角标 */
 .lock-flag {
-  font-size: 11px;
+  font-size: 12px;
   margin-left: 4px;
   opacity: 0.85;
   display: inline-block;
@@ -1764,7 +1766,7 @@ h2 {
   justify-content: flex-end;
 }
 .effect-chip {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   padding: 3px 7px;
   border-radius: 999px;
@@ -1819,7 +1821,7 @@ h2 {
 }
 
 .alchemy-side-name {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
   text-align: center;
   line-height: 1.3;
@@ -1879,7 +1881,7 @@ h2 {
   flex-shrink: 0;
 }
 .loot-text {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dim);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1943,7 +1945,7 @@ h2 {
 }
 
 .opp-stats {
-  font-size: 11px;
+  font-size: 12px;
   flex: 1;
 }
 
@@ -2204,7 +2206,7 @@ h2 {
   color: #fff;
   border-radius: 6px;
   padding: 0 6px;
-  font-size: 11px;
+  font-size: 12px;
   margin-left: 6px;
   vertical-align: middle;
 }
@@ -2346,7 +2348,7 @@ h2 {
   border: 1px dashed var(--primary);
   border-radius: 10px;
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .badge-own {
   background: rgba(120, 170, 90, 0.16);
@@ -2354,7 +2356,7 @@ h2 {
   border: 1px dashed #7aa25f;
   border-radius: 10px;
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .spirit-card-effect {
   font-size: 12px;
@@ -2410,7 +2412,7 @@ h2 {
 
 /* 挂机任务行：食灵经验加成提示 */
 .task-spirit {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--primary);
   margin: 2px 0 4px;
 }
@@ -2585,11 +2587,11 @@ h2 {
 }
 
 .guide-overview .ov-stage {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .guide-overview .ov-unlock {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .guide-overview .ov-desc {
@@ -2946,7 +2948,7 @@ h2 {
   gap: 2px;
 }
 .equip-stat-label {
-  font-size: 11px;
+  font-size: 12px;
 }
 .equip-stat-val {
   font-size: 14px;
@@ -3005,12 +3007,12 @@ h2 {
 }
 
 .bag-grid .item-cell-name {
-  font-size: 11px;
+  font-size: 12px;
   max-width: 100%;
 }
 
 .bag-grid .item-cell-sub {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 右侧详情栏 */
@@ -3570,7 +3572,7 @@ h2 {
 .spirit-wall-col { flex: 1; min-width: 0; height: 530px; display: flex; flex-direction: column; }
 .spirit-cell.selected { border: 2px solid var(--primary); box-shadow: 0 2px 6px rgba(93, 64, 55, 0.16); }
 /* 未拥有标识 */
-.badge.badge-locked { background: rgba(150, 110, 70, 0.14); color: #8a6a4a; border: 1px dashed rgba(150, 110, 70, 0.4); border-radius: 6px; padding: 1px 6px; font-size: 11px; }
+.badge.badge-locked { background: rgba(150, 110, 70, 0.14); color: #8a6a4a; border: 1px dashed rgba(150, 110, 70, 0.4); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
 /* 翻页按钮固定在底部（不随内容移动） */
 .spirit-wall-col .pager-row, .spirit-wall-col .pager { flex-shrink: 0; z-index: 5; background: rgba(255, 252, 246, 0.95); border-radius: 10px; padding: 4px 0; }
 .spirit-detail-panel {
@@ -3665,7 +3667,10 @@ html[data-theme='dark'] {
   --text-dim: #cfbaa5;
   --bg: #1a120c;
   --card: #241a13;
-  --border: #4d3a2b;
+  --border: rgba(232, 180, 95, 0.26);        /* 暖金描边（2026-09-10 用户要求：深色下统一金色边框） */
+  --border-strong: rgba(240, 196, 118, 0.46); /* 交互元素（按钮/输入）用更亮的金 */
+  --gold-glow: rgba(232, 180, 95, 0.12);      /* 淡淡金光：容器外发光（2026-09-10 用户要求） */
+  --gold-glow-strong: rgba(240, 196, 118, 0.22); /* 交互元素的金光 */
   --good: #6fbf7a;
   --good-strong: #8cd899;
   --good-soft: #22402a;
@@ -3699,7 +3704,7 @@ html[data-theme='dark'] .stat-line, html[data-theme='dark'] .quick-item {
 html[data-theme='dark'] .btn, html[data-theme='dark'] .btn-sm, html[data-theme='dark'] .btn-primary,
 html[data-theme='dark'] .btn-danger, html[data-theme='dark'] .region-tabs .btn, html[data-theme='dark'] .quick-nav .btn {
   background: rgba(56, 41, 30, 0.95);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-strong);
   color: #eadfca;
 }
 html[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.92); color: #fff; }
@@ -3719,11 +3724,11 @@ html[data-theme='dark'] .app-sidebar, html[data-theme='dark'] .app-status {
 }
 
 /* ── 内部构件 ── */
-html[data-theme='dark'] .gather-section-title { background: rgba(56, 41, 30, 0.7); color: #ecdcc8; border-color: rgba(255, 255, 255, 0.14); }
+html[data-theme='dark'] .gather-section-title { background: rgba(56, 41, 30, 0.7); color: #ecdcc8; border-color: var(--border); }
 html[data-theme='dark'] .item-cell { background: rgba(36, 26, 19, 0.6); }
-html[data-theme='dark'] .ing { background: rgba(46, 32, 23, 0.7); color: #e0d0bc; border-color: rgba(255, 255, 255, 0.14); }
+html[data-theme='dark'] .ing { background: rgba(46, 32, 23, 0.7); color: #e0d0bc; border-color: var(--border); }
 html[data-theme='dark'] .spoil-item, html[data-theme='dark'] .log-card { background: rgba(36, 26, 19, 0.6); }
-html[data-theme='dark'] .target-table th, html[data-theme='dark'] .target-table td { border-color: rgba(255, 255, 255, 0.12); color: #e2d3c0; }
+html[data-theme='dark'] .target-table th, html[data-theme='dark'] .target-table td { border-color: var(--border); color: #e2d3c0; }
 html[data-theme='dark'] .stat-num, html[data-theme='dark'] .stat-label { color: inherit; }
 
 /* ── 文字可读性 ── */
@@ -3731,8 +3736,8 @@ html[data-theme='dark'] h2, html[data-theme='dark'] h3, html[data-theme='dark'] 
 html[data-theme='dark'] .dim { color: var(--text-dim); }
 html[data-theme='dark'] .mono { color: #f0e0c8; }
 html[data-theme='dark'] .battle-log { color: #d9c9b6; }
-html[data-theme='dark'] .log-list li { border-color: rgba(255, 255, 255, 0.12); }
-html[data-theme='dark'] .badge, html[data-theme='dark'] .badge-on { border-color: rgba(255, 255, 255, 0.2); }
+html[data-theme='dark'] .log-list li { border-color: var(--border); }
+html[data-theme='dark'] .badge, html[data-theme='dark'] .badge-on { border-color: var(--border-strong); }
 
 /* ── 深色主题 v4 补丁（2026-09-06）：表单控件 / 背包详情 / 食灵格 / 冷库 / 进度条 ── */
 html[data-theme='dark'] input,
@@ -3741,7 +3746,7 @@ html[data-theme='dark'] textarea,
 html[data-theme='dark'] .plot-select {
   background: rgba(52, 38, 28, 0.95);
   color: #f2e6d7;
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--border);
 }
 html[data-theme='dark'] input[type='range'] { accent-color: #e0704a; }
 html[data-theme='dark'] select option { background: #241a13; color: #f2e6d7; }
@@ -3764,7 +3769,7 @@ html[data-theme='dark'] .item-grid .item-cell {
 }
 html[data-theme='dark'] .spirit-cell {
   background: rgba(46, 32, 23, 0.78);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--border);
   color: #e8dccb;
 }
 html[data-theme='dark'] .spirit-cell.locked { background: rgba(30, 22, 16, 0.6); }
@@ -3782,7 +3787,7 @@ html[data-theme='dark'] .btn-sm,
 html[data-theme='dark'] .btn-primary,
 html[data-theme='dark'] .btn-danger,
 html[data-theme='dark'] .region-tabs .btn,
-html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !important; color: #eadfca !important; border-color: rgba(255, 255, 255, 0.2) !important; }
+html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !important; color: #eadfca !important; border-color: var(--border-strong) !important; }
 html[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.92) !important; color: #fff !important; }
 html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92) !important; color: #ffe9e4 !important; }
 html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6) !important; color: #e6d8c5 !important; }
@@ -3813,7 +3818,7 @@ html[data-theme='dark'] .stats-col,
 html[data-theme='dark'] .menu-list {
   background: rgba(44, 31, 22, 0.85) !important;
   color: #e8dccb !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
+  border-color: var(--border) !important;
 }
 html[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #6b4f3a; }
 html[data-theme='dark'] .guide-block { background: rgba(44, 31, 22, 0.7) !important; }
@@ -3835,7 +3840,7 @@ html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85)
 .app-sidebar, .app-status { position: relative; z-index: 1; }
 
 /* ── 觅珍页暗色覆盖（组件 :global 规则迁移至此，html[data-theme=dark] 全局写法）── */
-html[data-theme='dark'] .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: rgba(255, 255, 255, 0.16); color: #e8dccb; }
+html[data-theme='dark'] .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: var(--border); color: #e8dccb; }
 html[data-theme='dark'] .pool-mini-name { color: rgb(var(--pc2)); }
 html[data-theme='dark'] .pool-mini-price { color: rgba(var(--pc2), 0.65); }
 html[data-theme='dark'] .pool-mini.active {
@@ -3875,12 +3880,12 @@ html[data-theme='dark'] .gacha-front-sub { color: #bfa98f; }
 html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, var(--tlo1, #7a4a30), var(--tlo2, #3a2418)); }
 
 /* 制作队列暗色（2026-09-06） */
-html[data-theme='dark'] .queue-item { background: rgba(44, 31, 22, 0.6); border-color: rgba(255, 255, 255, 0.16); }
+html[data-theme='dark'] .queue-item { background: rgba(44, 31, 22, 0.6); border-color: var(--border); }
 
 /* 装备词条芯片（2026-09-06） */
 .equip-mod-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .equip-mod-chips .mod-chip {
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   color: #8a5a12;
   background: rgba(255, 245, 224, 0.85);
   border: 1px solid rgba(217, 138, 43, 0.4);
@@ -3937,7 +3942,7 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
 .rt-line2 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 2px; }
 .rt-name { font-weight: 600; }
 .rt-qty { color: var(--gold); font-weight: 700; }
-.rt-src { font-size: 11px; color: var(--muted); white-space: normal; }
+.rt-src { font-size: 12px; color: var(--muted); white-space: normal; }
 .rt-src-craft { color: var(--primary-strong); }
 html[data-theme='dark'] .rt-row:hover { background: rgba(255, 255, 255, 0.06); }
 html[data-theme='dark'] .rt-node::before { border-left-color: rgba(232, 180, 95, 0.28); }
@@ -3953,7 +3958,7 @@ html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); 
   transform: translateY(-3px);
 }
 .cb-badges { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-bottom: 2px; }
-.cb-badges span { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.cb-badges span { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
 .cb-type { background: rgba(150, 110, 70, 0.14); color: var(--muted); }
 .cb-power { background: rgba(217, 138, 43, 0.2); color: var(--warn-strong); }
 .cb-battle-panel { margin-top: 12px; }
@@ -3964,7 +3969,7 @@ html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); 
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 5px 10px; border-radius: 8px; font-size: 13px;
 }
-.cb-round-idx { font-size: 11px; color: var(--muted); min-width: 48px; }
+.cb-round-idx { font-size: 12px; color: var(--muted); min-width: 48px; }
 .cb-round-cards { flex: 1; }
 .cb-round-verdict { font-weight: 800; }
 .cb-round.win { background: rgba(87, 168, 97, 0.12); }
@@ -3988,7 +3993,7 @@ html[data-theme='dark'] .cb-first-bonus { color: #8fd39a; }
   border: 1px solid var(--border); border-radius: 8px;
   background: rgba(255, 252, 246, 0.9); color: var(--text);
 }
-html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.16); }
+html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; border-color: var(--border); }
 
 /* 顶部导航单行（2026-09-06）：隐藏自身横向滚动条 */
 .top-nav::-webkit-scrollbar { display: none; }
@@ -4097,7 +4102,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 /* 拼图目标预览与编号（2026-09-06） */
 .puzzle-goal { pointer-events: none; opacity: 0.85; }
 .puzzle-goal-cell { cursor: default; }
-.puzzle-num { position: absolute; right: 5px; bottom: 3px; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.puzzle-num { position: absolute; right: 5px; bottom: 3px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
 .puzzle-cell { position: relative; }
 .puzzle-goal-label { font-size: 12px; font-weight: 700; margin-bottom: 8px; text-align: center; color: var(--primary-strong); }
 .puzzle-board-play { margin-top: 10px; }
@@ -4170,7 +4175,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .mg-info-card ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
 .mg-info-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .mg-info-row:first-of-type { margin-top: 0; }
-html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
+html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); color: #ffb08a; border-color: #e0704a; }
 
 /* ── 小游戏统一按钮/文字规范（2026-09-07）── */
@@ -4455,9 +4460,9 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 1
 
 /* ── 称号页佩戴态（2026-09-09）── */
 .gather-card.title-equipped { border-color: var(--gold) !important; box-shadow: 0 0 12px rgba(168, 120, 11, 0.45); }
-.title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(234, 176, 74, 0.25); color: var(--primary-strong); }
+.title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(234, 176, 74, 0.25); color: var(--primary-strong); }
 .gather-card:not(.locked) { cursor: pointer; }
-html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: rgba(255, 255, 255, 0.2); }
+html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-entry-sep { background: rgba(255, 255, 255, 0.18); }
 
 /* ── 水果合成 深色适配（2026-09-09）── */
@@ -4580,3 +4585,229 @@ html[data-theme='dark'] .mg-shell .gd-result, html[data-theme='dark'] .mg-shell 
 .realm-modal { max-width: 520px; }
 .realm-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .realm-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; text-align: left; }
+
+/* ══ 高清晰模式（2026-09-10）════════════════════════════════════════
+   <html data-crisp="1"> 由设置面板「高清晰模式」开关驱动（默认关）。
+   目标：关掉全站背景模糊 + 抬高不透明度 + 加深次要文字，让文字与边界完全锐利。
+   实现：全部规则挂在 html[data-crisp='1'] 前缀下，开关关闭时不产生任何影响。 */
+html[data-crisp='1'] *,
+html[data-crisp='1'] *::before,
+html[data-crisp='1'] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 亮色档位下的对比度再加深（深色主题只关模糊，不改配色） */
+html[data-crisp='1']:not([data-theme='dark']) {
+  --text: #3b241d;
+  --text-dim: #57402f;
+  --muted: #665c54;
+  --border: #d3b9a2;
+}
+
+html[data-crisp='1']:not([data-theme='dark']) .main-scroll { background: rgba(255, 252, 247, 0.98); }
+html[data-crisp='1'] .card,
+html[data-crisp='1'] .gather-card,
+html[data-crisp='1'] .opp-row,
+html[data-crisp='1'] .slot-card,
+html[data-crisp='1'] .item-card,
+html[data-crisp='1'] .item-cell,
+html[data-crisp='1'] .plot-select,
+html[data-crisp='1'] .modal,
+html[data-crisp='1'] .btn,
+html[data-crisp='1'] .top-nav-btn,
+html[data-crisp='1'] .skill-item,
+html[data-crisp='1'] .feature-tile {
+  background-image: none;
+}
+
+html[data-crisp='1']:not([data-theme='dark']) .card,
+html[data-crisp='1']:not([data-theme='dark']) .gather-card,
+html[data-crisp='1']:not([data-theme='dark']) .opp-row,
+html[data-crisp='1']:not([data-theme='dark']) .slot-card,
+html[data-crisp='1']:not([data-theme='dark']) .item-card,
+html[data-crisp='1']:not([data-theme='dark']) .plot-select,
+html[data-crisp='1']:not([data-theme='dark']) .modal {
+  background: #fffdf9;
+}
+/* ── 高清晰模式 · 深色档位（2026-09-10）：同样关模糊（见上方通用规则），并把深色表面提到近实底 ── */
+html[data-crisp='1'][data-theme='dark'] {
+  --text-dim: #e7d8c5;
+  --muted: #d2c1ab;
+  --border: #6a5140;
+}
+
+html[data-crisp='1'][data-theme='dark'] .main-scroll { background: rgba(22, 15, 10, 0.985); }
+
+html[data-crisp='1'][data-theme='dark'] .card,
+html[data-crisp='1'][data-theme='dark'] .gather-card,
+html[data-crisp='1'][data-theme='dark'] .opp-row,
+html[data-crisp='1'][data-theme='dark'] .slot-card,
+html[data-crisp='1'][data-theme='dark'] .item-card,
+html[data-crisp='1'][data-theme='dark'] .item-cell,
+html[data-crisp='1'][data-theme='dark'] .plot-select,
+html[data-crisp='1'][data-theme='dark'] .modal,
+html[data-crisp='1'][data-theme='dark'] .stats-col,
+html[data-crisp='1'][data-theme='dark'] .daily-item,
+html[data-crisp='1'][data-theme='dark'] .season-card {
+  /* 深色主题在 §深色块用 !important 设过卡片底色（rgba(36,26,19,0.92)），此处需同权重且更靠后覆盖 */
+  background: #241a13 !important;
+}
+
+html[data-crisp='1'][data-theme='dark'] .btn,
+html[data-crisp='1'][data-theme='dark'] .btn-sm,
+html[data-crisp='1'][data-theme='dark'] .top-nav-btn,
+html[data-crisp='1'][data-theme='dark'] .skill-item,
+html[data-crisp='1'][data-theme='dark'] .feature-tile,
+html[data-crisp='1'][data-theme='dark'] .sidebar-tab,
+html[data-crisp='1'][data-theme='dark'] .top-nav,
+html[data-crisp='1'][data-theme='dark'] .bottom-nav {
+  background-color: #2e2118;
+  background-image: none;
+}
+
+/* 深色下侧栏/主区的背景图一并压暗（清晰优先，保留一点纹理） */
+html[data-crisp='1'][data-theme='dark'] .app-sidebar,
+html[data-crisp='1'][data-theme='dark'] .app-status {
+  background-image: linear-gradient(rgba(16, 11, 7, 0.94), rgba(16, 11, 7, 0.94)), url('../../public/images/bg-sidebar.png');
+}
+
+/* ══ 深色模式 · 全页面实测补齐（2026-09-10）══════════════════════════
+   来源：Playwright 逐页扫描（34 个页面 + 6 个弹窗）× 两项判定
+   ① 文字/底色对比度 < WCAG 阈值 ② 深色下仍声明「亮色底」（RGB>195）的硬编码层。
+   修完后两项扫描均为 0 命中；改动仅「深色 + 该元素」，不影响亮色档与高清晰模式。 */
+
+/* ① 顶栏「限时活动」药丸：亮色=深紫字/浅紫底；深色需反转（原 2.18:1） */
+html[data-theme='dark'] .top-nav-market {
+  color: #e9b6e0;
+  background: rgba(201, 140, 192, 0.16);
+  border-color: rgba(233, 182, 224, 0.45);
+}
+
+/* ② 主色按钮：深色 --primary(#e0704a) 偏亮，白字仅 3.6:1 → 底色压深（白字回到 ~5:1） */
+html[data-theme='dark'] .btn-primary,
+html[data-theme='dark'] .btn.btn-primary,
+html[data-theme='dark'] .btn-sm.btn-primary,
+html[data-theme='dark'] .region-tabs .btn.btn-primary {
+  background: #b8502c !important;
+  border-color: #cf6741 !important;
+  color: #fff !important;
+}
+html[data-theme='dark'] .btn-primary:hover,
+html[data-theme='dark'] .btn.btn-primary:hover { background: #c05430 !important; }
+html[data-theme='dark'] .btn-primary:disabled,
+html[data-theme='dark'] .btn.btn-primary:disabled { background: rgba(120, 62, 40, 0.7) !important; }
+
+/* ③ 侧栏技能项选中态：选中底是半透明主色，主色字太暗（3.38:1）→ 用亮主色 */
+html[data-theme='dark'] .skill-item.active .skill-name,
+html[data-theme='dark'] .skill-item.active .skill-level,
+html[data-theme='dark'] .skill-item.active .skill-xp { color: #ffb08a; }
+
+/* ④ 侧栏页签 / 功能磁贴：硬编码亮玻璃底（rgb(255,252,246,.3)）→ 深色玻璃底 */
+html[data-theme='dark'] .sidebar-tab,
+html[data-theme='dark'] .feature-tile,
+html[data-theme='dark'] .feature-group-label { background: rgba(255, 255, 255, 0.06); }
+html[data-theme='dark'] .sidebar-tab { color: #e6d8c5; }
+html[data-theme='dark'] .sidebar-tab:hover,
+html[data-theme='dark'] .feature-tile:hover { background: rgba(255, 255, 255, 0.12); }
+html[data-theme='dark'] .sidebar-tab.active,
+html[data-theme='dark'] .feature-tile.active {
+  background: rgba(224, 112, 74, 0.34);
+  color: #ffb08a;
+  border-color: rgba(224, 112, 74, 0.7);
+}
+
+/* ⑤ 装备/背包弹窗内的浅色面板（硬编码 rgba(255,251,244,.5) → 实测呈灰色块） */
+html[data-theme='dark'] .equip-pane { background: rgba(255, 255, 255, 0.05); }
+
+/* ⑥ 觅珍卡池主题色：亮色下用 --pc1/--pc2（深彩），深色下需提亮才可读（原 1.5~2.9:1） */
+html[data-theme='dark'] .pool-mini.pool-material .pool-mini-name { color: #4fd6b4; }
+html[data-theme='dark'] .pool-mini.pool-material .pool-mini-price { color: rgba(79, 214, 180, 0.85); }
+html[data-theme='dark'] .pool-mini.pool-food .pool-mini-name { color: #ffa95e; }
+html[data-theme='dark'] .pool-mini.pool-food .pool-mini-price { color: rgba(255, 169, 94, 0.85); }
+html[data-theme='dark'] .pool-mini.pool-gear .pool-mini-name { color: #a8c6d8; }
+html[data-theme='dark'] .pool-mini.pool-gear .pool-mini-price { color: rgba(168, 198, 216, 0.85); }
+html[data-theme='dark'] .pool-mini.pool-mix .pool-mini-name { color: #c9a3ea; }
+html[data-theme='dark'] .pool-mini.pool-mix .pool-mini-price { color: rgba(201, 163, 234, 0.85); }
+html[data-theme='dark'] .pool-mini.pool-limited .pool-mini-name { color: #e3bd7a; }
+html[data-theme='dark'] .pool-mini.pool-limited .pool-mini-price { color: rgba(227, 189, 122, 0.85); }
+
+/* ⑦ 主色按钮内部的次要文字（.dim / strong）：深色下需提亮，否则只剩 2.7~4.2:1 */
+html[data-theme='dark'] .btn-primary .dim,
+html[data-theme='dark'] .btn-primary span.dim,
+html[data-theme='dark'] .btn-primary .dim.mono,
+html[data-theme='dark'] .btn-primary strong { color: #fff !important; }
+
+/* ⑧ 抽卡按钮上的「10连/100连」药丸：硬编码亮底，深色下改深色玻璃底（按钮底色为渐变，扫描器读不到，此处按目视结果补） */
+html[data-theme='dark'] .gacha-btn-tag {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+/* ⑨ 装备弹窗「当前装备总属性」小方块：硬编码亮底 rgba(255,251,244,.6)，深色下与浅色文字同色（几乎看不见）
+   漏检原因：该区块仅在「已穿戴装备」时渲染，早先的扫描跑在空档上 → 已把守卫改成带数据的档位 */
+html[data-theme='dark'] .equip-stat-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+}
+
+
+/* ══ 深色模式 · 边缘去白（2026-09-10 用户反馈「大部分框的边缘有白色」）══════════════
+   亮色档用「白色半透明描边 + 白色内高光」模拟玻璃反光（.btn/.gather-card/.modal/食灵页…），
+   深色下这些白边会变成刺眼的亮线。深色统一改为：极淡白描边（0.10）+ 深色落影（不再有白色高光）。 */
+html[data-theme='dark'] .card,
+html[data-theme='dark'] .gather-card,
+html[data-theme='dark'] .opp-row,
+html[data-theme='dark'] .slot-card,
+html[data-theme='dark'] .item-card,
+html[data-theme='dark'] .plot-select,
+html[data-theme='dark'] .stats-col,
+html[data-theme='dark'] .modal,
+html[data-theme='dark'] .bag-pane,
+html[data-theme='dark'] .spirit-row,
+html[data-theme='dark'] .spirit-box,
+html[data-theme='dark'] .spirit-duo-card,
+html[data-theme='dark'] .spirit-drawer,
+html[data-theme='dark'] .spirit-book-page,
+html[data-theme='dark'] .season-card,
+html[data-theme='dark'] .alchemy-card,
+html[data-theme='dark'] .story-chapter {
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 14px var(--gold-glow), inset 0 1px 0 rgba(240, 196, 118, 0.06);
+}
+
+html[data-theme='dark'] .btn,
+html[data-theme='dark'] .btn-sm {
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 10px var(--gold-glow-strong);
+}
+html[data-theme='dark'] .badge,
+html[data-theme='dark'] .feature-tile,
+html[data-theme='dark'] .sidebar-tab,
+html[data-theme='dark'] .top-nav-btn,
+html[data-theme='dark'] .skill-item,
+html[data-theme='dark'] .mg-entry,
+html[data-theme='dark'] .mg-page-btn {
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+html[data-theme='dark'] .btn-danger { border-color: var(--border) !important; }
+
+/* 进度条：去掉白色内高光与浅色槽底（深色下槽底会发白） */
+html[data-theme='dark'] .progress-bar {
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+}
+html[data-theme='dark'] .progress-bar-fill,
+html[data-theme='dark'] .hp-fill { box-shadow: none; }
+
+/* 选中/激活态：金光加强（当前页签、选中技能、激活磁贴、当前赛季档、主按钮） */
+html[data-theme='dark'] .skill-item.active,
+html[data-theme='dark'] .sidebar-tab.active,
+html[data-theme='dark'] .feature-tile.active,
+html[data-theme='dark'] .top-nav-btn.active,
+html[data-theme='dark'] .season-tier-card.active,
+html[data-theme='dark'] .season-pts-card,
+html[data-theme='dark'] .btn-primary {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 16px var(--gold-glow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}

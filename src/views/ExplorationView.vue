@@ -109,7 +109,7 @@ function scrollToSection(label) {
             <div class="gather-card-head">
               <div>
                 <strong>{{ t.name }}</strong><span v-if="!isUnlocked(t.id)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
-                <div class="dim" style="font-size: 11px">Lv {{ t.reqLevel }} 解锁</div>
+                <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>
             <div class="gather-card-row">
