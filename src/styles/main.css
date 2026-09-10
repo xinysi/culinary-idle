@@ -4,6 +4,7 @@
 :root {
   --primary: #d95a38;
   --primary-strong: #b8442a;
+  --primary-deep: #7a2f16; /* 深陶土：用在「同色相底色」上的文字（如侧栏选中行），保证对比 ≥4.5:1 */
   --primary-soft: #f8dccd;
   --text: #4a2f26;
   --text-dim: #6b5347;
@@ -92,12 +93,19 @@ body {
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100%; /* 百分比高度链（html/body/#app 100%）：zoom 缩放时与视口物理尺寸一致，绝不溢出/留空（2026-09-06） */
+  height: 100%;
+  /* 整幅壁纸铺在最外层（含顶部导航栏区域）：顶栏/三栏/底部状态条共用同一张连续图（2026-09-11） */
+  background-image: url('../../public/images/bg-start.jpg');
+  background-size: cover;
+  background-position: center; /* 百分比高度链（html/body/#app 100%）：zoom 缩放时与视口物理尺寸一致，绝不溢出/留空（2026-09-06） */
 }
 
 /* 顶部功能导航 + 三栏主体 */
 .app-body {
   display: grid;
+  /* 2026-09-11：三栏 = 三块**直角**面板，**贴顶贴底贴左右**；壁纸只出现在面板之间的竖缝里 */
+  padding: 0;
+  gap: 10px;
   /* 左右栏随视口/缩放等比自适应（2026-09-06：固定 230px 在放大时被内容撑破导致错位） */
   grid-template-columns: minmax(170px, min(22%, 250px)) minmax(0, 1fr) minmax(170px, min(22%, 250px));
   flex: 1;
@@ -110,11 +118,15 @@ body {
   justify-content: flex-start; /* 主按钮区左对齐；右侧固定组由 spacer 顶到最右 */
   gap: 6px;
   padding: 6px 10px;
-  background: rgba(255, 252, 246, 0.80);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
-  border-top: 1px solid var(--border);
+  /* 顶栏不铺实底（2026-09-11）：靠内容那侧（下缘）淡出到透明，与 .main-scroll 的上缘渐隐对接；
+     按钮所在的偏上区域保留浓度，保证文字可读。中间内容滚不到它下面，故无需遮底 */
+  /* 2026-09-11 重构：顶栏是"中间内容面板"的上段，不再是独立浮块 */
+  margin: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(150, 105, 78, 0.16);
+  border-radius: 0;
+  box-shadow: none;
   flex-shrink: 0; /* 不随内容区滚动（flex 布局固定）*/
   margin-bottom: 0;
   flex-wrap: nowrap; /* 放大/按钮多时保持单行，不再折成两行（2026-09-06） */
@@ -164,7 +176,7 @@ body {
   background: rgba(217, 90, 56, 0.25);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: var(--primary-strong);
+  color: var(--primary-deep); /* 同上：顶栏两侧有羽化带，底色会变浅（2026-09-11） */
   border-color: rgba(217, 90, 56, 0.65);
 }
 
@@ -213,10 +225,13 @@ body {
   align-items: stretch;
   gap: 14px;
   padding: 6px 12px;
-  background: rgba(255, 252, 246, 0.80);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
+  /* 与顶栏同口径：面板内的下段分区（2026-09-11 重构） */
+  margin: 0;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(150, 105, 78, 0.16);
+  border-radius: 0;
+  box-shadow: none;
   flex-shrink: 0;
   z-index: 20;
   position: relative;
@@ -227,6 +242,9 @@ body {
   flex: 1;
   min-width: 0;
 }
+
+/* 底栏压在壁纸上（毛玻璃 0.68），--text-dim 小字实测 4.40:1 → 该处单独加深（2026-09-11，同 .app-status .dim 的处理） */
+.bottom-nav .dim { color: #574439; }
 .bottom-nav-col:first-child {
   flex: 0 1 auto; /* 放大时可收缩（2026-09-06：与顶部导航同策略） */
   min-width: 0;
@@ -282,22 +300,20 @@ body {
 
 .app-sidebar {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.80), rgba(255, 252, 246, 0.80)), url('../../public/images/bg-sidebar.png');
-  background-size: cover;
-  background-position: center;
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(50px);
-  border-right: 1px solid var(--border);
-  
-  overflow-y: auto;
+  /* 直角面板（2026-09-11）：金边由 ::after 的 mask 环绘制（见「面板金边」一节）。
+     面板自身不滚动——滚动下沉到技能列表（.skill-nav），头部页签固定住 */
+  background-color: rgba(255, 252, 246, 0.82);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .app-main {
-  background-image: url('../../public/images/bg-start.jpg');
-  background-size: cover;
-  background-position: center;
+  /* 2026-09-11：中间整列 = 一块直角内容面板（顶栏/内容/底栏都在它内部）。
+     金边由 ::after 的 mask 环绘制，且**两端渐隐**（10%~90% 实、两端透明） */
+  position: relative;
+  background-color: rgba(255, 252, 246, 0.88);
+  overflow: hidden;   /* 顶栏/底栏与内容的分区裁切 */
   display: flex;
   flex-direction: column;
   overflow: hidden; /* 导航固定，内容区独立滚动 */
@@ -306,28 +322,97 @@ body {
 
 /* 内容滚动区 */
 .main-scroll {
-  /* 性能：不用 backdrop-filter 动态模糊。实测动态进度条 fill 在带 blur 的层内每帧动画会触发
-     Chromium 对背景的模糊重采样，把主线程拖到 ~20fps；改用静态半透明磨砂底遮罩背景——
-     0.78 磨砂：既透出启动页背景图、又保证文字对比度（AGENTS.md 口径），且不牺牲进度条 ~60fps。 */
-  background: rgba(255, 251, 244, 0.92);
+  /* 性能：不用 backdrop-filter（动态进度条 fill 在带 blur 的层内会触发背景模糊重采样，掉到 ~20fps）。
+     实测值 0.92（原注释写的 0.78 早已过时，2026-09-11 修正）；
+     左右各 64px 从 0.34 渐入到 0.92，与两侧导航栏的羽化边对接 → 接缝不再是硬台阶。 */
+  /* 底色由 .app-main 内容面板提供（2026-09-11 重构） */
+  background: none;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
   padding: 16px;
 }
 
+/* 右栏压在壁纸上，--muted 小字实测仅 3.95:1，此处单独加深（2026-09-11） */
+.app-status .dim { color: #5f5148; }
 .app-status {
   position: relative;
-  background-image: linear-gradient(rgba(255, 252, 246, 0.80), rgba(255, 252, 246, 0.80)), url('../../public/images/bg-sidebar.png');
-  background-size: cover;
-  background-position: center;
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(50px);
-  border-left: 1px solid var(--border);
+  /* 直角面板（2026-09-11）：本栏内容多、自身滚动，金边改由 .app-body::after 覆盖右列绘制 */
+  background-color: rgba(255, 252, 246, 0.82);
   
   overflow-y: auto;
   padding: 12px;
 }
+
+/* ══ 面板金边：金色流光描边环（2026-09-11）══
+   用 mask **只画那一圈 2px 的环**——金色不会渗进面板内部（此前用"分层背景 + border-box 裁切"会让整块面板染金）。
+   环的渐隐方向按栏位：左栏向右渐隐、右栏向左渐隐、中区两端渐隐。
+   金边为静止的渐变（渐隐方向按栏位）；见下方「流光性能结论」。 */
+.app-sidebar::after, .app-main::after, .app-body::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;              /* 环宽 */
+  pointer-events: none;
+  z-index: 3;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.app-sidebar::after { background-image: linear-gradient(90deg, rgba(214, 170, 84, 0.90) 0%, rgba(214, 170, 84, 0.82) 45%, rgba(214, 170, 84, 0) 92%); }
+.app-main::after { background-image: linear-gradient(90deg, rgba(214, 170, 84, 0) 0%, rgba(214, 170, 84, 0.90) 10%, rgba(214, 170, 84, 0.90) 90%, rgba(214, 170, 84, 0) 100%); }
+/* 右栏面板自身滚动，环挂在 .app-body 上覆盖右列（伪元素放在滚动容器里会跟着内容滚走） */
+.app-body { position: relative; }
+.app-body::after {
+  inset: 0 0 0 auto;                    /* 右栏贴右边、贴顶贴底 */
+  width: clamp(170px, 22%, 250px);      /* 直角矩形，与面板同形 */
+  z-index: 4;
+  background-image: linear-gradient(270deg, rgba(214, 170, 84, 0.90) 0%, rgba(214, 170, 84, 0.82) 45%, rgba(214, 170, 84, 0) 92%);
+}
+html[data-theme='dark'] .app-sidebar::after { background-image: linear-gradient(100deg, rgba(240, 206, 140, 0) 43%, rgba(240, 206, 140, 0.42) 50%, rgba(240, 206, 140, 0) 57%), linear-gradient(90deg, rgba(186, 142, 62, 0.85) 0%, rgba(186, 142, 62, 0.72) 45%, rgba(186, 142, 62, 0) 92%); }
+html[data-theme='dark'] .app-main::after {
+  border-top-color: rgba(186, 142, 62, 0.85);
+  border-bottom-color: rgba(186, 142, 62, 0.85);
+}
+html[data-theme='dark'] .app-body::after { background-image: linear-gradient(100deg, rgba(240, 206, 140, 0) 43%, rgba(240, 206, 140, 0.42) 50%, rgba(240, 206, 140, 0) 57%), linear-gradient(270deg, rgba(186, 142, 62, 0.85) 0%, rgba(186, 142, 62, 0.72) 45%, rgba(186, 142, 62, 0) 92%); }
+
+/* 金色流光：2026-09-11 实测结论——带 mask 的环上任何动画（background-position / opacity）都会让
+   滚动帧时长从 16.6ms(60fps) 掉到 44~56ms(~18-23fps)，will-change / translateZ 提升都无效；
+   因此金边**保持静止**（只留渐变与各栏渐隐）。要做真流光需改用真实元素承载，另行评估。 */
+
+/* 点击/键盘焦点：去掉 Chromium 默认粗黑 outline（曾把导航按钮框成黑边），仅键盘导航时给淡主色描边（2026-09-11） */
+button:focus:not(:focus-visible) { outline: none; }
+button:focus-visible { outline: 2px solid rgba(217, 90, 56, 0.55); outline-offset: 2px; }
+
+/* 滚动条改「透明材质」：轨道全透明，滑块半透明（亮色深棕 / 深色米白），悬浮加深（2026-09-11） */
+.app-sidebar > .skill-nav::-webkit-scrollbar,
+.main-scroll::-webkit-scrollbar,
+.app-status::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+.app-sidebar > .skill-nav::-webkit-scrollbar-track,
+.main-scroll::-webkit-scrollbar-track,
+.app-status::-webkit-scrollbar-track { background: transparent; }
+.app-sidebar > .skill-nav::-webkit-scrollbar-corner,
+.main-scroll::-webkit-scrollbar-corner,
+.app-status::-webkit-scrollbar-corner { background: transparent; }
+.app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
+.main-scroll::-webkit-scrollbar-thumb,
+.app-status::-webkit-scrollbar-thumb {
+  background: rgba(110, 88, 74, 0.26);
+  border: 2px solid transparent;   /* 留白 → 滑块更细更"轻" */
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+.app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
+.main-scroll:hover::-webkit-scrollbar-thumb,
+.app-status:hover::-webkit-scrollbar-thumb { background: rgba(110, 88, 74, 0.44); background-clip: padding-box; }
+html[data-theme='dark'] .app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
+html[data-theme='dark'] .main-scroll::-webkit-scrollbar-thumb,
+html[data-theme='dark'] .app-status::-webkit-scrollbar-thumb { background: rgba(255, 246, 236, 0.22); background-clip: padding-box; }
+html[data-theme='dark'] .app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
+html[data-theme='dark'] .main-scroll:hover::-webkit-scrollbar-thumb,
+html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb { background: rgba(255, 246, 236, 0.40); background-clip: padding-box; }
 
 /* 一键回到顶部按钮（中间页面右下角，避开右侧面板）*/
 .back-top-btn {
@@ -435,10 +520,17 @@ body {
   left: 0;
   bottom: 0;
   width: 240px;
-  background: var(--sidebar-bg);
+  /* 手机端没有常驻侧栏，这两张竖版图正好给抽屉用（2026-09-11） */
+  background-image: linear-gradient(rgba(255, 252, 246, 0.50), rgba(255, 252, 246, 0.50)), url('../../public/images/bg-sidebar.jpg');
+  background-size: cover;
+  background-position: 22% center;
   border-right: 1px solid var(--border);
   z-index: 45;
   overflow-y: auto;
+}
+
+html[data-theme='dark'] .mobile-skills {
+  background-image: linear-gradient(rgba(18, 12, 8, 0.52), rgba(18, 12, 8, 0.52)), url('../../public/images/bg-sidebar-night.jpg');
 }
 
 .mobile-skills .sidebar {
@@ -734,7 +826,7 @@ h2 {
 
 .skill-cat {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text);
   padding: 8px 4px 4px;
   font-weight: 600;
 }
@@ -794,12 +886,12 @@ h2 {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(217, 90, 56, 0.45);
-  color: var(--primary-strong);
+  color: var(--primary-deep); /* 压在壁纸底上，--primary-strong 实测仅 3.8:1（2026-09-11） */
 }
 
 .skill-item.active .dim,
 .skill-item.active .skill-level {
-  color: var(--primary);
+  color: var(--primary-deep); /* 2026-09-11：原 var(--primary) 与选中行橙底色同色相，实测仅 2.05:1 */
 }
 
 .skill-name {
@@ -938,7 +1030,7 @@ h2 {
 }
 
 /* 右侧导航栏卡片框 → 与左侧导航项(.skill-item)同款样式：
-   透明毛玻璃背景 + 虚线边框，让底下的 bg-sidebar.png 背景透出，同时保持整体偏白 */
+   透明毛玻璃背景 + 虚线边框，让底下的 bg-sidebar.jpg 背景透出，同时保持整体偏白 */
 .status-panel .card {
   background: rgba(255, 252, 246, 0.62);
   backdrop-filter: blur(12px);
@@ -3712,16 +3804,33 @@ html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92); color
 html[data-theme='dark'] .btn:disabled, html[data-theme='dark'] .btn-sm:disabled { background: rgba(40, 30, 22, 0.7); color: #7a6a58; }
 
 /* ── 导航/侧栏/主区 ── */
-html[data-theme='dark'] .top-nav, html[data-theme='dark'] .bottom-nav { background: rgba(28, 19, 13, 0.92); }
+/* 深色：面板底（深色金边环见「面板金边」一节；光带 alpha 0.42，远低于"金光过亮"判定线） */
+html[data-theme='dark'] .app-sidebar { background-color: rgba(30, 21, 15, 0.82); }
+html[data-theme='dark'] .app-status { background-color: rgba(30, 21, 15, 0.82); }  /* 2026-09-11 补回：此前被补丁误删，导致深色下右栏还是白底 */
+html[data-theme='dark'] .app-main { background-color: rgba(30, 21, 15, 0.88); }
+html[data-theme='dark'] .top-nav { background: none; border-bottom-color: rgba(255, 236, 214, 0.12); }
+html[data-theme='dark'] .bottom-nav { background: none; border-top-color: rgba(255, 236, 214, 0.12); }
 html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6); color: #e6d8c5; }
 html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active {
-  background: rgba(224, 112, 74, 0.34); color: #ffb08a; border-color: rgba(224, 112, 74, 0.7);
+  background: rgba(224, 112, 74, 0.34); color: #ffc9ad; border-color: rgba(224, 112, 74, 0.7);
 }
-html[data-theme='dark'] .main-scroll { background: rgba(26, 18, 12, 0.92); }
-html[data-theme='dark'] .app-main { background-image: linear-gradient(rgba(15, 10, 7, 0.42), rgba(15, 10, 7, 0.42)), url('../../public/images/bg-start.jpg'); }
-html[data-theme='dark'] .app-sidebar, html[data-theme='dark'] .app-status {
-  background-image: linear-gradient(rgba(18, 12, 8, 0.74), rgba(18, 12, 8, 0.74)), url('../../public/images/bg-sidebar.png');
+html[data-theme='dark'] .app-layout { background-image: url('../../public/images/bg-start-night.jpg'); }
+  html[data-theme='dark'] .main-scroll { background: none; }
+/* 深色主题换夜景版壁纸（2026-09-10）：主内容区 + 启动页都用 bg-start-night.jpg */
+/* 深色下主区不再自带图/压暗层（并入 .main-scroll 的羽化渐变，避免接缝出现第二道台阶） */
+html[data-theme='dark'] .splash-bg { background-image: url('../../public/images/bg-start-night.jpg'); }
+/* 夜景壁纸：标题区本身是暗的，故撤掉米白柔光、文字翻回白/暖白（与亮色版互为镜像） */
+html[data-theme='dark'] .splash-overlay {
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, 0.30) 0%,
+    rgba(0, 0, 0, 0.06) 32%,
+    rgba(0, 0, 0, 0.05) 55%,
+    rgba(0, 0, 0, 0.30) 82%,
+    rgba(0, 0, 0, 0.45) 100%);
 }
+html[data-theme='dark'] .splash-title { color: #fff; text-shadow: 0 4px 18px rgba(0, 0, 0, 0.75); }
+html[data-theme='dark'] .splash-sub { color: #ffe8d0; font-weight: 600; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); }
+/* （2026-09-11 重构后已废弃：深色侧栏不再用羽化渐变，面板底由 .app-sidebar/.app-status 的 background-color 提供） */
 
 /* ── 内部构件 ── */
 html[data-theme='dark'] .gather-section-title { background: rgba(56, 41, 30, 0.7); color: #ecdcc8; border-color: var(--border); }
@@ -3791,7 +3900,7 @@ html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !im
 html[data-theme='dark'] .btn-primary { background: rgba(224, 112, 74, 0.92) !important; color: #fff !important; }
 html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92) !important; color: #ffe9e4 !important; }
 html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6) !important; color: #e6d8c5 !important; }
-html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active { background: rgba(224, 112, 74, 0.34) !important; color: #ffb08a !important; }
+html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active { background: rgba(224, 112, 74, 0.34) !important; color: #ffc9ad !important; }
 html[data-theme='dark'] .card, html[data-theme='dark'] .modal, html[data-theme='dark'] .gather-card { background: rgba(36, 26, 19, 0.92) !important; color: #ecdcc8 !important; }
 html[data-theme='dark'] .bag-detail, html[data-theme='dark'] .cold-pane, html[data-theme='dark'] .spirit-cell { background: rgba(36, 26, 19, 0.9) !important; color: #ecdcc8 !important; }
 html[data-theme='dark'] .plot-select, html[data-theme='dark'] input, html[data-theme='dark'] select { background: rgba(52, 38, 28, 0.95) !important; color: #f2e6d7 !important; }
@@ -4612,7 +4721,8 @@ html[data-crisp='1']:not([data-theme='dark']) {
   --border: #d3b9a2;
 }
 
-html[data-crisp='1']:not([data-theme='dark']) .main-scroll { background: rgba(255, 252, 247, 0.98); }
+/* 高清晰模式：把"中区面板"本身加厚到近乎不透明即可（.main-scroll 已无底色）（2026-09-11） */
+html[data-crisp='1']:not([data-theme='dark']) .app-main { background-color: rgba(255, 252, 247, 0.98); }
 html[data-crisp='1'] .card,
 html[data-crisp='1'] .gather-card,
 html[data-crisp='1'] .opp-row,
@@ -4644,7 +4754,7 @@ html[data-crisp='1'][data-theme='dark'] {
   --border: #6a5140;
 }
 
-html[data-crisp='1'][data-theme='dark'] .main-scroll { background: rgba(22, 15, 10, 0.985); }
+html[data-crisp='1'][data-theme='dark'] .app-main { background-color: rgba(22, 15, 10, 0.985); }
 
 html[data-crisp='1'][data-theme='dark'] .card,
 html[data-crisp='1'][data-theme='dark'] .gather-card,
@@ -4674,9 +4784,10 @@ html[data-crisp='1'][data-theme='dark'] .bottom-nav {
 }
 
 /* 深色下侧栏/主区的背景图一并压暗（清晰优先，保留一点纹理） */
+/* 高清晰模式：侧栏/右栏只加深色纱（壁纸由 .app-body 提供），保留一点纹理 */
 html[data-crisp='1'][data-theme='dark'] .app-sidebar,
 html[data-crisp='1'][data-theme='dark'] .app-status {
-  background-image: linear-gradient(rgba(16, 11, 7, 0.94), rgba(16, 11, 7, 0.94)), url('../../public/images/bg-sidebar.png');
+  background-image: linear-gradient(rgba(16, 11, 7, 0.90), rgba(16, 11, 7, 0.90));
 }
 
 /* ══ 深色模式 · 全页面实测补齐（2026-09-10）══════════════════════════
@@ -4705,10 +4816,11 @@ html[data-theme='dark'] .btn.btn-primary:hover { background: #c05430 !important;
 html[data-theme='dark'] .btn-primary:disabled,
 html[data-theme='dark'] .btn.btn-primary:disabled { background: rgba(120, 62, 40, 0.7) !important; }
 
-/* ③ 侧栏技能项选中态：选中底是半透明主色，主色字太暗（3.38:1）→ 用亮主色 */
+/* ③ 侧栏技能项选中态：选中底是半透明主色，主色字太暗（3.38:1）→ 用亮主色；
+   2026-09-11 换夜景壁纸后该处背景亮度升到 0.10，再提亮一档（#ffb08a 3.94:1 → #ffc9ad 4.7:1） */
 html[data-theme='dark'] .skill-item.active .skill-name,
 html[data-theme='dark'] .skill-item.active .skill-level,
-html[data-theme='dark'] .skill-item.active .skill-xp { color: #ffb08a; }
+html[data-theme='dark'] .skill-item.active .skill-xp { color: #ffd2b8; }
 
 /* ④ 侧栏页签 / 功能磁贴：硬编码亮玻璃底（rgb(255,252,246,.3)）→ 深色玻璃底 */
 html[data-theme='dark'] .sidebar-tab,

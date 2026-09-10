@@ -127,9 +127,14 @@ function applyCrisp() {
   else delete document.documentElement.dataset.crisp
 }
 // 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
+// 2026-09-10：主题偏好另存一份全局键，供「启动界面」使用——启动页阶段还没读档，
+// player.settings 是默认值（theme:'light'），深色玩家否则会在启动页看到亮色壁纸。
+const THEME_KEY = 'culinary-idle.theme'
 function applyTheme() {
-  const t = player.settings?.theme === 'dark' ? 'dark' : ''
-  if (t) document.documentElement.dataset.theme = t
+  const saved = player.settings?.theme
+  // 进游戏前（phase = splash，尚未读档）优先用全局偏好；进游戏后以存档内的设置为准
+  const pref = ui.phase === 'game' ? saved : (localStorage.getItem(THEME_KEY) || saved)
+  if (pref === 'dark') document.documentElement.dataset.theme = 'dark'
   else delete document.documentElement.dataset.theme
 }
 onMounted(() => {
@@ -141,8 +146,11 @@ onMounted(() => {
   refreshTodayTimer = t
 })
 onUnmounted(() => { clearInterval(refreshTodayTimer) })
-// 主题切换实时生效（设置面板修改 settings.theme）
-watch(() => player.settings?.theme, () => applyTheme())
+// 主题切换实时生效（设置面板修改 settings.theme），并写入全局键供启动页复用
+watch(() => player.settings?.theme, (v) => {
+  try { if (v) localStorage.setItem(THEME_KEY, v) } catch { /* 隐私模式下忽略 */ }
+  applyTheme()
+})
 
 // 跨午夜刷新定时器句柄
 let refreshTodayTimer = null

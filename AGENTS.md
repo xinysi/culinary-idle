@@ -74,6 +74,9 @@
 
 ## 存档机制注意点（重要，勿破坏）
 - 存档保存在 localStorage，键形如 `culinary-idle.save.{slot}`（3 存档位 + `schemaVersion`/`player`）。
+- **主题偏好另存一个全局键 `culinary-idle.theme`（2026-09-10 新增，不是存档位）**：启动界面阶段尚未读档、`player.settings` 还是默认值（`theme:'light'`），
+  深色玩家否则会在启动页看到亮色壁纸。故 `App.vue` 在 `ui.phase !== 'game'` 时优先读该键、进游戏后以存档内 `settings.theme` 为准；
+  该键只在主题变化时（即进入游戏之后）写入，**启动界面阶段仍然零写入**，不违反下面两条铁律。
 - **启动界面阶段绝对不能写档**：`saveNow()` 仅在 `gameRunning === true`（已进入游戏）时才写入，否则会把默认空状态覆盖到当前存档位，导致玩家存档被清空（曾实际发生的事故）。
 - `registerGameEvents()`（含 `visibilitychange → saveNow()` 自动存档监听）**只在 `startGame` 进入游戏后注册**，`main.js` 挂载时不得注册；否则页面刷新时的 `visibilitychange` 会在启动界面阶段触发 `saveNow()` 覆盖存档。
 - 启动流程：`main.js` 只 mount；`startGame`（选存档后）设置 `gameRunning`、注册监听、`ui.phase='game'`。
@@ -81,8 +84,58 @@
 - 测试环境：`@playwright/test`（chromium 已装），dev server 在 `http://localhost:5173/` 或 `5174/`（可能有两个实例），测试脚本 `e2e-test.spec.mjs`。
 
 ## 视觉 UI 规范（毛玻璃 / 背景）
+
+- **布局骨架：三栏 = 三块独立圆角面板（2026-09-11 重构，取代此前"逐段羽化"的一整套做法）**
+  之前的思路是"壁纸整幅一层 + 三栏各自做色纱 + 逐段羽化把接缝抹平"，结果是**一列里叠了四种材质**（顶栏毛玻璃条 / 中区奶油 / 底栏毛玻璃条 / 侧栏色纱），怎么调都"割裂"。现改为：
+  | 结构 | 做法 |
+  | --- | --- |
+  | 壁纸 | 只铺 **`.app-layout`** 一层（亮 `bg-start.jpg` / 深 `bg-start-night.jpg`） |
+  | `.app-body` | `padding: 0; gap: 10px` —— 三块面板**贴顶贴底贴左右**（直角矩形，2026-09-11 起不再用圆角），**壁纸只出现在面板之间的 10px 竖缝里** |
+  | 三块面板 | 侧栏 `.app-sidebar` / 中区 `.app-main` / 右栏 `.app-status`：统一**直角**（`border-radius: 0`，勿加回圆角）+ 半透明底（侧栏/右栏 `rgba(255,252,246,0.82)`、中区 `0.88`；深色 `rgba(30,21,15,0.82/0.88)`）+ **金色流光描边环**（见下），**都不再有自己的 background-image / 羽化渐变** |
+  | 顶栏 / 底栏 | **不再是独立浮块**，而是中区面板内部的上/下分区：`background: none` + 只在靠内容一侧加 `1px` 细分隔线（`.top-nav` → `border-bottom`、`.bottom-nav` → `border-top`）；`.app-main` 的 `overflow: hidden` 让它们被面板圆角裁切 |
+
+  **金色描边环（2026-09-11，静止版）**：用 `::after` + `mask`（`content-box` xor `border-box`）**只画那 2px 的一圈**，
+  渐变方向按栏位渐隐——左栏向右渐隐（`90deg`）、右栏向左渐隐（`270deg`）、中区两端渐隐（10%~90% 实）。
+  亮色金 `rgba(214,170,84,·)`；深色暗金 `rgba(186,142,62,·)`。
+
+  实测：亮色文字对比 **5.65~11.34:1**、深色 **8.15~11.76:1**；深色体检 22,537 元素全过；滚动帧时长 **16.7ms（60fps）**。
+  ⚠️ **环上不要加任何动画（2026-09-11 实测结论）**：`background-position` 流光或 `opacity` 脉动都会让**滚动帧时长从 16.6ms 掉到 44~56ms（~18-23fps）**，
+  `will-change: opacity` / `transform: translateZ(0)` 提升**都无效**（mask 层交不给合成器）；关掉动画立刻回到 60fps。要真流光，需改用**真实元素**承载环（模板改造），另行评估。
+  ⚠️ 金边实现的四个坑（全部踩过）：
+  · **不要用"分层背景 + `background-clip: border-box/padding-box`"画环**：金边层会被裁到整块面板，而半透明面板底盖不住它 → **整块面板染金**；
+  · **不要让环挂在滚动容器自己的 `::after` 上**：滚动容器里的绝对定位伪元素会**跟着内容滚走**。因此侧栏改为 `.app-sidebar { overflow: hidden }` + 滚动下沉到 `.app-sidebar > .skill-nav`（头部页签固定住，透明滚动条样式也一并挂到 `.skill-nav`），右栏内容多且自身滚动，环改挂在 `.app-body::after` 上覆盖右列（≤940px 时隐藏）；
+  · **右栏金环（`.app-body::after`）用 `inset: 0 0 0 auto`**：贴右边 + 贴顶贴底，与直角面板同形（曾先后踩过：`border-radius: inherit` 让环变直角、`inset: 10px …` 让环上下留缝，两种都对不上面板）。
+  深色若要加金色光晕，注意 `e2e-dark` 的"金色光晕过亮"判定：`rgba(232,180,95,·)` / `rgba(240,196,118,·)` 的 **alpha 必须 ≤ 0.35**（环的渐变不受此限，但 box-shadow/text-shadow 受）。
+  ⚠️ **深色主题下三块面板的底色必须逐块确认（2026-09-11 事故）**：某次补丁把 `html[data-theme='dark'] .app-status { background-color: … }` 一并删掉了，
+  结果**深色下右栏变白底**（左/中栏正常），而当时的深色体检只扫 `.app-* *` 的**后代**、扫不到面板本身，所以没报警。现已把 `.app-main/.app-status/.app-sidebar/.top-nav/.bottom-nav` **本身**也纳入 `e2e-dark.spec.mjs` 的扫描范围（并用"临时放回该 bug"反例验证：逐页报 `light-bg aside.status-panel.app-status`）。
+  改深浅色任何一条规则后，**至少确认这三块面板在两套主题下的 computed background 都正确**（一条命令即可：`getComputedStyle` 取 `.app-sidebar/.app-main/.app-status` 的 `backgroundColor`）。
+  ⚠️ 关键约束：
+  ① **中区面板不要用 `backdrop-filter`**：它是内容（含每帧动画的进度条）的祖先层，祖先上的 blur 会持续重采样背景，实测把主线程压到 ~20fps（`.main-scroll` 早就因此去掉了 blur，别再往 `.app-main` 上加）；
+  ② **三块面板共用一套参数**（同圆角/同描边/同透明度量级）——这正是"不割裂"的来源，别单独给某一块换材质；
+  ③ 面板透明度别低于 **0.82**（更低时画面透得太实，行与行浓淡不一、整栏"发花"；0.62 时踩过）；
+  ④ **`button:focus:not(:focus-visible) { outline: none }`** 是必需项：Chromium 默认的粗黑焦点环会出现在点击后的导航按钮上（用户放大截图里一眼可见）。`:focus-visible` 仍保留淡主色描边给键盘导航。
+- **滚动条：透明材质（2026-09-11）**：`.app-sidebar` / `.main-scroll` / `.app-status` 的 `::-webkit-scrollbar` 轨道全透明、滑块半透明（亮色深棕 `rgba(110,88,74,0.26)`、深色米白 `rgba(255,246,236,0.22)`，`:hover` 加深），滑块用 `border: 2px solid transparent` + `background-clip: padding-box` 收细。仅用 webkit 伪元素（Electron/Chromium 全支持；勿同时写 `scrollbar-width/color`，Chromium 121+ 会改用它而让伪元素失效）。
+- **手机端（≤720px）三处规则目前被同优先级后置规则覆盖，属既有待修 bug（2026-09-11 实测）**：
+  `@media` 里的 `.app-sidebar{display:none}`、`.app-status{display:none}`、`.mobile-nav{display:flex}` 分别被后面的 `.sidebar{display:flex}`、`.status-panel{display:flex}`、`.mobile-nav{display:none}` 覆盖 → 手机上底部导航不显示、侧栏没被真正隐藏（靠 grid 高度 0 才没露出来）、状态栏堆到正文下方。
+  修法（未实施，需用户确认）：把三条媒体查询选择器提权，如 `.app-body .app-sidebar` / `.app-body .app-status` / `.app-layout .mobile-nav`。
+- **启动页 / 主内容区 / 左右导航栏 三处壁纸都按主题切换（2026-09-10）**：
+  | 位置 | 亮色 | 深色 |
+  | --- | --- | --- |
+  | 启动页 `.splash-bg` | `bg-start.jpg`（1920×1080） | `bg-start-night.jpg` |
+  | 桌面三栏（`.app-body` 单层） | 同上 `bg-start.jpg` | 同上 `bg-start-night.jpg` |
+  | 手机端技能抽屉 `.mobile-skills` | `bg-sidebar.jpg`（1080×1920） | `bg-sidebar-night.jpg` |
+
+  规则都写在 `main.css` 的 `html[data-theme='dark']` 权威块里。**都靠「半透明色彩层压在图上」控制可读性**：启动页亮色＝米白柔光 `0.46`+深墨字、深色＝深色渐暗+白字；
+  手机抽屉＝米白/暖黑磨砂 `0.50`（`background-position: 22% center` 取景左移）。
+  ⚠️ 换壁纸必须重新对一次亮度/取景：标题带平均亮度 < 0.45 才稳（量法见 README「质量保障」的教训段）。
+
+- **压在壁纸上的文字必须实测对比度（2026-09-11）**：导航栏/右栏壁纸透出后，背景亮度会随画面明暗波动（实测 0.51~0.81），小字号文字很容易掉到 4.5:1 以下。
+  - **红线：主色橙 `--primary #d95a38` 不可当作「同色相底色上的文字」**——侧栏选中行原本「橙字压橙底」实测仅 **2.05:1**。该场景用新语义色 **`--primary-deep #7a2f16`**（5.0:1）。
+  - 已定点加深（勿回退）：`.skill-item.active .dim/.skill-level` → `--primary-deep`；`.skill-cat` → `--text`；`.app-status .dim` → `#5f5148`。深色模式对应规则用浅橙 `#ffb08a`，本就 6.2:1，不需改。
+  - **量法（别再靠肉眼或"取最暗 10% 像素"——那对小字严重低估）**：用 Playwright 把 `*{color:transparent}` 后截图，量元素框内的背景中位亮度，再配 `getComputedStyle` 的真实文字色算 WCAG 对比。全套对照见提交说明。
+  - 副作用记录：降磨砂（0.80→0.50）会让这类对比整体下滑（如橙色 3.3→2.05），**改磨砂/取景后必须复测**。
 - **全局毛玻璃质感**：框（`.card`/`.gather-card`/`.opp-row`/`.slot-card`/`.item-card`/`.plot-select`）、弹窗（`.modal`）、按钮（`.btn`/`.btn-primary`/`.btn-danger`）、左/中/右导航栏均采用「半透明玻璃底 + `backdrop-filter: blur` + 半透明白描边」。
-- **背景图资源**：中间主内容区 `.app-main` 与左右导航栏 `.app-sidebar`/`.app-status` 使用 `public/images/` 下背景图；启动页共用 `/images/bg-start.jpg`，左侧导航栏已替换为 `/images/bg-sidebar.png`（用户提供）。左/右导航栏背景用 `background-image` + `::before` 白磨砂层（`rgba(255,252,246,0.7)` + `blur(15px)` + `pointer-events:none`），并把内容 `z-index:1` 提升到磨砂层之上，避免文字被盖。
+- **背景图资源**：中间主内容区 `.app-main` 与左右导航栏 `.app-sidebar`/`.app-status` 使用 `public/images/` 下背景图（**亮/暗各一张，见上一条主题切换表**）；启动页共用 `/images/bg-start.jpg`。左/右导航栏背景用 `background-image` + 半透明磨砂层，文字在磨砂层之上。
 - **导航项（侧栏 `.skill-item` / 顶部 `.top-nav-btn`）**：未选中/选中均为透明毛玻璃（`rgba(255,252,246,0.30)` + `blur(12px)`）并用**虚线**边框分隔；选中用半透明主色（`rgba(217,90,56,0.25)`）+ 主色虚线 + 主色文字。
 - **文字可读性**：毛玻璃不透明度在复杂背景图上需保证文字对比（内容区 `.main-scroll` 加 `rgba(255,251,244,0.78)` 磨砂底，框背景 0.80、按钮 0.85）。
 - 新增物品/配方数据后，运行 `vite build` + `npx playwright test e2e-test.spec.mjs`（9/9）验证；UI 改动同样用回归脚本确认无未捕获控制台错误。

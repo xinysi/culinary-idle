@@ -93,17 +93,20 @@ function startNew() {
   background-position: center;
 }
 
-/* 柔和渐变暗化：顶部略暗、中部透亮、底部渐暗，让文字自然浮现 */
+/* 米白柔光（仅托住文字块）+ 底部暖暗收边：壁纸是白天版（亮蓝天白云），
+   文字改用深墨色，与游戏主色板（米白 rgba(255,252,246) + 陶土红 #D95A38）一致 */
 .splash-overlay {
   position: absolute;
   inset: 0;
   background:
+    radial-gradient(ellipse 44% 30% at 50% 46%,
+      rgba(255, 252, 246, 0.46) 0%,
+      rgba(255, 252, 246, 0.30) 52%,
+      rgba(255, 252, 246, 0.10) 78%,
+      rgba(255, 252, 246, 0) 92%),
     linear-gradient(180deg,
-      rgba(0, 0, 0, 0.30) 0%,
-      rgba(0, 0, 0, 0.06) 32%,
-      rgba(0, 0, 0, 0.05) 55%,
-      rgba(0, 0, 0, 0.30) 82%,
-      rgba(0, 0, 0, 0.45) 100%);
+      rgba(93, 42, 16, 0.10) 82%,
+      rgba(93, 42, 16, 0.20) 100%);
 }
 
 .splash-content {
@@ -121,17 +124,22 @@ function startNew() {
 .splash-title {
   font-size: 60px;
   font-weight: 900;
-  color: #fff;
-  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.75);
+  color: #40211a; /* 深墨：白天版壁纸上的主标题色 */
+  text-shadow:
+    0 2px 12px rgba(255, 255, 255, 0.95),
+    0 0 34px rgba(255, 255, 255, 0.7);
   letter-spacing: 6px;
   line-height: 1.15;
 }
 
 .splash-sub {
-  color: #ffe8d0;
+  color: #8a4626;
   font-size: 18px;
+  font-weight: 700;
   letter-spacing: 2px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+  text-shadow:
+    0 1px 3px rgba(255, 255, 255, 1),
+    0 0 16px rgba(255, 255, 255, 0.95);
 }
 
 .splash-start-btn {
@@ -140,13 +148,13 @@ function startNew() {
   letter-spacing: 4px;
   padding: 14px 48px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
   cursor: pointer;
   color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(217, 90, 56, 0.96), rgba(160, 52, 24, 0.96));
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 20px rgba(120, 55, 25, 0.35);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
   transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
   margin-top: 10px;
@@ -154,8 +162,8 @@ function startNew() {
 
 .splash-start-btn:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(232, 105, 68, 0.98), rgba(178, 62, 30, 0.98));
+  box-shadow: 0 10px 30px rgba(120, 55, 25, 0.45);
 }
 
 .start-slot-modal {

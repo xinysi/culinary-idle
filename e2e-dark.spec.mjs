@@ -49,7 +49,8 @@ function scanPage(exempt) {
   const path = (el) => el.tagName.toLowerCase() + '.' + [...(el.classList || [])].filter((c) => !c.startsWith('data-v')).join('.')
   const bad = []
   const seen = new Set()
-  const roots = '.app-main *, .app-status *, .app-sidebar *, .top-nav *, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
+  // 2026-09-11：把三块面板/两条栏**本身**也纳入扫描（原来只扫后代 '*'，导致'深色下某面板底色变白'这类问题扫不到）
+  const roots = '.app-main, .app-main *, .app-status, .app-status *, .app-sidebar, .app-sidebar *, .top-nav, .top-nav *, .bottom-nav, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
   let scanned = 0
   for (const el of document.querySelectorAll(roots)) {
     const cs = getComputedStyle(el)
