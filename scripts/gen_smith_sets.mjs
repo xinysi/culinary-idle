@@ -7,6 +7,10 @@ import { SMITHING_EXT } from '../src/game/data/expansion1.js'
 import { SMITHING_EXT2 } from '../src/game/data/expansion2.js'
 import { ITEMS } from '../src/game/data/items.js'
 import { equipTierFor, equipQualityFor } from '../src/game/data/equipTierCurve.js'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+// 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
+const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')
 
 const SLOT_CN = { weapon: '刀', offhand: '锅', body: '围裙', helmet: '厨师帽', amulet: '调味瓶', legs: '腿甲', boots: '靴子', ring: '戒指' }
 const OFFSET = { weapon: 0, offhand: 1, body: 2, helmet: 3, amulet: 2, legs: 3, boots: 4, ring: 4 }
@@ -150,7 +154,23 @@ for (const r of orphanRaw) {
   }
 }
 
+// 头注释必须由生成器写出，否则重跑会被抹掉
+// ⚠️ 自引用防护（2026-09-10）：items.js 已合并上次的 SMITHING_SET_ITEMS，
+//    不清空 src/game/data/smithSetExt.js 就重跑，全部条目会因「已存在/重名」被跳过。
+if (!outRecipes.length || !outItems.length) {
+  console.error('❌ 生成了 0 条配方/装备——极可能是自引用污染：请先把 smithSetExt.js 的')
+  console.error('   两个导出清空（SMITHING_SET_RECIPES = [] / SMITHING_SET_ITEMS = []）后再重跑。已中止。')
+  process.exit(1)
+}
+
+const HEADER = `// 厨具锻造品质套 + 独立矿套（生成器产出，勿手改）
+// 覆盖：20 品质套 + 21 独立矿套，每套 8 槽（刀/锅/砧板/围裙/厨师帽/调味瓶/腿甲/靴子），
+//       21 独立矿套另含手写的戒指/护符，共 9 件。
+// 改后重跑：node scripts/gen_smith_sets.mjs
+// ⚠️ 重跑前必须先清空本文件的两个导出（置 []）——生成器会 import ITEMS，
+//    而 ITEMS 已合并上次的产物，不清空会因「已存在/重名」跳过全部条目（自引用污染）。
+`
 const recipesJs = `export const SMITHING_SET_RECIPES = ${JSON.stringify(outRecipes, null, 1)}\n`
 const itemsJs = `export const SMITHING_SET_ITEMS = ${JSON.stringify(outItems, null, 1)}\n`
-writeFileSync('src/game/data/smithSetExt.js', recipesJs + itemsJs, 'utf8')
+writeFileSync(join(__OUT_DIR, 'smithSetExt.js'), HEADER + recipesJs + itemsJs, 'utf8')
 console.log(`配方=${outRecipes.length} 物品=${outItems.length}`)
