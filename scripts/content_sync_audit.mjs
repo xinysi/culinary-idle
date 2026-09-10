@@ -58,16 +58,16 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     if (['gather', 'craft', 'harvest'].includes(o.kind) && o.param !== 'any' && !ITEMS[o.param]) badRef.push(`${q.id}:${o.param}`)
     if (o.kind === 'boss' && o.param !== 'any' && !COMBAT_BOSSES.some((b) => b.name === o.param)) badRef.push(`${q.id}:${o.param}`)
   }
-  check('任务', '目标引用有效（物品/BOSS）', badRef.length === 0, badRef.slice(0, 5).join('; '))
+  check('任务：目标引用有效（物品/BOSS）', badRef.length === 0, badRef.slice(0, 5).join('; '))
 }
 
 // ── 2. 成就：id 唯一 / 奖励有效 / check 可执行 ──
 {
   const ids = ALL_ACHIEVEMENTS.map((a) => a.id)
-  check('成就', 'id 唯一', new Set(ids).size === ids.length)
+  check('成就：id 唯一', new Set(ids).size === ids.length)
   const badReward = []
   for (const a of ALL_ACHIEVEMENTS) for (const id of Object.keys(a.reward?.items ?? {})) if (!ITEMS[id]) badReward.push(`${a.id}→${id}`)
-  check('成就', '奖励物品全部存在', badReward.length === 0, badReward.slice(0, 5).join('; '))
+  check('成就：奖励物品全部存在', badReward.length === 0, badReward.slice(0, 5).join('; '))
   setActivePinia(createPinia())
   const p = usePlayerStore()
   p.newGame()
@@ -89,7 +89,7 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const storyKinds = new Set([...logViewSrc.matchAll(/case '([a-zA-Z]+)':/g)].map((m) => m[1]))
   const badReq = []
   for (const ch of STORY) for (const r of ch.requirements ?? []) if (!storyKinds.has(r.kind)) badReq.push(`${ch.chapter}:${r.kind}`)
-  check('故事', '章节需求 kind 均有进度分支', badReq.length === 0, badReq.slice(0, 5).join('; '))
+  check('故事：章节需求 kind 均有进度分支', badReq.length === 0, badReq.slice(0, 5).join('; '))
   const badPart = []
   for (const ch of STORY) {
     if (!ch.parts?.length) badPart.push(`${ch.chapter}(无段落)`)
@@ -104,7 +104,7 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const dup = names.filter((n, i) => names.indexOf(n) !== i)
   check(`称号：名称全局唯一（${names.length} 个）`, dup.length === 0, `重复: ${[...new Set(dup)].join(',')}`)
   const missing = ALL_ACHIEVEMENTS.filter((a) => a.title && !names.includes(a.title)).map((a) => a.id)
-  check('称号', '成就称号均已登记', missing.length === 0, missing.join(','))
+  check('称号：成就称号均已登记', missing.length === 0, missing.join(','))
 }
 
 // ── 5. 统计：StatsView 引用的字段必须真实存在（defaultState 或运行期赋值）──
@@ -120,7 +120,7 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     return !assigned
   })
   check(`统计：引用字段均有来源（${keys.size} 个）`, dead.length === 0, `无来源: ${dead.join(',')}`)
-  check('统计', '统计页分区/行结构完整', statsViewSrc.includes('const sections = computed') && (statsViewSrc.match(/label:/g) ?? []).length >= 20)
+  check('统计：统计页分区/行结构完整', statsViewSrc.includes('const sections = computed') && (statsViewSrc.match(/label:/g) ?? []).length >= 20)
 }
 
 // ── 6. 游玩攻略：总览覆盖全部系统 + 六阶段结构 + 导航视图一致 ──
@@ -176,6 +176,51 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   }
   const checked = sideViews.filter((v) => !!viewTagToName[v]).length
   check(`攻略：左栏功能页均含「相关页面」跳转条（${checked} 页）`, noRel.length === 0, `缺跳转条: ${noRel.join(',')}`)
+}
+
+
+// ── 7. check 误用静态扫描（2026-09-10 新增）──
+// 背景：三个审计脚本 + 两个测试套件里共有 107 处把「标签」当成了条件——
+//   check('分类', '说明文字', 真正的条件)  ← 签名为 (name, cond, detail) 时，第 2 参字符串恒为真
+// 后果：这些断言从未生效（图鉴三查 6/8、system_test2 70/77 全是恒真），门禁形同虚设。
+// 这里永久拦截：凡签名为 (name, cond, detail) 的脚本，第 2 个顶层实参不得是字符串字面量。
+{
+  const splitTopLevel = (src, start) => {
+    let depth = 0, cur = '', args = [], inStr = null, esc = false
+    for (let i = start; i < src.length; i++) {
+      const ch = src[i]
+      if (inStr) {
+        cur += ch
+        if (esc) { esc = false; continue }
+        if (ch === '\\') { esc = true; continue }
+        if (ch === inStr) inStr = null
+        continue
+      }
+      if (ch === "'" || ch === '"' || ch === '`') { inStr = ch; cur += ch; continue }
+      if ('([{'.includes(ch)) depth++
+      else if (ch === ')' && depth === 0) { args.push(cur.trim()); return args }
+      else if (')]}'.includes(ch)) depth--
+      if (ch === ',' && depth === 0) { args.push(cur.trim()); cur = ''; continue }
+      cur += ch
+    }
+    return args
+  }
+  const offenders = []
+  for (const f of fs.readdirSync('scripts')) {
+    if (!f.endsWith('.mjs')) continue
+    const src = fs.readFileSync(`scripts/${f}`, 'utf8')
+    // 仅检查签名为 (name, cond, ...) 的脚本（system_test.mjs 是 (area, name, cond, detail)，不在此列）
+    if (!/const check = \(name, cond/.test(src)) continue
+    for (const m of src.matchAll(/(^|\n)[ \t]*check\(/g)) {
+      const at = m.index + m[0].length
+      const args = splitTopLevel(src, at)
+      if (args.length >= 3 && /^\s*(['"`])/.test(args[1] ?? '')) {
+        const line = src.slice(0, at).split('\n').length
+        offenders.push(`${f}:${line}`)
+      }
+    }
+  }
+  check(`脚本：check 无「第 2 参传字符串」误用（扫描 ${fs.readdirSync('scripts').filter((f) => f.endsWith('.mjs')).length} 个脚本）`, offenders.length === 0, `恒真调用: ${offenders.slice(0, 6).join(', ')}`)
 }
 
 console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称号/统计/攻略）' : `\n${fail} FAILURES`)

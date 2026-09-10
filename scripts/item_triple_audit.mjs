@@ -5,6 +5,7 @@ import { ITEMS, getItem } from '../src/game/data/items.js'
 import { CATEGORY_LABEL, itemDetailLines } from '../src/game/data/itemDetail.js'
 import { itemSources } from '../src/game/data/itemSources.js'
 import { itemUses } from '../src/game/data/itemUses.js'
+import { jumpForSource } from '../src/game/data/sourceJump.js'
 import { ALCHEMY_RECIPES } from '../src/game/data/alchemy.js'
 import { getAllSkillInstances } from '../src/game/skills/registry.js'
 import { FORAGING_TARGETS } from '../src/game/skills/ForagingSkill.js'
@@ -34,7 +35,7 @@ const items = Object.values(ITEMS)
     if (!it.name) bad.push(`${it.id}缺name`)
     if (it.value == null || !Number.isFinite(it.value) || it.value < 0) bad.push(`${it.id}value=${it.value}`)
   }
-  check('数据', '物品 name/value 完整', bad.length === 0, bad.slice(0, 5).join(','))
+  check('数据：物品 name/value 完整', bad.length === 0, bad.slice(0, 5).join(','))
 }
 
 // ── 1. 重名（图鉴一个名字≠两样东西）──
@@ -42,7 +43,7 @@ const items = Object.values(ITEMS)
   const nm = {}
   for (const it of items) (nm[it.name] ??= []).push(it.id)
   const dups = Object.entries(nm).filter(([, ids]) => ids.length > 1)
-  check('重名', '全部物品名称唯一', dups.length === 0, dups.slice(0, 3).map(([n, ids]) => `${n}:${ids.join(',')}`).join('; '))
+  check('重名：全部物品名称唯一', dups.length === 0, dups.slice(0, 3).map(([n, ids]) => `${n}:${ids.join(',')}`).join('; '))
 }
 
 // ── 2. 详细作用（itemDetailLines）完整性 ──
@@ -58,28 +59,56 @@ const items = Object.values(ITEMS)
     if (it.type === 'spirit' && !lines.some((l) => l[0] === '食灵效果')) bad.push(`${it.id}(食灵无效果)`)
     if (it.type === 'equipment' && !Object.keys(it.stats ?? {}).length) bad.push(`${it.id}(装备无stats)`)
   }
-  check('详细作用', '全部物品详情行完整（无 undefined/缺类型/种子/食灵/装备）', bad.length === 0, bad.slice(0, 8).join('; '))
+  check('详细作用：全部物品详情行完整（无 undefined/缺类型/种子/食灵/装备）', bad.length === 0, bad.slice(0, 8).join('; '))
+
+  // 效果覆盖（2026-09-10 补）：物品上带效果字段，详情里就必须有一句话说清它。
+  // 起因：能量饼干的 offlineBonusH 在 itemDetailLines 里**从来没有分支**，图鉴只显示类型/档位/价值/等级，
+  // 而原检查只看结构完整性 → 静默漏了。以后新增任何效果字段若忘记写详情，这里会 FAIL 并点名。
+  const EFFECT_RULES = [
+    { field: 'offlineBonusH', label: '离线时长', kw: ['离线'] },
+    { field: 'heal', label: '对决回血', kw: ['回血'] },
+    { field: 'regen', label: '持续回血', kw: ['持续回血', '回复'] },
+    { field: 'buff', label: '对决增益', kw: ['增益'] },
+    { field: 'drunk', label: '醉酒', kw: ['醉酒'] },
+    { field: 'flavorEnergy', label: '调味能量', kw: ['调味能量', '能量'] },
+    { field: 'randomBuff', label: '随机增益', kw: ['随机'] },
+    { field: 'spoilMs', label: '腐坏时间', kw: ['腐坏'] },
+  ]
+  const noEffectText = []
+  for (const it of items) {
+    const text = itemDetailLines(it.id).map((l) => l.join(' ')).join(' ')
+    const miss = []
+    for (const r of EFFECT_RULES) {
+      const v = it[r.field]
+      if (v == null || v === 0 || v === false) continue
+      if (!r.kw.some((k) => text.includes(k))) miss.push(r.field)
+    }
+    if (it.use && !['保鲜时长', '经验增益', '产量增益'].some((k) => text.includes(k))) miss.push('use')
+    if (miss.length) noEffectText.push(`${it.id}(${it.name}) 缺: ${miss.join(',')}`)
+  }
+  check(`详细作用：全部 ${items.length} 件物品的效果字段均已在详情中说明`, noEffectText.length === 0, noEffectText.slice(0, 8).join('; '))
 }
 
 // ── 3. 可用于制作（itemUses）：产物必须存在（幽灵配方引用不入图鉴）──
 {
   let bad = 0
   for (const it of items) for (const u of itemUses(it.id)) if (!ITEMS[u.outputId]) bad++
-  check('可用于制作', 'itemUses 无坏链（产出引用均存在）', bad === 0, `bad=${bad}`)
+  check('可用于制作：itemUses 无坏链（产出引用均存在）', bad === 0, `bad=${bad}`)
 }
 
 // ── 4. 获取来源：来源跳转覆盖（jump 关键字更新时同步维护此表）──
 {
-  const RULES = ['采摘', '垂钓', '狩猎', '挖掘', '农耕', '烹饪', '烘焙', '腌制', '调酒', '调料', '香料', '锻造', '保鲜', '探索', '商店', '购买', '赛季', 'BOSS', '首领', '击败', '炼金', '成就', '主线任务', '任务', '契约', '食灵', '觅珍', '抽卡', '竞技场', '交易所', '牧场']
+  // 判定直接调用 ItemDetailModal 用的同一个 jumpForSource（2026-09-10 起共用 data/sourceJump.js）：
+  // 此前审计自维护一份关键词白名单，与实际跳转函数漂移，导致 17 种来源（约 408 条）在图鉴里没有跳转链接却「通过」。
   const missing = new Map()
   const norm = (s) => s.replace(/Lv\d+/g, 'LvX').replace(/×\d+/g, '×N').replace(/\d+/g, 'N')
   for (const it of items) for (const s of itemSources(it.id)) {
-    if (!RULES.some((r) => s.includes(r))) {
+    if (!jumpForSource(s)) {
       const key = norm(s)
       missing.set(key, (missing.get(key) ?? 0) + 1)
     }
   }
-  check('获取来源', '全部来源可跳转（无未识别来源模式）', missing.size === 0, [...missing.entries()].slice(0, 4).map(([g, n]) => `${n}x ${g.slice(0, 40)}`).join('; '))
+  check('获取来源：全部来源均可跳转（与实际跳转表同源）', missing.size === 0, [...missing.entries()].slice(0, 4).map(([g, n]) => `${n}x ${g.slice(0, 40)}`).join('; '))
 }
 
 // ── 5. 交叉引用：采集/三农/商店/探索/食灵/BOSS/赛季/成就/任务 所有 id 存在 ──
@@ -92,8 +121,8 @@ const items = Object.values(ITEMS)
   for (const t of [...FORAGING_TARGETS, ...FISHING_TARGETS, ...HUNTING_TARGETS, ...EXCAVATION_TARGETS]) if (!ITEMS[t.itemId]) bad.push(`采集${t.itemId}`)
   for (const c of CROPS) if (!ITEMS[c.itemId] || !ITEMS[c.seedId]) bad.push(`作物${c.itemId}`)
   for (const s of SHOP_ITEMS) if (s.itemId && !ITEMS[s.itemId]) bad.push(`商店${s.itemId}`)
+  // 说明：探索目标（explore_001…）本身**不是物品**，没有同 id 的物品，所以只校验它的战利品引用
   for (const t of EXPLORATION_TARGETS_ALL) {
-    if (!ITEMS[t.id]) bad.push(`探索${t.id}`)
     for (const l of t.loot ?? []) if (l.type === 'item' && !ITEMS[l.itemId]) bad.push(`探索${t.id}loot${l.itemId}`)
   }
   for (const s of SPIRITS) for (const [mid] of Object.entries(s.contract ?? {})) if (!ITEMS[mid]) bad.push(`食灵${s.id}契约${mid}`)
@@ -104,7 +133,7 @@ const items = Object.values(ITEMS)
     for (const id of Object.keys(q.reward?.items ?? {})) if (!ITEMS[id]) bad.push(`任务${q.id}${id}`)
     for (const o of q.objectives ?? []) if (['gather', 'craft', 'harvest'].includes(o.kind) && !ITEMS[o.param]) bad.push(`任务${q.id}目标${o.param}`)
   }
-  check('交叉引用', '全部系统引用 id 存在（含任务目标）', bad.length === 0, bad.slice(0, 6).join('; '))
+  check('交叉引用：全部系统引用 id 存在（含任务目标）', bad.length === 0, bad.slice(0, 6).join('; '))
 }
 
 // ── 6. 炼金幽灵配方监控：已知幽灵基线（2026-09-06 审计入库，已从 UI/图鉴过滤）；
