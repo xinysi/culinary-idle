@@ -32,6 +32,10 @@ import { BRANCH_THEMES, themeMult, THEME_BONUS_PER_LEVEL } from '../src/game/dat
 import { BRANCHES } from '../src/game/data/branches.js'
 import { SUPPLIERS, supplierDailyCost, SUPPLIER_MAX_CONTRACTS, SUPPLIER_PRICE_MULT } from '../src/game/data/suppliers.js'
 import { CHEFS, chefForWeek, chefOpponent, chefReward } from '../src/game/data/chefChallenges.js'
+import { ALL_TITLES, TITLE_TOTAL, honorBonuses, honorLevelOf, honorNextNeed, perkOf, TITLE_PERK_VALUE } from '../src/game/data/honor.js'
+import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, codexPointsFor } from '../src/game/data/codexShop.js'
+import { SET_MEALS, activeSetMeal, setMealBoard, mealMissing } from '../src/game/data/setMeals.js'
+import { RIVAL_SHOPS, RIVAL_BOARD_SIZE, RIVAL_MONTH_GROWTH, rivalsOfMonth, monthIndexOf, playerScoreFrom, rankOf, rivalReward, rankStars } from '../src/game/data/rivals.js'
 import { realmOpponent } from '../src/game/data/mysticRealm.js'
 import { FishingSkill } from '../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../src/game/skills/HuntingSkill.js'
@@ -99,6 +103,10 @@ function freshPlayer(skills = {}) {
   p.marketBoost = (...a) => (a.length ? realMarketBoost(...a) : { restaurant: 1, combatXp: 1, gatherXp: 1, craftXp: 1 })
   // 节庆（按日期生效）同样会污染产量/收入断言 → 测试内固定为无节庆
   p.festivalBoost = () => ({ restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1, gatherYield: 1, active: [] })
+  // 天气（按自然日生效）同理：风天 gatherYield>1 会让产量变成概率 +1，断言随机失败
+  // → 保留天气定义本身（供「加成为 marketBoost 口径」断言读 weather 字段），只把各乘区压平
+  const realWeather = p.weatherEffects.bind(p)
+  p.weatherEffects = () => ({ ...realWeather(), restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1, gatherYield: 1 })
   p.activeMarketEvents = (...a) => (a.length ? realActive(...a) : [])
   for (const [id, lv] of Object.entries(skills)) p.setSkillState(id, { level: lv, exp: totalXpForLevel(lv) })
   createSkillInstances(p)
@@ -1101,6 +1109,111 @@ console.log('══ E. 离线进度 ══')
     const r2 = pb2.onCombatEndChef('lose', `${def.icon} ${def.name}`)
     check('名厨', '失败可重复挑战', r2?.passed === false && pb2.chefClearedThisWeek() === false && pb2.chefStart().ok === true)
     check('名厨', '放弃清空当前挑战', (pb2.chefAbort(), pb2.chefChallenge.current === null))
+  }
+
+
+  // 荣誉殿堂（2026-09-10）：称号被动 + 荣誉等级（纯读取层）
+  {
+    check('荣誉', `称号总数 ${TITLE_TOTAL}、名称全局唯一`, TITLE_TOTAL === new Set(ALL_TITLES.map((t) => t.name)).size && TITLE_TOTAL >= 78)
+    check('荣誉', '每条称号都能归入四条通道之一', ALL_TITLES.every((t) => ['xpPct', 'gatherPct', 'craftPct', 'goldPct'].includes(perkOf(t.name).stat)))
+    check('荣誉', `称号被动固定 ${TITLE_PERK_VALUE}%`, ALL_TITLES.every((t) => perkOf(t.name).value === TITLE_PERK_VALUE))
+    check('荣誉', '同一称号的被动稳定（确定性）', perkOf('采摘大师').stat === perkOf('采摘大师').stat && perkOf('采摘大师').stat === 'gatherPct')
+    check('荣誉', '等级门槛 0/8/16/72 → 0/1/2/9 且封顶 9', [0, 8, 16, 72, 80].map(honorLevelOf).join(',') === '0,1,2,9,9')
+    check('荣誉', '满级时下一级需求为 null', honorNextNeed(72) === null && honorNextNeed(8) === 8)
+    check('荣誉', '无称号无加成', JSON.stringify(honorBonuses({ equipped: null, ownedTitles: [] }).perks) === JSON.stringify({ xpPct: 0, gatherPct: 0, craftPct: 0, goldPct: 0 }))
+    check('荣誉', '未拥有该称号则不生效', honorBonuses({ equipped: '采摘大师', ownedTitles: [] }).perks.gatherPct === 0)
+    check('荣誉', '佩戴已拥有称号：该通道 +2、等级各 +1', (() => {
+      const b = honorBonuses({ equipped: '采摘大师', ownedTitles: Array.from({ length: 16 }, (_, i) => ALL_TITLES[i].name) })
+      return b.level === 2 && b.perks.gatherPct === 2 + 2 && b.perks.xpPct === 2
+    })())
+  }
+  // 图鉴兑换所（2026-09-10）：完成度档位发点数 → 兑换外观/道具
+  {
+    check('图鉴兑换', `档位 ${CODEX_TIERS.length} 档、累计 ${CODEX_TIER_TOTAL} 点`, CODEX_TIERS.length === 15 && CODEX_TIER_TOTAL === CODEX_TIERS.reduce((a, t) => a + t.points, 0))
+    check('图鉴兑换', '档位百分比严格递增', CODEX_TIERS.every((t, i) => i === 0 || t.pct > CODEX_TIERS[i - 1].pct))
+    check('图鉴兑换', '0% 不得点、100% 发满', codexPointsFor(0).total === 0 && codexPointsFor(100).total === CODEX_TIER_TOTAL && codexPointsFor(100).next === null)
+    check('图鉴兑换', '50% 只发到 50 档', codexPointsFor(50).total === CODEX_TIERS.filter((t) => t.pct <= 50).reduce((a, t) => a + t.points, 0))
+    check('图鉴兑换', '货架奖励齐备（id 唯一 / 花费为正）', new Set(CODEX_REWARDS.map((r) => r.id)).size === CODEX_REWARDS.length && CODEX_REWARDS.every((r) => r.cost > 0))
+    check('图鉴兑换', '货架总花费 ≤ 满档点数（可全清）', CODEX_REWARDS.reduce((a, r) => a + r.cost, 0) <= CODEX_TIER_TOTAL)
+    check('图鉴兑换', '货架不含影响数值的装备', CODEX_REWARDS.every((r) => r.kind !== 'equipment' && !r.items || Object.keys(r.items ?? {}).every((id) => ITEMS[id] && ITEMS[id].type !== 'equipment')))
+    const pc = freshPlayer()
+    check('图鉴兑换', '空图鉴点数 0、兑换被拒', pc.codexPoints().points === 0 && pc.codexRedeem('cx_spice').ok === false)
+    const ids = Object.keys(ITEMS)
+    for (const id of ids.slice(0, Math.floor(ids.length * 0.6))) pc.collected[id] = true
+    const cpts = pc.codexPoints()
+    check('图鉴兑换', '60% 完成度发够点数', cpts.points === cpts.total && cpts.total > 100, `total=${cpts.total}`)
+    const r1 = pc.codexRedeem('cx_spice')
+    check('图鉴兑换', '兑换扣点数并发放道具', r1.ok === true && pc.codexPoints().points === cpts.total - 12 && (pc.inventory.mysterySpice ?? 0) === 3)
+    check('图鉴兑换', '重复兑换被拒', pc.codexRedeem('cx_spice').ok === false)
+    check('图鉴兑换', '兑换称号进入称号墙并计入荣誉', pc.codexRedeem('cx_title_scholar').ok === true && pc.ownedTitles().includes('博物学者') && pc.honorState().owned >= 1)
+    check('图鉴兑换', '兑换头像框写入 avatarFrame 且进存档', pc.codexRedeem('cx_frame_dex').ok === true && pc.avatarFrame === 'codex' && 'avatarFrame' in pc.serialize() && 'codexOwned' in pc.serialize())
+  }
+  // 套餐与定食（2026-09-10）：菜单凑齐大类即生效，多套取最高
+  {
+    check('套餐', `套餐 ${SET_MEALS.length} 套、id 唯一且加成递增`, new Set(SET_MEALS.map((m) => m.id)).size === SET_MEALS.length && SET_MEALS.every((m) => m.need.length >= 2 && m.bonus > 0))
+    check('套餐', '空菜单无套餐', activeSetMeal([]).meal === null && activeSetMeal([]).bonus === 0)
+    const food = Object.values(ITEMS).filter((i) => i.type === 'food')
+    const pick = (c) => food.find((f) => f.category === c)?.id
+    check('套餐', '主食+主菜 → 家常套餐（+8）', activeSetMeal([pick('主食'), pick('主菜')]).meal?.id === 'sm_home')
+    check('套餐', '辅食不构成套餐', activeSetMeal([pick('主食'), pick('baking')]).meal === null)
+    check('套餐', '四类齐 → 豪华全席（最高加成）', activeSetMeal([pick('主食'), pick('主菜'), pick('汤品'), pick('甜点')]).meal?.id === 'sm_grand')
+    check('套餐', '同类重复不叠加（两道主菜仍只算一道）', activeSetMeal([pick('主菜'), food.filter((f) => f.category === '主菜')[1].id]).meal === null)
+    check('套餐', '缺项列表正确', (() => { const b = setMealBoard([pick('主食')]).find((m) => m.id === 'sm_home'); return b.ok === false && b.missing.join() === '主菜' })())
+    const pm = freshPlayer()
+    check('套餐', '无菜单时玩家加成为 0', pm.setMealBonus() === 0)
+    pm.restaurant.menu = [pick('主食'), pick('主菜')]
+    const inc2 = pm.restaurantHourlyIncome
+    const noMeal = (() => { const q = freshPlayer(); q.restaurant.menu = [pick('主食'), pick('baking')]; return q })()
+    check('套餐', '菜单成套餐后餐厅收入上升', pm.setMealBonus() === 8 && inc2 > 0)
+    check('套餐', '外卖单价随套餐上浮（半额）', (() => {
+      const a = freshPlayer(); a.restaurant.menu = [pick('主食'), pick('baking')]
+      const b = freshPlayer(); b.restaurant.menu = [pick('主食'), pick('主菜')]
+      const dish = pick('主菜')
+      return b.takeoutPriceOf(dish) >= a.takeoutPriceOf(dish)
+    })())
+    void noMeal
+  }
+  // 同业竞争榜（2026-09-10）：月度榜单，对手每月变强，只给正向激励
+  {
+    check('同业榜', `榜单规模 ${RIVAL_BOARD_SIZE}（含玩家）、对手池 ${RIVAL_SHOPS.length}`, RIVAL_BOARD_SIZE === 6 && RIVAL_SHOPS.length === 12)
+    check('同业榜', '对手分数同月确定、跨月递增', (() => {
+      const m = monthIndexOf()
+      return rivalsOfMonth(m).map((r) => r.score).join() === rivalsOfMonth(m).map((r) => r.score).join() &&
+        rivalsOfMonth(m + 1).reduce((a, r) => a + r.score, 0) > rivalsOfMonth(m).reduce((a, r) => a + r.score, 0)
+    })())
+    check('同业榜', `每月成长 ${Math.round(RIVAL_MONTH_GROWTH * 100)}% 已生效`, RIVAL_MONTH_GROWTH === 0.06)
+    const pv = freshPlayer()
+    check('同业榜', '新品种子分数为 0 / 名次为榜末', playerScoreFrom(pv, 0) === 0 && rankOf(0, rivalsOfMonth(0)) === RIVAL_BOARD_SIZE)
+    check('同业榜', '分数越高名次越前', (() => {
+      const rv = rivalsOfMonth(0)
+      const mid = rv[Math.floor(rv.length / 2)].score
+      return rankOf(mid + 1, rv) < rankOf(mid - 1, rv)
+    })())
+    check('同业榜', '名次奖励正向且随分数放大', (() => {
+      const a = rivalReward(1, 1000), b = rivalReward(1, 10000), c = rivalReward(4, 1000)
+      return a.gold > 0 && b.gold > a.gold && c.gold < a.gold
+    })())
+    check('同业榜', '星标 1/2/3 对应榜末/前三/榜一', rankStars(6) === 1 && rankStars(2) === 2 && rankStars(1) === 3)
+    // 领奖 / 推广（每月各一次）
+    pv.gold = 200000
+    const rw = pv.rivalBoard().reward
+    const g0 = pv.gold
+    const rc = pv.rivalClaim()
+    check('同业榜', '领奖发金币并记账', rc.ok === true && pv.gold === g0 + rw.gold && (pv.stats.rivalClaims ?? 0) === 1)
+    check('同业榜', '同一月不可重复领奖', pv.rivalClaim().ok === false)
+    check('同业榜', '推广扣金币并提高分数', (() => {
+      pv.stats.ordersServed = 200 // 先有分数，否则 0 分放大 30% 仍是 0
+      const before = pv.rivalBoard().score
+      const g1 = pv.gold
+      const ok = pv.rivalPromote()
+      return ok.ok === true && pv.gold === g1 - 20000 && pv.rivalBoard().score > before
+    })())
+    check('同业榜', '同一月不可重复推广', pv.rivalPromote().ok === false)
+    check('同业榜', '跨月重置领取与推广状态', (() => {
+      pv.rivals.month = -1
+      const b = pv.rivalBoard()
+      return b.claimed === false && b.promo === false
+    })())
   }
 
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限

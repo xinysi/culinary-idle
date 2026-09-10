@@ -13,6 +13,8 @@ const VIEWS = [
   // 2026-09-10 新增九页（分店主题并入 branches，无需另列）
   'milestones', 'chronicle', 'weather', 'mascot', 'banquet', 'takeout',
   'suppliers', 'chefChallenge', 'seasonReview',
+  // 2026-09-10 第四批
+  'honor', 'codexExchange', 'setMeals', 'rivals',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

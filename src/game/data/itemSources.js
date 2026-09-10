@@ -30,6 +30,7 @@ import { RANCH_ANIMALS } from './ranch.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { SUPPLIERS, SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { CHEFS, chefReward } from './chefChallenges.js'
+import { CODEX_REWARDS } from './codexShop.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -167,6 +168,9 @@ for (const c of CHEFS) {
   for (const id of Object.keys(chefReward(c, 1).items ?? {})) add(id, `名厨挑战·战胜「${c.name}」奖励`)
 }
 add('mysterySpice', '名厨挑战对手掉落（25%）')
+
+// 图鉴兑换所（2026-09-10）：按图鉴完成度档位发放的点数兑换（限量道具）
+for (const r of CODEX_REWARDS) for (const id of Object.keys(r.items ?? {})) add(id, `图鉴兑换所兑换（${r.cost} 图鉴点数）`)
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {
