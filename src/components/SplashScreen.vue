@@ -33,7 +33,7 @@ function startNew() {
     <!-- 柔和渐变遮罩：让标题自然浮现（无边框、无毛玻璃） -->
     <div class="splash-overlay"></div>
     <div class="splash-content">
-      <h1 class="splash-title">美食放置：食之契约</h1>
+      <h1 class="splash-title">美食放置：食灵山海</h1>
       <p class="splash-sub">— 挂机美食主题放置游戏 —</p>
       <button class="splash-start-btn" @click="ui.toggleStartSlotModal(true)">开始游戏</button>
     </div>

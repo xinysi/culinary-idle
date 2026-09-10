@@ -55,10 +55,10 @@ function draw() {
     ctx.textAlign = 'center'
     ctx.fillStyle = '#f5e6c8'
     ctx.font = 'bold 30px "Microsoft YaHei", "Noto Sans SC", sans-serif'
-    ctx.fillText('美食放置：食之契约', W / 2, 66)
+    ctx.fillText('美食放置：食灵山海', W / 2, 66)
     ctx.font = '15px "Microsoft YaHei", sans-serif'
     ctx.fillStyle = 'rgba(245, 230, 200, 0.75)'
-    ctx.fillText('Culinary Idle: Taste Covenant · 战报', W / 2, 96)
+    ctx.fillText('Culinary Idle: Spirit Atlas · 战报', W / 2, 96)
     // 玩家名
     ctx.font = 'bold 26px "Microsoft YaHei", sans-serif'
     ctx.fillStyle = '#fff'
@@ -120,7 +120,7 @@ watch(
 function download() {
   const a = document.createElement('a')
   a.href = canvasRef.value.toDataURL('image/png')
-  a.download = `食之契约战报-${Date.now()}.png`
+  a.download = `食灵山海战报-${Date.now()}.png`
   a.click()
 }
 function close() {
