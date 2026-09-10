@@ -252,10 +252,6 @@ const QUESTS_BASE = [
 
 export const QUESTS = [...QUESTS_BASE, ...QUESTS_EXT]
 
-export function getQuest(id) {
-  return QUESTS.find((q) => q.id === id) ?? null
-}
-
 export function questObjectiveKey(obj) {
   return `${obj.kind}:${obj.param}`
 }

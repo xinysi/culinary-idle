@@ -26,10 +26,6 @@ AOJIS.push(...AOJI_EXT)
 import { AOJI_EXT2 } from './expansion2.js'
 AOJIS.push(...AOJI_EXT2)
 
-export function getAoji(id) {
-  return AOJIS.find((a) => a.id === id) ?? null
-}
-
 // 奥义数值平衡（启动时调用）：把高阶奥义的 costPerSec 下调到可长期维持的区间，
 // 与品鉴点供给（对决胜利）匹配；不改生成器产物文件（AOJI_EXT/EXT2），统一在此归一。
 const AOJI_COST_TUNE = {

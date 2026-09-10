@@ -1,5 +1,5 @@
 // 轻量音效系统 — Web Audio 合成（无外部资源），受 settings.soundEnabled 控制
-// 用法：EventBus 桥接在 App.vue 注册一次（initSoundBridge），各事件自动发声
+// 用法：事件桥接在 App.vue 的 onMounted 里注册一次（含全局点击音 + 各 EventBus 事件），各事件自动发声
 let ctx = null
 
 function ensureCtx() {

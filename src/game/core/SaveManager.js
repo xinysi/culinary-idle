@@ -119,7 +119,7 @@ export class SaveManager {
 
   /** 三个存档位概览（存档面板用） */
   listSlots() {
-    return [0, 1, 2].map((slot) => {
+    return Array.from({ length: SLOT_COUNT }, (_, i) => i).map((slot) => {
       const data = this.loadSlot(slot)
       return { slot, exists: !!data, data }
     })

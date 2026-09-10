@@ -62,5 +62,3 @@ export function storyLine(spirit, stage) {
   return (DOMAIN_LINES[dom]?.[info.key] ?? '').replaceAll('{name}', spirit?.name ?? '')
 }
 
-/** 全部片段的展示顺序（等级升序） */
-export const STAGE_ORDER = [...SPIRIT_STORY_STAGES]

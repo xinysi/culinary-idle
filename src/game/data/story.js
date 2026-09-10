@@ -6,7 +6,7 @@
 // requirements.kind 由 StoryView 映射为玩家实时进度。
 
 import { ITEMS } from './items.js'
-import { SPIRITS } from './spirits.js'
+import { SPIRITS } from './spiritTiers.js'
 import { AOJIS } from './aojis.js'
 
 export const STORY = [
@@ -284,6 +284,3 @@ export const STORY = [
   },
 ]
 
-export function currentStoryChapter() {
-  return STORY
-}

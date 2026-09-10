@@ -1,10 +1,10 @@
 // tilt.js — 卡片随光标倾斜指令（3D 引力感）
 // 以卡片自身中心为原点，把鼠标坐标归一化到 [-1, 1]，
-// 映射为 rotateX / rotateY（最大 ±10deg），通过 CSS 变量 --tilt-x / --tilt-y 驱动，
+// 映射为 rotateX / rotateY（默认最大 ±10°，`v-tilt:small` 为 ±3°），通过 CSS 变量 --tilt-x / --tilt-y 驱动，
 // 配合 CSS transition 平滑缓动；鼠标离开后还原到 0。
 // 每个元素独立监听 / 独立写自己的变量，多卡片互不干扰。
 
-const MAX_ANGLE = 10 // 最大倾斜角（±10°），`v-tilt:small` 时减半为 ±5°
+const MAX_ANGLE = 10 // 最大倾斜角（±10°）；`v-tilt:small` 用更克制的 ±3°（小卡片倾斜过大会显得晃）
 
 function bindTilt(el, max = MAX_ANGLE) {
   const onMove = (e) => {

@@ -37,10 +37,6 @@ export const SHOP_ITEMS = [
 // 农耕种子扩充（生成器 gen_farm_seeds.mjs 产出，勿手改）：所有可采集/可挖掘非矿物食材的种子
 SHOP_ITEMS.push(...SHOP_SEED_ENTRIES)
 
-export function getShopEntry(itemId) {
-  return SHOP_ITEMS.find((s) => s.itemId === itemId) ?? null
-}
-
 export function shopItemName(itemId) {
   return ITEMS[itemId]?.name ?? itemId
 }

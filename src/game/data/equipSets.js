@@ -6,9 +6,6 @@ import { ITEMS } from './items.js'
 import { SMITHING_SET_RECIPES } from './smithSetExt.js'
 import { SEASONS } from './seasons.js'
 
-/** 触发档位（件数） */
-export const SET_TIER_STEPS = [2, 4, 6]
-
 const SLOT_SUFFIXES = ['厨师帽', '调味瓶', '砧板', '围裙', '护符', '戒指', '腿甲', '靴子', '头盔', '项链', '坠子', '耳环', '手镯', '刀', '锅', '环', '衣', '帽', '裤', '甲', '履']
 
 function keyToName(key, ids) {

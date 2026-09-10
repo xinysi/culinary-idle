@@ -3,7 +3,7 @@
 import { ITEMS, itemName } from '../src/game/data/items.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS, STYLE_INFO, STYLE_ADVANTAGE } from '../src/game/data/combat.js'
 import { SEASONS } from '../src/game/data/seasons.js'
-import { SPIRITS } from '../src/game/data/spirits.js'
+import { SPIRITS } from '../src/game/data/spiritTiers.js'
 import { ALL_ACHIEVEMENTS } from '../src/game/data/achievements.js'
 import { QUESTS, questObjectiveKey } from '../src/game/data/quests.js'
 import { SHOP_ITEMS } from '../src/game/data/shop.js'

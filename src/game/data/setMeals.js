@@ -24,10 +24,6 @@ export const SET_MEALS = [
 
 const MEAL_INDEX = new Map(SET_MEALS.map((m) => [m.id, m]))
 
-export function getSetMeal(id) {
-  return MEAL_INDEX.get(id) ?? null
-}
-
 /** 菜单里各料理大类的「在菜单中出现的次数」（按出现的不同料理数计） */
 export function menuCategoryCount(menu = []) {
   const out = {}

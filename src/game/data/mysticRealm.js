@@ -16,9 +16,6 @@ export const REALM_BUFFS = [
   { id: 'gold20', name: '金玉满堂', desc: '本局结算金币 +25%', mod: { goldPct: 25 } },
 ]
 
-/** 秘境对手（与试炼塔同模式：opp() 动态生成，等级随层数上浮、不超过 99） */
-export const REALM_MAX_FLOOR = 60
-
 export function realmOpponentLevel(floor, combatLevel) {
   const base = Math.max(1, combatLevel)
   return Math.max(1, Math.min(99, base + Math.floor(floor * 1.5)))

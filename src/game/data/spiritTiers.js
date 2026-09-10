@@ -1,5 +1,17 @@
-// 食灵 160 只（32 base × 5 阶级）— 生成器 gen_spirit_tiers.mjs 产出，勿手改。
-// 每阶级覆盖一个技能域 + 一个等级段；5 阶级合起来覆盖所有技能，等级从 1 起连续。
+// 食灵数据（§3.3.6）— 生成器 gen_spirit_tiers.mjs 产出，勿手改。
+// 制作「食灵契约」（消耗高级食材+调料）召唤食灵，同时可携带 2 个出战；食灵提供被动增益。
+// effect 字段含义：
+//   xpPct: {skillId: pct} 某技能经验加成（%）
+//   dmgPct: 全对决伤害加成（%）
+//   styleDmgPct: {style: pct} 指定流派伤害加成（%）
+//   healPerTurnPct: 每回合回复最大 生命值 百分比
+//   loseHpPerTurnPct: 每回合损失最大 生命值 百分比（龙息精灵的代价）
+//   fishingAccPct: 垂钓成功率加成（%）
+//   farmYieldBonus: 农耕收获额外数量
+//
+// 共 160 只（32 位主题 × 5 阶级）。每阶级覆盖一个技能域 + 一个等级段：
+//   Ⅰ采耕(1~19)、Ⅱ烹制(20~39)、Ⅲ饮藏(40~59)、Ⅳ御对(60~79)、Ⅴ超凡(80~99)，
+//   5 阶级合起来覆盖所有技能，等级从 1 起连续（任何等级都有精灵可召唤）。
 export const SPIRIT_TIER = { appleSpirit_1: 1, appleSpirit_2: 2, appleSpirit_3: 3, appleSpirit_4: 4, appleSpirit_5: 5, wheatSpirit_1: 1, wheatSpirit_2: 2, wheatSpirit_3: 3, wheatSpirit_4: 4, wheatSpirit_5: 5, fishSpirit_1: 1, fishSpirit_2: 2, fishSpirit_3: 3, fishSpirit_4: 4, fishSpirit_5: 5, saltSpirit_1: 1, saltSpirit_2: 2, saltSpirit_3: 3, saltSpirit_4: 4, saltSpirit_5: 5, chiliSpirit_1: 1, chiliSpirit_2: 2, chiliSpirit_3: 3, chiliSpirit_4: 4, chiliSpirit_5: 5, cornSpirit_1: 1, cornSpirit_2: 2, cornSpirit_3: 3, cornSpirit_4: 4, cornSpirit_5: 5, herbSpirit_1: 1, herbSpirit_2: 2, herbSpirit_3: 3, herbSpirit_4: 4, herbSpirit_5: 5, berrySpirit_1: 1, berrySpirit_2: 2, berrySpirit_3: 3, berrySpirit_4: 4, berrySpirit_5: 5, knifeSpirit_1: 1, knifeSpirit_2: 2, knifeSpirit_3: 3, knifeSpirit_4: 4, knifeSpirit_5: 5, flameSpirit_1: 1, flameSpirit_2: 2, flameSpirit_3: 3, flameSpirit_4: 4, flameSpirit_5: 5, lingzhiSpirit_1: 1, lingzhiSpirit_2: 2, lingzhiSpirit_3: 3, lingzhiSpirit_4: 4, lingzhiSpirit_5: 5, dragonBreathSpirit_1: 1, dragonBreathSpirit_2: 2, dragonBreathSpirit_3: 3, dragonBreathSpirit_4: 4, dragonBreathSpirit_5: 5, spirit_ext_01_1: 1, spirit_ext_01_2: 2, spirit_ext_01_3: 3, spirit_ext_01_4: 4, spirit_ext_01_5: 5, spirit_ext_02_1: 1, spirit_ext_02_2: 2, spirit_ext_02_3: 3, spirit_ext_02_4: 4, spirit_ext_02_5: 5, spirit_ext_03_1: 1, spirit_ext_03_2: 2, spirit_ext_03_3: 3, spirit_ext_03_4: 4, spirit_ext_03_5: 5, spirit_ext_04_1: 1, spirit_ext_04_2: 2, spirit_ext_04_3: 3, spirit_ext_04_4: 4, spirit_ext_04_5: 5, spirit_ext_05_1: 1, spirit_ext_05_2: 2, spirit_ext_05_3: 3, spirit_ext_05_4: 4, spirit_ext_05_5: 5, spirit_ext_06_1: 1, spirit_ext_06_2: 2, spirit_ext_06_3: 3, spirit_ext_06_4: 4, spirit_ext_06_5: 5, spirit_ext_07_1: 1, spirit_ext_07_2: 2, spirit_ext_07_3: 3, spirit_ext_07_4: 4, spirit_ext_07_5: 5, spirit_ext_08_1: 1, spirit_ext_08_2: 2, spirit_ext_08_3: 3, spirit_ext_08_4: 4, spirit_ext_08_5: 5, spirit_ext_09_1: 1, spirit_ext_09_2: 2, spirit_ext_09_3: 3, spirit_ext_09_4: 4, spirit_ext_09_5: 5, spirit_ext_10_1: 1, spirit_ext_10_2: 2, spirit_ext_10_3: 3, spirit_ext_10_4: 4, spirit_ext_10_5: 5, spirit_ext2_01_1: 1, spirit_ext2_01_2: 2, spirit_ext2_01_3: 3, spirit_ext2_01_4: 4, spirit_ext2_01_5: 5, spirit_ext2_02_1: 1, spirit_ext2_02_2: 2, spirit_ext2_02_3: 3, spirit_ext2_02_4: 4, spirit_ext2_02_5: 5, spirit_ext2_03_1: 1, spirit_ext2_03_2: 2, spirit_ext2_03_3: 3, spirit_ext2_03_4: 4, spirit_ext2_03_5: 5, spirit_ext2_04_1: 1, spirit_ext2_04_2: 2, spirit_ext2_04_3: 3, spirit_ext2_04_4: 4, spirit_ext2_04_5: 5, spirit_ext2_05_1: 1, spirit_ext2_05_2: 2, spirit_ext2_05_3: 3, spirit_ext2_05_4: 4, spirit_ext2_05_5: 5, spirit_ext2_06_1: 1, spirit_ext2_06_2: 2, spirit_ext2_06_3: 3, spirit_ext2_06_4: 4, spirit_ext2_06_5: 5, spirit_ext2_07_1: 1, spirit_ext2_07_2: 2, spirit_ext2_07_3: 3, spirit_ext2_07_4: 4, spirit_ext2_07_5: 5, spirit_ext2_08_1: 1, spirit_ext2_08_2: 2, spirit_ext2_08_3: 3, spirit_ext2_08_4: 4, spirit_ext2_08_5: 5, spirit_ext2_09_1: 1, spirit_ext2_09_2: 2, spirit_ext2_09_3: 3, spirit_ext2_09_4: 4, spirit_ext2_09_5: 5, spirit_ext2_10_1: 1, spirit_ext2_10_2: 2, spirit_ext2_10_3: 3, spirit_ext2_10_4: 4, spirit_ext2_10_5: 5 }
 export const SPIRITS = [
   { id: 'appleSpirit_1', name: '苹果精灵·采耕Ⅰ', reqLevel: 1, contract: {"crucian":3,"foraging_ext2_01":5,"apple":2}, effect: {"xpPct":{"foraging":5,"fishing":3,"hunting":3,"excavation":3,"farming":3}} },
@@ -326,3 +338,4 @@ export const ITEMS_SUPPLEMENT = [
   { id: 'spirit_ext2_10_5', name: '真龙精灵·超凡Ⅴ', type: 'spirit', category: 'spirit', tier: 5, value: 280 },
 ]
 export function getSpirit(id) { return SPIRITS.find((s) => s.id === id) ?? null }
+export const SPIRIT_SLOTS = 2 // 同时可携带 2 个出战（§3.3.6）

@@ -8,21 +8,6 @@ import { masteryLevelFromCount, masteryXpMultiplier } from '../core/mastery.js'
 import { itemName } from '../data/items.js'
 import { EXPLORATION_TARGETS_ALL } from '../data/explorationTargets.js'
 
-// 注：此数组为遗留“基础 10 目标”，仅保留向后兼容导出；实际运行数据使用下面的 EXPLORATION_TARGETS_ALL（200 目标）。
-// 运行数据：src/game/data/explorationTargets.js 的 EXPLORATION_TARGETS_ALL。
-export const EXPLORATION_TARGETS = [
-  { id: 'streetVendor', name: '街头小贩', reqLevel: 1, intervalSec: 3.0, xp: 10, baseSuccess: 0.85, failGold: 5, loot: [{ type: 'gold', min: 2, max: 10, chance: 0.7 }, { type: 'item', itemId: 'apple', min: 1, max: 3, chance: 0.35 }, { type: 'item', itemId: 'copperOre', min: 1, max: 2, chance: 0.2 }] },
-  { id: 'streetPerformer', name: '街头艺人', reqLevel: 8, intervalSec: 3.4, xp: 18, baseSuccess: 0.82, failGold: 8, loot: [{ type: 'gold', min: 4, max: 15, chance: 0.7 }, { type: 'item', itemId: 'apple', min: 1, max: 3, chance: 0.3 }, { type: 'item', itemId: 'wood', min: 1, max: 3, chance: 0.25 }] },
-  { id: 'snackBoss', name: '小吃摊老板娘', reqLevel: 15, intervalSec: 3.8, xp: 30, baseSuccess: 0.8, failGold: 12, loot: [{ type: 'gold', min: 6, max: 20, chance: 0.65 }, { type: 'item', itemId: 'wheat', min: 2, max: 4, chance: 0.3 }, { type: 'item', itemId: 'flour', min: 1, max: 3, chance: 0.25 }] },
-  { id: 'nightMarket', name: '夜市摊主', reqLevel: 25, intervalSec: 4.2, xp: 50, baseSuccess: 0.78, failGold: 18, loot: [{ type: 'gold', min: 10, max: 30, chance: 0.65 }, { type: 'item', itemId: 'peppercorn', min: 1, max: 2, chance: 0.3 }, { type: 'item', itemId: 'chili', min: 1, max: 3, chance: 0.3 }] },
-  { id: 'privateKitchen', name: '私房菜馆', reqLevel: 35, intervalSec: 4.6, xp: 75, baseSuccess: 0.75, failGold: 25, loot: [{ type: 'gold', min: 15, max: 40, chance: 0.6 }, { type: 'item', itemId: 'garlic', min: 1, max: 3, chance: 0.3 }, { type: 'item', itemId: 'ginger', min: 1, max: 2, chance: 0.3 }] },
-  { id: 'michelin', name: '米其林后厨', reqLevel: 45, intervalSec: 5.0, xp: 105, baseSuccess: 0.72, failGold: 35, loot: [{ type: 'gold', min: 20, max: 55, chance: 0.6 }, { type: 'item', itemId: 'truffle', min: 1, max: 1, chance: 0.15 }, { type: 'item', itemId: 'matsutake', min: 1, max: 1, chance: 0.2 }] },
-  { id: 'foodBlogger', name: '美食博主', reqLevel: 55, intervalSec: 5.4, xp: 145, baseSuccess: 0.7, failGold: 45, loot: [{ type: 'gold', min: 30, max: 70, chance: 0.6 }, { type: 'item', itemId: 'vanilla', min: 1, max: 2, chance: 0.25 }, { type: 'item', itemId: 'energyBiscuit', min: 1, max: 1, chance: 0.1 }] },
-  { id: 'royalChef', name: '宫廷御厨', reqLevel: 65, intervalSec: 5.8, xp: 195, baseSuccess: 0.68, failGold: 60, loot: [{ type: 'gold', min: 40, max: 90, chance: 0.55 }, { type: 'item', itemId: 'ginseng', min: 1, max: 2, chance: 0.25 }, { type: 'item', itemId: 'fossilIngredient', min: 1, max: 1, chance: 0.1 }] },
-  { id: 'godDisciple', name: '食神弟子', reqLevel: 80, intervalSec: 6.4, xp: 280, baseSuccess: 0.65, failGold: 90, loot: [{ type: 'gold', min: 60, max: 130, chance: 0.55 }, { type: 'item', itemId: 'spiritFruit', min: 1, max: 1, chance: 0.2 }, { type: 'item', itemId: 'mysterySpice', min: 1, max: 1, chance: 0.12 }] },
-  { id: 'legendRestaurant', name: '传说餐厅', reqLevel: 90, intervalSec: 7.0, xp: 380, baseSuccess: 0.6, failGold: 130, loot: [{ type: 'gold', min: 100, max: 200, chance: 0.5 }, { type: 'item', itemId: 'goldenDragonFish', min: 1, max: 1, chance: 0.06 }, { type: 'item', itemId: 'dragonRoot', min: 1, max: 2, chance: 0.2 }] },
-]
-
 const SUCCESS_PER_LEVEL = 0.015
 const MAX_SUCCESS = 0.95
 const MIN_SUCCESS = 0.25

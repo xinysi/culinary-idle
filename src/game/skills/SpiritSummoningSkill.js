@@ -4,7 +4,7 @@
 // 食灵被动效果在 player.spiritEffects 聚合，作用于采集/烹饪经验、对决、垂钓、农耕。
 
 import { ProductionSkill } from './ProductionSkill.js'
-import { SPIRITS } from '../data/spirits.js'
+import { SPIRITS } from '../data/spiritTiers.js'
 import { balanceRecipeLevels } from './recipeBalance.js'
 
 export const SPIRIT_RECIPES = SPIRITS.map((sp) => ({

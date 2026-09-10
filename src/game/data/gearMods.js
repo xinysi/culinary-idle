@@ -95,7 +95,3 @@ export function fmtMod(mod) {
   return `${mod.label} +${mod.value}`
 }
 
-/** 校验槽位词条是否仍对应当前穿戴（防旧档/换装错位） */
-export function validModsForSlot(mods, itemId) {
-  return mods?.itemId === itemId && Array.isArray(mods.mods) ? mods.mods : []
-}

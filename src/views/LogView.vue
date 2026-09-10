@@ -28,7 +28,7 @@ import { TALES, QUIRK_CAT_DEFS, quirkCategoryStats } from '../game/data/tales.js
 const talesExt = ref(null) // TALES_EXT（500 篇传闻）
 const quirks = ref(null) // QUIRKS（3588 条轶事）
 const quirkList = computed(() => quirks.value ?? [])
-import { SPIRITS } from '../game/data/spirits.js'
+import { SPIRITS } from '../game/data/spiritTiers.js'
 import { AOJIS } from '../game/data/aojis.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemDetailModal from '../components/ItemDetailModal.vue'

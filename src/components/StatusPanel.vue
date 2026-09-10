@@ -6,7 +6,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
-import { SPIRIT_SLOTS } from '../game/data/spirits.js'
+import { SPIRIT_SLOTS } from '../game/data/spiritTiers.js'
 import { AOJIS } from '../game/data/aojis.js'
 import ProgressBar from './ProgressBar.vue'
 

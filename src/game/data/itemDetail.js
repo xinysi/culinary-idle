@@ -1,7 +1,7 @@
 // 物品详细作用 — 背包/仓库查看、图鉴弹窗共用（所有物品类型）
 import { getItem } from './items.js'
 import { itemSources } from './itemSources.js'
-import { SPIRITS } from './spirits.js'
+import { SPIRITS } from './spiritTiers.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { gemDef, socketCountOf } from './gems.js'
 import { equipSetOf } from './equipSets.js'

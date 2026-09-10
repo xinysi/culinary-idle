@@ -69,7 +69,3 @@ export function getAllSkillInstances() {
   return [...instances.values()]
 }
 
-/** 供 store 使用的小包装（避免直接 import 造成时序问题） */
-export function useSkillRegistry() {
-  return { getSkillInstance, hasSkillInstance, getAllSkillInstances }
-}

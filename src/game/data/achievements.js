@@ -188,10 +188,6 @@ const FISH_IDS = ['crucian', 'carp', 'perch', 'salmon', 'tuna', 'eel', 'lobster'
 const DISH_IDS = Object.keys(ITEMS).filter((id) => ITEMS[id].type === 'food')
 const GEAR_IDS = Object.keys(ITEMS).filter((id) => ITEMS[id].type === 'equipment')
 
-export function getAchievement(id) {
-  return ALL_ACHIEVEMENTS.find((a) => a.id === id) ?? null
-}
-
 /** 图鉴总条目数（§6.2 完成度分母） */
 export function collectionTotal() {
   return Object.keys(ITEMS).length

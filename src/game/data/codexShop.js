@@ -59,5 +59,3 @@ export function getCodexReward(id) {
 /** 图鉴专属称号（进称号注册表，图鉴三查/称号唯一性校验会扫到） */
 export const CODEX_TITLES = CODEX_REWARDS.filter((r) => r.kind === 'title').map((r) => ({ id: r.id, name: r.title, desc: r.desc }))
 
-/** 图鉴专属头像框（需要在 main.css 里有对应的 .avatar-frame-<key> 样式） */
-export const CODEX_FRAMES = CODEX_REWARDS.filter((r) => r.kind === 'frame').map((r) => ({ id: r.id, key: r.frame, name: r.name, desc: r.desc }))
