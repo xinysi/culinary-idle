@@ -36,7 +36,8 @@ export class ProductionSkill extends Skill {
     const guild = this.player.guildEffects?.() ?? {}
     const craftBonus = (guild.craftPct ?? 0) / 100
     const insightBonus = (this.player.insightEffects?.()?.craftPct ?? 0) / 100 // 菜系图谱（2026-09-09）
-    return Math.min(recipe.successChance + (this.level - recipe.reqLevel) * BASE_SUCCESS_LEVEL_BONUS + craftBonus + insightBonus, MAX_SUCCESS)
+    const honorBonus = (this.player.honorState?.()?.perks?.craftPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
+    return Math.min(recipe.successChance + (this.level - recipe.reqLevel) * BASE_SUCCESS_LEVEL_BONUS + craftBonus + insightBonus + honorBonus, MAX_SUCCESS)
   }
 
   /** 材料是否足够 + 等级是否满足 */

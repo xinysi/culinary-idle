@@ -4458,6 +4458,13 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(210, 170, 1
 .avatar-frame-star { border: 3px solid #f2e08a !important; box-shadow: 0 0 8px rgba(242, 224, 138, 0.85), 0 0 16px rgba(242, 224, 138, 0.5) !important; }
 .avatar-frame-dragon { border: 3px solid #b8862e !important; box-shadow: 0 0 8px rgba(184, 134, 46, 0.8), 0 0 18px rgba(79, 158, 88, 0.6) !important; }
 
+/* ── 图鉴兑换所专属头像框（2026-09-10）：古籍青 / 全知金 ── */
+.avatar-frame-codex { border: 3px solid #4a8f86 !important; box-shadow: 0 0 10px rgba(74, 143, 134, 0.7), inset 0 0 8px rgba(74, 143, 134, 0.25) !important; }
+.avatar-frame-codexOmni {
+  border: 3px solid #e0b45a !important;
+  box-shadow: 0 0 6px rgba(224, 180, 90, 0.85), 0 0 14px rgba(224, 180, 90, 0.55), 0 0 24px rgba(74, 143, 134, 0.4) !important;
+}
+
 /* ── 称号页佩戴态（2026-09-09）── */
 .gather-card.title-equipped { border-color: var(--gold) !important; box-shadow: 0 0 12px rgba(168, 120, 11, 0.45); }
 .title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(234, 176, 74, 0.25); color: var(--primary-strong); }

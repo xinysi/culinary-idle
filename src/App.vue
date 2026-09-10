@@ -72,6 +72,10 @@ const TakeoutView = defineAsyncComponent(() => import('./views/TakeoutView.vue')
 const SuppliersView = defineAsyncComponent(() => import('./views/SuppliersView.vue'))
 const ChefChallengeView = defineAsyncComponent(() => import('./views/ChefChallengeView.vue'))
 const SeasonReviewView = defineAsyncComponent(() => import('./views/SeasonReviewView.vue'))
+const HonorView = defineAsyncComponent(() => import('./views/HonorView.vue'))
+const CodexExchangeView = defineAsyncComponent(() => import('./views/CodexExchangeView.vue'))
+const SetMealView = defineAsyncComponent(() => import('./views/SetMealView.vue'))
+const RivalsView = defineAsyncComponent(() => import('./views/RivalsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -282,6 +286,10 @@ onMounted(() => {
           <SuppliersView v-else-if="ui.activeView === 'suppliers'" />
           <ChefChallengeView v-else-if="ui.activeView === 'chefChallenge'" />
           <SeasonReviewView v-else-if="ui.activeView === 'seasonReview'" />
+          <HonorView v-else-if="ui.activeView === 'honor'" />
+          <CodexExchangeView v-else-if="ui.activeView === 'codexExchange'" />
+          <SetMealView v-else-if="ui.activeView === 'setMeals'" />
+          <RivalsView v-else-if="ui.activeView === 'rivals'" />
           <HeatView v-else-if="ui.activeView === 'heat'" />
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />

@@ -98,6 +98,8 @@ const FEATURE_GROUPS = [
       { icon: '🚚', name: '外卖', view: 'takeout' },
       { icon: '🤝', name: '供应商', view: 'suppliers' },
       { icon: '📖', name: '常客', view: 'regulars' },
+      { icon: '🍱', name: '套餐定食', view: 'setMeals' },
+      { icon: '🏪', name: '同业榜', view: 'rivals' },
     ],
   },
   {
@@ -119,6 +121,8 @@ const FEATURE_GROUPS = [
       { icon: '🗺', name: '里程碑', view: 'milestones' },
       { icon: '📜', name: '年鉴', view: 'chronicle' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
+      { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
+      { icon: '📖', name: '图鉴兑换', view: 'codexExchange' },
     ],
   },
   {

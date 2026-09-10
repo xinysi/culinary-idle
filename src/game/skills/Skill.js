@@ -76,6 +76,8 @@ export class Skill {
     const insightPct = this.player.insightEffects?.()?.xpPct ?? 0
     // 米其林星级全技能经验加成（2026-09-10）
     const michelinPct = this.player.michelinXpPct?.() ?? 0
+    // 荣誉殿堂（2026-09-10）：称号被动 + 荣誉等级
+    const honorPct = this.player.honorState?.()?.perks?.xpPct ?? 0
     // 食神信仰（2026-09-10）：书神全技能 + 刀灵/猎神等定向技能
     const patronFx = this.player.patronEffects?.() ?? {}
     const patronPct = (patronFx.xpPct ?? 0) + (patronFx.xpSkills?.[this.id] ?? 0)
@@ -98,7 +100,7 @@ export class Skill {
       : this.def.category === 'production' ? (market.craftXp ?? 1)
       : 1
 
-    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
+    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
     let level = this.level
     let leveled = false
     while (level < this.maxLevel && exp >= this.player.xpTotalForLevel(level + 1)) {

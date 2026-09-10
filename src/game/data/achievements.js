@@ -11,6 +11,7 @@ import { REGULARS, regularLevelFromServes } from './regulars.js'
 import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { SCHOOLS } from './schools.js'
 import { MILESTONES, milestoneSummary } from './milestones.js'
+import { CODEX_REWARDS } from './codexShop.js'
 import { STAFF } from './staff.js'
 import { REGIONS } from './regions.js'
 
@@ -168,6 +169,15 @@ export const ACHIEVEMENTS = [
   { id: 'chef1', name: '挑战名厨', category: '特殊', desc: '首次战胜一位名厨', reward: { gold: 6000, items: { energyBiscuit: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 1 },
   { id: 'chef8', name: '名厨征服者', category: '特殊', desc: '累计战胜名厨 8 次', title: '名厨征服者', reward: { gold: 36000, items: { mysterySpice: 3 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 8 },
   { id: 'seasonFull', name: '赛季全勤', category: '特殊', desc: '任一赛季任务全部达成', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => (p.chronicle ?? []).some((e) => (e.key ?? '').startsWith('season-all:')) },
+  // 第四批（2026-09-10）：荣誉殿堂 / 图鉴兑换所 / 套餐与定食 / 同业竞争榜
+  { id: 'honor3', group: '特殊', name: '小有名声', category: '特殊', desc: '荣誉等级达到 3 级（拥有 24 个称号）', reward: { gold: 9000, items: { energyBiscuit: 1 } }, check: (p) => p.ownedTitles().length >= 24 },
+  { id: 'honorMax', name: '荣誉等身', category: '特殊', desc: '荣誉等级满级（拥有 72 个称号）', title: '荣誉等身', reward: { gold: 60000, items: { mysterySpice: 3 } }, check: (p) => p.ownedTitles().length >= 72 },
+  { id: 'codex1', name: '以藏换物', category: '特殊', desc: '首次在图鉴兑换所兑换', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => (p.codexOwned ?? []).length >= 1 },
+  { id: 'codexAll', name: '图鉴藏家', category: '特殊', desc: '兑完图鉴兑换所全部商品', title: '图鉴藏家', reward: { gold: 40000, items: { mysterySpice: 3 } }, check: (p) => (p.codexOwned ?? []).length >= CODEX_REWARDS.length },
+  { id: 'meal1', name: '配餐入门', category: '特殊', desc: '菜单凑齐任意一套套餐', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => p.setMealBonus() > 0 },
+  { id: 'mealGrand', name: '一桌全席', category: '特殊', desc: '菜单凑齐「豪华全席」套餐', title: '全席掌勺', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => p.setMealState().meal?.id === 'sm_grand' },
+  { id: 'rival1', name: '榜上有名', category: '特殊', desc: '首次领取同业竞争榜名次奖励', reward: { gold: 5000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.rivalClaims ?? 0) >= 1 },
+  { id: 'rivalTop', name: '同业之首', category: '特殊', desc: '在任何一月登上同业竞争榜第 1 名', title: '同业之首', reward: { gold: 45000, items: { mysterySpice: 3 } }, check: (p) => (p.stats?.rivalBestRank ?? 99) === 1 },
 ]
 
 export const ALL_ACHIEVEMENTS = [...buildSkillAchievements(), ...ACHIEVEMENTS]

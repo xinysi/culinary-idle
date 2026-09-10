@@ -45,6 +45,10 @@ import { CHRONICLE_CAP } from '../game/data/chronicle.js'
 import { weatherBoost, fortuneForDay, dayKeyOf, weatherForDay } from '../game/data/weather.js'
 import { MASCOTS, getMascot, mascotReward, mascotBondLevel, mascotBondProgress } from '../game/data/mascots.js'
 import { BANQUET_TIERS, makeBanquetOrder, banquetAvailable } from '../game/data/banquets.js'
+import { ALL_TITLES, honorBonuses, honorLevelProgress, honorNextNeed } from '../game/data/honor.js'
+import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, getCodexReward, codexPointsFor } from '../game/data/codexShop.js'
+import { SET_MEALS, activeSetMeal, setMealBoard, setMealMult, SET_MEAL_TAKEOUT_RATIO } from '../game/data/setMeals.js'
+import { rivalsOfMonth, monthIndexOf, playerScoreFrom, rankOf, rivalReward, rankStars, RIVAL_PROMO_COST, RIVAL_PROMO_BONUS } from '../game/data/rivals.js'
 import { BRANCH_THEMES, getBranchTheme, themeMult } from '../game/data/branchThemes.js'
 import { SUPPLIERS, getSupplier, supplierDailyCost, SUPPLIER_MAX_CONTRACTS, SUPPLIER_TERM_DAYS } from '../game/data/suppliers.js'
 import { CHEFS, getChef, chefForWeek, chefOpponent, chefReward } from '../game/data/chefChallenges.js'
@@ -155,6 +159,7 @@ function defaultEquipment() {
 const defaultState = () => ({
     name: '美食学徒',
     title: null, // 称号（§6.3）
+    avatarFrame: null, // 头像框（游戏商店 / 图鉴兑换所购买；此前漏进存档，2026-09-10 修）
     avatar: null, // 自定义头像（base64 dataUrl，可在设置/头像处上传）
     gold: 100,
     gameCoins: 0, // 游戏币（2026-09-07 小游戏专有货币：七款小游戏奖励与游戏商店统一结算）
@@ -247,6 +252,8 @@ const defaultState = () => ({
     banquet: { order: null, done: 0, failed: 0 }, // 宴会承办（2026-09-10）
     takeout: { exp: 0, lastAt: 0, sold: 0, gold: 0 }, // 外卖业务：exp=累计完成单数（2026-09-10）
     branchThemes: {}, // 分店主题：{ [branchId]: themeId }（2026-09-10）
+    codexOwned: [], // 图鉴兑换所：已兑换奖励 id 列表（2026-09-10）
+    rivals: { month: null, claimed: false, promo: false }, // 同业竞争榜（2026-09-10）
     contracts: {}, // 供应商合约：{ [supplierId]: { startedAt, expiresAt, lastDay, paid } }（2026-09-10）
     chefChallenge: { week: null, cleared: [], current: null }, // 名厨挑战（2026-09-10）
     exchange: { dayKey: null, traded: {} }, // 交易所：{ dayKey, traded: { [itemId]: 已成交件数 } }（2026-09-10）
@@ -462,7 +469,9 @@ export const usePlayerStore = defineStore('player', {
       const patronIncome = 1 + (this.patronEffects?.()?.incomePct ?? 0) / 100 // 食神信仰（2026-09-10）
       // 夜市狂潮（2026-09-06）：12-20 点餐厅收入 ×2
       const market = this.marketBoost?.() ?? { restaurant: 1, combatXp: 1 }
-      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip * stars * staffMult * patronIncome * market.restaurant
+      const honor = 1 + (this.honorState?.()?.perks?.goldPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
+      const meal = setMealMult(activeSetMeal(s.restaurant?.menu ?? []).bonus) // 套餐与定食（2026-09-10）
+      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip * stars * staffMult * patronIncome * market.restaurant * honor * meal
     },
     /** 公会被动效果（§13）— 函数 getter：guildEffects() */
     guildEffects(s) {
@@ -501,6 +510,7 @@ export const usePlayerStore = defineStore('player', {
       this.$patch({
         name: saved.name ?? this.name,
         title: saved.title ?? null,
+        avatarFrame: saved.avatarFrame ?? null,
         avatar: saved.avatar ?? null,
         gold: saved.gold ?? 0,
         gameCoins: saved.gameCoins ?? 0,
@@ -576,6 +586,8 @@ export const usePlayerStore = defineStore('player', {
         banquet: saved.banquet ?? { order: null, done: 0, failed: 0 }, // 宴会承办
         takeout: saved.takeout ?? { exp: 0, lastAt: 0, sold: 0, gold: 0 }, // 外卖业务
         branchThemes: saved.branchThemes ?? {}, // 分店主题
+        codexOwned: Array.isArray(saved.codexOwned) ? saved.codexOwned : [], // 图鉴兑换所
+        rivals: saved.rivals ?? { month: null, claimed: false, promo: false }, // 同业竞争榜
         contracts: saved.contracts ?? {}, // 供应商合约
         chefChallenge: saved.chefChallenge ?? { week: null, cleared: [], current: null }, // 名厨挑战
         exchange: saved.exchange ?? { dayKey: null, traded: {} }, // 交易所
@@ -603,6 +615,7 @@ export const usePlayerStore = defineStore('player', {
       return {
         name: this.name,
         title: this.title,
+        avatarFrame: this.avatarFrame,
         avatar: this.avatar,
         gold: this.gold,
         gameCoins: this.gameCoins,
@@ -678,6 +691,8 @@ export const usePlayerStore = defineStore('player', {
         banquet: this.banquet,
         takeout: this.takeout,
         branchThemes: this.branchThemes,
+        codexOwned: this.codexOwned,
+        rivals: this.rivals,
         contracts: this.contracts,
         chefChallenge: this.chefChallenge,
         exchange: this.exchange,
@@ -3037,7 +3052,7 @@ export const usePlayerStore = defineStore('player', {
           const id = this._pickTakeoutDish()
           if (!id) break
           this.spendItem(id, 1)
-          const price = takeoutPrice(ITEMS[id], level)
+          const price = Math.round(takeoutPrice(ITEMS[id], level) * (1 + (this.setMealBonus() * SET_MEAL_TAKEOUT_RATIO) / 100))
           gold += price
           sold++
         }
@@ -3062,6 +3077,119 @@ export const usePlayerStore = defineStore('player', {
       const any = Object.keys(this.inventory).filter((id) => ITEMS[id]?.type === 'food' && this.inventory[id] > 0)
       any.sort((a, b) => (ITEMS[b]?.value ?? 0) - (ITEMS[a]?.value ?? 0))
       return any[0] ?? null
+    },
+
+    // ── 荣誉殿堂（2026-09-10）：称号被动 + 荣誉等级（纯读取层，不改称号数据）──
+    /** 已拥有的称号名列表（成就称号看已解锁成就、商店称号看 shopOwned） */
+    ownedTitles() {
+      const ach = new Set(this.achievements ?? [])
+      const out = []
+      for (const t of ALL_TITLES) {
+        const has = t.from === '成就' ? ach.has(t.achId)
+          : t.from === '商店' ? !!this.shopOwned?.[t.shopKey]
+          : (this.codexOwned ?? []).includes(t.codexKey)
+        if (has) out.push(t.name)
+      }
+      return out
+    },
+    /** 荣誉加成聚合：{ level, owned, perks: { xpPct, gatherPct, craftPct, goldPct }, perTitle } */
+    honorState() {
+      return honorBonuses({ equipped: this.title ?? null, ownedTitles: this.ownedTitles() })
+    },
+    /** 荣誉等级进度（页面用） */
+    honorProgress() {
+      const owned = this.ownedTitles()
+      return { ...honorLevelProgress(owned.length), next: honorNextNeed(owned.length), total: ALL_TITLES.length }
+    },
+    /** 佩戴称号的被动说明（未佩戴/未拥有 → null） */
+    equippedTitlePerk() {
+      return this.honorState().perTitle
+    },
+
+    // ── 同业竞争榜（2026-09-10）：月度榜单，对手随月份变强；只给正向激励 ──
+    /** 本月榜单状态：{ month, rivals, score, rank, reward, claimed, promo, stars } */
+    rivalBoard() {
+      const month = monthIndexOf()
+      if (!this.rivals || this.rivals.month !== month) {
+        // 跨月：重置领取与推广状态
+        this.rivals = { month, claimed: false, promo: false }
+      }
+      const menuTiers = (this.restaurant?.menu ?? []).reduce((a, id) => a + (getItem(id)?.tier ?? 0), 0)
+      const score = playerScoreFrom(this, menuTiers, this.rivals.promo)
+      const rivals = rivalsOfMonth(month)
+      const rank = rankOf(score, rivals)
+      return { month, rivals, score, rank, stars: rankStars(rank), reward: rivalReward(rank, score), claimed: !!this.rivals.claimed, promo: !!this.rivals.promo }
+    },
+    /** 买本月推广（分数 +30%，每月一次） */
+    rivalPromote() {
+      const b = this.rivalBoard()
+      if (b.promo) return { ok: false, msg: '本月已推广过' }
+      if (this.gold < RIVAL_PROMO_COST) return { ok: false, msg: `金币不足（需 ${RIVAL_PROMO_COST.toLocaleString()}）` }
+      this.spendGold(RIVAL_PROMO_COST)
+      this.rivals.promo = true
+      EventBus.emit('rival:promo', { cost: RIVAL_PROMO_COST, pct: RIVAL_PROMO_BONUS })
+      return { ok: true }
+    },
+    /** 领取本月名次奖励（每月一次） */
+    rivalClaim() {
+      const b = this.rivalBoard()
+      if (b.claimed) return { ok: false, msg: '本月奖励已领取' }
+      this.rivals.claimed = true
+      this.gainGold(b.reward.gold)
+      if (b.reward.items) this.gainItems(b.reward.items)
+      this.stats.rivalClaims = (this.stats.rivalClaims ?? 0) + 1
+      this.stats.rivalBestRank = Math.min(this.stats.rivalBestRank ?? 99, b.rank)
+      EventBus.emit('rival:claim', { rank: b.rank, gold: b.reward.gold, label: b.reward.label })
+      return { ok: true, reward: b.reward, rank: b.rank }
+    },
+
+    // ── 套餐与定食（2026-09-10）：菜单凑齐哪套就生效哪套（多套达标取最高），无新增存档状态 ──
+    /** 当前生效套餐：{ meal, bonus, satisfied } */
+    setMealState() {
+      return activeSetMeal(this.restaurant?.menu ?? [])
+    },
+    /** 当前生效套餐的加成（%） */
+    setMealBonus() {
+      return this.setMealState().bonus
+    },
+    /** 套餐面板（全部套餐的达标情况，页面用） */
+    setMealRows() {
+      return setMealBoard(this.restaurant?.menu ?? [])
+    },
+    /** 外卖单价（含套餐加成，外卖只吃一半效果） */
+    takeoutPriceOf(itemId) {
+      const it = getItem(itemId)
+      if (!it) return 0
+      const bonus = 1 + (this.setMealBonus() * SET_MEAL_TAKEOUT_RATIO) / 100
+      return Math.max(1, Math.round(takeoutPrice(it, this.takeoutLevel()) * bonus))
+    },
+
+    // ── 图鉴兑换所（2026-09-10）：按完成度档位发「图鉴点数」，兑换外观与收藏品 ──
+    /** 图鉴点数收支：{ total, spent, points, next, tiers } */
+    codexPoints() {
+      const pct = this.collectionPct
+      const { total, next } = codexPointsFor(pct)
+      const spent = CODEX_REWARDS.filter((r) => (this.codexOwned ?? []).includes(r.id)).reduce((a, r) => a + r.cost, 0)
+      return { pct, total, spent, points: Math.max(0, total - spent), next, max: CODEX_TIER_TOTAL }
+    },
+    /** 已兑换的奖励 id 列表 */
+    codexOwnedIds() {
+      return [...(this.codexOwned ?? [])]
+    },
+    /** 兑换（扣点数；称号/头像框直接写入，道具立即发放） */
+    codexRedeem(id) {
+      const def = getCodexReward(id)
+      if (!def) return { ok: false, msg: '奖励不存在' }
+      if ((this.codexOwned ?? []).includes(id)) return { ok: false, msg: '已兑换过' }
+      const { points } = this.codexPoints()
+      if (points < def.cost) return { ok: false, msg: `图鉴点数不足（需 ${def.cost}，当前 ${points}）` }
+      if (!Array.isArray(this.codexOwned)) this.codexOwned = []
+      this.codexOwned.push(id)
+      if (def.items) this.gainItems(def.items)
+      if (def.tastePoints) this.gainTastePoints(def.tastePoints)
+      if (def.frame) this.avatarFrame = def.frame
+      EventBus.emit('codex:redeem', { name: def.name, cost: def.cost, kind: def.kind })
+      return { ok: true, def }
     },
 
     // ── 分店主题（2026-09-10）：给分店选主题，与菜系研究联动加成时收 ──
