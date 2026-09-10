@@ -1,8 +1,8 @@
-// 美食放置：食之契约 — Electron 壳（加载 dist 构建产物）
+// 美食放置：食灵山海 — Electron 壳（加载 dist 构建产物）
 const { app, BrowserWindow, Menu } = require('electron')
 const path = require('path')
 
-app.setName('美食放置：食之契约')
+app.setName('美食放置：食灵山海')
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -10,7 +10,7 @@ function createWindow() {
     height: 860,
     minWidth: 960,
     minHeight: 640,
-    title: '美食放置：食之契约',
+    title: '美食放置：食灵山海',
     backgroundColor: '#fff8e1',
     autoHideMenuBar: true,
     webPreferences: {

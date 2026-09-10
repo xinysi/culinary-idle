@@ -14,7 +14,7 @@ test.describe('游戏全流程', () => {
 
   test('启动界面显示标题与开始按钮', async ({ page }) => {
     await expect(page.locator('.splash')).toBeVisible()
-    await expect(page.locator('.splash-title')).toContainText('美食放置：食之契约')
+    await expect(page.locator('.splash-title')).toContainText('美食放置：食灵山海')
     await expect(page.locator('.splash-start-btn')).toBeVisible()
     await expect(page.locator('.splash-bg')).toBeVisible()
   })

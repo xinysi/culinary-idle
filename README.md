@@ -1,10 +1,12 @@
-# 美食放置：食之契约（Culinary Idle: Taste Covenant）
+# 美食放置：食灵山海（Culinary Idle: Spirit Atlas）
 
 **🕹 在线游玩：[https://xinysi.github.io/culinary-idle/](https://xinysi.github.io/culinary-idle/)**（GitHub Pages，打开即玩；Windows 桌面版见 [Releases 页](https://github.com/xinysi/culinary-idle/releases)）
 
-Melvor Idle 风格的美食主题放置游戏。需求文档见 `《美食放置：食之契约》设计文档（当前版本）.md`。
+Melvor Idle 风格的美食主题放置游戏。需求文档见 `《美食放置：食灵山海》设计文档（当前版本）.md`。
 
-> **当前版本：v1.6.2**（2026-09-10）— 20 技能 · 2210 件物品 · 1248 条配方 · 28 首领 · 40 赛季 · 27 款小游戏 · 36 个功能页 · 178 成就 · 82 称号
+> **当前版本：v1.7.0**（2026-09-10）— 20 技能 · 2210 件物品 · 1248 条配方 · 28 首领 · 40 赛季 · 27 款小游戏 · 36 个功能页 · 178 成就 · 82 称号
+>
+> **v1.7.0 起更名为《美食放置：食灵山海》**（原《美食放置：食之契约》）。仓库名与内部标识仍是 `culinary-idle`——它是**存档键前缀**（`culinary-idle.save.{slot}`）与在线地址，改了会让老存档读不出来，因此保持不变。
 
 <img src="assets/72c4ab180fcb584c48c91800962659e9.png" width="1912" height="916" alt="image">
 
@@ -70,7 +72,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 - 背包/仓库使用 `{ itemId: quantity }` 对象形式（文档示例为数组 `[{id, quantity}]`），便于 Vue 响应式与查找，结构语义一致
 - 存档当前存于 LocalStorage，`SaveManager` 接口预留 IndexedDB 切换点（§10.1 主存储为 IndexedDB，后续迭代）
 
-## 当前可玩内容（v1.6.2）
+## 当前可玩内容（v1.7.0）
 
 **20 个技能全部实装**（§3 全部机制均已落地：采集 5 + 制作 6 + 对决 4 + 辅助 5，含转生 120 级上限与专精系统）。
 
@@ -162,6 +164,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 
 | 版本 | 日期 | 主要内容 |
 | --- | --- | --- |
+| **v1.7.0** | 2026-09-10 | **更名为《美食放置：食灵山海》**（原《美食放置：食之契约》）：12 个文件 + 设计文档同步改名（启动页/浏览器标签/分享卡/桌面壳窗口标题与 productName/Release 标题与标签）；世界观里那本《食之契约》作为剧情物件**保持不变**（37 处）；内部标识符 `culinary-idle` 不动，**老存档与在线地址不受影响**；**玩法零改动** |
 | **v1.6.2** | 2026-09-10 | **生成器安全加固**（不含玩法改动）：13 个生成器输出目录统一（`GEN_OUT_DIR`，并修好 6 个因目录三分而写错位置的默认路径）；**5 个产出冻结数据的生成器上硬门禁**（默认拒绝重跑）；新增 CI 门禁 `gen_drift_audit.mjs`（临时目录复现 + 按「行内容」比对，逐条打印「重跑会改什么」，产物哈希自证只读）；修复 `gen_tales` / `gen_quests` 的动态加载路径 bug（`tales_ext.js` 恢复可逐字复现） |
 | **v1.6.1** | 2026-09-10 | 补齐最后 16 个缺图物品（旱芹/烟熏腊肉/薄荷凉茶/鲜榨猕猴桃汁…），**2210 件物品全部有图片**；`item_triple_audit` 新增「图片齐备」检查（防再缺图）；仓库瘦身（移出 6 个零引用根文件 + 36 张死图，跟踪文件 2232→2190） |
 | **v1.6.0** | 2026-09-10 | **整合发布**：把 v1.3.0~v1.5.1 四个批次一并纳入仓库与 Release；README 重新整合（版本说明合并为「版本历史 + 质量保障」，数字校准到实测值）。功能层面无新增改动 |
@@ -205,9 +208,9 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 
 - **自动发布**：推送 `v*` 标签即触发 `.github/workflows/release.yml`（GitHub Actions）：安装依赖 → `vite build` → Electron 桌面打包 → 创建 Release 并上传 Windows 可执行 zip。
   ```bash
-  git tag v1.6.2 && git push origin v1.6.2
+  git tag v1.7.0 && git push origin v1.7.0
   ```
-  > 附件命名：**文件名用 ASCII**（`culinary-idle-<tag>-win32-x64.zip`），中文名放在 release 资产的 **display label**（「美食放置：食之契约 vX.Y.Z 桌面版」）。原因：GitHub 会剥掉附件名里的非 ASCII 字符（早期版本附件名因此变成 `-win32-x64.zip`）。
+  > 附件命名：**文件名用 ASCII**（`culinary-idle-<tag>-win32-x64.zip`），中文名放在 release 资产的 **display label**（「美食放置：食灵山海 vX.Y.Z 桌面版」）。原因：GitHub 会剥掉附件名里的非 ASCII 字符（早期版本附件名因此变成 `-win32-x64.zip`）。
 - **手动打包**（本机）：`npm.cmd run build` → 复制 `dist/` 到 `lmewexe/dist/` → `python lmewexe/fix_paths.py` → `cd lmewexe && npm run pack`（产物在 `lmewexe/release/`）。
 
 ## 内容扩充与生成器
