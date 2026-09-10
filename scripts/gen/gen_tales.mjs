@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-const base = join(__dir, '..', 'src')
-const d = (p) => join(base, p)
-const data = (p) => join(base, 'game', 'data', p)
+// ⚠️ 源码根与产物目录必须分开：这两者原先都由一个 base 兼任（join(__dir,'..','src')），
+//    scripts 三分出 scripts/gen/ 后它指向了不存在的 scripts/src，于是 load() 全部失败、
+//    ALL_ENEMIES 为空 → 生成器在 2521 行抛 TypeError（2026-09-10 修正）。
+const __SRC = join(__dir, '../../src')
+const base = process.env.GEN_OUT_DIR ?? join(__SRC, 'game', 'data') // 产物输出目录
+const d = (p) => join(__SRC, p) // 源码根相对路径（load 用）
+const data = (p) => join(base, p) // 产物路径
 
 async function load(path) {
   try { return await import('file:///' + d(path).replace(/\\/g, '/')) } catch { return null }

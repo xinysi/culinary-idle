@@ -1,4 +1,9 @@
 // 生成对决掉落定级池：每 5 级段的可用装备池 + 代表性材料池（勿手改 combatLoot.js）
+// ⚠️ 产物被「对决掉落链」引用（combat.js 的 rebalanceDrops/assignLegends、itemBalance 的等级覆盖），
+//    而对决敌人数据属 AGENTS.md 数据铁律的冻结层——本脚本**可以直接重跑**，但重跑前请先比对差异：
+//    实测重跑只从 LEGENDARY 名单里移出 27 条本就不该在的低阶锻造件（铜/铁/…/水晶 的 腿甲/靴子/戒指，
+//    LEGENDARY 528→501），ITEM_LEVEL/EQUIP_POOL 完全不变，且命中的那 1 处掉落到同一件物品上，
+//    即零玩法变化。若某次重跑出现「新增传说条目 / ITEM_LEVEL 变化 / 装备池增减」，先查清原因再提交。
 import { writeFileSync } from 'fs'
 import { ITEMS } from '../../src/game/data/items.js'
 import { FORAGING_TARGETS } from '../../src/game/skills/ForagingSkill.js'
@@ -17,7 +22,8 @@ import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '.
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
-const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
 
 const level = {}
 const addLv = (id, lv) => { if (id != null && (level[id] == null || lv < level[id])) level[id] = lv }

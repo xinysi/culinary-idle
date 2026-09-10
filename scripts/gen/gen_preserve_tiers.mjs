@@ -7,7 +7,8 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
-const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
 
 const TIERS = [
   { n: 1, roman: 'Ⅰ', lo: 1, hi: 19, req: 5 },

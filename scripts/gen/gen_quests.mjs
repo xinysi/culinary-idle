@@ -6,8 +6,24 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-const base = join(__dir, '..', 'src')
-const d = (p) => join(base, p)
+// ⚠️ 源码根与产物目录必须分开：这两者原先都由一个 base 兼任（join(__dir,'..','src')），
+//    scripts 三分出 scripts/gen/ 后它指向了不存在的 scripts/src，于是 load() 全部失败、
+//    生成出来的任务名/描述退回原始 id（2026-09-10 修正）。
+const __SRC = join(__dir, '../../src')
+const base = process.env.GEN_OUT_DIR ?? join(__SRC, 'game', 'data') // 产物输出目录
+
+// 🔒 冻结数据门禁：本脚本产出属 AGENTS.md 数据铁律的「已固定」层，且实测重跑会改写内容——
+// 重跑会换掉 452 个任务中 365 个的目标物品（例 q136「踏青采小麦」→「踏青采苹果」）。
+// 默认拒绝写仓库（只拦真实目录；GEN_OUT_DIR 指向别处时放行，供 scripts/ci/gen_drift_audit.mjs 无损比对）。
+const __REAL_OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+if (base === __REAL_OUT_DIR && process.env.ALLOW_FROZEN_REGEN !== '1') {
+  console.error('❌ 已中止：本生成器产物属「已固定」冻结数据，重跑会改写已定稿的游戏内容。')
+  console.error('   重跑会换掉 452 个任务中 365 个的目标物品（例 q136「踏青采小麦」→「踏青采苹果」）。')
+  console.error('   确需重跑（且已获用户批准）才显式放行：ALLOW_FROZEN_REGEN=1')
+  console.error('   只想比对漂移（不写仓库）：node scripts/ci/gen_drift_audit.mjs')
+  process.exit(1)
+}
+const d = (p) => join(__SRC, p) // 源码根相对路径（load 用）
 
 async function load(path) {
   try { return await import('file:///' + d(path).replace(/\\/g, '/')) } catch { return null }
@@ -189,5 +205,5 @@ const out = tasks.map((t) => `  {
     reward: { gold: ${t.gold} },
   },`).join('\n')
 const file = `// 程序化生成的任务（q49 起）— 由 scripts/gen/gen_quests.mjs 生成，勿手改\nexport const QUESTS_EXT = [\n${out}\n]\n`
-writeFileSync(join(base, 'game', 'data', 'quests_extra.js'), file, 'utf8')
+writeFileSync(join(base, 'quests_extra.js'), file, 'utf8')
 console.log('生成任务数:', tasks.length, '采集目标:', TARGETS.length, '配方:', RECIPES.length, 'boss:', BOSSES.length)

@@ -134,18 +134,69 @@
   **重跑前必须先把该产物的导出清空**（置 `{}` / `[]`），再运行，才能从干净基线重新生成。
   ⚠️ `gen_farm_seeds` 此前**没有任何记录**：直接重跑会**静默生成空文件，把 4057 行产物清空**（2026-09-10 实测已丢一次、已从备份/提交还原）。
   现已给两个生成器都加了**运行时防呆**：算出 0 条就报错中止、不写文件，并在报错里提示清空哪两个导出。
-  其余生成器（`gen_expansion*` / `gen_spirit_tiers` / `gen_exploration_targets` / `gen_smith_ores` / `gen_preserve_tiers` / `gen_combat_loot` / `gen_quests` / `gen_tales` / `gen_restaurant_decor` / `gen_season_gear`）无此陷阱，可直接重跑。
+  其余生成器（`gen_expansion*` / `gen_spirit_tiers` / `gen_smith_ores` / `gen_preserve_tiers` / `gen_quests` / `gen_tales` / `gen_restaurant_decor` / `gen_season_gear`）无此陷阱，可直接重跑。
+  ⚠️ 但下面「冻结数据生成器门禁」里的两个脚本**不在此列**，重跑有记录在案的风险，先读那一节。
 
-- **生成器输出路径不再依赖 cwd（2026-09-10）**：原先 7 个生成器用 `writeFileSync('src/game/data/X.js', ...)`（相对**运行目录**），
-  从别处运行会写错位置。现统一为 `join(dirname(fileURLToPath(import.meta.url)), '../src/game/data')`，可从任意目录运行。
-  验证方式：从 `/tmp` 运行并确认产物与提交版**逐字一致**（仅头注释里的生成日期会变，属预期）。
+- **🔒 冻结数据生成器门禁（2026-09-10 实测记录）**：有 2 个生成器的产物与**已定稿数据**脱钩，重跑会改写冻结层，因此
+  **默认拒绝执行**；确需重跑（并已获用户批准）时才显式放行。
+  1. **`gen_exploration_targets.mjs`（已加硬门禁）** — 产物 `explorationTargets.js` 的 `id/name/reqLevel/intervalSec/xp/baseSuccess/failGold/loot`
+     全部在数据铁律冻结清单里。实测当前算法口径与定稿**不一致**：重跑会改 **79 个目标名称 + 32 个目标的战利品构成**
+     （例：`explore_001` 名称「家常小馆」→「菜摊」、战利品 `chili_young` → `ginger_young`）。这不是修复，是静默改写已定稿内容。
+     门禁实现：脚本开头检查 `ALLOW_FROZEN_REGEN`，未设为 `1` 就打印原因并 `exit(1)`（**不写文件**）。
+     ```bash
+     node scripts/gen/gen_exploration_targets.mjs                    # 被拒绝（预期行为）
+     ALLOW_FROZEN_REGEN=1 node scripts/gen/gen_exploration_targets.mjs  # 确需重跑时才用
+     ```
+  2. **`gen_combat_loot.mjs`（只加警告注释，不锁）** — 产物被对决掉落链引用（`combat.js` 的 `rebalanceDrops`/`assignLegends`、
+     `itemBalance.js` 的等级覆盖），但它由装备/物品数据**推导**而来，将来装备数据正当变更后重跑是合理的维护动作，故不设硬门禁。
+     实测（2026-09-10）重跑**零玩法变化**：只从 `LEGENDARY` 移出 27 条本就不该在名单里的低阶锻造件（铜/铁/青铜/钢/银/秘银/金/精金/水晶 × 腿甲/靴子/戒指，528 → 501），
+     `ITEM_LEVEL`（1439）与 `EQUIP_POOL`（365 件）完全不变，且全库仅 1 处掉落命中它们（BOSS 汤王 12 级 → `smith_铁_ring`），重跑前后落到同一件物品。
+  3. **另 4 个产物实测同样会被重跑改写（2026-09-10 由 `gen_drift_audit.mjs` 检出，**已全部加硬门禁**，一律不得重跑）**：
+     | 产物 | 重跑会改什么（按「行内容」实测） |
+     | --- | --- |
+     | `expansion1.js` | `PRESERVE_EXT` 会被从**空数组补回 10 条保鲜配方**；`PRODUCTION_EXT` 有 163 种行仅仓库有；`EXPANSION_ITEMS` 各有独有字段（共 171/150 种行不同） |
+     | `expansion2.js` | `PRESERVE_EXT2` 同样被补回 10 条；**20 个赛季的 `missions` 全被改写**；`SMITHING_EXT2` 有 6 条配方的材料被换成 `ironOre`/`saltOre`（仓库用的是专用 ext2 矿）（504/309 种行不同） |
+     | `quests_extra.js` | **452 个任务里 365 个的目标物品被换**（例 q136「踏青采小麦」→「踏青采苹果」）（767/423 种行不同） |
+     | `expansion_gear.js` | 40 季 `tiers` 奖励里的一件物品被换（`yieldTonic3` → `pres_ext2_06`）+ 头部文案（2/2 种行不同） |
+
+     规律：这些产物自 **2026-08-07** 起就再没重跑过，之后设计决策都**只落到产物里**（保鲜配方改用 `preserveTiers.js` 于是清空了 `PRESERVE_EXT`、锻造改用专用 ext2 矿、任务目标与赛季任务被手工校正），
+     而生成器停留在旧口径。**生成器输出 ≠ 正确版本**，绝不能拿它去覆盖产物。
+  - **⚠️ 比对必须按「行内容」而不是按行号**（2026-09-10 血泪）：产物与生成器输出行数常不同，按行号硬比会整段错位，
+    得出「5700 行不同」「category 由 root 退化成 fruit」这类**假差异**——我据此写进文档的结论是错的，改用「行内容多重集」后真相完全不同（见上表）。审计已改为按内容比对。
+  - **⚠️ 绝不要在未确认门禁在位的情况下直接跑生成器**（2026-09-10 实际发生）：我曾用「直接运行」的方式去验证门禁，而补丁当时因锚点不匹配**整体未写盘**，
+     于是 4 个生成器真的把 `expansion1.js` / `expansion2.js` / `quests_extra.js` / `expansion_gear.js` **覆盖**了（已 `git checkout` 还原，并与备份逐字节核对：内容完全一致，仅行尾由 LF 变 CRLF，零丢失）。
+     验证门禁的正确顺序：**先 `grep ALLOW_FROZEN_REGEN` 确认门禁在位**，再运行；或干脆用 `GEN_OUT_DIR=<临时目录>` 跑（不碰仓库）。
+  - **`gen_tales.mjs` 曾因同一处路径 bug 崩溃，现已修复**（2026-09-10）：`base` 兼任「源码根（`load()` 动态 import 用）」与「产物目录」两职，
+    脚本三分后它指向不存在的 `scripts/src`，导致 `load()` 全部失败、`ALL_ENEMIES` 为空，最终在 `:2521` 抛 `TypeError`。
+     拆成 `__SRC`（源码根）/ `base`（产物目录）后，`tales_ext.js` 现已**逐字复现一致**（与 `preserveTiers` / `restaurantDecor` / `smithOres` / `smithSetExt` / `spiritTiers` 同列"一致"）。
+     同一处 bug 也影响 `gen_quests`（`load()` 失败会让任务名退回原始 id），已一并修复。
+  - **当前已上硬门禁的生成器（5 个）**：`gen_exploration_targets` / `gen_expansion` / `gen_expansion2` / `gen_quests` / `gen_season_gear`。
+    门禁只拦「写进真实 `src/game/data`」的运行；`GEN_OUT_DIR` 指向别处时放行，因此审计仍能无损测量漂移。
+  - **判断口径**：文件是**活数据**（游戏读的就是它），生成器输出只是「若今天重印会印成什么样」。所以「文件 ≠ 生成器输出」说明
+    **重跑＝改内容**，不重跑＝内容不变；绝不能把重跑当成「把过期文件更新成正确内容」。这些文件都在启动链上
+    （`player.js → data/combat.js → combatLoot.js`、`bootstrap.js → itemBalance/spoilBalance/ExplorationSkill → 上述文件`），**删除会让游戏白屏**，不是只坏一个页面。
+  - **配套审计 `scripts/ci/gen_drift_audit.mjs`（已入 CI）**：逐个把生成器跑进**临时目录**（`GEN_OUT_DIR`），与仓库产物比对并打印「重跑会改什么」；
+    仓库产物哈希前后校验，证明全程只读。已登记漂移 6 个（上面那些）、跳过 1（`farmSeeds.js` 自引用陷阱）、中止 1（`gen_tales` 报错），**FAIL 必须为 0**。
+
+- **生成器输出路径统一（2026-09-10 收口）**：全部 **13 个**生成器一律用
+  `const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')`，
+  不再依赖 cwd、也不再写死路径。此前有两类漏网：
+  1. 6 个用 `writeFileSync('src/game/data/X.js')`（相对**运行目录**）→ 从别处运行会写错位置；
+  2. 6 个（`gen_expansion` / `gen_expansion2` / `gen_season_gear` / `gen_quests` / `gen_restaurant_decor` / `gen_tales`）在 `scripts/` 三分出 `scripts/gen/` 后，
+     相对路径 `../src/...` 实际指向了**不存在的 `scripts/src/...`** —— 跑一次会"看似成功"，实则真产物不更新（2026-09-10 已全部修正，`scripts/src` 当时并不存在，未造成污染）。
+  验证方式：`node scripts/ci/gen_drift_audit.mjs`（临时目录复现 + 逐字比对）。
 
 - **生成器头注释里的日期**：`gen_exploration_targets` / `gen_smith_ores` / `gen_farm_seeds` 等会把生成日期写进产物首行，
   所以重跑后 `git diff` 至少有 1 行日期变化——这是**预期内**的，不是数据漂移。
 
 ### 校验习惯
+- **生成器相关改动后必须跑 `node scripts/ci/gen_drift_audit.mjs`**（已入 CI）：它把 13 个生成器逐个跑进**临时目录**、与仓库产物比对，并逐条打印「重跑会改什么」；FAIL 必须为 0。
+  新增生成器/新产物时，记得把它登记进该脚本的 `GENS`（脚本会提示"未登记的产物"）。
+- **生成器输出目录统一支持 `GEN_OUT_DIR`**：默认写仓库 `src/game/data`，设了就写指定目录——任何「只想比对、不想写仓库」的场景都用它（不要用重跑+还原的办法）。
 - **小游戏 UI 改动后必须跑 `node scripts/ci/minigame_ui_audit.mjs`**（27 款 × 11 项静态合规，0 失败为准）；标准见《小游戏UI标准.md》（页面骨架/顶栏胶囊/主区域/按钮/弹窗/配色/深色/交互/文案 + 例外清单）。新增或修改小游戏时先读该标准。
 - 改动/平衡后按需重跑生成器：`node scripts/gen/gen_smith_ores.mjs`（同名矿）→ **先清空 `smithSetExt.js` 再** `node scripts/gen/gen_smith_sets.mjs` → `node scripts/gen/gen_farm_seeds.mjs`（农耕）→ `vite build` → `e2e 9/9` → 检查无 `\uFFFD`。
 - 审查超纲可临时写审计脚本：材料锚 vs 产物 reqLevel（忽略矿物），三轮（原貌→平衡后→抬升范围/断供）。
-- 生成器产物文件（`smithSetExt.js`/`smithOres.js`/`farmSeeds.js` 等）**勿手改**，改后重跑对应生成器。
+- 生成器产物文件（`smithSetExt.js`/`smithOres.js`/`farmSeeds.js`/`combatLoot.js`/`explorationTargets.js` 等）**勿手改**。
+  ⚠️ 但**不是所有产物都能靠重跑更新**：5 个生成器已上硬门禁（见上文「冻结数据生成器门禁」），产物属冻结数据、重跑会改写内容；要改产物内容必须先问用户。
+  可安全重跑的一类（如 `gen_smith_ores` / `gen_smith_sets` / `gen_farm_seeds`）仍须先清空对应导出再跑，并跑 `gen_drift_audit.mjs` 确认差异符合预期。
 - **改了生成器/扩充了数据规模后，务必同步维护 `README.md` 与《美食放置：食之契约》设计文档（当前版本）.md 里的对应数字/描述**（物品/装备/食谱/采集目标/作物/矿/种子等），避免文档与实现脱节。

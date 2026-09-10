@@ -1,4 +1,5 @@
-// 生成“美食探索目标扩充”数据 → src/game/data/explorationTargets.js（勿手改，改后重跑本脚本）
+// 生成“美食探索目标扩充”数据 → src/game/data/explorationTargets.js
+// ⚠️ 产物属 AGENTS.md 数据铁律的「已固定」冻结数据：脚本默认拒绝执行，见下方门禁。
 // 目标：把探索目标从原有 50 个扩展到 200 个，并做全面的数值平衡（等级/经验/成功率/战利品/失败代价）。
 // 设计原则：
 //  - 目标总数恰为 200，reqLevel 从 1 连续覆盖到 99（每级 ≈2 个），保证玩家每升一级都有新目标解锁。
@@ -27,7 +28,22 @@ import { raiseRecipeLevels, balanceRecipeLevels } from '../../src/game/skills/re
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
-const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+
+// 🔒 冻结数据门禁（2026-09-10）：本脚本产出的 EXPLORATION_TARGETS_ALL 全字段
+//（id/name/reqLevel/intervalSec/xp/baseSuccess/failGold/loot）都在 AGENTS.md 数据铁律的冻结清单里。
+// 实测：当前算法口径与定稿不一致，重跑会改掉 79 个目标名称、32 个目标的战利品构成
+//（例 explore_001「家常小馆」→「菜摊」，战利品 chili_young → ginger_young）。
+// 那不是修复，而是静默改写已定稿的游戏内容，因此默认拒绝执行。
+const __REAL_OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+if (__OUT_DIR === __REAL_OUT_DIR && process.env.ALLOW_FROZEN_REGEN !== '1') {
+  console.error('❌ 已中止：explorationTargets.js 属「已固定」冻结数据（AGENTS.md 数据铁律）。')
+  console.error('   重跑会改 79 个目标名称 + 32 个目标的战利品，而 name/loot 均在冻结清单内。')
+  console.error('   确需重跑（且已获用户批准）时才显式放行：ALLOW_FROZEN_REGEN=1')
+  console.error('   只想比对漂移（不写仓库）请用：scripts/ci/gen_drift_audit.mjs（内部用 GEN_OUT_DIR 跑临时目录）')
+  process.exit(1)
+}
 // 注意：ALCHEMY_RECIPES 是横向转化表（{in:{...}, out:"itemId"}，无 reqLevel/output.itemId），
 // 其"产物等级"应取被转化物品自身在采集/配方中的等级，故不在此处作为等级锚点。
 // 等级锚点必须同步「图鉴/运行时」口径（itemBalance.js）：配方等级先经 raiseRecipeLevels / balanceRecipeLevels
@@ -380,7 +396,7 @@ if (badIds.length) console.log(`无效 id: ${badIds.slice(0, 10).join(', ')}`)
 const out = `// 美食探索目标扩充（生成器产出，勿手改）— ${new Date().toISOString().slice(0, 10)}
 // 由 scripts/gen/gen_exploration_targets.mjs 生成：200 个探索目标，等级 1~99，
 // intervalSec/xp 递增、baseSuccess 递减、failGold 递增，战利品按等级带匹配全物品库。
-// 修改后重跑 scripts/gen/gen_exploration_targets.mjs。
+// 🔒 本文件属「已固定」冻结数据（AGENTS.md 数据铁律）：勿重跑生成器——它会改写目标名称与战利品。
 export const EXPLORATION_TARGETS_ALL = ${JSON.stringify(targets, null, 1)}
 `
 writeFileSync(join(__OUT_DIR, 'explorationTargets.js'), out, 'utf8')

@@ -2,7 +2,23 @@
 // 装备名 = 赛季名（去「季」）+ 槽位词缀；套件按 10 档奖励发放（每档 1 件 + 原限定并入末档）
 // 运行：node scripts/gen/gen_season_gear.mjs → 产出 src/game/data/expansion_gear.js
 import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { SEASONS } from '../../src/game/data/seasons.js'
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+
+// 🔒 冻结数据门禁：本脚本产出属 AGENTS.md 数据铁律的「已固定」层，且实测重跑会改写内容——
+// 重跑会换掉 40 季奖励档位里的一件物品（yieldTonic3 ↔ pres_ext2_06）。
+// 默认拒绝写仓库（只拦真实目录；GEN_OUT_DIR 指向别处时放行，供 scripts/ci/gen_drift_audit.mjs 无损比对）。
+const __REAL_OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+if (__OUT_DIR === __REAL_OUT_DIR && process.env.ALLOW_FROZEN_REGEN !== '1') {
+  console.error('❌ 已中止：本生成器产物属「已固定」冻结数据，重跑会改写已定稿的游戏内容。')
+  console.error('   重跑会换掉 40 季奖励档位里的一件物品（yieldTonic3 ↔ pres_ext2_06）。')
+  console.error('   确需重跑（且已获用户批准）才显式放行：ALLOW_FROZEN_REGEN=1')
+  console.error('   只想比对漂移（不写仓库）：node scripts/ci/gen_drift_audit.mjs')
+  process.exit(1)
+}
 
 // 槽位顺序与基础属性（§5.1 八槽位）
 const SLOT_GEAR = [
@@ -85,6 +101,6 @@ const out = `// 赛季装备套件（生成器产出，勿手改）— ${new Dat
 export const EXPANSION_GEAR_ITEMS = ${JSON.stringify(gearItems, null, 1)}
 export const SEASONS_GEAR = ${JSON.stringify(seasonGear, null, 1)}
 `
-writeFileSync(new URL('../src/game/data/expansion_gear.js', import.meta.url), out)
+writeFileSync(join(__OUT_DIR, 'expansion_gear.js'), out)
 console.log('generated expansion_gear.js')
 console.log(`gear items=${Object.keys(gearItems).length}  seasons=${seasonGear.length}（每季 8 件）`)
