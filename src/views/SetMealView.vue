@@ -49,6 +49,9 @@ function goRestaurant() {
 function goTakeout() {
   ui.setView('takeout')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout', label: '🚚 外卖' }, { view: 'banquet', label: '🍽 宴会' }]
 </script>
 
 <template>
@@ -158,7 +161,8 @@ function goTakeout() {
       <button class="btn btn-sm" @click="goTakeout">🚚 外卖业务</button>
       <span class="dim">看看；餐厅页可调整菜单与装饰。</span>
     </div>
-  </div>
+      <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

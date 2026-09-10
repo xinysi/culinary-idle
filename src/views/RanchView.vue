@@ -65,6 +65,9 @@ function expand() {
   const r = player.ranchExpand()
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'cellar', label: '🍶 地窖' }, { view: 'automation', label: '🤖 自动化' }]
 </script>
 
 <template>
@@ -144,7 +147,8 @@ function expand() {
         </table>
       </div>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

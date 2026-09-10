@@ -67,6 +67,9 @@ function claimGift(r) {
   const res = player.regularClaimGift(r.def.id)
   if (!res.ok) ui.pushLog(res.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin', label: '⭐ 评级' }]
 </script>
 
 <template>
@@ -130,7 +133,8 @@ function claimGift(r) {
         </template>
       </div>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

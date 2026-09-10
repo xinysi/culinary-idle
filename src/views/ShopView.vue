@@ -121,6 +121,9 @@ const sellListPaged = computed(() => {
   while (arr.length < PAGE_SIZE) arr.push({ _pad: true })
   return arr
 })
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchange', label: '💹 交易所' }, { view: 'suppliers', label: '🤝 供应商' }]
 </script>
 
 <template>
@@ -205,7 +208,7 @@ const sellListPaged = computed(() => {
         <p v-if="!sellList.length" class="dim" style="grid-column: 1 / -1">背包空空如也</p>
       </div>
       <Pagination :current="Math.min(sellPage, sellPages)" :pages="sellPages" @update:current="(p) => sellPage = p" />
-    </div>
+</div>
 
     <!-- 数量选择弹窗（购买/卖出） -->
     <QuantityModal
@@ -216,5 +219,6 @@ const sellListPaged = computed(() => {
       @close="qtyTarget = null"
       @confirm="confirmQty"
     />
+    <RelatedPages :links="RELATED" />
   </section>
 </template>

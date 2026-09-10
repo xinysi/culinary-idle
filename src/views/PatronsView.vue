@@ -58,6 +58,9 @@ function pick(r) {
   const res = player.patronSwitch(r.def.id)
   if (!res.ok) ui.pushLog(res.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'legacy', label: '♻️ 传承' }, { view: 'spiritStories', label: '✨ 食灵物语' }, { view: 'honor', label: '🎖 荣誉殿堂' }]
 </script>
 
 <template>
@@ -106,7 +109,8 @@ function pick(r) {
         </div>
       </div>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

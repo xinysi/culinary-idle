@@ -46,6 +46,9 @@ function cancel(s) {
 function gotoShop() {
   ui.setView('shop')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', label: '💹 交易所' }]
 </script>
 
 <template>
@@ -128,7 +131,8 @@ function gotoShop() {
       <button class="btn btn-sm" @click="ui.setView('exchange')">💹 交易所</button>
       <span class="dim">看看即时行情。</span>
     </div>
-  </div>
+      <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

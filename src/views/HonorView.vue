@@ -64,6 +64,9 @@ const byFrom = computed(() => {
 function perkChipClass(stat) {
   return 'perk-chip perk-' + stat
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'codexExchange', label: '📖 图鉴兑换' }, { view: 'milestones', label: '🗺 里程碑' }, { view: 'log', label: '📖 图鉴/称号' }]
 </script>
 
 <template>
@@ -156,7 +159,8 @@ function perkChipClass(stat) {
         未点亮的称号显示为灰色，鼠标悬停可看到获取条件。称号被动按名称关键词归类（采/渔/矿…→采集产量，厨/刀/火…→制作成功率，商/财/酒…→经营收入，其余→全技能经验）。
       </p>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

@@ -41,6 +41,9 @@ function redeem(r) {
 function gotoCodex() {
   ui.openLogTab('log')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', label: '📖 图鉴' }]
 </script>
 
 <template>
@@ -128,7 +131,8 @@ function gotoCodex() {
       <button class="btn btn-sm" @click="ui.setView('honor')">🎖 荣誉殿堂</button>
       <span class="dim">。</span>
     </div>
-  </div>
+      <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

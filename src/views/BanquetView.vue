@@ -49,6 +49,9 @@ function deliver() {
 function abandon() {
   if (player.banquetAbandon()) ui.pushLog('已放弃本次宴席（无惩罚）', 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout', label: '🚚 外卖' }, { view: 'setMeals', label: '🍱 套餐定食' }]
 </script>
 
 <template>
@@ -117,7 +120,8 @@ function abandon() {
         </tbody>
       </table>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

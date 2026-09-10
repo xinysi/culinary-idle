@@ -22,12 +22,28 @@ const rows = computed(() =>
       clears: st.clears ?? 0,
       best: st.best ?? 0,
       streak: st.streak ?? 0,
+      bestText: bestTextOf(def, st),
       active: player.activeTrial === def.id,
       oppLevel: Math.min(99, player.combatLevel + def.levelOffset),
     }
   })
 )
 const totalClears = computed(() => player.stats?.trialClears ?? 0)
+// 最佳记录：回合制看最少回合、其余看最高剩余品鉴值（未通关/旧档无精确记录时回退到 0~100 综合分）
+function bestTextOf(def, st) {
+  const clears = st.clears ?? 0
+  if (!clears) return '尚未通关'
+  if (def.cond.type === 'turns') {
+    if (st.bestTurns != null) return `最快 ${st.bestTurns} 回合`
+    return st.best > 0 ? `最快约 ${Math.max(1, 100 - st.best)} 回合` : '—'
+  }
+  if (st.bestHp != null) return `最高剩余 ${st.bestHp}% 品鉴值`
+  return st.best > 0 ? `最高剩余约 ${st.best}% 品鉴值` : '—'
+}
+// 重复通关的金币收益（首通后按 30% 结算）
+function repeatGold(def) {
+  return Math.round((def.reward.gold ?? 0) * 0.3)
+}
 
 function start(r) {
   const c = combat
@@ -52,6 +68,9 @@ function abort(r) {
   player.trialAbort()
   ui.pushLog('已退出试炼', 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'arena', label: '🏆 竞技场' }, { view: 'chefChallenge', label: '🃏 名厨' }, { view: 'gearContest', label: '🃏 厨具赛' }]
 </script>
 
 <template>
@@ -93,6 +112,10 @@ function abort(r) {
           <div class="dim trial-sub">
             对手 Lv{{ r.oppLevel }} · 通关 {{ r.clears }} 次<template v-if="r.def.cond.type === 'streak'"> · 当前连胜 {{ r.streak }}/{{ r.def.cond.value }}</template>
           </div>
+          <div class="trial-best">
+            <span class="badge" :class="{ 'badge-on': r.clears > 0 }">🏆 {{ r.bestText }}</span>
+            <span v-if="r.clears > 0" class="dim trial-sub">重复通关 +{{ repeatGold(r.def).toLocaleString() }} 金币/次</span>
+          </div>
           <div class="dim trial-sub">
             首通奖励：{{ r.def.reward.gold.toLocaleString() }} 金币<template v-for="(q, id) in r.def.reward.items" :key="id"> + {{ getItem(id)?.name ?? id }} ×{{ q }}</template>
           </div>
@@ -108,7 +131,8 @@ function abort(r) {
         提示：试炼对手沿用你的自动进食/料理策略；速攻与无伤试炼建议带足高回血料理后再来。
       </p>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>
@@ -139,5 +163,11 @@ function abort(r) {
 .trial-sub {
   font-size: 12px;
   line-height: 1.5;
+}
+.trial-best {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

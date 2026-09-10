@@ -21,6 +21,9 @@ const week = computed(() => {
   }
   return out
 })
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'festival', label: '🌗 节庆' }, { view: 'mascot', label: '🍀 吉祥物' }, { view: 'restaurant', label: '🏮 餐厅' }]
 </script>
 
 <template>
@@ -82,7 +85,8 @@ const week = computed(() => {
         </tbody>
       </table>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

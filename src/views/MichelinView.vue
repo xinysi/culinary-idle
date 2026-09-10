@@ -36,6 +36,9 @@ function refresh() {
   player.michelin.lastReviewDay = player.todayKey
   ui.pushLog(`⭐ 米其林评审：${fmt(score)} 分 → ${starFromScore(score).name}`, 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', label: '🏪 同业榜' }, { view: 'restaurant', label: '🏮 餐厅' }]
 </script>
 
 <template>
@@ -107,7 +110,8 @@ function refresh() {
         </div>
       </div>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

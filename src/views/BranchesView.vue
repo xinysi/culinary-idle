@@ -59,6 +59,9 @@ function hire(def) {
   const r = player.branchHireManager(def.id)
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin', label: '⭐ 评级' }]
 </script>
 
 <template>
@@ -148,7 +151,8 @@ function hire(def) {
         </div>
       </div>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

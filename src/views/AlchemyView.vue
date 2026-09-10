@@ -151,6 +151,9 @@ const listPaged = computed(() => {
 })
 // 当前分类是否可融合（段标题徽章；只在背包变化时重算，不再每次渲染遍历全段）
 const anyCraftable = computed(() => secList.value.some((r) => maxAlchemy(r) > 0))
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'deluxe', label: '🍽️ 珍馐阁' }]
 </script>
 
 <template>
@@ -229,6 +232,7 @@ const anyCraftable = computed(() => secList.value.some((r) => maxAlchemy(r) > 0)
       @close="sel = null"
       @confirm="confirmAlchemy"
     />
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 

@@ -36,6 +36,9 @@ function jump(r) {
   ui.setView(view)
   ui.pushLog(`🗺 里程碑「${r.name}」相关页面：${view === 'log' ? '图鉴/统计' : view}`, 'info')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'chronicle', label: '📜 年鉴' }, { view: 'seasonReview', label: '📅 赛季回顾' }, { view: 'honor', label: '🎖 荣誉殿堂' }]
 </script>
 
 <template>
@@ -86,7 +89,8 @@ function jump(r) {
     </div>
 
     <p v-if="!rows.length" class="dim">🎉 全部里程碑已达成——接下来是自由发挥时间。</p>
-  </div>
+      <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

@@ -81,6 +81,9 @@ function maxQtyFor(itemId) {
   if (!it?.value) return 0
   return Math.min(CELLAR_MAX_QTY, Math.floor(CELLAR_MAX_BASE_VALUE / it.value), player.inventory[itemId] ?? 0)
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'automation', label: '🤖 自动化' }]
 </script>
 
 <template>
@@ -153,7 +156,8 @@ function maxQtyFor(itemId) {
         </div>
       </div>
     </template>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

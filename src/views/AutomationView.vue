@@ -41,6 +41,9 @@ function setThreshold(e) {
 function setStandby(skillId, recipeId) {
   player.setStandbyRecipe(skillId, recipeId || null)
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'ranch', label: '🐄 牧场' }, { view: 'cellar', label: '🍶 地窖' }]
 </script>
 
 <template>
@@ -114,7 +117,8 @@ function setStandby(skillId, recipeId) {
         </tbody>
       </table>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>

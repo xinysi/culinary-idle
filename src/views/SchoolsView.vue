@@ -57,6 +57,9 @@ function claim(r) {
 function cancel(r) {
   if (player.schoolCancel(r.def.id)) ui.pushLog('已取消研究（材料与金币不退还）', 'warn')
 }
+import RelatedPages from '../components/RelatedPages.vue'
+// 相关页面（2026-09-10 补）
+const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'flavorBook', label: '📔 风味册' }]
 </script>
 
 <template>
@@ -113,7 +116,8 @@ function cancel(r) {
         </template>
       </div>
     </div>
-  </div>
+    <RelatedPages :links="RELATED" />
+</div>
 </template>
 
 <style scoped>
