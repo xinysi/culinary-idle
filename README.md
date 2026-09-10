@@ -4,7 +4,7 @@
 
 Melvor Idle 风格的美食主题放置游戏。需求文档见 `《美食放置：食之契约》设计文档（当前版本）.md`。
 
-> **当前版本：v1.6.1**（2026-09-10）— 20 技能 · 2210 件物品 · 1248 条配方 · 28 首领 · 40 赛季 · 27 款小游戏 · 36 个功能页 · 178 成就 · 82 称号
+> **当前版本：v1.6.2**（2026-09-10）— 20 技能 · 2210 件物品 · 1248 条配方 · 28 首领 · 40 赛季 · 27 款小游戏 · 36 个功能页 · 178 成就 · 82 称号
 
 <img src="assets/72c4ab180fcb584c48c91800962659e9.png" width="1912" height="916" alt="image">
 
@@ -41,7 +41,7 @@ src/
 │   ├── core/             # Experience（经验曲线）/ GameEngine（主循环）/ OfflineProgress（离线）
 │   │                     # SaveManager（存档）/ mastery（专精）/ EventBus / sound
 │   ├── combat/Combat.js  # 对决引擎（回合制 / 三角克制 / 机制 / 掉落）
-│   ├── data/             # 93 个数据模块：items / skills / combat / seasons / quests / guide /
+│   ├── data/             # 92 个数据模块：items / skills / combat / seasons / quests / guide /
 │   │                     #   story / aojis / spirits / expeditions / equipSets / gems / milestones /
 │   │                     #   chronicle / weather / mascots / banquets / takeout / suppliers /
 │   │                     #   branchThemes / chefChallenges / honor / codexShop / setMeals / rivals …
@@ -55,10 +55,11 @@ src/
 └── components/           # 24 个组件：Sidebar / StatusPanel / CombatPanel / 各类弹窗 / 分页 / 进度条
 
 scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 个文件平铺）
-├── ci/                   # 10 个 CI 门禁：system_test / system_test2 / buff_test / continuity_test /
+├── ci/                   # 11 个 CI 门禁：system_test / system_test2 / buff_test / continuity_test /
 │                         #   season_check / audit_sync / content_sync_audit / item_triple_audit /
-│                         #   minigame_ui_audit / verify_modules.cjs
-├── gen/                  # 13 个内容生成器（gen_*）：产物勿手改，改后重跑（注意自引用陷阱，见 AGENTS.md）
+│                         #   minigame_ui_audit / gen_drift_audit / verify_modules.cjs
+├── gen/                  # 13 个内容生成器（gen_*）：产物勿手改；其中 5 个产出「已固定」冻结数据、
+│                         #   已上硬门禁（默认拒绝重跑），见下文「生成器安全」与 AGENTS.md 数据铁律
 ├── sim/                  # 3 个标定模拟：balance_sim / growth_sim / endgame_sim（不进 CI，按需手动跑）
 └── legacy/               # smoke_test.mjs（早期真机回归，旧曲线快照，非门禁）
 ```
@@ -69,7 +70,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 - 背包/仓库使用 `{ itemId: quantity }` 对象形式（文档示例为数组 `[{id, quantity}]`），便于 Vue 响应式与查找，结构语义一致
 - 存档当前存于 LocalStorage，`SaveManager` 接口预留 IndexedDB 切换点（§10.1 主存储为 IndexedDB，后续迭代）
 
-## 当前可玩内容（v1.6.1）
+## 当前可玩内容（v1.6.2）
 
 **20 个技能全部实装**（§3 全部机制均已落地：采集 5 + 制作 6 + 对决 4 + 辅助 5，含转生 120 级上限与专精系统）。
 
@@ -161,6 +162,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 
 | 版本 | 日期 | 主要内容 |
 | --- | --- | --- |
+| **v1.6.2** | 2026-09-10 | **生成器安全加固**（不含玩法改动）：13 个生成器输出目录统一（`GEN_OUT_DIR`，并修好 6 个因目录三分而写错位置的默认路径）；**5 个产出冻结数据的生成器上硬门禁**（默认拒绝重跑）；新增 CI 门禁 `gen_drift_audit.mjs`（临时目录复现 + 按「行内容」比对，逐条打印「重跑会改什么」，产物哈希自证只读）；修复 `gen_tales` / `gen_quests` 的动态加载路径 bug（`tales_ext.js` 恢复可逐字复现） |
 | **v1.6.1** | 2026-09-10 | 补齐最后 16 个缺图物品（旱芹/烟熏腊肉/薄荷凉茶/鲜榨猕猴桃汁…），**2210 件物品全部有图片**；`item_triple_audit` 新增「图片齐备」检查（防再缺图）；仓库瘦身（移出 6 个零引用根文件 + 36 张死图，跟踪文件 2232→2190） |
 | **v1.6.0** | 2026-09-10 | **整合发布**：把 v1.3.0~v1.5.1 四个批次一并纳入仓库与 Release；README 重新整合（版本说明合并为「版本历史 + 质量保障」，数字校准到实测值）。功能层面无新增改动 |
 | v1.5.1 | 2026-09-10 | 图鉴补全与门禁修复：补能量饼干详情三行；**修复 107 处恒真断言**（门禁此前大部分失效）；来源跳转单一来源化并补 17 种/约 408 条缺失跳转；修竞技场 `kind` 真 bug |
@@ -174,7 +176,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 
 ## 质量保障
 
-**CI 门禁（9 套，改动后必须全绿）**
+**CI 门禁（10 套，改动后必须全绿）**
 
 | 套件 | 断言 | 覆盖 |
 | --- | --- | --- |
@@ -187,33 +189,49 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 | `item_triple_audit.mjs` | 2210 件 | **图鉴三查**：详细作用（含「效果字段必须在详情中说明」）/ 可用于制作（无幽灵产物）/ 获取来源（**与实际跳转表同源**，全部可跳转）+ 重名 + 交叉引用 + 炼金幽灵配方基线 |
 | `content_sync_audit.mjs` | 17 | **内容同步审计（图鉴三查之前必跑）**：任务 kind 处理与引用、成就 id/奖励/check 可执行、故事结构与需求分支、称号唯一、统计字段来源、攻略总览覆盖与导航视图注册、左栏功能页跳转条、**check 误用静态扫描** |
 | `minigame_ui_audit.mjs` | 27 款 × 11 项 | 小游戏 UI 静态合规 |
-| `verify_modules.cjs` | 235 模块 | 全模块编译 + 渲染风险静态检查 |
+| `gen_drift_audit.mjs` | 13 生成器 | **生成器漂移审计**：把每个生成器跑进临时目录与产物比对，逐条打印「重跑会改什么」（**按行内容比对，不按行号**）；已登记漂移 6 / 跳过 1，FAIL 必须为 0；产物哈希前后校验，证明全程只读 |
+| `verify_modules.cjs` | 235 模块 | 全模块编译 + 渲染风险静态检查（本地门禁，不在 CI workflow 内） |
 
 **端到端**：`npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs`（10 项）——启动界面/选档/弹窗/存档持久化与不被覆盖，以及**深色模式配色体检**（47 个页面 + 6 个弹窗，逐元素扫描对比度/亮底/白边/金光过亮，扫描量约 2.2 万元素）。
 
-**改动后标准流程**：`content_sync_audit.mjs` → `item_triple_audit.mjs` → 其余 CI 套件 → `vite build` → e2e（含深色守卫）。小游戏改动额外跑 `minigame_ui_audit.mjs`；小游戏 UI 标准见《小游戏UI标准.md》。
+**改动后标准流程**：`content_sync_audit.mjs` → `item_triple_audit.mjs` → 其余 CI 套件 → `vite build` → e2e（含深色守卫）。小游戏改动额外跑 `minigame_ui_audit.mjs`（标准见《小游戏UI标准.md》）；**动了生成器或生成器产物，额外跑 `gen_drift_audit.mjs`**。
 
 > **关于断言的可信度**（v1.5.1 的教训）：曾出现 107 处 `check` 把「标签」当条件（`check(name, cond, detail)` 被当成四参调用）导致断言恒真、门禁形同虚设。现已加静态扫描永久拦截，并且**每条新守卫都必须做反例验证**（把被测行为改坏，确认它真的会 FAIL）。
+>
+> **关于差异的可信度**（v1.6.2 的教训）：比对两份文件的差异**不能按行号**——行数不同会整段错位，得出「5700 行不同」「category 退化成 fruit」这类**假结论**（当时据此写进文档的描述全是错的）。现统一按「行内容多重集」比对。
+> 同理，**验证门禁前先确认门禁在位**：曾用「直接运行生成器」去验证门禁，而门禁补丁当时并未写盘，结果 4 个冻结数据文件被真的覆盖（已还原并与备份逐字节核对，零丢失）。校验顺序：先静态确认，再运行；或直接用 `GEN_OUT_DIR=<临时目录>`。
 
 ## 发布（GitHub Releases）
 
 - **自动发布**：推送 `v*` 标签即触发 `.github/workflows/release.yml`（GitHub Actions）：安装依赖 → `vite build` → Electron 桌面打包 → 创建 Release 并上传 Windows 可执行 zip。
   ```bash
-  git tag v1.6.0 && git push origin v1.6.0
+  git tag v1.6.2 && git push origin v1.6.2
   ```
   > 附件命名：**文件名用 ASCII**（`culinary-idle-<tag>-win32-x64.zip`），中文名放在 release 资产的 **display label**（「美食放置：食之契约 vX.Y.Z 桌面版」）。原因：GitHub 会剥掉附件名里的非 ASCII 字符（早期版本附件名因此变成 `-win32-x64.zip`）。
 - **手动打包**（本机）：`npm.cmd run build` → 复制 `dist/` 到 `lmewexe/dist/` → `python lmewexe/fix_paths.py` → `cd lmewexe && npm run pack`（产物在 `lmewexe/release/`）。
 
-## 内容扩充（生成器产出，勿手改）
+## 内容扩充与生成器
 
-- 采摘/垂钓/狩猎/挖掘 两期各 **+60 食材**（240 新采集物，等级 1-99 均匀分布）
-- 烹饪 +60（共 294）、烘焙 +60（共 97）、腌制 +60（共 90）、调酒 +80（共 127）、调料调配 +60（共 97）
-- 厨具锻造由 `gen_smith_ores.mjs`（13 种同名矿）+ `gen_smith_sets.mjs`（20 品质套 + 21 独立矿完整 8 槽套）覆盖：**365 配方 / 244 装备**
-- 食材保鲜为 **3 系列 × 5 阶级**（共 15）+ 肥料 2；美食知识 **+20 奥义**（共 32）
-- 美食探索 **+40 目标**（共 200，战利品按等级带匹配全物品库，`gen_exploration_targets.mjs` 产出）、食灵召唤 **160 只**（32 主题 × 5 阶级）
-- 农耕种子 **184 种**（`gen_farm_seeds.mjs` 产出，覆盖所有可采集非矿物食材）
-- 对决：10 区域各 **+20 对手**（共 **220**）、**BOSS +20**（共 **28**，含独有掉落）
-- 扩展物品由 `gen_expansion.mjs` 产出；锻造/农耕种子/同名矿/食灵阶级分别由上述生成器产出（**勿手改产物**，改生成器后重跑）
+**产出溯源**（所有产物一律**勿手改**；总量见上文「当前可玩内容」）：
+
+| 生成器 | 产出 |
+| --- | --- |
+| `gen_expansion` / `gen_expansion2` | 两期各 10 技能 +30 条目，含奥义 / 保鲜 / 探索 / 食灵 / 赛季扩充与对决区域对手、首领（`expansion1.js` / `expansion2.js`） |
+| `gen_smith_ores` / `gen_smith_sets` | 13 种同名矿 + 20 品质套 + 21 独立矿完整 8 槽套 → **365 配方 / 244 装备**（`smithOres.js` / `smithSetExt.js`） |
+| `gen_farm_seeds` | **184 种**农耕种子与作物，覆盖所有可采集非矿物食材（`farmSeeds.js`） |
+| `gen_spirit_tiers` | 食灵 **160 只**（32 主题 × 5 阶级，`spiritTiers.js`） |
+| `gen_preserve_tiers` | 保鲜剂/增益剂 3 系列 × 5 阶级（共 15）+ 肥料 2（`preserveTiers.js`） |
+| `gen_exploration_targets` | 探索目标 **200 个**（等级 1~99，战利品按等级带匹配全物品库） |
+| `gen_quests` / `gen_tales` / `gen_season_gear` / `gen_restaurant_decor` / `gen_combat_loot` | 主线任务补充 452 条 · 食灵物语 · 赛季装备套 · 餐厅装饰 · 对决掉落定级池 |
+
+### 🔒 生成器安全（v1.6.2 新增）
+
+**核心结论：产物是「活数据」——游戏读的就是它；生成器输出只是「若今天重印会印成什么样」。两者不一致时，重跑 = 改掉游戏内容，而不是「把过期文件更新成正确内容」。**
+
+- **输出目录统一**：13 个生成器默认写 `src/game/data`，设 `GEN_OUT_DIR` 可改写（用于无损比对）。此前有 6 个因 `scripts/` 目录三分而写向不存在的 `scripts/src/…`，已修正。
+- **5 个生成器已上硬门禁**（`gen_exploration_targets` / `gen_expansion` / `gen_expansion2` / `gen_quests` / `gen_season_gear`）：其产物属「已固定」冻结数据，实测重跑会改写内容（补回 10 条保鲜配方、换掉 452 个任务中 365 个的目标、改写 20 个赛季的任务、换掉赛季奖励物品、改 79 个探索目标名称），因此**默认拒绝执行**，确需重跑要显式 `ALLOW_FROZEN_REGEN=1`。
+- **审计常驻**：`scripts/ci/gen_drift_audit.mjs` 把每个生成器跑进**临时目录**与仓库产物比对（全程只读、哈希自证），逐条打印「重跑会改什么」。
+- 完整门禁范围、实测差异与事故记录见 `AGENTS.md` 的「冻结数据生成器门禁」；**任何「改完生成器就重跑」的说法自 v1.6.2 起作废**。
 
 ## 数值平衡（Beta→Release 调优）
 

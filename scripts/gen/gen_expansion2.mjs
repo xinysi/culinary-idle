@@ -2,8 +2,24 @@
 // 运行：node scripts/gen/gen_expansion2.mjs  → 产出 src/game/data/expansion2.js
 // 规则：所有 id/名称唯一；食谱材料引用已存在物品；等级递增；赛季任务目标从「未用过」物品池分配
 import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { ITEMS } from '../../src/game/data/items.js'
 import { SEASONS } from '../../src/game/data/seasons.js'
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+
+// 🔒 冻结数据门禁：本脚本产出属 AGENTS.md 数据铁律的「已固定」层，且实测重跑会改写内容——
+// 重跑会补回 10 条保鲜配方、改写 20 个赛季的任务、把 6 条锻造配方材料换成通用铁矿/盐矿。
+// 默认拒绝写仓库（只拦真实目录；GEN_OUT_DIR 指向别处时放行，供 scripts/ci/gen_drift_audit.mjs 无损比对）。
+const __REAL_OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+if (__OUT_DIR === __REAL_OUT_DIR && process.env.ALLOW_FROZEN_REGEN !== '1') {
+  console.error('❌ 已中止：本生成器产物属「已固定」冻结数据，重跑会改写已定稿的游戏内容。')
+  console.error('   重跑会补回 10 条保鲜配方、改写 20 个赛季的任务、把 6 条锻造配方材料换成通用铁矿/盐矿。')
+  console.error('   确需重跑（且已获用户批准）才显式放行：ALLOW_FROZEN_REGEN=1')
+  console.error('   只想比对漂移（不写仓库）：node scripts/ci/gen_drift_audit.mjs')
+  process.exit(1)
+}
 
 const L = (i) => 1 + Math.floor((i * 98) / 29)
 const IV = (level, base = 3) => Math.min(8, base + level * 0.16)
@@ -278,6 +294,6 @@ export const REGION_EXT2 = ${JSON.stringify(regionExt2, null, 1)}
 export const BOSS_EXT2 = ${JSON.stringify(bossExt2, null, 1)}
 export const SEASONS_EXT2 = ${JSON.stringify(seasonExt2, null, 1)}
 `
-writeFileSync(new URL('../src/game/data/expansion2.js', import.meta.url), out)
+writeFileSync(join(__OUT_DIR, 'expansion2.js'), out)
 console.log('generated expansion2.js')
 console.log(`items=${Object.keys(items).length}  gather=${Object.values(gatheringExt2).reduce((s, a) => s + a.length, 0)}  prod=${Object.values(prodExt2).reduce((s, a) => s + a.length, 0) + smithExt2.length + preserveExt2.length}  aojis=${AOJI2.length}  explore=${EXPLORE2.length}  spirits=${SPIRITS2.length}  opponents=${regionExt2.reduce((s, r) => s + r.opponents.length, 0)}  bosses=${BOSS2.length}  seasons=${SEASON2.length}`)

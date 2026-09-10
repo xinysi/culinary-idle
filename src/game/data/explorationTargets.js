@@ -1,7 +1,7 @@
 // 美食探索目标扩充（生成器产出，勿手改）— 2026-09-01
 // 由 scripts/gen/gen_exploration_targets.mjs 生成：200 个探索目标，等级 1~99，
 // intervalSec/xp 递增、baseSuccess 递减、failGold 递增，战利品按等级带匹配全物品库。
-// 修改后重跑 scripts/gen/gen_exploration_targets.mjs。
+// 🔒 本文件属「已固定」冻结数据（AGENTS.md 数据铁律）：勿重跑生成器——它会改写目标名称与战利品。
 export const EXPLORATION_TARGETS_ALL = [
  {
   "id": "explore_001",

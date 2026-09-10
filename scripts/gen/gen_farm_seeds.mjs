@@ -14,7 +14,8 @@ import { ITEMS } from '../../src/game/data/items.js'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 // 输出路径按脚本自身位置解析，避免「必须在仓库根目录运行」的隐性约束
-const __OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
+// 输出目录：默认写入仓库 src/game/data；设 GEN_OUT_DIR 可改写到别处（供 scripts/ci/gen_drift_audit.mjs 做无损漂移比对）
+const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
 
 // 既有的 15 种手写作物（FarmingSkill 基线），其种子已在 items.js；生成器不读取合并后的 CROPS，
 // 避免重跑时把已生成作物当作「已有」导致 FARM_CROPS 清空。

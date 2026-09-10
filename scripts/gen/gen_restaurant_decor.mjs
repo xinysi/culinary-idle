@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { RESTAURANT_DECOR_BASE } from '../../src/game/data/restaurantDecorBase.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const OUT = join(__dirname, '../src/game/data/restaurantDecor.js')
+const OUT = join(process.env.GEN_OUT_DIR ?? join(__dirname, '../../src/game/data'), 'restaurantDecor.js')
 
 // 8 类新增家具（每类 25，共 200）；category 即类别 key；名字带 emoji（补全装饰图标）
 const NEW_BY_CATEGORY = {

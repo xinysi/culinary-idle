@@ -31,6 +31,8 @@ jobs:
           node scripts/ci/content_sync_audit.mjs
           node scripts/ci/item_triple_audit.mjs
           node scripts/ci/minigame_ui_audit.mjs
+          # 生成器漂移审计：在临时目录里复现各生成器输出并与仓库产物比对（只读，不写仓库）
+          node scripts/ci/gen_drift_audit.mjs
 
       - name: Web build
         run: npm run build
