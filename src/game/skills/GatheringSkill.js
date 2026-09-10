@@ -101,7 +101,9 @@ export class GatheringSkill extends Skill {
     const yMult = this.player.getYieldMultiplier?.() ?? 1
     const festPct = ((this.player.festivalBoost?.()?.gatherYield ?? 1) - 1) // 节庆（2026-09-10）
     const patronPct = (this.player.patronEffects?.()?.yieldPct ?? 0) / 100 // 食神信仰：农神/窖神（2026-09-10）
-    const extraChance = yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + (yMult - 1)
+    const wxPct = ((this.player.weatherEffects?.()?.gatherYield ?? 1) - 1) // 天气（2026-09-10）
+    const luckyPct = target ? (this.player.luckyItemBonus?.(target.itemId) ?? 0) : 0 // 今日运势·幸运食材
+    const extraChance = yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + (yMult - 1)
     if (extraChance <= 0) return qty + batch
     return qty + batch + (Math.random() < extraChance ? 1 : 0)
   }

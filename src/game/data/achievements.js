@@ -10,6 +10,7 @@ import { masteryLevelFromCount } from '../core/mastery.js'
 import { REGULARS, regularLevelFromServes } from './regulars.js'
 import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { SCHOOLS } from './schools.js'
+import { MILESTONES, milestoneSummary } from './milestones.js'
 import { STAFF } from './staff.js'
 import { REGIONS } from './regions.js'
 
@@ -146,10 +147,27 @@ export const ACHIEVEMENTS = [
   { id: 'apprentice50', name: '衣钵传人', category: '特殊', desc: '徒弟成长到满级 Lv50', title: '衣钵传人', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => (p.legacy?.apprentice?.level ?? 0) >= 50 },
   { id: 'patron1', name: '初选定信仰', category: '特殊', desc: '首次选定一位守护神', reward: { gold: 2500, items: { mysterySpice: 1 } }, check: (p) => !!p.patron?.active },
   { id: 'patronMax', name: '神眷之人', category: '特殊', desc: '任一守护神供奉满级 Lv3', title: '神眷之人', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => Object.values(p.patron?.levels ?? {}).some((lv) => (lv ?? 0) >= 3) },
+  { id: 'ms10', group: '特殊', name: '路上之人', category: '特殊', desc: '达成 10 项里程碑', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => milestoneSummary(p).done >= 10 },
+  { id: 'msAll', name: '圆满之路', category: '特殊', desc: '达成全部里程碑', title: '圆满之路', reward: { gold: 50000, items: { mysterySpice: 3, energyBiscuit: 3 } }, check: (p) => milestoneSummary(p).done >= MILESTONES.length },
+  { id: 'chron20', group: '特殊', name: '有故事的人', category: '特殊', desc: '年鉴记录 20 条', reward: { gold: 4000, items: { energyBiscuit: 1 } }, check: (p) => (p.chronicle ?? []).length >= 20 },
+  { id: 'chron60', name: '编年史家', category: '特殊', desc: '年鉴记录 60 条', title: '编年史家', reward: { gold: 18000, items: { mysterySpice: 2 } }, check: (p) => (p.chronicle ?? []).length >= 60 },
+  { id: 'mascot1', group: '特殊', name: '招财进宝', category: '特殊', desc: '买下第一位吉祥物', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.mascots?.owned ?? {}).length >= 1 },
+  { id: 'mascot30', name: '镇店之宝', category: '特殊', desc: '累计蹭吉祥物 30 次', title: '镇店之宝', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mascotPets ?? 0) >= 30 },
+  { id: 'banquet1', group: '特殊', name: '开席', category: '特殊', desc: '首次交付一场宴席', reward: { gold: 5000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.banquets ?? 0) >= 1 },
+  { id: 'banquet20', name: '宴遍四方', category: '特殊', desc: '累计交付 20 场宴席', title: '宴遍四方', reward: { gold: 25000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.banquets ?? 0) >= 20 },
+  { id: 'takeout100', name: '外卖先锋', category: '特殊', desc: '外卖累计接单 100 单', reward: { gold: 8000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.takeoutSold ?? 0) >= 100 },
+  { id: 'takeout1000', name: '配送之王', category: '特殊', desc: '外卖累计接单 1000 单', title: '配送之王', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.takeoutSold ?? 0) >= 1000 },
   { id: 'ex10', name: '第一桶金', category: '特殊', desc: '交易所累计成交 10 件', reward: { gold: 1500 }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 10 },
   { id: 'ex500', name: '行情老手', category: '特殊', desc: '交易所累计成交 500 件', title: '行情老手', reward: { gold: 9000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.exchangeTrades ?? 0) >= 500 },
   { id: 'trial1', name: '初次试炼', category: '特殊', desc: '通关任意一条厨神试炼', reward: { gold: 3000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.trialClears ?? 0) >= 1 },
   { id: 'trialAll', name: '厨神之证', category: '特殊', desc: '四条试炼各通关至少 1 次', title: '厨神之证', reward: { gold: 25000, items: { mysterySpice: 2 } }, check: (p) => ['t_speed', 't_flawless', 't_overlevel', 't_streak'].every((id) => (p.trials?.[id]?.clears ?? 0) >= 1) },
+  { id: 'theme1', name: '特色经营', category: '特殊', desc: '给任意一家分店定下主题', reward: { gold: 4000, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.branchThemes ?? {}).length >= 1 },
+  { id: 'themeAll', name: '连锁品牌', category: '特殊', desc: '三家以上分店各有主题', title: '连锁品牌', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => Object.keys(p.branchThemes ?? {}).length >= 3 },
+  { id: 'sup1', name: '长期合作', category: '特殊', desc: '签下第一份供应商合约', reward: { gold: 3000 }, check: (p) => Object.keys(p.contracts ?? {}).length >= 1 },
+  { id: 'sup50', name: '供应链主', category: '特殊', desc: '供应商累计到货 50 次', title: '供应链主', reward: { gold: 16000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.contractDeliveries ?? 0) >= 50 },
+  { id: 'chef1', name: '挑战名厨', category: '特殊', desc: '首次战胜一位名厨', reward: { gold: 6000, items: { energyBiscuit: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 1 },
+  { id: 'chef8', name: '名厨征服者', category: '特殊', desc: '累计战胜名厨 8 次', title: '名厨征服者', reward: { gold: 36000, items: { mysterySpice: 3 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 8 },
+  { id: 'seasonFull', name: '赛季全勤', category: '特殊', desc: '任一赛季任务全部达成', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => (p.chronicle ?? []).some((e) => (e.key ?? '').startsWith('season-all:')) },
 ]
 
 export const ALL_ACHIEVEMENTS = [...buildSkillAchievements(), ...ACHIEVEMENTS]

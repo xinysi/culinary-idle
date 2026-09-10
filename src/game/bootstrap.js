@@ -210,15 +210,29 @@ export function registerGameEvents() {
         player.bumpSeason('boss', opponent)
         player.bumpGuild('boss', opponent)
         player.bumpDaily('boss', opponent)
+        player.recordChronicle?.('boss:' + opponent, 'boss', `首次击败首领「${opponent}」`)
       }
       // 厨神试炼（2026-09-10）：胜利后判定条件
       const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
-      if (trial?.passed) ui.pushLog(`🏅 ${trial.label}通关！${trial.first ? '首通奖励' : '重复奖励'} +${trial.gold.toLocaleString()} 金币`, 'levelup')
+      if (trial?.passed) {
+      ui.pushLog(`🏅 ${trial.label}通关！${trial.first ? '首通奖励' : '重复奖励'} +${trial.gold.toLocaleString()} 金币`, 'levelup')
+      if (trial.first) player.recordChronicle?.('trial:' + trial.label, 'trial', `${trial.label}首次通关`)
+    }
       else if (trial?.label) ui.pushLog(`🏅 ${trial.label}`, 'warn')
+      // 名厨挑战（2026-09-10）：每周一次，战胜给大奖
+      const chef = player.onCombatEndChef?.(result, opponent)
+      if (chef?.passed) {
+        ui.pushLog(`🃏 战胜名厨「${chef.name}」！+${chef.gold.toLocaleString()} 金币、神秘调料 ×2、能量饼干 ×1`, 'levelup')
+        player.recordChronicle?.('chef:' + chef.name, 'contest', `战胜名厨「${chef.name}」`)
+      } else if (chef?.name) {
+        ui.pushLog(`🃏 不敌名厨「${chef.name}」，本周可再来挑战`, 'warn')
+      }
     } else {
       ui.pushLog(`💀 败给 ${opponent}${lost ? `，失去了 ${itemName(lost)}` : ''}`, 'warn')
       const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
       if (trial?.label) ui.pushLog(`🏅 ${trial.label}`, 'warn')
+      const chef = player.onCombatEndChef?.(result, opponent)
+      if (chef?.name) ui.pushLog(`🃏 不敌名厨「${chef.name}」，本周可再来挑战`, 'warn')
     }
   })
 
@@ -228,6 +242,12 @@ export function registerGameEvents() {
   EventBus.on('guild:task', ({ name, points, gold }) => ui.pushLog(`📋 公会任务完成：${name}（+${points} 公会点${gold ? `，${gold} 金币` : ''}）`, 'levelup'))
   EventBus.on('season:claim', ({ name, tier }) => ui.pushLog(`🎖️ ${name}奖励领取：${tier}`, 'levelup'))
   EventBus.on('season:mission', ({ name, points }) => ui.pushLog(`🎪 赛季任务完成：${name}（+${points} 赛季点）`, 'levelup'))
+
+  // 供应商合约 / 分店主题（2026-09-10）
+  EventBus.on('supplier:sign', ({ name, deposit, days }) => ui.pushLog(`🤝 与${name}签约 ${days} 天（定金 ${deposit.toLocaleString()} 金币）`, 'info'))
+  EventBus.on('supplier:deliver', ({ name, itemId, qty, cost }) => ui.pushLog(`📦 ${name}到货：${itemName(itemId)} ×${qty}（货款 ${cost.toLocaleString()}）`, 'info'))
+  EventBus.on('supplier:expire', ({ name }) => ui.pushLog(`📄 与${name}的合约已到期`, 'warn'))
+  EventBus.on('branch:theme', ({ name, cost }) => ui.pushLog(`🏮 分店换上新主题「${name}」（${cost.toLocaleString()} 金币）`, 'info'))
 
   // 每日/周常（2026-09-06）
   EventBus.on('daily:claim', ({ name, gold }) => ui.pushLog(`📋 每日任务完成：${name}（+${gold} 金币）`, 'levelup'))
@@ -341,6 +361,7 @@ export function registerGameEvents() {
   // 食灵物语（2026-09-10）
   EventBus.on('spiritStory:claim', ({ name, label }) => {
     ui.pushLog(`✨ ${name}的物语「${label}」已解锁`, 'levelup')
+    player.recordChronicle?.('spirit:' + name + ':' + label, 'spirit', `${name}的物语「${label}」`)
   })
 
   // 自动化中心（2026-09-10）
@@ -357,6 +378,30 @@ export function registerGameEvents() {
     ui.pushLog(`🐄 买下了${name}（-${cost.toLocaleString()} 金币）`, 'info')
   })
 
+  // 宴会承办 / 外卖（2026-09-10）
+  EventBus.on('banquet:accept', ({ name, cat, need, hours }) => {
+    ui.pushLog(`🍽 接下${name}：备齐 ${cat} ×${need} 份，限时 ${hours} 小时`, 'info')
+  })
+  EventBus.on('banquet:done', ({ name, gold, spice }) => {
+    ui.pushLog(`🍽 ${name}交付完成：金币 +${gold.toLocaleString()}${spice ? `、神秘调料 ×${spice}` : ''}`, 'levelup')
+  })
+  EventBus.on('banquet:expired', () => ui.pushLog('🍽 宴席超时作废（无惩罚）', 'warn'))
+  EventBus.on('takeout:done', ({ sold, gold, level }) => {
+    ui.pushLog(`🚚 外卖结算：${sold} 单，金币 +${gold.toLocaleString()}（Lv${level}）`, 'gain')
+  })
+  EventBus.on('takeout:upgrade', ({ level, cost }) => {
+    ui.pushLog(`🚚 外卖升级至 Lv${level}（-${cost.toLocaleString()} 金币）`, 'levelup')
+  })
+
+  // 吉祥物（2026-09-10）
+  EventBus.on('mascot:buy', ({ name, cost }) => {
+    ui.pushLog(`🍀 ${name}入职（-${cost.toLocaleString()} 金币），记得每天蹭一次`, 'levelup')
+  })
+  EventBus.on('mascot:pet', ({ name, gold, items, levelUp }) => {
+    const extra = Object.entries(items ?? {}).map(([id, q]) => `${itemName(id)} ×${q}`).join('、')
+    ui.pushLog(`🐾 蹭了蹭${name}：金币 +${gold.toLocaleString()}${extra ? '、' + extra : ''}${levelUp ? ' · 好感提升！' : ''}`, levelUp ? 'levelup' : 'gain')
+  })
+
   // 食神信仰（2026-09-10）
   EventBus.on('patron:switch', ({ name, gold }) => {
     ui.pushLog(`🏛 改信「${name}」（-${gold.toLocaleString()} 金币，24 小时内不可再切）`, 'levelup')
@@ -368,6 +413,8 @@ export function registerGameEvents() {
   // 师徒传承（2026-09-10）
   EventBus.on('player:prestige', ({ carry }) => {
     if (carry > 0) ui.pushLog(`♻️ 转生留一手：本技能从 Lv${1 + carry} 起步（传承 ${carry} 级）`, 'levelup')
+    player.recordChronicle?.(`prestige:${player.stats?.prestiges ?? 0}`, 'prestige', `完成第 ${player.stats?.prestiges ?? 0} 次转生`)
+    player.recordChronicle?.('prestige:first', 'prestige', '踏上轮回之路（首次转生）')
   })
   EventBus.on('apprentice:grow', ({ level, days }) => {
     ui.pushLog(`🎓 徒弟成长 +${days} 级 → Lv${level}`, 'info')
@@ -395,11 +442,13 @@ export function registerGameEvents() {
   })
   EventBus.on('school:done', ({ name, level }) => {
     ui.pushLog(`📜 ${name}研究完成 → Lv${level}`, 'levelup')
+    if (level >= 5) player.recordChronicle?.('school:' + name, 'school', `${name}研究至满级 Lv5`)
   })
 
   // 厨具大赛（2026-09-10）
   EventBus.on('gearContest:done', ({ score, rank, rankName, gold }) => {
     ui.pushLog(`🃏 厨具大赛：${score.toLocaleString()} 分 → ${rank} 档「${rankName}」，奖励 +${(gold ?? 0).toLocaleString()} 金币`, 'levelup')
+    player.recordChronicle?.('contest:' + rank, 'contest', `厨具大赛取得 ${rank} 档「${rankName}」`)
   })
 
   // 风味搭配册（2026-09-10）
@@ -411,11 +460,13 @@ export function registerGameEvents() {
   EventBus.on('michelin:review', ({ stars, prev, score }) => {
     const names = ['未入榜', '一星', '二星', '三星']
     ui.pushLog(`⭐ 米其林评审：${score} 分 → ${names[stars] ?? stars} 星` + (stars > prev ? '（升级！）' : '（降级）'), stars > prev ? 'levelup' : 'warn')
+    if (stars > prev && stars > 0) player.recordChronicle?.('michelin:' + stars, 'michelin', `餐厅获评米其林${names[stars]}`)
   })
 
   // 餐厅分店（2026-09-10）
   EventBus.on('branch:open', ({ name, cost }) => {
     ui.pushLog(`🏬 ${name}开业（-${cost.toLocaleString()} 金币）`, 'levelup')
+    player.recordChronicle?.('branch:' + name, 'branch', `${name}开业`)
   })
   EventBus.on('branch:manager', ({ name, cost }) => {
     ui.pushLog(`🏬 ${name}已雇店长（-${cost.toLocaleString()} 金币，时收 +25%）`, 'info')

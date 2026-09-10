@@ -28,6 +28,8 @@ import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_P
 import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
+import { SUPPLIERS, SUPPLIER_PRICE_MULT } from './suppliers.js'
+import { CHEFS, chefReward } from './chefChallenges.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -156,6 +158,15 @@ for (const it of Object.values(ITEMS)) {
   if ((it.value ?? 0) < 20 || (it.value ?? 0) > 300) continue
   add(it.id, '交易所（行情买入）')
 }
+
+// 供应商合约（2026-09-10）：签约后按日自动到货（供货清单见 suppliers.js）
+for (const s of SUPPLIERS) add(s.itemId, `供应商合约·${s.name}（每日到货 ${s.qty} 个，货款 ${Math.round(SUPPLIER_PRICE_MULT * 100)}% 物价）`)
+
+// 名厨挑战（2026-09-10）：战胜名厨的固定奖励 + 对手掉落
+for (const c of CHEFS) {
+  for (const id of Object.keys(chefReward(c, 1).items ?? {})) add(id, `名厨挑战·战胜「${c.name}」奖励`)
+}
+add('mysterySpice', '名厨挑战对手掉落（25%）')
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {

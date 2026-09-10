@@ -10,6 +10,9 @@ const VIEWS = [
   'kitchenNotes', 'flavorBook', 'schools', 'michelin', 'staff', 'branches', 'exchange', 'regulars',
   'trials', 'gearContest', 'minigames', 'festival', 'legacy', 'patrons', 'spiritStories', 'restaurant',
   'guild', 'season', 'arena', 'tower', 'fest', 'mijian', 'stats', 'log', 'guide',
+  // 2026-09-10 新增九页（分店主题并入 branches，无需另列）
+  'milestones', 'chronicle', 'weather', 'mascot', 'banquet', 'takeout',
+  'suppliers', 'chefChallenge', 'seasonReview',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

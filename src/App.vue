@@ -63,6 +63,15 @@ const StaffView = defineAsyncComponent(() => import('./views/StaffView.vue'))
 const RegionsView = defineAsyncComponent(() => import('./views/RegionsView.vue'))
 const LegacyView = defineAsyncComponent(() => import('./views/LegacyView.vue'))
 const PatronsView = defineAsyncComponent(() => import('./views/PatronsView.vue'))
+const MilestonesView = defineAsyncComponent(() => import('./views/MilestonesView.vue'))
+const ChronicleView = defineAsyncComponent(() => import('./views/ChronicleView.vue'))
+const WeatherView = defineAsyncComponent(() => import('./views/WeatherView.vue'))
+const MascotView = defineAsyncComponent(() => import('./views/MascotView.vue'))
+const BanquetView = defineAsyncComponent(() => import('./views/BanquetView.vue'))
+const TakeoutView = defineAsyncComponent(() => import('./views/TakeoutView.vue'))
+const SuppliersView = defineAsyncComponent(() => import('./views/SuppliersView.vue'))
+const ChefChallengeView = defineAsyncComponent(() => import('./views/ChefChallengeView.vue'))
+const SeasonReviewView = defineAsyncComponent(() => import('./views/SeasonReviewView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -264,6 +273,15 @@ onMounted(() => {
           <RegionsView v-else-if="ui.activeView === 'regions'" />
           <LegacyView v-else-if="ui.activeView === 'legacy'" />
           <PatronsView v-else-if="ui.activeView === 'patrons'" />
+          <MilestonesView v-else-if="ui.activeView === 'milestones'" />
+          <ChronicleView v-else-if="ui.activeView === 'chronicle'" />
+          <WeatherView v-else-if="ui.activeView === 'weather'" />
+          <MascotView v-else-if="ui.activeView === 'mascot'" />
+          <BanquetView v-else-if="ui.activeView === 'banquet'" />
+          <TakeoutView v-else-if="ui.activeView === 'takeout'" />
+          <SuppliersView v-else-if="ui.activeView === 'suppliers'" />
+          <ChefChallengeView v-else-if="ui.activeView === 'chefChallenge'" />
+          <SeasonReviewView v-else-if="ui.activeView === 'seasonReview'" />
           <HeatView v-else-if="ui.activeView === 'heat'" />
           <TriviaView v-else-if="ui.activeView === 'trivia'" />
           <Kitchen2048View v-else-if="ui.activeView === 'kitchen2048'" />
