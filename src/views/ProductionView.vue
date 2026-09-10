@@ -321,6 +321,10 @@ function scrollToSection(label) {
         <button class="btn btn-sm btn-primary" :disabled="!(player.inventory.energyBiscuit ?? 0) || player.offlineBonusH >= 12" @click="useBiscuit()">
           使用
         </button>
+        <!-- 溢出后的两个出口（2026-09-10）：战斗内使用 / 奥义页回收 -->
+        <span v-if="player.biscuitOfflineMaxed()" class="dim biscuit-overflow">
+          已满上限 → 仍可用于<b>对决中的能量补给</b>，或在<b>美食知识页</b>回收成品鉴点
+        </span>
       </div>
     </div>
 
@@ -511,6 +515,10 @@ function scrollToSection(label) {
 </template>
 
 <style scoped>
+.biscuit-overflow {
+  font-size: 12px;
+  color: var(--warn-strong, #bf7200);
+}
 /* 制作队列（2026-09-06） */
 .queue-card { margin-bottom: 12px; }
 .queue-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }

@@ -48,6 +48,7 @@ import { BANQUET_TIERS, makeBanquetOrder, banquetAvailable } from '../game/data/
 import { ALL_TITLES, honorBonuses, honorLevelProgress, honorNextNeed } from '../game/data/honor.js'
 import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, getCodexReward, codexPointsFor } from '../game/data/codexShop.js'
 import { SET_MEALS, activeSetMeal, setMealBoard, setMealMult, SET_MEAL_TAKEOUT_RATIO } from '../game/data/setMeals.js'
+import { BISCUIT_TASTE_RATE, BISCUIT_EXCHANGE_MAX, tasteFromBiscuits, maxExchangeable } from '../game/data/biscuitUse.js'
 import { rivalsOfMonth, monthIndexOf, playerScoreFrom, rankOf, rivalReward, rankStars, RIVAL_PROMO_COST, RIVAL_PROMO_BONUS } from '../game/data/rivals.js'
 import { BRANCH_THEMES, getBranchTheme, themeMult } from '../game/data/branchThemes.js'
 import { SUPPLIERS, getSupplier, supplierDailyCost, SUPPLIER_MAX_CONTRACTS, SUPPLIER_TERM_DAYS } from '../game/data/suppliers.js'
@@ -1106,6 +1107,27 @@ export const usePlayerStore = defineStore('player', {
       this.spendItem('energyBiscuit', 1)
       this.offlineBonusH = Math.min(this.offlineBonusH + 4, 12)
       return true
+    },
+    /** 离线加时是否已满（满了就只剩战斗使用与回收两个出口） */
+    biscuitOfflineMaxed() {
+      return (this.offlineBonusH ?? 0) >= 12
+    },
+    /** 常驻回收预览：{ owned, max, rate, taste }（2026-09-10 新增第二用途之 C） */
+    biscuitExchangePreview(count = null) {
+      const owned = this.inventory.energyBiscuit ?? 0
+      const max = maxExchangeable(owned)
+      const n = count == null ? max : Math.max(0, Math.min(max, Math.floor(count)))
+      return { owned, max, rate: BISCUIT_TASTE_RATE, count: n, taste: tasteFromBiscuits(n) }
+    },
+    /** 常驻回收：能量饼干 → 品鉴点（不限量，可反复兑换；品鉴点是奥义持续消耗的燃料） */
+    exchangeBiscuitForTaste(count = null) {
+      const pv = this.biscuitExchangePreview(count)
+      if (pv.count < 1) return { ok: false, msg: '没有可回收的能量饼干' }
+      this.spendItem('energyBiscuit', pv.count)
+      this.gainTastePoints(pv.taste)
+      this.stats.biscuitsRecycled = (this.stats.biscuitsRecycled ?? 0) + pv.count
+      EventBus.emit('biscuit:recycle', { count: pv.count, taste: pv.taste })
+      return { ok: true, ...pv }
     },
 
     /** 通用道具使用（§3.4.2 保鲜剂/增益剂） */

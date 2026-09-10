@@ -1,10 +1,11 @@
 <script setup>
 // 美食知识视图 — 需求文档 §3.4.1：品鉴点数 + 奥义激活/关闭（卡片式，参考食灵召唤页）
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
 import { INSIGHT_NODES, INSIGHT_BRANCHES, getInsightNode } from '../game/data/insightTree.js'
+import { BISCUIT_TASTE_RATE } from '../game/data/biscuitUse.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -34,6 +35,18 @@ function filteredAojis() {
 function catCount(c) {
   if (!c) return AOJIS.length
   return AOJIS.filter((a) => a.category === c).length
+}
+
+// ── 能量补给：常驻回收（2026-09-10）──
+// 能量饼干的离线上限封顶 +12h（用满 3 块即饱和），多余的在此不限量换成品鉴点——
+// 品鉴点是奥义的持续消耗燃料，本身就是不封顶系统，形成稳定出口。
+const redeemCount = ref(null) // null = 全部
+const biscuitPv = computed(() => player.biscuitExchangePreview(redeemCount.value))
+function redeemBiscuits() {
+  const r = player.exchangeBiscuitForTaste(redeemCount.value)
+  if (!r.ok) { ui.pushLog(r.msg, 'warn'); return }
+  redeemCount.value = null
+  ui.pushLog(`🍪 回收能量饼干 ×${r.count} → 品鉴点 +${r.taste}`, 'gain')
 }
 
 // ── 菜系图谱（2026-09-09 永久天赋树）──
@@ -125,6 +138,36 @@ function unlockNode(id) {
         已解锁 {{ (player.insights ?? []).length }}/{{ INSIGHT_NODES.length }} 个节点；加成永久生效（经验/产量/制作成功率/对决攻防）。
       </p>
     </div>
+
+    <!-- 能量补给：能量饼干的常驻回收（2026-09-10）-->
+    <div class="card biscuit-box">
+      <div class="biscuit-head">
+        <span class="biscuit-title">🍪 能量补给（能量饼干回收）</span>
+        <span class="dim biscuit-sub">
+          持有 <b class="mono">{{ player.inventory.energyBiscuit ?? 0 }}</b> 块 ·
+          离线上限 {{ player.offlineBonusH ?? 0 }}h<template v-if="player.biscuitOfflineMaxed()">（已满 +12h）</template>
+        </span>
+      </div>
+      <p class="dim biscuit-sub">
+        能量饼干的作用是「离线时长上限 +4h」，而该上限封顶 +12h（{{ 3 }} 块即饱和）；战斗中也能吃（能量补给：回血 + 命中/攻速增益）。
+        多余的饼干可在这里<b>不限量</b>回收成<b>品鉴点</b>——品鉴点是奥义的持续消耗燃料，不封顶。
+      </p>
+      <div class="biscuit-actions">
+        <span class="dim biscuit-sub">回收数量</span>
+        <input v-model.number="redeemCount" type="number" min="1" :max="biscuitPv.max" class="plot-select biscuit-input" :placeholder="String(biscuitPv.max)" />
+        <span class="dim biscuit-sub">块（留空 = 全部）</span>
+        <span class="biscuit-preview mono">
+          → 品鉴点 +{{ (redeemCount ? Math.min(redeemCount, biscuitPv.max) : biscuitPv.max) * BISCUIT_TASTE_RATE }}
+        </span>
+        <button class="btn btn-sm btn-primary" :disabled="player.inventory.energyBiscuit < 1" @click="redeemBiscuits">
+          回收{{ redeemCount ? '' : '全部' }}
+        </button>
+      </div>
+      <p class="dim biscuit-sub">
+        汇率固定 {{ BISCUIT_TASTE_RATE }} 品鉴点/块（约等于同级战斗一场的一小部分，不会取代打怪成为主要来源）；
+        已回收 <b class="mono">{{ (player.stats?.biscuitsRecycled ?? 0).toLocaleString() }}</b> 块。
+      </p>
+    </div>
   </div>
 </template>
 
@@ -137,4 +180,37 @@ function unlockNode(id) {
 .insight-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .insight-node.insight-ready { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft) inset; }
 .insight-node.insight-locked { opacity: 0.55; }
+/* 能量补给（2026-09-10） */
+.biscuit-box {
+  margin-top: 12px;
+}
+.biscuit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.biscuit-title {
+  font-weight: 600;
+}
+.biscuit-sub {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.biscuit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.biscuit-input {
+  width: 110px;
+}
+.biscuit-preview {
+  font-size: 13px;
+  color: var(--good, #57a861);
+}
 </style>

@@ -121,6 +121,7 @@ const sections = computed(() => [
       { label: '餐厅套餐', value: player.setMealState().meal ? `+${player.setMealBonus()}%` : '无', sub: ` ${player.setMealState().meal?.name ?? '菜单未凑齐任何套餐'}` },
       { label: '同业榜名次', value: `#${player.rivalBoard().rank}`, sub: ` 本月 · 经营分 ${player.rivalBoard().score.toLocaleString()} · 历史最佳 #${player.stats?.rivalBestRank ?? '—'}` },
       { label: '厨神试炼通关', value: player.stats?.trialClears ?? 0, sub: ` 次 · 最佳记录 ${player.trialState('t_speed').bestTurns ? player.trialState('t_speed').bestTurns + ' 回合（速攻）' : '—'}` },
+      { label: '能量饼干', value: player.inventory.energyBiscuit ?? 0, sub: ` 块 · 离线加时 ${player.offlineBonusH ?? 0}h/12h · 对战使用 ${player.stats?.biscuitsUsed ?? 0} 次 · 回收 ${player.stats?.biscuitsRecycled ?? 0} 块` },
       { label: '师徒传承', value: `Lv${player.apprenticeState().level}`, sub: ` 徒弟 · 转生 ${player.stats?.prestiges ?? 0} 次 · 传承合计 ${Object.values(player.legacy?.carry ?? {}).reduce((a, n) => a + (n ?? 0), 0)} 级` },
     ],
   },

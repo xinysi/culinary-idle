@@ -7,6 +7,7 @@ import { STYLE_INFO, STYLE_ADVANTAGE } from '../data/combat.js'
 import { getItem, itemName } from '../data/items.js'
 import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
+import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
 const DRUNK_TURNS = 5 // 醉酒 负面效果 持续 5 回合
@@ -65,6 +66,8 @@ export class Combat {
     this.burnTurns = 0
     this.poisonTurns = 0
     this.foodCooldown = 0
+    this.biscuitCooldown = 0 // 能量饼干冷却（2026-09-10）
+    this.biscuitSpeedPct = 0 // 「精力充沛」攻速加成，随 buffTurns 归零
     this.result = null // win | lose
   }
 
@@ -93,7 +96,7 @@ export class Combat {
     const atkPct = (realm?.attackPct ?? 0) + (insight.attackPct ?? 0)
     const defPct = (realm?.defensePct ?? 0) + (insight.defensePct ?? 0)
     const hpPct = (realm?.maxHpPct ?? 0) + (insight.maxHpPct ?? 0)
-    const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0)
+    const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0) + (this.biscuitSpeedPct || 0) // +能量饼干「精力充沛」（2026-09-10）
     const speedBonus = Number(eq.speedBonus) || 0
     const baseSpeed = Math.max(1.2, (2.4 - sl * 0.02 - speedBonus) * (1 - speedPct / 100))
     return {
@@ -133,6 +136,8 @@ export class Combat {
     this.burnTurns = 0
     this.poisonTurns = 0
     this.foodCooldown = 0
+    this.biscuitCooldown = 0 // 能量饼干冷却（2026-09-10）
+    this.biscuitSpeedPct = 0 // 「精力充沛」攻速加成，随 buffTurns 归零
     this.result = null
     this.logLine(`⚔️ 对决开始：${opponent.name}（等级 ${opponent.level}，${opponent.styleName}）`)
     EventBus.emit('combat:start', { opponent: opponent.name })
@@ -163,9 +168,13 @@ export class Combat {
 
     // 回合开始状态结算
     if (this.foodCooldown > 0) this.foodCooldown--
+    if (this.biscuitCooldown > 0) this.biscuitCooldown--
     if (this.buffTurns > 0) {
       this.buffTurns--
-      if (this.buffTurns === 0) this.buffs = { atk: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0 }
+      if (this.buffTurns === 0) {
+        this.buffs = { atk: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0 }
+        this.biscuitSpeedPct = 0 // 增益到期，攻速加成同时失效
+      }
     }
     if (this.drunkTurns > 0) this.drunkTurns--
     if (this.slowTurns > 0) this.slowTurns--
@@ -508,6 +517,31 @@ export class Combat {
       this.drunkTurns = DRUNK_TURNS
       this.logLine(`🥴 醉意上头：命中率下降 15%（${DRUNK_TURNS} 回合）`, 'warn')
     }
+    return true
+  }
+
+  /** 能量饼干：战斗内「能量补给」（2026-09-10 新增第二用途）
+   *  回品鉴值 + 数回合精力充沛（命中/攻速）；自身冷却，与料理冷却互不影响。
+   *  不封顶（可反复使用，靠冷却控制节奏）——给离线时长封顶后溢出的饼干一个出口。 */
+  useEnergyBiscuit() {
+    if ((this.player.inventory.energyBiscuit ?? 0) < 1) return false
+    if (this.biscuitCooldown > 0) {
+      this.logLine(`🍪 能量饼干冷却中（剩 ${this.biscuitCooldown} 回合）`, 'warn')
+      return false
+    }
+    const p = this.playerStats()
+    this.player.spendItem('energyBiscuit', 1)
+    const heal = Math.floor(p.maxHp * BISCUIT_HEAL_PCT)
+    const before = this.player.combat.hp
+    const after = Math.min(p.maxHp, before + heal)
+    this.player.setCombat({ hp: after })
+    this.buffs.accuracy += BISCUIT_ACC
+    this.biscuitSpeedPct = BISCUIT_SPEED_PCT
+    this.buffTurns = Math.max(this.buffTurns, BISCUIT_BUFF_TURNS)
+    this.biscuitCooldown = BISCUIT_COOLDOWN_TURNS
+    this.player.stats.biscuitsUsed = (this.player.stats.biscuitsUsed ?? 0) + 1
+    this.logLine(`🍪 能量补给：回复 ${after - before} 品鉴值，命中 +${BISCUIT_ACC}、攻速 +${BISCUIT_SPEED_PCT}%（${BISCUIT_BUFF_TURNS} 回合）`)
+    EventBus.emit('combat:biscuit', { heal: after - before })
     return true
   }
 

@@ -89,6 +89,7 @@ function useItem(kind, id) {
   else if (kind === 'sauce') combat.useSauce(id)
   else if (kind === 'drink') combat.useDrink(id)
   else if (kind === 'spice') combat.useMysterySpice()
+  else if (kind === 'biscuit') combat.useEnergyBiscuit()
 }
 function setStyle(style) {
   player.setCombatStyle(style)
@@ -198,6 +199,13 @@ function buffText() {
               </div>
               <div v-if="(player.inventory.mysterySpice ?? 0) > 0" class="item-group">
                 <button class="btn btn-sm" @click="useItem('spice')">🪄 神秘调料 ×{{ player.inventory.mysterySpice }}</button>
+              </div>
+              <div v-if="(player.inventory.energyBiscuit ?? 0) > 0" class="item-group">
+                <button class="btn btn-sm" :disabled="combat.biscuitCooldown > 0" @click="useItem('biscuit')">
+                  🍪 能量补给 ×{{ player.inventory.energyBiscuit }}
+                  <span v-if="combat.biscuitCooldown > 0" class="dim">（冷却 {{ combat.biscuitCooldown }} 回合）</span>
+                  <span v-else class="dim">（回血 {{ Math.floor(player.maxHp * 0.25) }} · 命中+8 · 攻速+10%）</span>
+                </button>
               </div>
             </div>
             <button class="btn btn-sm" @click="stopFight()" style="margin-top: auto">停止对决</button>

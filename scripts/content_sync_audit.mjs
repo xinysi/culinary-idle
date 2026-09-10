@@ -140,6 +140,8 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     '分店主题', '供应商合约', '名厨挑战', '赛季回顾',
     // 2026-09-10 第四批：荣誉殿堂 / 图鉴兑换所 / 套餐与定食 / 同业竞争榜
     '荣誉殿堂', '图鉴兑换', '套餐', '同业竞争',
+    // 2026-09-10 第五批：能量饼干的三用途（离线加时 / 战斗补给 / 回收）
+    '能量饼干', '能量补给', '品鉴点',
   ]
   const miss = required.filter((k) => !ovText.includes(k))
   check(`攻略：总览覆盖全部功能关键词（${required.length} 个）`, miss.length === 0, `未覆盖: ${miss.join(',')}`)
