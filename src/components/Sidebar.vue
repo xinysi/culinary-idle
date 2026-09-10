@@ -45,6 +45,15 @@ function selectSkill(id) {
 // ── 功能页分组（2026-09-10 细分）：非高频功能页从顶栏移入左栏，按玩法角色分成六组 ──
 const FEATURE_GROUPS = [
   {
+    id: 'today',
+    icon: '🌤',
+    name: '今日',
+    items: [
+      { icon: '🌤', name: '天气运势', view: 'weather' },
+      { icon: '🍀', name: '吉祥物', view: 'mascot' },
+    ],
+  },
+  {
     id: 'buy',
     icon: '🛒',
     name: '采买与转化',
@@ -85,6 +94,9 @@ const FEATURE_GROUPS = [
       { icon: '👨‍🍳', name: '班底', view: 'staff' },
       { icon: '🏬', name: '分店', view: 'branches' },
       { icon: '💹', name: '交易所', view: 'exchange' },
+      { icon: '🍽', name: '宴会', view: 'banquet' },
+      { icon: '🚚', name: '外卖', view: 'takeout' },
+      { icon: '🤝', name: '供应商', view: 'suppliers' },
       { icon: '📖', name: '常客', view: 'regulars' },
     ],
   },
@@ -95,7 +107,18 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '🏅', name: '试炼', view: 'trials' },
       { icon: '🃏', name: '厨具赛', view: 'gearContest' },
+      { icon: '🃏', name: '名厨', view: 'chefChallenge' },
       { icon: '🎮', name: '小游戏', view: 'minigames' },
+    ],
+  },
+  {
+    id: 'record',
+    icon: '🗺',
+    name: '记录与回顾',
+    items: [
+      { icon: '🗺', name: '里程碑', view: 'milestones' },
+      { icon: '📜', name: '年鉴', view: 'chronicle' },
+      { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
     ],
   },
   {

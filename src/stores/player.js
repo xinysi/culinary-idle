@@ -41,6 +41,14 @@ import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay } f
 import { SHOP_ITEMS } from '../game/data/shop.js'
 import { EXPEDITIONS, getExpedition, expeditionTier, expeditionYieldMult, expeditionRareBonus } from '../game/data/expeditions.js'
 import { REGULARS, getRegular, regularLevelFromServes, REGULAR_LEVEL_REQ, REGULAR_MAX_GIFT } from '../game/data/regulars.js'
+import { CHRONICLE_CAP } from '../game/data/chronicle.js'
+import { weatherBoost, fortuneForDay, dayKeyOf, weatherForDay } from '../game/data/weather.js'
+import { MASCOTS, getMascot, mascotReward, mascotBondLevel, mascotBondProgress } from '../game/data/mascots.js'
+import { BANQUET_TIERS, makeBanquetOrder, banquetAvailable } from '../game/data/banquets.js'
+import { BRANCH_THEMES, getBranchTheme, themeMult } from '../game/data/branchThemes.js'
+import { SUPPLIERS, getSupplier, supplierDailyCost, SUPPLIER_MAX_CONTRACTS, SUPPLIER_TERM_DAYS } from '../game/data/suppliers.js'
+import { CHEFS, getChef, chefForWeek, chefOpponent, chefReward } from '../game/data/chefChallenges.js'
+import { takeoutLevelFromExp, takeoutPrice, takeoutConcurrency, takeoutUpgradeCost, TAKEOUT_MAX_LEVEL, TAKEOUT_PRICE_MULT } from '../game/data/takeout.js'
 import { AUTOMATIONS, getAutomation, SELL_THRESHOLD_DEFAULT, SELL_KEEP, SELL_EXCLUDED_CATEGORIES } from '../game/data/automation.js'
 import { FLAVOR_PAIRS, getFlavorPair, matchFlavorPairs } from '../game/data/flavorPairs.js'
 import { festivalBoost, upcomingFestivals } from '../game/data/festivals.js'
@@ -234,6 +242,13 @@ const defaultState = () => ({
     regionPosting: {}, // 采集队派驻：{ [lineId]: regionId }（2026-09-10）
     legacy: { carry: {}, apprentice: { level: 0, lastDay: null } }, // 师徒传承（2026-09-10）
     patron: { active: null, levels: {}, lastSwitchAt: 0 }, // 食神信仰（2026-09-10）
+    chronicle: [], // 厨师年鉴：[{ key, at, kind, text }]（2026-09-10）
+    mascots: { owned: {}, active: null, pets: {}, lastPetDay: null }, // 吉祥物（2026-09-10）
+    banquet: { order: null, done: 0, failed: 0 }, // 宴会承办（2026-09-10）
+    takeout: { exp: 0, lastAt: 0, sold: 0, gold: 0 }, // 外卖业务：exp=累计完成单数（2026-09-10）
+    branchThemes: {}, // 分店主题：{ [branchId]: themeId }（2026-09-10）
+    contracts: {}, // 供应商合约：{ [supplierId]: { startedAt, expiresAt, lastDay, paid } }（2026-09-10）
+    chefChallenge: { week: null, cleared: [], current: null }, // 名厨挑战（2026-09-10）
     exchange: { dayKey: null, traded: {} }, // 交易所：{ dayKey, traded: { [itemId]: 已成交件数 } }（2026-09-10）
     trials: {}, // 厨神试炼：{ [trialId]: { clears, best, streak } }（2026-09-10）
     activeTrial: null, // 当前进行的试炼 id（一次性，不持久化）
@@ -556,6 +571,13 @@ export const usePlayerStore = defineStore('player', {
         regionPosting: saved.regionPosting ?? {}, // 采集队派驻
         legacy: saved.legacy ?? { carry: {}, apprentice: { level: 0, lastDay: null } }, // 师徒传承
         patron: saved.patron ?? { active: null, levels: {}, lastSwitchAt: 0 }, // 食神信仰
+        chronicle: Array.isArray(saved.chronicle) ? saved.chronicle : [], // 厨师年鉴
+        mascots: saved.mascots ?? { owned: {}, active: null, pets: {}, lastPetDay: null }, // 吉祥物
+        banquet: saved.banquet ?? { order: null, done: 0, failed: 0 }, // 宴会承办
+        takeout: saved.takeout ?? { exp: 0, lastAt: 0, sold: 0, gold: 0 }, // 外卖业务
+        branchThemes: saved.branchThemes ?? {}, // 分店主题
+        contracts: saved.contracts ?? {}, // 供应商合约
+        chefChallenge: saved.chefChallenge ?? { week: null, cleared: [], current: null }, // 名厨挑战
         exchange: saved.exchange ?? { dayKey: null, traded: {} }, // 交易所
         trials: saved.trials ?? {}, // 厨神试炼
         critic: saved.critic ?? { order: null, nextAt: 0 }, // 美食评论家
@@ -651,6 +673,13 @@ export const usePlayerStore = defineStore('player', {
         regionPosting: this.regionPosting,
         legacy: this.legacy,
         patron: this.patron,
+        chronicle: this.chronicle,
+        mascots: this.mascots,
+        banquet: this.banquet,
+        takeout: this.takeout,
+        branchThemes: this.branchThemes,
+        contracts: this.contracts,
+        chefChallenge: this.chefChallenge,
         exchange: this.exchange,
         trials: this.trials,
         critic: this.critic,
@@ -1542,6 +1571,11 @@ export const usePlayerStore = defineStore('player', {
       st.awarded.push(m.id)
       st.points += m.points
       EventBus.emit('season:mission', { name: m.name, points: m.points })
+      // 赛季年鉴（2026-09-10）：本赛季任务全清记一条
+      const season = getSeason(activeSeasonId())
+      if (season && st.awarded.length >= season.missions.length) {
+        this.recordChronicle(`season-all:${season.id}`, 'seasonal', `赛季「${season.name}」全部任务达成`)
+      }
     },
     seasonClaimTier(index) {
       const season = getSeason(activeSeasonId())
@@ -1554,6 +1588,10 @@ export const usePlayerStore = defineStore('player', {
       if (tier.reward?.gold) this.gainGold(tier.reward.gold)
       if (tier.reward?.items) this.gainItems(tier.reward.items)
       EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `奖励 ${index + 1}` })
+      // 赛季年鉴（2026-09-10）：领满全部档位记一条
+      if (st.claimed.length >= season.tiers.length) {
+        this.recordChronicle(`season-tier:${season.id}`, 'seasonal', `赛季「${season.name}」全部档位领取完毕`)
+      }
       return true
     },
 
@@ -1572,7 +1610,10 @@ export const usePlayerStore = defineStore('player', {
         a.wins++
         a.currentStreak++
         const brokeRecord = a.currentStreak > a.bestStreak
-        if (brokeRecord) a.bestStreak = a.currentStreak
+        if (brokeRecord) {
+          a.bestStreak = a.currentStreak
+          this.recordChronicle('arena:' + a.bestStreak, 'arena', `竞技场连胜纪录刷新：${a.bestStreak} 连胜`)
+        }
         a.records.push({ name, level, streak: a.currentStreak, date: Date.now() })
         if (a.records.length > 5) a.records = a.records.slice(-5)
 
@@ -2211,7 +2252,8 @@ export const usePlayerStore = defineStore('player', {
       const def = getBranch(id)
       const st = this.branches?.[id]
       if (!def || !st) return 0
-      return branchHourly(def, { manager: st.manager, restaurantLevel: this.restaurant?.level ?? 1 })
+      const base = branchHourly(def, { manager: st.manager, restaurantLevel: this.restaurant?.level ?? 1 })
+      return Math.round(base * (this.branchThemeMult?.(id) ?? 1)) // 主题加成（2026-09-10）
     },
     /** 每帧：分店收入结算（整点入账；离线按 12 小时上限补算） */
     _tickBranches() {
@@ -2789,6 +2831,364 @@ export const usePlayerStore = defineStore('player', {
       return patronEffectAt(def, def ? this.patronLevel(id) : 0)
     },
 
+    // ── 厨师年鉴（2026-09-10）：首次达成事件的时间线（同 key 只记一次，上限 CHRONICLE_CAP 条） ──
+    /** 记录一条年鉴（key 去重；返回是否新记入） */
+    recordChronicle(key, kind, text, at = Date.now()) {
+      if (!key || !text) return false
+      if (!Array.isArray(this.chronicle)) this.chronicle = []
+      if (this.chronicle.some((e) => e.key === key)) return false
+      this.chronicle.push({ key, kind, text, at })
+      if (this.chronicle.length > CHRONICLE_CAP) this.chronicle.splice(0, this.chronicle.length - CHRONICLE_CAP)
+      EventBus.emit('chronicle:add', { kind, text })
+      return true
+    },
+    /** 按类别统计条目数 */
+    chronicleCount(kind) {
+      return (this.chronicle ?? []).filter((e) => e.kind === kind).length
+    },
+
+    // ── 天气与运势（2026-09-10）：按自然日确定性抽取，纯日期计算（无存档状态） ──
+    /** 今日天气定义 */
+    todayWeather() {
+      return weatherForDay(this.todayKey ?? dayKeyOf())
+    },
+    /** 今日天气聚合加成（gatherYield 单独在采集产量处生效） */
+    weatherEffects() {
+      return weatherBoost(this.todayKey ?? dayKeyOf())
+    },
+    /** 今日运势：幸运食材 + 宜做三条 */
+    todayFortune() {
+      const key = this.todayKey ?? dayKeyOf()
+      const pool = Object.values(ITEMS).filter((it) => it.type === 'ingredient').map((it) => it.id)
+      return fortuneForDay(key, pool)
+    },
+    /** 某采集目标是否今日幸运食材（产量 +20%） */
+    luckyItemBonus(itemId) {
+      const f = this.todayFortune()
+      return f.luckyItem === itemId ? 0.2 : 0
+    },
+
+    // ── 吉祥物（2026-09-10）：购买后可每天「蹭一次」领随机奖励，好感等级提升奖励 ──
+    /** 吉祥物状态（惰性初始化） */
+    mascotState() {
+      if (!this.mascots || typeof this.mascots !== 'object') this.mascots = { owned: {}, active: null, pets: {}, lastPetDay: null }
+      if (!this.mascots.owned) this.mascots.owned = {}
+      if (!this.mascots.pets) this.mascots.pets = {}
+      return this.mascots
+    },
+    /** 购买吉祥物 */
+    mascotBuy(id) {
+      const def = getMascot(id)
+      const st = this.mascotState()
+      if (!def) return { ok: false, msg: '吉祥物不存在' }
+      if (st.owned[id]) return { ok: false, msg: '已拥有' }
+      if (this.gold < def.cost) return { ok: false, msg: `金币不足（需 ${def.cost.toLocaleString()}）` }
+      this.spendGold(def.cost)
+      st.owned[id] = true
+      if (!st.active) st.active = id
+      EventBus.emit('mascot:buy', { id, name: def.name, cost: def.cost })
+      return { ok: true }
+    },
+    /** 切换当前吉祥物（免费） */
+    mascotActivate(id) {
+      const st = this.mascotState()
+      if (!st.owned[id]) return { ok: false, msg: '尚未拥有' }
+      st.active = id
+      return { ok: true }
+    },
+    /** 今日是否已蹭过 */
+    mascotPettedToday() {
+      const st = this.mascotState()
+      return st.lastPetDay === (this.todayKey ?? dayKeyOf())
+    },
+    /** 蹭一蹭（每天一次）：给金币与可能的专属物品，累计次数升好感 */
+    mascotPet() {
+      const st = this.mascotState()
+      const id = st.active
+      const def = id ? getMascot(id) : null
+      if (!def) return { ok: false, msg: '请先购买并选择一位吉祥物' }
+      if (this.mascotPettedToday()) return { ok: false, msg: '今天已经蹭过了，明天再来' }
+      const pets = st.pets[id] ?? 0
+      const reward = mascotReward(def, pets)
+      st.pets[id] = pets + 1
+      st.lastPetDay = this.todayKey ?? dayKeyOf()
+      this.gainGold(reward.gold)
+      for (const [itemId, qty] of Object.entries(reward.items)) this.gainItem(itemId, qty)
+      this.stats.mascotPets = (this.stats.mascotPets ?? 0) + 1
+      const levelUp = mascotBondLevel(st.pets[id]) > mascotBondLevel(pets)
+      EventBus.emit('mascot:pet', { id, name: def.name, gold: reward.gold, items: reward.items, levelUp })
+      return { ok: true, reward, levelUp }
+    },
+    /** 某吉祥物的好感等级 / 进度 */
+    mascotBondLevelOf(id) {
+      return mascotBondLevel(this.mascotState().pets?.[id] ?? 0)
+    },
+    mascotBondProgressOf(id) {
+      return mascotBondProgress(this.mascotState().pets?.[id] ?? 0)
+    },
+
+    // ── 宴会承办（2026-09-10）：限时大订单，一次性交付指定类别料理换大奖 ──
+    /** 当前宴席订单（无单时按「今日 + 对决等级」生成候选，需玩家接单） */
+    banquetState() {
+      if (!this.banquet || typeof this.banquet !== 'object') this.banquet = { order: null, done: 0, failed: 0 }
+      return this.banquet
+    },
+    /** 生成今日候选订单（不落单，仅预览） */
+    banquetOffer() {
+      return makeBanquetOrder(this.combatLevel, this.todayKey ?? _todayStr())
+    },
+    /** 接单：写入订单并开始计时 */
+    banquetAccept() {
+      const st = this.banquetState()
+      if (st.order) return { ok: false, msg: '已有进行中的宴席' }
+      const offer = this.banquetOffer()
+      st.order = { ...offer, acceptedAt: Date.now(), expiresAt: Date.now() + offer.hours * 3600_000 }
+      EventBus.emit('banquet:accept', { name: offer.tierName, cat: offer.cat, need: offer.need, hours: offer.hours })
+      return { ok: true, order: st.order }
+    },
+    /** 当前订单可交付份数（库存内符合类别 + tier 的料理） */
+    banquetReady() {
+      const o = this.banquetState().order
+      return o ? banquetAvailable(this, o, ITEMS) : 0
+    },
+    /** 交付：扣除料理并发奖（需库存达标且在时限内） */
+    banquetDeliver() {
+      const st = this.banquetState()
+      const o = st.order
+      if (!o) return { ok: false, msg: '当前没有宴席订单' }
+      if (Date.now() > o.expiresAt) return { ok: false, msg: '订单已超时' }
+      let left = o.need
+      const take = []
+      for (const [id, qty] of Object.entries({ ...this.inventory })) {
+        if (left <= 0) break
+        const it = ITEMS[id]
+        if (!it || it.type !== 'food' || it.category !== o.cat || (it.tier ?? 0) < o.minTier) continue
+        const use = Math.min(qty, left)
+        take.push([id, use]); left -= use
+      }
+      if (left > 0) return { ok: false, msg: `还差 ${left} 份${o.cat}（tier ≥ ${o.minTier}）` }
+      for (const [id, qty] of take) this.spendItem(id, qty)
+      this.gainGold(o.gold)
+      if (o.spice) this.gainItem('mysterySpice', o.spice)
+      const favor = this.restaurant.favor ?? { xp: 0 }
+      favor.xp = (favor.xp ?? 0) + 60
+      this.restaurant.favor = favor
+      st.done = (st.done ?? 0) + 1
+      st.order = null
+      this.stats.banquets = (this.stats.banquets ?? 0) + 1
+      EventBus.emit('banquet:done', { name: o.tierName, gold: o.gold, spice: o.spice })
+      return { ok: true, gold: o.gold, spice: o.spice }
+    },
+    /** 放弃当前订单（不惩罚，仅作废） */
+    banquetAbandon() {
+      const st = this.banquetState()
+      if (!st.order) return false
+      st.order = null
+      st.failed = (st.failed ?? 0) + 1
+      return true
+    },
+    /** 每帧：超时订单自动作废 */
+    _tickBanquet() {
+      const st = this.banquetState()
+      if (st.order && Date.now() > st.order.expiresAt) {
+        st.order = null
+        st.failed = (st.failed ?? 0) + 1
+        EventBus.emit('banquet:expired', {})
+      }
+    },
+
+    // ── 外卖业务（2026-09-10）：每小时消耗库存料理换金币（单价高于堂食） ──
+    /** 外卖等级（按累计完成单数） */
+    takeoutLevel() {
+      return takeoutLevelFromExp(this.takeout?.exp ?? 0)
+    },
+    /** 升级到下一级的花费（满级返回 null） */
+    takeoutNextCost() {
+      return takeoutUpgradeCost(this.takeoutLevel() + 1)
+    },
+    /** 手动升级（也随单数自然升级，这里给"花钱加速"的选项） */
+    takeoutUpgrade() {
+      const cost = this.takeoutNextCost()
+      if (cost == null) return { ok: false, msg: '已达最高等级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.takeout) this.takeout = { exp: 0, lastAt: 0, sold: 0, gold: 0 }
+      this.takeout.exp = this.takeoutLevel() * 50 // 直接补足到下一级门槛
+      EventBus.emit('takeout:upgrade', { level: this.takeoutLevel(), cost })
+      return { ok: true, level: this.takeoutLevel() }
+    },
+    /** 每小时外卖结算：按等级并发单量，从菜单料理里挑选有库存的卖出 */
+    _tickTakeout(deltaMs) {
+      this._takeoutAccum = (this._takeoutAccum ?? 0) + deltaMs
+      if (this._takeoutAccum < 60_000) return
+      this._takeoutAccum = 0
+      const now = Date.now()
+      if (!this.takeout) this.takeout = { exp: 0, lastAt: 0, sold: 0, gold: 0 }
+      if (!this.takeout.lastAt) { this.takeout.lastAt = now; return }
+      const hours = Math.floor((now - this.takeout.lastAt) / 3600_000)
+      if (hours < 1) return
+      this.takeout.lastAt += hours * 3600_000
+      const level = this.takeoutLevel()
+      const perHour = takeoutConcurrency(level)
+      let sold = 0
+      let gold = 0
+      for (let h = 0; h < hours; h++) {
+        for (let i = 0; i < perHour; i++) {
+          const id = this._pickTakeoutDish()
+          if (!id) break
+          this.spendItem(id, 1)
+          const price = takeoutPrice(ITEMS[id], level)
+          gold += price
+          sold++
+        }
+      }
+      if (sold > 0) {
+        this.gainGold(gold)
+        this.takeout.exp = (this.takeout.exp ?? 0) + sold
+        this.takeout.sold = (this.takeout.sold ?? 0) + sold
+        this.takeout.gold = (this.takeout.gold ?? 0) + gold
+        this.stats.takeoutSold = (this.stats.takeoutSold ?? 0) + sold
+        EventBus.emit('takeout:done', { sold, gold, level: this.takeoutLevel() })
+      }
+    },
+    /** 挑一份可外送的料理（优先菜单里的、库存最多的） */
+    _pickTakeoutDish() {
+      const menu = (this.restaurant?.menu ?? []).filter((id) => (this.inventory[id] ?? 0) > 0)
+      if (menu.length) {
+        menu.sort((a, b) => (this.inventory[b] ?? 0) - (this.inventory[a] ?? 0))
+        return menu[0]
+      }
+      // 菜单空时退而求其次：任意库存料理（按价值降序）
+      const any = Object.keys(this.inventory).filter((id) => ITEMS[id]?.type === 'food' && this.inventory[id] > 0)
+      any.sort((a, b) => (ITEMS[b]?.value ?? 0) - (ITEMS[a]?.value ?? 0))
+      return any[0] ?? null
+    },
+
+    // ── 分店主题（2026-09-10）：给分店选主题，与菜系研究联动加成时收 ──
+    /** 某分店主题 id（无 → null） */
+    branchThemeOf(branchId) {
+      return this.branchThemes?.[branchId] ?? null
+    },
+    /** 设置 / 更换分店主题（一次性金币，换主题需重新付费） */
+    setBranchTheme(branchId, themeId) {
+      const def = getBranchTheme(themeId)
+      if (!def) return { ok: false, msg: '主题不存在' }
+      if (!this.branches?.[branchId]) return { ok: false, msg: '该分店尚未开业' }
+      if (this.branchThemeOf(branchId) === themeId) return { ok: false, msg: '已是该主题' }
+      if (this.gold < def.cost) return { ok: false, msg: `金币不足（需 ${def.cost.toLocaleString()}）` }
+      this.spendGold(def.cost)
+      if (!this.branchThemes) this.branchThemes = {}
+      this.branchThemes[branchId] = themeId
+      EventBus.emit('branch:theme', { branchId, name: def.name, cost: def.cost })
+      return { ok: true }
+    },
+    /** 某分店的主题加成倍率（= 1 + 6% × 对应学派等级） */
+    branchThemeMult(branchId) {
+      const themeId = this.branchThemeOf(branchId)
+      if (!themeId) return 1
+      const def = getBranchTheme(themeId)
+      const lv = this.schoolState?.(def.school)?.level ?? 0
+      return themeMult(themeId, lv)
+    },
+
+    // ── 供应商合约（2026-09-10）：锁价长约，每日自动到货（离线按自然日补算） ──
+    /** 当前生效的合约列表 */
+    activeContracts() {
+      const now = Date.now()
+      return Object.entries(this.contracts ?? {})
+        .filter(([, c]) => (c?.expiresAt ?? 0) > now)
+        .map(([id, c]) => ({ def: getSupplier(id), ...c }))
+        .filter((c) => !!c.def)
+    },
+    /** 签约（一次性定金，期限 7 天） */
+    signContract(supplierId) {
+      const def = getSupplier(supplierId)
+      if (!def) return { ok: false, msg: '供应商不存在' }
+      if (this.activeContracts().length >= SUPPLIER_MAX_CONTRACTS) return { ok: false, msg: `最多同时 ${SUPPLIER_MAX_CONTRACTS} 份合约` }
+      if (this.activeContracts().some((c) => c.def.id === supplierId)) return { ok: false, msg: '该合约已在生效' }
+      if (this.gold < def.deposit) return { ok: false, msg: `金币不足（需 ${def.deposit.toLocaleString()}）` }
+      this.spendGold(def.deposit)
+      if (!this.contracts) this.contracts = {}
+      const now = Date.now()
+      this.contracts[supplierId] = { startedAt: now, expiresAt: now + SUPPLIER_TERM_DAYS * 86400_000, lastDay: null, paid: 0 }
+      EventBus.emit('supplier:sign', { id: supplierId, name: def.name, deposit: def.deposit, days: SUPPLIER_TERM_DAYS })
+      return { ok: true }
+    },
+    /** 解约（定金不退） */
+    cancelContract(supplierId) {
+      if (!this.contracts?.[supplierId]) return false
+      delete this.contracts[supplierId]
+      return true
+    },
+    /** 每帧：合约按自然日结算（金币够才到货；不够则顺延不累积） */
+    _tickContracts() {
+      if (!this.contracts) return
+      const today = this.todayKey ?? _todayStr()
+      const now = Date.now()
+      for (const [id, c] of Object.entries(this.contracts)) {
+        const def = getSupplier(id)
+        if (!def) { delete this.contracts[id]; continue }
+        if ((c.expiresAt ?? 0) <= now) {
+          delete this.contracts[id]
+          EventBus.emit('supplier:expire', { name: def.name })
+          continue
+        }
+        if (c.lastDay === today) continue
+        if (!c.lastDay) { c.lastDay = today; continue } // 首日记时不补历史
+        const it = getItem(def.itemId)
+        const cost = supplierDailyCost(def, it?.value ?? 0)
+        if (this.gold < cost) continue // 金币不足：今日不到货，明日再试
+        this.spendGold(cost)
+        this.gainItem(def.itemId, def.qty)
+        c.lastDay = today
+        c.paid = (c.paid ?? 0) + cost
+        this.stats.contractDeliveries = (this.stats.contractDeliveries ?? 0) + 1
+        EventBus.emit('supplier:deliver', { name: def.name, itemId: def.itemId, qty: def.qty, cost })
+      }
+    },
+
+    // ── 名厨挑战（2026-09-10）：每周一位名厨，固定流派，战胜给大奖 ──
+    /** 本周名厨 */
+    chefOfWeek() {
+      return chefForWeek(Math.floor(Date.now() / (7 * 24 * 3600_000)))
+    },
+    /** 本周是否已战胜该名厨 */
+    chefClearedThisWeek() {
+      const c = this.chefChallenge ?? {}
+      const week = Math.floor(Date.now() / (7 * 24 * 3600_000))
+      return c.week === week && (c.cleared ?? []).includes(this.chefOfWeek().id)
+    },
+    /** 开始挑战（标记当前名厨，由视图生成对手） */
+    chefStart() {
+      const def = this.chefOfWeek()
+      if (this.chefClearedThisWeek()) return { ok: false, msg: '本周已战胜该名厨' }
+      if (!this.chefChallenge) this.chefChallenge = { week: null, cleared: [], current: null }
+      this.chefChallenge.current = def.id
+      return { ok: true, chef: def }
+    },
+    /** 放弃当前名厨挑战 */
+    chefAbort() {
+      if (this.chefChallenge?.current) this.chefChallenge.current = null
+    },
+    /** 战斗结束回调（由 combat:end 驱动）：胜利则发奖。
+     *  opponentName 必须与本周名厨的对手名一致——中途逃跑后再赢别的对手不会误领（2026-09-10）。 */
+    onCombatEndChef(result, opponentName) {
+      const def = getChef(this.chefChallenge?.current)
+      if (!def) return null
+      if (opponentName && opponentName !== `${def.icon} ${def.name}`) return null
+      if (result !== 'win') { this.chefChallenge.current = null; return { passed: false, name: def.name } }
+      const week = Math.floor(Date.now() / (7 * 24 * 3600_000))
+      if (this.chefChallenge.week !== week) { this.chefChallenge.week = week; this.chefChallenge.cleared = [] }
+      const reward = chefReward(def, this.combatLevel)
+      this.gainGold(reward.gold)
+      for (const [itemId, qty] of Object.entries(reward.items)) this.gainItem(itemId, qty)
+      this.chefChallenge.cleared.push(def.id)
+      this.chefChallenge.current = null
+      this.stats.chefWins = (this.stats.chefWins ?? 0) + 1
+      EventBus.emit('chef:win', { name: def.name, gold: reward.gold })
+      return { passed: true, name: def.name, gold: reward.gold }
+    },
+
     /** 自动补给（2026-09-09 放置化）：狩猎陷阱 / 摆盘装饰食材低于阈值时，自动从杂货铺补货（保留金币下限） */
     _tickAutoSupply(deltaMs) {
       if (this.settings?.autoSupply === false) return
@@ -2982,7 +3382,9 @@ export const usePlayerStore = defineStore('player', {
       const st = this.realmState()
       if (!st.active) return null
       st.floor++
+      const prevBest = st.best ?? 0
       st.best = Math.max(st.best ?? 0, st.floor)
+      if (st.best > prevBest) this.recordChronicle('realm:' + st.best, 'realm', `食神秘境推进到第 ${st.best} 层`)
       st.pending = rollRealmChoices(3)
       EventBus.emit('realm:floor', { floor: st.floor })
       return st.pending
@@ -3064,7 +3466,9 @@ export const usePlayerStore = defineStore('player', {
     onTowerWin(floor) {
       this.bumpChallenge('tower', floor) // 每周挑战赛：塔层（2026-09-09）
       const t = this.tower ?? { floor: 1, best: 0, rewarded: [] }
+      const tPrev = t.best ?? 0
       t.best = Math.max(t.best ?? 0, floor)
+      if (t.best > tPrev) this.recordChronicle('tower:' + t.best, 'tower', `无尽挑战塔推进到第 ${t.best} 层`)
       t.floor = floor + 1
       t.rewarded = t.rewarded ?? []
       const m = towerMilestone(floor)
@@ -3092,12 +3496,13 @@ export const usePlayerStore = defineStore('player', {
       const base = aggregateMarketBoost(hour, weekday)
       if (hour !== null || weekday !== null) return base // 显式传参：纯函数路径（测试/预览）
       const fest = this.festivalBoost?.() ?? { restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1 }
+      const wx = this.weatherEffects?.() ?? { restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1 } // 天气（2026-09-10）
       return {
         ...base,
-        restaurant: (base.restaurant ?? 1) * (fest.restaurant ?? 1),
-        gatherXp: (base.gatherXp ?? 1) * (fest.gatherXp ?? 1),
-        craftXp: (base.craftXp ?? 1) * (fest.craftXp ?? 1),
-        combatXp: (base.combatXp ?? 1) * (fest.combatXp ?? 1),
+        restaurant: (base.restaurant ?? 1) * (fest.restaurant ?? 1) * (wx.restaurant ?? 1),
+        gatherXp: (base.gatherXp ?? 1) * (fest.gatherXp ?? 1) * (wx.gatherXp ?? 1),
+        craftXp: (base.craftXp ?? 1) * (fest.craftXp ?? 1) * (wx.craftXp ?? 1),
+        combatXp: (base.combatXp ?? 1) * (fest.combatXp ?? 1) * (wx.combatXp ?? 1),
       }
     },
     /** 今日节庆聚合加成（2026-09-10）：纯日期计算，无存档状态 */
@@ -3355,6 +3760,9 @@ export const usePlayerStore = defineStore('player', {
       this._tickMichelin() // 米其林评级（2026-09-10）
       this._tickStaff() // 雇工班底发薪（2026-09-10）
       this._tickApprentice() // 师徒传承：徒弟成长（2026-09-10）
+      this._tickBanquet() // 宴会承办超时检查（2026-09-10）
+      this._tickTakeout(deltaMs) // 外卖业务（2026-09-10）
+      this._tickContracts() // 供应商合约按日结算（2026-09-10）
       this._tickCritic(deltaMs) // 美食评论家到访（2026-09-09）
 
       // 周期任务：腐坏 / 成就 / 任务同步 / 赛季同步

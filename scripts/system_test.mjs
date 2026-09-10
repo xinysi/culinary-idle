@@ -22,6 +22,16 @@ import { STAFF, staffCost, staffWage } from '../src/game/data/staff.js'
 import { REGIONS } from '../src/game/data/regions.js'
 import { carryFromLevel } from '../src/game/data/legacy.js'
 import { PATRONS, patronCost, PATRON_SWITCH_GOLD } from '../src/game/data/patrons.js'
+import { MILESTONES, milestoneSummary } from '../src/game/data/milestones.js'
+import { CHRONICLE_CAP, groupByDay } from '../src/game/data/chronicle.js'
+import { weatherForDay } from '../src/game/data/weather.js'
+import { MASCOTS, mascotBondLevel, mascotReward } from '../src/game/data/mascots.js'
+import { banquetTierFor } from '../src/game/data/banquets.js'
+import { takeoutConcurrency, takeoutUpgradeCost, takeoutPrice, TAKEOUT_MAX_LEVEL } from '../src/game/data/takeout.js'
+import { BRANCH_THEMES, themeMult, THEME_BONUS_PER_LEVEL } from '../src/game/data/branchThemes.js'
+import { BRANCHES } from '../src/game/data/branches.js'
+import { SUPPLIERS, supplierDailyCost, SUPPLIER_MAX_CONTRACTS, SUPPLIER_PRICE_MULT } from '../src/game/data/suppliers.js'
+import { CHEFS, chefForWeek, chefOpponent, chefReward } from '../src/game/data/chefChallenges.js'
 import { realmOpponent } from '../src/game/data/mysticRealm.js'
 import { FishingSkill } from '../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../src/game/skills/HuntingSkill.js'
@@ -891,6 +901,208 @@ console.log('══ E. 离线进度 ══')
     const expect = Math.round(base * 1.12)
     check('信仰', '窖神加成生效（+12%）', pp.gold === gold0 + expect, `got=${pp.gold - gold0} expect=${expect}`)
   }
+  // 里程碑之路（2026-09-10）：长线目标聚合与进度
+  {
+    const pm = freshPlayer()
+    const s0 = milestoneSummary(pm)
+    check('里程碑', '定义完整且新档完成数为 0', MILESTONES.length >= 20 && s0.total === MILESTONES.length && s0.done === 0, JSON.stringify(s0))
+    check('里程碑', '每个定义都有 value 函数', MILESTONES.every((m) => typeof m.value === 'function' && m.target > 0 && !!m.group))
+    // 造进度：转生 3 次、图鉴若干、首领 2 位
+    pm.stats.prestiges = 3
+    pm.stats.bosses = ['面条之王', '火锅真君']
+    pm.collected = { ...pm.collected, apple: 1, wheat: 1 }
+    const s1 = milestoneSummary(pm)
+    check('里程碑', '进度随玩家数据变化', s1.done >= 0 && s1.byGroup['成长'].total > 0)
+    // 单项进度不超目标（进度条不溢出）
+    pm.guild.points = 999999
+    const g = MILESTONES.find((m) => m.id === 'm_guildMax')
+    check('里程碑', '进度按目标截断', Math.min(g.target, g.value(pm)) === g.target)
+    // 达成判定
+    pm.skills.foraging.level = 120
+    const m120 = MILESTONES.find((m) => m.id === 'm_skill120')
+    check('里程碑', '达成判定正确（技能 120 级）', m120.value(pm) >= m120.target)
+  }
+  // 厨师年鉴（2026-09-10）：首次达成事件去重记录
+  {
+    const pc = freshPlayer()
+    check('年鉴', '新档年鉴为空', (pc.chronicle ?? []).length === 0)
+    const r1 = pc.recordChronicle('boss:面条之王', 'boss', '首次击败首领「面条之王」')
+    check('年鉴', '记录一条', r1 === true && pc.chronicle.length === 1 && pc.chronicleCount('boss') === 1)
+    check('年鉴', '同 key 不重复记录', pc.recordChronicle('boss:面条之王', 'boss', '重复内容') === false && pc.chronicle.length === 1)
+    pc.recordChronicle('boss:火锅真君', 'boss', '首次击败首领「火锅真君」')
+    pc.recordChronicle('prestige:1', 'prestige', '完成第 1 次转生')
+    check('年鉴', '分类计数正确', pc.chronicleCount('boss') === 2 && pc.chronicleCount('prestige') === 1)
+    check('年鉴', '条目含时间戳与文本', pc.chronicle.every((e) => typeof e.at === 'number' && !!e.text && !!e.kind))
+    // 上限裁剪
+    for (let i = 0; i < 320; i++) pc.recordChronicle('bulk:' + i, 'boss', '批量 ' + i)
+    check('年鉴', '超出上限自动裁剪', pc.chronicle.length === CHRONICLE_CAP, `len=${pc.chronicle.length}`)
+    // 按日分组
+    const days = groupByDay([{ key: 'a', kind: 'boss', text: 'x', at: Date.now() }, { key: 'b', kind: 'boss', text: 'y', at: Date.now() }])
+    check('年鉴', '按自然日分组', days.length === 1 && days[0].entries.length === 2)
+  }
+  // 天气与运势（2026-09-10）：按自然日确定性抽取
+  {
+    const pw = freshPlayer()
+    const wx = pw.todayWeather()
+    check('天气', '今日天气确定性（同日同结果）', wx.id === pw.todayWeather().id && !!wx.name && !!wx.icon)
+    check('天气', '不同日期可给出不同天气', new Set([1, 2, 3, 4, 5, 6].map((i) => weatherForDay('2026-09-0' + i).id)).size > 1)
+    const fx = pw.weatherEffects()
+    check('天气', '加成为 marketBoost 口径（含天气定义）', fx.weather?.id === wx.id && typeof fx.gatherYield === 'number' && typeof fx.restaurant === 'number')
+    const f = pw.todayFortune()
+    check('运势', '幸运食材来自物品池', !!ITEMS[f.luckyItem] && f.tips.length === 3)
+    check('运势', '幸运食材加成 20%', pw.luckyItemBonus(f.luckyItem) === 0.2 && pw.luckyItemBonus('__none__') === 0)
+    // 天气并入 marketBoost（无参路径）
+    const real = pw.marketBoost.bind(pw)
+    pw.marketBoost = () => real()
+    const mb = pw.marketBoost()
+    const expect = fx.gatherXp
+    check('天气', 'marketBoost 已乘入天气倍率', Math.abs(mb.gatherXp - expect) < 1e-9, `mb=${mb.gatherXp} wx=${expect}`)
+  }
+  // 吉祥物（2026-09-10）：购买 + 每日蹭一次 + 好感等级
+  {
+    const pm2 = freshPlayer()
+    pm2.gold = 200000
+    check('吉祥物', '未购买时蹭被拒', pm2.mascotPet().ok === false)
+    const b1 = pm2.mascotBuy('cat')
+    check('吉祥物', '购买扣金币并自动上岗', b1.ok === true && pm2.gold === 192000 && pm2.mascotState().active === 'cat')
+    check('吉祥物', '重复购买被拒', pm2.mascotBuy('cat').ok === false)
+    const g0 = pm2.gold
+    const p1 = pm2.mascotPet()
+    check('吉祥物', '蹭一次给金币 + 计数', p1.ok === true && pm2.gold > g0 && (pm2.stats.mascotPets ?? 0) === 1)
+    check('吉祥物', '同日不可重复蹭', pm2.mascotPet().ok === false)
+    // 好感等级：蹭次数门槛 1/5/15/30/60
+    check('吉祥物', '好感等级按次数', mascotBondLevel(1) === 1 && mascotBondLevel(5) === 2 && mascotBondLevel(60) === 5)
+    pm2.mascotState().pets.cat = 60
+    check('吉祥物', '好感满级加成 +125%（金币基础 ×2.25）', mascotReward(MASCOTS[0], 60, () => 1).gold === Math.round(MASCOTS[0].goldBase * 2.25))
+    check('吉祥物', '切换吉祥物免费但需已拥有', pm2.mascotActivate('koi').ok === false && pm2.mascotActivate('cat').ok === true)
+  }
+  // 宴会承办（2026-09-10）：限时大订单
+  {
+    const pb = freshPlayer()
+    check('宴会', '候选订单随等级变化', banquetTierFor(1).id === 'b10' && banquetTierFor(50).id === 'b40' && banquetTierFor(75).id === 'b60')
+    const ac = pb.banquetAccept()
+    check('宴会', '接单后进入进行中', ac.ok === true && !!pb.banquetState().order)
+    check('宴会', '重复接单被拒', pb.banquetAccept().ok === false)
+    check('宴会', '库存不足不可交付', pb.banquetDeliver().ok === false)
+    // 造货：按订单类别造足量 tier 合格的料理
+    const o = pb.banquetState().order
+    const dish = Object.values(ITEMS).find((it) => it.type === 'food' && it.category === o.cat && (it.tier ?? 0) >= o.minTier)
+    pb.inventory[dish.id] = o.need + 3
+    check('宴会', '备齐后可交付', pb.banquetReady() >= o.need && pb.banquetDeliver().ok === true && (pb.stats.banquets ?? 0) === 1)
+    check('宴会', '交付扣料理并清空订单', pb.inventory[dish.id] === 3 && pb.banquetState().order === null)
+    // 超时作废
+    pb.banquetAccept()
+    pb.banquetState().order.expiresAt = Date.now() - 1
+    pb._tickBanquet()
+    check('宴会', '超时自动作废', pb.banquetState().order === null && pb.banquetState().failed === 1)
+  }
+  // 外卖业务（2026-09-10）：按小时消耗库存料理换金币
+  {
+    const pt2 = freshPlayer()
+    check('外卖', '初始 Lv1、并发 1 单', pt2.takeoutLevel() === 1 && takeoutConcurrency(1) === 1)
+    check('外卖', '已满级时无升级花费（next=null）', takeoutUpgradeCost(TAKEOUT_MAX_LEVEL + 1) === null && takeoutUpgradeCost(2) === 20000)
+    check('外卖', '升级扣金币并提升等级', (() => {
+      pt2.gold = 100000
+      const lv0 = pt2.takeoutLevel()
+      const r = pt2.takeoutUpgrade()
+      return r.ok === true && pt2.takeoutLevel() === lv0 + 1
+    })())
+    // 造菜单与库存 → 一小时结算
+    const dish2 = Object.values(ITEMS).find((it) => it.type === 'food' && (it.value ?? 0) > 20)
+    pt2.restaurant.menu = [dish2.id, dish2.id]
+    pt2.inventory[dish2.id] = 10
+    const g0 = pt2.gold
+    pt2.takeout.lastAt = Date.now() - 3600_000
+    pt2._tickTakeout(60_000)
+    check('外卖', '整点结算：消耗料理换金币', pt2.inventory[dish2.id] < 10 && pt2.gold > g0 && (pt2.stats.takeoutSold ?? 0) > 0, `sold=${pt2.stats.takeoutSold}`)
+    check('外卖', '单价高于堂食基准（×1.2 起）', takeoutPrice(dish2, 1) >= Math.round((dish2.value + (dish2.heal ?? 0) * 0.5) * 1.2))
+  }
+
+  // 分店主题（2026-09-10）：主题倍率 = 1 + 6% × 对应学派等级
+  {
+    check('分店主题', '倍率随学派等级递增', themeMult('sichuan', 0) === 1 && Math.abs(themeMult('sichuan', 10) - (1 + THEME_BONUS_PER_LEVEL * 10 / 100)) < 1e-9)
+    check('分店主题', '未知主题不加成', themeMult('nope', 20) === 1)
+    check('分店主题', `六种主题各绑一个学派（${BRANCH_THEMES.length} 种）`, BRANCH_THEMES.length === 6 && BRANCH_THEMES.every((t) => t.school && t.cost > 0))
+    const pb = freshPlayer()
+    const bid = BRANCHES[0].id
+    check('分店主题', '未开店不可设主题', pb.setBranchTheme(bid, 'sichuan').ok === false)
+    pb.branches[bid] = { lastAt: Date.now(), manager: false }
+    check('分店主题', '金币不足被拒', (() => { pb.gold = 10; return pb.setBranchTheme(bid, 'sichuan').ok === false })())
+    pb.gold = 1_000_000
+    const base = pb.branchHourlyOf(bid)
+    check('分店主题', '设主题扣金币并写入', pb.setBranchTheme(bid, 'sichuan').ok === true && pb.branchThemeOf(bid) === 'sichuan' && pb.gold === 1_000_000 - BRANCH_THEMES[0].cost)
+    check('分店主题', '重复设同主题被拒', pb.setBranchTheme(bid, 'sichuan').ok === false)
+    check('分店主题', '学派 0 级时主题不加成（倍率 1）', pb.branchHourlyOf(bid) === base && base > 0, `hourly=${pb.branchHourlyOf(bid)} base=${base}`)
+    pb.schools = { s_main: { level: 20, research: null } }
+    check('分店主题', '学派等级提升后时收增加', pb.branchHourlyOf(bid) > base, `${pb.branchHourlyOf(bid)} vs ${base}`)
+    check('分店主题', '可换成另一主题', pb.setBranchTheme(bid, 'bar').ok === true && pb.branchThemeOf(bid) === 'bar')
+  }
+  // 供应商合约（2026-09-10）：定金签 7 天，按自然日自动到货
+  {
+    check('供应商', `单价为物价 ${Math.round(SUPPLIER_PRICE_MULT * 100)}%`, supplierDailyCost(SUPPLIERS[0], 100) === Math.round(100 * SUPPLIER_PRICE_MULT * SUPPLIERS[0].qty))
+    check('供应商', '数量与定金为正', SUPPLIERS.every((s) => s.qty > 0 && s.deposit > 0 && ITEMS[s.itemId]))
+    const pb = freshPlayer()
+    check('供应商', '金币不足不可签约', (() => { pb.gold = 0; return pb.signContract(SUPPLIERS[0].id).ok === false })())
+    pb.gold = 5_000_000
+    const dep = SUPPLIERS[0].deposit
+    check('供应商', '签约扣定金并生效', pb.signContract(SUPPLIERS[0].id).ok === true && pb.gold === 5_000_000 - dep && pb.activeContracts().length === 1)
+    check('供应商', '重复签约被拒', pb.signContract(SUPPLIERS[0].id).ok === false)
+    // 首日只计时不到货
+    const def0 = SUPPLIERS[0]
+    const have0 = pb.inventory[def0.itemId] ?? 0
+    pb._tickContracts()
+    check('供应商', '签约首日只计时不到货', (pb.inventory[def0.itemId] ?? 0) === have0 && pb.contracts[def0.id].lastDay === (pb.todayKey ?? null) || pb.contracts[def0.id].lastDay !== null)
+    // 隔日到货
+    const cost = supplierDailyCost(def0, ITEMS[def0.itemId].value)
+    const g1 = pb.gold
+    pb.contracts[def0.id].lastDay = '2000-01-01'
+    pb._tickContracts()
+    check('供应商', '隔日自动到货并扣货款', (pb.inventory[def0.itemId] ?? 0) === have0 + def0.qty && pb.gold === g1 - cost, `inv=${pb.inventory[def0.itemId]} gold=${pb.gold}`)
+    check('供应商', '到货计入统计', (pb.stats.contractDeliveries ?? 0) === 1)
+    // 金币不足当日不到货、不累积
+    pb.gold = 0
+    const have1 = pb.inventory[def0.itemId]
+    pb.contracts[def0.id].lastDay = '2000-01-02'
+    pb._tickContracts()
+    check('供应商', '金币不足当日不到货', (pb.inventory[def0.itemId] ?? 0) === have1)
+    // 合约上限
+    pb.gold = 10_000_000
+    pb.signContract(SUPPLIERS[1].id); pb.signContract(SUPPLIERS[2].id)
+    check('供应商', `同时最多 ${SUPPLIER_MAX_CONTRACTS} 份合约`, pb.activeContracts().length === SUPPLIER_MAX_CONTRACTS && pb.signContract(SUPPLIERS[3].id).ok === false)
+    // 到期自动失效
+    pb.contracts[SUPPLIERS[1].id].expiresAt = Date.now() - 1
+    pb._tickContracts()
+    check('供应商', '到期自动失效', !pb.contracts[SUPPLIERS[1].id] && pb.activeContracts().length === SUPPLIER_MAX_CONTRACTS - 1)
+    // 解约
+    check('供应商', '解约立即移除', pb.cancelContract(SUPPLIERS[0].id) === true && !pb.contracts[SUPPLIERS[0].id])
+  }
+  // 名厨挑战（2026-09-10）：每周一位名厨，固定流派，战胜给奖
+  {
+    check('名厨', `名单 ${CHEFS.length} 位且流派合法`, CHEFS.length === 8 && CHEFS.every((c) => ['knife', 'plating', 'flavor'].includes(c.style) && c.levelOffset > 0))
+    check('名厨', '按周确定性轮换', chefForWeek(0).id === CHEFS[0].id && chefForWeek(CHEFS.length).id === CHEFS[0].id && chefForWeek(1).id === CHEFS[1].id)
+    const pb = freshPlayer()
+    const def = chefForWeek(Math.floor(Date.now() / (7 * 24 * 3600_000)))
+    const o = chefOpponent(def, 10)
+    check('名厨', '对手等级 = 玩家等级 + 偏移', o.level === 10 + def.levelOffset && o.isChef === true && o.style === def.style)
+    check('名厨', '对手等级封顶 99', chefOpponent(def, 99).level === 99)
+    check('名厨', '本周初始未通过', pb.chefClearedThisWeek() === false)
+    check('名厨', '开始挑战标记当前名厨', pb.chefStart().ok === true && pb.chefChallenge.current === def.id)
+    // 中途逃跑后打赢别的对手不误领：对手名不匹配
+    check('名厨', '对手名不匹配不结算', pb.onCombatEndChef('win', '别的对手') === null && pb.chefChallenge.current === def.id)
+    const rw = chefReward(def, pb.combatLevel)
+    const g0 = pb.gold
+    const res = pb.onCombatEndChef('win', `${def.icon} ${def.name}`)
+    check('名厨', '战胜发奖并标记通过', res?.passed === true && pb.gold === g0 + rw.gold && pb.chefClearedThisWeek() === true)
+    check('名厨', '战胜计入统计', (pb.stats.chefWins ?? 0) === 1)
+    check('名厨', '通过后不可再挑战', pb.chefStart().ok === false)
+    // 失败可重复挑战
+    const pb2 = freshPlayer()
+    pb2.chefStart()
+    const r2 = pb2.onCombatEndChef('lose', `${def.icon} ${def.name}`)
+    check('名厨', '失败可重复挑战', r2?.passed === false && pb2.chefClearedThisWeek() === false && pb2.chefStart().ok === true)
+    check('名厨', '放弃清空当前挑战', (pb2.chefAbort(), pb2.chefChallenge.current === null))
+  }
+
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限
   {
     const pa = freshPlayer()

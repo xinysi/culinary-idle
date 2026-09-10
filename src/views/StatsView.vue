@@ -10,6 +10,8 @@ import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
 import { REGIONS } from '../game/data/regions.js'
+import { milestoneSummary } from '../game/data/milestones.js'
+import { getItem } from '../game/data/items.js'
 import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
 
 const player = usePlayerStore()
@@ -28,6 +30,7 @@ const seasonClaimed = computed(() =>
   Object.values(player.seasons ?? {}).reduce((a, s) => a + (s.claimed?.length ?? 0), 0)
 )
 // 厨房笔记（2026-09-10）：配方精通分布（只读 player.skills[*].mastery）
+const msSummary = computed(() => milestoneSummary(player))
 const recipeMastery = computed(() => {
   const lv = []
   for (const s of skills.value) {
@@ -102,7 +105,17 @@ const sections = computed(() => [
       { label: '产地考察', value: Object.keys(player.regions ?? {}).length, sub: ` / ${REGIONS.length} 个 · 派驻 ${Object.keys(player.regionPosting ?? {}).length} 条线路` },
       { label: '徒弟', value: `Lv${player.apprenticeState().level}`, sub: ` ${player.apprenticeRankName()} · 离线效率 ${Math.round((0.8 + player.apprenticeOfflineBonus()) * 100)}%` },
       { label: '守护神信仰', value: player.patronActiveId() ? `Lv${player.patronLevel(player.patronActiveId())}` : '无', sub: ' 信仰等级（供奉永久保留）' },
+      { label: '里程碑', value: msSummary.value.done, sub: ` / ${msSummary.value.total} 项（${msSummary.value.pct}%）` },
+      { label: '年鉴记录', value: (player.chronicle ?? []).length, sub: ' 条（首次达成时间线）' },
+      { label: '今日天气', value: player.todayWeather().name, sub: ` · 幸运食材 ${getItem(player.todayFortune().luckyItem)?.name ?? '—'}` },
+      { label: '吉祥物', value: Object.keys(player.mascotState().owned).length, sub: ` / 5 位 · 累计蹭过 ${player.stats?.mascotPets ?? 0} 次` },
+      { label: '宴会承办', value: player.stats?.banquets ?? 0, sub: ` 场 · 作废 ${player.banquetState().failed ?? 0} 场` },
+      { label: '外卖接单', value: player.stats?.takeoutSold ?? 0, sub: ` 单 · Lv${player.takeoutLevel()} · 流水 ${(player.takeout?.gold ?? 0).toLocaleString()} 金币` },
       { label: '交易所成交', value: player.stats?.exchangeTrades ?? 0, sub: ` 件 · 流水 ${(player.stats?.exchangeGold ?? 0).toLocaleString()} 金币` },
+      { label: '分店主题', value: Object.keys(player.branchThemes ?? {}).length, sub: ' 家已定主题（对应学派每级 +6% 时收）' },
+      { label: '供应商合约', value: player.activeContracts().length, sub: ` 份生效中 · 累计到货 ${player.stats?.contractDeliveries ?? 0} 次` },
+      { label: '名厨挑战', value: player.stats?.chefWins ?? 0, sub: ` 位名厨被战胜 · 本周 ${player.chefClearedThisWeek() ? '已通过' : '未通过'}` },
+      { label: '赛季档位', value: (player.seasonState().claimed ?? []).length, sub: ` 档已领（${player.activeSeasonDef?.name ?? '—'}）· 历史 ${Object.keys(player.seasons ?? {}).length} 季有记录` },
       { label: '厨神试炼通关', value: player.stats?.trialClears ?? 0, sub: ' 次' },
     ],
   },
