@@ -5,6 +5,9 @@ wuguan/
 .reasonix/
 playwork/
 lmewexe/release/
+
+# 原始图片工作目录（2026-09-10 已移入 wuguan/，不再入仓库）
+lmewimg/
 *.local
 .DS_Store
 npm-debug.log*
