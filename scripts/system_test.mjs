@@ -24,6 +24,7 @@ import { carryFromLevel } from '../src/game/data/legacy.js'
 import { PATRONS, patronCost, PATRON_SWITCH_GOLD } from '../src/game/data/patrons.js'
 import { MILESTONES, milestoneSummary } from '../src/game/data/milestones.js'
 import { CHRONICLE_CAP, groupByDay } from '../src/game/data/chronicle.js'
+import { QUIRK_CAT_DEFS, quirkCategoryStats } from '../src/game/data/tales.js'
 import { weatherForDay } from '../src/game/data/weather.js'
 import { MASCOTS, mascotBondLevel, mascotReward } from '../src/game/data/mascots.js'
 import { banquetTierFor } from '../src/game/data/banquets.js'
@@ -1214,6 +1215,33 @@ console.log('══ E. 离线进度 ══')
       const b = pv.rivalBoard()
       return b.claimed === false && b.promo === false
     })())
+  }
+
+
+  // 轶事分类统计（2026-09-10 修复）：原实现给 defs 建副本、却把计数写进 QUIRK_CAT_DEFS 原对象，
+  // 模板读副本 → 四个大类标签恒显示 0/0（自首个版本起存在）。守卫锁住「计数写进渲染对象」这一点。
+  {
+    const list = [
+      { cat: 'gather', sub: 'foraging' },
+      { cat: 'gather', sub: 'fishing' },
+      { cat: 'craft', sub: 'cooking' },
+      { cat: 'support', sub: 'gastronomy' },
+    ]
+    const st = quirkCategoryStats(list, (q) => q.sub === 'foraging')
+    check('轶事', '大类计数写入渲染对象（合计 = 总数）', st.defs.reduce((a, d) => a + d.total, 0) === list.length)
+    check('轶事', '大类解锁数写入渲染对象', st.defs.reduce((a, d) => a + d.unlocked, 0) === 1)
+    check('轶事', '大类定义齐备且顺序固定', st.defs.map((d) => d.id).join() === 'gather,craft,combatWins,support' && st.defs.every((d) => d.name && d.icon))
+    check('轶事', '子类统计按 cat|sub 归并', st.subMap.get('gather|foraging')?.total === 1 && st.subMap.get('gather|foraging')?.unlocked === 1 && st.subMap.size === 4)
+    check('轶事', '空列表不报错', quirkCategoryStats([]).defs.every((d) => d.total === 0))
+    // 全量数据（tales_ext 3588 条）：cat 必须全部落在已知大类，且总数不丢
+    const { QUIRKS } = await import('../src/game/data/tales_ext.js')
+    const known = new Set(QUIRK_CAT_DEFS.map((c) => c.id))
+    const unknown = [...new Set(QUIRKS.map((q) => q.cat))].filter((c) => !known.has(c))
+    const full = quirkCategoryStats(QUIRKS, () => false)
+    check('轶事', `全量 ${QUIRKS.length} 条无未知大类`, unknown.length === 0, unknown.join(','))
+    check('轶事', '全量大类合计 = 轶事总数', full.defs.reduce((a, d) => a + d.total, 0) === QUIRKS.length)
+    check('轶事', '全量子类合计 = 轶事总数', [...full.subMap.values()].reduce((a, x) => a + x.total, 0) === QUIRKS.length)
+    check('轶事', '全量大类均非空', full.defs.every((d) => d.total > 0))
   }
 
   // 自动补给（2026-09-09 放置化）：陷阱/装饰食材低于 50 自动补到 200，保留金币下限

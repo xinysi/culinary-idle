@@ -39,3 +39,44 @@ export const TALES = [
     body: '大陆禁忌菜单上，排着三道从未被做成的菜：用「时间的余味」炖的汤、以「思念为引」调的酱、还有……以「某个厨师的执念」为料的主菜。据说做出之人，会永远被写进美食的传说，成为下一道「太古禁食」。',
   },
 ]
+
+// ── 轶事分类统计（2026-09-10 修复）──
+// 轶事（QUIRKS，3588 条）按「大类 → 子类（技能）」两级分类统计，页面与测试共用同一份实现。
+// 修复的缺陷：原实现 `defs` 用 `{...c}` 建了副本，而 `defById` 映射到 QUIRK_CAT_DEFS 的**原对象**，
+// 循环把计数写进原对象、模板读的却是副本 → 四个大类标签恒显示 0/0（自首个版本起就存在）。
+export const QUIRK_CAT_DEFS = [
+  { id: 'gather', name: '采集', icon: '🌿' },
+  { id: 'craft', name: '制作', icon: '🍳' },
+  { id: 'combatWins', name: '对决', icon: '⚔️' },
+  { id: 'support', name: '辅助', icon: '📜' },
+]
+
+/**
+ * @param {Array} list 轶事列表（QUIRKS）
+ * @param {(q) => boolean} isUnlocked 单条解锁判定
+ * @returns {{ defs: Array<{id,name,icon,total,unlocked}>, subMap: Map<string,{sub,total,unlocked}> }}
+ *          大类顺序与 QUIRK_CAT_DEFS 一致；subMap 键为 `cat|sub`
+ */
+export function quirkCategoryStats(list, isUnlocked = () => false) {
+  const defs = QUIRK_CAT_DEFS.map((c) => ({ ...c, total: 0, unlocked: 0 }))
+  // 必须映射到 defs 里的同一批对象（再建副本会让计数写丢）
+  const byId = new Map(defs.map((c) => [c.id, c]))
+  const subMap = new Map()
+  for (const q of list) {
+    const ok = !!isUnlocked(q)
+    const d = byId.get(q.cat)
+    if (d) {
+      d.total++
+      if (ok) d.unlocked++
+    }
+    const key = q.cat + '|' + q.sub
+    let sub = subMap.get(key)
+    if (!sub) {
+      sub = { sub: q.sub, total: 0, unlocked: 0 }
+      subMap.set(key, sub)
+    }
+    sub.total++
+    if (ok) sub.unlocked++
+  }
+  return { defs, subMap }
+}

@@ -23,7 +23,7 @@ import { SEASONS } from '../game/data/seasons.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { STORY } from '../game/data/story.js'
-import { TALES } from '../game/data/tales.js'
+import { TALES, QUIRK_CAT_DEFS, quirkCategoryStats } from '../game/data/tales.js'
 // 传闻/轶事文案（tales_ext ~1.4MB）改为动态加载（2026-09-06 chunk 拆分：图鉴首开不背轶事文案）
 const talesExt = ref(null) // TALES_EXT（500 篇传闻）
 const quirks = ref(null) // QUIRKS（3588 条轶事）
@@ -451,12 +451,6 @@ const talesBySeries = computed(() => {
   }
   return [...m.entries()].map(([series, tales]) => ({ series, tales, total: tales.length, unlocked: tales.filter(taleUnlocked).length }))
 })
-const QUIRK_CAT_DEFS = [
-  { id: 'gather', name: '采集', icon: '🌿' },
-  { id: 'craft', name: '制作', icon: '🍳' },
-  { id: 'combatWins', name: '对决', icon: '⚔️' },
-  { id: 'support', name: '辅助', icon: '📜' },
-]
 // 子子类（技能）中文名映射；缺失时回退为 sub 本身
 const QUIRK_SUB_NAMES = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', farming: '农耕',
@@ -467,22 +461,7 @@ const QUIRK_SUB_NAMES = {
 }
 function quirkSubName(sub) { return QUIRK_SUB_NAMES[sub] ?? sub }
 // 轶事计数（QUIRKS 3588 条：按大类/子类一次性统计；模板不再内联反复 filter 全表）
-const quirkCats = computed(() => {
-  const defById = new Map(QUIRK_CAT_DEFS.map((c) => [c.id, c]))
-  const defs = QUIRK_CAT_DEFS.map((c) => ({ ...c, total: 0, unlocked: 0 }))
-  const subMap = new Map() // `cat|sub` → { sub, total, unlocked }
-  for (const q of quirkList.value) {
-    const u = taleUnlocked(q)
-    const d = defById.get(q.cat)
-    if (d) { d.total++; if (u) d.unlocked++ }
-    const key = q.cat + '|' + q.sub
-    let s = subMap.get(key)
-    if (!s) { s = { sub: q.sub, total: 0, unlocked: 0 }; subMap.set(key, s) }
-    s.total++
-    if (u) s.unlocked++
-  }
-  return { defs, subMap }
-})
+const quirkCats = computed(() => quirkCategoryStats(quirkList.value, taleUnlocked))
 // 当前大类下的子子类列表（按首次出现顺序，带解锁计数）
 const activeQuirkSubs = computed(() => {
   const list = []
