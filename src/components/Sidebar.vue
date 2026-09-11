@@ -130,6 +130,7 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '🏁', name: '里程碑', view: 'milestones' },
       { icon: '📰', name: '年鉴', view: 'chronicle' },
+      { icon: '📜', name: '故事', view: 'story' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
       { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
       // 简写「成就称号」：4 列后瓦片只有 54px，「成就与称号」（5 字）会换行；全称仍用在页面标题与跳转文案里

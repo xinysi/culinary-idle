@@ -86,7 +86,13 @@ const sidebarSrc = read('src/components/Sidebar.vue')
 
 // ── 3. 故事：结构完整 + 需求 kind 有 storyCur 分支 ──
 {
-  const storyKinds = new Set([...logViewSrc.matchAll(/case '([a-zA-Z]+)':/g)].map((m) => m[1]))
+  // 2026-09-12：storyCur 从 LogView 抽到独立页 StoryView 后，写死文件名会让本检查「找不到分支」而误报。
+  // 改为**自己定位**定义 storyCur 的那个视图文件——以后再搬家也不会失效（找不到就明确 FAIL）。
+  const storyFile = fs.readdirSync('src/views').filter((f) => f.endsWith('.vue'))
+    .map((f) => `src/views/${f}`).find((p) => read(p).includes('function storyCur'))
+  check('故事：能定位定义 storyCur 的视图文件', !!storyFile, storyFile ? storyFile : '未找到（检查是否改名/删除）')
+  const storySrc = storyFile ? read(storyFile) : ''
+  const storyKinds = new Set([...storySrc.matchAll(/case '([a-zA-Z]+)':/g)].map((m) => m[1]))
   const badReq = []
   for (const ch of STORY) for (const r of ch.requirements ?? []) if (!storyKinds.has(r.kind)) badReq.push(`${ch.chapter}:${r.kind}`)
   check('故事：章节需求 kind 均有进度分支', badReq.length === 0, badReq.slice(0, 5).join('; '))
