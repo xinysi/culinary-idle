@@ -76,15 +76,12 @@ function pickCategory(c) {
   category.value = c
 }
 
-// ── 称号 ──
-function equipTitle(name) {
-  player.title = name
-  ui.pushLog(`🏷 已佩戴称号「${name}」`, 'gain')
-}
-function clearTitle() {
-  if (!player.title) return
-  player.title = null
-  ui.pushLog('🏷 已取消佩戴称号', 'info')
+// ── 称号（只读展示）──
+// 2026-09-11：佩戴/取消佩戴**只保留在「荣誉殿堂」一个入口**。此前两页都能改 player.title，
+// 状态虽同一份却让人不知道该去哪；称号的被动与荣誉等级本来就在荣誉殿堂，故由它独占。
+const TITLE_HOME = 'honor'
+function goEquipTitle() {
+  ui.setView(TITLE_HOME)
 }
 const ownedShopTitles = computed(() => SHOP_TITLES.filter((t) => player.shopOwned?.[t.key]).length)
 const ownedCodexTitles = computed(() => CODEX_SHOP_TITLES.filter((t) => (player.codexOwned ?? []).includes(t.key)).length)
@@ -113,7 +110,7 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
       <div class="av-stat"><span class="dim">完成度</span><b class="mono">{{ completion.toFixed(1) }}%</b></div>
       <div class="av-stat"><span class="dim">称号</span><b class="mono">{{ ownedTitles }}/{{ totalTitles }}</b></div>
       <div class="av-stat"><span class="dim">当前佩戴</span><b class="mono">{{ player.title || '（无）' }}</b></div>
-      <button v-if="player.title" class="btn btn-sm" @click="clearTitle">取消佩戴</button>
+      <button class="btn btn-sm" title="佩戴/取消佩戴在荣誉殿堂" @click="goEquipTitle">去荣誉殿堂佩戴 ↗</button>
     </div>
 
     <div class="av-tabs">
@@ -170,14 +167,13 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
     <template v-else>
       <div class="card av-card">
         <div class="av-h">🏅 成就称号（{{ ownedAchTitles }}/{{ ACHIEVEMENT_TITLES.length }}）</div>
-        <p class="dim av-desc">完成对应成就后解锁，点击即可佩戴。</p>
+        <p class="dim av-desc">完成对应成就后解锁。<b>佩戴与取消佩戴统一在「荣誉殿堂」</b>（那里同时显示该称号的被动加成与荣誉等级）。</p>
         <div class="av-grid">
           <div
             v-for="t in ACHIEVEMENT_TITLES"
             :key="t.id"
             class="av-title"
             :class="{ locked: !unlockedIds.has(t.id), equipped: player.title === t.name }"
-            @click="unlockedIds.has(t.id) && equipTitle(t.name)"
           >
             <div class="av-title-name">
               <strong>{{ t.name }}</strong>
@@ -197,13 +193,12 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
             :key="t.key"
             class="av-title"
             :class="{ locked: !player.shopOwned?.[t.key], equipped: player.title === t.name }"
-            @click="player.shopOwned?.[t.key] && equipTitle(t.name)"
           >
             <div class="av-title-name">
               <strong>{{ t.icon }} {{ t.name }}</strong>
               <span v-if="player.title === t.name" class="badge badge-on">佩戴中</span>
             </div>
-            <div class="dim av-title-desc">{{ player.shopOwned?.[t.key] ? '已拥有 · 点击佩戴' : `未拥有 · 游戏币 ${t.price.toLocaleString()}` }}</div>
+            <div class="dim av-title-desc">{{ player.shopOwned?.[t.key] ? '已拥有' : `未拥有 · 游戏币 ${t.price.toLocaleString()}` }}</div>
           </div>
         </div>
       </div>
@@ -217,13 +212,12 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
             :key="t.key"
             class="av-title"
             :class="{ locked: !(player.codexOwned ?? []).includes(t.key), equipped: player.title === t.name }"
-            @click="(player.codexOwned ?? []).includes(t.key) && equipTitle(t.name)"
           >
             <div class="av-title-name">
               <strong>{{ t.name }}</strong>
               <span v-if="player.title === t.name" class="badge badge-on">佩戴中</span>
             </div>
-            <div class="dim av-title-desc">{{ (player.codexOwned ?? []).includes(t.key) ? '已拥有 · 点击佩戴' : (t.desc || '未拥有 · 图鉴兑换所兑换') }}</div>
+            <div class="dim av-title-desc">{{ (player.codexOwned ?? []).includes(t.key) ? '已拥有' : (t.desc || '未拥有 · 图鉴兑换所兑换') }}</div>
           </div>
         </div>
         <p v-if="!CODEX_SHOP_TITLES.length" class="dim">暂无图鉴兑换称号。</p>
@@ -307,12 +301,6 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
 .av-ach.locked,
 .av-title.locked {
   opacity: 0.62;
-}
-.av-title {
-  cursor: pointer;
-}
-.av-title:not(.locked):hover {
-  border-style: solid;
 }
 .av-title.equipped {
   border-style: solid;
