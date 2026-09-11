@@ -268,6 +268,14 @@
 - 存档：`friends: { data, orders, orderDay }` 已进三个存档函数；旧档回退空对象，且 `friendState()` **懒初始化**，旧档也能直接用。`system_test.mjs` 的 **C12 厨友**一节覆盖上述规则（含跨天刷新、材料不足拒交、存档往返、旧档懒初始化）。
 - 跨天判断统一用 `this.todayKey ?? _todayStr()`（与签到/每日任务同源），别自己 `new Date()` 取日期。
 
+### 🚀 发布流程与「发布后核验」（2026-09-11 立）
+1. 全量回归：`vite build` → 10 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs`（12 项）。
+2. 版本号三处同步：`package.json`、`lmewexe/package.json`、README 的「当前版本」行 + 版本历史行。
+3. `git add -A` → commit（信息里写清「玩法零改动 / 新存档字段」之类的口径）→ `git push origin main` → `git tag vX.Y.Z && git push origin vX.Y.Z`。
+4. 推 tag 会触发三条 workflow（`release.yml` 打桌面版 zip、`pages.yml` 部署在线版、`ci.yml`）：`gh run list` 轮询到三条都 `completed success`。
+5. **发布后核验**：`gh release view vX.Y.Z --json name,isDraft,isPrerelease,assets` 看标题/是否草稿/附件与**中文 label**（附件名是 ASCII，中文名放在 label 里，见 release.yml 注释）。
+   ⚠️ **核验线上是否真的更新了，必须用浏览器打开线上站点点进去看，不要比对 `dist/assets` 的哈希**：Pages 用 `npm ci`（自带 Node/npm 版本）构建，产物 chunk 哈希与本地 `.toolchain/node` 的构建**并不一致**（2026-09-11 实测：本地 `index-CdNvJ3du.js` vs 线上 `index-DGEUrWpc.js`，一度误判为「没部署」）。正确做法是 Playwright 打开 `https://xinysi.github.io/culinary-idle/`，进游戏后检查左栏是否出现本次新增的功能页磁贴、并真进一页确认渲染。
+
 ### 校验习惯
 - 🧩 **新增功能页（view）必须在四处同时登记，缺一处就是缺陷**：
   1. `src/stores/ui.js` 的 `VIEW_KEYS`（白名单，开发期对未知 key 告警）；
