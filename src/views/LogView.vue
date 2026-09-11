@@ -9,14 +9,6 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
-import {
-  cardPoolFrom,
-  cardColor as cardColorFor,
-  cardStrength as cardStrengthOf,
-  simulateBattle,
-  settleBattle,
-  DIFFICULTIES,
-} from '../game/data/cardBattle.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { SEASONS } from '../game/data/seasons.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
@@ -32,7 +24,7 @@ import Pagination from '../components/Pagination.vue'
 // 分页状态（每个列表独立页码；行数不同 → 每页数量不同）
 const itemPage = ref(1)
 const seasonPage = ref(1)
-const PAGE = { items: 28, season: 20, cards: 13 } // 卡牌 13 张/页
+const PAGE = { items: 28, season: 20 } // 卡牌 13 张/页
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -161,52 +153,6 @@ function seasonClaimed(s) {
 }
 
 // ── 图鉴卡牌化（§13，2026-09-06 重构：逻辑在 game/data/cardBattle.js，本处仅薄壳）──
-const selectedCards = ref([])
-const battleResult = ref(null)
-const cardDiff = ref('normal') // 难度：休闲/标准/挑战（AI 战力与奖励倍率）
-const battleReward = ref(null) // 结算明细 { reward, dailyBonus, firstBonus }
-const cardPool = computed(() => cardPoolFrom(player.collected))
-// 卡池管理（2026-09-06）：搜索 + 类型筛选 + 分页，防止卡牌过多时全量渲染
-const cardQuery = ref('')
-const cardCat = ref('all')
-const cardPage = ref(1)
-const filteredPool = computed(() => {
-  const q = cardQuery.value.trim().toLowerCase()
-  return cardPool.value.filter((id) => {
-    const it = getItem(id)
-    if (cardCat.value === 'food' && it?.type !== 'food') return false
-    if (cardCat.value === 'equipment' && it?.type !== 'equipment') return false
-    if (q && !(it?.name ?? '').toLowerCase().includes(q)) return false
-    return true
-  })
-})
-const cardPages = computed(() => Math.max(1, Math.ceil(filteredPool.value.length / PAGE.cards)))
-const pagedCards = computed(() => {
-  const p = Math.min(cardPage.value, cardPages.value)
-  const arr = filteredPool.value.slice((p - 1) * PAGE.cards, p * PAGE.cards)
-  while (arr.length < PAGE.cards) arr.push({ _pad: true })
-  return arr
-})
-watch([cardQuery, cardCat], () => { cardPage.value = 1 })
-/** 一键最强：自动选择当前筛选结果中战力前 3 */
-function pickBest() {
-  selectedCards.value = filteredPool.value.slice(0, 3)
-}
-function cardColor(id) { return cardColorFor(id) }
-function cardStrengthText(id) { return Math.round(cardStrengthOf(id)) }
-function toggleCard(id) {
-  const i = selectedCards.value.indexOf(id)
-  if (i >= 0) selectedCards.value.splice(i, 1)
-  else if (selectedCards.value.length < 3) selectedCards.value.push(id)
-}
-function clearSelection() { selectedCards.value = [] }
-function doCardBattle() {
-  if (!selectedCards.value.length) return
-  const result = simulateBattle(selectedCards.value, player.collected, { difficulty: cardDiff.value })
-  battleReward.value = settleBattle(player, result, cardDiff.value)
-  battleResult.value = result
-  selectedCards.value = []
-}
 
 // ── 配方手册：每个制作技能内按 reqLevel 每 5 级分段，可折叠；顶部按等级快速跳转 ──
 const recipeInstances = computed(() => getAllSkillInstances().filter((x) => x.type === 'production'))
@@ -358,8 +304,8 @@ const seasonPaged = computed(() => {
         <button class="btn btn-sm" title="独立页面" @click="goPage('quests')">📋 任务中心 ↗</button>
         <button class="btn btn-sm" title="独立页面" @click="goPage('achievements')">🏅 成就与称号 ↗</button>
         <button class="btn btn-sm" title="独立页面" @click="goPage('story')">📜 故事与传闻 ↗</button>
+        <button class="btn btn-sm" title="独立页面" @click="goPage('cards')">🎴 卡牌对战 ↗</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'log' }" @click="tab = 'log'">图鉴（{{ player.collectionPct }}%）</button>
-        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'cards' }" @click="tab = 'cards'">卡牌对战（{{ player.stats.cardBattle?.wins ?? 0 }}胜/{{ player.stats.cardBattle?.losses ?? 0 }}负）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'recipes' }" @click="tab = 'recipes'">配方手册</button>
       </div>
 
@@ -514,86 +460,6 @@ const seasonPaged = computed(() => {
       </template>
 
       <!-- 卡牌对战（§13）：图鉴页直属分类（2026-09-06 重构排版）-->
-      <template v-else-if="tab === 'cards'">
-          <div class="card-battle-head">
-            <h3 style="margin: 0">🂡 卡牌对战</h3>
-            <span class="dim">卡池 {{ cardPool.length }} 张 · 已选 <b class="mono cb-count">{{ selectedCards.length }}</b>/3 · 战绩 {{ player.stats.cardBattle?.wins ?? 0 }}胜 {{ player.stats.cardBattle?.losses ?? 0 }}负</span>
-            <button v-if="selectedCards.length" class="btn btn-sm" @click="clearSelection">清空选卡</button>
-          </div>
-          <p class="dim" style="margin: 4px 0 8px">从已收集的料理/装备中<span style="color: var(--primary-strong); font-weight: 700">点选 3 张</span>组成卡组，与 AI 同池对决（3 局 2 胜制）：每局战力 ±12% 浮动；胜得金币（按难度倍率），每日首胜额外 +50，首次胜场额外 +能量饼干。</p>
-          <div class="region-tabs" style="flex-wrap: wrap; margin-bottom: 8px">
-            <span class="dim" style="align-self: center">难度：</span>
-            <button
-              v-for="(d, key) in DIFFICULTIES"
-              :key="key"
-              class="btn btn-sm"
-              :class="{ 'btn-primary': cardDiff === key }"
-              @click="cardDiff = key"
-            >{{ d.label }}（AI ×{{ d.aiMult }} · 奖励 ×{{ d.rewardMult }}）</button>
-          </div>
-          <div class="cb-filter-bar">
-            <input v-model="cardQuery" class="cb-filter-input" type="text" placeholder="🔍 搜索卡牌名称…" />
-            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'all' }" @click="cardCat = 'all'">全部</button>
-            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'food' }" @click="cardCat = 'food'">🍽 料理</button>
-            <button class="btn btn-sm" :class="{ 'btn-primary': cardCat === 'equipment' }" @click="cardCat = 'equipment'">⚒ 装备</button>
-            <span class="dim mono" style="margin-left: auto">{{ filteredPool.length }} 张</span>
-            <button class="btn btn-sm" title="自动选择战力最高的前 3 张" :disabled="!filteredPool.length" @click="pickBest">✨ 一键最强</button>
-          </div>
-          <div class="card-grid">
-            <div
-              v-for="(id, ii) in pagedCards"
-              :key="id?.id ?? 'pad-' + ii"
-              v-if="!id?._pad"
-              class="item-card cb-card"
-              :style="{ borderColor: cardColor(id) }"
-              :class="{ selected: selectedCards.includes(id) }"
-              @click="toggleCard(id)"
-            >
-              <div class="cb-badges">
-                <span class="cb-type">{{ getItem(id)?.type === 'food' ? '🍽 料理' : '⚒ 装备' }}</span>
-                <span class="cb-power">⚔ {{ cardStrengthText(id) }}</span>
-              </div>
-              <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-card-img" @error="$event.target.style.display = 'none'" alt="" />
-              <div class="item-card-name">{{ getItem(id)?.name }}</div>
-              <div class="dim">{{ CATEGORY_LABEL[getItem(id)?.category] ?? getItem(id)?.category ?? '' }}</div>
-              <div class="mono dim">T{{ getItem(id)?.tier }}</div>
-            </div>
-            <p v-if="!cardPool.length" class="dim" style="grid-column: 1 / -1">还没有收集到料理/装备，去制作或获得吧。</p>
-            <p v-else-if="!filteredPool.length" class="dim" style="grid-column: 1 / -1">没有符合搜索/筛选的卡牌。</p>
-          </div>
-          <div style="display: flex; justify-content: center; margin-top: 8px">
-            <Pagination v-if="cardPages > 1" :current="Math.min(cardPage, cardPages)" :pages="cardPages" @update:current="(p) => (cardPage = p)" />
-          </div>
-          <div class="card cb-battle-panel">
-            <div class="cb-battle-head">
-              <button class="btn btn-sm btn-primary" :disabled="!selectedCards.length" @click="doCardBattle">⚔️ 开始对战</button>
-              <span class="dim">当前卡组战力合计 <b class="mono">{{ selectedCards.reduce((a, id) => a + cardStrengthOf(id), 0).toFixed(0) }}</b></span>
-            </div>
-            <div v-if="battleResult" class="battle-result" :class="{ win: battleResult.won, lose: !battleResult.won }">
-              <div class="cb-result-title">
-                <template v-if="battleResult.won">
-                  🏆 卡牌对决胜利！+{{ battleReward?.reward ?? 50 }} 金币
-                  <span v-if="battleReward?.dailyBonus" class="cb-daily-bonus">+ 每日首胜 +{{ battleReward.dailyBonus }}</span>
-                  <span v-if="battleReward?.firstBonus" class="cb-first-bonus">🎁 首胜能量饼干 ×1</span>
-                </template>
-                <template v-else>💀 卡牌对决失败，换几张卡试试</template>
-              </div>
-              <div class="cb-rounds">
-                <div v-for="(r, i) in battleResult.rounds" :key="i" class="cb-round" :class="{ win: r.win, lose: !r.win }">
-                  <span class="cb-round-idx">第 {{ i + 1 }} 局</span>
-                  <span class="cb-round-cards">
-                    {{ r.mine ? itemName(r.mine) : '—' }}（<b class="mono">{{ Math.round(r.ms) }}</b>）
-                    <span class="dim">vs</span>
-                    {{ r.theirs ? itemName(r.theirs) : '—' }}（<b class="mono">{{ Math.round(r.ts) }}</b>）
-                  </span>
-                  <span class="cb-round-verdict">{{ r.win ? '✅ 胜' : '❌ 负' }}</span>
-                </div>
-              </div>
-            </div>
-            <p v-else class="dim" style="margin: 8px 0 0">选好卡组后点击「开始对战」。</p>
-          </div>
-        </template>
-
       <!-- ── 配方手册（§3.2：全部配方一览，含未解锁）── -->
       <template v-else-if="tab === 'recipes'">
         <div class="region-tabs" style="flex-wrap: wrap">

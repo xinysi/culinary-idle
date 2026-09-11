@@ -42,6 +42,8 @@ import { RIVAL_SHOPS, RIVAL_BOARD_SIZE, RIVAL_MONTH_GROWTH, rivalsOfMonth, month
 import { realmOpponent } from '../../src/game/data/mysticRealm.js'
 import { MAIL_CAP, MAIL_HARD_CAP, mailKindLabel } from '../../src/game/data/mail.js'
 import { FRIENDS, friendBondLevel, friendBondProgress, friendVisitReward } from '../../src/game/data/friends.js'
+import { ENCOUNTERS, getEncounter } from '../../src/game/data/encounters.js'
+import { itemSources } from '../../src/game/data/itemSources.js'
 
 // 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
 const ACH = (id) => ALL_ACHIEVEMENTS.find((a) => a.id === id)
@@ -2554,6 +2556,65 @@ console.log('══ C12. 厨友 ══')
   p4.applySave({ gold: 100 })
   check('厨友', '旧档缺 friends 字段时回退为空', p4.friends && typeof p4.friends.data === 'object' && p4.friendBond(FRIENDS[0].id) === 0)
   check('厨友', '旧档也能正常拜访（懒初始化）', p4.visitFriend(FRIENDS[0].id).ok === true)
+}
+
+// ── C13. 奇遇图鉴（2026-09-11）────────────────────────
+console.log('══ C13. 奇遇图鉴 ══')
+{
+  // ① 数据完整性：8 个事件、id 唯一、每件 2~3 个分支、分支奖励引用的物品都存在
+  check('奇遇', `共 ${ENCOUNTERS.length} 个事件`, ENCOUNTERS.length === 8)
+  check('奇遇', 'id 唯一且有标题/正文', new Set(ENCOUNTERS.map((e) => e.id)).size === ENCOUNTERS.length
+    && ENCOUNTERS.every((e) => e.title && e.body))
+  check('奇遇', '每个事件 2~3 个分支且都有文案', ENCOUNTERS.every((e) => e.choices.length >= 2 && e.choices.length <= 3
+    && e.choices.every((c) => c.label)))
+  check('奇遇', '分支奖励引用的物品全部存在', ENCOUNTERS.every((e) => e.choices.every((c) =>
+    Object.keys(c.effect?.items ?? {}).every((id) => getItem(id) != null))))
+  // 图鉴三查联动：奇遇给的物品，必须在图鉴「获取来源」里标注了奇遇（2026-09-11 补）
+  check('奇遇', '奖励物品在图鉴来源中标注了「随机奇遇」', (() => {
+    const ids = new Set(ENCOUNTERS.flatMap((e) => e.choices.flatMap((c) => Object.keys(c.effect?.items ?? {}))))
+    return [...ids].every((id) => itemSources(id).some((t) => t.includes('随机奇遇')))
+  })())
+  check('奇遇', 'getEncounter 能按 id 取回', getEncounter(ENCOUNTERS[0].id)?.id === ENCOUNTERS[0].id && getEncounter('nope') === null)
+
+  // ② 新档：没有任何记录
+  const p = freshPlayer()
+  check('奇遇', '新档未遇到任何奇遇', p.encountersSeenCount() === 0 && p.encounters.total === 0)
+  check('奇遇', '新档 encounterStats 返回空记录', p.encounterStats(ENCOUNTERS[0].id).seen === 0
+    && p.encounterStats(ENCOUNTERS[0].id).picks.length === 0)
+
+  // ③ 遇到即累加（同一事件遇两次 → 2 次，总数也累加）
+  const idA = ENCOUNTERS[0].id
+  const idB = ENCOUNTERS[1].id
+  p.markEncounterSeen(idA)
+  p.markEncounterSeen(idA)
+  p.markEncounterSeen(idB)
+  check('奇遇', '遇到次数按事件累加', p.encounterStats(idA).seen === 2 && p.encounterStats(idB).seen === 1)
+  check('奇遇', '累计触发计入 total', p.encounters.total === 3)
+  check('奇遇', '已遇到的事件数（去重）', p.encountersSeenCount() === 2)
+  check('奇遇', '非法 id 不计数', (p.markEncounterSeen(null), p.encounters.total === 3))
+
+  // ④ 选择记录：按分支下标累加，且下标超界会自动补齐数组
+  p.recordEncounterPick(idA, 0)
+  p.recordEncounterPick(idA, 2)
+  p.recordEncounterPick(idA, 2)
+  const picksA = p.encounterStats(idA).picks
+  check('奇遇', '各分支选择次数记在下标上', picksA[0] === 1 && (picksA[1] ?? 0) === 0 && picksA[2] === 2)
+  check('奇遇', '非法下标不计数', (p.recordEncounterPick(idA, -1), p.encounterStats(idA).picks.reduce((a, n) => a + (n ?? 0), 0) === 3))
+
+  // ⑤ 首次遇到会在年鉴留痕（不改奖励，只是记录）
+  const chron = (p.chronicle ?? []).filter((c) => c.kind === 'encounter')
+  check('奇遇', '首次遇到写一条年鉴记录', chron.length === 2, `n=${chron.length}`)
+
+  // ⑥ 存档往返 + 旧档兜底
+  const round = JSON.stringify(p.serialize())
+  const p2 = freshPlayer()
+  p2.applySave(JSON.parse(round))
+  check('奇遇', '奇遇记录随存档往返无损', JSON.stringify(p2.serialize()) === round)
+  check('奇遇', '往返后记录内容正确', p2.encounterStats(idA).seen === 2 && p2.encounters.total === 3)
+  const p3 = freshPlayer()
+  p3.applySave({ gold: 100 })
+  check('奇遇', '旧档缺 encounters 字段时回退为空', p3.encountersSeenCount() === 0 && p3.encounters.total === 0)
+  check('奇遇', '旧档也能正常记录', (p3.markEncounterSeen(idA), p3.encounterStats(idA).seen === 1))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

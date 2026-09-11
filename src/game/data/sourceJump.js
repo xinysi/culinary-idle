@@ -38,6 +38,8 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['名厨挑战', '名厨'], target: { view: 'chefChallenge' } },
   { kw: ['图鉴兑换所', '图鉴兑换'], target: { view: 'codexExchange' } },
   { kw: ['地窖', '陈酿'], target: { view: 'cellar' } },
+  // ── 2026-09-11 补：随机奇遇（挂机动作 0.2% 触发的小事件奖励）──
+  { kw: ['随机奇遇', '奇遇'], target: { view: 'encounters' } },
 ]
 
 /** 来源串 → 跳转目标（无匹配返回 null） */

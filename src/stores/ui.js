@@ -18,7 +18,7 @@ export const VIEW_KEYS = [
   'milestones', 'chronicle', 'weather', 'mascot', 'banquet', 'takeout', 'suppliers',
   'chefChallenge', 'seasonReview', 'honor', 'codexExchange', 'setMeals', 'rivals',
   'minigames', 'stats', 'log', 'restaurant', 'guild', 'season', 'arena', 'tower', 'fest',
-  'mijian', 'guide', 'gear', 'quests', 'achievements', 'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story',
+  'mijian', 'guide', 'gear', 'quests', 'achievements', 'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters',
 ]
 
 export const useUiStore = defineStore('ui', {
