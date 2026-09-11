@@ -52,13 +52,14 @@ export const useUiStore = defineStore('ui', {
       this.showStartSlotModal = open ?? !this.showStartSlotModal
     },
     setView(v) {
-      // 未知 key：开发期告警并按 App.vue 的兜底行为落到技能页；线上保持原样，行为与旧版完全一致
-      if (!VIEW_KEYS.includes(v)) {
-        if (import.meta.env?.DEV) {
-          console.warn(`[ui] 未知的 view key「${v}」——已回退到 skill。若是新页面，请在 ui.js 的 VIEW_KEYS 与 App.vue 分派链中登记。`)
-          this.activeView = 'skill'
-          return
-        }
+      // 未知 key：开发期告警并按 App.vue 的兜底行为落到技能页；线上保持原样，行为与旧版完全一致。
+      // 2026-09-11：告警同时写进**游戏内日志**——此前只 console.warn，页面上毫无提示，
+      // 表现成「点某个入口莫名其妙跳到技能页（采摘）」，排查时看不出是被兜底了。
+      if (!VIEW_KEYS.includes(v) && import.meta.env?.DEV) {
+        console.warn(`[ui] 未知的 view key「${v}」——已回退到 skill。若是新页面，请在 ui.js 的 VIEW_KEYS 与 App.vue 分派链中登记；若只是页面没刷新，硬刷新（Ctrl+Shift+R）即可。`)
+        this.pushLog(`⚠️ 未知页面「${v}」，已回退到技能页（多半是开发服务器模块未刷新，硬刷新即可）`, 'warn')
+        this.activeView = 'skill'
+        return
       }
       this.activeView = v
     },
