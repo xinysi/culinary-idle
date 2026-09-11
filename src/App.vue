@@ -176,7 +176,11 @@ const mainScroll = ref(null)
 const showTopBtn = ref(false)
 function onMainScroll() {
   showTopBtn.value = (mainScroll.value?.scrollTop ?? 0) > 300
+  navMoreOpen.value = false // 滚动内容时收起「⋯」浮层，避免它悬在半空
 }
+// 窄屏顶栏的「⋯」浮层（宽屏隐藏该按钮、右侧功能直接铺开）
+const navMoreOpen = ref(false)
+watch(() => ui.activeView, () => { navMoreOpen.value = false })
 function scrollTop() {
   mainScroll.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -236,32 +240,44 @@ onMounted(() => {
       <main class="app-main">
         <!-- 顶部功能导航：主功能按页翻页（左对齐弹性区），翻页控件+功能组固定贴右不动 -->
         <nav class="top-nav">
-          <template v-for="item in TOP_NAV" :key="item.view">
-            <button class="top-nav-btn" :class="{ active: ui.activeView === item.view, 'has-dot': !!item.dot, 'dot-on': item.dot?.() }" @click="item.onClick()">
-              {{ item.label }}
-            </button>
-          </template>
-          <span class="top-nav-spacer"></span>
-          <div class="top-nav-right">
+          <!-- 主按钮区：自己横向滚动，不与右侧组抢宽度（2026-09-11 拆开——此前共用一个滚动容器，
+               窄屏下右侧组会被一起推出可视区，连签到/设置都点不到） -->
+          <div class="top-nav-main">
+            <template v-for="item in TOP_NAV" :key="item.view">
+              <button class="top-nav-btn" :class="{ active: ui.activeView === item.view, 'has-dot': !!item.dot, 'dot-on': item.dot?.() }" @click="item.onClick()">
+                {{ item.label }}
+              </button>
+            </template>
+          </div>
+          <!-- 右侧功能区：宽屏铺开；≤940px 收进「⋯」浮层（点任一项自动收起） -->
+          <div class="top-nav-right" :class="{ open: navMoreOpen }" @click="navMoreOpen = false">
             <button
               v-if="marketSummary"
               class="top-nav-market"
               :title="marketSummary.title"
               @click="ui.showMarketModal = true"
             >{{ marketSummary.label }}</button>
-            <button class="top-nav-btn top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰</button>
-            <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊</button>
-            <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖</button>
-            <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️</button>
+            <button class="top-nav-btn top-nav-market-all" title="查看限时活动轮换时间表" @click="ui.showMarketModal = true">⏰<span class="nav-btn-text">活动</span></button>
+            <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊<span class="nav-btn-text">统计</span></button>
+            <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖<span class="nav-btn-text">图鉴</span></button>
+            <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️<span class="nav-btn-text">攻略</span></button>
             <span class="top-nav-sep"></span>
             <button class="top-nav-btn has-dot" :class="{ 'dot-on': signInDot }" @click="ui.toggleSignIn(true)">🎁签到</button>
             <button class="top-nav-btn" @click="ui.toggleSearch(true)">🔍搜索</button>
             <button class="top-nav-btn" @click="ui.toggleBagModal(true, 'bag')">🧺厨藏</button>
             <button class="top-nav-btn" @click="ui.toggleEquipModal(true)">⚔️装备</button>
             <span class="top-nav-sep"></span>
-            <button class="top-nav-btn" title="设置" @click="ui.toggleSettingsPanel(true)">⚙️</button>
-            <button class="top-nav-btn" title="存档" @click="ui.toggleSavePanel(true)">💾</button>
+            <button class="top-nav-btn" title="设置" @click="ui.toggleSettingsPanel(true)">⚙️<span class="nav-btn-text">设置</span></button>
+            <button class="top-nav-btn" title="存档" @click="ui.toggleSavePanel(true)">💾<span class="nav-btn-text">存档</span></button>
           </div>
+          <!-- 窄屏专用：呼出上面的右侧功能区（宽屏隐藏） -->
+          <button
+            class="top-nav-btn top-nav-more"
+            :class="{ active: navMoreOpen }"
+            title="更多功能（统计/图鉴/攻略/签到/搜索/厨藏/装备/设置/存档）"
+            @click="navMoreOpen = !navMoreOpen"
+          >⋯</button>
+          <div v-if="navMoreOpen" class="top-nav-more-backdrop" @click="navMoreOpen = false"></div>
         </nav>
 
         <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
