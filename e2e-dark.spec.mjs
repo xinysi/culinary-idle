@@ -25,6 +25,8 @@ const VIEWS = [
   'logs', 'market', 'friends',
   // 2026-09-11 第九批（今日待办）
   'today',
+  // 2026-09-12 第十批（故事与传闻，自图鉴页抽出）
+  'story',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

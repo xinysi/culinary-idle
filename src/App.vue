@@ -80,6 +80,7 @@ const LogsView = defineAsyncComponent(() => import('./views/LogsView.vue'))
 const MarketView = defineAsyncComponent(() => import('./views/MarketView.vue'))
 const FriendsView = defineAsyncComponent(() => import('./views/FriendsView.vue'))
 const TodayView = defineAsyncComponent(() => import('./views/TodayView.vue'))
+const StoryView = defineAsyncComponent(() => import('./views/StoryView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -329,6 +330,7 @@ onMounted(() => {
           <MarketView v-else-if="ui.activeView === 'market'" />
           <FriendsView v-else-if="ui.activeView === 'friends'" />
           <TodayView v-else-if="ui.activeView === 'today'" />
+          <StoryView v-else-if="ui.activeView === 'story'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />
