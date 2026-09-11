@@ -5,8 +5,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
-import { RESTAURANT_DECOR, DECOR_CATEGORIES, RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
-import Pagination from '../components/Pagination.vue'
+import { RESTAURANT_DECOR, RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -45,40 +44,12 @@ function serveCriticNow() {
   else criticPick.value = null
 }
 
-// 装饰：分类 tab + 分页
-const activeCat = ref('all')
-const page = ref(1)
-const PAGE_SIZE = 24 // 6 列 × 4 行（整行，便于补满行使翻页按钮位置固定）
-const decorList = computed(() => activeCat.value === 'all' ? RESTAURANT_DECOR : RESTAURANT_DECOR.filter((d) => d.category === activeCat.value))
-const decorPages = computed(() => Math.max(1, Math.ceil(decorList.value.length / PAGE_SIZE)))
-const currentPage = computed(() => Math.min(page.value, decorPages.value))
-const pagedDecor = computed(() => {
-  const arr = decorList.value.slice((currentPage.value - 1) * PAGE_SIZE, currentPage.value * PAGE_SIZE)
-  while (arr.length < PAGE_SIZE) arr.push({ _pad: true })
-  return arr
-})
-// 当前已购装饰的总收入%加成
+// 装饰（§13）已独立成页（views/DecorView.vue）：本页只保留总加成数字与入口
 const decorTotalBonus = computed(() => {
   let s = 0
   for (const id of player.restaurant.decor ?? []) s += RESTAURANT_DECOR_BY_ID[id]?.effect ?? 0
   return +s.toFixed(1)
 })
-function setCat(c) { activeCat.value = c; page.value = 1 }
-function decorEffectPct(id) { const d = RESTAURANT_DECOR_BY_ID[id]; return d ? d.effect : 0 }
-function ownCount(cat) {
-  return (player.restaurant.decor ?? []).filter((id) => {
-    const d = RESTAURANT_DECOR_BY_ID[id]
-    return cat === 'all' || (d && d.category === cat)
-  }).length
-}
-function catCount(cat) {
-  return cat === 'all' ? RESTAURANT_DECOR.length : RESTAURANT_DECOR.filter((d) => d.category === cat).length
-}
-function buyDecor(d) {
-  if (!player.spendGold(d.price)) return
-  player.restaurant.decor = [...(player.restaurant.decor ?? []), d.id]
-  ui.pushLog(`🏮 餐厅装饰：${d.name}（收入 +${d.effect}%）`, 'gain')
-}
 
 const ownedFoods = computed(() =>
   Object.entries(player.inventory)
@@ -182,45 +153,16 @@ function hourlyOf(dishId) {
       <p v-else class="dim" style="font-size: 12px">背包中没有符合要求的料理——去做一道 <b>tier ≥ {{ critic.minTier }}</b> 的{{ critic.category }}再来。</p>
     </div>
 
-    <!-- 餐厅装饰（§13）：分类 tab + 分页 -->
+    <!-- 餐厅装饰（§13）已独立成页（2026-09-11）：这里只给状态与入口 -->
     <div class="card">
       <div class="decor-title-row">
-        <h3>装饰（已购 {{ (player.restaurant.decor ?? []).length }}/{{ RESTAURANT_DECOR.length }}）</h3>
+        <h3>🏮 餐厅装潢（已购 {{ (player.restaurant.decor ?? []).length }}/{{ RESTAURANT_DECOR.length }}）</h3>
         <span class="dim mono">当前总加成 +{{ decorTotalBonus }}%</span>
+        <button class="btn btn-sm btn-primary" style="margin-left: auto" @click="ui.setView('decor')">去装潢 ↗</button>
       </div>
-      <div class="decor-cat-tabs">
-        <button class="btn btn-sm" :class="{ 'btn-primary': activeCat === 'all' }" @click="setCat('all')">
-          全部 <span class="dim mono">{{ ownCount('all') }}/{{ RESTAURANT_DECOR.length }}</span>
-        </button>
-        <button
-          v-for="c in DECOR_CATEGORIES"
-          :key="c.id"
-          class="btn btn-sm"
-          :class="{ 'btn-primary': activeCat === c.id }"
-          @click="setCat(c.id)"
-        >
-          {{ c.label }} <span class="dim mono">{{ ownCount(c.id) }}/{{ catCount(c.id) }}</span>
-        </button>
-      </div>
-      <div class="guild-shop-grid grid-n-6">
-        <template v-for="(d, di) in pagedDecor" :key="d.id ?? 'pad-' + di">
-        <div v-if="!d._pad" class="guild-shop-card" :class="{ 'guild-locked': (player.restaurant.decor ?? []).includes(d.id) }">
-          <div class="guild-shop-name">{{ d.name }}</div>
-          <div class="dim guild-shop-price">收入 +{{ d.effect }}%</div>
-          <button
-            v-if="!(player.restaurant.decor ?? []).includes(d.id)"
-            class="btn btn-sm btn-primary"
-            :disabled="player.gold < d.price"
-            @click="buyDecor(d)"
-          >
-            {{ d.price.toLocaleString() }} 金币
-          </button>
-          <span v-else class="badge badge-on">已购置</span>
-        </div>
-        <div v-else class="pager-spacer"></div>
-        </template>
-      </div>
-      <Pagination :current="currentPage" :pages="decorPages" @update:current="(p) => page = p" />
+      <p class="dim" style="margin: 0">
+        装饰按类别选购，每件永久提升餐厅收入 %——分类进度、性价比排序与「下一件推荐」都在装潢页。
+      </p>
     </div>
   </div>
 </template>

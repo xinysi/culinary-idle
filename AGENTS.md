@@ -122,9 +122,12 @@
     判定真实观感要用**像素采样**：在滚动容器右边缘取一条竖带，看颜色是不是目标色（参考：全局米色 #d2b294 / 面板奶油 ≈ rgb(250,248,244)）。
   · ⚠️ **headless Chromium 根本不绘制滚动条**（覆盖式，offsetWidth − clientWidth = 0）；要看滚动条必须用**真实窗口**渲染（Playwright `headless:false`）。
   · 面板滚动条当前形态：滑块**本体全透明**（只留 1px 细棱勾形状——**亮色暖灰棱 rgba(118,94,76,.38)，深色黑棱 rgba(0,0,0,.70)**，深色下用户明确要求黑棱）+ 全圆头 + 四周留白收细；悬停时才给一点极淡体感（深色悬停棱更黑 .85）。
-- **手机端（≤720px）三处规则目前被同优先级后置规则覆盖，属既有待修 bug（2026-09-11 实测）**：
-  `@media` 里的 `.app-sidebar{display:none}`、`.app-status{display:none}`、`.mobile-nav{display:flex}` 分别被后面的 `.sidebar{display:flex}`、`.status-panel{display:flex}`、`.mobile-nav{display:none}` 覆盖 → 手机上底部导航不显示、侧栏没被真正隐藏（靠 grid 高度 0 才没露出来）、状态栏堆到正文下方。
-  修法（未实施，需用户确认）：把三条媒体查询选择器提权，如 `.app-body .app-sidebar` / `.app-body .app-status` / `.app-layout .mobile-nav`。
+- **响应式断点里的 `display` 规则必须带 `.app-layout` 前缀提权（2026-09-11 已修，勿改回裸选择器）**：
+  基础规则 `.sidebar{display:flex}`、`.status-panel{display:flex}`、`.mobile-nav{display:none}` 都声明在 `@media` 块**之后**，与裸选择器同为 (0,1,0) 特指度时由「后声明者」胜出 → 媒体查询里的 `display:none/flex` **全部失效**。
+  实测后果（改前）：平板 900px 下右栏**照旧显示**（200×457）且中区被压成半高（900→433）；手机 390px 下右栏**占满屏**（390×396）、左栏 `display` 仍是 `flex`（只靠 grid 高度 0 才没露出来）、**底部导航在任何宽度都不显示**。
+  现写法：媒体查询里写 `.app-layout .app-status` / `.app-layout .app-sidebar` / `.app-layout .mobile-nav`（(0,2,0) 稳压基础规则）。**注意 `.app-sidebar` 是网格里那一栏，抽屉里的 `<Sidebar />` 只有 `.sidebar` 类，所以前缀不会误伤抽屉**。
+  守卫：`e2e-test.spec.mjs` 的「响应式：平板收起右栏、手机单栏 + 底部导航可用」逐条断言 computed display 与中区高度，并实点底部导航验证抽屉开合。
+  ⚠️ 另注：手机上右侧状态栏（挂机/事件日志/快捷状态）**没有任何入口**——媒体查询的设计意图就是单栏隐藏它，底部导航 5 个按钮里也没有它。若以后要让手机能看状态栏，那是**新增功能**（需要给它一个抽屉入口），别靠放开这条 `display:none` 来解决。
 - **启动页 / 主内容区 / 左右导航栏 三处壁纸都按主题切换（2026-09-10）**：
   | 位置 | 亮色 | 深色 |
   | --- | --- | --- |
@@ -249,7 +252,34 @@
 - **生成器头注释里的日期**：`gen_exploration_targets` / `gen_smith_ores` / `gen_farm_seeds` 等会把生成日期写进产物首行，
   所以重跑后 `git diff` 至少有 1 行日期变化——这是**预期内**的，不是数据漂移。
 
+### 📬 信箱（2026-09-11，`src/game/data/mail.js` + `MailView.vue` + `player.js` 的 mail* 动作）
+- **定位：只做「兜底 + 留档」，绝不接管既有奖励的发放路径**。三条来源：① `overflow` 溢出转存 ② `offline` 离线回执（产出仍由 `settleOffline` 直接发放，邮件只是明细）③ `welcome` 新档欢迎信（**不带附件**，不动物值曲线）。**新增任何「送东西」的功能仍走原来的 `gainGold`/`gainItem`**，不要图省事塞进信箱。
+- **`gainItem` 的返回值语义没变**（背包满仍是 `false`、截断仍按 `add > 0`），只是**多了一条不丢东西的通道**：溢出部分进 `_fileOverflowMail`。
+  ⚠️ **因此「靠 gainItem 的返回值判断背包满」的写法有重复风险**：物品会被转存进邮箱，而调用方以为没发出去。现存唯一一处（`unsocketGem`）已改为 `canGainItem()` 容量预检 + 必定成功两步；**以后新增类似「发不出去就回滚」的逻辑，必须用 `canGainItem` 预检，不要看返回值**。
+- **领取必须过 `canGainItem` 预检**：否则「领出来 → 背包满 → 又转存成一封新邮件」会形成死循环。领取失败时邮件保持未领。
+- **上限 60 封**：满了先淘汰最旧的「已领或无附件」邮件；若 60 封全是未领附件则**拒收**（`sendMail` 返回 `null`，`_fileOverflowMail` 返回 `false` → 此时才回落到 `inventory:full` 事件）——刻意保留「背包不够就得扩容」的压力，**别把信箱改成无限仓库**。
+- **存档**：`mail` 已进 `defaultState`/`serialize`/`applySave`（旧档回退空信箱；缺 `nextId` 时按现有最大 id 推算，防 id 撞车）。`system_test.mjs` 的 **C11 信箱**一节共 31 项断言覆盖上述全部规则（含「拆卸宝石不重复」「旧档迁移」「往返无损」），改信箱务必先跑它。
+
+### 🤝 厨友（2026-09-11，`src/game/data/friends.js` + `FriendsView.vue` + `player.js` 的 friend* 动作）
+- **这是纯单机游戏、没有后端**，所以「社交」一律做成**本地生成的镜像 NPC**（与竞技场镜像对手、同业榜 NPC 同一思路）。**不要**写出「等待其他玩家响应」「联网同步」这类假装有服务端的设计。
+- **奖励只放大本系统自身**：羁绊等级只提高该厨友的拜访礼物与委托赏金，**不叠加**到餐厅/采集/对决等既有乘区——那些节奏已经标定过，别去动。
+- **赏金口径绑住既有物品价值**（`物品 value × 数量 × (1.4~2.0)`，对照「食客订单」的 ×(1.5~2.2) 略低一档），**不要另起一套经济尺度**；拜访礼物沿用吉祥物的 `base × (1+0.25×等级)` 公式。
+- **委托池只能放现存物品**（`friends.js` 里每个厨友的 `pool`）。加了不存在的 id 会让页面显示 undefined、并可能被引用类审计判 FAIL；池子只放**早期也交得起**的低阶食材。
+- 存档：`friends: { data, orders, orderDay }` 已进三个存档函数；旧档回退空对象，且 `friendState()` **懒初始化**，旧档也能直接用。`system_test.mjs` 的 **C12 厨友**一节覆盖上述规则（含跨天刷新、材料不足拒交、存档往返、旧档懒初始化）。
+- 跨天判断统一用 `this.todayKey ?? _todayStr()`（与签到/每日任务同源），别自己 `new Date()` 取日期。
+
 ### 校验习惯
+- 🧩 **新增功能页（view）必须在四处同时登记，缺一处就是缺陷**：
+  1. `src/stores/ui.js` 的 `VIEW_KEYS`（白名单，开发期对未知 key 告警）；
+  2. `src/App.vue` 的 `defineAsyncComponent` import + `v-else-if="ui.activeView === '...'"` 分派（末尾 `v-else` 兜底到 `SkillView`，**漏登记会静默显示技能页**）；
+  3. `src/components/Sidebar.vue` 的 `FEATURE_GROUPS`（含 icon/name/view，自动进「功能」页签并计入 `FEATURE_VIEWS`）；
+  4. `e2e-dark.spec.mjs` 的 `VIEWS`（否则该页不进深色体检）。
+  页面若要接入跳转，用 `components/RelatedPages.vue`（`content_sync_audit.mjs` 会检查左栏功能页是否都有跳转条）；需要「切到某个技能」时 `RelatedPages` 不够用（它只能切 view），要直接调 `player.setActiveSkill(id)`。
+  守卫：`e2e-test.spec.mjs` 的「全部 view key 均已注册」会逐 key 切换并断言无 `setView` 告警——漏登记会在这里 FAIL，而不是静默显示技能页。
+- **把某块 UI 从旧页面抽成独立页时，必须同时处理「旧页残留」与「跨页进行中的状态」**：
+  - 旧页**不要留重复界面**，改成「状态 + 入口 ↗」卡片（如对决页的秘境条、餐厅页的装潢行）；若原页面还持有会推进状态的监听（如 `combat:end` 推进秘境层数），**监听要保留**——战斗跑在单例 `Combat` 上、玩家随时可能换页，两处都不监听会让进行中的一局卡死。视图由 `App.vue` 的 `v-if/v-else-if` 互斥挂载，同一时刻只有一个监听生效，不会重复推进。
+  - 旧页若因此少了「唯一入口」，记得把**别处指向旧页的口子改指新页**（如 `StatusPanel` 的「去领取/查看」由 `openLogTab('quest')` 改为 `ui.setView('quests')`）。
+  - 抽走后**立刻删掉旧页的死代码**（模板块 + 只服务于它的 computed/函数/分页常量），并用 `npm run build` 的产物体积变化核对（本次 LogView 64.3kB → 54.6kB）；改一个文件里的大段代码时**不要用「从 A 锚点到 B 锚点整段切掉」的批量脚本**——锚点之间可能夹着无关的 import，本次就这样误删过 `items.js`/`cardBattle.js` 的 4 组 import，靠 build + 逐行对照才发现。批量删改后必须 `git diff` 逐段复核，或改用精确的小段 `Edit`。
 - **生成器相关改动后必须跑 `node scripts/ci/gen_drift_audit.mjs`**（已入 CI）：它把 13 个生成器逐个跑进**临时目录**、与仓库产物比对，并逐条打印「重跑会改什么」；FAIL 必须为 0。
   新增生成器/新产物时，记得把它登记进该脚本的 `GENS`（脚本会提示"未登记的产物"）。
 - **生成器输出目录统一支持 `GEN_OUT_DIR`**：默认写仓库 `src/game/data`，设了就写指定目录——任何「只想比对、不想写仓库」的场景都用它（不要用重跑+还原的办法）。

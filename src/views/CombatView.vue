@@ -9,7 +9,6 @@ import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_ADVANTAGE, COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
 import { getItem, itemName } from '../game/data/items.js'
-import { realmOpponent, REALM_BUFFS } from '../game/data/mysticRealm.js'
 import CombatPanel from '../components/CombatPanel.vue'
 
 const player = usePlayerStore()
@@ -42,31 +41,13 @@ const battleFrame = computed(() => {
   }
 })
 
-// ── 食神秘境（2026-09-09 roguelike 局内模式）：逐层挑战 + 3 选 1 临时增益 ──
-const realm = computed(() => {
+// ── 食神秘境（2026-09-11 独立成页，界面在 views/MysticRealmView.vue）──
+// 本页只做两件事：① 顶部状态条（是否进行中 / 历史最佳）② combat:end 的秘境分支——
+// 本局开打后若玩家切到对决页，胜利/失败仍需推进或结算，否则本局会卡住。
+const realmStat = computed(() => {
   ui.loopTick
-  const st = player.realmState()
-  return { ...st, buffDefs: (st.buffs ?? []).map((id) => REALM_BUFFS.find((b) => b.id === id)).filter(Boolean) }
+  return player.realmState()
 })
-function startRealm() {
-  player.realmStart()
-  fightRealmFloor()
-}
-function fightRealmFloor() {
-  const st = player.realmState()
-  if (!st.active || !combat) return
-  if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
-  combat.start(realmOpponent(st.floor, player.combatLevel))
-}
-function pickRealmBuff(id) {
-  if (player.realmPickBuff(id)) fightRealmFloor()
-}
-function abandonRealm() {
-  if (!confirm('放弃本次秘境？按当前层数结算奖励，本局增益清零。')) return
-  const r = player.realmEnd()
-  combat?.stop()
-  if (r) ui.pushLog(`🏯 秘境结算：第 ${r.floor} 层，+${r.gold} 金币`, 'gain')
-}
 
 // ── 持久战：胜利后自动重新挑战当前敌人 ──
 // 监听随组件挂载注册、卸载解除（避免每次进出对决页叠加一个永不解除的 combat:end 监听）
@@ -153,35 +134,16 @@ function closeDrops() {
 
 <template>
   <div class="combat-view">
-    <!-- 食神秘境（2026-09-09 roguelike）：逐层挑战 + 3 选 1 临时增益（仅本局生效） -->
+    <!-- 食神秘境已独立成页（2026-09-11）；本局进行中时这里只给状态与入口 -->
     <div class="card realm-card">
       <div class="realm-head">
         <h3>🏯 食神秘境</h3>
         <span class="dim">逐层挑战随机对手，每胜一层 3 选 1 临时增益（仅本局生效）；阵亡按层数结算奖励</span>
         <div class="realm-head-right">
-          <span v-if="realm.best" class="dim">历史最佳 {{ realm.best }} 层</span>
-          <template v-if="realm.active">
-            <span class="badge badge-on">第 {{ realm.floor + 1 }} 层</span>
-            <button class="btn btn-sm btn-danger" @click="abandonRealm()">放弃并结算</button>
-          </template>
-          <button v-else class="btn btn-sm btn-primary" @click="startRealm()">进入秘境</button>
-        </div>
-      </div>
-      <div v-if="realm.active && realm.buffDefs.length" class="realm-buffs">
-        <span v-for="b in realm.buffDefs" :key="b.id" class="mod-chip">{{ b.name }}（{{ b.desc }}）</span>
-      </div>
-    </div>
-
-    <!-- 3 选 1 增益弹窗 -->
-    <div v-if="realm.pending?.length" class="modal-backdrop">
-      <div class="modal realm-modal">
-        <div class="modal-head">
-          <h3>🏯 第 {{ realm.floor }} 层通过！选择一项祝福</h3>
-        </div>
-        <div class="realm-choices">
-          <button v-for="b in realm.pending" :key="b.id" class="btn realm-choice" @click="pickRealmBuff(b.id)">
-            <strong>{{ b.name }}</strong>
-            <span class="dim">{{ b.desc }}</span>
+          <span v-if="realmStat.best" class="dim">历史最佳 {{ realmStat.best }} 层</span>
+          <span v-if="realmStat.active" class="badge badge-on">进行中 · 第 {{ realmStat.floor + 1 }} 层</span>
+          <button class="btn btn-sm btn-primary" @click="ui.setView('realm')">
+            {{ realmStat.active ? '回到秘境' : '进入秘境' }} ↗
           </button>
         </div>
       </div>

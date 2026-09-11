@@ -1,13 +1,12 @@
 <script setup>
-// 日志面板 — 需求文档 §6（成就/图鉴/称号）+ §7.2（主线任务）+ §13（图鉴卡牌化）
-// 图鉴 tab：物品（分类展示全部物品+未获得标记）/ 悬浮详情；首领 / 赛季 / 卡牌对战
+// 图鉴面板 — 需求文档 §6（图鉴）+ §13（图鉴卡牌化）
+// 图鉴 tab：物品（分类展示全部物品+未获得标记）/ 悬浮详情；首领 / 赛季 / 卡牌对战 + 配方手册 + 故事
+// 2026-09-11：成就/称号/主线任务三块已移出为独立页（见 views/AchievementsView.vue、views/QuestsView.vue），
+//             本页只在页签栏保留两个跳转按钮
 import { bindTip } from '../composables/useFixedTooltip.js'
 import { ref, computed, watch, onMounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
-import { SHOP_TITLES } from '../game/data/titles.js'
-import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
 import {
@@ -38,19 +37,15 @@ import { itemImage } from '../game/data/itemImage.js'
 import Pagination from '../components/Pagination.vue'
 
 // 分页状态（每个列表独立页码；行数不同 → 每页数量不同）
-const qPage = ref(1)
-const aPage = ref(1)
 const itemPage = ref(1)
 const seasonPage = ref(1)
 const quirkPage = ref(1)
-const PAGE = { quest: 24, achieve: 24, items: 28, season: 20, quirk: 24, cards: 13 } // 卡牌 13 张/页
+const PAGE = { items: 28, season: 20, quirk: 24, cards: 13 } // 卡牌 13 张/页
 
 const player = usePlayerStore()
 const ui = useUiStore()
-const tab = ref('quest')
+const tab = ref('log')
 onMounted(() => {
-  player.ensureDailyTasks()
-  player.ensureWeeklyTask()
   // 传闻/轶事文案 chunk 按需加载（2026-09-06 拆包）
   import('../game/data/tales_ext.js').then((m) => {
     talesExt.value = m.TALES_EXT
@@ -70,17 +65,21 @@ const bossDetail = ref(null) // 点击首领图鉴行 → 详情弹窗
 const seasonTip = ref(null) // 赛季图鉴格子点击固定浮框
 
 // immediate：顶栏图标进入时 LogView 是全新挂载（v-else-if 卸载重建），不 immediate 会停在默认「任务」页
+// 已独立成页的旧子页：老入口若还传这些值，直接转到对应新页
+const MIGRATED_TABS = { quest: 'quests', achieve: 'achievements', title: 'achievements' }
 watch(
   () => ui.logInitialTab,
   (t) => {
-    if (t) {
-      tab.value = t
-      if (t === 'log') sub.value = 'items'
-      ui.logInitialTab = null
-    }
+    if (!t) return
+    ui.logInitialTab = null
+    if (MIGRATED_TABS[t]) { ui.setView(MIGRATED_TABS[t]); return }
+    tab.value = t
+    if (t === 'log') sub.value = 'items'
   },
   { immediate: true },
 )
+// 跳转到独立页面（任务中心 / 成就与称号）
+function goPage(v) { ui.setView(v) }
 
 const TYPE_LABELS = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 // 一级分类（type 大类）；二级分类 = 该大类下的 category 细分（动态生成）
@@ -224,60 +223,6 @@ function doCardBattle() {
   selectedCards.value = []
 }
 
-const unlockedIds = computed(() => new Set(player.achievements))
-const categories = ['技能', '对决', '收集', '探索', '特殊']
-
-// 任务
-const currentQuest = computed(() => QUESTS[player.quests.index] ?? null)
-function questProgress(q) {
-  return q.objectives.map((obj) => {
-    const key = questObjectiveKey(obj)
-    const cur = player.quests.progress[key] ?? 0
-    return { obj, cur, key }
-  })
-}
-function objLabel(obj) {
-  switch (obj.kind) {
-    case 'gather': return `获得 ${itemName(obj.param)}`
-    case 'craft': return `制作 ${itemName(obj.param)}`
-    case 'harvest': return `收获 ${itemName(obj.param)}`
-    case 'combatWin': return '赢得对决'
-    case 'boss': return `击败 首领「${obj.param}」`
-    case 'explore': return '探索成功'
-    case 'skillLevel30': {
-      const lv = obj.param === 'any' ? 30 : (Number(obj.param) || 30)
-      return `${obj.qty > 1 ? obj.qty + ' 个技能' : '技能'}达到 ${lv} 级`
-    }
-    case 'gold': return `累计金币 ${obj.qty}`
-    case 'collection': return `图鉴收集 ${obj.qty}%`
-    case 'seasons': return `赛季领奖 ${obj.qty} 季`
-    case 'card': return `卡牌对战胜利 ${obj.qty} 场`
-    case 'arena': return `竞技场 ${obj.qty} 连胜`
-    case 'restaurant': return `餐厅达到 ${obj.qty} 级`
-    case 'gear': return `装备图鉴 ${obj.qty} 件`
-    case 'upgrades': return `强化装备 ${obj.qty} 件`
-    case 'prestiges': return `转生 ${obj.qty} 次`
-    case 'guild': return '加入一个公会'
-    default: return obj.kind
-  }
-}
-function rewardText(reward) {
-  const parts = []
-  if (reward?.gold) parts.push(`${reward.gold} 金币`)
-  if (reward?.items) for (const [id, q] of Object.entries(reward.items)) parts.push(`${itemName(id)} ×${q}`)
-  return parts.join('、') || '—'
-}
-
-// 任务卡片状态：done 已完成 / current 当前可做 / locked 未解锁（前序未完成）
-const QUEST_INDEX = new Map(QUESTS.map((q, i) => [q.id, i])) // id→序号（500 条，避免每卡 findIndex 线性查找）
-function questState(q) {
-  const done = player.quests.completed.includes(q.id)
-  const current = currentQuest.value?.id === q.id
-  const idx = QUEST_INDEX.get(q.id) ?? 0
-  const prevDone = idx === 0 || player.quests.completed.includes(QUESTS[idx - 1].id)
-  return { done, current, locked: !done && !current && !prevDone }
-}
-
 // ── 配方手册：每个制作技能内按 reqLevel 每 5 级分段，可折叠；顶部按等级快速跳转 ──
 const recipeInstances = computed(() => getAllSkillInstances().filter((x) => x.type === 'production'))
 // 大类切换：一次只显示一个制作大类（烹饪/烘焙/腌制…），避免全部配方同时渲染
@@ -361,19 +306,6 @@ function isOpen(instId, label) {
 function scrollToLabel(instId, label) {
   const el = document.getElementById('recipe-sec-' + instId + '-' + label)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-// 称号（2026-09-09：成就称号 + 商店称号统一展示，支持佩戴/取消佩戴）
-const titleAchievements = computed(() => ALL_ACHIEVEMENTS.filter((a) => a.title))
-const ownedShopTitles = computed(() => SHOP_TITLES.filter((t) => player.shopOwned?.[t.key]))
-function equipTitle(name) {
-  player.title = name
-  ui.pushLog(`🏷 已佩戴称号「${name}」`, 'gain')
-}
-function clearTitle() {
-  if (!player.title) return
-  player.title = null
-  ui.pushLog('🏷 已取消佩戴称号', 'info')
 }
 
 // ── 故事（§13：线性七章，每章覆盖全部功能，需求全达标解锁下一章）──
@@ -484,58 +416,6 @@ function selectQuirkSub(sub) {
   quirkPage.value = 1
 }
 
-// 成就进度（§6：当前需求 + 百分比）
-function achievementProgress(a) {
-  const p = player
-  const m = a.id.match(/^skill_(\w+)_(\d+)$/)
-  if (m) {
-    const cur = Math.min(p.skills[m[1]]?.level ?? 1, Number(m[2]))
-    return { cur, need: Number(m[2]), pct: Math.min(100, (cur / Number(m[2])) * 100) }
-  }
-  const N = {
-    firstWin: 1, win10: 10, win100: 100, win500: 500, win1000: 1000, bossAll: 28, hardBossAll: 28,
-    log25: 25, log50: 50, log75: 75, log100: 100,
-    explore1: 1, explore50: 50, region3: 3, region6: 6, region10: 10,
-    gold10k: 10000, gold100k: 100000, items50: 50, prestige1: 1, prestige3: 3, prestige5: 5, prestige8: 8, prestige12: 12, level120: 120,
-    totalLevel500: 500, totalLevel1000: 1000, hardcore10: 10, season5: 5, season10: 10, seasonAll: 40,
-    collection25: 25, collection50: 50, collection75: 75, collection100: 100,
-    hardcoreDay1: 1, hardcoreDay7: 7, hardcoreDay30: 30, hardcoreDay100: 100,
-  }
-  const need = N[a.id]
-  let cur = null
-  if (a.id.startsWith('log')) cur = p.collectionPct
-  else if (a.id.startsWith('collection')) cur = p.collectionPct
-  else if (a.id.startsWith('hardcoreDay')) cur = p.hardcoreDayCount()
-  else if (['firstWin', 'win10', 'win100', 'win500', 'win1000'].includes(a.id) || a.id === 'hardcore10') cur = p.stats.combatWins
-  else if (a.id === 'bossAll') cur = p.stats.bosses.length
-  else if (a.id === 'hardBossAll') cur = p.stats.hardBosses?.length ?? 0
-  else if (a.id.startsWith('explore')) cur = p.stats.explorations
-  else if (a.id.startsWith('region')) cur = p.regionsUnlocked
-  else if (a.id.startsWith('gold')) cur = p.stats.totalGoldEarned
-  else if (a.id === 'items50') cur = Object.keys(p.collected).length
-  else if (a.id === 'prestige1') cur = p.stats.prestiges
-  else if (a.id.startsWith('prestige')) cur = p.stats.prestiges
-  else if (a.id === 'level120') cur = Math.max(...Object.values(p.skills).map((s) => s.level ?? 1))
-  else if (a.id.startsWith('totalLevel')) cur = p.totalLevels
-  else if (a.id.startsWith('season')) cur = Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length
-  else if (a.id === 'allDishes') cur = Object.keys(p.collected).filter((id) => getItem(id)?.type === 'food').length
-  else if (a.id === 'allGear') cur = Object.keys(p.collected).filter((id) => getItem(id)?.type === 'equipment').length
-  else if (a.id === 'allFish') cur = Object.keys(p.collected).filter((id) => ['fish', 'seafood'].includes(getItem(id)?.category)).length
-  if (cur === null || !need) return null
-  return { cur: Math.min(cur, need), need, pct: Math.min(100, (cur / need) * 100) }
-}
-// 图鉴总数缓存（ITEMS 全表只数一次，供成就 need/进度复用）
-const ACH_TOTAL = {
-  allDishes: Object.values(ITEMS).filter((it) => it.type === 'food').length,
-  allGear: Object.values(ITEMS).filter((it) => it.type === 'equipment').length,
-  allFish: Object.values(ITEMS).filter((it) => it.category === 'fish' || it.category === 'seafood').length,
-}
-function achievementNeed(a) {
-  const m = a.id.match(/^skill_(\w+)_(\d+)$/)
-  if (m) return Number(m[2])
-  if (a.id === 'allDishes' || a.id === 'allGear' || a.id === 'allFish') return ACH_TOTAL[a.id] ?? 0
-  return null
-}
 const SLOT_ZH = { weapon: '武器', helmet: '头盔', body: '身体', legs: '腿甲', boots: '脚部', offhand: '副手', amulet: '饰品1', ring: '饰品2' }
 const slotZh = (id) => SLOT_ZH[getItem(id)?.slot] ?? getItem(id)?.slot ?? ''
 // 每季装备 = 单件奖励(limitedItem) + 8 件 gear 套(limitedItems)
@@ -569,21 +449,6 @@ function pageList(list, pageRef, size) {
     return arr
   })
 }
-const questPaged = pageList(QUESTS, qPage, PAGE.quest)
-const questPages = computed(() => Math.max(1, Math.ceil(QUESTS.length / PAGE.quest)))
-// 任务卡视图：每页一次预计算 state/进度（模板不再逐卡重复调用 questState/questProgress）
-const questView = computed(() => questPaged.value.map((q) => (q._pad ? q : { q, state: questState(q), progs: questProgress(q) })))
-const achievePages = computed(() => Math.max(1, Math.ceil(ALL_ACHIEVEMENTS.length / PAGE.achieve)))
-const achievePaged = computed(() => {
-  const p = Math.min(aPage.value, achievePages.value)
-  const arr = ALL_ACHIEVEMENTS.slice((p - 1) * PAGE.achieve, p * PAGE.achieve)
-  while (arr.length < PAGE.achieve) arr.push({ _pad: true })
-  return arr
-})
-// 成就卡视图：每页一次预计算 unlocked/进度（模板每卡不再重复调用 achievementProgress 3 次）
-const achieveView = computed(() =>
-  achievePaged.value.map((a) => (a._pad ? a : { a, unlocked: unlockedIds.value.has(a.id), prog: achievementProgress(a), need: achievementNeed(a) }))
-)
 const itemPages = computed(() => Math.max(1, Math.ceil(itemList.value.length / PAGE.items)))
 const itemPaged = computed(() => {
   const p = Math.min(itemPage.value, itemPages.value)
@@ -617,140 +482,23 @@ function scrollToTalesSeries(series) {
     <header class="skill-head">
       <div>
         <h2>📖 图鉴</h2>
-        <p class="dim">主线任务 · 成就 · 美食图鉴 · 配方手册 · 故事 · 称号</p>
+        <p class="dim">美食图鉴 · 配方手册 · 卡牌对战 · 故事（任务、成就与称号已独立成页，见上方跳转按钮）</p>
       </div>
     </header>
 
     <div class="card">
+      <!-- 任务/成就/称号已独立成页（2026-09-11），这里只留跳转按钮；其余仍是本页页签 -->
       <div class="region-tabs">
-        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'quest' }" @click="tab = 'quest'">任务</button>
-        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'achieve' }" @click="tab = 'achieve'">成就（{{ unlockedIds.size }}/{{ ALL_ACHIEVEMENTS.length }}）</button>
+        <button class="btn btn-sm" title="独立页面" @click="goPage('quests')">📋 任务中心 ↗</button>
+        <button class="btn btn-sm" title="独立页面" @click="goPage('achievements')">🏅 成就与称号 ↗</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'log' }" @click="tab = 'log'">图鉴（{{ player.collectionPct }}%）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'cards' }" @click="tab = 'cards'">卡牌对战（{{ player.stats.cardBattle?.wins ?? 0 }}胜/{{ player.stats.cardBattle?.losses ?? 0 }}负）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'recipes' }" @click="tab = 'recipes'">配方手册</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'story' }" @click="tab = 'story'">📜故事</button>
-        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'title' }" @click="tab = 'title'">称号</button>
       </div>
-
-      <!-- ── 每日/周常任务（2026-09-06 长线日活钩子）── -->
-      <div v-if="tab === 'quest'" class="card daily-panel">
-        <div class="daily-head">
-          <strong>📋 今日任务</strong>
-          <span class="dim">{{ player.dailyClaimableCount() }}/{{ player.daily.tasks.length }}</span>
-          <span v-if="player.daily.streak > 1" class="badge badge-on">🔥 连续 {{ player.daily.streak }} 天</span>
-        </div>
-        <div v-if="player.daily.tasks.length" class="daily-grid">
-          <div v-for="(t, i) in player.daily.tasks" :key="t.name + i" class="daily-item" :class="{ done: t.progress >= t.qty }">
-            <span class="daily-name">{{ t.name }}</span>
-            <span class="mono dim">{{ t.progress }}/{{ t.qty }}</span>
-            <span class="dim daily-gold">+{{ Math.floor(t.gold * (1 + player.combatLevel * 0.3)) }} 金</span>
-            <button
-              class="btn btn-sm"
-              :disabled="t.progress < t.qty || t.claimed"
-              @click="player.claimDailyTask(i)"
-            >{{ t.claimed ? '已领取' : t.progress >= t.qty ? '领取' : '进行中' }}</button>
-          </div>
-        </div>
-        <p v-else class="dim">今日任务加载中……</p>
-        <div v-if="player.daily.claimedAll" class="daily-bonus">🎁 每日礼包已发放（能量饼干 ×1 + 金币）—— 明天再来！</div>
-        <div v-if="player.weekly.task" class="weekly-row" :class="{ done: player.weekly.progress >= player.weekly.task.qty }">
-          <strong>🏆 本周挑战:{{ player.weekly.task.name }}</strong>
-          <span class="mono dim">{{ player.weekly.progress }}/{{ player.weekly.task.qty }}</span>
-          <span class="dim">+{{ Math.floor(player.weekly.task.gold * (1 + player.combatLevel * 0.3)) }} 金币</span>
-          <button
-            class="btn btn-sm"
-            :disabled="player.weekly.progress < player.weekly.task.qty || player.weekly.claimed"
-            @click="player.claimWeekly()"
-          >{{ player.weekly.claimed ? '已领取' : player.weekly.progress >= player.weekly.task.qty ? '领取' : '进行中' }}</button>
-        </div>
-        <!-- 每周挑战赛（2026-09-09）：难度型周目标，与产量型周常互补 -->
-        <div v-if="player.challengeDef()" class="weekly-row" :class="{ done: player.challenge.progress >= player.challengeDef().target }">
-          <strong>⚔️ 每周挑战：{{ player.challengeDef().name }}</strong>
-          <span class="dim">{{ player.challengeDef().desc }}</span>
-          <span class="mono dim">{{ player.challenge.progress }}/{{ player.challengeDef().target }}</span>
-          <span class="dim">+{{ player.challengeDef().gold.toLocaleString() }} 金币<template v-if="player.challengeBest[player.challengeDef().id]"> · 历史最佳 {{ player.challengeBest[player.challengeDef().id] }}</template></span>
-          <button
-            class="btn btn-sm"
-            :disabled="player.challenge.progress < player.challengeDef().target || player.challenge.done"
-            @click="player.claimChallenge()"
-          >{{ player.challenge.done ? '已领取' : player.challenge.progress >= player.challengeDef().target ? '领取' : '进行中' }}</button>
-        </div>
-      </div>
-
-      <!-- ── 任务（§7.2）── -->
-      <template v-if="tab === 'quest'">
-        <div class="gather-grid grid-n-6 grid-equal">
-          <template v-for="(v, qi) in questView" :key="v.q?.id ?? 'pad-' + qi">
-          <div
-            v-if="!v._pad"
-            v-tilt
-            class="gather-card"
-            :class="{ locked: v.state.locked, selected: v.state.current }"
-          >
-            <div class="gather-card-head">
-              <div>
-                <strong>{{ v.q.name }}</strong>
-                <div class="dim" style="font-size: 12px">{{ v.q.desc }}</div>
-              </div>
-              <span v-if="v.state.done" class="badge" style="background: var(--good-soft); color: var(--good-strong)">✔</span>
-              <span v-else-if="v.state.current" class="badge badge-on">进行中</span>
-              <span v-else class="badge" style="background: var(--lock-bg); color: var(--muted)">🔒</span>
-            </div>
-            <div v-for="p in v.progs" :key="p.key" class="gather-card-row">
-              <span>{{ objLabel(p.obj) }}</span>
-              <span class="mono">{{ p.cur }}/{{ p.obj.qty }}</span>
-            </div>
-            <ProgressBar
-              v-if="v.state.current"
-              :progress="Math.min(1, Math.min(...v.progs.map((p) => p.cur / p.obj.qty)))"
-            />
-            <div class="gather-card-row">
-              <span>奖励</span>
-              <span class="dim">{{ rewardText(v.q.reward) }}</span>
-            </div>
-          </div>
-          <div v-else class="pager-spacer"></div>
-          </template>
-        </div>
-        <Pagination v-if="QUESTS.length > PAGE.quest" :current="Math.min(qPage, questPages)" :pages="questPages" @update:current="(p) => qPage = p" />
-        <p v-if="!currentQuest" class="dim" style="margin-top: 10px">全部主线任务已完成！</p>
-      </template>
-
-      <!-- ── 成就（§6.1）── -->
-      <template v-else-if="tab === 'achieve'">
-        <div class="gather-grid grid-n-6 grid-equal">
-          <template v-for="(v, ai) in achieveView" :key="v.a?.id ?? 'pad-' + ai">
-          <div
-            v-if="!v._pad"
-            v-tilt
-            class="gather-card"
-            :class="{ locked: !v.unlocked }"
-          >
-            <div class="gather-card-head">
-              <span class="achieve-mark">{{ v.unlocked ? '✔' : '○' }}</span>
-              <div>
-                <strong>{{ v.a.name }}</strong>
-                <div class="dim" style="font-size: 12px">{{ v.a.category }} · {{ v.a.desc }}</div>
-              </div>
-            </div>
-            <div v-if="!v.unlocked && v.prog" class="gather-card-row">
-              <span>进度</span>
-              <span class="mono">{{ v.prog.cur }}/{{ v.need ?? v.prog.need }}</span>
-            </div>
-            <ProgressBar v-if="!v.unlocked && v.prog" :progress="v.prog.pct / 100" />
-            <div class="gather-card-row">
-              <span>奖励</span>
-              <span class="dim">{{ rewardText(v.a.reward) }}</span>
-            </div>
-          </div>
-          <div v-else class="pager-spacer"></div>
-          </template>
-        </div>
-        <Pagination v-if="ALL_ACHIEVEMENTS.length > PAGE.achieve" :current="aPage" :pages="achievePages" @update:current="(p) => aPage = p" />
-      </template>
 
       <!-- ── 图鉴（§6.2：分类展示全部物品 + 未获得标记 + 悬浮详情；首领/赛季图鉴）── -->
-      <template v-else-if="tab === 'log'">
+      <template v-if="tab === 'log'">
         <div class="region-tabs">
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'items' }" @click="sub = 'items'">物品（{{ player.collectionPct }}%）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'boss' }" @click="sub = 'boss'">首领（{{ player.stats.bosses.length }}/{{ COMBAT_BOSSES.length }}）</button>
@@ -1174,55 +922,6 @@ function scrollToTalesSeries(series) {
         </template>
       </template>
 
-      <!-- ── 称号（§6.3；2026-09-09 支持佩戴/取消佩戴 + 商店称号）── -->
-      <template v-else>
-        <p>
-          当前称号：<strong v-if="player.title" class="title-badge">{{ player.title }}</strong><span v-else class="dim">（无）</span>
-          <button v-if="player.title" class="btn btn-sm" style="margin-left: 8px" @click="clearTitle()">取消佩戴</button>
-        </p>
-        <h3 style="margin: 12px 0 6px">🏅 成就称号（点击已解锁称号佩戴）</h3>
-        <div class="gather-grid">
-          <div
-            v-for="a in titleAchievements"
-            :key="a.id"
-            v-tilt
-            class="gather-card"
-            :class="{ locked: !unlockedIds.has(a.id), 'title-equipped': player.title === a.title }"
-            @click="unlockedIds.has(a.id) && equipTitle(a.title)"
-          >
-            <div class="gather-card-head">
-              <span class="achieve-mark">{{ unlockedIds.has(a.id) ? '✔' : '○' }}</span>
-              <div>
-                <strong>{{ a.title }}</strong>
-                <span v-if="player.title === a.title" class="title-eq-badge">佩戴中</span>
-                <div class="dim" style="font-size: 12px">{{ a.desc }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <h3 style="margin: 14px 0 6px">🛒 商店称号（游戏商店购买）</h3>
-        <div class="gather-grid">
-          <div
-            v-for="t in SHOP_TITLES"
-            :key="t.key"
-            v-tilt
-            class="gather-card"
-            :class="{ locked: !player.shopOwned?.[t.key], 'title-equipped': player.title === t.name }"
-            @click="player.shopOwned?.[t.key] && equipTitle(t.name)"
-          >
-            <div class="gather-card-head">
-              <span class="achieve-mark">{{ player.shopOwned?.[t.key] ? '✔' : '🔒' }}</span>
-              <div>
-                <strong>{{ t.icon }} {{ t.name }}</strong>
-                <span v-if="player.title === t.name" class="title-eq-badge">佩戴中</span>
-                <div class="dim" style="font-size: 12px">
-                  {{ player.shopOwned?.[t.key] ? '已拥有 · 点击佩戴' : `未拥有 · 游戏商店 ${t.price} 游戏币` }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
     </div>
 
     <!-- 物品详情弹窗（点击图鉴物品显示） -->

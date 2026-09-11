@@ -15,6 +15,14 @@ const VIEWS = [
   'suppliers', 'chefChallenge', 'seasonReview',
   // 2026-09-10 第四批
   'honor', 'codexExchange', 'setMeals', 'rivals',
+  // 2026-09-11 第五批（装备总览 / 任务中心 / 成就与称号）
+  'gear', 'quests', 'achievements',
+  // 2026-09-11 第六批（食神秘境 / 餐厅装潢，各自从对决页、餐厅页抽出）
+  'realm', 'decor',
+  // 2026-09-11 第七批（信箱）
+  'mail',
+  // 2026-09-11 第八批（系统日志 / 行情 / 厨友）
+  'logs', 'market', 'friends',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

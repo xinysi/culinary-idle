@@ -51,6 +51,9 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '🌤', name: '天气运势', view: 'weather' },
       { icon: '🍀', name: '吉祥物', view: 'mascot' },
+      { icon: '📋', name: '任务中心', view: 'quests' },
+      { icon: '📬', name: '信箱', view: 'mail', badge: () => player.mailUnclaimedCount() },
+      { icon: '💹', name: '行情', view: 'market' },
     ],
   },
   {
@@ -83,6 +86,7 @@ const FEATURE_GROUPS = [
       { icon: '📓', name: '厨房笔记', view: 'kitchenNotes' },
       { icon: '📔', name: '风味册', view: 'flavorBook' },
       { icon: '📜', name: '菜系研究', view: 'schools' },
+      { icon: '⚔️', name: '装备总览', view: 'gear' },
     ],
   },
   {
@@ -100,6 +104,8 @@ const FEATURE_GROUPS = [
       { icon: '📖', name: '常客', view: 'regulars' },
       { icon: '🍱', name: '套餐定食', view: 'setMeals' },
       { icon: '🏪', name: '同业榜', view: 'rivals' },
+      { icon: '🤝', name: '厨友', view: 'friends', badge: () => player.friendsVisitableCount() },
+      { icon: '🏮', name: '餐厅装潢', view: 'decor' },
     ],
   },
   {
@@ -110,6 +116,7 @@ const FEATURE_GROUPS = [
       { icon: '🏅', name: '试炼', view: 'trials' },
       { icon: '🃏', name: '厨具赛', view: 'gearContest' },
       { icon: '🃏', name: '名厨', view: 'chefChallenge' },
+      { icon: '🏯', name: '食神秘境', view: 'realm' },
       { icon: '🎮', name: '小游戏', view: 'minigames' },
     ],
   },
@@ -120,8 +127,10 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '🗺', name: '里程碑', view: 'milestones' },
       { icon: '📜', name: '年鉴', view: 'chronicle' },
+      { icon: '🗂', name: '系统日志', view: 'logs' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
       { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
+      { icon: '🏅', name: '成就与称号', view: 'achievements' },
       { icon: '📖', name: '图鉴兑换', view: 'codexExchange' },
     ],
   },
@@ -231,11 +240,13 @@ function onAvatarPick(e) {
             :key="it.view"
             class="feature-tile"
             :class="{ active: ui.activeView === it.view }"
-            :title="it.name"
+            :title="it.badge?.() ? `${it.name}（${it.badge()} 封待领）` : it.name"
             @click="goFeature(it)"
           >
             <span class="feature-icon">{{ it.icon }}</span>
             <span class="feature-name">{{ it.name }}</span>
+            <!-- 待领角标（2026-09-11 信箱）：非零才显示 -->
+            <span v-if="it.badge?.()" class="feature-badge">{{ it.badge() > 99 ? '99+' : it.badge() }}</span>
           </button>
         </div>
       </template>

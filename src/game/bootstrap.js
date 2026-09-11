@@ -18,6 +18,7 @@ import { applyValueBalance } from './data/valueBalance.js'
 import { applySpoilBalance } from './data/spoilBalance.js'
 import { applyAojiBalance } from './data/aojis.js'
 import { ENCOUNTERS } from './data/encounters.js'
+import { offlineMailBody } from './data/mail.js'
 import { FEST_MILESTONES } from './data/cookingFest.js'
 
 export const saveManager = new SaveManager({ slot: 0 })
@@ -71,6 +72,26 @@ export function settleOffline(player, ui, elapsedMs) {
     )
   }
   if (reports.length === 0 && restGold > 0) ui.pushLog(`离线餐厅收入 ${restGold} 金币`, 'offline')
+
+  // 信箱（2026-09-11）：离线明细留档。产出**已在上面直接发放**，这封回执不带附件，只是让
+  // 玩家关掉离线弹窗后仍能回查「离开这段时间到底产出了什么」。
+  if (reports.length || restGold > 0) {
+    const lines = reports.map(({ inst, r }) => {
+      const first = Object.entries(r.items)[0]
+      const consumedNote = r.consumed ? `，消耗 ${itemName(Object.keys(r.consumed)[0])} ×${Object.values(r.consumed)[0]}` : ''
+      const goldNote = r.gold > 0 ? `，金币 +${r.gold}` : ''
+      return `· ${inst.def.name}：+${r.exp} 经验，${first ? `${itemName(first[0])} ×${first[1]}` : '无产出'}${consumedNote}${goldNote}`
+    })
+    const overflow = player.mailUnclaimedCount?.() ?? 0
+    player.sendMail({
+      kind: 'offline',
+      from: 'kitchen',
+      subject: `离线结算回执（${formatDuration(elapsedMs)}）`,
+      body: offlineMailBody(formatDuration(elapsedMs), lines, restGold)
+        + (overflow > 0 ? `\n\n另有 ${overflow} 封「溢出转存」邮件待领取（背包满时替你收着的东西）。` : ''),
+      reward: null,
+    })
+  }
   return reports.length || restGold > 0 ? { reports, restGold, elapsedMs } : null
 }
 
@@ -281,6 +302,14 @@ export function registerGameEvents() {
   })
 
   // 背包/仓库满（§5.4）
+  // 2026-09-11 信箱：背包满时物品不再静默丢失，而是转存邮箱——提示同步改掉，避免玩家以为东西没了
+  EventBus.on('mail:overflow', ({ itemId, qty }) => {
+    ui.pushLog(
+      `🎒 背包已满：${itemName(itemId)} ×${qty} 已转存到信箱（整理背包后去「信箱」领取）`,
+      'warn'
+    )
+  })
+  // 物品原地未动（仓库/冷库 → 背包 放不下时物品仍在原处；或信箱也塞满、确实发不出去）
   EventBus.on('inventory:full', () => ui.pushLog('🎒 背包已满！请整理、存入仓库或出售（商店可扩展容量）', 'warn'))
   EventBus.on('bank:full', () => ui.pushLog('📦 仓库已满！请取出物品或扩展仓库', 'warn'))
 

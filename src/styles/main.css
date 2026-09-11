@@ -458,7 +458,9 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
   .app-body {
     grid-template-columns: 200px minmax(0, 1fr);
   }
-  .app-status {
+  /* ⚠️ 必须带 `.app-layout` 前缀提权：`.status-panel { display:flex }`（见「右栏」一节）声明在本媒体查询**之后**，
+     与裸 `.app-status` 同为 (0,1,0) 特指度时会由后者胜出 → 右栏在平板/手机上一直没收起（2026-09-11 修）。 */
+  .app-layout .app-status {
     display: none;
   }
 }
@@ -472,7 +474,11 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
   .app-layout {
     padding-bottom: 56px; /* 底部导航高度 */
   }
-  .app-sidebar {
+  /* ⚠️ 以下两条同样必须带 `.app-layout` 前缀提权（原因同上面的 `.app-status`）：
+     `.sidebar { display:flex }`、`.mobile-nav { display:none }` 都声明在本媒体查询之后，
+     裸选择器会被它们反向覆盖 → 手机端左栏没收起、底部导航永远不显示（2026-09-11 修）。
+     注意 `.app-sidebar` 是网格里那一栏；抽屉里的 `<Sidebar />` 只有 `.sidebar` 类，不受影响。 */
+  .app-layout .app-sidebar {
     display: none;
   }
   .app-main {
@@ -481,7 +487,7 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
   .main-scroll {
     padding: 10px;
   }
-  .mobile-nav {
+  .app-layout .mobile-nav {
     display: flex;
   }
   .sidebar-footer {
@@ -799,6 +805,7 @@ h2 {
 
 .feature-tile {
   aspect-ratio: 1;
+  position: relative; /* 待领角标 .feature-badge 的定位基准（2026-09-11 信箱） */
   min-height: 46px;
   display: flex;
   flex-direction: column;
@@ -838,6 +845,24 @@ h2 {
   font-size: 12px;
   line-height: 1.15;
   word-break: break-all;
+}
+
+/* 待领角标（2026-09-11 信箱）：非零才渲染，深色下同色系可读 */
+.feature-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--primary, #d95a38);
+  color: #fff;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .skill-cat {
