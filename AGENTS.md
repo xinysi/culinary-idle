@@ -114,7 +114,14 @@
   ② **三块面板共用一套参数**（同圆角/同描边/同透明度量级）——这正是"不割裂"的来源，别单独给某一块换材质；
   ③ 面板透明度别低于 **0.82**（更低时画面透得太实，行与行浓淡不一、整栏"发花"；0.62 时踩过）；
   ④ **`button:focus:not(:focus-visible) { outline: none }`** 是必需项：Chromium 默认的粗黑焦点环会出现在点击后的导航按钮上（用户放大截图里一眼可见）。`:focus-visible` 仍保留淡主色描边给键盘导航。
-- **滚动条：透明材质（2026-09-11）**：`.app-sidebar` / `.main-scroll` / `.app-status` 的 `::-webkit-scrollbar` 轨道全透明、滑块半透明（亮色深棕 `rgba(110,88,74,0.26)`、深色米白 `rgba(255,246,236,0.22)`，`:hover` 加深），滑块用 `border: 2px solid transparent` + `background-clip: padding-box` 收细。仅用 webkit 伪元素（Electron/Chromium 全支持；勿同时写 `scrollbar-width/color`，Chromium 121+ 会改用它而让伪元素失效）。
+- **滚动条：透明材质（2026-09-11）**：`.app-sidebar` / `.main-scroll` / `.app-status` 的 `::-webkit-scrollbar` 轨道全透明、滑块半透明（亮色深棕 `rgba(110,88,74,0.26)`、深色米白 `rgba(255,246,236,0.22)`，`:hover` 加深），滑块用 `border: 2px solid transparent` + `background-clip: padding-box` 收细。**只留 webkit 伪元素样式**，且注意这三条（2026-09-11 实测踩过）：
+  · ⚠️ **绝不能在任何地方写 scrollbar-width / scrollbar-color**：Chromium 121+ 一旦看到这两个标准属性，就**完全忽略全部 ::-webkit-scrollbar-* 样式**。
+    项目全局那条 `* { scrollbar-width: thin; scrollbar-color: var(--scrollbar) }` 让三块面板的「玻璃滚动条」**一直没被绘制**——肉眼看到的始终是 `--scrollbar`(#d2b294) 那层米色实心滑块（已删除该全局声明；
+    顶栏/分页器等需要**隐藏**滚动条的地方单独写 `scrollbar-width: none` 是允许的，不冲突）。
+  · ⚠️ **排查滚动条别只信 `getComputedStyle(el, ::-webkit-scrollbar-thumb)`**：伪元素计算值仍会返回你写的值，但浏览器可能根本不用它绘制（上面那个坑就这样骗过我两轮）。
+    判定真实观感要用**像素采样**：在滚动容器右边缘取一条竖带，看颜色是不是目标色（参考：全局米色 #d2b294 / 面板奶油 ≈ rgb(250,248,244)）。
+  · ⚠️ **headless Chromium 根本不绘制滚动条**（覆盖式，offsetWidth − clientWidth = 0）；要看滚动条必须用**真实窗口**渲染（Playwright `headless:false`）。
+  · 面板滚动条当前形态：滑块**本体全透明**（只留 1px 细棱勾形状——**亮色暖灰棱 rgba(118,94,76,.38)，深色黑棱 rgba(0,0,0,.70)**，深色下用户明确要求黑棱）+ 全圆头 + 四周留白收细；悬停时才给一点极淡体感（深色悬停棱更黑 .85）。
 - **手机端（≤720px）三处规则目前被同优先级后置规则覆盖，属既有待修 bug（2026-09-11 实测）**：
   `@media` 里的 `.app-sidebar{display:none}`、`.app-status{display:none}`、`.mobile-nav{display:flex}` 分别被后面的 `.sidebar{display:flex}`、`.status-panel{display:flex}`、`.mobile-nav{display:none}` 覆盖 → 手机上底部导航不显示、侧栏没被真正隐藏（靠 grid 高度 0 才没露出来）、状态栏堆到正文下方。
   修法（未实施，需用户确认）：把三条媒体查询选择器提权，如 `.app-body .app-sidebar` / `.app-body .app-status` / `.app-layout .mobile-nav`。

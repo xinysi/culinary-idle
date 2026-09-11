@@ -37,10 +37,9 @@
 }
 
 /* ── 全局滚动条美化（WebKit/Blink + Firefox）── */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar) rgba(0, 0, 0, 0);
-}
+/* ⚠️ 这里**不能**写 scrollbar-width / scrollbar-color：Chromium 121+ 一旦看到这两个标准属性，
+   就会完全忽略所有 ::-webkit-scrollbar-* 样式（2026-09-11 实测：三块面板的玻璃滚动条因此一直没生效，
+   肉眼看到的是 --scrollbar 那层米色）。滚动条外观一律交给下面的 ::-webkit-scrollbar-* 伪元素。 */
 
 *::-webkit-scrollbar {
   width: 8px;
@@ -386,33 +385,50 @@ html[data-theme='dark'] .app-body::after { background-image: linear-gradient(100
 button:focus:not(:focus-visible) { outline: none; }
 button:focus-visible { outline: 2px solid rgba(217, 90, 56, 0.55); outline-offset: 2px; }
 
-/* 滚动条改「透明材质」：轨道全透明，滑块半透明（亮色深棕 / 深色米白），悬浮加深（2026-09-11） */
+/* 三块面板滚动条：玻璃质感（2026-09-11 二调）——轨道全透明；滑块=半透明玻璃棒（暖灰/暖白），
+   中段透亮、两端略深 + 一道极淡内壁高光；圆头、四周 2px 留白收细；悬浮整体加深一档。
+   ⚠️ 别用高不透明度的白（0.6+）：在浅色面板上会读成实心白棒，不像玻璃。 */
 .app-sidebar > .skill-nav::-webkit-scrollbar,
 .main-scroll::-webkit-scrollbar,
-.app-status::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+.app-status::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
 .app-sidebar > .skill-nav::-webkit-scrollbar-track,
 .main-scroll::-webkit-scrollbar-track,
 .app-status::-webkit-scrollbar-track { background: transparent; }
 .app-sidebar > .skill-nav::-webkit-scrollbar-corner,
 .main-scroll::-webkit-scrollbar-corner,
 .app-status::-webkit-scrollbar-corner { background: transparent; }
+/* 三块面板滚动条：**玻璃质感**（2026-09-11）——半透明渐变玻璃棒 + 内壁高光（玻璃棱）+ 圆头；
+   轨道全透明，滑块四周留 2px 透明边 → 又细又"轻"，悬浮时玻璃变亮 */
 .app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
 .main-scroll::-webkit-scrollbar-thumb,
 .app-status::-webkit-scrollbar-thumb {
-  background: rgba(110, 88, 74, 0.26);
-  border: 2px solid transparent;   /* 留白 → 滑块更细更"轻" */
-  background-clip: padding-box;
-  border-radius: 8px;
+  /* 玻璃：半透明暖灰玻璃棒——上下略深、中段透亮，再压一道极淡内壁高光当"玻璃棱"
+     （不要用高不透明度的白：在浅色面板上会读成一条实心白棒） */
+  background: transparent;                       /* 本体全透明：这才叫透明玻璃 */
+  border: 1px solid rgba(118, 94, 76, 0.38);      /* 只留一道细棱勾出形状（亮色面板上用暖灰棱，白棱会看不见） */
+  border-radius: 999px;
 }
 .app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
 .main-scroll:hover::-webkit-scrollbar-thumb,
-.app-status:hover::-webkit-scrollbar-thumb { background: rgba(110, 88, 74, 0.44); background-clip: padding-box; }
+.app-status:hover::-webkit-scrollbar-thumb {
+  background: rgba(118, 94, 76, 0.14);           /* 悬停才给一点极淡的体感 */
+  border-color: rgba(118, 94, 76, 0.55);
+  border-radius: 999px;
+}
 html[data-theme='dark'] .app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
 html[data-theme='dark'] .main-scroll::-webkit-scrollbar-thumb,
-html[data-theme='dark'] .app-status::-webkit-scrollbar-thumb { background: rgba(255, 246, 236, 0.22); background-clip: padding-box; }
+html[data-theme='dark'] .app-status::-webkit-scrollbar-thumb {
+  background: transparent;                       /* 本体全透明 */
+  border: 1px solid rgba(0, 0, 0, 0.70);          /* 深色下棱用黑色（用户要求） */
+  border-radius: 999px;
+}
 html[data-theme='dark'] .app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
 html[data-theme='dark'] .main-scroll:hover::-webkit-scrollbar-thumb,
-html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb { background: rgba(255, 246, 236, 0.40); background-clip: padding-box; }
+html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 246, 236, 0.14);
+  border-color: rgba(0, 0, 0, 0.85);              /* 悬停：黑棱更实 */
+  border-radius: 999px;
+}
 
 /* 一键回到顶部按钮（中间页面右下角，避开右侧面板）*/
 .back-top-btn {
@@ -3913,7 +3929,7 @@ html[data-theme='dark'] {
   --sidebar-bg: #241a13;
   --scrollbar: #6b4f3a;
   --lock-bg: #2e2118;
-  scrollbar-color: var(--scrollbar) rgba(0, 0, 0, 0);
+  /* 见文件开头说明：不写 scrollbar-color，否则 webkit 伪元素全失效 */
 }
 html[data-theme='dark'] .quick-nav,
 html[data-theme='dark'] .story-reqs,
