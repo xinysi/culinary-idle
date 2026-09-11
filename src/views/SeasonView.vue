@@ -62,8 +62,9 @@ function missionProgress(m) {
   return state.value.missionProgress[m.id] ?? 0
 }
 function claim(i) {
-  if (player.seasonClaimTier(i)) ui.pushLog('赛季奖励已领取', 'info')
-  else ui.pushLog('点数不足或已领取', 'warn')
+  // 2026-09-11 起奖励经「信箱」到账。成功路径的提示由 `season:claim` 的全局监听统一发（避免同一动作两条日志），
+  // 这里只处理失败提示。
+  if (!player.seasonClaimTier(i)) ui.pushLog('点数不足或已领取', 'warn')
 }
 function rewardText(reward) {
   const parts = []

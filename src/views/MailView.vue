@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MAIL_CAP, MAIL_FROM, mailKindLabel } from '../game/data/mail.js'
+import { MAIL_CAP, MAIL_HARD_CAP, MAIL_FROM, mailKindLabel } from '../game/data/mail.js'
 import { getItem } from '../game/data/items.js'
 import RelatedPages from '../components/RelatedPages.vue'
 
@@ -21,6 +21,7 @@ const RELATED = [
 const TABS = [
   { id: 'all', name: '全部' },
   { id: 'unclaimed', name: '待领' },
+  { id: 'reward', name: '🎁 奖励到账' },
   { id: 'overflow', name: '📦 溢出转存' },
   { id: 'offline', name: '🌙 离线回执' },
   { id: 'welcome', name: '🎉 欢迎信' },
@@ -104,7 +105,7 @@ function clearSettled() {
       <div>
         <h2>📬 信箱</h2>
         <p class="dim">
-          这里收三类东西：<b>溢出转存</b>（背包满或堆叠到顶时没放进去的部分，替你收着，随时可领）、
+          这里收四类东西：<b>溢出转存</b>（背包满或堆叠到顶时没放进去的部分，替你收着，随时可领）、<b>奖励到账</b>（赛季档位等系统奖励寄到这里统一领）、
           <b>离线结算回执</b>（产出已在结算时发放，此处仅留明细）、以及系统通知。
         </p>
       </div>
@@ -184,7 +185,8 @@ function clearSettled() {
       <ul class="mv-rules">
         <li><b>背包满不再丢东西</b>：新物品种类放不下、或已有物品到了堆叠上限时，没发出去的部分会自动转存到「溢出转存」邮件里，腾出空间后领取即可（不会过期）。</li>
         <li><b>领取需要空间</b>：背包装不下时领取会被拒绝（邮件保持未领），避免「领出来又立刻转存成一封新邮件」的循环。</li>
-        <li><b>信箱有上限 {{ MAIL_CAP }} 封</b>：满了会先淘汰最旧的「已领或无附件」邮件；如果 60 封全是未领附件，新邮件会被拒收——所以该扩容背包时还是要扩容。</li>
+        <li><b>信箱很宽松（软上限 {{ MAIL_CAP }} 封）</b>：达到软上限只淘汰最旧的「已领或无附件」邮件；<b>即使全是未领附件也照收</b>（硬上限 {{ MAIL_HARD_CAP }} 封才止收）。同一物品的溢出会<b>合并成一封</b>，所以封数≈有溢出的物品种类数，正常玩用不到上限。</li>
+        <li><b>信箱里的东西不能用</b>：它只是「暂时取不走」的缓冲，不是额外仓库——想真正用上还是得清理/扩容背包。</li>
         <li><b>离线回执只是明细</b>：产出在离线结算时就已直接发放，邮件里不会再发一次。</li>
       </ul>
     </div>
