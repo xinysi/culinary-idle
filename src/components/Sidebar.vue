@@ -49,6 +49,8 @@ const FEATURE_GROUPS = [
     icon: '🗓️',
     name: '今日',
     items: [
+      // 「今日待办」放本组第一格：它是「上线先看什么」的落地页（汇总其余每日动作）
+      { icon: '📌', name: '今日待办', view: 'today', badge: () => player.pendingClaimCount() + player.mailUnclaimedCount() + player.friendsVisitableCount() },
       { icon: '🌤', name: '天气运势', view: 'weather' },
       { icon: '🍀', name: '吉祥物', view: 'mascot' },
       { icon: '📋', name: '任务中心', view: 'quests', badge: () => player.pendingClaimCount() },

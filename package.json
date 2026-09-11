@@ -1,7 +1,7 @@
 {
   "name": "culinary-idle",
   "private": true,
-  "version": "1.8.5",
+  "version": "1.8.6",
   "type": "module",
   "description": "美食放置：食灵山海 — Melvor Idle 风格的美食主题放置游戏",
   "engines": {
