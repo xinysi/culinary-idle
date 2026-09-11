@@ -70,6 +70,15 @@ const HonorView = defineAsyncComponent(() => import('./views/HonorView.vue'))
 const CodexExchangeView = defineAsyncComponent(() => import('./views/CodexExchangeView.vue'))
 const SetMealView = defineAsyncComponent(() => import('./views/SetMealView.vue'))
 const RivalsView = defineAsyncComponent(() => import('./views/RivalsView.vue'))
+const GearView = defineAsyncComponent(() => import('./views/GearView.vue'))
+const QuestsView = defineAsyncComponent(() => import('./views/QuestsView.vue'))
+const AchievementsView = defineAsyncComponent(() => import('./views/AchievementsView.vue'))
+const MysticRealmView = defineAsyncComponent(() => import('./views/MysticRealmView.vue'))
+const DecorView = defineAsyncComponent(() => import('./views/DecorView.vue'))
+const MailView = defineAsyncComponent(() => import('./views/MailView.vue'))
+const LogsView = defineAsyncComponent(() => import('./views/LogsView.vue'))
+const MarketView = defineAsyncComponent(() => import('./views/MarketView.vue'))
+const FriendsView = defineAsyncComponent(() => import('./views/FriendsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -209,6 +218,7 @@ onMounted(() => {
   EventBus.on('set:bonus', () => on() && sfx.reward())
   EventBus.on('skill:outofammo', () => on() && sfx.warn())
   EventBus.on('inventory:full', () => on() && sfx.warn())
+  EventBus.on('mail:overflow', () => on() && sfx.warn()) // 信箱：溢出转存同样给一声提醒（2026-09-11）
   EventBus.on('bank:full', () => on() && sfx.warn())
   EventBus.on('spoilage:spoil', () => on() && sfx.warn())
 })
@@ -292,6 +302,15 @@ onMounted(() => {
           <CodexExchangeView v-else-if="ui.activeView === 'codexExchange'" />
           <SetMealView v-else-if="ui.activeView === 'setMeals'" />
           <RivalsView v-else-if="ui.activeView === 'rivals'" />
+          <GearView v-else-if="ui.activeView === 'gear'" />
+          <QuestsView v-else-if="ui.activeView === 'quests'" />
+          <AchievementsView v-else-if="ui.activeView === 'achievements'" />
+          <MysticRealmView v-else-if="ui.activeView === 'realm'" />
+          <DecorView v-else-if="ui.activeView === 'decor'" />
+          <MailView v-else-if="ui.activeView === 'mail'" />
+          <LogsView v-else-if="ui.activeView === 'logs'" />
+          <MarketView v-else-if="ui.activeView === 'market'" />
+          <FriendsView v-else-if="ui.activeView === 'friends'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />

@@ -1,6 +1,7 @@
 // 端到端流程测试 — Playwright
 // 覆盖：启动界面 → 开始游戏 → 选存档 → 进入主界面 → 各菜单/弹窗
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
 
 const BASE = 'http://localhost:5173'
 
@@ -108,6 +109,84 @@ test.describe('游戏全流程', () => {
     // 存档面板（按钮只显示 💾）
     await page.locator('.top-nav-btn[title="存档"]').click()
     await expect(page.locator('.modal-backdrop')).toBeVisible()
+  })
+
+  // 守卫：App.vue 的分派链末尾是 v-else → SkillView，漏注册的 view key 不会报错、
+  // 只会静默显示技能页。这里逐 key 切换并捕获 ui.setView 的「未知 key」告警，杜绝静默回退。
+  test('全部 view key 均已在 App.vue 注册（无静默回退到技能页）', async ({ page }) => {
+    // 从源码取出白名单，避免与此处硬编码的列表脱节
+    const src = fs.readFileSync(new URL('./src/stores/ui.js', import.meta.url), 'utf8')
+    const block = src.slice(src.indexOf('export const VIEW_KEYS = ['), src.indexOf(']', src.indexOf('export const VIEW_KEYS = [')))
+    const keys = [...block.matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1])
+    expect(keys.length, '未能从 ui.js 解析出 VIEW_KEYS').toBeGreaterThan(40)
+
+    const warns = []
+    page.on('console', (m) => { if (m.type() === 'warning' && m.text().includes('未知的 view key')) warns.push(m.text()) })
+
+    await page.locator('.splash-start-btn').click()
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(1200)
+
+    const rendered = []
+    for (const v of keys) {
+      await page.evaluate((vv) => {
+        const el = document.querySelector('#app')
+        const pinia = el && el.__vue_app__ && el.__vue_app__.config.globalProperties.$pinia
+        const ui = pinia && pinia._s.get('ui')
+        if (ui) ui.setView(vv)
+      }, v)
+      await page.waitForTimeout(220)
+      // 每个已注册页面都必须渲染出内容（SkillView 兜底页也满足，故用告警而非 DOM 判定回退）
+      const hasContent = await page.evaluate(() => document.querySelector('.main-scroll')?.innerText?.trim().length > 20)
+      if (!hasContent) rendered.push(v)
+    }
+    expect(warns, `以下 view key 未在 ui.js 的 VIEW_KEYS 中登记：\n${warns.join('\n')}`).toEqual([])
+    expect(rendered, `以下页面切换后内容为空：${rendered.join('、')}`).toEqual([])
+  })
+
+  // 守卫：响应式断点的 display 规则曾被「声明在媒体查询之后的基础规则」反向覆盖
+  // （`.status-panel`/`.sidebar`/`.mobile-nav` 都是 (0,1,0) 特指度且更靠后）——右栏在手机上照旧占满屏、
+  // 底部导航则**任何宽度都不显示**。修法是在媒体查询里加 `.app-layout` 前缀提权，此处逐条断言防回归。
+  test('响应式：平板收起右栏、手机单栏 + 底部导航可用', async ({ page }) => {
+    const disp = (sel) => page.evaluate((s) => {
+      const el = document.querySelector(s)
+      return el ? getComputedStyle(el).display : 'MISSING'
+    }, sel)
+
+    await page.locator('.splash-start-btn').click()
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(1000)
+
+    // 桌面：三栏齐全、底部导航隐藏
+    expect(await disp('.app-sidebar')).toBe('flex')
+    expect(await disp('.app-status')).toBe('flex')
+    expect(await disp('.mobile-nav')).toBe('none')
+
+    // 平板（<940）：右栏收起、左栏保留
+    await page.setViewportSize({ width: 900, height: 900 })
+    await page.waitForTimeout(400)
+    expect(await disp('.app-status')).toBe('none')
+    expect(await disp('.app-sidebar')).toBe('flex')
+    // 中区应占满高度（三栏变两栏后不该再被压成半高）
+    const h = await page.evaluate(() => Math.round(document.querySelector('.app-main').getBoundingClientRect().height))
+    expect(h, '平板下中区应占满高度').toBeGreaterThan(800)
+
+    // 手机（<720）：单栏 + 底部导航出现
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.waitForTimeout(400)
+    expect(await disp('.app-sidebar')).toBe('none')
+    expect(await disp('.app-status')).toBe('none')
+    expect(await disp('.mobile-nav')).toBe('flex')
+
+    // 底部导航可用：🏠 打开技能抽屉 → 抽屉内 Sidebar 可见 → 选技能后抽屉收起
+    await page.locator('.mobile-nav-btn').first().click()
+    await page.waitForTimeout(400)
+    expect(await disp('.mobile-skills .sidebar'), '抽屉内 Sidebar 应可见').toBe('flex')
+    await page.locator('.mobile-skills .skill-item').first().click()
+    await page.waitForTimeout(400)
+    expect(await page.locator('.mobile-skills').count(), '选完技能抽屉应收起').toBe(0)
   })
 
   test('刷新后仍能看到启动界面（干净会话）', async ({ page }) => {

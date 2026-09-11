@@ -19,6 +19,8 @@ import { ALL_ACHIEVEMENTS, collectionTotal } from '../game/data/achievements.js'
 import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { COMBAT_REGIONS } from '../game/data/combat.js'
 import { EventBus } from '../game/core/EventBus.js'
+import { MAIL_CAP, WELCOME_MAIL, overflowMailBody } from '../game/data/mail.js'
+import { FRIENDS, getFriend, friendBondLevel, friendBondProgress, friendVisitReward, makeFriendOrder } from '../game/data/friends.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
 import { countForMasteryLevel } from '../game/core/mastery.js'
 import { MAX_LEVEL, PRESTIGE_MAX_LEVEL } from '../game/skills/Skill.js'
@@ -277,6 +279,12 @@ const defaultState = () => ({
     settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
+    // 信箱（2026-09-11）：{ list: [{ id, ts, kind, from, subject, body, reward, claimed, read }], nextId }
+    // 只承载「兜底转存 / 结算回执 / 通知」，不改变任何既有奖励的发放路径（见 game/data/mail.js）
+    mail: { list: [], nextId: 1 },
+    // 厨友（2026-09-11 本地镜像 NPC）：{ [friendId]: { bond, lastVisitDay } } + orders/orderDay
+    // 委托每日刷新一次；奖励只放大本系统自身，不叠加到既有乘区（见 game/data/friends.js）
+    friends: { data: {}, orders: {}, orderDay: null },
   })
 
 export const usePlayerStore = defineStore('player', {
@@ -501,6 +509,8 @@ export const usePlayerStore = defineStore('player', {
     newGame() {
       // 全新档：整体重置为默认状态（单一来源 defaultState，防止嵌套字段残留/漂移，2026-09-06）
       this.$state = defaultState()
+      // 新档欢迎信（2026-09-11 信箱）：纯说明、**不带附件**，不触碰任何既有数值曲线
+      this.sendMail(WELCOME_MAIL)
     },
 
     applySave(saved) {
@@ -597,6 +607,16 @@ export const usePlayerStore = defineStore('player', {
         critic: saved.critic ?? { order: null, nextAt: 0 }, // 美食评论家
         plan: saved.plan ?? { active: false, index: 0, steps: [] }, // 挂机计划
         minigames: saved.minigames ?? { heat: { day: 0, streak: 0, bestStreak: 0 }, trivia: { week: '', answered: 0, correct: 0, badges: 0 }, kitchen2048: { best: 0 }, foodrush: { day: 0, best: 0, rewarded: 0 }, puzzle: { day: '', done: 0 }, matchfood: { day: '', buffed: 0 } },
+        // 信箱（2026-09-11）：旧档无此字段 → 给空信箱；nextId 兜底从现有最大 id 推算，避免 id 重复
+        mail: saved.mail && Array.isArray(saved.mail.list)
+          ? { list: saved.mail.list, nextId: saved.mail.nextId ?? (saved.mail.list.reduce((a, m) => Math.max(a, m?.id ?? 0), 0) + 1) }
+          : { list: [], nextId: 1 },
+        // 厨友（2026-09-11）：旧档无此字段 → 空羁绊 + 空委托（委托下次进页面时按当天补生成）
+        friends: {
+          data: saved.friends?.data ?? {},
+          orders: saved.friends?.orders ?? {},
+          orderDay: saved.friends?.orderDay ?? null,
+        },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
       // 食灵阁迁移（2026-09-06）：旧档背包内的食灵物品移入独立食灵阁（不占背包格）
@@ -702,6 +722,8 @@ export const usePlayerStore = defineStore('player', {
         critic: this.critic,
         plan: this.plan,
         minigames: this.minigames,
+        mail: this.mail,
+        friends: this.friends,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -767,16 +789,20 @@ export const usePlayerStore = defineStore('player', {
     gainItem(itemId, qty = 1) {
       if (!(qty > 0)) return false
       const item = getItem(itemId)
-      // §5.4 容量：不同物品种类数限制（已有种类不占新格）
-      if (!(itemId in this.inventory) && this.inventorySlotsUsed >= this.inventoryCap) {
-        EventBus.emit('inventory:full', { itemId })
-        return false
-      }
       // §5.4 堆叠上限：食材/料理 9999；不可堆叠物品（装备等）上限 1
       const cap = item?.stackable === false ? 1 : item?.maxStack ?? 9999
       const have = this.inventory[itemId] ?? 0
+      // §5.4 容量：不同物品种类数限制（已有种类不占新格）。
+      // 2026-09-11 信箱：这里原本把整批发不出去的物品**静默丢弃**（只发事件、返回 false，而绝大多数调用方
+      // 不看返回值）——现在改为把没发出去的部分转存邮箱（返回值语义保持不变，见 _fileOverflowMail）。
+      if (!(itemId in this.inventory) && this.inventorySlotsUsed >= this.inventoryCap) {
+        // 转存成功 → 只报「已转存」；信箱也塞满而转存失败 → 才报「背包已满」（此时确实没地方放了）
+        if (!this._fileOverflowMail(item, itemId, qty)) EventBus.emit('inventory:full', { itemId })
+        return false
+      }
       const add = Math.max(0, Math.min(qty, cap - have))
       if (add > 0) this.inventory[itemId] = have + add
+      if (add < qty) this._fileOverflowMail(item, itemId, qty - add) // 堆叠上限截断的部分同样不丢
       if (!this.collected[itemId]) this.gainInsight(1) // 菜系图谱：图鉴首次收集 +1（2026-09-09）
       this.collected[itemId] = true
       if (item?.spoilMs) this.spoilage[itemId] = Date.now() + this.freshMsFor(item)
@@ -1084,7 +1110,10 @@ export const usePlayerStore = defineStore('player', {
       const rec = this.gemSockets?.[slot]
       const id = rec?.gems?.[index]
       if (!id) return { ok: false, msg: '该插槽为空' }
-      if (!this.gainItem(id, 1)) return { ok: false, msg: '背包已满，无法拆卸' }
+      // 2026-09-11：改用「容量预检 + 必定成功」两步，而不是看 gainItem 的返回值——
+      // 否则背包满时宝石会「既留在插槽里、又被 gainItem 转存进邮箱」，领回来就白嫖一颗。
+      if (!this.canGainItem(id, 1)) return { ok: false, msg: '背包已满，无法拆卸' }
+      this.gainItem(id, 1)
       rec.gems[index] = null
       return { ok: true, itemId: id }
     },
@@ -3509,6 +3538,222 @@ export const usePlayerStore = defineStore('player', {
       this.stats.insights = (this.stats.insights ?? 0) + n
       return this.stats.insights
     },
+    // ── 厨友（2026-09-11，本地镜像 NPC；见 game/data/friends.js）────────
+    /** 某位厨友的羁绊记录（懒初始化，旧档/新档都能直接用） */
+    friendState(id) {
+      if (!this.friends || typeof this.friends !== 'object') this.friends = { data: {}, orders: {}, orderDay: null }
+      if (!this.friends.data) this.friends.data = {}
+      if (!this.friends.orders) this.friends.orders = {}
+      if (!this.friends.data[id]) this.friends.data[id] = { bond: 0, lastVisitDay: null }
+      return this.friends.data[id]
+    },
+    friendBond(id) {
+      return this.friendState(id).bond ?? 0
+    },
+    friendLevel(id) {
+      return friendBondLevel(this.friendBond(id))
+    },
+    /** 今日是否已拜访过这位厨友 */
+    friendVisitedToday(id) {
+      return this.friendState(id).lastVisitDay === (this.todayKey ?? _todayStr())
+    },
+    /** 今日还可拜访的人数（红点用） */
+    friendsVisitableCount() {
+      return FRIENDS.filter((f) => !this.friendVisitedToday(f.id)).length
+    },
+    /** 未交付的委托数 */
+    friendOrderCount() {
+      this.ensureFriendOrders()
+      return FRIENDS.filter((f) => this.friendOrder(f.id)).length
+    },
+
+    /** 每日刷新委托（跨天时重掷；每人一份） */
+    ensureFriendOrders() {
+      if (!this.friends || typeof this.friends !== 'object') this.friends = { data: {}, orders: {}, orderDay: null }
+      const today = this.todayKey ?? _todayStr()
+      if (this.friends.orderDay === today && Object.keys(this.friends.orders ?? {}).length) return
+      const orders = {}
+      for (const f of FRIENDS) {
+        const o = makeFriendOrder(f, this.inventory, this.friendBond(f.id), (id) => getItem(id)?.value ?? 0)
+        if (o) orders[f.id] = o
+      }
+      this.friends.orders = orders
+      this.friends.orderDay = today
+    },
+    friendOrder(id) {
+      this.ensureFriendOrders()
+      return this.friends.orders?.[id] ?? null
+    },
+
+    /** 拜访（每人每日一次）：小礼物 + 羁绊 +1 */
+    visitFriend(id) {
+      const def = getFriend(id)
+      if (!def) return { ok: false, msg: '没有这位厨友' }
+      if (this.friendVisitedToday(id)) return { ok: false, msg: '今天已经拜访过了，明天再来' }
+      const st = this.friendState(id)
+      const r = friendVisitReward(def, st.bond ?? 0)
+      st.bond = (st.bond ?? 0) + 1
+      st.lastVisitDay = this.todayKey ?? _todayStr()
+      if (r.gold > 0) this.gainGold(r.gold)
+      EventBus.emit('friend:visit', { id, name: def.name, gold: r.gold })
+      return { ok: true, gold: r.gold, bond: st.bond, level: friendBondLevel(st.bond) }
+    },
+
+    /** 交付帮厨委托：扣物品 → 给赏金 + 羁绊 +1，并清掉今日委托 */
+    deliverFriendOrder(id) {
+      const def = getFriend(id)
+      const o = this.friendOrder(id)
+      if (!def || !o) return { ok: false, msg: '这位厨友今天没有委托' }
+      if ((this.inventory[o.itemId] ?? 0) < o.qty) return { ok: false, msg: `材料不足：${getItem(o.itemId)?.name ?? o.itemId} ×${o.qty}` }
+      this.spendItem(o.itemId, o.qty)
+      const st = this.friendState(id)
+      st.bond = (st.bond ?? 0) + 1
+      this.gainGold(o.reward)
+      delete this.friends.orders[id]
+      EventBus.emit('friend:deliver', { id, name: def.name, gold: o.reward, itemId: o.itemId, qty: o.qty })
+      return { ok: true, gold: o.reward, bond: st.bond, level: friendBondLevel(st.bond) }
+    },
+
+    // ── 信箱（2026-09-11）──────────────────────────────────────────
+    // 只做三件事：兜底转存（背包满/堆叠截断）、结算回执、通知；不接管任何既有奖励的发放路径。
+
+    /** 该物品若能整批放入背包则 true（严格：新种类要有空格、已有种类要够堆叠余量） */
+    canGainItem(itemId, qty = 1) {
+      if (!(qty > 0)) return true
+      const item = getItem(itemId)
+      const cap = item?.stackable === false ? 1 : item?.maxStack ?? 9999
+      const have = this.inventory?.[itemId] ?? 0
+      if (!(itemId in (this.inventory ?? {})) && this.inventorySlotsUsed >= this.inventoryCap) return false
+      return cap - have >= qty
+    },
+
+    /**
+     * 投递一封邮件。容量满时先淘汰最旧的「无附件或附件已领」邮件；全是未领附件则拒收（返回 null）。
+     * @returns {number|null} 邮件 id
+     */
+    sendMail({ kind = 'system', from = 'system', subject = '系统邮件', body = '', reward = null } = {}) {
+      if (!this.mail || !Array.isArray(this.mail.list)) this.mail = { list: [], nextId: 1 }
+      const list = this.mail.list
+      if (list.length >= MAIL_CAP) {
+        const idx = list.findIndex((m) => m.claimed || !m.reward)
+        if (idx < 0) return null // 信箱塞满未领附件 → 拒收（不把信箱变成无限仓库）
+        list.splice(idx, 1)
+      }
+      const m = {
+        id: this.mail.nextId++,
+        ts: Date.now(),
+        kind,
+        from,
+        subject,
+        body,
+        reward: reward && ((reward.gold ?? 0) > 0 || Object.keys(reward.items ?? {}).length) ? reward : null,
+        claimed: false,
+        read: false,
+      }
+      list.push(m)
+      EventBus.emit('mail:new', { id: m.id, subject: m.subject, kind: m.kind })
+      return m.id
+    },
+
+    /** 未领附件的邮件数（红点用；无附件的通知不算） */
+    mailUnclaimedCount() {
+      return (this.mail?.list ?? []).filter((m) => m.reward && !m.claimed).length
+    },
+    /** 未读邮件数 */
+    mailUnreadCount() {
+      return (this.mail?.list ?? []).filter((m) => !m.read).length
+    },
+    markMailRead(id) {
+      const m = (this.mail?.list ?? []).find((x) => x.id === id)
+      if (m) m.read = true
+    },
+    markAllMailRead() {
+      for (const m of this.mail?.list ?? []) m.read = true
+    },
+
+    /** 领取附件（容量预检：装不下就拒绝，避免领出来又被转投成新邮件） */
+    claimMail(id) {
+      const m = (this.mail?.list ?? []).find((x) => x.id === id)
+      if (!m) return { ok: false, msg: '邮件不存在' }
+      if (!m.reward) return { ok: false, msg: '这封邮件没有附件' }
+      if (m.claimed) return { ok: false, msg: '附件已领取' }
+      const gold = m.reward.gold ?? 0
+      const items = m.reward.items ?? {}
+      for (const [itemId, qty] of Object.entries(items)) {
+        if (!this.canGainItem(itemId, qty)) return { ok: false, msg: '背包空间不足，请先清理后再领取' }
+      }
+      if (gold > 0) this.gainGold(gold)
+      const got = []
+      for (const [itemId, qty] of Object.entries(items)) {
+        this.gainItem(itemId, qty)
+        got.push({ itemId, qty })
+      }
+      m.claimed = true
+      m.read = true
+      EventBus.emit('mail:claim', { id, gold, items: got })
+      return { ok: true, gold, items: got }
+    },
+
+    /** 一键领取全部可领附件 */
+    claimAllMail() {
+      let gold = 0
+      let count = 0
+      let blocked = 0
+      for (const m of [...(this.mail?.list ?? [])]) {
+        if (!m.reward || m.claimed) continue
+        const r = this.claimMail(m.id)
+        if (r.ok) { gold += r.gold ?? 0; count++ } else blocked++
+      }
+      return { ok: count > 0, gold, count, blocked }
+    },
+
+    /** 删除邮件（有未领附件的不能删，防误删） */
+    deleteMail(id) {
+      const list = this.mail?.list ?? []
+      const m = list.find((x) => x.id === id)
+      if (!m) return false
+      if (m.reward && !m.claimed) return false
+      const i = list.indexOf(m)
+      if (i >= 0) list.splice(i, 1)
+      return true
+    },
+    /** 清空已领/无附件的邮件 */
+    clearSettledMail() {
+      const list = this.mail?.list ?? []
+      const keep = list.filter((m) => m.reward && !m.claimed)
+      const removed = list.length - keep.length
+      if (removed > 0) this.mail.list = keep
+      return removed
+    },
+
+    /**
+     * 内部：把「没发出去的那部分」物品转存邮箱（溢出兜底）。
+     * 与最新一封未领的同类溢出邮件合并，避免刷出几十封只装 1 个的邮件。
+     */
+    _fileOverflowMail(item, itemId, qty) {
+      if (!(qty > 0)) return true
+      const list = this.mail?.list ?? []
+      const last = list[list.length - 1]
+      const sameSingle = last && last.kind === 'overflow' && !last.claimed
+        && Object.keys(last.reward?.items ?? {}).length === 1 && last.reward.items[itemId] != null
+      let filed = true
+      if (sameSingle) {
+        last.reward.items[itemId] += qty
+        last.ts = Date.now()
+      } else {
+        const name = item?.name ?? itemId
+        filed = this.sendMail({
+          kind: 'overflow',
+          from: 'kitchen',
+          subject: `溢出转存：${name} ×${qty}`,
+          body: overflowMailBody(name, qty),
+          reward: { items: { [itemId]: qty } },
+        }) !== null
+      }
+      if (filed) EventBus.emit('mail:overflow', { itemId, qty })
+      return filed
+    },
+
     /** 已解锁节点的效果合计 */
     insightEffects() {
       return insightEffectSum(this.insights ?? [])

@@ -198,13 +198,24 @@ function closeAoji(id) {
     <div class="card quick-status">
       <h3>快捷状态</h3>
 
+      <!-- 信箱（2026-09-11）：只在有未领附件时出现，避免占位 -->
+      <div v-if="player.mailUnclaimedCount() > 0" class="quick-group">
+        <div class="quick-group-title">信箱</div>
+        <div class="quick-group-body">
+          <div class="quick-item">
+            <span class="quick-item-text">📬 {{ player.mailUnclaimedCount() }} 封待领（溢出转存 / 附件）</span>
+            <button class="btn btn-sm" @click="ui.setView('mail')">去查看</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 每日任务（2026-09-06 长线日活钩子） -->
       <div class="quick-group">
         <div class="quick-group-title">每日任务</div>
         <div class="quick-group-body">
           <div class="quick-item">
             <span class="quick-item-text">{{ player.dailyClaimableCount() }}/{{ player.daily.tasks.length }} 今日完成<template v-if="player.daily.streak > 1">（🔥{{ player.daily.streak }} 天）</template></span>
-            <button class="btn btn-sm" @click="ui.openLogTab('quest')">去领取</button>
+            <button class="btn btn-sm" @click="ui.setView('quests')">去领取</button>
           </div>
         </div>
       </div>
@@ -215,7 +226,7 @@ function closeAoji(id) {
         <div class="quick-group-body">
           <div class="quick-item">
             <span class="quick-item-text">{{ currentQuestDef.name }}</span>
-            <button class="btn btn-sm" @click="ui.openLogTab('quest')">查看</button>
+            <button class="btn btn-sm" @click="ui.setView('quests')">查看</button>
           </div>
         </div>
       </div>

@@ -40,6 +40,8 @@ import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, codexPointsFor } from '..
 import { SET_MEALS, activeSetMeal, setMealBoard, mealMissing } from '../../src/game/data/setMeals.js'
 import { RIVAL_SHOPS, RIVAL_BOARD_SIZE, RIVAL_MONTH_GROWTH, rivalsOfMonth, monthIndexOf, playerScoreFrom, rankOf, rivalReward, rankStars } from '../../src/game/data/rivals.js'
 import { realmOpponent } from '../../src/game/data/mysticRealm.js'
+import { MAIL_CAP } from '../../src/game/data/mail.js'
+import { FRIENDS, friendBondLevel, friendBondProgress, friendVisitReward } from '../../src/game/data/friends.js'
 import { FishingSkill } from '../../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../../src/game/skills/HuntingSkill.js'
 import { ExcavationSkill } from '../../src/game/skills/ExcavationSkill.js'
@@ -2326,6 +2328,177 @@ console.log('══ C11. 食灵阁 ══')
   p.inventory.appleSpirit_1 = 2
   p.applySave(JSON.parse(JSON.stringify(p.$state)))
   check('食灵', '旧档背包食灵自动迁移入阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && !(p.inventory.appleSpirit_1 > 0))
+}
+
+// ── C11. 信箱（2026-09-11）────────────────────────────
+console.log('══ C11. 信箱 ══')
+{
+  // ① 新档欢迎信：纯文案、无附件
+  const p = freshPlayer()
+  check('信箱', '新档有一封欢迎信', p.mail.list.length === 1 && p.mail.list[0].kind === 'welcome')
+  check('信箱', '欢迎信不带附件（不送东西）', p.mail.list[0].reward === null && p.mailUnclaimedCount() === 0)
+  check('信箱', '无附件邮件不算待领', p.mailUnclaimedCount() === 0 && p.mailUnreadCount() === 1)
+
+  // ② 背包满 → 物品不再静默丢失，而是转存邮箱（返回值语义保持 false）
+  const ids = Object.keys(ITEMS)
+  for (let i = 0; i < 20; i++) p.gainItem(ids[i], 1)
+  const before = p.mail.list.length
+  const ok = p.gainItem(ids[20], 1)
+  check('信箱', '背包满时 gainItem 仍返回 false', ok === false && p.inventorySlotsUsed === 20)
+  check('信箱', '背包满时物品被转存邮箱（不再丢失）', p.mail.list.length === before + 1 && p.mail.list.at(-1).kind === 'overflow')
+  const om = p.mail.list.at(-1)
+  check('信箱', '溢出邮件带正确附件', om.reward?.items?.[ids[20]] === 1 && om.claimed === false)
+  check('信箱', '溢出邮件计入待领红点', p.mailUnclaimedCount() === 1)
+
+  // ③ 连续同一物品的溢出 → 合并成一封（不刷屏）
+  p.gainItem(ids[20], 4)
+  check('信箱', '同物品溢出合并累加', p.mail.list.length === before + 1 && p.mail.list.at(-1).reward.items[ids[20]] === 5)
+
+  // ④ 领取：背包腾出空间后成功入包
+  delete p.inventory[ids[0]]
+  const c1 = p.claimMail(om.id)
+  check('信箱', '领取后物品入包', c1.ok === true && p.inventory[ids[20]] === 5)
+  check('信箱', '领取后标记已领且计入统计', om.claimed === true && p.mailUnclaimedCount() === 0)
+  check('信箱', '重复领取被拒', p.claimMail(om.id).ok === false)
+
+  // ⑤ 领取时背包满 → 拒绝且邮件保持未领（不能领出来又转投成新邮件）
+  const p5 = freshPlayer()
+  for (let i = 0; i < 20; i++) p5.gainItem(ids[i], 1)
+  p5.gainItem(ids[20], 3)
+  const m5 = p5.mail.list.at(-1)
+  check('信箱', '背包满时领取被拒', p5.claimMail(m5.id).ok === false, p5.claimMail(m5.id).msg)
+  check('信箱', '被拒后邮件仍未领', m5.claimed === false && p5.mailUnclaimedCount() === 1)
+  check('信箱', '被拒不会复制出第二封邮件', p5.mail.list.filter((m) => m.kind === 'overflow').length === 1)
+  check('信箱', 'canGainItem 与实发一致', p5.canGainItem(ids[20], 3) === false && p5.canGainItem(ids[0], 1) === true)
+
+  // ⑥ 堆积上限截断的部分同样转存
+  const p6 = freshPlayer()
+  p6.inventory[ids[0]] = 9999 // 食材堆叠上限
+  p6.gainItem(ids[0], 5)
+  check('信箱', '堆叠上限截断的部分转存邮箱', p6.inventory[ids[0]] === 9999 && p6.mail.list.at(-1)?.reward?.items?.[ids[0]] === 5)
+
+  // ⑦ 非堆叠品（装备）重复获得不再蒸发
+  const p7 = freshPlayer()
+  p7.gainItem('ironKnife', 1)
+  p7.gainItem('ironKnife', 1)
+  check('信箱', '重复装备转存邮箱（改前静默丢失）', p7.inventory.ironKnife === 1 && p7.mail.list.at(-1)?.reward?.items?.ironKnife === 1)
+
+  // ⑧ 拆卸宝石：背包满时拒绝，且**不会**既留插槽又转投邮箱（防白嫖）
+  //    注意要让「宝石」是背包里**没有**的种类、且格子已占满，才命中 canGainItem 的拒绝分支
+  const p8 = freshPlayer()
+  p8.inventoryCap = 1 // 只有 1 个格子
+  p8.inventory = { apple: 5 } // 该格已被占满 → 新种类无处可放
+  p8.equipment.weapon = 'ironKnife'
+  p8.gemSockets.weapon = { itemId: 'ironKnife', gems: ['goldOre'] } // goldOre 不在背包 → 新种类
+  const u = p8.unsocketGem('weapon', 0)
+  check('信箱', '背包满时拆卸宝石被拒', u.ok === false, u.msg)
+  check('信箱', '被拒后宝石仍在插槽且未被转投', p8.gemSockets.weapon.gems[0] === 'goldOre' && p8.mail.list.filter((m) => m.kind === 'overflow').length === 0)
+
+  // ⑨ 删除与清理：有未领附件的不能删
+  const p9 = freshPlayer()
+  for (let i = 0; i < 20; i++) p9.gainItem(ids[i], 1)
+  p9.gainItem(ids[20], 1)
+  const m9 = p9.mail.list.at(-1)
+  check('信箱', '有未领附件的邮件不可删', p9.deleteMail(m9.id) === false && p9.mail.list.includes(m9))
+  delete p9.inventory[ids[0]]
+  p9.claimMail(m9.id)
+  check('信箱', '已领附件后可删', p9.deleteMail(m9.id) === true && !p9.mail.list.includes(m9))
+  check('信箱', '欢迎信（无附件）可删', p9.deleteMail(p9.mail.list[0].id) === true)
+
+  // ⑩ 容量上限：满且全是未领附件 → 拒收（不把信箱变成无限仓库）
+  const p10 = freshPlayer()
+  for (let i = 0; i < 20; i++) p10.gainItem(ids[i], 1) // 背包塞满
+  for (let i = 20; i < 80; i++) p10.gainItem(ids[i], 1) // 溢出 → 造 > 60 封
+  check('信箱', `信箱容量封顶 ${MAIL_CAP}`, p10.mail.list.length === MAIL_CAP)
+  check('信箱', '满且全是未领附件时 → 新附件邮件被拒', p10.sendMail({ kind: 'system', subject: 'x', reward: { gold: 1 } }) === null)
+  check('信箱', '满且全是未领附件时 → 无附件通知同样不插队', p10.sendMail({ kind: 'system', subject: '通知', body: 'x' }) === null)
+  // 腾位规则：只要能找到「已领或本就无附件」的旧邮件，就淘汰它并接收新邮件
+  p10.mail.list[0].claimed = true
+  const okMail = p10.sendMail({ kind: 'system', subject: '通知', body: 'x' })
+  check('信箱', '有可淘汰的旧邮件时新邮件可进（淘汰最旧）', okMail !== null && p10.mail.list.length === MAIL_CAP && p10.mail.list.at(-1).subject === '通知')
+
+  // ⑪ 一键领取
+  const p11 = freshPlayer()
+  for (let i = 0; i < 20; i++) p11.gainItem(ids[i], 1)
+  p11.gainItem(ids[20], 2)
+  p11.gainItem(ids[21], 3)
+  for (let i = 0; i < 5; i++) delete p11.inventory[ids[i]] // 腾 5 格
+  const all = p11.claimAllMail()
+  check('信箱', '一键领取汇总入包', all.ok === true && all.count === 2 && p11.inventory[ids[20]] === 2 && p11.inventory[ids[21]] === 3)
+  check('信箱', '一键领取后无待领', p11.mailUnclaimedCount() === 0)
+
+  // ⑫ 存档往返：mail 必须完整进档（含 nextId，避免重开档 id 撞车）
+  const s1 = JSON.stringify(p11.serialize())
+  const p12 = freshPlayer()
+  p12.applySave(JSON.parse(s1))
+  check('信箱', '信箱随存档往返无损', JSON.stringify(p12.serialize()) === s1)
+  const p13 = freshPlayer()
+  p13.applySave({ gold: 100 }) // 旧档（无 mail 字段）
+  check('信箱', '旧档缺 mail 字段时回退为空信箱', Array.isArray(p13.mail.list) && p13.mail.list.length === 0)
+  const p14 = freshPlayer()
+  p14.applySave({ mail: { list: [{ id: 7, ts: 1, kind: 'system', subject: 'a', body: '', reward: null, claimed: true, read: true }] } })
+  check('信箱', '旧档缺 nextId 时按最大 id 推算（防撞 id）', p14.mail.nextId === 8)
+}
+
+// ── C12. 厨友（2026-09-11）────────────────────────────
+console.log('══ C12. 厨友 ══')
+{
+  const p = freshPlayer()
+  check('厨友', `名单 ${FRIENDS.length} 位`, FRIENDS.length > 0)
+  check('厨友', '初始羁绊为 0、今日全部可拜访', p.friendBond(FRIENDS[0].id) === 0 && p.friendsVisitableCount() === FRIENDS.length)
+  check('厨友', '羁绊门槛与等级换算正确', friendBondLevel(0) === 0 && friendBondLevel(1) === 1 && friendBondLevel(5) === 2 && friendBondLevel(45) === 5)
+  const bp = friendBondProgress(3)
+  check('厨友', '羁绊进度条可用', bp.level === 1 && bp.current === 2 && bp.needed === 4)
+
+  // 委托：每日生成、池内物品必须真实存在、赏金为正
+  p.ensureFriendOrders()
+  const o0 = p.friendOrder(FRIENDS[0].id)
+  check('厨友', '每位厨友都有当日委托', FRIENDS.every((f) => !!p.friendOrder(f.id)))
+  check('厨友', '委托物品真实存在于物品库', FRIENDS.every((f) => getItem(p.friendOrder(f.id).itemId) != null))
+  check('厨友', '委托物品只取该厨友的池子', FRIENDS.every((f) => f.pool.includes(p.friendOrder(f.id).itemId)))
+  check('厨友', '委托赏金为正数', FRIENDS.every((f) => p.friendOrder(f.id).reward > 0))
+
+  // 拜访：每日一次 + 给金币
+  const g0 = p.gold
+  const v1 = p.visitFriend(FRIENDS[0].id)
+  check('厨友', '拜访给金币且羁绊 +1', v1.ok === true && p.gold === g0 + v1.gold && p.friendBond(FRIENDS[0].id) === 1)
+  check('厨友', '同日重复拜访被拒', p.visitFriend(FRIENDS[0].id).ok === false)
+  check('厨友', '可拜访人数随之减少', p.friendsVisitableCount() === FRIENDS.length - 1)
+  // 跨天恢复
+  p.todayKey = '2000-01-02'
+  check('厨友', '跨天后可再次拜访', p.friendVisitedToday(FRIENDS[0].id) === false && p.visitFriend(FRIENDS[0].id).ok === true)
+
+  // 交付委托：材料不足 → 拒；足够 → 扣物品 + 给赏金 + 羁绊 +1 + 委托消失
+  const p2 = freshPlayer()
+  p2.ensureFriendOrders()
+  const o2 = p2.friendOrder(FRIENDS[1].id)
+  check('厨友', '材料不足时交付被拒', p2.deliverFriendOrder(FRIENDS[1].id).ok === false)
+  p2.gainItem(o2.itemId, o2.qty)
+  const before = p2.inventory[o2.itemId]
+  const gold2 = p2.gold
+  const d = p2.deliverFriendOrder(FRIENDS[1].id)
+  // 注意：spendItem 扣到 0 会 delete 掉该键，所以取 ?? 0 再比
+  check('厨友', '交付成功：扣材料 + 给金币', d.ok === true && (p2.inventory[o2.itemId] ?? 0) === before - o2.qty && p2.gold === gold2 + o2.reward, `inv=${p2.inventory[o2.itemId]} gold=${p2.gold - gold2}`)
+  check('厨友', '交付后羁绊 +1 且当日委托清空', p2.friendBond(FRIENDS[1].id) === 1 && p2.friendOrder(FRIENDS[1].id) === null)
+  check('厨友', '已交付的委托不能重复交付', p2.deliverFriendOrder(FRIENDS[1].id).ok === false)
+
+  // 跨天重掷委托
+  p2.friends.orderDay = '2000-01-01'
+  p2.ensureFriendOrders()
+  check('厨友', '跨天重掷当日委托', p2.friends.orderDay === (p2.todayKey ?? '') && FRIENDS.every((f) => !!p2.friendOrder(f.id)))
+
+  // 奖励口径：绑住既有物品价值（不另起一套经济）
+  check('厨友', '拜访礼物随羁绊等级上浮', friendVisitReward(FRIENDS[0], 0).gold < friendVisitReward(FRIENDS[0], 45).gold)
+
+  // 存档：friends 必须进档
+  const s1 = JSON.stringify(p2.serialize())
+  const p3 = freshPlayer()
+  p3.applySave(JSON.parse(s1))
+  check('厨友', '厨友随存档往返无损', JSON.stringify(p3.serialize()) === s1)
+  const p4 = freshPlayer()
+  p4.applySave({ gold: 100 })
+  check('厨友', '旧档缺 friends 字段时回退为空', p4.friends && typeof p4.friends.data === 'object' && p4.friendBond(FRIENDS[0].id) === 0)
+  check('厨友', '旧档也能正常拜访（懒初始化）', p4.visitFriend(FRIENDS[0].id).ok === true)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

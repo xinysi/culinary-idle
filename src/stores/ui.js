@@ -2,7 +2,24 @@
 
 import { defineStore } from 'pinia'
 
-const LOG_MAX = 100
+// 日志保留条数（2026-09-11：100 → 500，配合新增的「系统日志」页可回溯；仍为**会话内**，
+// 不入存档——挂机游戏每 tick 都可能 pushLog，写档会显著放大存档体积与写入频率）
+const LOG_MAX = 500
+
+/**
+ * 合法的功能页 view key（与 App.vue 的 v-if/v-else-if 分派链一一对应）。
+ * App.vue 末尾是 `v-else` 兜底到 SkillView，因此拼错的 key 不会报错、会静默显示技能页——
+ * 新增页面时若忘了在这里登记，开发期会看到告警而不是"页面没反应"。
+ */
+export const VIEW_KEYS = [
+  'skill', 'shop', 'deluxe', 'alchemy', 'expedition', 'cellar', 'kitchenNotes', 'regulars',
+  'spiritStories', 'automation', 'ranch', 'branches', 'exchange', 'trials', 'michelin',
+  'flavorBook', 'gearContest', 'festival', 'schools', 'staff', 'regions', 'legacy', 'patrons',
+  'milestones', 'chronicle', 'weather', 'mascot', 'banquet', 'takeout', 'suppliers',
+  'chefChallenge', 'seasonReview', 'honor', 'codexExchange', 'setMeals', 'rivals',
+  'minigames', 'stats', 'log', 'restaurant', 'guild', 'season', 'arena', 'tower', 'fest',
+  'mijian', 'guide', 'gear', 'quests', 'achievements', 'realm', 'decor', 'mail', 'logs', 'market', 'friends',
+]
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
@@ -10,7 +27,7 @@ export const useUiStore = defineStore('ui', {
     phase: 'splash', // splash(启动界面) | game(游戏主界面)
     showStartSlotModal: false, // 启动界面选存档弹窗
     rightPanelOpen: true,
-    activeView: 'skill', // skill | shop | log | restaurant | guild | season | arena
+    activeView: 'skill', // 取值见 VIEW_KEYS（与 App.vue 的分派链对应）
     showSavePanel: false, // 存档面板（§8.2）
     showSettingsPanel: false, // 设置面板
     showMobileSkills: false, // 移动端技能抽屉
@@ -35,6 +52,14 @@ export const useUiStore = defineStore('ui', {
       this.showStartSlotModal = open ?? !this.showStartSlotModal
     },
     setView(v) {
+      // 未知 key：开发期告警并按 App.vue 的兜底行为落到技能页；线上保持原样，行为与旧版完全一致
+      if (!VIEW_KEYS.includes(v)) {
+        if (import.meta.env?.DEV) {
+          console.warn(`[ui] 未知的 view key「${v}」——已回退到 skill。若是新页面，请在 ui.js 的 VIEW_KEYS 与 App.vue 分派链中登记。`)
+          this.activeView = 'skill'
+          return
+        }
+      }
       this.activeView = v
     },
     toggleSavePanel(open) {
