@@ -261,7 +261,8 @@ export function registerGameEvents() {
   EventBus.on('restaurant:upgrade', ({ level }) => ui.pushLog(`🏮 餐厅升级到 ${level} 级！`, 'levelup'))
   EventBus.on('guild:join', ({ name }) => ui.pushLog(`🤝 加入公会：${name}`, 'info'))
   EventBus.on('guild:task', ({ name, points, gold }) => ui.pushLog(`📋 公会任务完成：${name}（+${points} 公会点${gold ? `，${gold} 金币` : ''}）`, 'levelup'))
-  EventBus.on('season:claim', ({ name, tier }) => ui.pushLog(`🎖️ ${name}奖励领取：${tier}`, 'levelup'))
+  // 2026-09-11：档位奖励改为「信箱到账」，文案同步（否则会与 SeasonView 的提示重复且说法不一致）
+  EventBus.on('season:claim', ({ name, tier }) => ui.pushLog(`🎖️ ${name} 奖励已寄到信箱：${tier}`, 'levelup'))
   EventBus.on('season:mission', ({ name, points }) => ui.pushLog(`🎪 赛季任务完成：${name}（+${points} 赛季点）`, 'levelup'))
 
   // 供应商合约 / 分店主题（2026-09-10）

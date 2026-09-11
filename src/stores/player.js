@@ -19,7 +19,7 @@ import { ALL_ACHIEVEMENTS, collectionTotal } from '../game/data/achievements.js'
 import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { COMBAT_REGIONS } from '../game/data/combat.js'
 import { EventBus } from '../game/core/EventBus.js'
-import { MAIL_CAP, WELCOME_MAIL, overflowMailBody } from '../game/data/mail.js'
+import { MAIL_CAP, MAIL_HARD_CAP, WELCOME_MAIL, overflowMailBody } from '../game/data/mail.js'
 import { FRIENDS, getFriend, friendBondLevel, friendBondProgress, friendVisitReward, makeFriendOrder } from '../game/data/friends.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
 import { countForMasteryLevel } from '../game/core/mastery.js'
@@ -1652,8 +1652,24 @@ export const usePlayerStore = defineStore('player', {
       st.claimed.push(index)
       st.points -= tier.points // 领取奖励扣除对应赛季点（积分兑换语义）
       this.gainInsight(3) // 菜系图谱：赛季领档 +3（2026-09-09）
-      if (tier.reward?.gold) this.gainGold(tier.reward.gold)
-      if (tier.reward?.items) this.gainItems(tier.reward.items)
+      // 奖励改为「信箱到账」（2026-09-11 放宽，见设计文档 §11.17）：
+      // **领档即记账**（上面已 push claimed），所以赛季进度与 seasonAll/season5 成就阈值都不受影响；
+      // 只是奖励不再直接进包，而是寄一封邮件、玩家到信箱一起领（物品类背包满时也能先安全存着，不丢）。
+      // 硬上限拒收（几乎不可达）时回退为直接发放，保证奖励永不因信箱问题而丢。
+      const reward = tier.reward ?? {}
+      const filed = (reward.gold || reward.items)
+        ? this.sendMail({
+            kind: 'reward',
+            from: 'system',
+            subject: `赛季奖励到账：${tier.name ?? `第 ${index + 1} 档`}`,
+            body: `赛季「${season.name}」的档位奖励已到账。\n\n点「领取」即可入包；若背包空间不足，先清理背包再来取——附件不会过期。`,
+            reward,
+          })
+        : null
+      if (filed === null) {
+        if (reward.gold) this.gainGold(reward.gold)
+        if (reward.items) this.gainItems(reward.items)
+      }
       EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `奖励 ${index + 1}` })
       // 赛季年鉴（2026-09-10）：领满全部档位记一条
       if (st.claimed.length >= season.tiers.length) {
@@ -3628,16 +3644,19 @@ export const usePlayerStore = defineStore('player', {
     },
 
     /**
-     * 投递一封邮件。容量满时先淘汰最旧的「无附件或附件已领」邮件；全是未领附件则拒收（返回 null）。
-     * @returns {number|null} 邮件 id
+     * 投递一封邮件。
+     * 容量（2026-09-11 放宽）：达到软上限 MAIL_CAP 时只淘汰最旧的「无附件或附件已领」邮件；
+     * 若一封可淘汰的都没有（全是未领附件）则**继续收下**，直到硬上限 MAIL_HARD_CAP 才拒收。
+     * 改前是「满 60 封且全未领就拒收」，实测会让物品真的蒸发——那正是信箱本要修的毛病。
+     * @returns {number|null} 邮件 id（仅在硬上限才返回 null）
      */
     sendMail({ kind = 'system', from = 'system', subject = '系统邮件', body = '', reward = null } = {}) {
       if (!this.mail || !Array.isArray(this.mail.list)) this.mail = { list: [], nextId: 1 }
       const list = this.mail.list
       if (list.length >= MAIL_CAP) {
         const idx = list.findIndex((m) => m.claimed || !m.reward)
-        if (idx < 0) return null // 信箱塞满未领附件 → 拒收（不把信箱变成无限仓库）
-        list.splice(idx, 1)
+        if (idx >= 0) list.splice(idx, 1)
+        else if (list.length >= MAIL_HARD_CAP) return null // 病态保护：只有到硬上限才拒收
       }
       const m = {
         id: this.mail.nextId++,
@@ -3736,13 +3755,14 @@ export const usePlayerStore = defineStore('player', {
     _fileOverflowMail(item, itemId, qty) {
       if (!(qty > 0)) return true
       const list = this.mail?.list ?? []
-      const last = list[list.length - 1]
-      const sameSingle = last && last.kind === 'overflow' && !last.claimed
-        && Object.keys(last.reward?.items ?? {}).length === 1 && last.reward.items[itemId] != null
+      // 2026-09-11：合并改为**按物品查全表**（此前只看最后一封）。实测交替溢出 A、B、A、C、B 会产生
+      // 5 封邮件；改后同物品永远只有一封未领溢出邮件 → 封数≈有溢出的物品种类数，这才是「不拒收」敢放开的前提。
+      const same = list.find((m) => m.kind === 'overflow' && !m.claimed
+        && Object.keys(m.reward?.items ?? {}).length === 1 && m.reward.items[itemId] != null)
       let filed = true
-      if (sameSingle) {
-        last.reward.items[itemId] += qty
-        last.ts = Date.now()
+      if (same) {
+        same.reward.items[itemId] += qty
+        same.ts = Date.now()
       } else {
         const name = item?.name ?? itemId
         filed = this.sendMail({

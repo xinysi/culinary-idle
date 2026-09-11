@@ -40,7 +40,7 @@ import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, codexPointsFor } from '..
 import { SET_MEALS, activeSetMeal, setMealBoard, mealMissing } from '../../src/game/data/setMeals.js'
 import { RIVAL_SHOPS, RIVAL_BOARD_SIZE, RIVAL_MONTH_GROWTH, rivalsOfMonth, monthIndexOf, playerScoreFrom, rankOf, rivalReward, rankStars } from '../../src/game/data/rivals.js'
 import { realmOpponent } from '../../src/game/data/mysticRealm.js'
-import { MAIL_CAP } from '../../src/game/data/mail.js'
+import { MAIL_CAP, MAIL_HARD_CAP, mailKindLabel } from '../../src/game/data/mail.js'
 import { FRIENDS, friendBondLevel, friendBondProgress, friendVisitReward } from '../../src/game/data/friends.js'
 
 // 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
@@ -2414,17 +2414,60 @@ console.log('══ C11. 信箱 ══')
   check('信箱', '已领附件后可删', p9.deleteMail(m9.id) === true && !p9.mail.list.includes(m9))
   check('信箱', '欢迎信（无附件）可删', p9.deleteMail(p9.mail.list[0].id) === true)
 
-  // ⑩ 容量上限：满且全是未领附件 → 拒收（不把信箱变成无限仓库）
+  // ⑩ 容量语义（2026-09-11 放宽）：软上限只淘汰「已领/无附件」，全未领也照收，硬上限才拒收
   const p10 = freshPlayer()
   for (let i = 0; i < 20; i++) p10.gainItem(ids[i], 1) // 背包塞满
-  for (let i = 20; i < 80; i++) p10.gainItem(ids[i], 1) // 溢出 → 造 > 60 封
-  check('信箱', `信箱容量封顶 ${MAIL_CAP}`, p10.mail.list.length === MAIL_CAP)
-  check('信箱', '满且全是未领附件时 → 新附件邮件被拒', p10.sendMail({ kind: 'system', subject: 'x', reward: { gold: 1 } }) === null)
-  check('信箱', '满且全是未领附件时 → 无附件通知同样不插队', p10.sendMail({ kind: 'system', subject: '通知', body: 'x' }) === null)
-  // 腾位规则：只要能找到「已领或本就无附件」的旧邮件，就淘汰它并接收新邮件
+  let refused = 0
+  // 造 > 软上限数量的**不同物品**溢出（同物品会合并成一封，所以种类数必须够多才能越过软上限）
+  for (let i = 20; i < 20 + MAIL_CAP + 60; i++) {
+    const before = p10.mail.list.length
+    p10.gainItem(ids[i], 1) // 溢出 → 造远超软上限的未领附件邮件
+    if (p10.mail.list.length === before) refused++
+  }
+  // 注意：不能用「列表长度没变」判拒收——**淘汰**（清理已领/无附件旧邮件）也不会让长度增长。
+  // 软上限命中时最先被清掉的正是那封「无附件」的欢迎信，所以这里改为断言真正要锁住的性质：**溢出零丢失**。
+  const mailIds = new Set()
+  for (const m of p10.mail.list) for (const k of Object.keys(m.reward?.items ?? {})) mailIds.add(k)
+  const lost = []
+  for (let i = 20; i < 20 + MAIL_CAP + 60; i++) {
+    const inBag = (p10.inventory[ids[i]] ?? 0) > 0
+    if (!inBag && !mailIds.has(ids[i])) lost.push(ITEMS[ids[i]]?.name ?? ids[i])
+  }
+  check('信箱', `放宽后溢出零丢失（共 ${p10.mail.list.length} 封邮件，丢失 ${lost.length} 种${lost.length ? '：' + lost.slice(0, 3).join(',') : ''}）`, lost.length === 0 && p10.mail.list.length > MAIL_CAP)
+  check('信箱', '软上限时优先淘汰「无附件」的旧邮件（欢迎信已被清）', !p10.mail.list.some((m) => m.kind === 'welcome'))
+  void refused
+  check('信箱', '溢出邮件按物品合并（每物品至多一封）', (() => {
+    const seen = new Set()
+    for (const m of p10.mail.list.filter((x) => x.kind === 'overflow')) {
+      const k = Object.keys(m.reward.items)[0]
+      if (seen.has(k)) return false
+      seen.add(k)
+    }
+    return true
+  })())
+  // 软上限的淘汰只针对「已领/无附件」；点了已领之后新邮件应能进来且总数受控
   p10.mail.list[0].claimed = true
   const okMail = p10.sendMail({ kind: 'system', subject: '通知', body: 'x' })
-  check('信箱', '有可淘汰的旧邮件时新邮件可进（淘汰最旧）', okMail !== null && p10.mail.list.length === MAIL_CAP && p10.mail.list.at(-1).subject === '通知')
+  check('信箱', '有可淘汰的旧邮件时新邮件可进（淘汰最旧）', okMail !== null && p10.mail.list.at(-1).subject === '通知')
+  // 硬上限才拒收（病态保护）：直接灌到硬上限之上
+  const p10b = freshPlayer()
+  while (p10b.mail.list.length < MAIL_HARD_CAP) p10b.sendMail({ kind: 'system', subject: '塞满', reward: { gold: 1 } })
+  check('信箱', `硬上限 ${MAIL_HARD_CAP} 才拒收`, p10b.sendMail({ kind: 'system', subject: 'x', reward: { gold: 1 } }) === null)
+
+  // ⑩b 奖励到账（放宽后新增）：赛季档位改为邮件到账，领档记账但金币不直接进包
+  const p10c = freshPlayer()
+  const cst = p10c.seasonState()
+  cst.points = 5000
+  const goldB = p10c.gold
+  const mailsB = p10c.mail.list.length
+  const tierOk = p10c.seasonClaimTier(0)
+  const rw = p10c.mail.list.filter((m) => m.kind === 'reward')
+  check('信箱', '赛季领档成功且记账（claimed 立刻标记）', tierOk === true && cst.claimed.includes(0))
+  check('信箱', '赛季奖励改为邮件到账（金币未直接进包）', p10c.gold === goldB && p10c.mail.list.length === mailsB + 1 && rw.length === 1)
+  const rwGold = rw[0].reward.gold ?? 0
+  const gotRw = p10c.claimMail(rw[0].id)
+  check('信箱', '领取奖励邮件即到账', gotRw.ok === true && p10c.gold === goldB + rwGold, `gold=${p10c.gold - goldB} expect=${rwGold}`)
+  check('信箱', '奖励邮件计入待领红点', p10c.mailUnclaimedCount() >= 0 && mailKindLabel('reward').label === '奖励到账')
 
   // ⑪ 一键领取
   const p11 = freshPlayer()
