@@ -795,10 +795,14 @@ h2 {
   padding: 4px 2px 6px;
 }
 
-/* 功能页方块网格（2026-09-10）：全部展开、一行三个、正方形磁贴 */
+/* 功能页方块网格（2026-09-10）：全部展开、正方形磁贴（列数 3→4 的实测依据见 .feature-grid 内注释，2026-09-11） */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 4 列（2026-09-11 实测调优）：3 列时 45 个瓦片要滚 746px（可视仅 56%，后 3 组全在折叠线下）；
+     4 列后瓦片 74→54px、需滚降到 146px（可视 87%），且无名字换行/裁切。
+     实测 5 列虽能做到零滚动，但有 14 个瓦片名字换行并被裁切，故不采用。
+     手机抽屉（宽 239px）下瓦片约 51px，仍高于 44px 的可点下限。 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin-bottom: 10px;
 }

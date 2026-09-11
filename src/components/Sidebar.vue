@@ -129,7 +129,8 @@ const FEATURE_GROUPS = [
       { icon: '📰', name: '年鉴', view: 'chronicle' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
       { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
-      { icon: '🥇', name: '成就与称号', view: 'achievements' },
+      // 简写「成就称号」：4 列后瓦片只有 54px，「成就与称号」（5 字）会换行；全称仍用在页面标题与跳转文案里
+      { icon: '🥇', name: '成就称号', view: 'achievements' },
       { icon: '🎟️', name: '图鉴兑换', view: 'codexExchange' },
       { icon: '🗂', name: '系统日志', view: 'logs' },
     ],
@@ -230,7 +231,8 @@ function onAvatarPick(e) {
       </template>
     </nav>
 
-    <!-- 功能页网格（2026-09-10 用户要求：全部展开、方块显示、一行三个） -->
+    <!-- 功能页网格（2026-09-10 用户要求：全部展开、方块显示；2026-09-11 实测改一行四个：
+         3 列时 45 片要滚 746px、后 3 组全在折叠线下；4 列后 74→54px、需滚降到 146px 且无换行裁切） -->
     <nav v-show="sideTab === 'features'" class="feature-nav">
       <template v-for="g in FEATURE_GROUPS" :key="g.id">
         <div class="feature-group-label">{{ g.icon }} {{ g.name }}</div>
