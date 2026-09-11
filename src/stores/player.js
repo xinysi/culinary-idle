@@ -3541,6 +3541,19 @@ export const usePlayerStore = defineStore('player', {
       this.ensureDailyTasks()
       return this.daily.tasks.filter((t) => t.claimed).length
     },
+    /**
+     * 「可领取但还没领」的任务数（每日 + 周常 + 每周挑战）——左栏「任务中心」角标用。
+     * 注意与上面的 `dailyClaimableCount()` 语义不同：那个返回的是**已领**数（名字有历史原因，勿混用）。
+     */
+    pendingClaimCount() {
+      this.ensureDailyTasks()
+      this.ensureWeeklyTask()
+      let n = this.daily.tasks.filter((t) => !t.claimed && (t.progress ?? 0) >= t.qty).length
+      if (this.weekly.task && !this.weekly.claimed && this.weekly.progress >= this.weekly.task.qty) n++
+      const def = this.challengeDef() // 内部会 ensureWeeklyChallenge（跨周才刷新，幂等）
+      if (def && !this.challenge.done && this.challenge.progress >= def.target) n++
+      return n
+    },
 
     // ── 菜系图谱（2026-09-09 永久天赋树）──
     /** 美食见闻余额 */

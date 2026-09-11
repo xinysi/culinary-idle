@@ -51,7 +51,7 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '🌤', name: '天气运势', view: 'weather' },
       { icon: '🍀', name: '吉祥物', view: 'mascot' },
-      { icon: '📋', name: '任务中心', view: 'quests' },
+      { icon: '📋', name: '任务中心', view: 'quests', badge: () => player.pendingClaimCount() },
       { icon: '📬', name: '信箱', view: 'mail', badge: () => player.mailUnclaimedCount() },
       { icon: '📈', name: '行情', view: 'market' },
     ],
@@ -113,7 +113,8 @@ const FEATURE_GROUPS = [
     icon: '🎯',
     name: '挑战与休闲',
     items: [
-      { icon: '🏅', name: '试炼', view: 'trials' },
+      // 「厨神试炼」：与页面标题一致；顶栏那个「试炼塔」(`tower`) 是另一个系统，名字近似易混（2026-09-11 改名区分）
+      { icon: '🏅', name: '厨神试炼', view: 'trials' },
       { icon: '⚒️', name: '厨具赛', view: 'gearContest' },
       { icon: '🃏', name: '名厨', view: 'chefChallenge' },
       { icon: '🏯', name: '食神秘境', view: 'realm' },
