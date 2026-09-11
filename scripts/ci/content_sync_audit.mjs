@@ -142,7 +142,27 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     '荣誉殿堂', '图鉴兑换', '套餐', '同业竞争',
     // 2026-09-10 第五批：能量饼干的三用途（离线加时 / 战斗补给 / 回收）
     '能量饼干', '能量补给', '品鉴点',
+    // 2026-09-11：信箱 / 厨友 / 行情 / 系统日志
+    '信箱', '厨友', '行情', '系统日志',
   ]
+  // ── 2026-09-11 修「守卫自身有盲区」：上面这份白名单是**手抄**的，新系统忘了往里加时这条检查恒真，
+  //    等于 PASS 而不设防（本轮就是这么漏掉信箱/厨友的）。因此再叠加一条**从侧栏派生**的检查：
+  //    左栏「功能」页签里的每个页面，都必须在攻略总览里找到对应关键词。
+  //    关键词默认取磁贴名，个别叫法与攻略用语不同的在此显式映射。
+  const VIEW_GUIDE_KEYWORD = {
+    weather: '天气', quests: '任务', achievements: '成就',
+    flavorBook: '风味搭配', gear: '装备', setMeals: '套餐', rivals: '同业竞争',
+    decor: '装饰', gearContest: '厨具大赛', chefChallenge: '名厨挑战', realm: '秘境',
+    deluxe: '珍馐阁', michelin: '米其林', legacy: '师徒传承', patrons: '食神信仰',
+    codexExchange: '图鉴兑换', festival: '节庆', spiritStories: '食灵',
+  }
+  const derived = [...new Set([...sidebarSrc.matchAll(/\{ icon: '[^']*', name: '([^']+)', view: '([a-zA-Z]+)'/g)]
+    .map((m) => ({ name: m[1], view: m[2] })))]
+  const derivedMiss = derived
+    .filter((d) => !ovText.includes(VIEW_GUIDE_KEYWORD[d.view] ?? d.name))
+    .map((d) => `${d.view}(${d.name}→${VIEW_GUIDE_KEYWORD[d.view] ?? d.name})`)
+  check(`攻略：左栏全部功能页均有攻略关键词（派生检查 ${derived.length} 页）`, derivedMiss.length === 0, `缺: ${derivedMiss.join(', ')}`)
+
   const miss = required.filter((k) => !ovText.includes(k))
   check(`攻略：总览覆盖全部功能关键词（${required.length} 个）`, miss.length === 0, `未覆盖: ${miss.join(',')}`)
   const badItem = []

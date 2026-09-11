@@ -3688,6 +3688,9 @@ export const usePlayerStore = defineStore('player', {
         this.gainItem(itemId, qty)
         got.push({ itemId, qty })
       }
+      if (!this.stats) this.stats = {}
+      // 累计领取次数（成就/统计用）：邮件本身会被清理掉，所以用计数器而不是数 list
+      this.stats.mailClaimed = (this.stats.mailClaimed ?? 0) + 1
       m.claimed = true
       m.read = true
       EventBus.emit('mail:claim', { id, gold, items: got })
