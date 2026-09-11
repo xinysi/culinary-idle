@@ -183,7 +183,10 @@ export function registerGameEvents() {
       if (Math.random() < 0.002 && Date.now() - lastEncounterAt > 10_000) {
         lastEncounterAt = Date.now()
         const enc = ENCOUNTERS[Math.floor(Math.random() * ENCOUNTERS.length)]
-        if (ui.openEncounter(enc)) ui.pushLog(`✨ 奇遇降临：「${enc.title}」`, 'info')
+        if (ui.openEncounter(enc)) {
+          player.markEncounterSeen(enc.id) // 奇遇图鉴：记录「遇到过」（2026-09-11，纯留痕不改奖励）
+          ui.pushLog(`✨ 奇遇降临：「${enc.title}」`, 'info')
+        }
       }
     }
     if (outcome === 'craft') {

@@ -20,6 +20,7 @@ import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { COMBAT_REGIONS } from '../game/data/combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { MAIL_CAP, MAIL_HARD_CAP, WELCOME_MAIL, overflowMailBody } from '../game/data/mail.js'
+import { ENCOUNTERS, getEncounter } from '../game/data/encounters.js'
 import { FRIENDS, getFriend, friendBondLevel, friendBondProgress, friendVisitReward, makeFriendOrder } from '../game/data/friends.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
 import { countForMasteryLevel } from '../game/core/mastery.js'
@@ -279,6 +280,9 @@ const defaultState = () => ({
     settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
+    // 奇遇图鉴（2026-09-11）：{ seen: { [id]: 触发次数 }, picks: { [id]: [各分支被选次数] }, total: 累计触发 }
+    // 纯记录层：不改变奇遇的触发率与奖励，只让「一次性内容」可回看（见 game/data/encounters.js）
+    encounters: { seen: {}, picks: {}, total: 0 },
     // 信箱（2026-09-11）：{ list: [{ id, ts, kind, from, subject, body, reward, claimed, read }], nextId }
     // 只承载「兜底转存 / 结算回执 / 通知」，不改变任何既有奖励的发放路径（见 game/data/mail.js）
     mail: { list: [], nextId: 1 },
@@ -611,6 +615,12 @@ export const usePlayerStore = defineStore('player', {
         mail: saved.mail && Array.isArray(saved.mail.list)
           ? { list: saved.mail.list, nextId: saved.mail.nextId ?? (saved.mail.list.reduce((a, m) => Math.max(a, m?.id ?? 0), 0) + 1) }
           : { list: [], nextId: 1 },
+        // 奇遇图鉴（2026-09-11）：旧档无此字段 → 空的已遇/已选记录（页面显示为「还没遇到过」）
+        encounters: {
+          seen: saved.encounters?.seen ?? {},
+          picks: saved.encounters?.picks ?? {},
+          total: saved.encounters?.total ?? 0,
+        },
         // 厨友（2026-09-11）：旧档无此字段 → 空羁绊 + 空委托（委托下次进页面时按当天补生成）
         friends: {
           data: saved.friends?.data ?? {},
@@ -724,6 +734,7 @@ export const usePlayerStore = defineStore('player', {
         minigames: this.minigames,
         mail: this.mail,
         friends: this.friends,
+        encounters: this.encounters,
         lastOnlineAt: this.lastOnlineAt,
       }
     },
@@ -3541,6 +3552,37 @@ export const usePlayerStore = defineStore('player', {
       this.ensureDailyTasks()
       return this.daily.tasks.filter((t) => t.claimed).length
     },
+    // ── 奇遇图鉴（2026-09-11）：只记录「遇到过 / 选过哪支」，不改触发率与奖励 ──
+    /** 遇到某奇遇（由 bootstrap 触发时调用）：累加触发次数 */
+    markEncounterSeen(id) {
+      if (!this.encounters) this.encounters = { seen: {}, picks: {}, total: 0 }
+      if (!id) return
+      this.encounters.seen[id] = (this.encounters.seen[id] ?? 0) + 1
+      this.encounters.total = (this.encounters.total ?? 0) + 1
+      // 年鉴：首次遇到记一条（不改任何奖励，只是留痕）
+      if (this.encounters.seen[id] === 1) this.recordChronicle?.(`encounter:${id}`, 'encounter', `初次遇到奇遇「${getEncounter(id)?.title ?? id}」`)
+    },
+    /** 选择某分支（由奇遇弹窗选择时调用）：记录该分支被选次数 */
+    recordEncounterPick(id, index) {
+      if (!this.encounters) this.encounters = { seen: {}, picks: {}, total: 0 }
+      if (!id || !(index >= 0)) return
+      const arr = this.encounters.picks[id] ?? []
+      while (arr.length <= index) arr.push(0)
+      arr[index] = (arr[index] ?? 0) + 1
+      this.encounters.picks[id] = arr
+    },
+    /** 已遇到过的奇遇数（图鉴进度用） */
+    encountersSeenCount() {
+      return ENCOUNTERS.filter((e) => (this.encounters?.seen?.[e.id] ?? 0) > 0).length
+    },
+    /** 某奇遇的触发次数 / 各分支被选次数（页面只读展示） */
+    encounterStats(id) {
+      return {
+        seen: this.encounters?.seen?.[id] ?? 0,
+        picks: this.encounters?.picks?.[id] ?? [],
+      }
+    },
+
     // ── 「今日待办」页的判定（2026-09-11）：都是对既有状态的只读汇总，不新增存档字段 ──
     /** 研究已完成、待收取的学派 id 列表 */
     schoolReadyList() {

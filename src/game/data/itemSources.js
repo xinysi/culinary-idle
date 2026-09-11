@@ -18,6 +18,7 @@ import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '.
 import { SHOP_ITEMS } from './shop.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { getItem, ITEMS } from './items.js'
+import { ENCOUNTERS } from './encounters.js'
 import { COMBAT_BOSSES } from './combat.js'
 import { SEASONS } from './seasons.js'
 import { seasonTiers } from './seasonContent.js'
@@ -171,6 +172,13 @@ add('mysterySpice', '名厨挑战对手掉落（25%）')
 
 // 图鉴兑换所（2026-09-10）：按图鉴完成度档位发放的点数兑换（限量道具）
 for (const r of CODEX_REWARDS) for (const id of Object.keys(r.items ?? {})) add(id, `图鉴兑换所兑换（${r.cost} 图鉴点数）`)
+
+// 随机奇遇（2026-09-11 补录）：挂机动作 0.2% 触发的小事件，分支奖励给的物品
+for (const enc of ENCOUNTERS) {
+  for (const c of enc.choices ?? []) {
+    for (const id of Object.keys(c.effect?.items ?? {})) add(id, `随机奇遇·「${enc.title}」（挂机 0.2% 触发）`)
+  }
+}
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {

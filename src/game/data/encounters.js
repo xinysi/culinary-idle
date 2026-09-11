@@ -37,7 +37,7 @@ export const ENCOUNTERS = [
     title: '🐱 馋嘴的猫',
     body: '一只胖橘猫跳上你的柜台，对着刚出锅的菜喵喵直叫，尾巴摇得像风车。',
     choices: [
-      { label: '喂它一块', effect: { gold: 30, items: { egg: 3 } } },
+      { label: '喂它一块', effect: { gold: 30, items: { pheasantEgg: 3 } } },
       { label: '轰走它', effect: { gold: 30 } },
       { label: '它真可爱，多喂点', effect: { gold: 50, items: { milk: 2 } } },
     ],
@@ -57,7 +57,7 @@ export const ENCOUNTERS = [
     title: '🐭 深夜的偷食贼',
     body: '半夜，米缸传来窸窸窣窣的声音——一只肥硕的老鼠正拖着你的干粮逃跑！',
     choices: [
-      { label: '抓住它！', effect: { gold: 60, items: { cheese: 2 } } },
+      { label: '抓住它！', effect: { gold: 60, items: { baking_ext_10: 2 } } },
       { label: '用香料薰走它', effect: { gold: 40 }, costItem: { spice: 2 } },
       { label: '就当破财消灾', effect: { gold: 15 } },
     ],
@@ -83,3 +83,10 @@ export const ENCOUNTERS = [
     ],
   },
 ]
+
+const ENCOUNTER_INDEX = new Map(ENCOUNTERS.map((e) => [e.id, e]))
+
+/** 按 id 取奇遇定义（图鉴/年鉴展示用） */
+export function getEncounter(id) {
+  return ENCOUNTER_INDEX.get(id) ?? null
+}

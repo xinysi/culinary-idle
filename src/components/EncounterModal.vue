@@ -10,8 +10,9 @@ const player = usePlayerStore()
 
 const enc = computed(() => ui.encounter?.encounter ?? null)
 
-function pick(choice) {
+function pick(choice, index) {
   if (!enc.value) return
+  player.recordEncounterPick(enc.value.id, index) // 奇遇图鉴：记录选了哪一支（2026-09-11）
   const e = choice.effect ?? {}
   if (e.gold) {
     const gold = Math.floor(e.gold * (1 + player.combatLevel * 0.2))
@@ -42,7 +43,7 @@ function pick(choice) {
           v-for="(c, i) in enc.choices"
           :key="i"
           class="btn encounter-choice"
-          @click="pick(c)"
+          @click="pick(c, i)"
         >{{ c.label }}</button>
       </div>
     </div>

@@ -56,6 +56,7 @@ const FEATURE_GROUPS = [
       { icon: '📋', name: '任务中心', view: 'quests', badge: () => player.pendingClaimCount() },
       { icon: '📬', name: '信箱', view: 'mail', badge: () => player.mailUnclaimedCount() },
       { icon: '📈', name: '行情', view: 'market' },
+      { icon: '❓', name: '奇遇图鉴', view: 'encounters' },
     ],
   },
   {
@@ -131,6 +132,7 @@ const FEATURE_GROUPS = [
       { icon: '🏁', name: '里程碑', view: 'milestones' },
       { icon: '📰', name: '年鉴', view: 'chronicle' },
       { icon: '📜', name: '故事', view: 'story' },
+      { icon: '🎴', name: '卡牌对战', view: 'cards' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
       { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
       // 简写「成就称号」：4 列后瓦片只有 54px，「成就与称号」（5 字）会换行；全称仍用在页面标题与跳转文案里
