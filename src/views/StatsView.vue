@@ -13,6 +13,7 @@ import { REGIONS } from '../game/data/regions.js'
 import { milestoneSummary } from '../game/data/milestones.js'
 import { getItem } from '../game/data/items.js'
 import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
+import { FRIENDS } from '../game/data/friends.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -51,6 +52,7 @@ const highlights = computed(() => [
 ])
 // 已获称号（称号墙）
 const ownedTitles = computed(() => ALL_ACHIEVEMENTS.filter((a) => a.title && (player.achievements ?? []).includes(a.id)).map((a) => a.title))
+// 注意口径：这里只统计**成就称号**（不含商店称号与图鉴兑换称号）；全部称号数见 honorProgress().total
 const totalTitles = computed(() => ALL_ACHIEVEMENTS.filter((a) => a.title).length)
 
 // 分栏式：六大类，每栏若干统计项；value 为流光大数字，sub 为辅助文字
@@ -132,7 +134,7 @@ const sections = computed(() => [
       { label: '图鉴完成度', value: `${player.collectionPct}%`, sub: `（${Object.keys(player.collected).length}/${Object.keys(ITEMS).length}）` },
       { label: '锻造套装集齐', value: player.setBonuses?.length ?? 0, sub: ` / ${COLLECTABLE_SETS.length} 套` },
       { label: '称号', value: player.title ? `「${player.title}」` : '无' },
-      { label: '称号收集', value: ownedTitles.value.length, sub: ` / ${totalTitles.value}` },
+      { label: '成就称号', value: ownedTitles.value.length, sub: ` / ${totalTitles.value}（另有商店 7 + 图鉴兑换 2）` },
       { label: '赛季套装收集', value: seasonClaimed.value, sub: ' 档' },
       { label: '厨艺大赛月分', value: player.fest?.score ?? 0, sub: player.fest?.month ? `（${player.festTheme()?.name ?? ''}）` : '（未开赛）' },
       { label: '食灵羁绊', value: (player.spirits?.active ?? []).map((id) => `Lv${player.bondLevelFor(id)}`).join('+') || '—', sub: ' 出战食灵最高羁绊' },
@@ -141,6 +143,8 @@ const sections = computed(() => [
       { label: '远行采集队', value: Object.values(player.expeditions ?? {}).reduce((a, e) => a + (e?.completions ?? 0), 0), sub: ' 轮' },
       { label: '评论家好评', value: player.stats?.criticServed ?? 0, sub: ' 次' },
       { label: '挂机计划完成', value: player.stats?.plansDone ?? 0, sub: ' 次' },
+      { label: '信箱待领', value: player.mailUnclaimedCount(), sub: ` 封 · 累计领取 ${player.stats?.mailClaimed ?? 0} 次` },
+      { label: '厨友往来', value: Object.values(player.friends?.data ?? {}).filter((f) => (f?.bond ?? 0) > 0).length, sub: ` / ${FRIENDS.length} 位 · 累计互动 ${Object.values(player.friends?.data ?? {}).reduce((a, f) => a + (f?.bond ?? 0), 0)} 次` },
     ],
   },
   {
@@ -192,7 +196,7 @@ const sections = computed(() => [
       </div>
     </div>
     <div v-if="ownedTitles.length" class="card hall-titles-card">
-      <h4 class="stats-col-head">🎖 已获称号（{{ ownedTitles.length }} / {{ totalTitles }}）</h4>
+      <h4 class="stats-col-head">🎖 已获成就称号（{{ ownedTitles.length }} / {{ totalTitles }}）</h4>
       <div class="hall-titles">
         <span v-for="t in ownedTitles" :key="t" class="badge" :class="{ 'badge-on': player.title === t }">{{ t }}</span>
       </div>

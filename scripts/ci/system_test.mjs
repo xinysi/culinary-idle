@@ -42,6 +42,12 @@ import { RIVAL_SHOPS, RIVAL_BOARD_SIZE, RIVAL_MONTH_GROWTH, rivalsOfMonth, month
 import { realmOpponent } from '../../src/game/data/mysticRealm.js'
 import { MAIL_CAP } from '../../src/game/data/mail.js'
 import { FRIENDS, friendBondLevel, friendBondProgress, friendVisitReward } from '../../src/game/data/friends.js'
+
+// 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
+const ACH = (id) => ALL_ACHIEVEMENTS.find((a) => a.id === id)
+const ACH_MAIL_FIRST = ACH('mailFirst')
+const ACH_FRIEND_FIRST = ACH('friendFirst')
+const ACH_FRIEND_ALL = ACH('friendAllBond')
 import { FishingSkill } from '../../src/game/skills/FishingSkill.js'
 import { HuntingSkill } from '../../src/game/skills/HuntingSkill.js'
 import { ExcavationSkill } from '../../src/game/skills/ExcavationSkill.js'
@@ -2359,6 +2365,9 @@ console.log('══ C11. 信箱 ══')
   const c1 = p.claimMail(om.id)
   check('信箱', '领取后物品入包', c1.ok === true && p.inventory[ids[20]] === 5)
   check('信箱', '领取后标记已领且计入统计', om.claimed === true && p.mailUnclaimedCount() === 0)
+  // 内容同步（2026-09-11）：新增成就必须真的会被这套行为点亮
+  check('信箱', '领取计数递增（信箱成就依据）', p.stats.mailClaimed === 1)
+  check('信箱', '「信箱初启」成就随之达成', ACH_MAIL_FIRST.check(p) === true)
   check('信箱', '重复领取被拒', p.claimMail(om.id).ok === false)
 
   // ⑤ 领取时背包满 → 拒绝且邮件保持未领（不能领出来又转投成新邮件）
@@ -2462,6 +2471,9 @@ console.log('══ C12. 厨友 ══')
   const g0 = p.gold
   const v1 = p.visitFriend(FRIENDS[0].id)
   check('厨友', '拜访给金币且羁绊 +1', v1.ok === true && p.gold === g0 + v1.gold && p.friendBond(FRIENDS[0].id) === 1)
+  // 内容同步（2026-09-11）：新增成就必须真的会被这套行为点亮
+  check('厨友', '「初次登门」成就随之达成', ACH_FRIEND_FIRST.check(p) === true)
+  check('厨友', '「整条街的熟人」需全部有往来（此时未达成）', ACH_FRIEND_ALL.check(p) === false)
   check('厨友', '同日重复拜访被拒', p.visitFriend(FRIENDS[0].id).ok === false)
   check('厨友', '可拜访人数随之减少', p.friendsVisitableCount() === FRIENDS.length - 1)
   // 跨天恢复

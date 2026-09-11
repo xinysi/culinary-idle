@@ -14,6 +14,7 @@ import { MILESTONES, milestoneSummary } from './milestones.js'
 import { CODEX_REWARDS } from './codexShop.js'
 import { STAFF } from './staff.js'
 import { REGIONS } from './regions.js'
+import { FRIENDS, FRIEND_BOND_STEPS } from './friends.js'
 
 // 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
 const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
@@ -180,6 +181,12 @@ export const ACHIEVEMENTS = [
   { id: 'biscuitRecycle', name: '循环利用', category: '特殊', desc: '累计回收能量饼干 50 块', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.biscuitsRecycled ?? 0) >= 50 },
   { id: 'rival1', name: '榜上有名', category: '特殊', desc: '首次领取同业竞争榜名次奖励', reward: { gold: 5000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.rivalClaims ?? 0) >= 1 },
   { id: 'rivalTop', name: '同业之首', category: '特殊', desc: '在任何一月登上同业竞争榜第 1 名', title: '同业之首', reward: { gold: 45000, items: { mysterySpice: 3 } }, check: (p) => (p.stats?.rivalBestRank ?? 99) === 1 },
+  // ── 信箱 / 厨友（2026-09-11 内容同步补）──
+  { id: 'mailFirst', name: '信箱初启', category: '特殊', desc: '首次从信箱领取附件', title: '收信人', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.mailClaimed ?? 0) >= 1 },
+  { id: 'mailClaimed30', name: '物归原主', category: '特殊', desc: '累计从信箱领取 30 次附件', reward: { gold: 9000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mailClaimed ?? 0) >= 30 },
+  { id: 'friendFirst', name: '初次登门', category: '特殊', desc: '首次拜访任意一位厨友', title: '街坊', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) > 0) },
+  { id: 'friendAllBond', name: '整条街的熟人', category: '特殊', desc: `${FRIENDS.length} 位厨友全部有过往来`, title: '邻里之主', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => FRIENDS.every((f) => (p.friends?.data?.[f.id]?.bond ?? 0) > 0) },
+  { id: 'friendBondMax', name: '老交情', category: '特殊', desc: '任一厨友羁绊达到 5 级', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) >= FRIEND_BOND_STEPS.at(-1)) },
 ]
 
 export const ALL_ACHIEVEMENTS = [...buildSkillAchievements(), ...ACHIEVEMENTS]
