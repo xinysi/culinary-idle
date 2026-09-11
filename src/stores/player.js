@@ -3541,6 +3541,38 @@ export const usePlayerStore = defineStore('player', {
       this.ensureDailyTasks()
       return this.daily.tasks.filter((t) => t.claimed).length
     },
+    // ── 「今日待办」页的判定（2026-09-11）：都是对既有状态的只读汇总，不新增存档字段 ──
+    /** 研究已完成、待收取的学派 id 列表 */
+    schoolReadyList() {
+      const now = Date.now()
+      return SCHOOLS.filter((def) => {
+        const r = this.schools?.[def.id]?.research
+        return !!r && now >= r.readyAt
+      }).map((def) => def.id)
+    },
+    /** 常客中「已满级且满级礼物未领」的人数 */
+    regularGiftReadyCount() {
+      let n = 0
+      for (const def of REGULARS) {
+        const st = this.regulars?.[def.id]
+        if (!st) continue
+        if (regularLevelFromServes(st.serves ?? 0) >= REGULAR_LEVEL_REQ.length - 1 && !st.giftClaimed) n++
+      }
+      return n
+    },
+    /** 赛季里「点数已够且未领」的档位数 */
+    seasonClaimableCount() {
+      const season = getSeason(activeSeasonId())
+      const st = this.seasonState()
+      if (!season) return 0
+      return season.tiers.filter((t, i) => st.points >= t.points && !st.claimed.includes(i)).length
+    },
+    /** 当前公会的每日任务列表（未加入返回空数组） */
+    guildTasks() {
+      const g = getGuild(this.guild?.id)
+      return g?.tasks ?? []
+    },
+
     /**
      * 「可领取但还没领」的任务数（每日 + 周常 + 每周挑战）——左栏「任务中心」角标用。
      * 注意与上面的 `dailyClaimableCount()` 语义不同：那个返回的是**已领**数（名字有历史原因，勿混用）。
