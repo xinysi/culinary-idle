@@ -71,7 +71,9 @@ const overviewCount = computed(() => GUIDE_OVERVIEW.reduce((a, c) => a + c.items
             <span class="badge badge-on ov-stage">{{ it.stage }}</span>
             <span class="dim ov-unlock">{{ it.unlock }}</span>
           </div>
-          <p class="dim ov-desc">{{ it.desc }}</p>
+          <!-- desc 里带 <b> 强调标记（GUIDE_OVERVIEW 的数据就是富文本），必须用 v-html：
+               用 {{ }} 插值会把 <b> 当纯文本原样显示出来（2026-09-12 修，与 LogView 转生详解同口径） -->
+          <p class="dim ov-desc" v-html="it.desc"></p>
         </div>
       </div>
       </div>

@@ -6,9 +6,21 @@ import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel, friendBondProgress } from '../game/data/friends.js'
-import { getItem } from '../game/data/items.js'
+import { getItem, itemName } from '../game/data/items.js'
+import FoldCard from '../components/FoldCard.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+
+// 羁绊阶梯（0~5 级）：系数与 friends.js 的公式同源——拜访礼物 ×(1+0.25×级)、委托赏金 ×(1+0.15×级)
+const bondLadder = computed(() =>
+  Array.from({ length: FRIEND_BOND_STEPS.length + 1 }, (_, lv) => ({
+    lv,
+    total: lv === 0 ? 0 : FRIEND_BOND_STEPS[lv - 1],
+    step: lv === 0 ? 0 : FRIEND_BOND_STEPS[lv - 1] - (lv === 1 ? 0 : FRIEND_BOND_STEPS[lv - 2]),
+    giftMult: 1 + 0.25 * lv,
+    orderMult: 1 + 0.15 * lv,
+  }))
+)
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -81,6 +93,49 @@ function visitAll() {
         <p class="dim mono">累计羁绊 {{ totalBond }} · {{ orderable }} 份委托可交</p>
       </div>
     </header>
+
+    <!-- 羁绊阶梯 + 厨友档案（2026-09-12 补）：系数直接由 friends.js 的公式算（礼物 ×(1+0.25×级)、赏金 ×(1+0.15×级)） -->
+    <FoldCard
+      title="📋 羁绊阶梯 + 厨友档案"
+      hint="羁绊每级：拜访礼物 +25%、委托赏金 +15%；满 5 级各需累计互动 1/5/12/25/45 次"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>羁绊</th><th>累计互动</th><th>本级还需</th><th>拜访礼物</th><th>委托赏金</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in bondLadder" :key="row.lv">
+              <td class="mono">Lv{{ row.lv }}</td>
+              <td class="mono">{{ row.total }} 次</td>
+              <td class="mono">{{ row.step ? row.step + ' 次' : '—' }}</td>
+              <td class="mono">×{{ row.giftMult.toFixed(2) }}</td>
+              <td class="mono">×{{ row.orderMult.toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-scroll" style="margin-top: 10px">
+        <table class="target-table">
+          <thead>
+            <tr><th>厨友</th><th>拿手菜系</th><th>礼物基数</th><th>委托点名池</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="f in FRIENDS" :key="f.id">
+              <td>{{ f.icon }} {{ f.name }}</td>
+              <td class="dim">{{ f.school }}</td>
+              <td class="mono">{{ f.goldBase }}</td>
+              <td class="dim">{{ (f.pool ?? []).map((id) => itemName(id)).join('、') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        「累计互动」= 拜访 + 交付委托各算 1 次（每位厨友独立计）。礼物金币 = 礼物基数 × 礼物系数；
+        委托赏金 = 物品价值 × 数量 × 随机(1.4~2.0) × 赏金系数，且委托<b>优先点名你背包里已有的料</b>——
+        所以「先刷谁」看两件事：他的<b>礼物基数</b>（越高越值得每天串门）与<b>点名池</b>是否是你手上多的料。
+      </p>
+    </FoldCard>
 
     <div class="card fr-hero">
       <div class="fr-stat"><span class="dim">今日可拜访</span><b class="mono" :class="{ 'fr-hot': visitable > 0 }">{{ visitable }}/{{ FRIENDS.length }}</b></div>

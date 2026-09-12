@@ -11,7 +11,9 @@ export const FESTIVALS = [
   { id: 'moonbanquet', name: '满月宴', icon: '🌕', days: [15], boost: { restaurant: 1.3 }, desc: '餐厅收入 ×1.3' },
   { id: 'stoveking', name: '灶王诞', icon: '🔥', days: [18], boost: { craftXp: 1.35 }, desc: '制作经验 ×1.35' },
   { id: 'foodgod', name: '食神祭', icon: '🕯️', days: [22], boost: { combatXp: 1.35 }, desc: '对决经验 ×1.35' },
-  { id: 'nightmarket', name: '月末夜市', icon: '🏮', lastDays: 2, boost: { restaurant: 1.6, combatXp: 1.2 }, desc: '餐厅收入 ×1.6、对决经验 ×1.2' },
+  { id: 'nightmarket', name: '月末夜市', icon: '🏮', lastDays: 2, boost: { restaurant: 1.6, combatXp: 1.2 }, desc: '餐厅收入 ×1.6、对决经验 ×1.2' },  { id: 'teaday', name: '品茶日', icon: '🍵', days: [6], boost: { gatherXp: 1.25, restaurant: 1.2 }, desc: '采集经验 ×1.25、餐厅收入 ×1.2' },
+  { id: 'hotpotday', name: '暖锅日', icon: '🍲', days: [21], boost: { craftXp: 1.3, gatherYield: 1.15 }, desc: '制作经验 ×1.3、采集产量 ×1.15' },
+
 ]
 
 /** 当月天数 */

@@ -163,6 +163,7 @@ function checkGhost() {
   }
 }
 function win() {
+  player.recordMinigame('pacman', null) // 该玩法无分数概念：只计结算次数
   over.value = true
   running.value = false
   stopLoop()
@@ -172,6 +173,7 @@ function win() {
   ui.pushLog(`👻 吃豆人通关！+${gold} 游戏币`, 'gain')
 }
 function lose() {
+  player.recordMinigame('pacman', null) // 该玩法无分数概念：只计结算次数
   over.value = true
   running.value = false
   stopLoop()

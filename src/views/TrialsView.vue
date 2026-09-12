@@ -55,12 +55,14 @@ function start(r) {
     ui.pushLog('战斗进行中，请先结束当前对决', 'warn')
     return
   }
-  const ok = player.trialStart(r.def.id)
+  // 先造对手再登记试炼：把对手名一并写入 activeTrialOpp，结算时校验身份
+  const foe = trialOpponent(r.def, player.combatLevel)
+  const ok = player.trialStart(r.def.id, foe.name)
   if (!ok.ok) {
     ui.pushLog(ok.msg, 'warn')
     return
   }
-  c.start(trialOpponent(r.def, player.combatLevel))
+  c.start(foe)
   ui.pushLog(`🏅 ${r.def.name}开始：${r.def.desc}`, 'info')
 }
 function abort(r) {

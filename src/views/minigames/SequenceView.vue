@@ -182,6 +182,7 @@ function tap(i) {
 
 function settle() {
   if (overFlag) return
+  player.recordMinigame('serve', score.value, { lower: false, unit: '分' })
   overFlag = true
   over.value = true
   clearTimers()

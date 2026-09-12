@@ -35,6 +35,18 @@ function row(s) {
 const rows = computed(() =>
   [...SUPPLIERS.map(row)].sort((a, b) => (b.on ? 1 : 0) - (a.on ? 1 : 0))
 )
+// ── 合约对照（2026-09-12 补）：按「每天省多少金币」排序，并给出定金回本天数 ──
+// 省价口径与卡片一致：店价 = 基准价值 ×1.6（商店售价倍数），合约价 = 基准价值 ×0.78；合约期 7 天
+const compare = computed(() =>
+  SUPPLIERS.map(row)
+    .map((r) => {
+      const totalCost = r.def.deposit + r.cost * SUPPLIER_TERM_DAYS
+      const totalQty = r.def.qty * SUPPLIER_TERM_DAYS
+      const unitCost = totalCost / totalQty
+      return { ...r, totalCost, unitCost, vsValue: unitCost / (r.item?.value || 1) }
+    })
+    .sort((a, b) => a.vsValue - b.vsValue) // 越接近/低于基准价值越划算
+)
 
 function sign(s) {
   const r = player.signContract(s.id)
@@ -46,6 +58,7 @@ function cancel(s) {
 function gotoShop() {
   ui.setView('shop')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', label: '💹 交易所' }]
@@ -64,6 +77,37 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
       </div>
     </header>
 
+
+    <FoldCard
+      title="📋 各商行合约对照"
+      hint="这 7 样货商店不卖，合约买的是「自动送达」；折合单价 ×1.8~×12.5 基准价值"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>商行</th><th>每日到货</th><th>每日货款</th><th>7 天货款</th><th>定金</th><th>7 天总支出</th><th>折合单价</th><th>相对基准价值</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in compare" :key="c.def.id" :class="{ selected: !!c.on }">
+              <td>{{ c.def.icon }} {{ c.def.name }}</td>
+              <td>{{ c.item?.name }} ×{{ c.def.qty }}</td>
+              <td class="mono">{{ c.cost.toLocaleString() }}</td>
+              <td class="mono dim">{{ (c.cost * SUPPLIER_TERM_DAYS).toLocaleString() }}</td>
+              <td class="mono">{{ c.def.deposit.toLocaleString() }}</td>
+              <td class="mono">{{ c.totalCost.toLocaleString() }}</td>
+              <td class="mono">{{ c.unitCost.toFixed(1) }}</td>
+              <td class="mono" :class="c.vsValue > 1 ? 'dim' : 'up'">×{{ c.vsValue.toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        <b>这 7 样货商店并不出售</b>——合约买到的是「按天自动送达」，省的是自己去采/去做的功夫，不是省店价。
+        表里按真实支出算：<b>7 天总支出 = 定金 + 7 × 每日货款</b>（定金一次性、不退），
+        <b>折合单价 = 总支出 ÷ 7 天总件数</b>，再除以物品自身基准价值得到「相对基准价值」——低于 ×1.00 才算比它的名义价值划算。
+        货款金币不足时当日不到货、次日再试，合约不因此作废。
+      </p>
+    </FoldCard>
     <div class="card status-line">
       <span class="badge badge-on">生效中 {{ activeCount }} / {{ SUPPLIER_MAX_CONTRACTS }}</span>
       <span class="dim">可再签 <b class="mono">{{ remain }}</b> 份 · 累计到货 <b class="mono">{{ (player.stats?.contractDeliveries ?? 0).toLocaleString() }}</b> 次</span>
@@ -131,6 +175,8 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
       <button class="btn btn-sm" @click="ui.setView('exchange')">💹 交易所</button>
       <span class="dim">看看即时行情。</span>
     </div>
+
+    <!-- 合约对照（2026-09-12 补） -->
       <RelatedPages :links="RELATED" />
 </div>
 </template>

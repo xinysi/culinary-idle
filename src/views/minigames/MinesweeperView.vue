@@ -196,6 +196,7 @@ function pass() {
 }
 function settle(win) {
   if (over.value) return
+  player.recordMinigame('mines', elapsed.value, { lower: true, unit: '秒' })
   over.value = true
   passed.value = false
   stopTimer()

@@ -189,6 +189,52 @@ test.describe('游戏全流程', () => {
     expect(await page.locator('.mobile-skills').count(), '选完技能抽屉应收起').toBe(0)
   })
 
+  // 守卫：390px 手机下**任何页面都不得横向溢出**（2026-09-12 立）
+  // 起因：新增的 7 列对照表与 6 列榜单行把主区撑宽（实测分店 +22px、同业榜 +6px）——
+  // 桌面上完全看不出，只有手机才会出现「页面能左右滑」的怪状。宽表请包 `.table-scroll`。
+  test('手机 390px：全部页面无横向溢出', async ({ page }) => {
+    const src = fs.readFileSync(new URL('./src/stores/ui.js', import.meta.url), 'utf8')
+    const block = src.slice(src.indexOf('export const VIEW_KEYS = ['), src.indexOf(']', src.indexOf('export const VIEW_KEYS = [')))
+    const keys = [...block.matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1])
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(BASE)
+    await page.waitForTimeout(600)
+    await page.locator('.splash-start-btn').click()
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(1000)
+    // 种入代表性数据：空档上多数表格/网格不渲染，会漏掉宽表
+    await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      const p = pinia._s.get('player')
+      for (const id of Object.keys(p.skills)) p.setSkillState(id, { level: 99, exp: 0 })
+      p.gold = 3000000
+      p.restaurant = { ...p.restaurant, level: 12, menu: ['roastPotato'] }
+      p.branches = { east: { lastAt: Date.now(), manager: true } }
+      p.schools = { s_main: { level: 8 } }
+      p.regulars = { r_oldman: { serves: 8 } }
+      p.inventory.apple = 50
+      p.recordMinigame('snake', 12, { unit: '食物' })
+    })
+    await page.waitForTimeout(400)
+    const bad = []
+    for (const v of keys) {
+      await page.evaluate((vv) => {
+        document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').setView(vv)
+      }, v)
+      await page.waitForTimeout(260)
+      const r = await page.evaluate(() => {
+        const main = document.querySelector('.main-scroll')
+        return {
+          doc: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          main: main ? main.scrollWidth - main.clientWidth : 0,
+        }
+      })
+      if (r.doc > 2 || r.main > 2) bad.push(`${v}(文档 +${r.doc}px / 主区 +${r.main}px)`)
+    }
+    expect(bad, `以下页面在 390px 下横向溢出：\n${bad.join('\n')}`).toEqual([])
+  })
+
   test('刷新后仍能看到启动界面（干净会话）', async ({ page }) => {
     // 每次 test 都是干净 context，刷新应仍显示启动界面（无存档时）
     await page.reload()

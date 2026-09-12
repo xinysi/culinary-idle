@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { CELLAR_TIERS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_UNLOCK_LEVEL, nextCellarExpandCost } from '../game/data/cellar.js'
+import { CELLAR_TIERS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, nextCellarExpandCost } from '../game/data/cellar.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -81,6 +81,24 @@ function maxQtyFor(itemId) {
   if (!it?.value) return 0
   return Math.min(CELLAR_MAX_QTY, Math.floor(CELLAR_MAX_BASE_VALUE / it.value), player.inventory[itemId] ?? 0)
 }
+// ── 档位对照表（2026-09-12 补）：把「时长 × 倍率」的三个档位换成可比口径 ──
+// 关键结论：**倍率/时长（折算时收）随档位变长而下降**——12h 档时收最高、48h 档最低，
+// 所以长档不是「更划算」而是「更省心」（少上线几次）。表里同时给单槽满额出窖，便于横向比较。
+const tierRows = computed(() =>
+  CELLAR_TIERS.map((t) => ({
+    ...t,
+    perHour: t.mult / t.hours, // 每小时的倍率（越大越赚）
+    maxPayout: Math.round(CELLAR_MAX_BASE_VALUE * t.mult),
+  }))
+)
+const bestPerHour = computed(() => Math.max(...tierRows.value.map((r) => r.perHour)))
+// 扩建阶梯：3 格（初始）→ 6 格 → 9 格，费用逐档递增
+const expandLadder = computed(() => {
+  const rows = [{ slots: CELLAR_BASE_SLOTS, cost: null }]
+  CELLAR_EXPAND_COSTS.forEach((cost, i) => rows.push({ slots: CELLAR_BASE_SLOTS + (i + 1) * 3, cost }))
+  return rows
+})
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'automation', label: '🤖 自动化' }]
@@ -101,6 +119,42 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
       </button>
     </header>
 
+
+      <FoldCard
+        title="📋 陈酿档位对照表"
+        hint="折算时收 12h 0.125/时 > 24h 0.083 > 48h 0.063 —— 越长的档位每小时越低"
+      >
+        <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>档位</th><th>成熟时长</th><th>价值倍率</th><th>折算时收</th><th>单槽满额出窖</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in tierRows" :key="t.hours">
+              <td class="mono">{{ t.hours }}h</td>
+              <td class="mono">{{ t.hours }} 小时</td>
+              <td class="mono">×{{ t.mult }}</td>
+              <td class="mono" :class="{ 'mastery-hl': t.perHour === bestPerHour }">
+                {{ t.perHour.toFixed(3) }}/时<template v-if="t.perHour === bestPerHour"> ← 时收最高</template>
+              </td>
+              <td class="mono">{{ t.maxPayout.toLocaleString() }} 金币</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+          折算时收 = 倍率 ÷ 时长，所以<b>越长的档位每小时收益越低</b>：12h 档是 48h 档的两倍时收，适合常上线的玩家；
+          48h 档总收益更高、只要每天照看一次，适合睡前挂。单槽满额出窖按「价值上限 {{ CELLAR_MAX_BASE_VALUE.toLocaleString() }}」× 倍率估算。
+        </p>
+        <div class="dim" style="margin-top: 6px; font-size: 12px">
+          扩建阶梯：<span v-for="(e, i) in expandLadder" :key="e.slots">
+            <template v-if="i"> → </template>
+            <b class="mono">{{ e.slots }}</b> 格<template v-if="e.cost">（{{ e.cost.toLocaleString() }} 金币）</template><template v-else>（初始）</template>
+          </span>
+          （上限 {{ CELLAR_MAX_SLOTS }} 格）
+        </div>
+      </FoldCard>
+
     <div v-if="!unlocked" class="card status-line">
       <span class="badge">🔒 未解锁</span>
       <span class="dim">需 {{ getSkillDef('brewing')?.name ?? '调酒' }} Lv{{ CELLAR_UNLOCK_LEVEL }} 解锁地窖</span>
@@ -110,8 +164,10 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
       <div class="card status-line">
         <span class="badge badge-on">槽位 {{ player.cellarSlots() }} 格</span>
         <span class="dim">累计出窖 <b class="mono">{{ stats.rounds }}</b> 次 · 累计金币 <b class="mono">{{ stats.gold.toLocaleString() }}</b></span>
-        <span class="dim">档位：12h ×1.5 / 24h ×2 / 48h ×3</span>
+        <span class="dim">档位：12h ×1.5 / 24h ×2 / 48h ×3 / 96h ×4</span>
       </div>
+
+      <!-- 档位对照表（2026-09-12 补） -->
 
       <div class="cellar-grid">
         <div v-for="s in slots" :key="s.index" class="card cellar-slot">

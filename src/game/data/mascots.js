@@ -7,7 +7,9 @@ export const MASCOTS = [
   { id: 'dough', name: '面团小人', icon: '🍞', cost: 15000, desc: '面粉成精：爱送烘焙原料', goldBase: 220, itemChance: 0.5, items: { flour: 5 } },
   { id: 'koi', name: '锦鲤', icon: '🐟', cost: 30000, desc: '好运连连：蹭完常带稀有渔获', goldBase: 260, itemChance: 0.5, items: { goldenDragonFish: 1 } },
   { id: 'stove', name: '灶王玩偶', icon: '🧧', cost: 60000, desc: '灶火相伴：金币更丰厚，偶尔给调料', goldBase: 900, itemChance: 0.3, items: { mysterySpice: 2 } },
-  { id: 'pot', name: '铜锅精灵', icon: '🍲', cost: 120000, desc: '锅气十足：给的能量饼干能多挂几小时', goldBase: 1200, itemChance: 0.35, items: { energyBiscuit: 1 } },
+  { id: 'pot', name: '铜锅精灵', icon: '🍲', cost: 120000, desc: '锅气十足：给的能量饼干能多挂几小时', goldBase: 1200, itemChance: 0.35, items: { energyBiscuit: 1 } },  { id: 'turtle', name: '灶下龟', icon: '🐢', cost: 40000, desc: '慢火慢炖：爱送发面用的酵母', goldBase: 700, itemChance: 0.45, items: { yeast: 5 } },
+  { id: 'fox', name: '柴火狐', icon: '🦊', cost: 200000, desc: '添柴起灶：金币丰厚，偶尔叼来调料', goldBase: 1600, itemChance: 0.4, items: { mysterySpice: 2 } },
+
 ]
 
 const MASCOT_INDEX = new Map(MASCOTS.map((m) => [m.id, m]))

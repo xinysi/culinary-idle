@@ -108,8 +108,10 @@ export class FishingSkill extends GatheringSkill {
     const exp = Math.floor(normal * target.xpPerAction + (actions - ok) * target.xpPerAction * FAIL_XP_RATIO)
 
     const items = {}
-    if (normal > 0) items[target.itemId] = normal
+    // 期望条数走与在线同一套公式（含平均双倍率 / 精通保底产量 / 产量加成），不再只按 1 条计
+    const expectedQty = Math.round(normal * this.expectedYield(target))
+    if (expectedQty > 0) items[target.itemId] = expectedQty
     if (rare > 0) items[RARE_FISH_ID] = rare
-    return { actions, exp, items }
+    return { actions, exp, xpMult: this.xpMultOf(target), items }
   }
 }

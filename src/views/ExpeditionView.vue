@@ -5,11 +5,12 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { EXPEDITIONS, expeditionTier, expeditionYieldMult, EXPEDITION_TIER_STEPS } from '../game/data/expeditions.js'
+import { EXPEDITIONS, expeditionTier, expeditionYieldMult, expeditionRareBonus, EXPEDITION_TIER_STEPS } from '../game/data/expeditions.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
+import FoldCard from '../components/FoldCard.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -68,6 +69,32 @@ function claim(lineId, i) {
 function stop(lineId, i) {
   if (player.expeditionStop(lineId, i)) ui.pushLog('已撤回该槽位（本轮进度放弃）', 'info')
 }
+// 熟练度阶梯（8 档）与三条线档案（2026-09-12 补）：数值与 store 的结算同源
+//   每轮产出件数 = 周期小时 × 5 × 产量倍率；每轮金币 = 槽位 goldPerHour × 周期
+const tierLadder = computed(() =>
+  EXPEDITION_TIER_STEPS.map((need, i) => ({
+    tier: i + 1,
+    need,
+    yieldMult: expeditionYieldMult(i + 1),
+    rarePct: expeditionRareBonus(i + 1) * 100,
+    step: i === 0 ? need : need - EXPEDITION_TIER_STEPS[i - 1],
+  }))
+)
+const lineArchive = computed(() =>
+  EXPEDITIONS.map((def) => ({
+    def,
+    skillName: getSkillDef(def.skill)?.name ?? def.skill,
+    rareName: def.rare ? `${getItem(def.rare.itemId)?.name ?? def.rare.itemId}（${(def.rare.chance * 100).toFixed(1)}%）` : '—',
+    slots: (def.slots ?? []).map((s, i) => ({
+      index: i + 1,
+      reqLevel: s.reqLevel,
+      hours: s.hours,
+      qty: Math.round(s.hours * 5),
+      gold: s.goldPerHour * s.hours,
+      pool: (s.pool ?? []).map((id) => getItem(id)?.name ?? id).join('、'),
+    })),
+  }))
+)
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automation', label: '🤖 自动化' }]
@@ -81,6 +108,55 @@ const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automati
         <p class="dim">派出采集队远行，<b>小时级</b>周期自动带回材料；到期领取，领取后自动开始下一轮（离线期间照常计时，不叠加）。</p>
       </div>
     </header>
+
+    <!-- 熟练度阶梯 + 三条线档案（2026-09-12 补） -->
+    <FoldCard
+      title="📋 熟练度阶梯 + 三条线档案"
+      hint="熟练度 8 档：每档产量 +10%、稀有率 +0.5%；满档需累计 128 轮"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>熟练度档位</th><th>累计完成</th><th>本级还需</th><th>产量倍率</th><th>稀有率加成</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in tierLadder" :key="t.tier">
+              <td class="mono">第 {{ t.tier }} 档</td>
+              <td class="mono">{{ t.need }} 轮</td>
+              <td class="mono">{{ t.step }} 轮</td>
+              <td class="mono">×{{ t.yieldMult.toFixed(2) }}</td>
+              <td class="mono">+{{ t.rarePct.toFixed(1) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-scroll" style="margin-top: 10px">
+        <table class="target-table">
+          <thead>
+            <tr><th>线路 · 槽位</th><th>解锁</th><th>周期</th><th>每轮产出</th><th>每轮金币</th><th>可产出</th></tr>
+          </thead>
+          <tbody>
+            <template v-for="l in lineArchive" :key="l.def.id">
+              <tr v-for="s in l.slots" :key="s.index">
+                <td>{{ l.def.icon }} {{ l.def.name }} · {{ s.index }}</td>
+                <td class="mono dim">{{ l.skillName }} Lv{{ s.reqLevel }}</td>
+                <td class="mono">{{ s.hours }}h</td>
+                <td class="mono">≈{{ s.qty }} 件</td>
+                <td class="mono gold">{{ s.gold.toLocaleString() }}</td>
+                <td class="dim">{{ s.pool }}</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        每条线 4 个槽位、按<b>对应技能等级</b>解锁（线路本身 Lv{{ EXPEDITIONS[0].reqLevel }}~{{ EXPEDITIONS[EXPEDITIONS.length - 1].reqLevel }} 解锁）。
+        「每轮产出」按<b>基础</b>熟练度算（≈周期小时 × 5 件，熟练度每档 +10%），「每轮金币」= 槽位时收 × 周期；
+        三条线的<b>稀有掉落</b>：<template v-for="(l, i) in lineArchive" :key="l.def.id"><template v-if="i"> · </template>{{ l.def.icon }} {{ l.rareName }}</template>。
+        熟练度按线路独立累计，所以常跑同一条线收益更高。
+      </p>
+    </FoldCard>
+
 
     <div class="card">
       <p class="dim" style="margin: 0 0 10px">

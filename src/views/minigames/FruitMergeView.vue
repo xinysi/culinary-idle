@@ -327,6 +327,7 @@ function checkWin() {
   }
 }
 function win() {
+  player.recordMinigame('fruitmerge', scoreRef.value, { lower: false, unit: '分' })
   won = true
   wonRef.value = true
   runningRef.value = false
@@ -338,6 +339,7 @@ function win() {
   saveBest()
 }
 function lose() {
+  player.recordMinigame('fruitmerge', scoreRef.value, { lower: false, unit: '分' })
   over = true
   overRef.value = true
   runningRef.value = false

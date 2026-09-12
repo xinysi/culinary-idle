@@ -3,13 +3,14 @@
 // 覆盖：技能经验/产出、联动链、对决（伤害/克制/命中/暴击/胜负）、装备、
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
+import fs from 'node:fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { Combat } from '../../src/game/combat/Combat.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../../src/game/data/combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
-import { countForMasteryLevel } from '../../src/game/core/mastery.js'
+import { countForMasteryLevel, masteryXpMultiplier } from '../../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
 import { EQUIPMENT_SETS, equipSetBonuses } from '../../src/game/data/equipSets.js'
 import { regularLevelFromServes, REGULARS } from '../../src/game/data/regulars.js'
@@ -66,6 +67,8 @@ import { EventBus } from '../../src/game/core/EventBus.js'
 import { settleOffline } from '../../src/game/bootstrap.js'
 import { useUiStore } from '../../src/stores/ui.js'
 import { ITEMS, getItem } from '../../src/game/data/items.js'
+import { ALCHEMY_RECIPES } from '../../src/game/data/alchemy.js'
+import { applyValueBalance } from '../../src/game/data/valueBalance.js'
 import { cardPoolFrom, cardStrength, simulateBattle, settleBattle, DIFFICULTIES } from '../../src/game/data/cardBattle.js'
 import { ALL_ACHIEVEMENTS } from '../../src/game/data/achievements.js'
 import { QUESTS } from '../../src/game/data/quests.js'
@@ -641,37 +644,46 @@ console.log('══ E. 离线进度 ══')
   // 厨神试炼（2026-09-10）：限制条件判定 + 首通/重复奖励
   {
     const pt = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 }) // 对决等级 = (40+40+40)/3 = 40
+    // 结算会校验本场对手身份（trialStart 登记 activeTrialOpp），这里模拟真实 combat:end 带上同名对手
+    const fight = (info) => pt.onCombatEndTrial({ opponent: pt.activeTrialOpp, ...info })
     check('试炼', '对决 30 级解锁', pt.combatLevel === 40 && pt.trialsUnlocked() === true && freshPlayer().trialsUnlocked() === false, `combatLevel=${pt.combatLevel}`)
     // 速攻：12 回合内 → 通关
     pt.trialStart('t_speed')
-    const r1 = pt.onCombatEndTrial({ result: 'win', turns: 8, hpLeft: 50, hpMax: 100 })
+    const r1 = fight({ result: 'win', turns: 8, hpLeft: 50, hpMax: 100 })
     check('试炼', '速攻达标通关 + 首通奖励', r1?.passed === true && r1.first === true && pt.trialState('t_speed').clears === 1)
-    // 速攻：13 回合 → 不达标并退出
+    // 身份校验：开着试炼去打别的怪 → 不结算（防「随便打赢一只小怪拿首通奖励」）
     pt.trialStart('t_speed')
-    const r2 = pt.onCombatEndTrial({ result: 'win', turns: 13, hpLeft: 50, hpMax: 100 })
+    const rX = pt.onCombatEndTrial({ result: 'win', opponent: '🍎 别的怪', turns: 3, hpLeft: 100, hpMax: 100 })
+    check('试炼', '非试炼对手不结算（试炼保持进行中）', rX === null && pt.activeTrial === 't_speed' && pt.trialState('t_speed').clears === 1)
+    // 速攻：13 回合 → 不达标并退出
+    const r2 = fight({ result: 'win', turns: 13, hpLeft: 50, hpMax: 100 })
     check('试炼', '超出回合数不达标', r2?.passed === false && pt.activeTrial === null)
     // 无伤：95% 血量 → 通关；80% → 不达标
     pt.trialStart('t_flawless')
-    const r3 = pt.onCombatEndTrial({ result: 'win', turns: 30, hpLeft: 95, hpMax: 100 })
+    const r3 = fight({ result: 'win', turns: 30, hpLeft: 95, hpMax: 100 })
     check('试炼', '无伤达标（≥90% 血量）', r3?.passed === true)
     pt.trialStart('t_flawless')
-    const r4 = pt.onCombatEndTrial({ result: 'win', turns: 30, hpLeft: 80, hpMax: 100 })
+    const r4 = fight({ result: 'win', turns: 30, hpLeft: 80, hpMax: 100 })
     check('试炼', '血量不足不达标', r4?.passed === false)
+    // 血量字段缺失（旧事件载荷 bug：hpLeft=undefined）→ 血量类条件判失败，不判 NaN 也不误判通过
+    pt.trialStart('t_flawless')
+    const rNaN = fight({ result: 'win', turns: 30 })
+    check('试炼', '血量缺失按 0% 判失败（不误判通过）', rNaN?.passed === false)
     // 连胜：3 连胜才通关，中间失败清零
     pt.trialStart('t_streak')
-    pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
-    pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    fight({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    fight({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
     check('试炼', '连胜进度累计', pt.trialState('t_streak').streak === 2)
-    const r5 = pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    const r5 = fight({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
     check('试炼', '3 连胜通关 + 清零', r5?.passed === true && pt.trialState('t_streak').streak === 0)
     // 重复通关给 30% 金币
     const g0 = pt.gold
     pt.trialStart('t_speed')
-    const r6 = pt.onCombatEndTrial({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
+    const r6 = fight({ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 })
     check('试炼', '重复通关 30% 金币', r6?.passed === true && r6.first === false && pt.gold - g0 === Math.round(4000 * 0.3))
     // 失败退出
     pt.trialStart('t_overlevel')
-    const r7 = pt.onCombatEndTrial({ result: 'lose', turns: 3, hpLeft: 0, hpMax: 100 })
+    const r7 = fight({ result: 'lose', turns: 3, hpLeft: 0, hpMax: 100 })
     check('试炼', '失败自动退出', r7?.passed === false && pt.activeTrial === null)
   }
   // 米其林评级（2026-09-10）：六维评分 → 每日评审 → 星级收益
@@ -1099,7 +1111,7 @@ console.log('══ E. 离线进度 ══')
   }
   // 名厨挑战（2026-09-10）：每周一位名厨，固定流派，战胜给奖
   {
-    check('名厨', `名单 ${CHEFS.length} 位且流派合法`, CHEFS.length === 8 && CHEFS.every((c) => ['knife', 'plating', 'flavor'].includes(c.style) && c.levelOffset > 0))
+    check('名厨', `名单 ${CHEFS.length} 位且流派合法`, CHEFS.length === 10 && CHEFS.every((c) => ['knife', 'plating', 'flavor'].includes(c.style) && c.levelOffset > 0))
     check('名厨', '按周确定性轮换', chefForWeek(0).id === CHEFS[0].id && chefForWeek(CHEFS.length).id === CHEFS[0].id && chefForWeek(1).id === CHEFS[1].id)
     const pb = freshPlayer()
     const def = chefForWeek(Math.floor(Date.now() / (7 * 24 * 3600_000)))
@@ -1261,16 +1273,17 @@ console.log('══ E. 离线进度 ══')
   {
     // ① 试炼最佳成绩：回合制记最少回合、其余记最高剩余品鉴值
     const pt = freshPlayer({ knife: 30, tasteAcumen: 30, heatControl: 30 })
+    const fight = (info) => pt.onCombatEndTrial({ opponent: pt.activeTrialOpp, ...info })
     pt.trialStart('t_speed')
-    pt.onCombatEndTrial({ result: 'win', turns: 12, hpLeft: 60, hpMax: 100 })
+    fight({ result: 'win', turns: 12, hpLeft: 60, hpMax: 100 })
     pt.trialStart('t_speed')
-    pt.onCombatEndTrial({ result: 'win', turns: 9, hpLeft: 60, hpMax: 100 })
+    fight({ result: 'win', turns: 9, hpLeft: 60, hpMax: 100 })
     const stS = pt.trialState('t_speed')
     check('试炼记录', '回合制记最少回合（9 而非 12）', stS.bestTurns === 9, `bestTurns=${stS.bestTurns}`)
     pt.trialStart('t_flawless')
-    pt.onCombatEndTrial({ result: 'win', turns: 40, hpLeft: 92, hpMax: 100 })
+    fight({ result: 'win', turns: 40, hpLeft: 92, hpMax: 100 })
     pt.trialStart('t_flawless')
-    pt.onCombatEndTrial({ result: 'win', turns: 40, hpLeft: 96, hpMax: 100 })
+    fight({ result: 'win', turns: 40, hpLeft: 96, hpMax: 100 })
     const stF = pt.trialState('t_flawless')
     check('试炼记录', '非回合制记最高剩余品鉴值（96）', stF.bestHp === 96, `bestHp=${stF.bestHp}`)
     check('试炼记录', '未通关时不写精确记录', (freshPlayer().trialState('t_speed').bestTurns ?? null) === null)
@@ -2615,6 +2628,218 @@ console.log('══ C13. 奇遇图鉴 ══')
   p3.applySave({ gold: 100 })
   check('奇遇', '旧档缺 encounters 字段时回退为空', p3.encountersSeenCount() === 0 && p3.encounters.total === 0)
   check('奇遇', '旧档也能正常记录', (p3.markEncounterSeen(idA), p3.encounterStats(idA).seen === 1))
+}
+
+// ── C14. 炼金价值比（2026-09-12）────────────────────────
+// 炼金配方按「投入价值 ≈ 产出价值」生成（authored 数据 0 违规）。若价值平衡层把产物抬到高于
+// 其投入，就出现「买原料 → 炼金 → 卖产物」的无限刷钱循环（实测：9 清水 18 金 → 1 苏打水卖 27 金）。
+console.log('══ C14. 炼金价值比 ══')
+{
+  applyValueBalance() // 与游戏启动同一套平衡（要求幂等）
+  let violated = 0
+  let worst = null
+  for (const r of ALCHEMY_RECIPES) {
+    const outItem = ITEMS[r.out]
+    if (!outItem || outItem.value == null) continue
+    let inValue = 0
+    for (const [id, qty] of Object.entries(r.in ?? {})) inValue += (ITEMS[id]?.value ?? 0) * qty
+    if (outItem.value > inValue) {
+      violated++
+      if (!worst || outItem.value - inValue > worst.diff) worst = { r, out: outItem.value, in: inValue, diff: outItem.value - inValue }
+    }
+  }
+  check('炼金', '平衡后无「产出价值 > 投入价值」的配方', violated === 0, `违规 ${violated} 条${worst ? `，最大「${worst.r.name}」（${worst.out} vs ${worst.in}）` : ''}`)
+  // 卖价口径（floor(value×0.5)）：产出卖价须低于「投入全按买价购入」的成本，否则可无限刷钱
+  const waterBuy = 2 * 9 // 杂货铺清水 2 金/瓶 × 9 瓶
+  const sodaSell = Math.floor((ITEMS.sodaWater?.value ?? 0) * 0.5)
+  check('炼金', '苏打水不可刷钱（卖价 < 9 清水成本）', sodaSell < waterBuy, `value=${ITEMS.sodaWater?.value}，卖价=${sodaSell}，成本=${waterBuy}`)
+  // 幂等：重复调用不再改动任何 value（否则每次启动都会继续漂移）
+  const snap = Object.values(ITEMS).map((it) => it.value)
+  applyValueBalance()
+  check('炼金', 'valueBalance 幂等（重复调用不再改值）', Object.values(ITEMS).every((it, i) => it.value === snap[i]))
+}
+
+// ── C15. 离线结算幂等（2026-09-12）────────────────────
+// 曾经：读档结算离线后既不推进 lastOnlineAt、也不落盘 → 同一份存档反复读取会反复发放同一段
+// 离线收益（关页面前没触发自动存档时尤其明显）。修法：结算完立刻推进时间戳并写回该存档位。
+console.log('══ C15. 离线结算幂等 ══')
+{
+  const store = new Map()
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  }
+  const { saveManager, loadSlot } = await import('../../src/game/bootstrap.js')
+  const p = freshPlayer({ foraging: 30 })
+  useUiStore()
+  p.setActiveSkill('foraging')
+  p.activeTarget = 'apple'
+  const invTotal = () => Object.values(p.inventory).reduce((a, b) => a + b, 0)
+  p.lastOnlineAt = Date.now() - 2 * 3600_000 // 存档里的「上次在线」= 2 小时前
+  saveManager.slot = 0
+  saveManager.saveSlot(0, { schemaVersion: 1, savedAt: Date.now(), player: p.serialize() })
+  const inv0 = invTotal()
+  check('离线幂等', '第一次读档发放离线收益', loadSlot(0) === true && invTotal() > inv0, `背包 ${inv0}→${invTotal()}`)
+  const inv1 = invTotal()
+  const saved = saveManager.loadSlot(0)
+  const lag = Date.now() - (saved?.player?.lastOnlineAt ?? 0)
+  check('离线幂等', '读档后 lastOnlineAt 已推进并落盘', lag < 10_000, `落盘时间戳滞后 ${lag}ms`)
+  // 关键复现路径：读档拿奖励 → 游戏内自动存档（把已入账的状态写回）→ 再读档。
+  // 若 lastOnlineAt 没被推进，第二次读档会再发一遍同一段离线收益（奖励翻倍）。
+  saveManager.saveSlot(0, { schemaVersion: 1, savedAt: Date.now(), player: p.serialize() })
+  loadSlot(0)
+  check('离线幂等', '自动存档后再读档不重复发放', invTotal() === inv1, `背包 ${inv1}→${invTotal()}`)
+}
+
+// ── C16. 离线与在线一致性（2026-09-12）────────────────
+// 离线只该「速率打 8 折」，不该因为另写一条算式而丢掉精通保底产量 / 产量加成 / 精通经验倍数。
+// 此前：离线产量 = 动作数 ×(1+双倍率)，离线经验 = 动作数 × 基础经验 —— 实测只有在线的 1/2~1/3。
+console.log('══ C16. 离线与在线一致性 ══')
+{
+  const p = freshPlayer({ foraging: 50 })
+  p.activeTarget = 'apple'
+  const f = new ForagingSkill(p)
+  const apple = f.targets.find((t) => t.itemId === 'apple')
+  p.skills.foraging.mastery.apple = countForMasteryLevel(50)
+  const expected = f.expectedYield(apple)
+  check('一致', '期望产量含精通 50 保底 +1', expected >= 2, `expected=${expected}`)
+  const off = f.computeOffline(3600_000, 0.8)
+  check('一致', '离线产量 = 动作数 × 期望产量', off.items.apple === Math.round(off.actions * expected), `离线=${off.items.apple} 期望=${Math.round(off.actions * expected)}`)
+  check('一致', '离线带精通经验倍数（在线 award 同口径）', off.xpMult === masteryXpMultiplier(50), `xpMult=${off.xpMult}`)
+  // 实测：照 performAction 的算法跑 N 次动作，平均产量应≈期望（两条路径不漂移的守门断言）
+  const N = 20000
+  let sum = 0
+  for (let i = 0; i < N; i++) {
+    const doubled = Math.random() < f.doubleChance(apple)
+    sum += f.yieldQuantity(doubled ? 2 : 1, apple)
+  }
+  const mean = sum / N
+  check('一致', '在线实测均值 ≈ 离线期望（±5%）', Math.abs(mean - expected) / expected < 0.05, `mean=${mean.toFixed(3)} expected=${expected.toFixed(3)}`)
+}
+
+// ── C17. combat:end 事件载荷完整性（2026-09-12）──────────
+// 踩过的坑：胜利分支把 hpLeft 写成不存在的 this.playerHp（undefined），使依赖血量百分比的
+// 「无伤试炼」恒判 NaN、永不通过——而没有任何检查盯着「事件载荷字段是否齐全」。
+// 这里真打一场，断言 combat:end 的关键字段都在且是有限数值。
+console.log('══ C17. combat:end 载荷完整性 ══')
+{
+  const p = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 })
+  p.setCombat({ hp: p.maxHp })
+  const cb = new Combat(p)
+  const seen = []
+  const h = (payload) => seen.push(payload)
+  EventBus.on('combat:end', h)
+  const weak = opp(1, '测试木桩', 'knife', { drops: [] })
+  cb.start(weak)
+  let g = 0
+  while (cb.inFight && g++ < 3000) cb.tick(200)
+  EventBus.off('combat:end', h)
+  const ev = seen[seen.length - 1]
+  check('事件载荷', 'combat:end 触发一次', seen.length === 1 && !!ev)
+  check('事件载荷', 'result 为 win/lose', ev?.result === 'win' || ev?.result === 'lose', `result=${ev?.result}`)
+  check('事件载荷', 'opponent 非空（试炼身份校验依赖它）', typeof ev?.opponent === 'string' && ev.opponent.length > 0, `opponent=${ev?.opponent}`)
+  check('事件载荷', 'turns 为有限数', Number.isFinite(ev?.turns), `turns=${ev?.turns}`)
+  check('事件载荷', 'hpLeft 为有限数（无伤试炼依赖）', Number.isFinite(ev?.hpLeft), `hpLeft=${ev?.hpLeft}`)
+  check('事件载荷', 'hpMax 为正数', Number.isFinite(ev?.hpMax) && ev.hpMax > 0, `hpMax=${ev?.hpMax}`)
+  check('事件载荷', '0 ≤ hpLeft ≤ hpMax', ev?.hpLeft >= 0 && ev?.hpLeft <= ev?.hpMax, `${ev?.hpLeft}/${ev?.hpMax}`)
+  check('事件载荷', 'oppLevel 为有限数', Number.isFinite(ev?.oppLevel), `oppLevel=${ev?.oppLevel}`)
+}
+
+// ── C18. 精通升级不得让采集间隔变慢（2026-09-12，用户实测发现）──────
+// 曾经的实现：精通 ≥20 直接把间隔整段换成固定档值（3.6s → 2.0s）。结果是 367 个采集目标里
+// **51% 在精通 19→20 时反而变慢**（基础 3.0s 的目标 1.5s → 3.6s，2.4 倍），玩家看到的是「精通升了却变慢」。
+// 现改为「固定档值」与「基础间隔÷2」取更快者。这里逐目标逐档验证单调性。
+console.log('══ C18. 精通升级不减速 ══')
+{
+  const p = freshPlayer({ foraging: 100 })
+  const f = getSkillInstance('foraging')
+  let slower = 0
+  let worst = null
+  for (const t of f.targets) {
+    let prev = Infinity
+    for (let lv = 0; lv <= 100; lv++) {
+      p.skills.foraging.mastery[t.itemId] = countForMasteryLevel(lv)
+      const cur = f.intervalMs(t)
+      if (cur > prev + 1e-9) {
+        slower++
+        const r = cur / prev
+        if (!worst || r > worst.r) worst = { id: t.itemId, lv, prev, cur, r }
+      }
+      prev = cur
+    }
+    delete p.skills.foraging.mastery[t.itemId]
+  }
+  check('精通间隔', `精通 0→100 逐级、全部 ${f.targets.length} 个目标都不变慢`, slower === 0, `变慢 ${slower} 次${worst ? `，最差 ${worst.id} 精通${worst.lv}：${(worst.prev / 1000).toFixed(2)}s→${(worst.cur / 1000).toFixed(2)}s` : ''}`)
+  // 固定档只在「比基础÷2 更快」时生效：基础 8s 的长目标应由固定档提速，基础 3s 的短目标应走 ÷2
+  const longT = f.targets.find((t) => t.intervalSec >= 8)
+  const shortT = f.targets.find((t) => t.intervalSec <= 3.2)
+  p.skills.foraging.mastery[longT.itemId] = countForMasteryLevel(100)
+  p.skills.foraging.mastery[shortT.itemId] = countForMasteryLevel(100)
+  check('精通间隔', '长基础目标由固定档提速（精通 100 → 2.0s）', Math.abs(f.intervalMs(longT) - 2000) < 1 && f.intervalSource(longT) === 'fixed', `${f.intervalMs(longT)}ms/${f.intervalSource(longT)}`)
+  check('精通间隔', '短基础目标保持「基础÷2」不被固定档拖慢', f.intervalSource(shortT) === 'ratio' && f.intervalMs(shortT) < 2000, `${f.intervalMs(shortT)}ms/${f.intervalSource(shortT)}`)
+}
+
+// ── C19. 数据引用完整性（2026-09-12）────────────────────
+// 起因：信仰「窖神」的供奉材料写的是 pickled_ext_01 / bambooShoot，两个 id **都不在物品库里** →
+// 材料永远凑不齐、该神永远升不了级（与之前「奇遇奖励 egg/cheese 幽灵物品」同一类事故）。
+// 这里把「数据里引用物品 id」的地方逐个查一遍，只允许引用真实存在的物品。
+console.log('══ C19. 数据引用完整性 ══')
+{
+  const bad = []
+  for (const p of PATRONS) for (const id of p.offer ?? []) if (!getItem(id)) bad.push(`${p.name}.offer → ${id}`)
+  for (const s of SUPPLIERS) if (!getItem(s.itemId)) bad.push(`${s.name}.itemId → ${s.itemId}`)
+  check('引用', `守护神供奉材料均存在（${PATRONS.length} 位）`, bad.filter((x) => x.includes('offer')).length === 0, bad.join('; '))
+  check('引用', `供应商货品均存在（${SUPPLIERS.length} 家）`, bad.filter((x) => x.includes('itemId')).length === 0, bad.join('; '))
+  // 反过来：每位神至少要有一个可获得的材料（存在 + 有获取途径才算可用）
+  const noMats = PATRONS.filter((p) => !(p.offer ?? []).length || (p.offer ?? []).some((id) => !getItem(id)))
+  check('引用', '每位守护神都有可凑齐的供奉材料', noMats.length === 0, noMats.map((p) => p.name).join('、'))
+
+  // 通用扫描（2026-09-12 补）：把**所有数据模块**里「引用物品 id」的字段逐个查一遍。
+  // 已抓到过的实例：信仰供奉材料 pickled_ext_01/bambooShoot、产地北境雪山物资箱 radish —— 都会让玩家
+  // 拿到一个不在物品库里的假条目（白占背包格）或让功能永远凑不齐。字段口径只认已核实的几类，避免误报。
+  {
+    const ITEM_ID_KEYS = new Set(['itemId', 'out']) // 值本身即物品 id
+    const ITEM_ID_MAP_KEYS = new Set(['items', 'feed', 'products']) // 对象的「键」是物品 id
+    const ITEM_ID_ARR_KEYS = new Set(['box', 'pool', 'offer']) // 字符串数组，元素是物品 id
+    const ghosts = []
+    const walk = (v, where, depth = 0) => {
+      if (v == null || depth > 6) return
+      if (Array.isArray(v)) {
+        v.forEach((x, i) => {
+          if (typeof x === 'string' && ITEM_ID_ARR_KEYS.has(where.split('.').pop())) {
+            if (!getItem(x)) ghosts.push(`${where}[${i}] → ${x}`)
+          } else walk(x, `${where}[${i}]`, depth + 1)
+        })
+        return
+      }
+      if (typeof v !== 'object') return
+      for (const [k, val] of Object.entries(v)) {
+        const key = k
+        if (typeof val === 'string' && ITEM_ID_KEYS.has(key)) {
+          // 炼金配方的 out 单独交给 item_triple_audit 守（那边有「62 条幽灵配方基线」的门禁，
+          // 基线只允许为零=不许新增），这里排除以免重复报同一批历史遗留。
+          if (!(where.startsWith('alchemy.js') && key === 'out') && !getItem(val)) ghosts.push(`${where}.${key} → ${val}`)
+          continue
+        }
+        if (val && typeof val === 'object' && ITEM_ID_MAP_KEYS.has(key)) {
+          // 两种形状都要支持：{ 物品id: 数量 }（如吉祥物礼物、牧场饲料）与 ['物品id', …]（如风味搭配）
+          const ids = Array.isArray(val) ? val.filter((x) => typeof x === 'string') : Object.keys(val)
+          for (const id of ids) if (!getItem(id)) ghosts.push(`${where}.${key}.${id}`)
+          continue
+        }
+        walk(val, `${where}.${key}`, depth + 1)
+      }
+    }
+    const files = fs.readdirSync('src/game/data').filter((f) => f.endsWith('.js'))
+    for (const f of files) {
+      let mod
+      try { mod = await import(`../../src/game/data/${f}`) } catch { continue }
+      for (const [name, val] of Object.entries(mod)) walk(val, `${f}:${name}`)
+    }
+    const uniq = [...new Set(ghosts)]
+    check('引用', `全部数据模块的物品 id 引用均存在（扫描 ${files.length} 个模块）`, uniq.length === 0, uniq.slice(0, 8).join('; '))
+  }
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

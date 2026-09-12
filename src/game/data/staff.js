@@ -6,6 +6,8 @@ export const STAFF = [
   { id: 'chef', name: '掌勺', icon: '👨‍🍳', per: 8, wage: 220, desc: '餐厅收入 +8% / 级' },
   { id: 'waiter', name: '跑堂', icon: '🏃', per: 10, wage: 130, desc: '食客订单奖励 +10% / 级' },
   { id: 'buyer', name: '采买', icon: '🧺', per: 6, wage: 90, desc: '餐厅收入 +6% / 级（兼管采买，降低补给保留金币要求）' },
+  { id: 'steward', name: '掌柜', icon: '📒', per: 9, wage: 200, desc: '餐厅收入 +9% / 级（门面与客情，门槛 2,222/时）' },
+  { id: 'accountant', name: '账房', icon: '🧮', per: 5, wage: 70, desc: '餐厅收入 +5% / 级（精打细算，最便宜好养）' },
 ]
 
 const STAFF_INDEX = new Map(STAFF.map((s) => [s.id, s]))

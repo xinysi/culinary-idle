@@ -4,13 +4,14 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { RIVAL_PROMO_COST, RIVAL_PROMO_BONUS, RIVAL_MONTH_GROWTH, RIVAL_BOARD_SIZE } from '../game/data/rivals.js'
+import { RIVAL_PROMO_COST, RIVAL_PROMO_BONUS, RIVAL_MONTH_GROWTH, RIVAL_BOARD_SIZE, RIVAL_SHOPS, rivalsOfMonth, monthIndexOf } from '../game/data/rivals.js'
 import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
 
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'michelin', label: '⭐ 米其林评级' }, { view: 'branches', label: '🏬 餐厅分店' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals', label: '🍱 套餐与定食' }]
@@ -24,6 +25,25 @@ const rows = computed(() => {
   ]
   list.sort((a, b) => b.score - a.score)
   return list.map((r, i) => ({ ...r, rank: i + 1 }))
+})
+// ── 12 家同行档案（2026-09-12 补）──
+// 每月只上场 5 家（轮换公式 (月序×3 + i×2) % 12），所以「这家下次什么时候出现」可以算出来；
+// 实力值每月 +6% 成长、并带 ±12% 的确定性抖动（同月同结果）。
+const archive = computed(() => {
+  const month = monthIndexOf()
+  const onBoard = new Map(board.value.rivals.map((r) => [r.id, r.score]))
+  return RIVAL_SHOPS.map((shop) => {
+    let nextIn = null
+    for (let k = 0; k <= 12; k++) {
+      if (rivalsOfMonth(month + k).some((r) => r.id === shop.id)) { nextIn = k; break }
+    }
+    return {
+      ...shop,
+      onBoard: onBoard.has(shop.id),
+      boardScore: onBoard.get(shop.id) ?? null,
+      nextIn,
+    }
+  }).sort((a, b) => b.power - a.power)
 })
 const top = computed(() => rows.value.find((r) => r.me))
 const nextUp = computed(() => {
@@ -74,6 +94,34 @@ function claim() {
       </div>
     </header>
 
+
+    <FoldCard
+      title="📇 12 家同行档案"
+      hint="每月只上场 5 家、实力每月 +6%；此表可查「这家下次哪个月出现」"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>店铺</th><th>招牌</th><th>基础实力</th><th>本月上场</th><th>本月实力</th><th>下次上场</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in archive" :key="a.id" :class="{ selected: a.onBoard }">
+              <td>{{ a.icon }} {{ a.name }}</td>
+              <td class="dim">{{ a.style }}</td>
+              <td class="mono">{{ a.power.toLocaleString() }}</td>
+              <td><span v-if="a.onBoard" class="badge badge-on">本月</span><span v-else class="dim">—</span></td>
+              <td class="mono">{{ a.boardScore == null ? '—' : a.boardScore.toLocaleString() }}</td>
+              <td class="dim">{{ a.nextIn === 0 ? '本月' : a.nextIn === 1 ? '下月' : a.nextIn + ' 个月后' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        同行<b>每月轮换上场</b>（{{ RIVAL_BOARD_SIZE - 1 }} 家 + 你 = 榜上 {{ RIVAL_BOARD_SIZE }} 位），
+        所以这个月的强敌下个月可能换人；<b>基础实力</b>是它第一次登场的量级，之后每月 ×{{ (1 + RIVAL_MONTH_GROWTH).toFixed(2) }} 并带 ±12% 确定性抖动。
+        想冲名次就盯「本月上场」那几家比分数——你比第 {{ RIVAL_BOARD_SIZE }} 名高就出榜。
+      </p>
+    </FoldCard>
     <!-- 我的名次 -->
     <div class="card rv-hero">
       <div class="rv-hero-left">
@@ -122,6 +170,7 @@ function claim() {
       </p>
     </div>
 
+    <!-- 12 家同行档案（2026-09-12 补） -->
     <!-- 分数构成 -->
     <div class="card">
       <div class="rv-h">🧮 经营分构成（合计 <b class="mono">{{ board.score.toLocaleString() }}</b><template v-if="board.promo"> · 含推广 +{{ RIVAL_PROMO_BONUS }}%</template>）</div>
@@ -262,5 +311,17 @@ function claim() {
   border-radius: 6px;
   background: var(--bg-soft);
   border: 1px dashed var(--border);
+}
+
+/* 窄屏（2026-09-12 修）：原本 6 列固定宽度在 390px 下溢出 6px（实测末列分数被挤出 396 > 390）。
+   手机上去掉「占比条」列（信息与右侧分数重复），保留 名次/图标/店名/流派/分数 五列。 */
+@media (max-width: 720px) {
+  .rv-row {
+    grid-template-columns: 20px 18px minmax(64px, 1fr) auto auto;
+    gap: 6px;
+    font-size: 12px;
+    padding: 5px 6px;
+  }
+  .rv-row-bar { display: none; }
 }
 </style>

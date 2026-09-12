@@ -410,7 +410,9 @@ export class Combat {
     const dropText = drops.length ? '，掉落：' + drops.map((d) => `${itemName(d.itemId)} ×${d.qty}`).join('、') : ''
     const xpText = `，经验：${STYLE_INFO[this.styleId].name} +${xpStyle}、品鉴力 +${xpTaste}、火候 +${xpHeat}`
     this.logLine(`🏆 胜利！获得 ${gold} 金币${xpText}${dropText}`, 'win')
-    EventBus.emit('combat:end', { result: 'win', opponent: o.name, gold, drops, isBoss: !!o.isBoss, turns: this.turnCount, hpLeft: this.playerHp, hpMax: this.playerStats().maxHp, oppLevel: o.level })
+    // hpLeft 必须是「当前剩余品鉴值」：早期误写成不存在的 this.playerHp（undefined），
+    // 使依赖血量百分比的厨神试炼「无伤试炼」恒判 NaN → 永不通过
+    EventBus.emit('combat:end', { result: 'win', opponent: o.name, gold, drops, isBoss: !!o.isBoss, turns: this.turnCount, hpLeft: this.player.combat.hp, hpMax: this.playerStats().maxHp, oppLevel: o.level })
   }
 
   /** 失败：随机丢失一件已装备装备（§4.1 非硬核），品鉴值恢复 */
@@ -432,8 +434,7 @@ export class Combat {
     if (slots.length) {
       const slot = slots[Math.floor(Math.random() * slots.length)]
       lost = this.player.equipment[slot]
-      this.player.unequip(slot)
-      this.player.spendItem(lost, 1) // 物品被夺走（不返还）
+      this.player.unequip(slot, { destroy: true }) // 物品被夺走：就地销毁，不回背包（否则背包满时会转投信箱，可从信箱找回）
     }
     this.player.setCombat({ hp: this.player.maxHp })
     this.player.onCombatLose?.() // 败场统计（§13）

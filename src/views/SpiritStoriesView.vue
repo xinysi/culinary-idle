@@ -45,6 +45,30 @@ const summary = computed(() => ({
   pending: player.spiritStoryPending(),
 }))
 
+// ── 四段奖励阶梯 + 我的进度（2026-09-12 补）──
+// 160 位食灵逐行铺表会太长，改为按「段位」汇总：每段要几级羁绊、给什么、我已解锁多少 / 共多少。
+// 分母用「已拥有食灵数」——未拥有的食灵不会出现在进度里，避免显示成永远做不完。
+const stageSummary = computed(() =>
+  SPIRIT_STORY_STAGES.map((stage) => {
+    const info = STAGE_INFO[stage] ?? {}
+    const ownedIds = owned.value.map((r) => r.id)
+    const unlocked = ownedIds.filter((id) => player.spiritStoryStage(id) >= stage).length
+    const claimed = ownedIds.filter((id) => player.spiritStoryClaimed(id, stage)).length
+    return {
+      stage,
+      name: info.name ?? `第 ${stage} 段`,
+      bondLv: stage,
+      reward: rewardText(stage),
+      unlocked,
+      claimed,
+      total: ownedIds.length,
+      gold: info.reward?.gold ?? 0,
+    }
+  })
+)
+/** 已拥有食灵全部刷满能拿到的金币总量（只按已拥有计，给玩家一个可追的目标） */
+const potentialGold = computed(() => stageSummary.value.reduce((a, r) => a + (r.total - r.claimed) * r.gold, 0))
+
 function rewardText(stage) {
   const r = STAGE_INFO[stage]?.reward ?? {}
   const parts = []
@@ -56,6 +80,7 @@ function claim(r, stage) {
   const res = player.spiritStoryClaim(r.id, stage)
   if (!res.ok) ui.pushLog(res.msg, 'warn')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'codexExchange', label: '📖 图鉴兑换' }]
@@ -73,6 +98,33 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'codexExchan
       </div>
     </header>
 
+
+    <FoldCard
+      title="📋 物语段落与奖励"
+      hint="四段需羁绊 Lv2/3/4/5；契约段给 5,000 金币 + 神秘调料 ×2"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>段落</th><th>需要羁绊</th><th>单次奖励</th><th>我已解锁</th><th>我已领取</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in stageSummary" :key="r.stage">
+              <td>{{ r.name }}</td>
+              <td class="mono">羁绊 Lv{{ r.bondLv }}</td>
+              <td class="dim">{{ r.reward }}</td>
+              <td class="mono" :class="{ 'mastery-hl': r.unlocked > 0 }">{{ r.unlocked }} / {{ r.total }}</td>
+              <td class="mono">{{ r.claimed }} / {{ r.total }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        羁绊等级靠<b>出战时长</b>累积（每 2/6/12/20/30 天升 1 级，共 5 级），第 2 段起才给物语，第 5 段「契约」给的最多。
+        分母是你<b>已拥有</b>的食灵数（未拥有的不参与显示）；已拥有食灵把 4 段全领完，还能再拿
+        <b class="mono">{{ potentialGold.toLocaleString() }}</b> 金币 + 若干神秘调料/能量饼干。
+      </p>
+    </FoldCard>
     <div class="card status-line">
       <span class="badge badge-on">食灵阁 {{ summary.owned }} / {{ summary.total }}</span>
       <span class="dim">已解锁片段 <b class="mono">{{ summary.unlocked }}</b> · 已领取 <b class="mono">{{ summary.claimed }}</b></span>
@@ -119,6 +171,7 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'codexExchan
         </div>
       </div>
     </div>
+    <!-- 四段奖励阶梯（2026-09-12 补） -->
     <RelatedPages :links="RELATED" />
 </div>
 </template>

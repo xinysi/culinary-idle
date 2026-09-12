@@ -14,6 +14,8 @@ export const BRANCHES = [
   { id: 'west', name: '城西分店', icon: '🍜', cost: 150000, goldPerHour: 2200, managerCost: 60000 },
   { id: 'south', name: '城南分店', icon: '🍢', cost: 400000, goldPerHour: 6000, managerCost: 160000 },
   { id: 'north', name: '城北分店', icon: '🍣', cost: 1000000, goldPerHour: 16000, managerCost: 400000 },
+  { id: 'dock', name: '码头分店', icon: '⛴️', cost: 2500000, goldPerHour: 38000, managerCost: 1000000 },
+  { id: 'imperial', name: '御街总铺', icon: '🏯', cost: 6000000, goldPerHour: 90000, managerCost: 2400000 },
 ]
 
 const BRANCH_INDEX = new Map(BRANCHES.map((b) => [b.id, b]))

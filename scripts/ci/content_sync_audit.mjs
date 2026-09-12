@@ -250,4 +250,39 @@ const sidebarSrc = read('src/components/Sidebar.vue')
 }
 
 console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称号/统计/攻略）' : `\n${fail} FAILURES`)
+// ── 组件 import 守卫（2026-09-12 立）────────────────────────────
+// 模板里用了 PascalCase 组件却没 import → Vue **静默不渲染**（不报错、构建也过）。
+// 本轮把对照表改成 <FoldCard> 时 FestView 就漏了 import：页面照常打开、只是那一块凭空消失，
+// 是浏览器里量「折叠卡数量」才发现的。这里逐个视图核对「用到的组件都有来源」。
+{
+  const GLOBALS = new Set(['Teleport', 'Transition', 'TransitionGroup', 'KeepAlive', 'Suspense', 'Component', 'Fragment', 'Text', 'Comment'])
+  const missing = []
+  let scanned = 0
+  for (const d of ['src/views', 'src/views/minigames', 'src/components']) {
+    if (!fs.existsSync(d)) continue
+    for (const f of fs.readdirSync(d)) {
+      if (!f.endsWith('.vue')) continue
+      const p = `${d}/${f}`
+      const src = read(p)
+      const t = src.indexOf('<template>')
+      if (t < 0) continue
+      const tpl = src.slice(t)
+      const script = src.slice(0, t)
+      for (const m of tpl.matchAll(/<([A-Z][A-Za-z0-9]+)(?=[\s/>])/g)) {
+        const tag = m[1]
+        if (GLOBALS.has(tag)) continue
+        // 递归组件按文件名自引用（<script setup> 支持），不算缺 import
+        if (tag === f.replace(/\.vue$/, '')) continue
+        // ⚠️ 必须用 String.raw：普通模板串里 \s 会被吃成 s、\b 被吃成 b，正则会静默失效（本轮踩过）
+        const ok = new RegExp(String.raw`import\s+${tag}\b`).test(script)
+          || new RegExp(String.raw`const\s+${tag}\s*=`).test(script)
+          || new RegExp(String.raw`components\s*:\s*\{[^}]*\b${tag}\b`).test(script)
+        if (!ok && !missing.includes(`${p}: <${tag}>`)) missing.push(`${p}: <${tag}>`)
+      }
+      scanned++
+    }
+  }
+  check(`视图：模板里用到的组件都有来源（扫描 ${scanned} 个 .vue）`, missing.length === 0, missing.slice(0, 8).join(', '))
+}
+
 process.exit(fail === 0 ? 0 : 1)

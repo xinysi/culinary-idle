@@ -107,7 +107,8 @@ export class ExplorationSkill extends Skill {
     }
   }
 
-  /** 离线：按期望成功率折算（§10.2.2） */
+  /** 离线：按期望成功率折算（§10.2.2）——掉落同样按期望给（此前只报经验与金币，物品一件不给），
+   *  经验带上卡片精通倍数（在线 performAction 里就是这么算的），并返回 xpMult 供结算时传入 */
   computeOffline(durationMs, efficiency) {
     const target = this.currentTarget
     if (!target || this.level < target.reqLevel) return null
@@ -116,9 +117,17 @@ export class ExplorationSkill extends Skill {
     if (actions <= 0) return null
     const rate = this.successChance(target)
     const ok = Math.round(actions * rate)
-    // 经验按期望成功次数；物品给期望掉落（简化为只报经验与金币估算）
     const exp = ok * target.xp
-    const gold = ok * (target.loot.find((l) => l.type === 'gold')?.chance ?? 0) * ((target.loot.find((l) => l.type === 'gold')?.min ?? 0) + (target.loot.find((l) => l.type === 'gold')?.max ?? 0)) / 2
-    return { actions, exp, items: {}, gold: Math.round(gold) }
+    const xpMult = masteryXpMultiplier(masteryLevelFromCount(this.mastery[target.id] ?? 0))
+    let gold = 0
+    const items = {}
+    for (const entry of target.loot ?? []) {
+      const avgQty = entry.min === undefined ? 1 : (entry.min + (entry.max ?? entry.min)) / 2
+      const expected = ok * (entry.chance ?? 0) * avgQty
+      if (entry.type === 'gold') { gold += expected; continue }
+      const qty = Math.round(expected)
+      if (qty > 0) items[entry.itemId] = (items[entry.itemId] ?? 0) + qty
+    }
+    return { actions, exp, xpMult, items, gold: Math.round(gold) }
   }
 }

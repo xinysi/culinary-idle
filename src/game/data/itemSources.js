@@ -30,6 +30,8 @@ import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { SUPPLIERS, SUPPLIER_PRICE_MULT } from './suppliers.js'
+import { REGIONS } from './regions.js'
+import { MASCOTS } from './mascots.js'
 import { CHEFS, chefReward } from './chefChallenges.js'
 import { CODEX_REWARDS } from './codexShop.js'
 
@@ -160,6 +162,13 @@ for (const it of Object.values(ITEMS)) {
   if ((it.value ?? 0) < 20 || (it.value ?? 0) > 300) continue
   add(it.id, '交易所（行情买入）')
 }
+
+// 产地与风土（2026-09-12 补录）：把采集队线路派驻到产地后，该产地物资箱物品会混入产出。
+// 此前产地从未登记为来源——玩家在图鉴里看不到「这里也能产出它」，也点不进去（sourceJump 同步补了跳转）。
+for (const r of REGIONS) for (const id of r.box ?? []) add(id, `产地与风土·${r.name}（派驻产出）`)
+
+// 吉祥物（2026-09-12 补录）：每日蹭一蹭有概率带礼物（同属补录，此前未登记）
+for (const m of MASCOTS) for (const id of Object.keys(m.items ?? {})) add(id, `吉祥物·${m.name}（每日互动礼物）`)
 
 // 供应商合约（2026-09-10）：签约后按日自动到货（供货清单见 suppliers.js）
 for (const s of SUPPLIERS) add(s.itemId, `供应商合约·${s.name}（每日到货 ${s.qty} 个，货款 ${Math.round(SUPPLIER_PRICE_MULT * 100)}% 物价）`)

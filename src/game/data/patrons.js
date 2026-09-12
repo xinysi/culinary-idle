@@ -13,7 +13,9 @@ export const PATRONS = [
   { id: 'p_hunt', name: '猎神', icon: '🏹', offer: ['trap', 'pheasantEgg'], effect: { xpSkills: { hunting: 8, fishing: 8 } }, desc: '狩猎/垂钓经验 +8% / 级' },
   { id: 'p_market', name: '商神', icon: '💰', offer: ['goldOre', 'silverOre'], effect: { incomePct: 8 }, desc: '餐厅收入 +8% / 级' },
   { id: 'p_scholar', name: '书神', icon: '📚', offer: ['flour', 'milk'], effect: { xpPct: 4 }, desc: '全技能经验 +4% / 级' },
-  { id: 'p_cellar', name: '窖神', icon: '🕯️', offer: ['pickled_ext_01', 'bambooShoot'], effect: { yieldPct: 4, incomePct: 4 }, desc: '采集产量 +4% / 级、餐厅收入 +4% / 级' },
+  // ⚠️ offer 的物品 id 必须真实存在（2026-09-12 修：原为 pickled_ext_01 / bambooShoot，两个 id 都不在物品库里，
+  //    致使窖神的供奉材料永远凑不齐、无法升级）。改为真实可得的腌制品与山货：泡菜 + 竹笋。
+  { id: 'p_cellar', name: '窖神', icon: '🕯️', offer: ['kimchi', 'foraging_ext_24'], effect: { yieldPct: 4, incomePct: 4 }, desc: '采集产量 +4% / 级、餐厅收入 +4% / 级' },
 ]
 
 const PATRON_INDEX = new Map(PATRONS.map((p) => [p.id, p]))

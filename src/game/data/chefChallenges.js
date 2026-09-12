@@ -12,7 +12,9 @@ export const CHEFS = [
   { id: 'c_sweet', name: '甜品皇后', icon: '🍰', style: 'plating', levelOffset: 6, say: '甜，是最诚实的味道。' },
   { id: 'c_flame', name: '烈焰厨魔', icon: '🔥', style: 'knife', levelOffset: 7, say: '让火焰替我说完剩下的话。' },
   { id: 'c_bamboo', name: '素食禅厨', icon: '🎋', style: 'plating', levelOffset: 7, say: '一菜一世界，不必杀生。' },
-  { id: 'c_final', name: '无名食神', icon: '👑', style: 'knife', levelOffset: 9, say: '名字不重要——吃过就记得。' },
+  { id: 'c_final', name: '无名食神', icon: '👑', style: 'knife', levelOffset: 9, say: '名字不重要——吃过就记得。' },  { id: 'c_ferment', name: '腌酿隐士', icon: '🫙', style: 'flavor', levelOffset: 8, say: '时间才是最好的调味料。' },
+  { id: 'c_noodle', name: '面案快手', icon: '🍜', style: 'knife', levelOffset: 5, say: '一根面，能拉出八种脾气。' },
+
 ]
 
 const CHEF_INDEX = new Map(CHEFS.map((c) => [c.id, c]))

@@ -123,6 +123,7 @@ function nextQ() {
   if (idx.value < qlist.value.length - 1 && cur.value.picked !== null) idx.value++
 }
 function settle() {
+  player.recordMinigame('trivia', correct, { lower: false, unit: '题' })
   const m = MODES[mode.value]
   const right = correctAll.value
   const mg2 = mg.value

@@ -298,6 +298,7 @@ function onUp(e) {
 // ── 结算 ──
 function settle() {
   if (overFlag) return
+  player.recordMinigame('curling', score.value, { lower: false, unit: '分' })
   overFlag = true
   over.value = true
   running = false

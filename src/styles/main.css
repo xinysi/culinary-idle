@@ -932,7 +932,9 @@ h2 {
   height: 15px;
   padding: 0 3px;
   border-radius: 8px;
-  background: var(--primary, #d95a38);
+  /* 2026-09-12 修：原用主色橙 #d95a38 + 白字，本身只有 3.81 对比（10px 小字要求 4.5）；
+     角标变成两位数（如 12）后深色体检抓到 3.19。改用深主色（同「橙字压橙底」那条的既有做法）。 */
+  background: var(--primary-deep, #7a2f16);
   color: #fff;
   font-size: 10px;
   line-height: 15px;
@@ -1094,6 +1096,12 @@ h2 {
   width: 100%;
   border-collapse: collapse;
 }
+
+/* 宽表容器（2026-09-12 立）：列数多的对照表在 390px 手机上会撑出横向溢出——
+   实测「分店 开店/店长回本对照」7 列在 390px 下溢出 22px。包一层 .table-scroll 即可横滑，
+   桌面下表格本来就装得下、不会出现滚动条（无副作用）。新增 >5 列的表格请一律包上。 */
+.table-scroll { overflow-x: auto; }
+.table-scroll > .target-table { min-width: 0; }
 
 .target-table th,
 .target-table td {
@@ -4405,6 +4413,59 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .mg-info-row:first-of-type { margin-top: 0; }
 html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-entry-on { background: rgba(224, 112, 74, 0.25); color: #ffb08a; border-color: #e0704a; }
+
+/* ── 折叠对照卡（2026-09-12 立）：放在页头下方，默认收起 ── */
+.fold-card { padding: 0; }
+.fold-card > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+}
+.fold-card > summary::-webkit-details-marker { display: none; }
+.fold-card > summary:hover { color: var(--primary-strong); }
+.fold-title { flex-shrink: 0; }
+.fold-hint {
+  font-weight: 400;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fold-toggle { margin-left: auto; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.fold-toggle::after { content: '▸ 展开'; }
+.fold-card[open] .fold-toggle::after { content: '▾ 收起'; }
+.fold-body { padding: 0 14px 12px; }
+@media (max-width: 720px) {
+  .fold-hint { display: none; } /* 手机上摘要文字挤不下，只留标题与展开指示 */
+}
+
+/* ── 小游戏记录墙（2026-09-12 补）── */
+.mg-wall { margin-top: 12px; padding: 12px 14px; }
+.mg-wall-sum { font-size: 12px; font-weight: 400; margin-left: 8px; }
+.mg-wall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
+.mg-wall-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; border-radius: 10px; cursor: pointer;
+  border: 1px dashed rgba(150, 110, 70, 0.4);
+  background: rgba(255, 251, 244, 0.8);
+  color: var(--text);
+}
+.mg-wall-item:hover { border-color: var(--primary-strong); }
+.mg-wall-empty { opacity: 0.55; }
+.mg-wall-on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.15); }
+.mg-wall-emoji { font-size: 18px; line-height: 1.1; }
+.mg-wall-name { font-size: 12px; font-weight: 700; }
+.mg-wall-best { font-size: 12px; color: var(--primary-deep); }
+.mg-wall-plays { font-size: 11px; }
+.mg-wall-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; }
+html[data-theme='dark'] .mg-wall-item { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
+html[data-theme='dark'] .mg-wall-on { background: rgba(224, 112, 74, 0.25); border-color: #e0704a; }
+html[data-theme='dark'] .mg-wall-best { color: #ffb08a; }
 
 /* ── 小游戏统一按钮/文字规范（2026-09-07）── */
 .mg-shell button { font-family: inherit; }

@@ -220,11 +220,14 @@ function matchExists() {
   return true
 }
 function fail() {
+  if (lost.value || won.value) return
+  player.recordMinigame('match10', null) // 该玩法无分数概念：只计结算次数
   lost.value = true
   beep(140, 0.3)
 }
 function checkWin() {
   if (remaining.value === 0) {
+    player.recordMinigame('match10', null) // 该玩法无分数概念：只计结算次数
     won.value = true
     celebrating.value = true
     beep(880, 0.12)

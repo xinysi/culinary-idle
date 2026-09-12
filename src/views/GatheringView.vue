@@ -48,6 +48,11 @@ function cardIntervalSec(t) {
   if (props.instance.masteryLevel(t) >= 5) return props.instance.intervalMs(t) / 1000
   return t.intervalSec
 }
+// 精通 ≥20 级起，间隔按「固定档值」与「基础间隔÷2」取更快者（见 mastery.js）。
+// 固定档更快时（典型是基础间隔很长的目标）才标出来，让玩家知道这个数是怎么来的。
+function intervalByFixedTier(t) {
+  return props.instance.intervalSource?.(t) === 'fixed'
+}
 function isSelected(itemId) {
   return (player.getSkillTarget(props.instance.id) ?? player.activeTarget) === itemId
 }
@@ -57,17 +62,18 @@ const ammoWarn = ref(false) // 弹药不足提示弹窗
 // ── 精通档位说明弹窗（2026-09 新档表）──
 const masteryModalOpen = ref(false)
 const masteryTiers = [
+  // inv 一列写的是「精通 ≥20 的固定档上限」：实际间隔 = min(上限, 基础间隔×精通因子)，所以是 ≤ 而非固定值
   { lv: '5 级', xp: '×1.1', dbl: '1%', batch: '—', inv: '减 1/3' },
   { lv: '10 级', xp: '×1.2', dbl: '5%', batch: '—', inv: '减半' },
-  { lv: '20 级', xp: '×1.4', dbl: '10%', batch: '—', inv: '固定 3.6s' },
-  { lv: '30 级', xp: '×1.6', dbl: '15%', batch: '—', inv: '固定 3.2s' },
-  { lv: '40 级', xp: '×1.9', dbl: '20%', batch: '—', inv: '固定 3.0s' },
-  { lv: '50 级', xp: '×2.2', dbl: '30%', batch: '+1', inv: '固定 2.8s' },
-  { lv: '60 级', xp: '×2.5', dbl: '40%', batch: '+1', inv: '固定 2.6s' },
-  { lv: '70 级', xp: '×2.8', dbl: '50%', batch: '+1', inv: '固定 2.4s' },
-  { lv: '80 级', xp: '×3.2', dbl: '60%', batch: '+1', inv: '固定 2.2s' },
-  { lv: '90 级', xp: '×3.6', dbl: '70%', batch: '+1', inv: '固定 2.1s' },
-  { lv: '100 级', xp: '×4', dbl: '80%', batch: '+2', inv: '固定 2.0s' },
+  { lv: '20 级', xp: '×1.4', dbl: '10%', batch: '—', inv: '≤ 3.6s' },
+  { lv: '30 级', xp: '×1.6', dbl: '15%', batch: '—', inv: '≤ 3.2s' },
+  { lv: '40 级', xp: '×1.9', dbl: '20%', batch: '—', inv: '≤ 3.0s' },
+  { lv: '50 级', xp: '×2.2', dbl: '30%', batch: '+1', inv: '≤ 2.8s' },
+  { lv: '60 级', xp: '×2.5', dbl: '40%', batch: '+1', inv: '≤ 2.6s' },
+  { lv: '70 级', xp: '×2.8', dbl: '50%', batch: '+1', inv: '≤ 2.4s' },
+  { lv: '80 级', xp: '×3.2', dbl: '60%', batch: '+1', inv: '≤ 2.2s' },
+  { lv: '90 级', xp: '×3.6', dbl: '70%', batch: '+1', inv: '≤ 2.1s' },
+  { lv: '100 级', xp: '×4', dbl: '80%', batch: '+2', inv: '≤ 2.0s' },
 ]
 function selectTarget(itemId) {
   // 已在采集中的目标再点 = 删除挂机任务：停止并隐藏（从右侧“挂机中”列表消失，卡片恢复默认状态）
@@ -202,7 +208,10 @@ function scrollToSection(label) {
             </div>
             <div class="gather-card-row">
               <span>间隔</span>
-              <span :class="['mono', masteryLevelOf(t) >= 5 ? 'mastery-hl' : '']">{{ cardIntervalSec(t).toFixed(1) }}s</span>
+              <span :class="['mono', masteryLevelOf(t) >= 5 ? 'mastery-hl' : '']">
+                {{ cardIntervalSec(t).toFixed(1) }}s<template v-if="intervalByFixedTier(t)"
+                  ><span class="dim" style="font-size: 11px" title="精通 20 级起按「固定档值」与「基础间隔÷2」取更快者；此处固定档更快">&nbsp;· 固定档</span></template>
+              </span>
             </div>
             <div v-if="getItem(t.itemId)?.spoilMs" class="gather-card-row">
               <span>腐坏</span>
@@ -258,10 +267,10 @@ function scrollToSection(label) {
           <h3>📖 卡片精通档位说明</h3>
           <button class="btn btn-sm" @click="masteryModalOpen = false">✕</button>
         </div>
-        <p class="dim" style="margin-bottom: 8px">精通等级由该卡片累计采集/制作次数提升；达到对应档位解锁经验、双倍产出、<b>保底产量</b>与间隔加成。</p>
+        <p class="dim" style="margin-bottom: 8px">精通等级由该卡片累计采集/制作次数提升；达到对应档位解锁经验、双倍产出、<b>保底产量</b>与间隔档位。</p>
         <table class="target-table">
           <thead>
-            <tr><th>精通</th><th>基础经验</th><th>双倍产出</th><th>保底产量</th><th>采集间隔</th></tr>
+            <tr><th>精通</th><th>基础经验</th><th>双倍产出</th><th>保底产量</th><th>采集间隔（≥20 级为上限）</th></tr>
           </thead>
           <tbody>
             <tr v-for="t in masteryTiers" :key="t.lv">
@@ -274,6 +283,11 @@ function scrollToSection(label) {
           </tbody>
         </table>
         <p class="dim" style="margin-top: 8px">精通低于 5 级：经验 ×1、双倍 1%、无保底产量、间隔不变（基础 1% 双倍）。保底产量为每次动作额外固定产出的数量（50 级 +1、100 级 +2），与双倍可叠加。</p>
+        <p class="dim" style="margin-top: 5px">
+          间隔按<b>基础间隔（可减技能等级 / 工具的 −间隔 加成）</b>乘精通比例：<b>5 级</b>减 1/3、<b>10 级起</b>减半；
+          <b>20 级起</b>再与当档<b>固定档值</b>（3.6s → 100 级 2.0s）<b>取更快者</b>——基础间隔长的目标由固定档提速，基础间隔短的目标保持「÷2」，
+          所以精通每升一档都只会更快、不会更慢。
+        </p>
         <p class="dim" style="margin-top: 5px">经验倍率与「设置经验倍率」<b>不叠加</b>（取较大）：当精通倍数 &gt; 设置倍率时用精通倍数（精通为独立成长线）；当设置倍率 &gt; 精通倍数（或无精通）时用设置倍率（作用于非精通部分）。</p>
       </div>
     </div>
