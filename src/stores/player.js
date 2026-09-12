@@ -263,6 +263,7 @@ const defaultState = () => ({
     exchange: { dayKey: null, traded: {} }, // 交易所：{ dayKey, traded: { [itemId]: 已成交件数 } }（2026-09-10）
     trials: {}, // 厨神试炼：{ [trialId]: { clears, best, streak } }（2026-09-10）
     activeTrial: null, // 当前进行的试炼 id（一次性，不持久化）
+    activeTrialOpp: null, // 当前试炼对手名（身份校验用，一次性，不持久化）
     // 美食评论家（2026-09-09）：{ order: null | {...}, nextAt }
     critic: { order: null, nextAt: 0 },
     // 挂机计划（2026-09-09）：按顺序挂机，条件满足自动换目标，全部完成自动暂停
@@ -753,6 +754,46 @@ export const usePlayerStore = defineStore('player', {
       const n = Math.floor(amount)
       if (n > 0) this.gameCoins += n
     },
+    // ── 小游戏成绩记录（2026-09-12）──────────────────────────────
+    // 按《小游戏UI标准》既有约定「最佳成绩按模式独立记录在 player.minigames.<id>」：在每款游戏**自有字段**
+    // （heat.bestStreak / kitchen2048.best / trivia.correct …）之外，再加一层统一的 records 子对象
+    // { best, plays, coins, lower, unit, lastAt }，供「小游戏 · 记录墙」跨 27 款汇总。
+    // additive：不动任何既有字段与存档结构，旧档缺 records 时懒建。
+    /** 某款小游戏的统一记录（缺失时懒建，返回实时对象） */
+    minigameRecordsOf(gameId) {
+      const mg = this.minigames ?? (this.minigames = {})
+      const g = mg[gameId] ?? (mg[gameId] = {})
+      return g.records ?? (g.records = { best: null, plays: 0, coins: 0, lower: false, unit: '', lastAt: 0 })
+    },
+    /** 记一局成绩（各游戏结算点调用一次）：score 口径由该游戏决定（分数/步数/用时/奖励币）；
+     *  lower=true 表示越小越好（步数、用时）。coins 为该局发放的游戏币，累计进本游戏记录。 */
+    recordMinigame(gameId, score, { coins = 0, lower = false, unit = '' } = {}) {
+      if (!gameId) return
+      const r = this.minigameRecordsOf(gameId)
+      // score 传 null 表示该玩法没有分数概念（如连连看/翻牌/吃豆人只发币）→ 只计结算次数，不写最佳分
+      const n = Number(score)
+      const hasScore = score != null && Number.isFinite(n)
+      const s = hasScore ? Math.max(0, Math.round(n)) : null
+      r.lower = !!lower
+      if (unit) r.unit = unit
+      if (s != null) {
+        if (r.best == null) r.best = s
+        else if (lower ? s < r.best : s > r.best) r.best = s
+      }
+      r.plays = (r.plays ?? 0) + 1
+      const c = Math.floor(Number(coins) || 0)
+      if (c > 0) r.coins = (r.coins ?? 0) + c
+      r.lastAt = Date.now()
+    },
+    /** 记录墙汇总：已玩款数 / 总局数 / 累计游戏币 */
+    minigameWallSummary() {
+      const rs = Object.values(this.minigames ?? {}).map((g) => g?.records).filter(Boolean)
+      return {
+        games: rs.filter((r) => (r.plays ?? 0) > 0).length,
+        plays: rs.reduce((a, r) => a + (r.plays ?? 0), 0),
+        coins: rs.reduce((a, r) => a + (r.coins ?? 0), 0),
+      }
+    },
     spendGameCoins(amount) {
       // 游戏商店消费（2026-09-07）
       if (this.gameCoins >= amount) {
@@ -1053,11 +1094,18 @@ export const usePlayerStore = defineStore('player', {
       return true
     },
 
-    unequip(slot) {
+    /**
+     * 卸下装备。
+     * destroy=true 表示装备「就地销毁、不进背包」——战败被夺走时用：
+     * 否则 gainItem 会把它收回背包，背包满时还会转投信箱，
+     * 让「战败丢装备」变成可以从信箱找回（曾是可复现的漏洞）。
+     * 镶嵌的宝石仍然照常退回（宝石不因战败丢失）。
+     */
+    unequip(slot, { destroy = false } = {}) {
       const itemId = this.equipment[slot]
       if (!itemId) return false
       this.equipment[slot] = null
-      this.gainItem(itemId, 1)
+      if (!destroy) this.gainItem(itemId, 1)
       this._returnGemSockets(slot) // 卸下时退回镶嵌的宝石（不丢失）
       return true
     },
@@ -2451,12 +2499,17 @@ export const usePlayerStore = defineStore('player', {
       if (!st) st = this.trials[id] = { clears: 0, best: 0, streak: 0, bestTurns: null, bestHp: null }
       return st
     },
-    /** 开始试炼（标记当前试炼；对手由视图生成） */
-    trialStart(id) {
+    /**
+     * 开始试炼（标记当前试炼；对手由视图生成）
+     * opponentName 由 trialOpponent() 生成，结算时据此校验身份——
+     * 否则「开着试炼去打别的怪」也能拿通关奖励（曾是可复现的刷奖励漏洞）
+     */
+    trialStart(id, opponentName = null) {
       const def = getTrial(id)
       if (!def) return { ok: false, msg: '试炼不存在' }
       if (!this.trialsUnlocked()) return { ok: false, msg: `需对决 Lv${TRIAL_UNLOCK_LEVEL} 解锁试炼` }
       this.activeTrial = id
+      this.activeTrialOpp = opponentName ?? `${def.icon} ${def.name}对手`
       return { ok: true }
     },
     /** 放弃/退出试炼 */
@@ -2467,26 +2520,33 @@ export const usePlayerStore = defineStore('player', {
         st.streak = 0
       }
       this.activeTrial = null
+      this.activeTrialOpp = null
       return true
     },
     /**
      * 战斗结束回调（由 combat:end 事件驱动）：判定试炼是否达成。
-     * info = { result, turns, hpLeft, hpMax }
+     * info = { result, opponent, turns, hpLeft, hpMax }
      * @returns {{ passed:boolean, first:boolean, gold:number, label:string }|null}
      */
     onCombatEndTrial(info) {
       const id = this.activeTrial
       if (!id) return null
       const def = getTrial(id)
-      if (!def) { this.activeTrial = null; return null }
+      if (!def) { this.activeTrial = null; this.activeTrialOpp = null; return null }
+      // 身份校验：本场必须就是试炼指定的那位对手，否则不结算（试炼保持进行中）
+      if (this.activeTrialOpp && info?.opponent !== this.activeTrialOpp) return null
       const st = this.trialState(id)
       if (info?.result !== 'win') {
         st.streak = 0
         this.activeTrial = null
+        this.activeTrialOpp = null
         return { passed: false, first: false, gold: 0, label: `${def.name}失败（已退出试炼）` }
       }
       const cond = def.cond ?? { type: 'win', value: 0 }
-      const hpPct = info.hpMax > 0 ? (info.hpLeft / info.hpMax) * 100 : 0
+      // 血量百分比：字段缺失/非数值时按 0 计（血量类条件失败），不判 NaN 也不误判通过
+      const hpMax = Number(info?.hpMax) || 0
+      const hpLeft = Number(info?.hpLeft)
+      const hpPct = hpMax > 0 && Number.isFinite(hpLeft) ? Math.max(0, Math.min(100, (hpLeft / hpMax) * 100)) : 0
       let ok = true
       if (cond.type === 'turns') ok = (info.turns ?? 999) <= cond.value
       else if (cond.type === 'hp') ok = hpPct >= cond.value
@@ -2494,6 +2554,7 @@ export const usePlayerStore = defineStore('player', {
       if (!ok) {
         if (cond.type === 'streak') return { passed: false, first: false, gold: 0, label: `${def.name}：连胜 ${st.streak}/${cond.value}` }
         this.activeTrial = null
+        this.activeTrialOpp = null
         return { passed: false, first: false, gold: 0, label: `${def.name}未达标（已退出试炼）` }
       }
       const first = (st.clears ?? 0) === 0
@@ -2512,6 +2573,7 @@ export const usePlayerStore = defineStore('player', {
       for (const [itemId, qty] of Object.entries(reward.items ?? {})) this.gainItem(itemId, qty)
       this.stats.trialClears = (this.stats.trialClears ?? 0) + 1
       this.activeTrial = null
+      this.activeTrialOpp = null
       EventBus.emit('trial:pass', { id, name: def.name, first, gold: reward.gold ?? 0 })
       return { passed: true, first, gold: reward.gold ?? 0, label: def.name }
     },

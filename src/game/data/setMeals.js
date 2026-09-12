@@ -19,7 +19,9 @@ export const SET_MEALS = [
   { id: 'sm_tea', icon: '🍪', name: '下午茶套餐', need: ['baking', '甜点'], bonus: 10, desc: '焙烤点心配甜食，午后的小生意' },
   { id: 'sm_three', icon: '🥘', name: '三菜套系', need: ['主食', '主菜', '汤品'], bonus: 14, desc: '有饭有菜有汤，正经一顿饭' },
   { id: 'sm_full', icon: '🍱', name: '全席套系', need: ['主食', '主菜', '甜点'], bonus: 16, desc: '从主食一路吃到甜点' },
-  { id: 'sm_grand', icon: '👑', name: '豪华全席', need: ['主食', '主菜', '汤品', '甜点'], bonus: 22, desc: '四类齐备，一桌宴席的排面' },
+  { id: 'sm_grand', icon: '👑', name: '豪华全席', need: ['主食', '主菜', '汤品', '甜点'], bonus: 22, desc: '四类齐备，一桌宴席的排面' },  { id: 'sm_pair', icon: '🍜', name: '双拼套系', need: ['主食', '汤品'], bonus: 12, desc: '一饭一汤，简单却稳当' },
+  { id: 'sm_craft', icon: '🥂', name: '匠心套系', need: ['主菜', '汤品', 'baking'], bonus: 18, desc: '三道讲究，为懂的人做' },
+
 ]
 
 const MEAL_INDEX = new Map(SET_MEALS.map((m) => [m.id, m]))

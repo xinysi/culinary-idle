@@ -63,15 +63,18 @@ export function masteryDoubleChance(level) {
   return 0
 }
 
-/** 精通等级对应的采集间隔因子（比例）：<5 为 1；5~9 减 1/3（×2/3）；10~19 减半（×1/2）；≥20 由固定间隔接管 */
+/** 精通等级对应的采集间隔因子（比例）：<5 为 1；5~9 减 1/3（×2/3）；≥10 减半（×1/2）。
+ *  ≥20 仍取 1/2 —— 固定间隔（masteryFixedInterval）只作「上限」叠加（取更快者），
+ *  不再整段替换比例口径（2026-09-12 修：整段替换会让 51% 的目标在精通 19→20 时反而变慢，最差 2.4 倍）。 */
 export function masteryIntervalFactor(level) {
-  if (level >= 20) return 1
   if (level >= 10) return 0.5
   if (level >= 5) return 2 / 3
   return 1
 }
 
-/** 精通等级对应的固定采集间隔（秒）：≥20 返回固定值，否则 null（用比例）。2026-09-09：整体上抬到 1.5~2.0s */
+/** 精通等级对应的固定采集间隔（秒）：≥20 返回固定值，否则 null（该档无固定值）。
+ *  语义是**上限**（取更快者，见 GatheringSkill.intervalMs），不是整段替换：固定值给「基础间隔长」的目标提速，
+ *  基础间隔短的目标继续走「基础÷2」，因此精通升级永远不会让同一张卡变慢。2026-09-09 定值、2026-09-12 改为取更快者。 */
 export function masteryFixedInterval(level) {
   if (level >= 100) return 2.0
   if (level >= 90) return 2.1

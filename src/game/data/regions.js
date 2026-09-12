@@ -10,7 +10,7 @@ export const REGIONS = [
   },
   {
     id: 'snow', name: '北境雪山', icon: '🏔️', cost: 60000, seasonMonths: [12, 1, 2],
-    box: ['truffle', 'mushroom', 'radish', 'mint', 'rosemary'],
+    box: ['truffle', 'mushroom', 'excavation_ext_01', 'mint', 'rosemary'],
     qtyPct: 15, rarePct: 8, desc: '寒地菌菇与香草，稀有物出产率高',
   },
   {
@@ -27,7 +27,17 @@ export const REGIONS = [
     id: 'volcano', name: '东岭火山', icon: '🌋', cost: 120000, seasonMonths: [9, 10, 11],
     box: ['copperOre', 'ironOre', 'saltOre', 'silverOre', 'goldOre'],
     qtyPct: 12, rarePct: 10, desc: '矿脉与地热的熔岩之乡',
+  },  {
+    id: 'highland', name: '云顶高原', icon: '🐄', cost: 40000, seasonMonths: [4, 5, 6],
+    box: ['milk', 'pheasantEgg', 'goatMeat', 'mushroom'],
+    qtyPct: 16, rarePct: 7, desc: '云线之上的牧养地，乳品与禽蛋稳定丰产',
   },
+  {
+    id: 'bamboo', name: '竹海山乡', icon: '🎍', cost: 70000, seasonMonths: [7, 8, 9],
+    box: ['foraging_ext_24', 'teaLeaf', 'mushroom', 'ginger'],
+    qtyPct: 19, rarePct: 6, desc: '漫山竹影，笋与山货按季冒头',
+  },
+
 ]
 
 const REGION_INDEX = new Map(REGIONS.map((r) => [r.id, r]))

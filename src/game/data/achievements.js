@@ -8,13 +8,17 @@ import { ITEMS } from './items.js'
 import { equipSetBonuses } from './equipSets.js'
 import { masteryLevelFromCount } from '../core/mastery.js'
 import { REGULARS, regularLevelFromServes } from './regulars.js'
+import { EXPEDITIONS, expeditionTier, EXPEDITION_TIER_STEPS } from './expeditions.js'
+import { BRANCHES } from './branches.js'
+import { MASCOTS } from './mascots.js'
+import { setMealBoard } from './setMeals.js'
 import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { SCHOOLS } from './schools.js'
 import { MILESTONES, milestoneSummary } from './milestones.js'
 import { CODEX_REWARDS } from './codexShop.js'
 import { STAFF } from './staff.js'
 import { REGIONS } from './regions.js'
-import { FRIENDS, FRIEND_BOND_STEPS } from './friends.js'
+import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel } from './friends.js'
 
 // 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
 const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
@@ -123,7 +127,7 @@ export const ACHIEVEMENTS = [
   { id: 'cellar50', name: '酒窖大师', category: '特殊', desc: '累计地窖出窖 50 次', title: '酒窖大师', reward: { gold: 6000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.cellarRounds ?? 0) >= 50 },
   { id: 'regular20', name: '熟客满堂', category: '特殊', desc: '累计招待常客 20 次', reward: { gold: 1500, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.regularServes ?? 0) >= 20 },
   { id: 'regular1', name: '常客盈门', category: '特殊', desc: '1 位常客好感达到满级', reward: { gold: 3000, items: { mysterySpice: 1 } }, check: (p) => REGULARS.some((r) => regularLevelFromServes(p.regulars?.[r.id]?.serves ?? 0) >= 5) },
-  { id: 'regularAll', name: '宾至如归', category: '特殊', desc: '全部 8 位常客好感满级', title: '宾至如归', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => REGULARS.every((r) => regularLevelFromServes(p.regulars?.[r.id]?.serves ?? 0) >= 5) },
+  { id: 'regularAll', name: '宾至如归', category: '特殊', desc: `全部 ${REGULARS.length} 位常客好感满级`, title: '宾至如归', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => REGULARS.every((r) => regularLevelFromServes(p.regulars?.[r.id]?.serves ?? 0) >= 5) },
   { id: 'story1', name: '物语初章', category: '特殊', desc: '解锁并领取 1 段食灵物语', reward: { gold: 600 }, check: (p) => (p.stats?.spiritStoryClaims ?? 0) >= 1 },
   { id: 'story40', name: '食灵知音', category: '特殊', desc: '累计领取 40 段食灵物语', title: '食灵知音', reward: { gold: 8000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.spiritStoryClaims ?? 0) >= 40 },
   { id: 'auto3', name: '自动化大师', category: '特殊', desc: '解锁全部 3 项自动化', title: '自动化大师', reward: { gold: 6000, items: { energyBiscuit: 1 } }, check: (p) => ['sell', 'queue', 'claim'].every((k) => p.automation?.unlocked?.[k]) },
@@ -143,7 +147,7 @@ export const ACHIEVEMENTS = [
   { id: 'staff1', name: '初雇人手', category: '特殊', desc: '雇下第一位雇工', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => STAFF.some((s) => (p.staff?.[s.id]?.level ?? 0) > 0) },
   { id: 'staffAll', name: '名店班底', category: '特殊', desc: '三种岗位全部满级在岗', title: '名店班底', reward: { gold: 25000, items: { mysterySpice: 2 } }, check: (p) => STAFF.every((s) => (p.staff?.[s.id]?.level ?? 0) >= 5) },
   { id: 'region1', name: '初次远行', category: '探索', desc: '考察 1 个产地', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.regions ?? {}).length >= 1 },
-  { id: 'regionAll', name: '踏遍四方', category: '探索', desc: '考察全部 5 个产地', title: '踏遍四方', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => REGIONS.every((r) => p.regions?.[r.id]) },
+  { id: 'regionAll', name: '踏遍四方', category: '探索', desc: `考察全部 ${REGIONS.length} 个产地`, title: '踏遍四方', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => REGIONS.every((r) => p.regions?.[r.id]) },
   { id: 'carry1', name: '留一手', category: '特殊', desc: '首次转生保留传承等级', reward: { gold: 3000, items: { mysterySpice: 1 } }, check: (p) => Object.values(p.legacy?.carry ?? {}).some((lv) => (lv ?? 0) > 0) },
   { id: 'apprentice30', name: '桃李成蹊', category: '特殊', desc: '徒弟成长到 Lv30', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => (p.legacy?.apprentice?.level ?? 0) >= 30 },
   { id: 'apprentice50', name: '衣钵传人', category: '特殊', desc: '徒弟成长到满级 Lv50', title: '衣钵传人', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => (p.legacy?.apprentice?.level ?? 0) >= 50 },
@@ -186,6 +190,12 @@ export const ACHIEVEMENTS = [
   { id: 'mailClaimed30', name: '物归原主', category: '特殊', desc: '累计从信箱领取 30 次附件', reward: { gold: 9000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mailClaimed ?? 0) >= 30 },
   { id: 'friendFirst', name: '初次登门', category: '特殊', desc: '首次拜访任意一位厨友', title: '街坊', reward: { gold: 2000, items: { energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) > 0) },
   { id: 'friendAllBond', name: '整条街的熟人', category: '特殊', desc: `${FRIENDS.length} 位厨友全部有过往来`, title: '邻里之主', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => FRIENDS.every((f) => (p.friends?.data?.[f.id]?.bond ?? 0) > 0) },
+  { id: 'friendBondAll', name: '满城人情', category: '特殊', desc: `${FRIENDS.length} 位厨友羁绊全部满级`, title: '满城人情', reward: { gold: 25000, items: { mysterySpice: 3 } }, check: (p) => FRIENDS.every((f) => friendBondLevel(p.friends?.data?.[f.id]?.bond ?? 0) >= FRIEND_BOND_STEPS.length) },
+  { id: 'expeditionTier5', name: '五路总管', category: '特殊', desc: `${EXPEDITIONS.length} 条采集队线路各达最高熟练度档`, title: '五路总管', reward: { gold: 18000, items: { mysterySpice: 2 } }, check: (p) => EXPEDITIONS.every((e) => expeditionTier(p.expeditions?.[e.id]?.completions ?? 0) >= EXPEDITION_TIER_STEPS.length) },
+  { id: 'branch6', name: '连锁大亨', category: '特殊', desc: `${BRANCHES.length} 家分店全部开业`, title: '连锁大亨', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => BRANCHES.every((b) => !!p.branches?.[b.id]) },
+  { id: 'mascot7', name: '吉祥满堂', category: '特殊', desc: `${MASCOTS.length} 位吉祥物全部买下`, title: '吉祥满堂', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => MASCOTS.every((m) => !!p.mascots?.owned?.[m.id]) },
+  { id: 'setMeal3', name: '搭配高手', category: '特殊', desc: '同时满足 3 套套餐定食', title: '搭配高手', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => setMealBoard(p.restaurant?.menu ?? []).filter((m) => m.ok).length >= 3 },
+  { id: 'chefWin10', name: '名厨克星', category: '特殊', desc: '累计战胜名厨 10 次', title: '名厨克星', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 10 },
   { id: 'friendBondMax', name: '老交情', category: '特殊', desc: '任一厨友羁绊达到 5 级', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) >= FRIEND_BOND_STEPS.at(-1)) },
 ]
 

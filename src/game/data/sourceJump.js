@@ -36,6 +36,8 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['交易所'], target: { view: 'exchange' } },
   { kw: ['牧场养殖', '牧场'], target: { view: 'ranch' } },
   { kw: ['名厨挑战', '名厨'], target: { view: 'chefChallenge' } },
+  { kw: ['产地与风土', '产地'], target: { view: 'regions' } },
+  { kw: ['吉祥物'], target: { view: 'mascot' } },
   { kw: ['图鉴兑换所', '图鉴兑换'], target: { view: 'codexExchange' } },
   { kw: ['地窖', '陈酿'], target: { view: 'cellar' } },
   // ── 2026-09-11 补：随机奇遇（挂机动作 0.2% 触发的小事件奖励）──

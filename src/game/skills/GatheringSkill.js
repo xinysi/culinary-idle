@@ -72,16 +72,35 @@ export class GatheringSkill extends Skill {
     return masteryLevelProgress(this.mastery[target.itemId] ?? 0)
   }
 
-  /** 目标实际间隔（毫秒）：基础 − 等级加成 − 工具加成；
-   *  精通≥20 级直接用固定间隔（masteryFixedInterval）；5/10 级用比例因子（减 1/3、减半） */
+  /**
+   * 目标实际间隔（毫秒）：基础 − 等级加成 − 工具加成，再乘精通比例因子（<5 为 1、5~9 减 1/3、≥10 减半）；
+   * 精通 ≥20 时固定间隔（masteryFixedInterval）作为**上限**参与，取更快者：`min(固定, 比例口径)`。
+   *
+   * ⚠️ 2026-09-12 修：此前是「精通 ≥20 直接整段换成固定值」，那会让 367 个采集目标里 **51%（187 个）**
+   * 在精通 19→20 时反而变慢（最差 3.0s 基础目标：1.5s → 3.6s，2.4 倍），而玩家看到的只是"精通升了却变慢"。
+   * 固定值本意是给「基础间隔很长」的目标兜底提速（那些才是后期真正刷的目标，8s 基础在精通 100 时 2.0s），
+   * 不该顺手把「基础间隔短」的目标一起拖慢。改成取更快者后：0 个目标比 19 级慢，慢目标的数值维持原标定。
+   */
   intervalMs(target = this.currentTarget) {
     if (!target) return 0
     const levelBonus = Math.floor((this.level - 1) / 10) * LEVEL_SPEED_BONUS_PER_10
     const lv = this.masteryLevel(target)
-    const fixedSec = masteryFixedInterval(lv)
-    if (fixedSec != null) return Math.max(fixedSec, MIN_INTERVAL_SECONDS) * 1000
     const sec = Math.max(target.intervalSec - levelBonus - this.toolBonusSec, MIN_INTERVAL_SECONDS)
-    return sec * masteryIntervalFactor(lv) * 1000
+    const byRatio = sec * masteryIntervalFactor(lv)
+    const fixedSec = masteryFixedInterval(lv)
+    if (fixedSec != null) return Math.min(fixedSec, byRatio) * 1000
+    return byRatio * 1000
+  }
+
+  /** 当前间隔由哪一支决定：'fixed'（精通固定值更快）或 'ratio'（比例口径更快）——UI 标注用 */
+  intervalSource(target = this.currentTarget) {
+    if (!target) return 'ratio'
+    const lv = this.masteryLevel(target)
+    const fixedSec = masteryFixedInterval(lv)
+    if (fixedSec == null) return 'ratio'
+    const levelBonus = Math.floor((this.level - 1) / 10) * LEVEL_SPEED_BONUS_PER_10
+    const sec = Math.max(target.intervalSec - levelBonus - this.toolBonusSec, MIN_INTERVAL_SECONDS)
+    return fixedSec < sec * masteryIntervalFactor(lv) ? 'fixed' : 'ratio'
   }
 
   /** 双倍产出几率：按该卡片精通档位（0/5%/15%/25%/50%），无精通时保留基础 1% */
@@ -91,9 +110,14 @@ export class GatheringSkill extends Skill {
     return Math.max(BASE_DOUBLE_CHANCE, masteryDoubleChance(mLevel))
   }
 
-  /** 产量加成后的数量：精通保底批量（2026-09-09）+ 奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）+ 公会被动（§13），以额外产出几率折算 */
-  yieldQuantity(qty, target = this.currentTarget) {
-    const batch = target ? masteryYieldBonus(this.masteryLevel(target)) : 0
+  /** 精通保底批量（50 级 +1 / 100 级 +2）：写死数量、不靠随机（2026-09-09） */
+  yieldBatch(target = this.currentTarget) {
+    return target ? masteryYieldBonus(this.masteryLevel(target)) : 0
+  }
+
+  /** 「额外产出 1 个」的总几率（可 >1，调用方按上限 +1 处理）：奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）
+   *  + 公会被动（§13）+ 菜系图谱 + 节庆 + 食神信仰 + 天气 + 今日运势 + 荣誉殿堂 */
+  yieldExtraChance(target = this.currentTarget) {
     const aoji = this.player.gastronomyEffects?.() ?? {}
     const yPct = aoji.yieldPct ?? 0
     const guildPct = this.player.guildEffects?.()?.yieldPct ?? 0
@@ -104,9 +128,25 @@ export class GatheringSkill extends Skill {
     const wxPct = ((this.player.weatherEffects?.()?.gatherYield ?? 1) - 1) // 天气（2026-09-10）
     const luckyPct = target ? (this.player.luckyItemBonus?.(target.itemId) ?? 0) : 0 // 今日运势·幸运食材
     const honorPct = (this.player.honorState?.()?.perks?.gatherPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
-    const extraChance = yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + (yMult - 1)
+    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + (yMult - 1)
+  }
+
+  /** 产量加成后的数量：精通保底批量 + 各百分比来源的额外产出，以额外产出几率折算 */
+  yieldQuantity(qty, target = this.currentTarget) {
+    const batch = this.yieldBatch(target)
+    const extraChance = Math.min(1, this.yieldExtraChance(target)) // 单次动作最多多给 1 个
     if (extraChance <= 0) return qty + batch
     return qty + batch + (Math.random() < extraChance ? 1 : 0)
+  }
+
+  /** 单次动作的期望产出（离线结算用，与在线 yieldQuantity 同源，避免两条路径漂移） */
+  expectedYield(target = this.currentTarget) {
+    return (1 + this.doubleChance(target)) + this.yieldBatch(target) + Math.min(1, this.yieldExtraChance(target))
+  }
+
+  /** 单次动作的卡片精通经验倍数（在线在 award() 里作为 mult 传给 addCardXp；离线需同样带上） */
+  xpMultOf(target = this.currentTarget) {
+    return masteryXpMultiplier(this.masteryLevel(target))
   }
 
   /** 弹药是否充足 */
@@ -167,7 +207,9 @@ export class GatheringSkill extends Skill {
 
   /**
    * 离线结算（§10.2.2）：actions = floor(duration / interval × efficiency)
-   * 物品数量按期望产出（含平均双倍率）计算；返回 { actions, exp, items, consumed? }
+   * 每次动作的期望产出与经验都走与在线同一套公式（expectedYield / xpMultOf）——离线只该「速率打 8 折」，
+   * 不该因为走了另一条算式而丢掉精通保底产量、产量加成与精通经验倍数（此前实测离线产出只有在线的 1/2~1/3）。
+   * 返回 { actions, exp, xpMult, items, consumed? }
    */
   computeOffline(durationMs, efficiency) {
     const target = this.currentTarget
@@ -179,9 +221,10 @@ export class GatheringSkill extends Skill {
     if (actions <= 0) return null
 
     const exp = actions * target.xpPerAction
+    const xpMult = this.xpMultOf(target)
     const items = {}
-    const expectedQty = Math.round(actions * (1 + this.doubleChance(target)))
+    const expectedQty = Math.round(actions * this.expectedYield(target))
     if (expectedQty > 0) items[target.itemId] = expectedQty
-    return { actions, exp, items }
+    return { actions, exp, xpMult, items }
   }
 }

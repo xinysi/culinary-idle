@@ -30,6 +30,25 @@ const rows = computed(() =>
   })
 )
 const openCount = computed(() => rows.value.filter((r) => r.opened).length)
+// ── 开店 / 店长 / 主题 对照（2026-09-12 补）──
+// 回本时长 = 该项投入 ÷ 它每小时多带来的收入（不含主题与餐厅等级加成——那两项对所有分店等比放大，不改变排序）
+const branchCompare = computed(() =>
+  BRANCHES.map((def) => {
+    const mgrGain = def.goldPerHour * MANAGER_BONUS
+    return {
+      def,
+      paybackH: def.cost / def.goldPerHour,
+      mgrHourly: Math.floor(def.goldPerHour * (1 + MANAGER_BONUS)),
+      mgrPaybackH: def.managerCost / mgrGain,
+    }
+  })
+)
+const themeCompare = computed(() =>
+  BRANCH_THEMES.map((t) => {
+    const lv = schoolLv(t.school)
+    return { ...t, schoolLabel: schoolName(t.school), lv, mult: 1 + (THEME_BONUS_PER_LEVEL * lv) / 100 }
+  })
+)
 const totalHourly = computed(() => rows.value.reduce((a, r) => a + (r.opened ? r.hourly : 0), 0))
 const totalGold = computed(() => player.stats?.branchGold ?? 0)
 const themedCount = computed(() => rows.value.filter((r) => r.theme).length)
@@ -59,6 +78,7 @@ function hire(def) {
   const r = player.branchHireManager(def.id)
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin', label: '⭐ 评级' }]
@@ -77,6 +97,35 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
       </div>
     </header>
 
+
+      <FoldCard
+        title="📋 开店与店长回本对照"
+        hint="各家开店回本 62~68 小时、店长 100~109 小时，差别不大"
+      >
+        <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>分店</th><th>开店费</th><th>基础时收</th><th>开店回本</th><th>雇店长</th><th>店长后时收</th><th>店长回本</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in branchCompare" :key="c.def.id">
+              <td>{{ c.def.icon }} {{ c.def.name }}</td>
+              <td class="mono">{{ c.def.cost.toLocaleString() }}</td>
+              <td class="mono">{{ c.def.goldPerHour.toLocaleString() }}/时</td>
+              <td class="mono">{{ Math.round(c.paybackH) }} 小时</td>
+              <td class="mono">{{ c.def.managerCost.toLocaleString() }}</td>
+              <td class="mono">+{{ c.mgrHourly.toLocaleString() }}/时<span class="dim">（+{{ Math.round(MANAGER_BONUS * 100) }}%）</span></td>
+              <td class="mono">{{ Math.round(c.mgrPaybackH) }} 小时</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+          各家的开店回本都在 <b>62~68 小时</b>（约 3 天）、店长回本都在 <b>100~109 小时</b>——差别不大，
+          所以「先开哪家」主要看当前金币够不够、而不是哪家更划算（越靠后的店规模越大、时收越高）。实际时收还会被<b>餐厅等级</b>（每级 +10%）与
+          <b>主题</b>加成放大；离线单次最多补 {{ BRANCH_OFFLINE_CAP_HOURS }} 小时。
+        </p>
+      </FoldCard>
     <div v-if="!unlocked" class="card status-line">
       <span class="badge">🔒 未解锁</span>
       <span class="dim">需餐厅 Lv{{ BRANCH_UNLOCK_LEVEL }} 解锁分店</span>
@@ -149,6 +198,33 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
             </div>
           </template>
         </div>
+      </div>
+
+      <!-- 开店 / 店长回本对照（2026-09-12 补） -->
+
+      <!-- 主题对照（2026-09-12 补） -->
+      <div class="card">
+        <h3>🎨 经营主题对照 <span class="dim" style="font-weight: 400; font-size: 12px">主题 = 把一家分店押注到一个学派上</span></h3>
+        <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>主题</th><th>联动学派</th><th>你当前学派等级</th><th>定主题费</th><th>当前加成</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in themeCompare" :key="t.id">
+              <td>{{ t.icon }} {{ t.name }}</td>
+              <td>{{ t.schoolLabel }}</td>
+              <td class="mono">Lv{{ t.lv }}</td>
+              <td class="mono">{{ t.cost.toLocaleString() }}</td>
+              <td class="mono" :class="{ 'mastery-hl': t.lv > 0 }">×{{ t.mult.toFixed(2) }}<span class="dim">（该店时收）</span></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+          每个主题绑定一个菜系学派，该学派<b>每级 +{{ THEME_BONUS_PER_LEVEL }}%</b> 时收（只作用于这一家分店）。
+          换主题要重新付定主题费、旧主题不回退——所以先把对应学派升几级再定，收益更明显。
+        </p>
       </div>
     </template>
     <RelatedPages :links="RELATED" />

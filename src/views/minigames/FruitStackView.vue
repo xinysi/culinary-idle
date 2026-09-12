@@ -342,6 +342,7 @@ function checkEnd() {
   }
 }
 function win() {
+  player.recordMinigame('fruitstack', null) // 该玩法无分数概念：只计结算次数
   won.value = true
   stopTimers()
   celebrating.value = true
@@ -355,6 +356,7 @@ function win() {
 }
 function fail(reason = '本局失败') {
   if (won.value || over.value) return
+  player.recordMinigame('fruitstack', null) // 该玩法无分数概念：只计结算次数
   over.value = true
   busy.value = false
   stopTimers()

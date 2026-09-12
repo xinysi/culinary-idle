@@ -8,6 +8,7 @@ export const BANQUET_TIERS = [
   { id: 'b20', name: '寿宴', tables: 20, hours: 18, goldBase: 14000, spice: 1, minTier: 3, reqCats: 2 },
   { id: 'b40', name: '官宴', tables: 40, hours: 24, goldBase: 32000, spice: 2, minTier: 4, reqCats: 2 },
   { id: 'b60', name: '国宴', tables: 60, hours: 36, goldBase: 70000, spice: 3, minTier: 5, reqCats: 3 },
+  { id: 'b80', name: '皇宴', tables: 80, hours: 48, goldBase: 120000, spice: 4, minTier: 5, reqCats: 3 },
 ]
 
 /** 可承办的料理类别（与图鉴分类一致） */
@@ -19,6 +20,7 @@ export const PORTIONS_PER_TABLE = 2
 /** 按对决等级挑选合适的宴席规模（等级越高规模越大） */
 export function banquetTierFor(combatLevel = 1) {
   const lv = Math.max(1, combatLevel)
+  if (lv >= 95) return BANQUET_TIERS[4]
   if (lv >= 70) return BANQUET_TIERS[3]
   if (lv >= 45) return BANQUET_TIERS[2]
   if (lv >= 20) return BANQUET_TIERS[1]

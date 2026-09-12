@@ -22,6 +22,18 @@ const staffGainTotal = computed(() => {
   return Math.round(restaurantHourly.value * (pct / (100 + pct)))
 })
 
+// ── 岗位横比（2026-09-12 补）──
+// 净赚门槛推导：Lv n 时 收益增量 = 收入基数 × per%×n/100，工资 = wage×n
+//   → 净赚 ⟺ 收入基数 ≥ wage×100/per（与 n 无关，所以门槛是常数）。
+// 另注：跑堂的加成作用于「食客订单奖励」、掌勺/采买作用于「餐厅时收」，门槛口径不同。
+const compare = computed(() =>
+  STAFF.map((def) => ({
+    ...def,
+    target: def.id === 'waiter' ? '食客订单奖励' : '餐厅收入',
+    threshold: Math.round((def.wage * 100) / def.per),
+  }))
+)
+
 const rows = computed(() =>
   STAFF.map((def) => {
     const st = player.staffState(def.id)
@@ -82,6 +94,7 @@ function hire(r) {
 function fire(r) {
   if (player.staffFire(r.def.id)) ui.pushLog(`已解雇${r.def.name}`, 'warn')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin', label: '⭐ 评级' }, { view: 'rivals', label: '🏪 同业榜' }]
@@ -100,6 +113,36 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       <span v-if="wagePerHour" class="dim mono">时薪合计 {{ wagePerHour.toLocaleString() }} 金币</span>
     </header>
 
+
+    <FoldCard
+      title="📋 岗位横比"
+      hint="净赚门槛＝时薪÷加成比例：掌勺 2,750/时、采买 1,500/时、跑堂 1,300"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>岗位</th><th>加成对象</th><th>每级</th><th>Lv{{ STAFF_MAX_LEVEL }} 合计</th><th>Lv{{ STAFF_MAX_LEVEL }} 时薪</th><th>净赚门槛</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in compare" :key="c.id">
+              <td>{{ c.icon }} {{ c.name }}</td>
+              <td class="dim">{{ c.target }}</td>
+              <td class="mono">+{{ c.per }}%</td>
+              <td class="mono">+{{ c.per * STAFF_MAX_LEVEL }}%</td>
+              <td class="mono">{{ (c.wage * STAFF_MAX_LEVEL).toLocaleString() }}/时</td>
+              <td class="mono" :class="{ 'mastery-hl': true }">{{ c.threshold.toLocaleString() }}/时</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        <b>净赚门槛</b>＝工资 ÷ 加成比例（{{ '时薪 × 100 ÷ 每级加成%' }}）：你的收入基数高于它，这个岗位才净赚。
+        算出来是<b>与等级无关</b>的常数——升级只是把「净赚金额」等比放大，不会改变"值不值"。
+        三个岗位的累计雇佣投入相同（Lv1~{{ STAFF_MAX_LEVEL }} 共 {{ (8000 * (1 + 4 + 9 + 16 + 25)).toLocaleString() }} 金币），
+        差别只在门槛：<b>跑堂</b>的门槛按「食客订单奖励额/时」算，<b>掌勺 / 采买</b>按「餐厅时收」算，两者不可直接比大小。
+        欠薪会自动停工，雇之前先确认时收撑得住。
+      </p>
+    </FoldCard>
     <div class="card status-line">
       <span class="badge" :class="{ 'badge-on': wagePerHour > 0 }">在岗 {{ rows.filter((r) => r.active).length }} / {{ STAFF.length }}</span>
       <span class="dim">累计已发工资 <b class="mono">{{ wagesPaid.toLocaleString() }}</b> 金币</span>
@@ -168,6 +211,8 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
         </div>
       </div>
     </div>
+
+    <!-- 岗位横比（2026-09-12 补）：三个岗位放在一起看，并算出「净赚门槛」 -->
     <RelatedPages :links="RELATED" />
 </div>
 </template>

@@ -87,6 +87,7 @@ function tick() {
   draw()
 }
 function die() {
+  player.recordMinigame('snake', eaten, { lower: false, unit: '食物' })
   over = true
   running.value = false
   if (timerId) clearInterval(timerId)

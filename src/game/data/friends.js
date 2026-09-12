@@ -71,7 +71,19 @@ export const FRIENDS = [
     id: 'oldChefSun', name: '退役孙师傅', icon: '👨‍🍳', school: '宴席', goldBase: 320,
     line: '“刀要稳，心要静。”',
     pool: ['ironOre', 'saltOre', 'rice', 'grape'],
-  },
+  },  { id: 'pickleGranny', name: '酱园阿婆', icon: '🫙', school: '腌酿', goldBase: 190,
+    line: '“坛子封好了，日子就有滋味。”',
+    pool: ['cabbage', 'chili', 'garlic', 'salt'] },
+  { id: 'soupUncle', name: '汤房老周', icon: '🥣', school: '汤羹', goldBase: 250,
+    line: '“火候不到，汤就不认你。”',
+    pool: ['mushroom', 'seaweed', 'onion', 'ginger'] },
+  { id: 'nightChef', name: '夜市阿泰', icon: '🍢', school: '异域', goldBase: 300,
+    line: '“尝尝这个，别问我放了什么。”',
+    pool: ['tomato', 'corn', 'chili', 'soySauce'] },
+  { id: 'sweetAmi', name: '甜饮阿蜜', icon: '🧋', school: '甜饮', goldBase: 220,
+    line: '“苦的喝多了，也该甜一甜。”',
+    pool: ['strawberry', 'grape', 'milk', 'mint'] },
+
 ]
 
 const FRIEND_INDEX = new Map(FRIENDS.map((f) => [f.id, f]))

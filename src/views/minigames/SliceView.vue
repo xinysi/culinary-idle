@@ -699,6 +699,7 @@ function startGame() {
 }
 function settle() {
   if (overFlag) return
+  player.recordMinigame('slice', score.value, { lower: false, unit: '分' })
   overFlag = true
   over.value = true
   running = false

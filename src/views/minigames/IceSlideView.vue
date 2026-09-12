@@ -219,6 +219,8 @@ function onKey(e) {
 // ── 结算 ──
 function pass() {
   if (over.value) return
+  if (over.value) return
+  player.recordMinigame('ice', moves.value, { lower: true, unit: '步' })
   over.value = true
   passed.value = true
   stopTimer()
@@ -234,6 +236,8 @@ function pass() {
 }
 function settle(win) {
   if (over.value) return
+  if (over.value) return
+  player.recordMinigame('ice', moves.value, { lower: true, unit: '步' })
   over.value = true
   passed.value = false
   stopTimer()

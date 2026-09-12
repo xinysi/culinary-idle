@@ -226,6 +226,7 @@ async function cascadeDrop(myEpoch) {
   }
 }
 function endNow(win) {
+  player.recordMinigame('match3', score.value, { lower: false, unit: '分' })
   won.value = win
   over.value = true
   if (timerId) clearInterval(timerId)

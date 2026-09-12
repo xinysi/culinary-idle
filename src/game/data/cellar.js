@@ -23,6 +23,7 @@ export const CELLAR_TIERS = [
   { hours: 12, mult: 1.5 },
   { hours: 24, mult: 2 },
   { hours: 48, mult: 3 },
+  { hours: 96, mult: 4 },
 ]
 
 export function cellarTier(hours) {

@@ -73,7 +73,29 @@ export const EXPEDITIONS = [
       { reqLevel: 50, hours: 2, goldPerHour: 610, pool: ['coldIronOre', 'excavation_ext2_17', 'starOre'] },
       { reqLevel: 70, hours: 4, goldPerHour: 880, pool: ['giltOre', 'excavation_ext2_25', 'excavation_ext2_27'] },
     ],
+  },  {
+    id: 'exp_bakery', name: '面点采买队', icon: '🍞', skill: 'baking', reqLevel: 25,
+    desc: '常年在麦香里打转的队伍，替你把烘焙原料一并带回。',
+    rare: { itemId: 'saffron', chance: 0.012 },
+    slots: [
+      { reqLevel: 1, hours: 1, goldPerHour: 150, pool: ['flour', 'yeast', 'milk'] },
+      { reqLevel: 30, hours: 1, goldPerHour: 450, pool: ['milk', 'flour', 'strawberry'] },
+      { reqLevel: 50, hours: 2, goldPerHour: 650, pool: ['milk', 'grape', 'flour', 'saffron'] },
+      { reqLevel: 70, hours: 4, goldPerHour: 950, pool: ['truffle', 'milk', 'flour', 'saffron'] },
+    ],
   },
+  {
+    id: 'exp_pickle', name: '腌酿商队', icon: '🫙', skill: 'preserving', reqLevel: 25,
+    desc: '沿盐道走的商队，坛坛罐罐里都是能久放的滋味。',
+    rare: { itemId: 'mysterySpice', chance: 0.01 },
+    slots: [
+      { reqLevel: 1, hours: 1, goldPerHour: 150, pool: ['cabbage', 'salt', 'chili'] },
+      { reqLevel: 30, hours: 1, goldPerHour: 450, pool: ['cabbage', 'garlic', 'salt'] },
+      { reqLevel: 50, hours: 2, goldPerHour: 650, pool: ['kimchi', 'pickledCabbage', 'salt'] },
+      { reqLevel: 70, hours: 4, goldPerHour: 950, pool: ['kimchi', 'truffleSauce', 'salt', 'mysterySpice'] },
+    ],
+  },
+
 ]
 
 export function getExpedition(id) {

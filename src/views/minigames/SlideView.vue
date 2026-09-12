@@ -218,6 +218,7 @@ function pass() {
 }
 function settle(win) {
   if (over.value) return
+  player.recordMinigame('slide', moves.value, { lower: true, unit: '步' })
   over.value = true
   passed.value = false
   stopTimer()

@@ -11,7 +11,9 @@ export const SUPPLIERS = [
   { id: 'sp_sea', name: '渔行', icon: '🐟', itemId: 'salmon', qty: 20, deposit: 26000, desc: '每日 20 尾三文鱼' },
   { id: 'sp_spice', name: '香料铺', icon: '🌿', itemId: 'peppercorn', qty: 15, deposit: 30000, desc: '每日 15 份花椒' },
   { id: 'sp_wine', name: '酒坊', icon: '🍶', itemId: 'riceWine', qty: 15, deposit: 24000, desc: '每日 15 坛糯米酒' },
-  { id: 'sp_lux', name: '山珍行', icon: '🍄', itemId: 'truffle', qty: 5, deposit: 90000, desc: '每日 5 颗松露' },
+  { id: 'sp_lux', name: '山珍行', icon: '🍄', itemId: 'truffle', qty: 5, deposit: 90000, desc: '每日 5 颗松露' },  { id: 'sp_egg', name: '蛋品行', icon: '🥚', itemId: 'pheasantEgg', qty: 30, deposit: 12000, desc: '每日 30 个野鸡蛋' },
+  { id: 'sp_sauce', name: '酱园', icon: '🫙', itemId: 'soySauce', qty: 20, deposit: 18000, desc: '每日 20 坛酱油' },
+
 ]
 
 const SUPPLIER_INDEX = new Map(SUPPLIERS.map((s) => [s.id, s]))

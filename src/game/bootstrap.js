@@ -50,7 +50,7 @@ export function settleOffline(player, ui, elapsedMs) {
     inst.actionsDone += r.actions
     if (r.consumed) player.spendItems(r.consumed) // 离线消耗弹药等
     player.gainItems(r.items)
-    inst.addCardXp(r.exp)
+    inst.addCardXp(r.exp, r.xpMult ?? 1) // 卡片精通经验倍数：在线在 award() 里就要带上，离线同样要带（否则脱机练级吃亏）
     if (r.gold > 0) player.gainGold(r.gold) // 探索等离线金币（§3.4.3）
     reports.push({ inst, r })
   }
@@ -236,8 +236,8 @@ export function registerGameEvents() {
         player.bumpDaily('boss', opponent)
         player.recordChronicle?.('boss:' + opponent, 'boss', `首次击败首领「${opponent}」`)
       }
-      // 厨神试炼（2026-09-10）：胜利后判定条件
-      const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
+      // 厨神试炼（2026-09-10）：胜利后判定条件（opponent 用于校验本场是否就是试炼对手）
+      const trial = player.onCombatEndTrial?.({ result, opponent, turns, hpLeft, hpMax })
       if (trial?.passed) {
       ui.pushLog(`🏅 ${trial.label}通关！${trial.first ? '首通奖励' : '重复奖励'} +${trial.gold.toLocaleString()} 金币`, 'levelup')
       if (trial.first) player.recordChronicle?.('trial:' + trial.label, 'trial', `${trial.label}首次通关`)
@@ -253,7 +253,7 @@ export function registerGameEvents() {
       }
     } else {
       ui.pushLog(`💀 败给 ${opponent}${lost ? `，失去了 ${itemName(lost)}` : ''}`, 'warn')
-      const trial = player.onCombatEndTrial?.({ result, turns, hpLeft, hpMax })
+      const trial = player.onCombatEndTrial?.({ result, opponent, turns, hpLeft, hpMax })
       if (trial?.label) ui.pushLog(`🏅 ${trial.label}`, 'warn')
       const chef = player.onCombatEndChef?.(result, opponent)
       if (chef?.name) ui.pushLog(`🃏 不敌名厨「${chef.name}」，本周可再来挑战`, 'warn')
@@ -556,6 +556,10 @@ export function startGame({ slot, newGame = false } = {}) {
   const now = Date.now()
   const elapsed = now - (player.lastOnlineAt || now)
   const report = settleOffline(player, ui, elapsed)
+  // 结算后立刻把「上次在线时间」推进到 now 并落盘（此处已确定要进这个存档位，可以写）：
+  // 否则同一份存档反复读取会反复发放同一段离线收益（关页面前没触发自动存档时尤其明显）
+  player.lastOnlineAt = now
+  saveManager.saveSlot(saveManager.slot, buildSaveData())
   if (report) {
     ui.openOfflineReport(report) // 离线结算详情弹窗（2026-09-06）
   } else {
@@ -642,6 +646,9 @@ export function loadSlot(slot) {  const player = usePlayerStore()
   createSkillInstances(player) // 重建技能实例（绑定同一 store）
   const now = Date.now()
   const report = settleOffline(player, ui, now - (player.lastOnlineAt || now))
+  // 同 startGame：结算后推进并落盘「上次在线时间」，避免重读同一存档重复结算离线收益
+  player.lastOnlineAt = now
+  saveManager.saveSlot(slot, buildSaveData())
   if (report) ui.openOfflineReport(report)
   ui.pushLog(`已读取存档位 ${slot + 1}`, 'info')
   return true

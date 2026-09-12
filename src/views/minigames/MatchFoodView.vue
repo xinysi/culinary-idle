@@ -63,6 +63,7 @@ function resetDay() {
 onUnmounted(() => { if (timerId) clearInterval(timerId) })
 
 function failNow() {
+  player.recordMinigame('matchfood', null) // 该玩法无分数概念：只计结算次数
   failed.value = true
   if (timerId) clearInterval(timerId)
 }
@@ -104,6 +105,7 @@ function tap(i) {
   }
 }
 function settle() {
+  player.recordMinigame('matchfood', null) // 该玩法无分数概念：只计结算次数
   const mg = player.minigames.matchfood
   if (!mg) player.minigames.matchfood = { day: '', buffed: 0 }
   mg.day = todayKey()

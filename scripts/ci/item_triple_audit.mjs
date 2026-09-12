@@ -89,6 +89,19 @@ const items = Object.values(ITEMS)
     if (miss.length) noEffectText.push(`${it.id}(${it.name}) 缺: ${miss.join(',')}`)
   }
   check(`详细作用：全部 ${items.length} 件物品的效果字段均已在详情中说明`, noEffectText.length === 0, noEffectText.slice(0, 8).join('; '))
+
+  // 反向守卫（2026-09-12）：EFFECT_RULES 是手写白名单，**新加的效果字段若没登记，上面那条检查会静默放过**
+  // （正是「能量饼干 offlineBonusH 漏详情」那类事故的温床）。这里改成从物品数据反推：出现在物品上的字段，
+  // 要么属于结构/展示字段，要么必须登记在 EFFECT_RULES 里 —— 新增效果字段没登记就直接 FAIL 点名。
+  const STRUCT_KEYS = new Set(['id', 'name', 'type', 'category', 'tier', 'value', 'stackable', 'maxStack', 'slot', 'quality', 'stats', 'image'])
+  const registered = new Set([...EFFECT_RULES.map((r) => r.field), 'use'])
+  const unregistered = new Set()
+  for (const it of items) {
+    for (const k of Object.keys(it)) {
+      if (!STRUCT_KEYS.has(k) && !registered.has(k)) unregistered.add(k)
+    }
+  }
+  check('详细作用：物品字段无「未登记」项（新效果字段必须先登记，否则上面那条检查覆盖不到）', unregistered.size === 0, [...unregistered].join(', '))
 }
 
 // ── 3. 可用于制作（itemUses）：产物必须存在（幽灵配方引用不入图鉴）──

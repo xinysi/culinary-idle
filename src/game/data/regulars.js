@@ -14,7 +14,11 @@ export const REGULARS = [
   { id: 'r_general', name: '卸甲将军', icon: '🛡️', category: '主菜', minTier: 3, gold: 460, unlockLevel: 9 },
   { id: 'r_nun', name: '云游尼师', icon: '🪷', category: 'baking', minTier: 3, gold: 420, unlockLevel: 12 },
   { id: 'r_prince', name: '微服公子', icon: '🎋', category: '汤品', minTier: 4, gold: 620, unlockLevel: 16 },
-  { id: 'r_master', name: '归隐食家', icon: '🍵', category: '甜点', minTier: 5, gold: 800, unlockLevel: 20 },
+  { id: 'r_master', name: '归隐食家', icon: '🍵', category: '甜点', minTier: 5, gold: 800, unlockLevel: 20 },  { id: 'r_envoy', name: '驿站信使', icon: '✉️', category: '主食', minTier: 4, gold: 700, unlockLevel: 24 },
+  { id: 'r_painter', name: '画舫画师', icon: '🖌️', category: '甜点', minTier: 4, gold: 900, unlockLevel: 28 },
+  { id: 'r_physician', name: '杏林医者', icon: '🌿', category: '汤品', minTier: 5, gold: 1050, unlockLevel: 32 },
+  { id: 'r_oldchef', name: '告老御厨', icon: '👑', category: '主菜', minTier: 5, gold: 1200, unlockLevel: 36 },
+
 ]
 
 const REGULAR_INDEX = new Map(REGULARS.map((r) => [r.id, r]))

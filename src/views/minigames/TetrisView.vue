@@ -466,6 +466,7 @@ function startGame() {
 }
 function settle() {
   if (overFlag) return
+  player.recordMinigame('tetris', score.value, { lower: false, unit: '分' })
   overFlag = true
   over.value = true
   running = false

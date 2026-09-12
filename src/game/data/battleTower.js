@@ -37,14 +37,21 @@ export function towerFloor(floorNum, baseLevel) {
   const level = Math.min(140, Math.max(1, baseLevel + Math.floor((floorNum - 1) / 4)))
   const style = STYLES[floorNum % 3]
   const name = `守塔人·${['刀', '盘', '味'][floorNum % 3]}${floorNum}层`
-  // 楼层属性上浮：hp ×(1+0.012×(层-1))，atk/def 同比例爬坡（温和，前期可碾压、深处变墙）
+  // 楼层属性上浮：hp/atk 按 g 线性爬坡（温和，前期可碾压、深处变墙）
   const g = 1 + Math.max(0, (floorNum - 1) * 0.012)
+  // 但 def/eva 不能跟着同一个 g 一起几何爬坡：伤害公式是 def/(def+100) 的饱和减伤，塔的 def 会
+  // 很快吃掉玩家的伤害区间。实测（满配：五技能 120 级 + 5 转生 + 各槽最强装备，20 场/层）：
+  //   def 跟 g → F90 只剩 6/20、F100 起 0/20 全败（而塔名深到 130+ 层、每 10 层还有里程碑）＝死墙；
+  //   def 走 √g → F90 20/20、F100 17/20、F110 起 0/20。
+  // 故 def 走 g 的平方根（hp/atk 不变）、eva 的层数项减半，让深处是「难」而不是「不可能」。
+  // 复测方法：scripts/sim/endgame_sim.mjs 的挑战塔段（每层必须满血开局，否则量的是假墙）。
+  const gSoft = Math.sqrt(g)
   return opp(level, name, style, {
     isTower: true,
     hp: Math.round((12 + level * 6) * g),
     atk: (1 + level * 0.7) * g,
-    def: Math.round(level * 1.5 * g),
-    eva: 4 + level * 1.5 + Math.max(0, floorNum - 1) * 0.1,
+    def: Math.round(level * 1.5 * gSoft),
+    eva: 4 + level * 1.5 + Math.max(0, floorNum - 1) * 0.05,
     drops: [],
   })
 }

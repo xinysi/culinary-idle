@@ -18,7 +18,10 @@ export const FEST_THEMES = [
   { id: 'tea', name: '茶点雅集', desc: '清茶一盏，点心为伴。提交「糕点/饮品」主题料理。', cats: ['甜点', 'baking'] },
   { id: 'legend', name: '传奇食谱', desc: '只有最传说的料理才配得上这个月！提交任何料理。', cats: ['any'] },
   { id: 'kid', name: '儿童套餐', desc: '童趣满满，色香味俱全。提交「甜点/主食/烘焙」主题料理', cats: ['甜点', '主食', 'baking'] },
-  { id: 'feast', name: '饕餮盛宴', desc: '年夜饭一般的排场！提交任何料理。', cats: ['any'] },
+  { id: 'feast', name: '饕餮盛宴', desc: '年夜饭一般的排场！提交任何料理。', cats: ['any'] },  { id: 'warmsoup', name: '暖汤季', desc: '一碗热汤下肚，风雪都不怕。提交「汤品/烘焙」主题料理。', cats: ['汤品', 'baking'] },
+  { id: 'fruit', name: '果香夏日', desc: '把整个夏天装进盘子里。提交含「水果/饮品基底」的料理。', cats: ['fruit', 'drinkBase'] },
+  { id: 'nightsnack', name: '深夜食堂', desc: '给还守在灶前的人做一道。提交「主食/主菜」主题料理。', cats: ['主食', '主菜'] },
+
 ]
 
 /** 当前主题（按年月 YYYYMM 数值取模，跨月自动轮换） */

@@ -94,6 +94,40 @@ onUnmounted(() => EventBus.off('mg:back', onBack))
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', label: '📖 图鉴/统计' }]
+
+// ── 记录墙（2026-09-12）────────────────────────────────────────
+// 数据源：player.minigames.<id>.records（各游戏结算时写入，见 recordMinigame）。
+// 未接入统一记录的少数玩法（如火候炉是「一锅一判」、2048 是逐档发奖）回退到它自己的原生字段，
+// 两者都没有就显示「还没玩过」。
+const NATIVE = {
+  heat: { get: (p) => p.minigames?.heat?.bestStreak, unit: '连胜' },
+  kitchen2048: { get: (p) => p.minigames?.kitchen2048?.best, unit: '分' },
+  puzzle: { get: (p) => p.minigames?.puzzle?.done, unit: '次' },
+}
+const wallSummary = computed(() => player.minigameWallSummary())
+const wallRows = computed(() =>
+  GAMES.map((g) => {
+    const rec = player.minigames?.[g.id]?.records ?? null
+    const native = NATIVE[g.id]
+    const nv = native?.get(player)
+    const best = rec?.best ?? (typeof nv === 'number' && nv > 0 ? nv : null)
+    const unit = rec?.unit || native?.unit || ''
+    const plays = rec?.plays ?? 0
+    const hasRec = plays > 0 || best != null
+    return {
+      id: g.id,
+      emoji: g.emoji,
+      name: g.name,
+      hasRec,
+      bestText: best == null ? '—' : `${best}${unit}`,
+      playsText: plays > 0 ? `${plays} 局` : (best != null ? '最佳记录' : '还没玩过'),
+      title: hasRec ? `${g.name}：最好 ${best == null ? '—' : best + unit} · 累计 ${plays} 局` : `${g.name}：还没玩过`,
+    }
+  })
+)
+function select(id) {
+  active.value = id
+}
 </script>
 
 <template>
@@ -123,6 +157,34 @@ const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', l
     </div>
     <!-- 游戏区域：自然流 -->
     <component :is="activeComp" />
+
+    <!-- 记录墙（2026-09-12 补）：27 款跨游戏汇总——此前只有 6 款把成绩写进存档，其余关掉页面就没了 -->
+    <div class="card mg-wall">
+      <h3>
+        🏆 记录墙
+        <span class="dim mg-wall-sum">
+          已玩 <b class="mono">{{ wallSummary.games }}</b>/{{ GAMES.length }} 款 · 累计 <b class="mono">{{ wallSummary.plays }}</b> 局
+        </span>
+      </h3>
+      <div class="mg-wall-grid">
+        <button
+          v-for="row in wallRows"
+          :key="row.id"
+          class="mg-wall-item"
+          :class="{ 'mg-wall-empty': !row.hasRec, 'mg-wall-on': active === row.id }"
+          :title="row.title"
+          @click="select(row.id)"
+        >
+          <span class="mg-wall-emoji">{{ row.emoji }}</span>
+          <span class="mg-wall-name">{{ row.name }}</span>
+          <span class="mg-wall-best mono">{{ row.bestText }}</span>
+          <span class="mg-wall-plays dim">{{ row.playsText }}</span>
+        </button>
+      </div>
+      <p class="dim mg-wall-note">
+        每款游戏结算时记录最好一局与局数（步数 / 用时类取最小）；「—」表示该玩法没有分数概念，只计局数。
+      </p>
+    </div>
     <RelatedPages :links="RELATED" />
 </div>
 </template>

@@ -68,6 +68,7 @@ function eat() {
 }
 function finish() {
   if (!RUNNING.value) return
+  player.recordMinigame('foodrush', bowls.value, { lower: false, unit: '碗' })
   RUNNING.value = false
   clearInterval(timerId)
   done.value = true

@@ -3,12 +3,40 @@
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { getItem, ITEMS } from '../game/data/items.js'
-import { festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
+import { festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES, FEST_THEMES, festThemeFor } from '../game/data/cookingFest.js'
+import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
+import FoldCard from '../components/FoldCard.vue'
 
 const player = usePlayerStore()
 
 const theme = computed(() => player.festTheme())
+
+// ── 主题日历（2026-09-12 补）──
+// 主题只取决于「年月」，所以往期与下月都能算出来（festThemeFor(YYYYMM) 按主题数取模循环）。
+// cats 里混着中文大类（汤品/主菜）与物品类别 id（baking/seafood…），展示时过一遍标签表，避免露出英文 id。
+const monthCalendar = computed(() => {
+  const cur = player.festState().month // YYYYMM
+  const y0 = Math.floor(cur / 100)
+  const m0 = cur % 100
+  const out = []
+  for (let k = -3; k <= 3; k++) {
+    const d = new Date(y0, m0 - 1 + k, 1)
+    const key = d.getFullYear() * 100 + (d.getMonth() + 1)
+    out.push({
+      key,
+      label: `${d.getFullYear()} 年 ${d.getMonth() + 1} 月`,
+      theme: festThemeFor(key),
+      offset: k,
+      isCur: k === 0,
+    })
+  }
+  return out
+})
+function catText(cats) {
+  if (!cats?.length || cats[0] === 'any') return '任何料理'
+  return cats.map((c) => CATEGORY_LABEL[c] ?? c).join(' / ')
+}
 const state = computed(() => player.festState())
 
 // 背包中可参赛料理（type=food 且符合当月主题），按得分预估排序
@@ -35,6 +63,31 @@ const candidates = computed(() =>
       </div>
     </header>
 
+
+    <FoldCard
+      title="🗓 主题日历（本期与前后三个月）"
+      hint="主题＝年月取模 12，下个月是什么现在就知道、可提前备菜"
+    >
+      <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>月份</th><th>主题</th><th>可提交</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="m in monthCalendar" :key="m.key" :class="{ selected: m.isCur }">
+              <td class="mono">{{ m.label }}<span v-if="m.isCur" class="badge badge-on" style="margin-left: 4px">本月</span><span v-else-if="m.offset < 0" class="dim" style="margin-left: 4px">已过</span></td>
+              <td>{{ m.theme.name }}</td>
+              <td class="dim">{{ catText(m.theme.cats) }}</td>
+              <td class="dim">{{ m.theme.desc }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        主题 = <b>年月对 {{ FEST_THEMES.length }} 取模</b>，所以顺序固定、可以预知：下个月是什么主题，现在就能按它的「可提交」范围先把菜备好。
+        每月 1 号自动切换并重置月分与里程碑（已领的不会退回）。
+      </p>
+    </FoldCard>
     <div class="card">
       <h3>🎪 本月主题：{{ theme.name }}</h3>
       <p class="dim">{{ theme.desc }}</p>
@@ -43,6 +96,8 @@ const candidates = computed(() =>
         <span class="dim">已提交 {{ state.entries.length }} 次</span>
       </div>
     </div>
+
+    <!-- 主题日历（2026-09-12 补）：主题按月确定性轮换，所以下个月是什么现在就知道 -->
 
     <div class="card">
       <h3>📅 月度里程碑</h3>

@@ -67,8 +67,8 @@ export class HuntingSkill extends GatheringSkill {
     if (actions <= 0) return null
     const exp = actions * (result.exp / result.actions)
     const items = {}
-    const expectedQty = Math.round(actions * (1 + this.doubleChance()))
+    const expectedQty = Math.round(actions * this.expectedYield()) // 与在线同源（含精通保底产量/产量加成）
     if (expectedQty > 0) items[this.currentTarget.itemId] = expectedQty
-    return { actions, exp: Math.floor(exp), items, consumed: { trap: actions } }
+    return { actions, exp: Math.floor(exp), xpMult: result.xpMult ?? 1, items, consumed: { trap: actions } }
   }
 }

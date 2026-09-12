@@ -120,6 +120,7 @@ function start() {
   rafId = requestAnimationFrame(loop)
 }
 function die() {
+  player.recordMinigame('flappy', passed.value, { lower: false, unit: '管道' })
   over.value = true
   running.value = false
   stopLoop()
