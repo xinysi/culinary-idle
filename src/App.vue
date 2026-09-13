@@ -20,11 +20,14 @@ import { useUiStore } from './stores/ui.js'
 import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
 import { EventBus } from './game/core/EventBus.js'
-import { sfx } from './game/core/sound.js'
+import { sfx, bgm, primeAudio, setSfxVolume, setBgmVolume } from './game/core/sound.js'
+import { getCombat } from './game/combat/Combat.js'
+import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
 
 const SkillView = defineAsyncComponent(() => import('./views/SkillView.vue'))
 const DaoView = defineAsyncComponent(() => import('./views/DaoView.vue'))
+const ShanhaiView = defineAsyncComponent(() => import('./views/ShanhaiView.vue'))
 const ShopView = defineAsyncComponent(() => import('./views/ShopView.vue'))
 const ZhenXiuView = defineAsyncComponent(() => import('./views/ZhenXiuView.vue'))
 const StatsView = defineAsyncComponent(() => import('./views/StatsView.vue'))
@@ -151,10 +154,36 @@ function applyTheme() {
   if (pref === 'dark') document.documentElement.dataset.theme = 'dark'
   else delete document.documentElement.dataset.theme
 }
+// 皮肤（v2.1）：同样另存一份全局键供启动界面使用；皮肤只写主色系变量（浅/深色都成立）
+const SKIN_KEY = 'culinary-idle.skin'
+function applySkin() {
+  const saved = player.settings?.skin
+  const pref = ui.phase === 'game' ? saved : (localStorage.getItem(SKIN_KEY) || saved)
+  // 皮肤分浅/深两版主色：按当前主题取（applyTheme 已先跑，此处读到的就是生效值）
+  applySkinToDom(pref ?? 'classic', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+}
+function syncAudioSettings() {
+  setSfxVolume(player.settings?.sfxVolume ?? 0.6)
+  setBgmVolume(player.settings?.bgmVolume ?? 0.35)
+  if (player.settings?.soundEnabled || player.settings?.bgmEnabled) primeAudio()
+}
+
+/** BGM 曲目：战斗中 → battle；否则按主题昼夜（未开启 BGM 就停） */
+function syncBgm() {
+  if (ui.phase !== 'game' || !player.settings?.bgmEnabled) {
+    bgm.stop()
+    return
+  }
+  const track = getCombat()?.inFight ? 'battle' : (document.documentElement.dataset.theme === 'dark' ? 'night' : 'day')
+  bgm.play(track)
+}
+
 onMounted(() => {
   applyUiScale()
   applyTheme()
+  applySkin()
   applyCrisp()
+  syncAudioSettings()
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
@@ -164,7 +193,20 @@ onUnmounted(() => { clearInterval(refreshTodayTimer) })
 watch(() => player.settings?.theme, (v) => {
   try { if (v) localStorage.setItem(THEME_KEY, v) } catch { /* 隐私模式下忽略 */ }
   applyTheme()
+  applySkin() // 皮肤分浅/深两版主色 → 主题变了要重算
 })
+
+// v2.1：皮肤偏好同样另存全局键（供启动界面），并在设置/阶段变化时重写行内样式
+watch(() => [player.settings?.skin, ui.phase], () => {
+  try { if (player.settings?.skin) localStorage.setItem(SKIN_KEY, player.settings.skin) } catch { /* 隐私模式下忽略 */ }
+  applySkin()
+})
+// v2.1：音量与开关变化时即时生效（BGM 关掉就停、开了就按当前场景起）
+watch(
+  () => [player.settings?.soundEnabled, player.settings?.bgmEnabled, player.settings?.sfxVolume, player.settings?.bgmVolume, ui.phase],
+  () => { syncAudioSettings(); syncBgm() },
+  { immediate: true }
+)
 
 // 跨午夜刷新定时器句柄
 let refreshTodayTimer = null
@@ -209,9 +251,23 @@ onMounted(() => {
     else if (e.outcome === 'plant' || e.outcome === 'fertilize') sfx.click()
   })
   EventBus.on('player:levelup', () => on() && sfx.levelup())
+  // v2.1：更多事件的音效（缺事件时静默，不影响逻辑）
+  EventBus.on('player:prestige', () => on() && sfx.prestige())
+  EventBus.on('dao:unlock', () => on() && sfx.unlock())
+  EventBus.on('trial:pass', () => on() && sfx.reward())
+  EventBus.on('season:claim', () => on() && sfx.open())
+  EventBus.on('exchange:trade', () => on() && sfx.coin())
+  EventBus.on('branch:open', () => on() && sfx.buy())
+  EventBus.on('supplier:sign', () => on() && sfx.buy())
+  EventBus.on('supplier:deliver', () => on() && sfx.mail())
+  EventBus.on('guild:join', () => on() && sfx.friend())
+  EventBus.on('chef:win', () => on() && sfx.serve())
+  EventBus.on('arena:end', () => on() && sfx.tower())
+  EventBus.on('tower:advance', () => on() && sfx.tower())
+  EventBus.on('boss:appear', () => on() && sfx.boss())
   EventBus.on('quest:complete', () => on() && sfx.win())
-  EventBus.on('combat:start', () => on() && sfx.collect())
-  EventBus.on('combat:end', ({ result }) => { if (on()) (result === 'win' ? sfx.win() : sfx.lose()) })
+  EventBus.on('combat:start', () => { if (on()) sfx.collect(); syncBgm() })
+  EventBus.on('combat:end', ({ result }) => { if (on()) (result === 'win' ? sfx.win() : sfx.lose()); syncBgm() })
   EventBus.on('arena:reward', () => on() && sfx.reward())
   EventBus.on('achievement:unlock', () => on() && sfx.reward())
   EventBus.on('guild:task', () => on() && sfx.reward())
@@ -286,7 +342,7 @@ onMounted(() => {
         </nav>
 
         <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
-        <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll">
+        <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll" :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai' }">
           <NewbieGuide />
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
@@ -337,6 +393,7 @@ onMounted(() => {
           <CardBattleView v-else-if="ui.activeView === 'cards'" />
           <EncountersView v-else-if="ui.activeView === 'encounters'" />
           <DaoView v-else-if="ui.activeView === 'dao'" />
+          <ShanhaiView v-else-if="ui.activeView === 'shanhai'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />

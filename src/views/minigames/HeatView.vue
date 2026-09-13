@@ -169,20 +169,20 @@ const nextReward = computed(() => {
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .hz-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .hz-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -197,17 +197,17 @@ const nextReward = computed(() => {
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.hz-box { background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.hz-box { background: rgba(var(--panel-rgb), 0.8); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .hz-box-head { display: flex; align-items: center; justify-content: space-between; }
 .hz-box-tag { font-weight: 800; font-size: 14px; }
 .hz-box-reward { font-size: 12px; color: var(--warn-strong); font-weight: 700; }
 .hz-track { position: relative; width: 100%; height: 22px; border-radius: 999px; overflow: hidden; background: linear-gradient(90deg, #f3dcc0, #ffe9d2 30%, #ffe9d2 70%, #f3dcc0); box-shadow: inset 0 1px 4px rgba(120, 84, 50, 0.18); }
 .hz-tiny { height: 16px; }
-.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #f2a25c, #d95a38); box-shadow: 0 0 12px rgba(217, 90, 56, 0.8); border-radius: 999px; }
+.hz-perfect { position: absolute; top: 0; bottom: 0; background: linear-gradient(180deg, #f2a25c, var(--primary-tint)); box-shadow: 0 0 12px rgba(var(--primary-tint-rgb), 0.8); border-radius: 999px; }
 .hz-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #7a4a26; border-radius: 2px; box-shadow: 0 0 8px rgba(122, 74, 38, 0.55); }
 .hz-acts { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .hz-mini { padding: 8px 22px; font-size: 14px; font-weight: 800; border: none; border-radius: 999px; cursor: pointer; color: #fff; }
-.hz-mini-gold { background: linear-gradient(135deg, #f2a25c, #d95a38); }
+.hz-mini-gold { background: linear-gradient(135deg, #f2a25c, var(--primary-tint)); }
 .hz-mini-fire { background: linear-gradient(135deg, #f27c45, #d85c2c); }
 .hz-v { font-size: 12px; font-weight: 700; }
 .hz-v.perfect { color: var(--good-strong); }
@@ -219,23 +219,23 @@ const nextReward = computed(() => {
 .hz-dot.perfect { color: var(--good-strong); }
 .hz-dot.good { color: var(--warn-strong); }
 .hz-dot.miss { color: var(--bad-strong); }
-.hz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.hz-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .hz-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .hz-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .hz-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -247,8 +247,8 @@ const nextReward = computed(() => {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }

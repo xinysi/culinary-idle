@@ -211,7 +211,7 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'honor', lab
   font-size: 26px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .legacy-stat-max {
   font-size: 13px;
@@ -270,7 +270,7 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'honor', lab
   border-style: solid;
 }
 .legacy-rank.current {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .legacy-rank-name {
   flex: 1;

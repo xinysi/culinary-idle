@@ -1,6 +1,7 @@
 <script setup>
 // 杂货铺 — 需求文档 §11.3：购买弹药/种子/容量扩展 + 出售背包物品（价值×0.5）
 import { ref, computed } from 'vue'
+import { PAID_CAP_MAX } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SHOP_ITEMS, shopItemName } from '../game/data/shop.js'
@@ -55,8 +56,8 @@ const buyListPaged = computed(() => {
 // 卡片动态样式：是否可负担/可购买（买不起或容量已满 → locked 置灰）
 function canAffordBuy(entry) {
   if (player.gold < entry.price) return false
-  if (entry.action === 'inventorySlot' && player.inventoryCap >= 100) return false
-  if (entry.action === 'bankSlot' && player.bankCap >= 500) return false
+  if (entry.action === 'inventorySlot' && player.inventoryCap >= PAID_CAP_MAX.inventory) return false
+  if (entry.action === 'bankSlot' && player.bankCap >= PAID_CAP_MAX.bank) return false
   return true
 }
 
@@ -86,14 +87,14 @@ function confirmQty(n) {
 function buy(entry) {
   if (entry.action === 'inventorySlot') {
     if (!player.spendGold(entry.price)) return
-    if (player.expandInventory(10)) ui.pushLog(`背包容量 +10（当前 ${player.inventoryCap}/100）`, 'info')
-    else { player.gainGold(entry.price); ui.pushLog('背包已达上限 100 格', 'warn') }
+    if (player.expandInventory(10)) ui.pushLog(`背包容量 +10（当前 ${player.inventoryCap}/${PAID_CAP_MAX.inventory}）`, 'info')
+    else { player.gainGold(entry.price); ui.pushLog(`背包已达商店上限 ${PAID_CAP_MAX.inventory} 格（可用山海食经继续扩容）`, 'warn') }
     return
   }
   if (entry.action === 'bankSlot') {
     if (!player.spendGold(entry.price)) return
-    if (player.expandBank(20)) ui.pushLog(`仓库容量 +20（当前 ${player.bankCap}/500）`, 'info')
-    else { player.gainGold(entry.price); ui.pushLog('仓库已达上限 500 格', 'warn') }
+    if (player.expandBank(20)) ui.pushLog(`仓库容量 +20（当前 ${player.bankCap}/${PAID_CAP_MAX.bank}）`, 'info')
+    else { player.gainGold(entry.price); ui.pushLog(`仓库已达商店上限 ${PAID_CAP_MAX.bank} 格（可用山海食经继续扩容）`, 'warn') }
     return
   }
   openBuyQty(entry)
@@ -170,14 +171,14 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
           <div class="gather-card-row">
             <span>持有</span>
             <span class="mono">
-              <template v-if="entry.action === 'inventorySlot'">{{ player.inventoryCap }}/100</template>
-              <template v-else-if="entry.action === 'bankSlot'">{{ player.bankCap }}/500</template>
+              <template v-if="entry.action === 'inventorySlot'">{{ player.inventoryCap }}/{{ PAID_CAP_MAX.inventory }}<span v-if="player.inventoryCap > PAID_CAP_MAX.inventory" class="dim">（商店已满）</span></template>
+              <template v-else-if="entry.action === 'bankSlot'">{{ player.bankCap }}/{{ PAID_CAP_MAX.bank }}<span v-if="player.bankCap > PAID_CAP_MAX.bank" class="dim">（商店已满）</span></template>
               <template v-else>{{ player.inventory[entry.itemId] ?? 0 }}</template>
             </span>
           </div>
           <button
             class="btn btn-sm btn-primary"
-            :disabled="player.gold < entry.price || (entry.action === 'inventorySlot' && player.inventoryCap >= 100) || (entry.action === 'bankSlot' && player.bankCap >= 500)"
+            :disabled="player.gold < entry.price || (entry.action === 'inventorySlot' && player.inventoryCap >= PAID_CAP_MAX.inventory) || (entry.action === 'bankSlot' && player.bankCap >= PAID_CAP_MAX.bank)"
             @click="buy(entry)"
           >
             购买

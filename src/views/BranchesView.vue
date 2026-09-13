@@ -294,8 +294,8 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
 }
 .theme-opt.active {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
-  color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
+  color: var(--accent, var(--primary-tint));
 }
 .theme-meta {
   font-size: 11px;

@@ -25,13 +25,14 @@ const ruleOf = (style, sel) => {
   return i < 0 ? null : style.slice(i, style.indexOf('}', i) + 1)
 }
 const has = (txt, re) => (txt ? re.test(txt) : false)
+// 注：标准里的颜色已全部 token 化（v2.1 皮肤要能覆盖）——断言要求写 token（如 rgba(var(--panel-rgb), 0.8)）而非字面色值。
 const checks = [
   ['顶栏', (s, tpl, pre) => new RegExp('class="' + pre + '-topbar"').test(tpl) && /模式说明/.test(tpl)],
-  ['模式胶囊', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-mode'); return has(r, /padding: 5px 12px/) && has(r, /font-size: 12px/) && has(r, /border-radius: 999px/) && has(r, /1px dashed rgba\(150, 110, 70, 0\.4\)/) && has(r, /rgba\(255, 252, 246, 0\.8\)/) && has(r, /var\(--muted\)/) }],
-  ['选中态', (s, tpl, pre, style) => has(ruleOf(style, '.' + pre + '-mode.on'), /rgba\(217, 90, 56, 0\.14\)/) && has(ruleOf(style, '.' + pre + '-mode.on'), /var\(--primary-strong\)/)],
-  ['状态胶囊', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-chip'); return has(r, /padding: 5px 12px/) && has(r, /font-weight: 700/) && has(r, /rgba\(255, 252, 246, 0\.8\)/) }],
+  ['模式胶囊', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-mode'); return has(r, /padding: 5px 12px/) && has(r, /font-size: 12px/) && has(r, /border-radius: 999px/) && has(r, /1px dashed rgba\(var\(--tint-rgb\), 0\.4\)/) && has(r, /rgba\(var\(--panel-rgb\), 0\.8\)/) && has(r, /var\(--muted\)/) }],
+  ['选中态', (s, tpl, pre, style) => has(ruleOf(style, '.' + pre + '-mode.on'), /rgba\(var\(--primary-tint-rgb\), 0\.14\)/) && has(ruleOf(style, '.' + pre + '-mode.on'), /var\(--primary-strong\)/)],
+  ['状态胶囊', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-chip'); return has(r, /padding: 5px 12px/) && has(r, /font-weight: 700/) && has(r, /rgba\(var\(--panel-rgb\), 0\.8\)/) }],
   ['说明按钮', (s, tpl, pre, style) => has(ruleOf(style, '.' + pre + '-info-btn'), /linear-gradient\(135deg, #72b864, #589c4b\)/)],
-  ['说明弹窗', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-info-box'); return has(r, /min\(620px, 92vw\)/) && has(r, /rgba\(255, 252, 246, 0\.94\)/) && has(r, /border-radius: 16px/) }],
+  ['说明弹窗', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-info-box'); return has(r, /min\(620px, 92vw\)/) && has(r, /rgba\(var\(--panel-rgb\), 0\.94\)/) && has(r, /border-radius: 16px/) }],
   ['通用规则框', (s, tpl, pre, style) => { const r = ruleOf(style, '.' + pre + '-info-rule'); return has(r, /rgba\(114, 184, 100, 0\.1\)/) && has(r, /var\(--text\)/) && has(r, /font-size: 12\.5px/) }],
   ['开始门控', (s, tpl, pre) => new RegExp('class="' + pre + '-start"').test(tpl) || (pre === 'fs' && /▶ 开始游戏/.test(tpl))],
   ['结算弹窗', (s, tpl, pre) => new RegExp(pre + '-mask').test(tpl) && new RegExp(pre + '-result').test(tpl) && new RegExp(pre + '-again').test(tpl)],

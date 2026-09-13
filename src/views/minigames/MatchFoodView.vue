@@ -186,20 +186,20 @@ resetDay()
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .mf-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .mf-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -209,16 +209,16 @@ resetDay()
   width: min(560px, 94%);
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
   padding: 14px; border-radius: 18px;
-  background: rgba(150, 110, 70, 0.16);
-  border: 1px solid rgba(150, 110, 70, 0.3);
-  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
+  background: rgba(var(--tint-rgb), 0.16);
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
+  box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.14);
 }
 .mf-cell {
   aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
   padding: 6px;
   border-radius: 10px; cursor: pointer; user-select: none;
-  background: rgba(255, 251, 244, 0.92); border: 1px solid rgba(150, 110, 70, 0.25);
+  background: rgba(var(--panel-soft-rgb), 0.92); border: 1px solid rgba(var(--tint-rgb), 0.25);
   transition: transform 0.1s ease;
 }
 .mf-img { width: 100%; height: 100%; object-fit: contain; } /* 固定尺寸：格内撑满按比例居中 */
@@ -243,23 +243,23 @@ resetDay()
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.mf-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.mf-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .mf-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .mf-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .mf-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -271,8 +271,8 @@ resetDay()
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -295,16 +295,16 @@ resetDay()
 }
 
 /* ── mf 结算弹窗（2026-09-09 统一）── */
-.mf-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.mf-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.mf-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.mf-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .mf-result-head { font-size: 18px; }
 .mf-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .mf-gold { color: var(--good-strong); font-weight: 800; }
-.mf-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.mf-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .mf-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .mf-spark { position: absolute; font-size: 22px; color: var(--gold); animation: mfSpark 1.1s ease-out forwards; }
 @keyframes mfSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
 /* ── mf 开始门控（2026-09-09）── */
-.mf-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.mf-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35); }
 </style>

@@ -89,6 +89,7 @@ const FEATURE_GROUPS = [
       { icon: '📓', name: '厨房笔记', view: 'kitchenNotes' },
       { icon: '📔', name: '风味册', view: 'flavorBook' },
       { icon: '📜', name: '菜系研究', view: 'schools' },
+      { icon: '📖', name: '山海食经', view: 'shanhai' },
       { icon: '🛡️', name: '装备总览', view: 'gear' },
     ],
   },

@@ -1,6 +1,7 @@
 <script setup>
 // 战报分享卡 — 生成一张 PNG 战报（2026-09-06）
 import { computed, ref, nextTick, watch } from 'vue'
+import { cssRgb } from '../game/core/cssVar.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
@@ -84,7 +85,7 @@ function draw() {
       ctx.font = 'bold 16px "Microsoft YaHei", sans-serif'
       ctx.fillText(v, W - 70, y)
       if (i < rows.length - 1) {
-        ctx.strokeStyle = 'rgba(217, 90, 56, 0.18)'
+        ctx.strokeStyle = cssRgb('--primary-tint-rgb', 0.18)
         ctx.setLineDash([4, 4])
         ctx.beginPath()
         ctx.moveTo(70, y + 12)

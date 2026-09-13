@@ -7,7 +7,7 @@ export const MICHELIN_UNLOCK_LEVEL = 3
 
 /** 评审维度权重（评分 = 各项加权和，量纲统一为「分」） */
 export const MICHELIN_FACTORS = [
-  { id: 'menu', label: '菜单成色', weight: 12, hint: '菜单中料理的最高 tier 之和' },
+  { id: 'menu', label: '菜单成色', weight: 12, hint: '菜单中料理的最高档位之和' },
   { id: 'decor', label: '店面装潢', weight: 0.6, hint: '已购装饰件数' },
   { id: 'orders', label: '出餐口碑', weight: 1.2, hint: '已完成的食客订单数' },
   { id: 'critic', label: '评论家好评', weight: 25, hint: '满足评论家的次数' },

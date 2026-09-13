@@ -4,6 +4,7 @@
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../../src/game/skills/registry.js'
@@ -27,8 +28,15 @@ import { MILESTONES, milestoneSummary } from '../../src/game/data/milestones.js'
 import { CHRONICLE_CAP, groupByDay } from '../../src/game/data/chronicle.js'
 import { QUIRK_CAT_DEFS, quirkCategoryStats } from '../../src/game/data/tales.js'
 import { recipesForPair, easiestRecipeForPair } from '../../src/game/data/flavorRecipes.js'
+import { SKINS, SKIN_REQUIRED_KEYS, skinVars, rgbOf } from '../../src/game/data/skins.js'
+import { daoGraphLayout, GRAPH_METRICS } from '../../src/game/data/daoGraph.js'
+import { SHANHAI_PATHS, SHANHAI_NODES, SHANHAI_RING_COUNT, SHANHAI_RINGS, SHANHAI_RING_SLOTS, SHANHAI_GAPS, SHANHAI_TICKET_RING } from '../../src/game/data/shanhaiTree.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, DERIVED_MAX, OFFLINE_CAP, safeCap } from '../../src/game/data/caps.js'
+import { SHANHAI_EFFECT_FIELDS, SHANHAI_EFFECT_CAPS, shanhaiIndex, shanhaiNodeState, shanhaiEffectSum } from '../../src/game/data/shanhaiProgress.js'
+import { shanhaiGraphLayout } from '../../src/game/data/shanhaiGraph.js'
+import { DAO_PATHS, DAO_NODES, DAO_OUTER, daoNodesOf, daoPathCost, daoUnlockedTotal } from '../../src/game/data/daoTree.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS, BISCUIT_TASTE_RATE } from '../../src/game/data/biscuitUse.js'
-import { weatherForDay } from '../../src/game/data/weather.js'
+import { WEATHERS, weatherForDay, weatherBoost, fortuneLevelForDay, isHarshWeather, FORTUNE_LEVELS } from '../../src/game/data/weather.js'
 import { MASCOTS, mascotBondLevel, mascotReward } from '../../src/game/data/mascots.js'
 import { banquetTierFor } from '../../src/game/data/banquets.js'
 import { takeoutConcurrency, takeoutUpgradeCost, takeoutPrice, TAKEOUT_MAX_LEVEL } from '../../src/game/data/takeout.js'
@@ -67,6 +75,7 @@ import { EventBus } from '../../src/game/core/EventBus.js'
 import { settleOffline } from '../../src/game/bootstrap.js'
 import { useUiStore } from '../../src/stores/ui.js'
 import { ITEMS, getItem } from '../../src/game/data/items.js'
+import { itemImage } from '../../src/game/data/itemImage.js'
 import { ALCHEMY_RECIPES } from '../../src/game/data/alchemy.js'
 import { applyValueBalance } from '../../src/game/data/valueBalance.js'
 import { cardPoolFrom, cardStrength, simulateBattle, settleBattle, DIFFICULTIES } from '../../src/game/data/cardBattle.js'
@@ -990,6 +999,60 @@ console.log('══ E. 离线进度 ══')
     const mb = pw.marketBoost()
     const expect = fx.gatherXp
     check('天气', 'marketBoost 已乘入天气倍率', Math.abs(mb.gatherXp - expect) < 1e-9, `mb=${mb.gatherXp} wx=${expect}`)
+    // ── 恶劣天气（2026-09-13 用户要求：天气不能只有好处）──
+    const harsh = WEATHERS.filter((w) => w.harsh)
+    const ALLOWED = ['gatherYield', 'gatherXp', 'craftXp', 'combatXp', 'restaurant']
+    check('天气', `共 ${WEATHERS.length} 种天气，其中恶劣 ${harsh.length} 种且各带至少一条减益`, WEATHERS.length === 9 && harsh.length === 3
+      && harsh.every((w) => isHarshWeather(w) && Object.values(w.boost).some((v) => v < 1)))
+    check('天气', '每条恶劣天气都留了「换个赛道」的补偿项（至少一条增益）', harsh.every((w) => Object.values(w.boost).some((v) => v > 1)))
+    // 只削「额外产出几率」对早期玩家等于没影响 → 每条恶劣天气都必须有一条**硬乘区**减益（经验/收入）
+    const HARD = ['gatherXp', 'craftXp', 'combatXp', 'restaurant']
+    check('天气', '每条恶劣天气都有硬乘区减益（经验/收入 < 1），不只是削额外产出', harsh.every((w) => Object.entries(w.boost).some(([k, v]) => HARD.includes(k) && v < 1)))
+    check('天气', '减益幅度夹在 −30% 以内、且倍率键都在白名单内（防崩坏）', WEATHERS.every((w) => Object.entries(w.boost).every(([k, v]) => ALLOWED.includes(k) && v > 0 && v >= 0.7 && v <= 1.5)))
+    check('天气', '全年覆盖：9 种天气都能抽到（含 3 种恶劣）', (() => {
+      const ids = new Set()
+      for (let i = 0; i < 400; i++) {
+        const d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10)
+        ids.add(weatherForDay(d).id)
+      }
+      return ids.size === WEATHERS.length && harsh.every((w) => ids.has(w.id))
+    })())
+    check('天气', '运势等级只缓和减益、绝不加重（penaltyScale ≤ 1，增益项原样）', (() => {
+      if (!FORTUNE_LEVELS.every((l) => l.penaltyScale > 0 && l.penaltyScale <= 1)) return false
+      let softened = 0
+      for (let i = 0; i < 400; i++) {
+        const d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10)
+        const w = weatherForDay(d)
+        const eff = weatherBoost(d)
+        for (const [k, v] of Object.entries(w.boost)) {
+          if (v < 1) {
+            if (eff[k] < v - 1e-9 || eff[k] > 1 + 1e-9) return false // 只能变好、最多回到 1
+            if (eff[k] > v + 1e-9) softened++
+          } else if (Math.abs(eff[k] - v) > 1e-9) return false // 增益不受运势影响
+        }
+      }
+      return softened > 0 // 一年内至少出现过「被运势缓和」的恶劣天气
+    })())
+    // 额外产出几率被压成负数时：在线不倒扣、离线也必须夹 0（否则坏天气下离线比在线还亏）
+    check('天气', '恶劣天气把额外产出压负时，在线/离线同口径（都不倒扣基础产量）', (() => {
+      const inst = getSkillInstance('foraging')
+      const orig = inst.yieldExtraChance.bind(inst)
+      inst.yieldExtraChance = () => -0.5
+      const exp = inst.expectedYield(inst.currentTarget)
+      const floor = 1 + inst.doubleChance(inst.currentTarget) + inst.yieldBatch(inst.currentTarget)
+      inst.yieldExtraChance = orig
+      return Math.abs(exp - floor) < 1e-9
+    })())
+    check('天气', '恶劣天气真的会打进聚合值（对应赛道 < 1）', (() => {
+      for (let i = 0; i < 400; i++) {
+        const d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10)
+        const w = weatherForDay(d)
+        if (!isHarshWeather(w)) continue
+        const eff = weatherBoost(d)
+        if (Object.entries(w.boost).some(([k, v]) => v < 1 && eff[k] < 1)) return true
+      }
+      return false
+    })())
   }
   // 吉祥物（2026-09-10）：购买 + 每日蹭一次 + 好感等级
   {
@@ -2842,39 +2905,589 @@ console.log('══ C19. 数据引用完整性 ══')
   }
 }
 
+// ── C20. 皮肤（v2.1：每套皮肤必须覆盖完整色板，且两主题下对比度达标）──
+console.log('══ C20. 皮肤 ══')
+{
+  const hex2rgb = (h) => { const x = h.replace('#', ''); return [parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16)] }
+  const lum = (h) => { const c = hex2rgb(h); const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]) }
+  const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05) }
+
+  check('皮肤', `id 唯一且非空（${SKINS.length} 套）`, new Set(SKINS.map((s) => s.id)).size === SKINS.length && SKINS.every((s) => s.id && s.name && s.desc))
+  check('皮肤', '名称唯一（防设置面板误判）', new Set(SKINS.map((s) => s.name)).size === SKINS.length)
+  check('皮肤', '解锁门槛严格递增且首套为 0', SKINS.every((s, i) => i === 0 ? s.need === 0 : s.need > SKINS[i - 1].need))
+  check('皮肤', '原味不覆盖任何变量（= 主题默认色）', Object.keys(SKINS[0].vars ?? {}).length === 0 && Object.keys(SKINS[0].varsDark ?? {}).length === 0)
+
+  const nonClassic = SKINS.filter((s) => s.id !== 'classic')
+  const missLight = [], missDark = [], deepInDark = [], rgbMismatch = []
+  for (const s of nonClassic) {
+    for (const k of SKIN_REQUIRED_KEYS) if (!(k in (s.vars ?? {}))) missLight.push(`${s.id}:${k}`)
+    // 深色下豁免两项：--primary-deep（深色块本就没定义它）与 --border（深色统一金色描边=设计身份，不随皮肤）
+    const darkExempt = new Set(['--primary-deep', '--border'])
+    for (const k of SKIN_REQUIRED_KEYS) if (!darkExempt.has(k) && !(k in (s.varsDark ?? {}))) missDark.push(`${s.id}:${k}`)
+    if ('--primary-deep' in (s.varsDark ?? {})) deepInDark.push(s.id)
+    for (const theme of ['light', 'dark']) {
+      const v = skinVars(s.id, theme)
+      if (v['--primary'] && v['--primary-rgb'] !== rgbOf(v['--primary'])) rgbMismatch.push(`${s.id}/${theme}:--primary-rgb`)
+      if (theme === 'dark') for (const key of ['--panel-rgb', '--panel-soft-rgb', '--panel-raised-rgb', '--panel-hi-rgb']) {
+        if (!v[key]) continue
+        const [r, g, b] = v[key].split(',').map(Number)
+        if (r > 195 && g > 195 && b > 195) missDark.push(`${s.id}:${key}过亮`)
+      }
+    }
+  }
+  check('皮肤', '浅色版变量齐备（含调色板三元组）', missLight.length === 0, missLight.slice(0, 6).join(' '))
+  check('皮肤', '深色版变量齐备且面板仍为深色', missDark.length === 0, missDark.slice(0, 6).join(' '))
+  check('皮肤', '深色版不得覆盖 --primary-deep', deepInDark.length === 0, deepInDark.join(' '))
+  check('皮肤', '--primary-rgb 与 --primary 同值（rgba 变量不脱钩）', rgbMismatch.length === 0, rgbMismatch.slice(0, 4).join(' '))
+
+  const fails = []
+  for (const s of SKINS) {
+    for (const theme of ['light', 'dark']) {
+      const v = skinVars(s.id, theme)
+      const base = theme === 'dark'
+        ? { text: '#f2e6d7', dim: '#cfbaa5', muted: '#bfa98f', bg: '#1a120c', card: '#241a13', primary: '#e0704a' }
+        : { text: '#4a2f26', dim: '#6b5347', muted: '#7a6f68', bg: '#f8f1e8', card: '#fffdf9', primary: '#d95a38' }
+      const g = (k, d) => v[k] ?? d
+      const pairs = [
+        ['text/bg', cr(g('--text', base.text), g('--bg', base.bg)), 4.5],
+        ['text/card', cr(g('--text', base.text), g('--card', base.card)), 4.5],
+        ['text-dim/card', cr(g('--text-dim', base.dim), g('--card', base.card)), 4.5],
+        ['muted/card', cr(g('--muted', base.muted), g('--card', base.card)), 4.5],
+        // 按钮文字是粗体大字（大文字阈值 3.0）；深色竣典的按钮底是 token 默认值 #b8502c
+        ['白字/主色按钮底', cr('#ffffff', g('--btn-primary-bg', theme === 'dark' ? '#b8502c' : g('--primary', base.primary))), 3.0],
+        ['主色当文字/卡片', cr(g('--primary', base.primary), g('--card', base.card)), 3.0],
+      ]
+      if (theme === 'light') pairs.push(['primary-deep/primary-soft', cr(g('--primary-deep', '#7a2f16'), g('--primary-soft', '#f8dccd')), 4.5])
+      for (const [name, got, min] of pairs) if (got < min) fails.push(`${s.id}/${theme} ${name} ${got.toFixed(2)}<${min}`)
+    }
+  }
+  check('皮肤', '逐皮肤 × 浅/深 对比度达标（WCAG）', fails.length === 0, fails.slice(0, 6).join('; '))
+}
+
+// ── C21. 厨神之路图谱（v2.1：**辐射式**布局，显示层纯函数，玩法数据不动）──
+console.log('══ C21. 厨神之路图谱 ══')
+{
+  const g = daoGraphLayout()
+  const ids = new Set(g.nodes.map((n) => n.id))
+  const byRoad = (id) => g.nodes.filter((n) => n.pathId === id)
+  const tierR = (t) => g.nodes.filter((n) => n.tier === t).map((n) => n.radius)
+  const rootR = g.root?.r ?? 0
+  check('道途图谱', `节点数与 DAO_NODES 一致（${DAO_NODES.length}）`, g.nodes.length === DAO_NODES.length, `${g.nodes.length}`)
+  check('道途图谱', '四条道途各 9 个节点、每层 3 个', DAO_PATHS.every((p) => byRoad(p.id).length === 9)
+    && [1, 2, 3].every((t) => DAO_PATHS.every((p) => byRoad(p.id).filter((n) => n.tier === t).length === 3)))
+  check('道途图谱', '坐标均为有限数且不重叠（含 6px 间隙）', g.nodes.every((n) => Number.isFinite(n.cx) && Number.isFinite(n.cy))
+    && g.nodes.every((a, i) => g.nodes.every((b, j) => i >= j || Math.hypot(a.cx - b.cx, a.cy - b.cy) >= a.r + b.r + 6)))
+  check('道途图谱', '层级越外圈半径越大（层 1 < 2 < 3，含抖动也不倒挂）', Math.max(...tierR(1)) < Math.min(...tierR(2)) && Math.max(...tierR(2)) < Math.min(...tierR(3)),
+    `${Math.round(Math.max(...tierR(1)))}/${Math.round(Math.min(...tierR(2)))}/${Math.round(Math.min(...tierR(3)))}`)
+  check('道途图谱', '每个节点落在自己扇区的角度范围内（中心 ± 跨度/2 + 抖动）', DAO_PATHS.every((p, i) => {
+    const c = GRAPH_METRICS.centers[i % GRAPH_METRICS.centers.length]
+    const half = GRAPH_METRICS.spread / 2 + GRAPH_METRICS.jitterA + 0.5
+    return byRoad(p.id).every((n) => {
+      const d = ((n.deg - c) % 360 + 540) % 360 - 180
+      return Math.abs(d) <= half
+    })
+  }))
+  check('道途图谱', '四个扇区角度互不重叠（相邻扇区留有空隙）', (() => {
+    const half = GRAPH_METRICS.spread / 2 + 6
+    const ranges = GRAPH_METRICS.centers.map((c) => [c - half, c + half]).sort((a, b) => a[0] - b[0])
+    return ranges.every((r, i) => i === 0 || r[0] > ranges[i - 1][1])
+  })())
+  check('道途图谱', '连线端点均存在且无自环', g.links.length > 0 && g.links.every((l) => ids.has(l.from) && ids.has(l.to) && l.from !== l.to)
+    && g.links.every((l) => Number.isFinite(l.x1) && Number.isFinite(l.y2)))
+  check('道途图谱', '画布尺寸能容纳全部节点与扇区', g.width > 0 && g.height > 0
+    && g.nodes.every((n) => n.cx - n.r >= 0 && n.cy - n.r >= 0 && n.cx + n.r <= g.width && n.cy + n.r <= g.height))
+  check('道途图谱', '根在画布中心，且干枝连到各自路带第 1 层节点', !!g.root && Math.abs(g.root.x - g.width / 2) < 1 && Math.abs(g.root.y - g.height / 2) < 1
+    && g.trunks.length === 4 && g.trunks.every((t) => {
+      const m = t.d.match(/([\d.-]+) ([\d.-]+)$/)
+      if (!m) return false
+      const ex = Number(m[1]), ey = Number(m[2])
+      return byRoad(t.pathId).filter((n) => n.tier === 1).some((n) => Math.hypot(n.cx - ex, n.cy - ey) <= n.r + 10)
+    }))
+  check('道途图谱', '节点半径随成本分档（1/2/3 枚 → 三档递增）', (() => {
+    const rOf = (c) => [...new Set(g.nodes.filter((n) => n.cost === c).map((n) => n.r))]
+    const [a, b, c] = [rOf(1), rOf(2), rOf(3)]
+    return a.length === 1 && b.length === 1 && c.length === 1 && a[0] < b[0] && b[0] < c[0]
+  })())
+  check('道途图谱', '三条环半径递增且都在根之外', g.rings.length === 3
+    && g.rings.every((r, i) => r.radius > rootR + 40 && (i === 0 || r.radius > g.rings[i - 1].radius)))
+  check('道途图谱', '扇区标题夹在根与第 1 环之间（聚焦中心即可见）', g.sectors.every((sec) => {
+    const d = Math.hypot(sec.titleAt.x - g.root.x, sec.titleAt.y - g.root.y)
+    return d > rootR + 10 && d < g.rings[0].radius - g.nodes[0].r
+  }))
+  check('道途图谱', '顶部进度牌匾**已删除**（用户 2026-09-13 要求；进度改由页面承担）', !('plaque' in g) || !g.plaque)
+  check('道途图谱', '外环「觅珍环」：12 个节点环绕一整圈（每 30°、在第 3 层之外、闭合成圈）', (() => {
+    const outer = g.nodes.filter((n) => n.ring)
+    if (outer.length !== DAO_OUTER.length || DAO_OUTER.length !== 12) return false
+    if (!outer.every((n) => n.radius > GRAPH_METRICS.rings[2] + 40)) return false // 必须落在第 3 层之外
+    const degs = outer.map((n) => ((n.deg % 360) + 360) % 360).sort((a, b) => a - b)
+    const steps = degs.map((d, k) => (k === 0 ? 360 - degs[degs.length - 1] + d : d - degs[k - 1]))
+    if (!steps.every((x) => Math.abs(x - 30) < 6)) return false // 每 30°（含角度抖动容差）
+    return g.links.filter((l) => l.ringLink).length === 12 // 12 条 = 首尾相接的闭合圈
+  })())
+  check('道途图谱', '外环每个节点奖励 100 张觅珍抽卡券、不消耗印记、门槛按全树已解锁数递进到 36', (() => {
+    const gates = DAO_OUTER.map((n) => n.req?.daoNodes)
+    return DAO_OUTER.every((n) => (n.cost ?? 0) === 0 && n.reward?.tickets === 100 && !n.effect)
+      && gates.every((x, k) => x === 3 * (k + 1)) && gates[gates.length - 1] === 36
+  })())
+  check('道途图谱', '外环节点不吃四条道途的进度统计（各道途仍 9 个 / 单路 18 印记）', DAO_PATHS.every((q) => daoNodesOf(q.id).length === 9 && daoPathCost(q.id) === 18)
+    && daoUnlockedTotal(DAO_NODES.filter((n) => n.path !== 'outer').map((n) => n.id)) === 36)
+  check('道途图谱', '画布节点是纯图标（无名称/徽标；标题有底片、图标随半径缩放）', (() => {
+    const svg = fs.readFileSync(new URL('../../src/components/DaoTreeGraph.vue', import.meta.url), 'utf8')
+    const noMarkup = !svg.includes('dtg-name') && !svg.includes('dtg-badge')
+    // 同时守住两处视觉契约：道途标题有淡色底片胶囊、节点图标随半径缩放
+    const polished = svg.includes('dtg-title-pill') && svg.includes('--dtg-icon')
+    const noFields = g.nodes.every((n) => !('labelDeg' in n) && !('side' in n) && 'icon' in n && 'name' in n)
+    return noMarkup && noFields && polished
+  })())
+  check('道途图谱', '连线均标注所属支线（四道途 + 外环觅珍环，画布按支线色着色）', g.links.every((l) => l.pathId === 'outer' || g.sectors.some((x) => x.id === l.pathId)))
+  check('道途图谱', '节点状态字段齐备（供画布着色）', g.nodes.every((n) => n.id && n.name && n.icon && n.pathId && n.pathName && Number.isFinite(n.cost) && Number.isFinite(n.tierReq)))
+}
+
+// ── C22. 山海食经（v2.1：10 系 × 6 环 × 3 节点；**纯条件点亮 + 固定数值奖励**）──
+console.log('══ C22. 山海食经 ══')
+{
+  const N = SHANHAI_NODES
+  const ids = new Set(N.map((n) => n.id))
+  check('山海食经', `节点总数 = 400 分支 + 50 汇金 + 10 珍券 = ${N.length}`, N.length === 460 && SHANHAI_PATHS.length === 10 && SHANHAI_RING_COUNT === 10 && SHANHAI_RINGS.length === 10 && SHANHAI_RING_SLOTS.join(',') === '3,3,3,3,3,5,5,5,5,5' && N.filter((n) => n.gap == null && !n.ticket).length === 400 && N.filter((n) => n.gap != null).length === 50 && N.filter((n) => n.ticket).length === 10)
+  check('山海食经', 'id 唯一', ids.size === N.length)
+  check('山海食经', '每系每环节点数 = 该环设计槽位数（3 或 5；第 6 环起 5 个）', SHANHAI_PATHS.every((p) => SHANHAI_RING_SLOTS.every((c, i) => N.filter((n) => n.path === p.id && n.ring === i + 1).length === c)))
+  check('山海食经', '条件只用 codex（收集件数 + 技能等级 + 转生次数）且数值合法', N.every((n) => {
+    const k = n.req?.kind
+    if (k !== 'codex' && k !== 'progress') return false
+    // 珍券环用「已点亮节点数」当门槛，不写收集件数/等级/转生
+    if (n.ticket) return k === 'progress' && Number.isFinite(n.req.nodes) && n.req.nodes > 0
+    const base = Number.isFinite(n.req.count) && n.req.count > 0
+      && Number.isFinite(n.req.level) && n.req.level >= 0 && Number.isFinite(n.req.prestige ?? 0) && (n.req.prestige ?? 0) >= 0
+    if (!base) return false
+    // 汇金节点横跨两条线：skill/skill2 必须正好是空隙两侧的技能；分支节点按 path 校验
+    if (n.gap != null) {
+      const g = SHANHAI_GAPS.find((x) => x.id === n.path)
+      return !!g && n.req.skill === g.aSkill && n.req.skill2 === g.bSkill
+    }
+    return SHANHAI_PATHS.some((p) => p.id === n.path && p.skill === n.req.skill)
+  }))
+  // ⚠️ 转生环**不得同时要求「当前等级」**：转生会把等级重置为 1+传承（≤20）→ 那样节点永远点不亮
+  check('山海食经', '转生环只写转生次数、不写等级要求（否则转生后永远够不着）', N.every((n) => !(n.req?.prestige > 0) || (n.req.level ?? 0) === 0))
+  check('山海食经', '大后期里程碑严格递增：满 100 级 → 转生 1 → 5 → 10', (() => {
+    const gate = (r) => { const n = N.find((x) => x.path === 'pick' && x.ring === r); return { level: n.req.level ?? 0, prestige: n.req.prestige ?? 0 } }
+    const r7 = gate(7), r8 = gate(8), r9 = gate(9), r10 = gate(10)
+    return r7.level === 100 && r7.prestige === 0 && r8.prestige === 1 && r9.prestige === 5 && r10.prestige === 10
+      && r8.prestige < r9.prestige && r9.prestige < r10.prestige
+  })())
+  check('山海食经', '前 6 环收集门槛严格递增；第 6~10 环持平（里程碑环靠等级/转生卡）', SHANHAI_PATHS.every((p) => {
+    const need = Array.from({ length: SHANHAI_RING_COUNT }, (_, i) => N.find((n) => n.path === p.id && n.ring === i + 1).req.count)
+    return need.slice(0, 6).every((v, i) => i === 0 || v > need[i - 1]) && need.slice(5).every((v) => v === need[5])
+  }))
+  check('山海食经', '汇金链：10 个分支空隙 × 第 6~10 环 = 50 个金币节点，且落在**两分支之间**（不是环内）', (() => {
+    const gaps = N.filter((n) => n.gap != null)
+    return SHANHAI_GAPS.length === 10 && gaps.length === 50
+      && SHANHAI_GAPS.every((g) => [6, 7, 8, 9, 10].every((r) => {
+        const n = N.find((x) => x.path === g.id && x.ring === r)
+        return n && n.effect?.field === 'gold' && n.req?.skill === g.aSkill && n.req?.skill2 === g.bSkill
+      }))
+      && gaps.every((n) => n.effect?.field === 'gold')
+  })())
+  check('山海食经', '汇金数额随环递增（6k/18k/48k/120k/300k，合计 4.92M）且在上限内', (() => {
+    const gaps = N.filter((n) => n.gap != null)
+    const perRing = {}
+    for (const n of gaps) perRing[n.ring] = n.effect.amount
+    const rings = Object.keys(perRing).map(Number).sort((a, b) => a - b)
+    const inc = rings.every((r, i) => i === 0 || perRing[r] > perRing[rings[i - 1]])
+    const total = gaps.reduce((a, n) => a + n.effect.amount, 0)
+    return inc && total === 4920000 && total <= SHANHAI_EFFECT_CAPS.gold
+  })(), (() => `汇金 ${N.filter((n) => n.gap != null).reduce((a, n) => a + n.effect.amount, 0).toLocaleString('en-US')} 金币`)
+  )
+  check('山海食经', '外圈「珍券环」：10 个环绕整圈（每 36°、在第 10 环之外、闭合成圈）、每个 100 张券', (() => {
+    const tk = N.filter((n) => n.ticket)
+    if (tk.length !== 10 || SHANHAI_TICKET_RING.nodes !== 10) return false
+    if (!tk.every((n) => n.reward?.tickets === 100 && n.req?.kind === 'progress' && n.iconItem === null)) return false
+    const g = shanhaiGraphLayout()
+    const gn = g.nodes.filter((n) => n.ticket)
+    if (gn.length !== 10) return false
+    if (!gn.every((n) => n.radius > g.rings[g.rings.length - 1].radius + 100)) return false // 在第 10 环之外
+    const degs = gn.map((n) => ((n.deg % 360) + 360) % 360).sort((a, b) => a - b)
+    const steps = degs.map((d, i) => (i === 0 ? 360 - degs[degs.length - 1] + d : d - degs[i - 1]))
+    if (!steps.every((x) => Math.abs(x - 36) < 6)) return false // 每 36°（含抖动容差）
+    return g.links.filter((l) => l.ringLink).length === 10 // 闭合圈
+  })())
+  check('山海食经', '珍券环门槛 = 已点亮节点数（45→450，排除珍券环自身，否则自引用）', (() => {
+    const tk = N.filter((n) => n.ticket)
+    if (!tk.every((n, i) => n.req.nodes === 45 * (i + 1)) || tk[9].req.nodes !== 450) return false
+    // 全点亮 450 个非珍券节点后，最后一个珍券节点才可点亮；点亮 449 个仍不可
+    const p = freshPlayer()
+    const rest = N.filter((n) => !n.ticket).map((n) => n.id)
+    p.shanhaiUnlocked = rest.slice(0, 449)
+    const st1 = shanhaiNodeState(tk[9], p)
+    p.shanhaiUnlocked = rest
+    const st2 = shanhaiNodeState(tk[9], p)
+    const st3 = shanhaiNodeState(tk[0], p) // 门槛 45：此时早已满足
+    return st1.can === false && st2.can === true && st3.can === true
+  })())
+  check('山海食经', '汇金节点的成对条件：两线合计收集 + 取两条线较低的等级/转生', (() => {
+    const p = freshPlayer()
+    const gapNode = N.find((n) => n.id === 'gap0_6') // 采撷+渔获，第 6 环：两线各 90% + 两线技能 75 级
+    const idx = shanhaiIndex()
+    const needPick = Math.max(3, Math.ceil(idx.pick.length * 0.9))
+    const needFish = Math.max(3, Math.ceil(idx.fish.length * 0.9))
+    const st0 = shanhaiNodeState(gapNode, p)
+    if (st0.need !== needPick + needFish) return false // 门槛 = 两线各自门槛之和
+    // 只满足一条线 → 仍不可点亮（这是「两条线都得到」的核心）
+    for (const id of idx.pick.slice(0, needPick)) p.collected[id] = true
+    p.setSkillState('foraging', { level: 75, exp: 0 })
+    p.setSkillState('fishing', { level: 75, exp: 0 })
+    const st1 = shanhaiNodeState(gapNode, p)
+    if (st1.can) return false
+    for (const id of idx.fish.slice(0, needFish)) p.collected[id] = true
+    const st2 = shanhaiNodeState(gapNode, p)
+    return st2.can === true && st2.level === 75
+  })())
+  check('山海食经', '汇金点亮即到账、账本记应发、补发幂等（旧档迁移走同一入口）', (() => {
+    const p = freshPlayer()
+    const node = N.find((n) => n.id === 'gap0_6') // 采撷+渔获 第 6 环：金币 +6000
+    const idx = shanhaiIndex()
+    for (const id of idx.pick.slice(0, Math.max(3, Math.ceil(idx.pick.length * 0.9)))) p.collected[id] = true
+    for (const id of idx.fish.slice(0, Math.max(3, Math.ceil(idx.fish.length * 0.9)))) p.collected[id] = true
+    p.setSkillState('foraging', { level: 75, exp: 0, prestiges: 0 })
+    p.setSkillState('fishing', { level: 75, exp: 0, prestiges: 0 })
+    const g0 = p.gold
+    const r = p.shanhaiUnlock(node.id)
+    if (!r.ok || p.gold !== g0 + 6000) return false
+    if (!String(r.landed).includes('金币') || p.stats.shanhaiGoldPaid !== 6000) return false
+    // 旧档迁移：账本清零 → 补发一次；再补一次不重复发（幂等）
+    p.stats.shanhaiGoldPaid = 0
+    const gBefore = p.gold
+    const fix1 = p.settleShanhaiGold()
+    const after1 = p.gold
+    const fix2 = p.settleShanhaiGold()
+    // ⚠️ 存档往返**绝不能重复发**（applySave 必须带回 stats.shanhaiGoldPaid；否则每次读档白拿一遍金币）
+    const gRound = p.gold
+    p.applySave(JSON.parse(JSON.stringify(p.serialize())))
+    const roundOk = p.stats.shanhaiGoldPaid === 6000 && p.settleShanhaiGold().repaired === false && p.gold >= gRound
+    return fix1.repaired === true && fix1.gold === 6000 && after1 === gBefore + 6000
+      && fix2.repaired === false && p.gold >= after1 && p.stats.shanhaiGoldPaid === 6000 && roundOk
+  })())
+  check('山海食经', '分支节点的图标物品都存在图片文件；汇金节点用金币图标兜底', (() => {
+    const bad = []
+    for (const n of N) {
+      if (n.gap != null || n.ticket) {
+        // 汇金 / 珍券节点：iconItem 为空、必须给 emoji 兜底（画布走位图精灵，只有一个字形）
+        if (n.iconItem !== null || !n.icon) bad.push(n.id + ':汇金/珍券节点应只有 emoji 兜底图标')
+        continue
+      }
+      if (!n.iconItem) { bad.push(n.id + ':无 iconItem'); continue }
+      const rel = itemImage(n.iconItem)
+      if (!rel) { bad.push(n.id + ':' + n.iconItem + ':无图片URL'); continue }
+      if (!fs.existsSync(fileURLToPath(new URL('../../public/' + rel, import.meta.url)))) bad.push(n.id + ':' + n.iconItem)
+    }
+    return bad.length === 0
+  })(), '')
+  check('山海食经', '每个节点都有固定数值奖励：分支/汇金走 effect 白名单，珍券环走 reward.tickets', N.every((n) => (n.ticket
+    ? n.reward?.tickets > 0 && !n.effect
+    : n.effect && SHANHAI_EFFECT_FIELDS.includes(n.effect.field) && Number.isInteger(n.effect.amount) && n.effect.amount > 0)))
+  check('山海食经', '全树效果总量≤ 上限（防悄悄加码）', (() => {
+    const sum = (f) => N.filter((n) => n.effect?.field === f).reduce((a, n) => a + n.effect.amount, 0)
+    const perSkill = {}
+    for (const n of N.filter((x) => x.effect?.field === 'flatYield')) {
+      const skill = SHANHAI_PATHS.find((p) => p.id === n.path)?.skill
+      perSkill[skill] = (perSkill[skill] ?? 0) + n.effect.amount
+    }
+    return sum('inventoryCap') <= SHANHAI_EFFECT_CAPS.inventoryCap && sum('bankCap') <= SHANHAI_EFFECT_CAPS.bankCap
+      && sum('coldStorageCap') <= SHANHAI_EFFECT_CAPS.coldStorageCap && sum('offlineH') <= SHANHAI_EFFECT_CAPS.offlineH
+      && Object.values(perSkill).every((v) => v <= SHANHAI_EFFECT_CAPS.flatYieldPerSkill)
+  })(), `背包${N.filter((n) => n.effect?.field === 'inventoryCap').reduce((a, n) => a + n.effect.amount, 0)}/仓库${N.filter((n) => n.effect?.field === 'bankCap').reduce((a, n) => a + n.effect.amount, 0)}/离线${N.filter((n) => n.effect?.field === 'offlineH').reduce((a, n) => a + n.effect.amount, 0)}h`)
+  check('山海食经', '各线可收集清单非空（来自真实技能实例）且最高环门槛≤清单长度', (() => {
+    const idx = shanhaiIndex()
+    return SHANHAI_PATHS.every((p) => {
+      const len = (idx[p.id] ?? []).length
+      const maxNeed = Math.max(...N.filter((n) => n.path === p.id).map((n) => n.req.count))
+      return len > 0 && maxNeed <= len
+    })
+  })())
+  check('山海食经', '新档：0 个可点亮 / 0 个已点亮', (() => {
+    const p = freshPlayer()
+    const list = p.shanhaiStates()
+    return list.length === 460 && list.filter((x) => x.can).length === 0 && list.filter((x) => x.unlocked).length === 0
+  })())
+  check('山海食经', '收集够即可点亮（不消耗任何资源），且容量奖励即时到账', (() => {
+    const p = freshPlayer()
+    const node = N.find((n) => n.id === 'pick11') // 第 1 环：收集 9 件 → 背包 +1
+    const list = shanhaiIndex().pick ?? []
+    for (const id of list.slice(0, node.req.count)) p.collected[id] = true
+    const before = { cap: p.inventoryCap, gold: p.gold, unlocked: p.shanhaiUnlocked.length }
+    const r = p.shanhaiUnlock('pick11')
+    return r.ok && p.inventoryCap === before.cap + 1 && p.gold === before.gold && p.shanhaiUnlocked.length === before.unlocked + 1
+      && p.shanhaiEffects().caps.inventory === 1
+  })())
+  check('山海食经', '容量奖励在满上限时**不蒸发**（顺位转投仓库，并返回到账文案）', (() => {
+    const p = freshPlayer()
+    const node = N.find((n) => n.id === 'pick11') // 背包 +1
+    for (const id of (shanhaiIndex().pick ?? []).slice(0, node.req.count)) p.collected[id] = true
+    p.inventoryCap = CAP_MAX.inventory // 真买满（硬顶；100 只是商店能买到的上限）
+    const bank0 = p.bankCap
+    const r = p.shanhaiUnlock('pick11')
+    // 断言**行为**（背包不动 + 仓库 +1 + 回执里说明转投），不写死文案
+    return r.ok && p.inventoryCap === CAP_MAX.inventory && p.bankCap === bank0 + 1 && typeof r.landed === 'string' && r.landed.includes('仓库')
+  })())
+  check('山海食经', '商店买满后背包节点**仍落在背包**（不再错位进仓库；用户实测报过）', (() => {
+    const p = freshPlayer()
+    const node = N.find((n) => n.id === 'pick11') // 背包 +1
+    for (const id of (shanhaiIndex().pick ?? []).slice(0, node.req.count)) p.collected[id] = true
+    p.inventoryCap = PAID_CAP_MAX.inventory // 金币路径已买满（100）
+    const bank0 = p.bankCap
+    const r = p.shanhaiUnlock('pick11')
+    return r.ok && p.inventoryCap === PAID_CAP_MAX.inventory + 1 && p.bankCap === bank0 && r.landed.includes('背包')
+  })(), `硬顶 ${CAP_MAX.inventory} / 商店上限 ${PAID_CAP_MAX.inventory}`)
+  check('山海食经', '条件不足时点亮失败且给出原因', (() => {
+    const p = freshPlayer()
+    const r = p.shanhaiUnlock('pick11')
+    return r.ok === false && typeof r.msg === 'string' && r.msg.includes('还差')
+  })())
+  check('山海食经', '旧档对账补发：缺账本时按已点亮节点补齐容量（被上限吞掉的也会补）', (() => {
+    const p = freshPlayer()
+    const idx = shanhaiIndex()
+    for (const id of (idx.pick ?? []).slice(0, 60)) p.collected[id] = true
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    saved.shanhaiUnlocked = ['pick11', 'pick12'] // 两个「背包 +1」
+    saved.inventoryCap = 20
+    delete saved.stats.shanhaiCapGranted
+    p.applySave(saved)
+    return p.inventoryCap === 22 && p.stats.shanhaiCapGranted?.inventory === 2
+  })())
+  check('山海食经', '对账幂等：重复读档不重复补发；满上限时顺位转投仓库', (() => {
+    const p = freshPlayer()
+    const idx = shanhaiIndex()
+    for (const id of (idx.pick ?? []).slice(0, 60)) p.collected[id] = true
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    saved.shanhaiUnlocked = ['pick11', 'pick12', 'pick13']
+    saved.inventoryCap = CAP_MAX.inventory // 真买满 → 三个 +1 都该顺位到仓库
+    saved.stats.shanhaiCapGranted = { inventory: 0, bank: 0, cold: 0 }
+    p.applySave(saved)
+    const bankAfterFirst = p.bankCap
+    p.applySave(JSON.parse(JSON.stringify(p.serialize()))) // 再读一次
+    return p.inventoryCap === CAP_MAX.inventory && bankAfterFirst === 103 && p.bankCap === 103
+  })())
+  check('山海食经', '存档往返与旧档迁移（缺字段回退空数组）', (() => {
+    const p = freshPlayer()
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    p.applySave({ ...saved, shanhaiUnlocked: undefined })
+    return Array.isArray(p.shanhaiUnlocked) && p.shanhaiUnlocked.length === 0
+  })())
+  check('山海食经', '道途标题在中心附近（夹在根与第 1 环之间）且两两不重叠', (() => {
+    const g = shanhaiGraphLayout()
+    const r0 = g.root.r
+    const ring1 = g.rings[0].radius
+    const titleR = g.sectors.map((s) => Math.hypot(s.titleAt.x - g.root.x, s.titleAt.y - g.root.y))
+    if (!titleR.every((d) => d > r0 + 20 && d < ring1)) return false
+    // 相邻标题中心距要 ≥ 底片宽（约 110px，留 20px 余量 → 130）
+    for (let i = 0; i < g.sectors.length; i++) {
+      const a = g.sectors[i].titleAt, b = g.sectors[(i + 1) % g.sectors.length].titleAt
+      if (Math.hypot(a.x - b.x, a.y - b.y) < 130) return false
+    }
+    return true
+  })())
+  check('山海食经', '画布布局：460 节点（含 50 汇金 + 10 珍券）/ 10 扇区 / 10 环，坐标有限且不重叠', (() => {
+    const g = shanhaiGraphLayout()
+    if (g.nodes.length !== 460 || g.nodes.filter((n) => n.gap).length !== 50 || g.nodes.filter((n) => n.ticket).length !== 10 || g.sectors.length !== 10 || g.rings.length !== 10) return false
+    if (!g.nodes.every((n) => Number.isFinite(n.cx) && Number.isFinite(n.cy))) return false
+    for (let i = 0; i < g.nodes.length; i++) {
+      for (let j = i + 1; j < g.nodes.length; j++) {
+        const a = g.nodes[i], b = g.nodes[j]
+        if (Math.hypot(a.cx - b.cx, a.cy - b.cy) < a.r + b.r + 6) return false
+      }
+    }
+    return true
+  })())
+}
+
+// ── C23. 上限一致性（v2.1 审计：每一处「加上限」与「被加上限」的写入/消费方）──
+console.log('══ C23. 上限一致性 ══')
+{
+  const P_SRC = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+  check('上限', `容量上限单一来源（硬顶 背包${CAP_MAX.inventory}/仓库${CAP_MAX.bank}/冷库${CAP_MAX.cold}；金币上限 ${PAID_CAP_MAX.inventory}/${PAID_CAP_MAX.bank}/${PAID_CAP_MAX.cold}）`, CAP_MAX.inventory === 330 && CAP_MAX.bank === 890 && CAP_MAX.cold === 158 && PAID_CAP_MAX.inventory === 100 && PAID_CAP_MAX.bank === 500 && PAID_CAP_MAX.cold === 100 && CAP_BASE.inventory === 20 && CAP_BASE.bank === 100 && CAP_BASE.cold === 5 && DERIVED_MAX.farmPlots === 20 && DERIVED_MAX.restaurantSlots === 6)
+  // ⚠️ 本轮的关键不变量：硬顶必须**装得下**「金币买满 + 山海食经全树」——否则节点文案写「背包 +1」却顺位进仓库（用户实测报的错位）
+  check('上限', '山海食经把「离线上限 / 每技能每次 +1 件」用到恰好封顶（不多不少）', (() => {
+    const off = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').reduce((a, n) => a + n.effect.amount, 0)
+    const perSkill = {}
+    for (const n of SHANHAI_NODES.filter((x) => x.effect?.field === 'flatYield')) {
+      const skill = SHANHAI_PATHS.find((p) => p.id === n.path)?.skill
+      perSkill[skill] = (perSkill[skill] ?? 0) + n.effect.amount
+    }
+    // 恰好等于各自天花板：少了是浪费设计位，多了会被 offlineMaxHours/采集逻辑夹掉（等于发不出去的奖励）
+    return off === OFFLINE_CAP.shanhaiMaxHours
+      && Object.values(perSkill).every((v) => v === SHANHAI_EFFECT_CAPS.flatYieldPerSkill)
+  })(), (() => {
+    const off = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').reduce((a, n) => a + n.effect.amount, 0)
+    return `离线 ${off}h / 封顶 ${OFFLINE_CAP.shanhaiMaxHours}h`
+  })())
+  check('上限', '硬顶 ≥ 金币路径上限 + 山海食经全树容量（三档都不许「装不下」）', (() => {
+    const tree = { inventory: 0, bank: 0, cold: 0 }
+    for (const n of SHANHAI_NODES) {
+      if (n.effect?.field === 'inventoryCap') tree.inventory += n.effect.amount
+      else if (n.effect?.field === 'bankCap') tree.bank += n.effect.amount
+      else if (n.effect?.field === 'coldStorageCap') tree.cold += n.effect.amount
+    }
+    return CAP_MAX.inventory >= PAID_CAP_MAX.inventory + tree.inventory && CAP_MAX.bank >= PAID_CAP_MAX.bank + tree.bank
+      && CAP_MAX.cold >= PAID_CAP_MAX.cold + tree.cold
+  })(), (() => {
+    const tree = { inventory: 0, bank: 0, cold: 0 }
+    for (const n of SHANHAI_NODES) {
+      if (n.effect?.field === 'inventoryCap') tree.inventory += n.effect.amount
+      else if (n.effect?.field === 'bankCap') tree.bank += n.effect.amount
+      else if (n.effect?.field === 'coldStorageCap') tree.cold += n.effect.amount
+    }
+    return `需 背包${PAID_CAP_MAX.inventory}+${tree.inventory}=${PAID_CAP_MAX.inventory + tree.inventory} / 仓库${PAID_CAP_MAX.bank}+${tree.bank}=${PAID_CAP_MAX.bank + tree.bank} / 冷库${PAID_CAP_MAX.cold}+${tree.cold}=${PAID_CAP_MAX.cold + tree.cold}`
+  })())
+  check('上限', '容量动作在满上限时拒绝而不越界', (() => {
+    const p = freshPlayer()
+    p.inventoryCap = CAP_MAX.inventory
+    p.bankCap = CAP_MAX.bank
+    p.coldStorageCap = CAP_MAX.cold
+    const r = p.expandColdStorage()
+    return p.expandInventory(10) === false && p.expandBank(20) === false && r.ok === false
+      && p.inventoryCap === CAP_MAX.inventory && p.bankCap === CAP_MAX.bank && p.coldStorageCap === CAP_MAX.cold
+  })())
+  check('上限', '读档非法值不会把上限变成 NaN（字符串 / 超限 / 负数）', (() => {
+    const p = freshPlayer()
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    saved.inventoryCap = 'abc'
+    saved.bankCap = 9999
+    saved.coldStorageCap = -3
+    saved.offlineBonusH = 'x'
+    p.applySave(saved)
+    return Number.isFinite(p.inventoryCap) && p.inventoryCap === CAP_BASE.inventory
+      && p.bankCap === CAP_MAX.bank && p.coldStorageCap === 0 && p.offlineBonusH === 0
+  })())
+  check('上限', '派生上限数组读档被截断（出战位 / 菜单格 / 农田）且并行数合法化', (() => {
+    const p = freshPlayer()
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    saved.spirits = { active: ['a', 'b', 'c', 'd', 'e'], owned: {} }
+    saved.restaurant = { level: 1, menu: new Array(9).fill('apple'), incomeAccum: 0, decor: [] }
+    saved.farming = { plots: new Array(30).fill(null) }
+    saved.settings = { ...saved.settings, maxParallelIdle: 'x' }
+    p.applySave(saved)
+    return p.spirits.active.length <= 2 && p.restaurant.menu.length <= DERIVED_MAX.restaurantSlots
+      && p.farming.plots.length <= DERIVED_MAX.farmPlots && p.settings.maxParallelIdle === 0
+  })())
+  check('上限', `离线上限走唯一出口：${OFFLINE_CAP.baseHours}h + 饼干(≤${OFFLINE_CAP.biscuitMaxHours}) + 厨神之路(≤${OFFLINE_CAP.daoMaxHours}) + 山海食经(≤${OFFLINE_CAP.shanhaiMaxHours})`, (() => {
+    const p = freshPlayer()
+    p.offlineBonusH = 99 // 越界 → 段内夹到饼干上限
+    p.shanhaiUnlocked = ['pick61', 'fish61', 'hunt61', 'dig61', 'farm61'] // 每节点 +1h，共 5h
+    const shanhai = Math.min(OFFLINE_CAP.shanhaiMaxHours, p.shanhaiEffects().offlineH)
+    const dao = Math.min(OFFLINE_CAP.daoMaxHours, Number(p.daoEffects?.().offlineHours) || 0)
+    const wan = p.offlineMaxHours()
+    const wan2 = p.offlineMaxHours()
+    return shanhai === 5 && dao === 0 && wan === OFFLINE_CAP.baseHours + OFFLINE_CAP.biscuitMaxHours + shanhai && wan2 === wan
+  })(), (() => {
+    const p = freshPlayer()
+    p.offlineBonusH = 99
+    p.shanhaiUnlocked = ['pick61', 'fish61', 'hunt61', 'dig61', 'farm61']
+    return `实际 ${p.offlineMaxHours()}h / 山海 ${p.shanhaiEffects().offlineH}h`
+  })())
+  check('上限', '离线窗口只有一个算法（bootstrap 引 store 出口，不自己再算 12h）', (() => {
+    const src = fs.readFileSync(new URL('../../src/game/bootstrap.js', import.meta.url), 'utf8')
+    return /offlineMaxHours\(\)/.test(src) && !/12\s*\*\s*3600_000/.test(src) && !/DEFAULT_MAX_OFFLINE_MS\s*\*/.test(src)
+  })())
+  check('上限', `饼干离线加成不超过各自天花板（safeCap 拒绝 NaN/字符串）`, (() => {
+    return safeCap('abc', 0, OFFLINE_CAP.biscuitMaxHours) === 0 && safeCap(NaN, 7, 10) === 7
+      && safeCap(99, 0, OFFLINE_CAP.biscuitMaxHours) === OFFLINE_CAP.biscuitMaxHours && safeCap(-5, 1, 10) === 0 && safeCap(3.9, 0, 10) === 3
+  })())
+  check('上限', '冷库满不静默：拒绝存入且发 cold:full 事件', (() => {
+    const p = freshPlayer()
+    const spoil = Object.keys(ITEMS).find((id) => ITEMS[id]?.spoilMs && ITEMS[id]?.type !== 'equipment')
+    if (!spoil) return false
+    p.coldStorageCap = 0
+    p.inventory[spoil] = 3
+    let fired = 0
+    const h = () => { fired++ }
+    EventBus.on('cold:full', h)
+    const ok = p.depositToColdStorage(spoil, 1)
+    EventBus.off('cold:full', h)
+    return ok === false && fired === 1 && (p.inventory[spoil] ?? 0) === 3
+  })())
+  check('上限', '写入方不再出现裸字面量（player.js 里容量判定不写 100/500/20/5）', (() => {
+    const bad = P_SRC.split('\n').filter((l) => /Cap\b[^\n]*[<>=]=?[^\n]*(\b100\b|\b500\b|\b20\b)/.test(l) && !/CAP_|safeCap|shanghai|shanhai/.test(l))
+    return bad.length === 0
+  })(), (() => P_SRC.split('\n').filter((l) => /Cap\b[^\n]*[<>=]=?[^\n]*(\b100\b|\b500\b|\b20\b)/.test(l) && !/CAP_|safeCap|shanhai/.test(l)).slice(0, 3).join(' | '))())
+  check('上限', '金币路径天花板严格低于硬顶（抬硬顶≠放宽金币可买量）', PAID_CAP_MAX.inventory < CAP_MAX.inventory && PAID_CAP_MAX.bank < CAP_MAX.bank && PAID_CAP_MAX.cold < CAP_MAX.cold
+    && PAID_CAP_MAX.inventory > CAP_BASE.inventory && PAID_CAP_MAX.bank > CAP_BASE.bank && PAID_CAP_MAX.cold > CAP_BASE.cold)
+  check('上限', '金币扩容仍停在商店上限（抬硬顶没有放宽金币可买量）', (() => {
+    const p = freshPlayer()
+    p.inventoryCap = PAID_CAP_MAX.inventory - 5
+    p.bankCap = PAID_CAP_MAX.bank - 10
+    const inv = p.expandInventory(10) // 95 → 100（不是 105）
+    const bank = p.expandBank(20)     // 490 → 500（不是 510）
+    const again = p.expandInventory(10) && p.expandBank(20)
+    return inv && bank && again === false && p.inventoryCap === PAID_CAP_MAX.inventory && p.bankCap === PAID_CAP_MAX.bank
+  })())
+  check('上限', '冷库付费扩容也停在金币上限（不借硬顶多买）', (() => {
+    const p = freshPlayer()
+    p.gold = 10 ** 9
+    p.coldStorageCap = PAID_CAP_MAX.cold
+    const r = p.expandColdStorage()
+    return r.ok === false && p.coldStorageCap === PAID_CAP_MAX.cold && p.gold === 10 ** 9
+  })())
+  check('上限', '冷库扩容价格单一来源（player 与 ProductionView 共用 COLD_EXPAND_COST）', (() => {
+    const prod = fs.readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
+    return /COLD_EXPAND_COST/.test(P_SRC) && /COLD_EXPAND_COST/.test(prod)
+  })())
+}
+
+// ── C24. 外环「觅珍环」抽卡券（v2.1：12 节点 × 100 张）──
+console.log('══ C24. 外环觅珍环 ══')
+{
+  check('觅珍环', '全树未点亮时不可解锁（门槛 = 全树已解锁数，不是本路）', (() => {
+    const p = freshPlayer()
+    const r = p.daoUnlock('x1')
+    return r.ok === false && r.msg.includes('全树已解锁')
+  })())
+  check('觅珍环', '解锁即到账：抽卡券 +100 且记帐本（daoTicketPaid）', (() => {
+    const p = freshPlayer()
+    p.daoUnlocked = DAO_NODES.filter((n) => n.path !== 'outer').slice(0, 3).map((n) => n.id)
+    p.stats.daoTicketPaid = 0
+    const t0 = p.mijian?.tickets ?? 0
+    const r = p.daoUnlock('x1')
+    return r.ok && r.tickets === 100 && (p.mijian.tickets ?? 0) === t0 + 100 && p.stats.daoTicketPaid === 100
+  })())
+  check('觅珍环', '读档对账：缺账本补发、重复读档与存档往返都不重复发', (() => {
+    const p = freshPlayer()
+    p.daoUnlocked = DAO_OUTER.slice(0, 6).map((n) => n.id) // 6 个外环节点 = 应发 600 张
+    p.stats.daoTicketPaid = 0
+    const t0 = p.mijian?.tickets ?? 0
+    const fix1 = p.settleDaoTickets()
+    const after = p.mijian.tickets
+    const fix2 = p.settleDaoTickets()
+    p.applySave(JSON.parse(JSON.stringify(p.serialize())))
+    const fix3 = p.settleDaoTickets()
+    return fix1.repaired === true && fix1.tickets === 600 && after === t0 + 600
+      && fix2.repaired === false && p.mijian.tickets === after
+      && fix3.repaired === false && p.mijian.tickets === after && p.stats.daoTicketPaid === 600
+  })())
+  check('珍券环', '山海食经珍券环：解锁即到账 +100，读档对账幂等（与厨神之路同一套纪律）', (() => {
+    const p = freshPlayer()
+    const rest = SHANHAI_NODES.filter((n) => !n.ticket).map((n) => n.id)
+    p.shanhaiUnlocked = rest.slice(0, 45) // 点亮 45 个节点 → 珍券环第一个（门槛 45）可点亮
+    p.stats.shanhaiTicketPaid = 0
+    const t0 = p.mijian?.tickets ?? 0
+    const r = p.shanhaiUnlock('tk1')
+    if (!r.ok || !String(r.landed).includes('觅珍抽卡券') || (p.mijian.tickets ?? 0) !== t0 + 100) return false
+    if (p.stats.shanhaiTicketPaid !== 100) return false
+    // 缺账本 → 补发一次；再补不重复；存档往返也不重复
+    p.stats.shanhaiTicketPaid = 0
+    const g0 = p.mijian.tickets
+    const fix1 = p.settleShanhaiTickets()
+    const after = p.mijian.tickets
+    const fix2 = p.settleShanhaiTickets()
+    p.applySave(JSON.parse(JSON.stringify(p.serialize())))
+    const fix3 = p.settleShanhaiTickets()
+    return fix1.repaired === true && fix1.tickets === 100 && after === g0 + 100
+      && fix2.repaired === false && fix3.repaired === false && p.mijian.tickets === after
+  })())
+  check('觅珍环', '外环总奖励 1200 张券、且不占道途效果与轮回印记', (() => {
+    const total = DAO_OUTER.reduce((a, n) => a + (n.reward?.tickets ?? 0), 0)
+    return total === 1200 && DAO_OUTER.every((n) => !n.effect && (n.cost ?? 0) === 0)
+  })())
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
-
-// ── C10. 一键入包（2026-09-06）──
-console.log('══ C10. 一键入包 ══')
-{
-  const p = freshPlayer({})
-  p.gainItem('apple', 5)
-  p.gainItem('ironKnife', 1)
-  // 全部移入仓库（含装备）
-  const moved = p.moveAllToBank()
-  check('存取', '一键入仓（背包→仓库，装备跳过）', moved === 1 && (p.bank.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1)
-  const back = p.moveAllToInventory()
-  check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
-}
-
-// ── C11. 食灵阁（2026-09-06：食灵不占背包格）──
-console.log('══ C11. 食灵阁 ══')
-{
-  const p = freshPlayer({ spiritSummoning: 10 })
-  const ss = getSkillInstance('spiritSummoning')
-  const r = ss.recipes.find((x) => x.output.itemId === 'appleSpirit' + '_' + 1 || x.output.itemId === 'appleSpirit_1')
-  console.log('rec:', r?.output?.itemId)
-  // 用 makeOrder 同款：直接 gainSpirit 验证不占背包
-  p.gainSpirit('appleSpirit_1', 3)
-  check('食灵', '食灵入阁不占背包格', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !(p.inventory.appleSpirit_1 > 0) && Object.keys(p.inventory).length === 0)
-  const okOn = p.setSpiritActive('appleSpirit_1', true)
-  check('食灵', '出战消耗食灵阁 1 只', okOn === true && (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && p.spirits.active.includes('appleSpirit_1'))
-  p.setSpiritActive('appleSpirit_1', false)
-  check('食灵', '退役归还食灵阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 3 && !p.spirits.active.includes('appleSpirit_1'))
-  // 旧档迁移：背包里的食灵 → 食灵阁
-  p.inventory.appleSpirit_1 = 2
-  p.applySave({ ...p.$state, inventory: { appleSpirit_1: 2 }, spirits: { active: [], owned: {} } })
-  check('食灵', '旧档背包食灵自动迁移入阁', (p.spirits.owned?.appleSpirit_1 ?? 0) === 2 && !(p.inventory.appleSpirit_1 > 0))
-}

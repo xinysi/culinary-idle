@@ -466,20 +466,20 @@ onUnmounted(() => { stopTimer() })
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .pp-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .pp-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -495,13 +495,13 @@ onUnmounted(() => { stopTimer() })
   border: none;
 }
 
-.pp-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); overflow: hidden; }
-.pp-cell { position: absolute; border-radius: 10px; background: rgba(255, 252, 246, 0.92); border: 1px solid rgba(150, 110, 70, 0.3); cursor: pointer; transition: box-shadow 0.12s; }
-.pp-cell:hover { box-shadow: 0 0 0 2px rgba(217, 90, 56, 0.35); }
+.pp-stage { position: relative; border-radius: 16px; background: rgba(120, 84, 50, 0.16); border: 1px solid rgba(var(--tint-rgb), 0.35); box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.18); overflow: hidden; }
+.pp-cell { position: absolute; border-radius: 10px; background: rgba(var(--panel-rgb), 0.92); border: 1px solid rgba(var(--tint-rgb), 0.3); cursor: pointer; transition: box-shadow 0.12s; }
+.pp-cell:hover { box-shadow: 0 0 0 2px rgba(var(--primary-tint-rgb), 0.35); }
 /* 按「对」配色：同一对的锅和碗同色，两对颜色不同（方便分辨谁连谁） */
-.pp-cell.pp-p0 { --pair-bg: rgba(255, 236, 208, 0.96); --pair-border: rgba(217, 90, 56, 0.65); --pair-flow-bg: rgba(244, 176, 96, 0.95); --pair-pipe: #d98a3a; }
+.pp-cell.pp-p0 { --pair-bg: rgba(255, 236, 208, 0.96); --pair-border: rgba(var(--primary-tint-rgb), 0.65); --pair-flow-bg: rgba(244, 176, 96, 0.95); --pair-pipe: #d98a3a; }
 .pp-cell.pp-p1 { --pair-bg: rgba(222, 246, 224, 0.96); --pair-border: rgba(76, 158, 68, 0.65); --pair-flow-bg: rgba(150, 214, 130, 0.95); --pair-pipe: #5fa348; }
-.pp-cell.src, .pp-cell.sink { background: var(--pair-bg, rgba(255, 252, 246, 0.92)); border-color: var(--pair-border, rgba(150, 110, 70, 0.3)); border-width: 2px; }
+.pp-cell.src, .pp-cell.sink { background: var(--pair-bg, rgba(var(--panel-rgb), 0.92)); border-color: var(--pair-border, rgba(var(--tint-rgb), 0.3)); border-width: 2px; }
 .pp-cell.valve .pp-hub { background: #8f7a62; }
 .pp-valve-arrow { color: #ffd65a; font-size: 14px; line-height: 1; }
 /* 管道手臂 */
@@ -515,7 +515,7 @@ onUnmounted(() => { stopTimer() })
 /* 通汤后沿路径流动 */
 .pp-cell.flow { animation: ppFlow 0.9s ease forwards; animation-delay: var(--flow-delay); }
 @keyframes ppFlow {
-  0% { background: rgba(255, 252, 246, 0.92); }
+  0% { background: rgba(var(--panel-rgb), 0.92); }
   40% { background: var(--pair-flow-bg, rgba(240, 190, 110, 0.95)); box-shadow: 0 0 14px var(--pair-border, rgba(224, 161, 58, 0.7)); }
   100% { background: var(--pair-flow-bg, rgba(240, 190, 110, 0.95)); box-shadow: 0 0 0 rgba(224, 161, 58, 0); }
 }
@@ -535,39 +535,39 @@ onUnmounted(() => { stopTimer() })
   font-size: 15px;
   cursor: pointer;
   color: #fff;
-  background: linear-gradient(135deg, #e8703f, #c9542e);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   border: none;
-  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35);
 }
-.pp-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.pp-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 
-.pp-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.pp-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.pp-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.pp-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .pp-result-head { font-size: 18px; }
 .pp-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .pp-gold { color: var(--good-strong); font-weight: 800; }
-.pp-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.pp-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .pp-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .pp-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ppSpark 1.1s ease-out forwards; }
 @keyframes ppSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
-.pp-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.pp-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .pp-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .pp-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .pp-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -579,8 +579,8 @@ onUnmounted(() => { stopTimer() })
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }

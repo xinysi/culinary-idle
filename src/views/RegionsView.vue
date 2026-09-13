@@ -252,7 +252,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'autom
   font-size: 30px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .region-hero-max {
   font-size: 14px;
@@ -285,8 +285,8 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'autom
 }
 .region-chip.on {
   opacity: 1;
-  border-color: var(--accent, #d95a38);
-  color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
+  color: var(--accent, var(--primary-tint));
 }
 .region-cal {
   margin-top: 12px;
@@ -312,7 +312,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'autom
 .region-cal-cell.current {
   opacity: 1;
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .region-cal-cell.empty {
   opacity: 0.5;

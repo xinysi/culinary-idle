@@ -214,7 +214,7 @@ function remainText(ev) {
   padding: 6px 9px;
   border-radius: 6px;
   background: var(--bg-soft);
-  border: 1px solid var(--accent, #d95a38);
+  border: 1px solid var(--accent, var(--primary-tint));
 }
 .mk-now-name {
   font-weight: 600;
@@ -268,12 +268,12 @@ function remainText(ev) {
   font: inherit;
 }
 .mk-cell.hot {
-  background: rgba(217, 90, 56, 0.16);
+  background: rgba(var(--primary-tint-rgb), 0.16);
   border-style: solid;
-  border-color: rgba(217, 90, 56, 0.45);
+  border-color: rgba(var(--primary-tint-rgb), 0.45);
 }
 .mk-cell.now {
-  outline: 2px solid var(--accent, #d95a38);
+  outline: 2px solid var(--accent, var(--primary-tint));
   outline-offset: 1px;
 }
 .mk-cell-h {
@@ -328,6 +328,6 @@ function remainText(ev) {
 }
 .mk-tr.on {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 </style>

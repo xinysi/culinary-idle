@@ -301,12 +301,12 @@ function posStyle(t) {
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .g2048-mode.on {
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
   border-color: var(--primary-strong);
   border-style: solid;
@@ -315,31 +315,31 @@ function posStyle(t) {
 .g2048-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
 }
 .g2048-board2 {
   position: relative; /* 方块绝对定位容器 */
-  background: rgba(150, 110, 70, 0.3);
-  border: 2px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--tint-rgb), 0.3);
+  border: 2px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 18px;
-  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18), inset 0 2px 10px rgba(93, 64, 55, 0.12);
+  box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.18), inset 0 2px 10px rgba(var(--tint-deep-rgb), 0.12);
 }
 .g2048-slot {
   position: absolute; /* 与瓦片共用绝对定位公式，像素级对齐（原 grid 布局有浮点/边框累计误差） */
   box-sizing: border-box;
   border-radius: 10px;
-  background: rgba(255, 251, 244, 0.55);
-  border: 1px solid rgba(150, 110, 70, 0.25);
+  background: rgba(var(--panel-soft-rgb), 0.55);
+  border: 1px solid rgba(var(--tint-rgb), 0.25);
 }
 .g2048-cell2 {
   position: absolute;
   border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   padding: 5px;
-  background: rgba(255, 251, 244, 0.6);
+  background: rgba(var(--panel-soft-rgb), 0.6);
   transition: left 0.12s ease, top 0.12s ease; /* 移动丝滑 */
   animation: tileBorn 0.12s ease; /* 新块/合并块浮现 */
   will-change: left, top;
@@ -354,7 +354,7 @@ function posStyle(t) {
 .g2048-cell2.v32 { background: #f6d9a8; } .g2048-cell2.v64 { background: #f3c684; }
 .g2048-cell2.v128 { background: #efb669; } .g2048-cell2.v256 { background: #e8a24e; }
 .g2048-cell2.v512 { background: #dd8f3c; } .g2048-cell2.v1024 { background: #e0704a; }
-.g2048-cell2.v2048, .g2048-cell2.v4096 { background: #d95a38; color: #fff; }
+.g2048-cell2.v2048, .g2048-cell2.v4096 { background: var(--primary-tint); color: #fff; }
 .g2048-keys {
   display: flex;
   gap: 10px;
@@ -362,9 +362,9 @@ function posStyle(t) {
   justify-content: center;
   align-items: center;
 }
-.g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(255, 252, 246, 0.9); border: 1px solid rgba(150, 110, 70, 0.4); color: var(--text); }
+.g2048-key { width: 54px; height: 46px; border-radius: 12px; font-size: 18px; font-weight: 800; cursor: pointer; background: rgba(var(--panel-rgb), 0.9); border: 1px solid rgba(var(--tint-rgb), 0.4); color: var(--text); }
 .g2048-key:hover { border-color: var(--primary-strong); }
-.g2048-reset { padding: 0 24px; height: 46px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.g2048-reset { padding: 0 24px; height: 46px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .g2048-info-btn {
   padding: 5px 12px;
   border-radius: 999px;
@@ -375,23 +375,23 @@ function posStyle(t) {
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.g2048-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.g2048-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .g2048-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .g2048-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .g2048-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -403,8 +403,8 @@ function posStyle(t) {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -419,17 +419,17 @@ function posStyle(t) {
 }
 
 /* ── g2048 结算弹窗（2026-09-09 统一）── */
-.g2048-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.g2048-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.g2048-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.g2048-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .g2048-result-head { font-size: 18px; }
 .g2048-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .g2048-gold { color: var(--good-strong); font-weight: 800; }
-.g2048-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.g2048-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .g2048-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .g2048-spark { position: absolute; font-size: 22px; color: var(--gold); animation: g2048Spark 1.1s ease-out forwards; }
 @keyframes g2048Spark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
 /* ── g2048 开始门控（2026-09-09）── */
-.g2048-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.g2048-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35); }
 .g2048-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
 </style>

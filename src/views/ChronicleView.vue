@@ -211,7 +211,7 @@ const RELATED = [{ view: 'milestones', label: '🗺 里程碑' }, { view: 'seaso
   font-size: 26px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .chron-stat-day {
   font-size: 17px;
@@ -240,8 +240,8 @@ const RELATED = [{ view: 'milestones', label: '🗺 里程碑' }, { view: 'seaso
   cursor: pointer;
 }
 .chron-kind-btn.chron-kind-link:hover {
-  border-color: var(--accent, #d95a38);
-  color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
+  color: var(--accent, var(--primary-tint));
 }
 .chron-kind-btn:disabled {
   opacity: 0.9;

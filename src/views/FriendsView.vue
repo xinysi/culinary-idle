@@ -221,7 +221,7 @@ function visitAll() {
   font-size: 16px;
 }
 .fr-hot {
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .fr-visitall {
   margin-left: auto;
@@ -293,12 +293,12 @@ function visitAll() {
   gap: 5px;
   padding: 7px 9px;
   border-radius: 6px;
-  background: rgba(217, 90, 56, 0.07);
+  background: rgba(var(--primary-tint-rgb), 0.07);
   border: 1px dashed var(--border);
 }
 .fr-order.ready {
   border-style: solid;
-  border-color: rgba(217, 90, 56, 0.5);
+  border-color: rgba(var(--primary-tint-rgb), 0.5);
 }
 .fr-order-top {
   display: flex;

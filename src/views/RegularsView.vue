@@ -84,7 +84,7 @@ const tipPct = computed(() => player.regularTipPct())
 function serve(r) {
   const itemId = d(r.def.id)
   if (!itemId) {
-    ui.pushLog(`请先选一道${r.def.category}（tier ≥ ${r.def.minTier}）`, 'warn')
+    ui.pushLog(`请先选一道${r.def.category}（需 ${r.def.minTier} 档以上）`, 'warn')
     return
   }
   const res = player.regularServe(r.def.id, itemId)
@@ -107,7 +107,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       <div>
         <h2>📖 常客名录</h2>
         <p class="dim">
-          {{ REGULARS.length }} 位常客各有偏好，<b>每天可招待 1 次</b>——消耗 1 件符合偏好（类别 + tier）的料理，换金币与好感；
+          {{ REGULARS.length }} 位常客各有偏好，<b>每天可招待 1 次</b>——消耗 1 件符合偏好（类别 + 档位）的料理，换金币与好感；
           好感每级 <b>小费 +2%</b>，满 5 级可领专属谢礼。
         </p>
       </div>
@@ -149,7 +149,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
           <span class="regular-icon">{{ r.def.icon }}</span>
           <div>
             <strong>{{ r.def.name }}</strong>
-            <div class="dim regular-sub">偏好：{{ r.def.category }}（tier ≥ {{ r.def.minTier }}）· 招待 +{{ r.def.gold }} 金币</div>
+            <div class="dim regular-sub">偏好：{{ r.def.category }}（需 {{ r.def.minTier }} 档以上）· 招待 +{{ r.def.gold }} 金币</div>
           </div>
         </div>
 
@@ -171,7 +171,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
           <div class="regular-actions">
             <select v-model="pick[r.def.id]" class="regular-select" :disabled="r.servedToday">
               <option value="">{{ r.cands.length ? `选择${catLabel(r.def.category)}…` : '背包无符合料理' }}</option>
-              <option v-for="c in r.cands" :key="c.id" :value="c.id">{{ c.it?.name }}（tier {{ c.it?.tier }} · 存 {{ c.qty }}）</option>
+              <option v-for="c in r.cands" :key="c.id" :value="c.id">{{ c.it?.name }}（{{ c.it?.tier }} 档 · 存 {{ c.qty }}）</option>
             </select>
             <button class="btn btn-sm btn-primary" :disabled="r.servedToday || !r.cands.length" @click="serve(r)">
               {{ r.servedToday ? '今日已招待' : '招待' }}
@@ -195,14 +195,14 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       <div class="table-scroll">
       <table class="target-table">
         <thead>
-          <tr><th>常客</th><th>解锁</th><th>偏好</th><th>最低 tier</th><th>单次金币</th><th>好感进度</th></tr>
+          <tr><th>常客</th><th>解锁</th><th>偏好</th><th>最低档位</th><th>单次金币</th><th>好感进度</th></tr>
         </thead>
         <tbody>
           <tr v-for="r in regularCompare" :key="r.id" :class="{ locked: !r.unlocked }">
             <td>{{ r.icon }} {{ r.name }}</td>
             <td class="mono">餐厅 Lv{{ r.unlockLevel }}</td>
             <td>{{ catLabel(r.category) }}</td>
-            <td class="mono">tier {{ r.minTier }}</td>
+            <td class="mono">{{ r.minTier }} 档</td>
             <td class="mono">{{ r.gold.toLocaleString() }}</td>
             <td class="mono">
               <template v-if="!r.unlocked">🔒 未解锁</template>
@@ -213,7 +213,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       </table>
       </div>
       <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
-        「偏好」= 类别，「最低 tier」= 该类别料理的档位下限——tier 越高的料理同样能满足，所以后期可以直接喂高阶菜。
+        「偏好」= 类别，「最低档位」= 该类别料理的档位下限——档位越高的料理同样能满足，所以后期可以直接喂高阶菜。
         越晚解锁的常客单次金币越高（{{ regularCompare[0].gold }} → {{ regularCompare[regularCompare.length - 1].gold }}），
         但招待消耗的料理也更贵，按自己的产能选人即可。
       </p>

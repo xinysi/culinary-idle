@@ -23,6 +23,17 @@ const check = (name, cond, detail = '') => {
   }
 }
 const read = (p) => fs.readFileSync(p, 'utf8')
+/** 列出 src 下全部源码文件（.js/.vue） */
+function walkSrc(dir = 'src', out = []) {
+  for (const n of fs.readdirSync(dir)) {
+    const p = `${dir}/${n}`
+    if (fs.statSync(p).isDirectory()) walkSrc(p, out)
+    else if (/\.(js|vue)$/.test(n)) out.push(p)
+  }
+  return out
+}
+
+
 /** 递归读取 src 下全部源码（跨文件检查用：事件可能在 bootstrap/技能/视图里触发） */
 function readAll(dir) {
   let out = ''
@@ -151,7 +162,8 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     // 2026-09-11：信箱 / 厨友 / 行情 / 系统日志
     '信箱', '厨友', '行情', '系统日志', '今日待办', '奇遇图鉴',
     // v2.0：厨神之路（轮回天赋树）
-    '厨神之路', '轮回印记',
+    '厨神之路',
+    '山海食经', '轮回印记',
   ]
   // ── 2026-09-11 修「守卫自身有盲区」：上面这份白名单是**手抄**的，新系统忘了往里加时这条检查恒真，
   //    等于 PASS 而不设防（本轮就是这么漏掉信箱/厨友的）。因此再叠加一条**从侧栏派生**的检查：
@@ -301,7 +313,7 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   for (const f of files) {
     const lines = read(`src/game/data/${f}`).split('\n')
     lines.forEach((line, i) => {
-      for (const m of line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}(?:\1))/g)) {
+      for (const m of line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}\1)/g)) {
         const body = m[2].slice(0, -1)
         if (!/[\u4e00-\u9fa5]/.test(body)) continue
         const tag = `${f}:${i + 1}`
@@ -317,6 +329,82 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     })
   }
   check(`文本：数据模块里面向玩家的中文串无「括号不配平/乱码/占位符/空串」（扫描 ${files.length} 个模块）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
+// ── 英文标识符裸露（2026-09-13 用户报「很多页面出现 tier」后立；同日补：**模板文本**也要扫）──
+// 面向玩家的中文里**不该出现内部字段名**。两处来源都要扫：
+//   ① JS/模板里的**字符串字面量**（剔除 `${...}`（花括号配对，吃嵌套模板）与 Vue `{{...}}` 插值）；
+//   ② `.vue` 的**模板文本节点**（先按「引号感知」剥掉整段标签与属性，再剥 `{{...}}`）——
+//      ⚠️ 第二轮才补上这条：宴会/常客/餐厅/同业榜的 `tier ≥ N`、`最低 tier` 全是**模板静态文本**，
+//      只扫字符串字面量会漏（用户就是先在宴会上看到的）。
+{
+  const IDS = /\b(tier|minTier|tierReq|reqLevel|itemId|itemName|itemQty|qty|pct|skillId|defId|slotId|amount|exp)\b/
+  /** 剔除模板串插值（花括号配对计数）与 Vue 插值 */
+  function stripInterp(str) {
+    let out = ''
+    for (let k = 0; k < str.length; k++) {
+      if (str[k] === '$' && str[k + 1] === '{') {
+        let depth = 1
+        k += 2
+        while (k < str.length && depth > 0) {
+          if (str[k] === '{') depth++
+          else if (str[k] === '}') depth--
+          k++
+        }
+        k--
+        continue
+      }
+      out += str[k]
+    }
+    return out.replace(/\{\{[^}]*\}\}/g, '')
+  }
+  /** 剥掉模板里的标签与属性（引号感知：属性值里可能有 > 或引号） */
+  function stripTags(tpl) {
+    let out = ''
+    let inTag = false
+    let quote = ''
+    for (let k = 0; k < tpl.length; k++) {
+      const c = tpl[k]
+      if (inTag) {
+        if (quote) { if (c === quote) quote = '' ; continue }
+        if (c === '"' || c === "'") { quote = c; continue }
+        if (c === '>') { inTag = false; out += '\u0001' } // 标签结束 → 插一个分隔符（保证行号不变）
+        continue
+      }
+      if (c === '<' && /[a-zA-Z/!]/.test(tpl[k + 1] ?? '')) { inTag = true; continue }
+      out += c
+    }
+    return out
+  }
+  const bad = []
+  let scanned = 0
+  for (const f of walkSrc()) {
+    const src = read(f)
+    const isVue = f.endsWith('.vue')
+    // ① 字符串字面量
+    src.split('\n').forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return // 注释不管
+      for (const m of line.matchAll(/(['"`])((?:\.|(?!\1).){2,}\1)/g)) {
+        const body = m[2].slice(0, -1)
+        if (!/[\u4e00-\u9fa5]/.test(body)) continue
+        scanned++
+        if (IDS.test(stripInterp(body))) bad.push(`${f}:${i + 1} 「${body.slice(0, 40)}」`)
+      }
+    })
+    // ② .vue 模板文本节点
+    if (isVue) {
+      const tm = src.match(/<template>([\s\S]*?)\n<\/template>/)
+      if (tm) {
+        stripTags(tm[1]).split('\n').forEach((line, i) => {
+          const body = stripInterp(line).trim()
+          if (!/[\u4e00-\u9fa5]/.test(body)) return
+          scanned++
+          if (IDS.test(body)) bad.push(`${f} 模板:${i + 1} 「${body.slice(0, 40)}」`)
+        })
+      }
+    }
+  }
+  check(`文本：面向玩家的中文里无英文标识符裸露（字符串字面量 + 模板文本，共扫 ${scanned} 条；插值不计）`, bad.length === 0, bad.slice(0, 6).join('; '))
 }
 
 process.exit(fail === 0 ? 0 : 1)

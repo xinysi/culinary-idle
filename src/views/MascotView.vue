@@ -216,7 +216,7 @@ const RELATED = [{ view: 'weather', label: '🌤 天气运势' }, { view: 'resta
   border-style: solid;
 }
 .mascot-ladder-row.current {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .mascot-ladder-gold {
   text-align: right;

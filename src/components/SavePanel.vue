@@ -154,6 +154,6 @@ function fmtTime(ts) {
 </template>
 
 <style scoped>
-.snapshot-box { margin-top: 10px; padding: 8px 10px; border: 1px dashed rgba(217, 90, 56, 0.3); border-radius: 8px; font-size: 12px; }
+.snapshot-box { margin-top: 10px; padding: 8px 10px; border: 1px dashed rgba(var(--primary-tint-rgb), 0.3); border-radius: 8px; font-size: 12px; }
 .snapshot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
 </style>

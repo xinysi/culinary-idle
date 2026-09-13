@@ -136,7 +136,7 @@ const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', l
 }
 .michelin-stars .on {
   color: var(--warn-strong);
-  text-shadow: 0 0 10px rgba(217, 90, 56, 0.35);
+  text-shadow: 0 0 10px rgba(var(--primary-tint-rgb), 0.35);
 }
 .michelin-name {
   font-size: 18px;

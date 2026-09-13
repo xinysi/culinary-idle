@@ -25,6 +25,8 @@ const PATTERNS = [
   { name: 'undefined 泄漏', re: /\bundefined\b/ },
   { name: 'NaN 泄漏', re: /\bNaN\b/ },
   { name: 'HTML 实体残留', re: /&lt;|&gt;/ },
+  // 英文标识符裸露（2026-09-13 用户报「很多页面出现 tier」后立）：内部字段名不该出现在界面上
+  { name: '英文标识符裸露', re: /(tier|minTier|tierReq|reqLevel|itemId|itemQty|pct|undefined|NaN)/ },
 ]
 
 /** 页内扫描（真函数，序列化后传进浏览器） */

@@ -257,7 +257,7 @@ const prestigeItems = [
   { t: '转生后——菜系图谱与见闻全保留', d: '菜系图谱节点、美食见闻、成就/称号、图鉴收集、食灵羁绊、餐厅与赛季进度<b class="hl">全部不受转生影响</b>；只有被转生的那个技能回 1 级。', tags: ['图谱/见闻保留', '成就称号保留'] },
   { t: '转生后——宝石与套装仍在装备上', d: '装备（含<b class="hl">镶嵌的宝石</b>与<b class="hl">套装加成</b>）不随转生重置；宝石在换装/拆卸时自动返还，不会因转生丢失。', tags: ['宝石保留', '套装保留'] },
   { t: '转生后——挂机计划按新等级重判', d: '挂机计划本身不会被清空，但「等级 / 熟练度」达成条件按转生后的新等级重新判定；若计划里排了 100 级条件，转生后会从头再练。建议转生后重排计划。', tags: ['计划不重置', '条件重判'] },
-  { t: '转生后——秘境/竞技场对手同步变弱', d: '对决等级 =（品鉴力 + 最高攻击技能 + 火候）/ 3，转生会让它下降，<b class="hl">食神秘境与竞技场镜像对手随之变弱</b>，评论家要求的 tier 也同步降低——转生期反而是刷秘境层数的窗口。', tags: ['对手变弱', '刷秘境窗口'] },
+  { t: '转生后——秘境/竞技场对手同步变弱', d: '对决等级 =（品鉴力 + 最高攻击技能 + 火候）/ 3，转生会让它下降，<b class="hl">食神秘境与竞技场镜像对手随之变弱</b>，评论家要求的档位也同步降低——转生期反而是刷秘境层数的窗口。', tags: ['对手变弱', '刷秘境窗口'] },
   { t: '转生后——重练到 120', d: '带每层 <b class="hl">+20%</b> 加成从 1 级重练该技能到 <b class="hl">120</b>；可继续转其它技能各自拿 +20% 与上限 120；满 120 挑战封顶内容。', tags: ['重练', '冲 120 级'] },
   { t: '优先转生——刀工 / 品鉴力', d: '优先转对<b class="hl">对决等级</b>影响大的技能（刀工、品鉴力等），更快提升对决战力、解锁更多区域。', tags: ['对决等级', '对决'] },
   { t: '平衡说明——偏肝长线', d: '99→100 级 = <b class="hl">3 亿经验</b>为基准；100→120 级全程约需 <b class="hl">199 亿经验</b>（120 级总经验约 231 亿）。每层 +20% 已缓解，仍属长线目标，建议配合全局经验倍率/增益剂加速。', tags: ['99→100 级 = 3 亿', '100→120 级 ≈ 199 亿'] },
@@ -573,7 +573,7 @@ const seasonPaged = computed(() => {
 
 <style scoped>
 /* ── 每日/周常面板（2026-09-06）── */
-.daily-panel { margin-bottom: 12px; background: rgba(255, 251, 244, 0.85); }
+.daily-panel { margin-bottom: 12px; background: rgba(var(--panel-soft-rgb), 0.85); }
 .daily-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .daily-head strong { font-size: 15px; }
 .daily-grid { display: flex; flex-direction: column; gap: 6px; }
@@ -581,7 +581,7 @@ const seasonPaged = computed(() => {
   display: flex; align-items: center; gap: 10px;
   padding: 6px 10px; border-radius: 8px;
   background: rgba(255, 255, 255, 0.6);
-  border: 1px dashed rgba(217, 90, 56, 0.25);
+  border: 1px dashed rgba(var(--primary-tint-rgb), 0.25);
 }
 .daily-item.done { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
 .daily-name { flex: 1; min-width: 0; }
@@ -590,8 +590,8 @@ const seasonPaged = computed(() => {
 .weekly-row {
   display: flex; align-items: center; gap: 10px; margin-top: 10px;
   padding: 8px 10px; border-radius: 8px;
-  background: rgba(217, 90, 56, 0.06);
-  border: 1px solid rgba(217, 90, 56, 0.3);
+  background: rgba(var(--primary-tint-rgb), 0.06);
+  border: 1px solid rgba(var(--primary-tint-rgb), 0.3);
 }
 .weekly-row.done { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
 .weekly-row strong { flex: 1; min-width: 0; font-size: 13px; }
@@ -602,7 +602,7 @@ const seasonPaged = computed(() => {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(255, 252, 246, 0.78);
+  background: rgba(var(--panel-rgb), 0.78);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 10px;
   padding: 10px 12px;
@@ -635,7 +635,7 @@ const seasonPaged = computed(() => {
   margin-top: 10px;
 }
 .season-card {
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 12px;
@@ -657,7 +657,7 @@ const seasonPaged = computed(() => {
   gap: 6px;
   font-size: 12px;
   padding: 2px 4px;
-  border-bottom: 1px dashed rgba(217, 90, 56, 0.18);
+  border-bottom: 1px dashed rgba(var(--primary-tint-rgb), 0.18);
 }
 .season-gear-row:last-child { border-bottom: none; }
 .season-gear-row.got { color: var(--good-strong); }

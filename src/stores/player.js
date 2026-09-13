@@ -5,6 +5,9 @@
 // 腐坏计时（§5.4）、成就/图鉴/称号（§6）、主线任务进度（§7.2）、统计
 
 import { defineStore } from 'pinia'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, safeCap, safeList } from '../game/data/caps.js'
+import { shanhaiNodeState, shanhaiEffectSum, shanhaiNode, shanhaiPathProgress, shanhaiCapGrant } from '../game/data/shanhaiProgress.js'
+import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
 import { totalXpForLevel } from '../game/core/Experience.js'
 import { getItem, ITEMS } from '../game/data/items.js'
@@ -173,8 +176,8 @@ const defaultState = () => ({
     skills: defaultSkills(),
     inventory: {}, // { itemId: qty }
     bank: {}, // { itemId: qty }
-    inventoryCap: 20, // 背包容量（§5.4：初始 20 格，可扩展至 100）
-    bankCap: 100, // 仓库容量（§5.4：初始 100 格，可扩展至 500）
+    inventoryCap: CAP_BASE.inventory, // 背包容量（§5.4：初始 20 格；金币买到 100，山海食经再 +60 → 硬顶 160）
+    bankCap: CAP_BASE.bank, // 仓库容量（§5.4：初始 100 格；金币买到 500，山海食经再 +130 → 硬顶 630）
     hardcore: false, // 硬核模式（§4.1/§8.2：死亡即删档）
     pausedSkills: {}, // 手动暂停的挂机技能（§3.1 停止/继续）
     closedIdleTasks: {}, // 挂机框中关闭的任务（停止并隐藏，§3.1）
@@ -192,11 +195,11 @@ const defaultState = () => ({
     buffs: { xpMult: null, yieldMult: null }, // 增益剂（§3.4.2）：{mult, expiresAt}
     spoilage: {}, // { itemId: spoilAt }（§5.4 腐坏计时）
     coldStorage: {}, // 冷库（§5.4 冻结腐坏）：{ itemId: { qty, remainMs } }，remainMs 为存入时剩余的腐坏毫秒（冻结期间不消耗）
-    coldStorageCap: 5, // 冷库容量（§5.4：初始 5 格，每次扩充 +1 花 1000 金币，上限 100）
+    coldStorageCap: CAP_BASE.cold, // 冷库容量（§5.4：初始 5 格，每次扩充 +1 花 1000 金币，金币买到 100，山海食经再 +10 → 硬顶 110）
     achievements: [], // 已解锁成就 id（§6.1）
     collected: {}, // 图鉴（§6.2）：{ itemId: true }
     quests: { index: 0, completed: [], progress: {} }, // 主线任务（§7.2）
-    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 } },
+    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0 },
     // §13 扩展：餐厅 / 公会 / 赛季 / 竞技场
     restaurant: { level: 1, menu: [], incomeAccum: 0, decor: [] }, // 餐厅经营：菜单为料理 itemId 列表；decor 装饰（§13）
     guild: { id: null, points: 0, day: null, taskProgress: {} }, // 公会：被动+任务+商店
@@ -214,6 +217,7 @@ const defaultState = () => ({
     // 菜系图谱（2026-09-09 永久天赋树）：已解锁节点 id；货币见 stats.insights
     insights: [], // 菜系图谱已解锁节点
     daoUnlocked: [], // 厨神之路 · 轮回天赋树已解锁节点（v2.0，懒建；印记由 stats.prestiges 派生，不另存货币）
+    shanhaiUnlocked: [], // 山海食经 · 收集科技树已点亮节点（v2.1；**纯条件点亮、不消耗资源**，无新货币）
     // 无尽挑战塔（对决 99 解锁）：floor=当前挑战层，best=已通最高层，rewarded=已发里程碑层
     tower: { floor: 1, best: 0, rewarded: [] },
     // 月度厨艺大赛：month=YYYYMM，score=当月累计分，entries=提交记录，rewarded=已领里程碑序号
@@ -280,7 +284,7 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
+    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
     // 奇遇图鉴（2026-09-11）：{ seen: { [id]: 触发次数 }, picks: { [id]: [各分支被选次数] }, total: 累计触发 }
@@ -462,7 +466,8 @@ export const usePlayerStore = defineStore('player', {
     },
     /** 餐厅菜单槽位（§13） */
     restaurantSlots(s) {
-      return Math.min(6, 2 + Math.floor((s.restaurant.level - 1) / 2))
+      const { restaurantSlots, restaurantSlotsBase, restaurantSlotsPerLevels } = DERIVED_MAX
+      return Math.min(restaurantSlots, restaurantSlotsBase + Math.floor((s.restaurant.level - 1) / restaurantSlotsPerLevels))
     },
     /** 餐厅每小时收入 */
     restaurantHourlyIncome(s) {
@@ -540,8 +545,8 @@ export const usePlayerStore = defineStore('player', {
         skills,
         inventory: saved.inventory ?? {},
         bank: saved.bank ?? {},
-        inventoryCap: Math.min(saved.inventoryCap ?? 20, 100),
-        bankCap: Math.min(saved.bankCap ?? 100, 500),
+        inventoryCap: safeCap(saved.inventoryCap, CAP_BASE.inventory, CAP_MAX.inventory),
+        bankCap: safeCap(saved.bankCap, CAP_BASE.bank, CAP_MAX.bank),
         hardcore: !!saved.hardcore,
         pausedSkills: saved.pausedSkills ?? {},
         closedIdleTasks: saved.closedIdleTasks ?? {},
@@ -549,22 +554,22 @@ export const usePlayerStore = defineStore('player', {
         activeSkill: saved.activeSkill && SKILL_DEFS[saved.activeSkill] ? saved.activeSkill : 'foraging',
         activeTarget: saved.activeTarget ?? null,
         skillTargets: saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
-        settings: { ...this.settings, ...(saved.settings ?? {}) },
-        farming: { plots: Array.isArray(saved.farming?.plots) ? saved.farming.plots : [] },
-        offlineBonusH: Math.min(saved.offlineBonusH ?? 0, 12),
+        settings: { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }, // 并行挂机只接受 0/1/2/3
+        farming: { plots: safeList(saved.farming?.plots, DERIVED_MAX.farmPlots) }, // 农田块数上限由技能等级派生，这里只兜住绝对上限
+        offlineBonusH: safeCap(saved.offlineBonusH, 0, OFFLINE_CAP.biscuitMaxHours),
         combat: { ...this.combat, ...(saved.combat ?? {}) },
-        spirits: { active: Array.isArray(saved.spirits?.active) ? saved.spirits.active : [], owned: saved.spirits?.owned ?? {} },
+        spirits: { active: safeList(saved.spirits?.active, SPIRIT_SLOTS), owned: saved.spirits?.owned ?? {} }, // 出战位上限
         gastronomy: { active: Array.isArray(saved.gastronomy?.active) ? saved.gastronomy.active : [] },
         tastePoints: saved.tastePoints ?? 0,
         buffs: { xpMult: saved.buffs?.xpMult ?? null, yieldMult: saved.buffs?.yieldMult ?? null },
         spoilage: saved.spoilage ?? {},
         coldStorage: saved.coldStorage ?? {},
-        coldStorageCap: Math.min(saved.coldStorageCap ?? 5, 100),
+        coldStorageCap: safeCap(saved.coldStorageCap, CAP_BASE.cold, CAP_MAX.cold),
         achievements: Array.isArray(saved.achievements) ? saved.achievements : [],
         collected: saved.collected ?? {},
         quests: { index: saved.quests?.index ?? 0, completed: saved.quests?.completed ?? [], progress: saved.quests?.progress ?? {} },
         stats: { ...this.stats, ...(saved.stats ?? {}) },
-        restaurant: { level: saved.restaurant?.level ?? 1, menu: saved.restaurant?.menu ?? [], incomeAccum: saved.restaurant?.incomeAccum ?? 0, decor: saved.restaurant?.decor ?? [] },
+        restaurant: { level: saved.restaurant?.level ?? 1, menu: safeList(saved.restaurant?.menu, DERIVED_MAX.restaurantSlots), incomeAccum: saved.restaurant?.incomeAccum ?? 0, decor: saved.restaurant?.decor ?? [] }, // 菜单格上限
         guild: { id: saved.guild?.id ?? null, points: saved.guild?.points ?? 0, day: saved.guild?.day ?? null, taskProgress: saved.guild?.taskProgress ?? {} },
         seasons: saved.seasons ?? {},
         signIn: saved.signIn ?? { lastDate: null, day: 0 },
@@ -576,6 +581,7 @@ export const usePlayerStore = defineStore('player', {
         realm: saved.realm ?? { active: false, floor: 0, buffs: [], best: 0, pending: null },
         insights: Array.isArray(saved.insights) ? saved.insights : [],
         daoUnlocked: Array.isArray(saved.daoUnlocked) ? saved.daoUnlocked : [],
+        shanhaiUnlocked: Array.isArray(saved.shanhaiUnlocked) ? saved.shanhaiUnlocked : [],
         tower: saved.tower ?? { floor: 1, best: 0, rewarded: [] },
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
@@ -619,7 +625,7 @@ export const usePlayerStore = defineStore('player', {
         minigames: saved.minigames ?? { heat: { day: 0, streak: 0, bestStreak: 0 }, trivia: { week: '', answered: 0, correct: 0, badges: 0 }, kitchen2048: { best: 0 }, foodrush: { day: 0, best: 0, rewarded: 0 }, puzzle: { day: '', done: 0 }, matchfood: { day: '', buffed: 0 } },
         // 信箱（2026-09-11）：旧档无此字段 → 给空信箱；nextId 兜底从现有最大 id 推算，避免 id 重复
         mail: saved.mail && Array.isArray(saved.mail.list)
-          ? { list: saved.mail.list, nextId: saved.mail.nextId ?? (saved.mail.list.reduce((a, m) => Math.max(a, m?.id ?? 0), 0) + 1) }
+          ? { list: safeList(saved.mail.list, MAIL_HARD_CAP), nextId: saved.mail.nextId ?? (saved.mail.list.reduce((a, m) => Math.max(a, m?.id ?? 0), 0) + 1) }
           : { list: [], nextId: 1 },
         // 奇遇图鉴（2026-09-11）：旧档无此字段 → 空的已遇/已选记录（页面显示为「还没遇到过」）
         encounters: {
@@ -647,6 +653,12 @@ export const usePlayerStore = defineStore('player', {
       }
       if (migrated > 0) this.spirits = { ...(this.spirits ?? {}), owned }
       this.syncGemSockets() // 读档后补全镶嵌记录（2026-09-09）
+      // 山海食经容量对账（v2.1）：旧档可能有「点了节点但容量被上限吞掉/整批漏发」，
+      // 这里按账本补差额；**幂等**（补完即写账本，重复读档不会重复发）。
+      this.settleShanhaiCaps()
+      this.settleShanhaiGold()
+      this.settleShanhaiTickets()
+      this.settleDaoTickets()
     },
 
     serialize() {
@@ -698,6 +710,7 @@ export const usePlayerStore = defineStore('player', {
         realm: this.realm,
         insights: this.insights,
         daoUnlocked: this.daoUnlocked,
+        shanhaiUnlocked: this.shanhaiUnlocked,
         tower: this.tower,
         fest: this.fest,
         spiritBonds: this.spiritBonds,
@@ -861,7 +874,13 @@ export const usePlayerStore = defineStore('player', {
       }
       const add = Math.max(0, Math.min(qty, cap - have))
       if (add > 0) this.inventory[itemId] = have + add
-      if (add < qty) this._fileOverflowMail(item, itemId, qty - add) // 堆叠上限截断的部分同样不丢
+      if (add < qty) {
+        // 堆叠上限截断的部分转信箱；**若信箱也塞满**（_fileOverflowMail 返回 false）才真的放不下 → 明确提示
+        if (!this._fileOverflowMail(item, itemId, qty - add)) {
+          EventBus.emit('inventory:full', { itemId })
+          try { useUiStore().pushLog(`📦 「${item?.name ?? itemId}」超出堆叠上限且信箱已满，本次多发部分未能入库`, 'warn') } catch { /* ui 未就绪 */ }
+        }
+      }
       if (!this.collected[itemId]) this.gainInsight(1) // 菜系图谱：图鉴首次收集 +1（2026-09-09）
       this.collected[itemId] = true
       if (item?.spoilMs) this.spoilage[itemId] = Date.now() + this.freshMsFor(item)
@@ -927,7 +946,12 @@ export const usePlayerStore = defineStore('player', {
       const amount = qty === null ? have : Math.min(qty, have)
       if (amount <= 0) return false
       // 容量判定：新食材需占用一个格子，超出容积则拒绝（可先扩充）
-      if (!(itemId in this.coldStorage) && this.coldStorageSlotsUsed >= this.coldStorageCap) return false
+      // ⚠️ 满容时**不能静默 return false**（审计发现：单件冻存路径调用方不看返回值 → 玩家以为存进去了）
+      if (!(itemId in this.coldStorage) && this.coldStorageSlotsUsed >= this.coldStorageCap) {
+        EventBus.emit('cold:full', { itemId })
+        try { useUiStore().pushLog(`🧊 冷库已满（${this.coldStorageSlotsUsed}/${this.coldStorageCap} 格），需先扩容或腾格`, 'warn') } catch { /* ui 未就绪 */ }
+        return false
+      }
       // 冻结：记录存入时剩余的腐坏时长（剩余毫秒，不随现实时间消耗）
       const remainMs = this.spoilage[itemId] ? Math.max(0, this.spoilage[itemId] - Date.now()) : item.spoilMs
       this.spendItem(itemId, amount)
@@ -1005,24 +1029,24 @@ export const usePlayerStore = defineStore('player', {
       return true
     },
 
-    // ── 容量扩展（§5.4）──
+    // ── 容量扩展（§5.4）——**金币路径**，天花板是 PAID_CAP_MAX（杂货铺/冷库的可购买上限），
+    //   比硬顶 CAP_MAX 低：山海食经的固定奖励要落进那截余量里（用户实测报过「背包 +1 却加到了仓库」）。
     expandInventory(n = 10) {
-      if (this.inventoryCap >= 100) return false
-      this.inventoryCap = Math.min(100, this.inventoryCap + n)
+      if (this.inventoryCap >= PAID_CAP_MAX.inventory) return false
+      this.inventoryCap = Math.min(PAID_CAP_MAX.inventory, this.inventoryCap + n)
       return true
     },
     expandBank(n = 20) {
-      if (this.bankCap >= 500) return false
-      this.bankCap = Math.min(500, this.bankCap + n)
+      if (this.bankCap >= PAID_CAP_MAX.bank) return false
+      this.bankCap = Math.min(PAID_CAP_MAX.bank, this.bankCap + n)
       return true
     },
-    /** 冷库容量扩充（§5.4）：每次 +1 格花 1000 金币，上限 100 */
+    /** 冷库容量扩充（§5.4）：每次 +1 格花 1000 金币，金币可买到的上限 100 格 */
     expandColdStorage() {
-      if (this.coldStorageCap >= 100) return { ok: false, msg: '冷库已达上限 100 格' }
-      const COST = 1000
-      if (this.gold < COST) return { ok: false, msg: `金币不足（需 ${COST} 金币）` }
-      this.gold -= COST
-      this.coldStorageCap = Math.min(100, this.coldStorageCap + 1)
+      if (this.coldStorageCap >= PAID_CAP_MAX.cold) return { ok: false, msg: `冷库已达上限 ${PAID_CAP_MAX.cold} 格` }
+      if (this.gold < COLD_EXPAND_COST) return { ok: false, msg: `金币不足（需 ${COLD_EXPAND_COST} 金币）` }
+      this.gold -= COLD_EXPAND_COST
+      this.coldStorageCap = Math.min(PAID_CAP_MAX.cold, this.coldStorageCap + 1)
       return { ok: true, msg: `冷库扩容到 ${this.coldStorageCap} 格` }
     },
 
@@ -1889,7 +1913,7 @@ export const usePlayerStore = defineStore('player', {
       if (now < c.nextAt) return
       c.order = makeCriticOrder(this)
       c.nextAt = now + criticDelay()
-      try { useUiStore().pushLog(`📝 美食评论家「${c.order.name}」到访：想要 tier ≥ ${c.order.minTier} 的${c.order.category}`, 'info') } catch (e) { /* ignore */ }
+      try { useUiStore().pushLog(`📝 美食评论家「${c.order.name}」到访：想要 ${c.order.minTier} 档以上的${c.order.category}`, 'info') } catch (e) { /* ignore */ }
     },
     /** 提交料理给评论家（消耗 1 件，给大奖 + 好感） */
     serveCritic(itemId) {
@@ -1899,7 +1923,7 @@ export const usePlayerStore = defineStore('player', {
       const item = getItem(itemId)
       if (!item || item.type !== 'food') return { ok: false, msg: '只能提交料理' }
       if (item.category !== o.category || (item.tier ?? 0) < o.minTier) {
-        return { ok: false, msg: `不符合要求（需 tier ≥ ${o.minTier} 的${o.category}）` }
+        return { ok: false, msg: `不符合要求（需 ${o.minTier} 档以上的${o.category}）` }
       }
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
       this.spendItem(itemId, 1)
@@ -2108,7 +2132,7 @@ export const usePlayerStore = defineStore('player', {
       const it = getItem(itemId)
       if (!it || it.type !== 'food') return { ok: false, msg: '只能招待料理' }
       if (it.category !== def.category) return { ok: false, msg: `他只爱「${def.category}」` }
-      if ((it.tier ?? 0) < def.minTier) return { ok: false, msg: `需 tier ≥ ${def.minTier} 的${def.category}` }
+      if ((it.tier ?? 0) < def.minTier) return { ok: false, msg: `需 ${def.minTier} 档以上的${def.category}` }
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
       const beforeLv = regularLevelFromServes(st.serves)
       this.spendItem(itemId, 1)
@@ -3152,7 +3176,7 @@ export const usePlayerStore = defineStore('player', {
         const use = Math.min(qty, left)
         take.push([id, use]); left -= use
       }
-      if (left > 0) return { ok: false, msg: `还差 ${left} 份${o.cat}（tier ≥ ${o.minTier}）` }
+      if (left > 0) return { ok: false, msg: `还差 ${left} 份${o.cat}（需 ${o.minTier} 档以上）` }
       for (const [id, qty] of take) this.spendItem(id, qty)
       this.gainGold(o.gold)
       if (o.spice) this.gainItem('mysterySpice', o.spice)
@@ -3963,8 +3987,200 @@ export const usePlayerStore = defineStore('player', {
       if (!chk.ok) return { ok: false, msg: chk.reason }
       this.daoUnlocked = [...(this.daoUnlocked ?? []), id]
       this.stats.daoUnlockedTotal = (this.stats.daoUnlockedTotal ?? 0) + 1
-      EventBus.emit('dao:unlock', { id, name: def.name, cost: def.cost })
-      return { ok: true, cost: def.cost }
+      // 外环「觅珍环」节点：奖励**觅珍抽卡券**（`mijian.tickets`，抽卡时优先抵扣）。
+      // 与山海食经金币同款纪律：即时发放 + 记账（stats.daoTicketPaid 记应发总额），读档对账补发 → 幂等。
+      const tickets = def.reward?.tickets ?? 0
+      if (tickets > 0) {
+        if (!this.mijian) this.mijian = { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+        this.mijian.tickets = (this.mijian.tickets ?? 0) + tickets
+        this.stats.daoTicketPaid = (this.stats.daoTicketPaid ?? 0) + tickets
+      }
+      EventBus.emit('dao:unlock', { id, name: def.name, cost: def.cost, tickets })
+      return { ok: true, cost: def.cost, tickets }
+    },
+    // ── 山海食经（v2.1 收集科技树）：**条件点亮、不消耗资源**、flat 奖励、零新货币 ──
+    /**
+     * 离线收益时长上限（小时）—— **唯一出口**：基础 12 + 能量饼干(≤12) + 厨神之路(≤6) + 山海食经(≤6)。
+     * 段与段各有天花板，任何一段都不会被别的段放大；改动上限只改 `data/caps.js`。
+     * （审计发现：原先三处 UI 文案把窗口写成「12h + 饼干」，与实际不符。）
+     */
+    offlineMaxHours() {
+      const biscuit = safeCap(this.offlineBonusH, 0, OFFLINE_CAP.biscuitMaxHours)
+      const dao = Math.min(OFFLINE_CAP.daoMaxHours, Number(this.daoEffects?.()?.offlineHours) || 0)
+      const shanhai = Math.min(OFFLINE_CAP.shanhaiMaxHours, Number(this.shanhaiEffects?.()?.offlineH) || 0)
+      return OFFLINE_CAP.baseHours + biscuit + dao + shanhai
+    },
+    /** 已点亮节点的效果合计：{ offlineH, flatYield: { skillId: n }, caps } */
+    shanhaiEffects() {
+      return shanhaiEffectSum(this.shanhaiUnlocked ?? [])
+    },
+    /** 单节点状态（含条件进度与原因） */
+    shanhaiState(id) {
+      const def = shanhaiNode(id)
+      return def ? shanhaiNodeState(def, this) : null
+    },
+    /** 全部节点状态（画布用） */
+    shanhaiStates() {
+      const ids = this.shanhaiUnlocked ?? []
+      return SHANHAI_NODES.map((n) => shanhaiNodeState(n, this, ids))
+    },
+    /** 某条收集线的进度 */
+    shanhaiProgress(pathId) {
+      return shanhaiPathProgress(this, pathId)
+    },
+    /**
+     * 容量发放原语：背包（≤100）→ 仓库（≤500）→ 冷库（≤100）逐级找位，
+     * 返回各档**实际落地**的数量（上限与 `CAP_MAX` 一致——**硬顶**，含金币路径买不到的那截余量）；
+     * 直接算字段而不走那三个动作，是因为它们只回布尔值、拿不到「实际发了多少」。
+     */
+    _grantShanhaiCaps({ inventory = 0, bank = 0, cold = 0 } = {}) {
+      const out = { inventory: 0, bank: 0, cold: 0 }
+      out.inventory = Math.min(inventory, Math.max(0, CAP_MAX.inventory - this.inventoryCap))
+      this.inventoryCap += out.inventory
+      const wantBank = bank + (inventory - out.inventory) // 背包落不下的顺位到仓库
+      out.bank = Math.min(wantBank, Math.max(0, CAP_MAX.bank - this.bankCap))
+      this.bankCap += out.bank
+      const wantCold = cold + (wantBank - out.bank) // 仓库落不下的顺位到冷库
+      out.cold = Math.min(wantCold, Math.max(0, CAP_MAX.cold - this.coldStorageCap))
+      this.coldStorageCap += out.cold
+      return out
+    },
+    /**
+     * 把「已点亮节点**应发**的容量总量」写进账本（`stats.shanhaiCapGranted`，读档对账用）。
+     * ⚠️ 记「应发」而不是「实际到账」是**为了幂等**：若记到账，一个装不下的奖励（本档已满）会在
+     * 每次读档被重试、并顺位砸进下一档 → 仓库随读档次数无上限增长（实测就是这么被 C22 幂等断言抓到的）。
+     * 代价：三档同时满时被吞掉的奖励不再补发——但硬顶已按「金币满 + 全树满」留了余量（C23 有守卫），
+     * 正常玩法下不会出现「装不下」。
+     */
+    _syncShanhaiCapLedger() {
+      if (!this.stats) this.stats = {}
+      this.stats.shanhaiCapGranted = shanhaiCapGrant(this.shanhaiUnlocked ?? [])
+    },
+    /**
+     * 读档对账：按「已点亮节点应发的容量」与账本（实际到账）的差额补发。
+     * 用途：① 修掉旧档（本次修复前点亮但被上限吞掉、或整批漏发）② 重复读档**不会**重复发（幂等）。
+     */
+    settleShanhaiCaps() {
+      const want = shanhaiCapGrant(this.shanhaiUnlocked ?? [])
+      const got = this.stats?.shanhaiCapGranted ?? { inventory: 0, bank: 0, cold: 0 }
+      const delta = {
+        inventory: Math.max(0, want.inventory - (got.inventory ?? 0)),
+        bank: Math.max(0, want.bank - (got.bank ?? 0)),
+        cold: Math.max(0, want.cold - (got.cold ?? 0)),
+      }
+      if (!delta.inventory && !delta.bank && !delta.cold) return { repaired: false }
+      const landed = this._grantShanhaiCaps(delta)
+      this._syncShanhaiCapLedger()
+      const parts = []
+      if (landed.inventory) parts.push(`背包 +${landed.inventory}`)
+      if (landed.bank) parts.push(`仓库 +${landed.bank}`)
+      if (landed.cold) parts.push(`冷库 +${landed.cold}`)
+      // 三档都满（理论上到不了：硬顶按「金币满 + 全树满」留了余量）→ landed 全 0：
+      // 账本上面已记为「已发」（保证幂等、不重复顺位），这里只是不刷一条无意义的日志
+      if (!parts.length) return { repaired: false, landed, want }
+      const msg = `📖 山海食经：补发已点亮节点的容量奖励（${parts.join('、')}）`
+      try { useUiStore().pushLog(msg, 'gain') } catch { /* ui 未就绪时忽略日志 */ }
+      return { repaired: true, landed, want }
+    },
+    /**
+     * 读档对账（金币）：按「已点亮金币节点应发的总额」与账本（`stats.shanhaiGoldPaid`）的差额补发。
+     * 金币**没有上限**（不像容量会被顶上限吞掉），所以只要记账就能保证「点亮即到手、不重复发」；
+     * 顺带把它当作那段「中间节点原来发容量」的旧档迁移：老档没有账本 → 读档一次性补发全部应得金币。
+     */
+    settleShanhaiGold() {
+      const want = shanhaiEffectSum(this.shanhaiUnlocked ?? []).gold ?? 0
+      const paid = this.stats?.shanhaiGoldPaid ?? 0
+      const delta = want - paid
+      if (delta <= 0) return { repaired: false }
+      this.gainGold(delta)
+      if (!this.stats) this.stats = {}
+      this.stats.shanhaiGoldPaid = want
+      try { useUiStore().pushLog(`📖 山海食经：补发已点亮金币节点的奖励 +${delta.toLocaleString('en-US')} 金币`, 'gain') } catch { /* ui 未就绪时忽略日志 */ }
+      return { repaired: true, gold: delta }
+    },
+    /**
+     * 读档对账（山海食经·珍券环的觅珍抽卡券）：应发总额 vs 账本（`stats.shanhaiTicketPaid`），差额补发。
+     * 与 `settleShanhaiGold` / `settleDaoTickets` 同一套纪律：幂等、兼作旧档迁移。
+     */
+    settleShanhaiTickets() {
+      const want = (this.shanhaiUnlocked ?? []).reduce((a, id) => a + (shanhaiNode(id)?.reward?.tickets ?? 0), 0)
+      const paid = this.stats?.shanhaiTicketPaid ?? 0
+      const delta = want - paid
+      if (delta <= 0) return { repaired: false }
+      this.mijian.tickets = (this.mijian.tickets ?? 0) + delta
+      if (!this.stats) this.stats = {}
+      this.stats.shanhaiTicketPaid = want
+      try { useUiStore().pushLog(`🎟️ 山海食经·珍券环：补发抽卡券 +${delta} 张`, 'gain') } catch { /* ui 未就绪 */ }
+      return { repaired: true, tickets: delta }
+    },
+    /** 能否点亮（收集件数 + 技能等级达标即可，**不消耗任何资源**） */
+    shanhaiCanUnlock(id) {
+      const st = this.shanhaiState(id)
+      if (!st) return { ok: false, reason: '节点不存在' }
+      if (st.unlocked) return { ok: false, reason: '已点亮' }
+      return st.can ? { ok: true } : { ok: false, reason: st.reason }
+    },
+    /** 点亮节点：容量类奖励**即时发放**，其余由聚合点按需读取 */
+    shanhaiUnlock(id) {
+      const def = shanhaiNode(id)
+      if (!def) return { ok: false, msg: '节点不存在' }
+      const chk = this.shanhaiCanUnlock(id)
+      if (!chk.ok) return { ok: false, msg: chk.reason }
+      this.shanhaiUnlocked = [...(this.shanhaiUnlocked ?? []), id]
+      this.stats.shanhaiUnlockedTotal = (this.stats.shanhaiUnlockedTotal ?? 0) + 1
+      // 容量类奖励：**满上限时不许蒸发**（背包 100 封顶，商店买满后再点树节点，原实现会静默吞掉）
+      // 且**必须记账**（stats.shanhaiCapGranted）→ 读档时按账本对账补发，旧档的漏发也能自动修。
+      const n = def.effect?.amount ?? 0
+      const f = def.effect?.field
+      let landed = ''
+      // 外圈「珍券环」节点：奖励**觅珍抽卡券**（与厨神之路外环同款纪律：即时发放 + 记账 + 读档对账）
+      const tickets = def.reward?.tickets ?? 0
+      if (tickets > 0) {
+        this.mijian.tickets = (this.mijian.tickets ?? 0) + tickets
+        this.stats.shanhaiTicketPaid = (this.stats.shanhaiTicketPaid ?? 0) + tickets
+        landed = `🎟️ 觅珍抽卡券 +${tickets}`
+      }
+      // 金币节点（第 6~10 环正中间那 50 个）：**即时发放**并记账，读档时对账补发（老档也补得上）
+      if (f === 'gold') {
+        this.gainGold(n)
+        this.stats.shanhaiGoldPaid = (this.stats.shanhaiGoldPaid ?? 0) + n
+        landed = `金币 +${n.toLocaleString('en-US')}`
+      }
+      if (f === 'inventoryCap' || f === 'bankCap' || f === 'coldStorageCap') {
+        const grant = { inventory: 0, bank: 0, cold: 0 }
+        if (f === 'inventoryCap') grant.inventory = n
+        else if (f === 'bankCap') grant.bank = n
+        else grant.cold = n
+        const got = this._grantShanhaiCaps(grant)
+        const parts = []
+        if (got.inventory) parts.push(`背包 +${got.inventory} 格`)
+        if (got.bank) parts.push(`仓库 +${got.bank} 格${f === 'inventoryCap' ? '（背包已满，顺位转投）' : ''}`)
+        if (got.cold) parts.push(`冷库 +${got.cold} 格${f !== 'coldStorageCap' ? '（前两档已满，顺位转投）' : ''}`)
+        landed = parts.length ? parts.join(' · ') : '背包/仓库/冷库都已满，本次奖励未生效'
+        this._syncShanhaiCapLedger()
+        if (!parts.length) {
+          try { useUiStore().pushLog(`📖 「${def.name}」：${landed}`, 'warn') } catch { /* ui 未就绪 */ }
+        }
+      }
+      EventBus.emit('shanhai:unlock', { id, name: def.name, landed })
+      return { ok: true, node: def, landed }
+    },
+
+    /**
+     * 读档对账（觅珍抽卡券）：外环「觅珍环」节点应发的券总额 vs 账本（`stats.daoTicketPaid`），差额补发。
+     * 与 `settleShanhaiGold` 同一套纪律：幂等、兼作旧档迁移（老档没有该字段 → 读档一次性补齐）。
+     */
+    settleDaoTickets() {
+      const want = (this.daoUnlocked ?? []).reduce((a, id) => a + (daoNode(id)?.reward?.tickets ?? 0), 0)
+      const paid = this.stats?.daoTicketPaid ?? 0
+      const delta = want - paid
+      if (delta <= 0) return { repaired: false }
+      if (!this.mijian) this.mijian = { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+      this.mijian.tickets = (this.mijian.tickets ?? 0) + delta
+      if (!this.stats) this.stats = {}
+      this.stats.daoTicketPaid = want
+      try { useUiStore().pushLog(`🎟️ 厨神之路·觅珍环：补发抽卡券 +${delta} 张`, 'gain') } catch { /* ui 未就绪 */ }
+      return { repaired: true, tickets: delta }
     },
     /** 某条道途的进度：{ unlocked, total, cost, spent } */
     daoPathProgress(pathId) {

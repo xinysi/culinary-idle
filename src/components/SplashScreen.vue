@@ -100,10 +100,10 @@ function startNew() {
   inset: 0;
   background:
     radial-gradient(ellipse 44% 30% at 50% 46%,
-      rgba(255, 252, 246, 0.46) 0%,
-      rgba(255, 252, 246, 0.30) 52%,
-      rgba(255, 252, 246, 0.10) 78%,
-      rgba(255, 252, 246, 0) 92%),
+      rgba(var(--panel-rgb), 0.46) 0%,
+      rgba(var(--panel-rgb), 0.30) 52%,
+      rgba(var(--panel-rgb), 0.10) 78%,
+      rgba(var(--panel-rgb), 0) 92%),
     linear-gradient(180deg,
       rgba(93, 42, 16, 0.10) 82%,
       rgba(93, 42, 16, 0.20) 100%);
@@ -151,7 +151,7 @@ function startNew() {
   border: 1px solid rgba(255, 255, 255, 0.75);
   cursor: pointer;
   color: #fff;
-  background: linear-gradient(180deg, rgba(217, 90, 56, 0.96), rgba(160, 52, 24, 0.96));
+  background: linear-gradient(180deg, rgba(var(--primary-tint-rgb), 0.96), rgba(160, 52, 24, 0.96));
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 6px 20px rgba(120, 55, 25, 0.35);

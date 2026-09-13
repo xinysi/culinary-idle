@@ -306,7 +306,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
   border-style: solid;
 }
 .staff-ladder-row.current {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .staff-ladder-perk {
   color: var(--good, #57a861);

@@ -158,7 +158,7 @@ const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', l
   font-size: 34px;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .cx-hero-right {
   flex: 1;
@@ -237,7 +237,7 @@ const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', l
 .cx-tier.hit {
   opacity: 1;
   border-style: solid;
-  border-color: var(--accent, #d95a38);
-  color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
+  color: var(--accent, var(--primary-tint));
 }
 </style>
