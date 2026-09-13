@@ -63,6 +63,15 @@ const SUFFIX = ['录', '谱', '典', '章', '卷']
 const RING_SLOTS = [3, 3, 3, 3, 3, 5, 5, 5, 5, 5]
 
 /**
+ * 平级排序的比较器：**按码位比较，绝不用 `localeCompare`**。
+ * ⚠️ 2026-09-13 实测踩坑：`localeCompare` 的结果**依赖运行环境的 locale/ICU**——
+ * `'smith_寒铁_legs'.localeCompare('smith_ext2_05')` 在本地（zh-CN）是 −1、按码位却是 +1，
+ * 于是同一份数据在本地生成与在 CI（不同 locale）生成会挑中**不同的物品**，`gen_drift_audit` 直接 FAIL（v2.1.0 的 CI 就是这么红的）。
+ * 生成器里任何「同键排序」都必须用这个，保证产物**跨环境可复现**。
+ */
+const cmpId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+
+/**
  * 该技能可收集的物品 `[{ id, level }]`（农耕=CROPS 常量、采集=实例 targets、制作=实例 recipes 产物）。
  * `level` 用于**按深度挑图标物品**（环越外 → 该线越珍稀的物品图），所以这里保留等级。
  */
@@ -181,7 +190,7 @@ const pathMeta = []
 for (const path of PATHS) {
   const items = collectiblesOf(path.skill)
   if (items.length < 12) throw new Error(`收集线「${path.name}」的可收集物品只有 ${items.length} 个，不足以铺 10 环节点`)
-  const sortedByLevel = [...items].sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))
+  const sortedByLevel = [...items].sort((a, b) => a.level - b.level || cmpId(a, b))
   for (const R of RINGS) {
     const need = Math.max(3, Math.ceil(items.length * R.pct))
     const slots = RING_SLOTS[R.ring - 1]
@@ -213,8 +222,8 @@ for (const path of PATHS) {
 const gapMeta = []
 const sortCache = new Map()
 for (const g of GAPS) {
-  const la = sortCache.get(g.a.id) ?? [...collectiblesOf(g.a.skill)].sort((x, y) => x.level - y.level || x.id.localeCompare(y.id))
-  const lb = sortCache.get(g.b.id) ?? [...collectiblesOf(g.b.skill)].sort((x, y) => x.level - y.level || x.id.localeCompare(y.id))
+  const la = sortCache.get(g.a.id) ?? [...collectiblesOf(g.a.skill)].sort((x, y) => x.level - y.level || cmpId(x, y))
+  const lb = sortCache.get(g.b.id) ?? [...collectiblesOf(g.b.skill)].sort((x, y) => x.level - y.level || cmpId(x, y))
   sortCache.set(g.a.id, la)
   sortCache.set(g.b.id, lb)
   const need = (list) => Math.max(3, Math.ceil(list.length * 0.90)) // 第 6 环起各环统一 90%（与分支环一致）

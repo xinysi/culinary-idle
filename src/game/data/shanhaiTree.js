@@ -162,7 +162,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "采撷·初识录",
     "icon": "🌱",
-    "iconItem": "foraging_ext_01",
+    "iconItem": "foraging_ext2_01",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -238,7 +238,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "采撷·渐熟谱",
     "icon": "🍃",
-    "iconItem": "foraging_ext_02",
+    "iconItem": "foraging_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -276,7 +276,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "采撷·通晓录",
     "icon": "🌿",
-    "iconItem": "foraging_ext2_04",
+    "iconItem": "foraging_ext_04",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -390,7 +390,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "采撷·大成录",
     "icon": "🌾",
-    "iconItem": "foraging_ext2_09",
+    "iconItem": "foraging_ext_09",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -485,7 +485,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "采撷·化境典",
     "icon": "🌳",
-    "iconItem": "foraging_ext_12",
+    "iconItem": "foraging_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -523,7 +523,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "采撷·化境卷",
     "icon": "🌳",
-    "iconItem": "foraging_ext_13",
+    "iconItem": "foraging_ext2_13",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -561,7 +561,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "采撷·圆满谱",
     "icon": "🍄",
-    "iconItem": "foraging_ext2_15",
+    "iconItem": "foraging_ext_15",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -599,7 +599,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "采撷·圆满章",
     "icon": "🍄",
-    "iconItem": "foraging_ext_16",
+    "iconItem": "foraging_ext2_16",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -657,7 +657,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "采撷·轮回谱",
     "icon": "🌰",
-    "iconItem": "foraging_ext2_18",
+    "iconItem": "foraging_ext_18",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -697,7 +697,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "采撷·轮回章",
     "icon": "🌰",
-    "iconItem": "foraging_ext2_19",
+    "iconItem": "foraging_ext_19",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -737,7 +737,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "采撷·历劫录",
     "icon": "🪴",
-    "iconItem": "foraging_ext2_21",
+    "iconItem": "foraging_ext_21",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -757,7 +757,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "采撷·历劫谱",
     "icon": "🪴",
-    "iconItem": "foraging_ext_22",
+    "iconItem": "foraging_ext2_22",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -777,7 +777,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "采撷·历劫典",
     "icon": "🪴",
-    "iconItem": "foraging_ext_23",
+    "iconItem": "foraging_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -797,7 +797,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "采撷·历劫章",
     "icon": "🪴",
-    "iconItem": "foraging_ext_24",
+    "iconItem": "foraging_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -837,7 +837,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "采撷·悟道录",
     "icon": "🌲",
-    "iconItem": "foraging_ext_26",
+    "iconItem": "foraging_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -857,7 +857,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "采撷·悟道谱",
     "icon": "🌲",
-    "iconItem": "foraging_ext_27",
+    "iconItem": "foraging_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -897,7 +897,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "采撷·悟道章",
     "icon": "🌲",
-    "iconItem": "foraging_ext2_28",
+    "iconItem": "foraging_ext_28",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -917,7 +917,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "采撷·悟道卷",
     "icon": "🌲",
-    "iconItem": "foraging_ext_30",
+    "iconItem": "foraging_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "foraging",
@@ -937,7 +937,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "渔获·初识录",
     "icon": "🐟",
-    "iconItem": "fishing_ext2_01",
+    "iconItem": "fishing_ext_01",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -956,7 +956,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "渔获·初识谱",
     "icon": "🐟",
-    "iconItem": "fishing_ext_02",
+    "iconItem": "fishing_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -975,7 +975,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "渔获·初识典",
     "icon": "🐟",
-    "iconItem": "fishing_ext2_02",
+    "iconItem": "fishing_ext_02",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -994,7 +994,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "渔获·渐熟录",
     "icon": "🐠",
-    "iconItem": "fishing_ext2_03",
+    "iconItem": "fishing_ext_03",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1013,7 +1013,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "渔获·渐熟谱",
     "icon": "🐠",
-    "iconItem": "fishing_ext_04",
+    "iconItem": "fishing_ext2_04",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1032,7 +1032,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "渔获·渐熟典",
     "icon": "🐠",
-    "iconItem": "fishing_ext2_04",
+    "iconItem": "fishing_ext_04",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1051,7 +1051,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓录",
     "icon": "🦐",
-    "iconItem": "fishing_ext_07",
+    "iconItem": "fishing_ext2_07",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1070,7 +1070,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓谱",
     "icon": "🦐",
-    "iconItem": "fishing_ext2_07",
+    "iconItem": "fishing_ext_07",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1089,7 +1089,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓典",
     "icon": "🦐",
-    "iconItem": "fishing_ext_08",
+    "iconItem": "fishing_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1108,7 +1108,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "渔获·精研录",
     "icon": "🦀",
-    "iconItem": "fishing_ext2_10",
+    "iconItem": "fishing_ext_10",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1127,7 +1127,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "渔获·精研谱",
     "icon": "🦀",
-    "iconItem": "fishing_ext2_11",
+    "iconItem": "fishing_ext_11",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1165,7 +1165,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "渔获·大成录",
     "icon": "🐙",
-    "iconItem": "fishing_ext2_14",
+    "iconItem": "fishing_ext_14",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1203,7 +1203,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "渔获·大成典",
     "icon": "🐙",
-    "iconItem": "fishing_ext_15",
+    "iconItem": "fishing_ext2_15",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1222,7 +1222,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境录",
     "icon": "🐋",
-    "iconItem": "fishing_ext_17",
+    "iconItem": "fishing_ext2_17",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1241,7 +1241,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境谱",
     "icon": "🐋",
-    "iconItem": "fishing_ext_18",
+    "iconItem": "fishing_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1260,7 +1260,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境典",
     "icon": "🐋",
-    "iconItem": "fishing_ext2_18",
+    "iconItem": "fishing_ext_18",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1279,7 +1279,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境章",
     "icon": "🐋",
-    "iconItem": "fishing_ext_19",
+    "iconItem": "fishing_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1298,7 +1298,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境卷",
     "icon": "🐋",
-    "iconItem": "fishing_ext2_19",
+    "iconItem": "fishing_ext_19",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1317,7 +1317,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满录",
     "icon": "🦑",
-    "iconItem": "fishing_ext2_20",
+    "iconItem": "fishing_ext_20",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1336,7 +1336,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满谱",
     "icon": "🦑",
-    "iconItem": "fishing_ext_21",
+    "iconItem": "fishing_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1355,7 +1355,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满典",
     "icon": "🦑",
-    "iconItem": "fishing_ext2_21",
+    "iconItem": "fishing_ext_21",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1374,7 +1374,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满章",
     "icon": "🦑",
-    "iconItem": "fishing_ext_22",
+    "iconItem": "fishing_ext2_22",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1393,7 +1393,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满卷",
     "icon": "🦑",
-    "iconItem": "fishing_ext2_22",
+    "iconItem": "fishing_ext_22",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1412,7 +1412,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回录",
     "icon": "🐚",
-    "iconItem": "fishing_ext2_23",
+    "iconItem": "fishing_ext_23",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1452,7 +1452,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回典",
     "icon": "🐚",
-    "iconItem": "fishing_ext_24",
+    "iconItem": "fishing_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1472,7 +1472,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回章",
     "icon": "🐚",
-    "iconItem": "fishing_ext2_24",
+    "iconItem": "fishing_ext_24",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1492,7 +1492,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回卷",
     "icon": "🐚",
-    "iconItem": "fishing_ext_25",
+    "iconItem": "fishing_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1532,7 +1532,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫谱",
     "icon": "🦞",
-    "iconItem": "fishing_ext_26",
+    "iconItem": "fishing_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1552,7 +1552,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫典",
     "icon": "🦞",
-    "iconItem": "fishing_ext2_26",
+    "iconItem": "fishing_ext_26",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1572,7 +1572,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫章",
     "icon": "🦞",
-    "iconItem": "fishing_ext2_27",
+    "iconItem": "fishing_ext_27",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1592,7 +1592,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫卷",
     "icon": "🦞",
-    "iconItem": "fishing_ext_28",
+    "iconItem": "fishing_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1612,7 +1612,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "渔获·悟道录",
     "icon": "🐳",
-    "iconItem": "fishing_ext2_28",
+    "iconItem": "fishing_ext_28",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1632,7 +1632,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "渔获·悟道谱",
     "icon": "🐳",
-    "iconItem": "fishing_ext_29",
+    "iconItem": "fishing_ext2_29",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1652,7 +1652,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "渔获·悟道典",
     "icon": "🐳",
-    "iconItem": "fishing_ext2_29",
+    "iconItem": "fishing_ext_29",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1692,7 +1692,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "渔获·悟道卷",
     "icon": "🐳",
-    "iconItem": "fishing_ext_30",
+    "iconItem": "fishing_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "fishing",
@@ -1731,7 +1731,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "山猎·初识谱",
     "icon": "🐇",
-    "iconItem": "hunting_ext_02",
+    "iconItem": "hunting_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1750,7 +1750,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "山猎·初识典",
     "icon": "🐇",
-    "iconItem": "hunting_ext2_02",
+    "iconItem": "hunting_ext_02",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1788,7 +1788,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "山猎·渐熟谱",
     "icon": "🦌",
-    "iconItem": "hunting_ext_04",
+    "iconItem": "hunting_ext2_04",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1807,7 +1807,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "山猎·渐熟典",
     "icon": "🦌",
-    "iconItem": "hunting_ext2_04",
+    "iconItem": "hunting_ext_04",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1826,7 +1826,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "山猎·通晓录",
     "icon": "🐗",
-    "iconItem": "hunting_ext2_07",
+    "iconItem": "hunting_ext_07",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1845,7 +1845,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "山猎·通晓谱",
     "icon": "🐗",
-    "iconItem": "hunting_ext_08",
+    "iconItem": "hunting_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1864,7 +1864,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "山猎·通晓典",
     "icon": "🐗",
-    "iconItem": "hunting_ext2_08",
+    "iconItem": "hunting_ext_08",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1883,7 +1883,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "山猎·精研录",
     "icon": "🐻",
-    "iconItem": "hunting_ext_11",
+    "iconItem": "hunting_ext2_11",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1902,7 +1902,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "山猎·精研谱",
     "icon": "🐻",
-    "iconItem": "hunting_ext2_11",
+    "iconItem": "hunting_ext_11",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1940,7 +1940,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "山猎·大成录",
     "icon": "🦅",
-    "iconItem": "hunting_ext2_14",
+    "iconItem": "hunting_ext_14",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1978,7 +1978,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "山猎·大成典",
     "icon": "🦅",
-    "iconItem": "hunting_ext_15",
+    "iconItem": "hunting_ext2_15",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1997,7 +1997,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境录",
     "icon": "🐉",
-    "iconItem": "hunting_ext_17",
+    "iconItem": "hunting_ext2_17",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2016,7 +2016,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境谱",
     "icon": "🐉",
-    "iconItem": "hunting_ext2_17",
+    "iconItem": "hunting_ext_17",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2035,7 +2035,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境典",
     "icon": "🐉",
-    "iconItem": "hunting_ext_18",
+    "iconItem": "hunting_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2054,7 +2054,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境章",
     "icon": "🐉",
-    "iconItem": "hunting_ext2_18",
+    "iconItem": "hunting_ext_18",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2073,7 +2073,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境卷",
     "icon": "🐉",
-    "iconItem": "hunting_ext_19",
+    "iconItem": "hunting_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2092,7 +2092,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满录",
     "icon": "🦊",
-    "iconItem": "hunting_ext_20",
+    "iconItem": "hunting_ext2_20",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2111,7 +2111,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满谱",
     "icon": "🦊",
-    "iconItem": "hunting_ext2_20",
+    "iconItem": "hunting_ext_20",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2130,7 +2130,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满典",
     "icon": "🦊",
-    "iconItem": "hunting_ext_21",
+    "iconItem": "hunting_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2149,7 +2149,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满章",
     "icon": "🦊",
-    "iconItem": "hunting_ext2_21",
+    "iconItem": "hunting_ext_21",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2168,7 +2168,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满卷",
     "icon": "🦊",
-    "iconItem": "hunting_ext_22",
+    "iconItem": "hunting_ext2_22",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2187,7 +2187,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回录",
     "icon": "🐺",
-    "iconItem": "hunting_ext_23",
+    "iconItem": "hunting_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2207,7 +2207,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回谱",
     "icon": "🐺",
-    "iconItem": "hunting_ext2_23",
+    "iconItem": "hunting_ext_23",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2227,7 +2227,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回典",
     "icon": "🐺",
-    "iconItem": "hunting_ext2_24",
+    "iconItem": "hunting_ext_24",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2267,7 +2267,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回卷",
     "icon": "🐺",
-    "iconItem": "hunting_ext_25",
+    "iconItem": "hunting_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2287,7 +2287,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫录",
     "icon": "🦉",
-    "iconItem": "hunting_ext_26",
+    "iconItem": "hunting_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2307,7 +2307,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫谱",
     "icon": "🦉",
-    "iconItem": "hunting_ext2_26",
+    "iconItem": "hunting_ext_26",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2327,7 +2327,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫典",
     "icon": "🦉",
-    "iconItem": "hunting_ext_27",
+    "iconItem": "hunting_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2347,7 +2347,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫章",
     "icon": "🦉",
-    "iconItem": "hunting_ext2_27",
+    "iconItem": "hunting_ext_27",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2367,7 +2367,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫卷",
     "icon": "🦉",
-    "iconItem": "hunting_ext_28",
+    "iconItem": "hunting_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2387,7 +2387,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道录",
     "icon": "🦬",
-    "iconItem": "hunting_ext2_28",
+    "iconItem": "hunting_ext_28",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2427,7 +2427,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道典",
     "icon": "🦬",
-    "iconItem": "hunting_ext_29",
+    "iconItem": "hunting_ext2_29",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2447,7 +2447,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道章",
     "icon": "🦬",
-    "iconItem": "hunting_ext2_29",
+    "iconItem": "hunting_ext_29",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2467,7 +2467,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道卷",
     "icon": "🦬",
-    "iconItem": "hunting_ext_30",
+    "iconItem": "hunting_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -2506,7 +2506,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "掘藏·初识谱",
     "icon": "🪨",
-    "iconItem": "excavation_ext_02",
+    "iconItem": "excavation_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2544,7 +2544,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟录",
     "icon": "🔶",
-    "iconItem": "excavation_ext_04",
+    "iconItem": "excavation_ext2_04",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2563,7 +2563,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟谱",
     "icon": "🔶",
-    "iconItem": "excavation_ext2_04",
+    "iconItem": "excavation_ext_04",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2582,7 +2582,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟典",
     "icon": "🔶",
-    "iconItem": "excavation_ext_05",
+    "iconItem": "excavation_ext2_05",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2601,7 +2601,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓录",
     "icon": "💎",
-    "iconItem": "excavation_ext2_07",
+    "iconItem": "excavation_ext_07",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2620,7 +2620,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓谱",
     "icon": "💎",
-    "iconItem": "excavation_ext_08",
+    "iconItem": "excavation_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2639,7 +2639,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓典",
     "icon": "💎",
-    "iconItem": "excavation_ext2_08",
+    "iconItem": "excavation_ext_08",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2677,7 +2677,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研谱",
     "icon": "🪙",
-    "iconItem": "excavation_ext2_11",
+    "iconItem": "excavation_ext_11",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2715,7 +2715,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成录",
     "icon": "🔷",
-    "iconItem": "excavation_ext_14",
+    "iconItem": "excavation_ext2_14",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2734,7 +2734,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成谱",
     "icon": "🔷",
-    "iconItem": "excavation_ext2_14",
+    "iconItem": "excavation_ext_14",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2753,7 +2753,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成典",
     "icon": "🔷",
-    "iconItem": "excavation_ext_15",
+    "iconItem": "excavation_ext2_15",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2772,7 +2772,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境录",
     "icon": "🏆",
-    "iconItem": "excavation_ext_17",
+    "iconItem": "excavation_ext2_17",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2791,7 +2791,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境谱",
     "icon": "🏆",
-    "iconItem": "excavation_ext2_17",
+    "iconItem": "excavation_ext_17",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2829,7 +2829,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境章",
     "icon": "🏆",
-    "iconItem": "excavation_ext_18",
+    "iconItem": "excavation_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2886,7 +2886,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满谱",
     "icon": "🧱",
-    "iconItem": "excavation_ext_20",
+    "iconItem": "excavation_ext2_20",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2905,7 +2905,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满典",
     "icon": "🧱",
-    "iconItem": "excavation_ext2_20",
+    "iconItem": "excavation_ext_20",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2924,7 +2924,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满章",
     "icon": "🧱",
-    "iconItem": "excavation_ext_21",
+    "iconItem": "excavation_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2943,7 +2943,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满卷",
     "icon": "🧱",
-    "iconItem": "excavation_ext2_21",
+    "iconItem": "excavation_ext_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2962,7 +2962,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回录",
     "icon": "⛰️",
-    "iconItem": "excavation_ext2_22",
+    "iconItem": "excavation_ext_22",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2982,7 +2982,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回谱",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_23",
+    "iconItem": "excavation_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3002,7 +3002,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回典",
     "icon": "⛰️",
-    "iconItem": "excavation_ext2_23",
+    "iconItem": "excavation_ext_23",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3062,7 +3062,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫录",
     "icon": "🗿",
-    "iconItem": "excavation_ext_25",
+    "iconItem": "excavation_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3082,7 +3082,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫谱",
     "icon": "🗿",
-    "iconItem": "excavation_ext2_25",
+    "iconItem": "excavation_ext_25",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3102,7 +3102,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫典",
     "icon": "🗿",
-    "iconItem": "excavation_ext_26",
+    "iconItem": "excavation_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3122,7 +3122,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫章",
     "icon": "🗿",
-    "iconItem": "excavation_ext2_26",
+    "iconItem": "excavation_ext_26",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3142,7 +3142,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫卷",
     "icon": "🗿",
-    "iconItem": "excavation_ext2_27",
+    "iconItem": "excavation_ext_27",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3182,7 +3182,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道谱",
     "icon": "👑",
-    "iconItem": "excavation_ext_28",
+    "iconItem": "excavation_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3202,7 +3202,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道典",
     "icon": "👑",
-    "iconItem": "excavation_ext_29",
+    "iconItem": "excavation_ext2_29",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3222,7 +3222,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道章",
     "icon": "👑",
-    "iconItem": "excavation_ext2_29",
+    "iconItem": "excavation_ext_29",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3242,7 +3242,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道卷",
     "icon": "👑",
-    "iconItem": "excavation_ext_30",
+    "iconItem": "excavation_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -3262,7 +3262,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "稼穑·初识录",
     "icon": "🌰",
-    "iconItem": "excavation_ext2_01",
+    "iconItem": "excavation_ext_01",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3319,7 +3319,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "稼穑·渐熟录",
     "icon": "🥬",
-    "iconItem": "excavation_ext_02",
+    "iconItem": "excavation_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3338,7 +3338,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "稼穑·渐熟谱",
     "icon": "🥬",
-    "iconItem": "foraging_ext2_02",
+    "iconItem": "foraging_ext_02",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3376,7 +3376,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "稼穑·通晓录",
     "icon": "🎃",
-    "iconItem": "foraging_ext2_04",
+    "iconItem": "foraging_ext_04",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3414,7 +3414,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "稼穑·通晓典",
     "icon": "🎃",
-    "iconItem": "excavation_ext_05",
+    "iconItem": "excavation_ext2_05",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3490,7 +3490,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "稼穑·大成录",
     "icon": "🌻",
-    "iconItem": "foraging_ext_09",
+    "iconItem": "foraging_ext2_09",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3585,7 +3585,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "稼穑·化境典",
     "icon": "🍇",
-    "iconItem": "excavation_ext_12",
+    "iconItem": "excavation_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3604,7 +3604,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "稼穑·化境章",
     "icon": "🍇",
-    "iconItem": "foraging_ext2_12",
+    "iconItem": "foraging_ext_12",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3642,7 +3642,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "稼穑·圆满录",
     "icon": "🍅",
-    "iconItem": "foraging_ext2_14",
+    "iconItem": "foraging_ext_14",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3680,7 +3680,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "稼穑·圆满典",
     "icon": "🍅",
-    "iconItem": "foraging_ext2_15",
+    "iconItem": "foraging_ext_15",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3757,7 +3757,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "稼穑·轮回谱",
     "icon": "🥕",
-    "iconItem": "foraging_ext2_17",
+    "iconItem": "foraging_ext_17",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3777,7 +3777,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "稼穑·轮回典",
     "icon": "🥕",
-    "iconItem": "foraging_ext_18",
+    "iconItem": "foraging_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3837,7 +3837,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "稼穑·历劫录",
     "icon": "🌽",
-    "iconItem": "foraging_ext_20",
+    "iconItem": "foraging_ext2_20",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3897,7 +3897,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "稼穑·历劫章",
     "icon": "🌽",
-    "iconItem": "foraging_ext_23",
+    "iconItem": "foraging_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3937,7 +3937,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "稼穑·悟道录",
     "icon": "🍒",
-    "iconItem": "foraging_ext_25",
+    "iconItem": "foraging_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3957,7 +3957,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "稼穑·悟道谱",
     "icon": "🍒",
-    "iconItem": "foraging_ext_26",
+    "iconItem": "foraging_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3977,7 +3977,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "稼穑·悟道典",
     "icon": "🍒",
-    "iconItem": "foraging_ext2_27",
+    "iconItem": "foraging_ext_27",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -3997,7 +3997,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "稼穑·悟道章",
     "icon": "🍒",
-    "iconItem": "foraging_ext_28",
+    "iconItem": "foraging_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -4017,7 +4017,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "稼穑·悟道卷",
     "icon": "🍒",
-    "iconItem": "foraging_ext2_29",
+    "iconItem": "foraging_ext_29",
     "req": {
       "kind": "codex",
       "skill": "farming",
@@ -4170,7 +4170,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "烹煮·通晓谱",
     "icon": "🍲",
-    "iconItem": "cooking_ext_09",
+    "iconItem": "cooking_ext2_09",
     "req": {
       "kind": "codex",
       "skill": "cooking",
@@ -4208,7 +4208,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "烹煮·精研录",
     "icon": "🥘",
-    "iconItem": "cooking_ext2_11",
+    "iconItem": "cooking_ext_11",
     "req": {
       "kind": "codex",
       "skill": "cooking",
@@ -4322,7 +4322,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "烹煮·化境录",
     "icon": "🍽️",
-    "iconItem": "cooking_ext2_18",
+    "iconItem": "cooking_ext_18",
     "req": {
       "kind": "codex",
       "skill": "cooking",
@@ -4532,7 +4532,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "烹煮·轮回谱",
     "icon": "🥟",
-    "iconItem": "cooking_ext2_24",
+    "iconItem": "cooking_ext_24",
     "req": {
       "kind": "codex",
       "skill": "cooking",
@@ -4652,7 +4652,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "烹煮·历劫典",
     "icon": "🍢",
-    "iconItem": "cooking_ext_27",
+    "iconItem": "cooking_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "cooking",
@@ -4831,7 +4831,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "烘焙·初识谱",
     "icon": "🍞",
-    "iconItem": "baking_ext_02",
+    "iconItem": "baking_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -4850,7 +4850,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "烘焙·初识典",
     "icon": "🍞",
-    "iconItem": "baking_ext2_02",
+    "iconItem": "baking_ext_02",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -4869,7 +4869,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "烘焙·渐熟录",
     "icon": "🥐",
-    "iconItem": "baking_ext2_05",
+    "iconItem": "baking_ext_05",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -4926,7 +4926,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "烘焙·通晓录",
     "icon": "🥨",
-    "iconItem": "baking_ext2_09",
+    "iconItem": "baking_ext_09",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -4945,7 +4945,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "烘焙·通晓谱",
     "icon": "🥨",
-    "iconItem": "baking_ext_10",
+    "iconItem": "baking_ext2_10",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -4964,7 +4964,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "烘焙·通晓典",
     "icon": "🥨",
-    "iconItem": "baking_ext2_10",
+    "iconItem": "baking_ext_10",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5040,7 +5040,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "烘焙·大成录",
     "icon": "🎂",
-    "iconItem": "baking_ext2_14",
+    "iconItem": "baking_ext_14",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5097,7 +5097,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "烘焙·化境录",
     "icon": "🥮",
-    "iconItem": "baking_ext2_16",
+    "iconItem": "baking_ext_16",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5154,7 +5154,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "烘焙·化境章",
     "icon": "🥮",
-    "iconItem": "baking_ext_17",
+    "iconItem": "baking_ext2_17",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5173,7 +5173,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "烘焙·化境卷",
     "icon": "🥮",
-    "iconItem": "baking_ext2_17",
+    "iconItem": "baking_ext_17",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5192,7 +5192,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "烘焙·圆满录",
     "icon": "🥯",
-    "iconItem": "baking_ext2_18",
+    "iconItem": "baking_ext_18",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5230,7 +5230,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "烘焙·圆满典",
     "icon": "🥯",
-    "iconItem": "baking_ext_19",
+    "iconItem": "baking_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5287,7 +5287,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "烘焙·轮回录",
     "icon": "🍰",
-    "iconItem": "baking_ext2_20",
+    "iconItem": "baking_ext_20",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5327,7 +5327,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "烘焙·轮回典",
     "icon": "🍰",
-    "iconItem": "baking_ext2_21",
+    "iconItem": "baking_ext_21",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5367,7 +5367,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "烘焙·轮回卷",
     "icon": "🍰",
-    "iconItem": "baking_ext2_22",
+    "iconItem": "baking_ext_22",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5407,7 +5407,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "烘焙·历劫谱",
     "icon": "🧇",
-    "iconItem": "baking_ext_24",
+    "iconItem": "baking_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5427,7 +5427,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "烘焙·历劫典",
     "icon": "🧇",
-    "iconItem": "baking_ext2_24",
+    "iconItem": "baking_ext_24",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5447,7 +5447,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "烘焙·历劫章",
     "icon": "🧇",
-    "iconItem": "baking_ext2_25",
+    "iconItem": "baking_ext_25",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5467,7 +5467,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "烘焙·历劫卷",
     "icon": "🧇",
-    "iconItem": "baking_ext_26",
+    "iconItem": "baking_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5487,7 +5487,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "烘焙·悟道录",
     "icon": "🥞",
-    "iconItem": "baking_ext_27",
+    "iconItem": "baking_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5507,7 +5507,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "烘焙·悟道谱",
     "icon": "🥞",
-    "iconItem": "baking_ext_28",
+    "iconItem": "baking_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5527,7 +5527,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "烘焙·悟道典",
     "icon": "🥞",
-    "iconItem": "baking_ext2_28",
+    "iconItem": "baking_ext_28",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5547,7 +5547,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "烘焙·悟道章",
     "icon": "🥞",
-    "iconItem": "baking_ext2_29",
+    "iconItem": "baking_ext_29",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5567,7 +5567,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "烘焙·悟道卷",
     "icon": "🥞",
-    "iconItem": "baking_ext_30",
+    "iconItem": "baking_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "baking",
@@ -5587,7 +5587,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "酿造·初识录",
     "icon": "🍵",
-    "iconItem": "brewing_ext2_01",
+    "iconItem": "brewing_ext_01",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5606,7 +5606,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "酿造·初识谱",
     "icon": "🍵",
-    "iconItem": "brewing_ext_02",
+    "iconItem": "brewing_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5682,7 +5682,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "酿造·渐熟典",
     "icon": "🧃",
-    "iconItem": "brewing_ext2_05",
+    "iconItem": "brewing_ext_05",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5720,7 +5720,7 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "酿造·通晓谱",
     "icon": "🍺",
-    "iconItem": "brewing_ext2_08",
+    "iconItem": "brewing_ext_08",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5777,7 +5777,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "酿造·精研谱",
     "icon": "🍷",
-    "iconItem": "brewing_ext2_11",
+    "iconItem": "brewing_ext_11",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5815,7 +5815,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "酿造·大成录",
     "icon": "🥂",
-    "iconItem": "brewing_ext2_14",
+    "iconItem": "brewing_ext_14",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5853,7 +5853,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "酿造·大成典",
     "icon": "🥂",
-    "iconItem": "brewing_ext_15",
+    "iconItem": "brewing_ext2_15",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5872,7 +5872,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "酿造·化境录",
     "icon": "🍾",
-    "iconItem": "brewing_ext_18",
+    "iconItem": "brewing_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5910,7 +5910,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "酿造·化境典",
     "icon": "🍾",
-    "iconItem": "brewing_ext_19",
+    "iconItem": "brewing_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5929,7 +5929,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "酿造·化境章",
     "icon": "🍾",
-    "iconItem": "brewing_ext2_19",
+    "iconItem": "brewing_ext_19",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5948,7 +5948,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "酿造·化境卷",
     "icon": "🍾",
-    "iconItem": "brewing_ext_20",
+    "iconItem": "brewing_ext2_20",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -5967,7 +5967,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "酿造·圆满录",
     "icon": "🍹",
-    "iconItem": "brewing_ext_21",
+    "iconItem": "brewing_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6024,7 +6024,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "酿造·圆满章",
     "icon": "🍹",
-    "iconItem": "brewing_ext2_22",
+    "iconItem": "brewing_ext_22",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6043,7 +6043,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "酿造·圆满卷",
     "icon": "🍹",
-    "iconItem": "brewing_ext_23",
+    "iconItem": "brewing_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6082,7 +6082,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "酿造·轮回谱",
     "icon": "🥤",
-    "iconItem": "brewing_ext2_24",
+    "iconItem": "brewing_ext_24",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6122,7 +6122,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "酿造·轮回章",
     "icon": "🥤",
-    "iconItem": "brewing_ext_25",
+    "iconItem": "brewing_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6162,7 +6162,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "酿造·历劫录",
     "icon": "🧉",
-    "iconItem": "brewing_ext2_94",
+    "iconItem": "brewing_ext2_97",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6202,7 +6202,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "酿造·历劫典",
     "icon": "🧉",
-    "iconItem": "brewing_ext_27",
+    "iconItem": "brewing_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6262,7 +6262,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "酿造·悟道录",
     "icon": "🍸",
-    "iconItem": "brewing_ext2_28",
+    "iconItem": "brewing_ext_28",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6282,7 +6282,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "酿造·悟道谱",
     "icon": "🍸",
-    "iconItem": "brewing_ext_29",
+    "iconItem": "brewing_ext2_29",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6302,7 +6302,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "酿造·悟道典",
     "icon": "🍸",
-    "iconItem": "brewing_ext2_99",
+    "iconItem": "brewing_ext_29",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6322,7 +6322,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "酿造·悟道章",
     "icon": "🍸",
-    "iconItem": "brewing_ext_30",
+    "iconItem": "brewing_ext2_100",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6342,7 +6342,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "酿造·悟道卷",
     "icon": "🍸",
-    "iconItem": "brewing_ext2_30",
+    "iconItem": "brewing_ext_30",
     "req": {
       "kind": "codex",
       "skill": "brewing",
@@ -6571,7 +6571,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "调味·精研典",
     "icon": "🥄",
-    "iconItem": "spiceMixing_ext_12",
+    "iconItem": "spiceMixing_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6590,7 +6590,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "调味·大成录",
     "icon": "🫙",
-    "iconItem": "spiceMixing_ext_14",
+    "iconItem": "spiceMixing_ext2_14",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6609,7 +6609,7 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "调味·大成谱",
     "icon": "🫙",
-    "iconItem": "spiceMixing_ext2_14",
+    "iconItem": "spiceMixing_ext_14",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6647,7 +6647,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "调味·化境录",
     "icon": "⚗️",
-    "iconItem": "spiceMixing_ext2_16",
+    "iconItem": "spiceMixing_ext_16",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6704,7 +6704,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "调味·化境章",
     "icon": "⚗️",
-    "iconItem": "spiceMixing_ext_17",
+    "iconItem": "spiceMixing_ext2_17",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6723,7 +6723,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "调味·化境卷",
     "icon": "⚗️",
-    "iconItem": "spiceMixing_ext2_17",
+    "iconItem": "spiceMixing_ext_17",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6742,7 +6742,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "调味·圆满录",
     "icon": "🧊",
-    "iconItem": "spiceMixing_ext_19",
+    "iconItem": "spiceMixing_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6799,7 +6799,7 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "调味·圆满章",
     "icon": "🧊",
-    "iconItem": "spiceMixing_ext2_20",
+    "iconItem": "spiceMixing_ext_20",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6897,7 +6897,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "调味·轮回章",
     "icon": "🫒",
-    "iconItem": "spiceMixing_ext_22",
+    "iconItem": "spiceMixing_ext2_22",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6917,7 +6917,7 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "调味·轮回卷",
     "icon": "🫒",
-    "iconItem": "spiceMixing_ext_23",
+    "iconItem": "spiceMixing_ext2_10",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6937,7 +6937,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "调味·历劫录",
     "icon": "🥜",
-    "iconItem": "spiceMixing_ext_24",
+    "iconItem": "spiceMixing_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6957,7 +6957,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "调味·历劫谱",
     "icon": "🥜",
-    "iconItem": "spiceMixing_ext2_24",
+    "iconItem": "spiceMixing_ext_24",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -6997,7 +6997,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "调味·历劫章",
     "icon": "🥜",
-    "iconItem": "spiceMixing_ext2_25",
+    "iconItem": "spiceMixing_ext_25",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7017,7 +7017,7 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "调味·历劫卷",
     "icon": "🥜",
-    "iconItem": "spiceMixing_ext_26",
+    "iconItem": "spiceMixing_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7037,7 +7037,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "调味·悟道录",
     "icon": "🍋",
-    "iconItem": "spiceMixing_ext_27",
+    "iconItem": "spiceMixing_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7057,7 +7057,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "调味·悟道谱",
     "icon": "🍋",
-    "iconItem": "spiceMixing_ext_28",
+    "iconItem": "spiceMixing_ext2_28",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7077,7 +7077,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "调味·悟道典",
     "icon": "🍋",
-    "iconItem": "spiceMixing_ext2_28",
+    "iconItem": "spiceMixing_ext_28",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7097,7 +7097,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "调味·悟道章",
     "icon": "🍋",
-    "iconItem": "spiceMixing_ext2_29",
+    "iconItem": "spiceMixing_ext_29",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7117,7 +7117,7 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "调味·悟道卷",
     "icon": "🍋",
-    "iconItem": "spiceMixing_ext_30",
+    "iconItem": "spiceMixing_ext2_30",
     "req": {
       "kind": "codex",
       "skill": "spiceMixing",
@@ -7327,7 +7327,7 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "锻造·精研谱",
     "icon": "🛠️",
-    "iconItem": "smith_寒铁_legs",
+    "iconItem": "smith_ext2_05",
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
@@ -7441,7 +7441,7 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "锻造·化境谱",
     "icon": "🗡️",
-    "iconItem": "smith_ext2_23",
+    "iconItem": "smith_琉璃_legs",
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",

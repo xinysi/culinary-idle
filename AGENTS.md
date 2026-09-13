@@ -420,6 +420,11 @@
 - ⚠️ **写这类含转义的 JS 代码（正则 ``/``、`
 `）绝不要用 Python heredoc 拼接**：Python 会把 `` 当退格、`` 当八进制转义，写出来的正则静默失效（本轮就因此得到一个「扫描 0 条」的假守卫，靠看输出条数才发现）。用 Edit/Write 工具写，或 Python 里用 `r'''…'''` 原始字符串。
 
+### 🎲 生成器必须跨环境可复现（2026-09-13 v2.1.0 的 CI 红在 `gen_drift_audit` 后立）
+- **禁止在生成器里用 `localeCompare` 排序**：它的结果依赖运行环境的 locale/ICU。实测 `'smith_寒铁_legs'.localeCompare('smith_ext2_05')` 在本地（zh-CN）返回 −1、按**码位**比较是 +1 → 同一份数据本地与 CI 挑中不同物品，`gen_drift_audit` 报「未登记的漂移」并把 CI 判红（产物 209 行 `iconItem` 不一致）。
+- 统一用**码位比较**：`const cmpId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)`（`gen_shanhai_tree.mjs` 里已定义，其它生成器照抄）。对「同键排序」的任何 tie-break 同理——**只认语言无关的比较**。
+- 自查方式：`GEN_OUT_DIR=<临时目录1> LANG=C LC_ALL=C node scripts/gen/X.mjs` 与 `... LANG=zh_CN.UTF-8 ...` 各跑一次，两份产物必须**逐字节相同**（再与仓库产物比对，`gen_drift_audit` 要求「一致」）。
+
 ### 🚀 发布流程与「发布后核验」（2026-09-11 立）
 1. 全量回归：`vite build` → 11 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs e2e-text.spec.mjs e2e-audio-skin.spec.mjs`（15 项）。
 2. 版本号三处同步：`package.json`、`lmewexe/package.json`、README 的「当前版本」行 + 版本历史行。
