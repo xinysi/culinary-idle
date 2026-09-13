@@ -6,6 +6,7 @@ import { EXPEDITIONS, expeditionTier, EXPEDITION_TIER_STEPS } from './expedition
 import { BRANCHES } from './branches.js'
 import { MASCOTS } from './mascots.js'
 import { setMealBoard } from './setMeals.js'
+import { DAO_PATHS, DAO_NODES } from './daoTree.js'
 
 /** 各成就的达成阈值（技能类成就用 id 内嵌的数字，见 achievementNeed） */
 const NEEDS = {
@@ -16,6 +17,7 @@ const NEEDS = {
   totalLevel500: 500, totalLevel1000: 1000, hardcore10: 10, season5: 5, season10: 10, seasonAll: 40,
   collection25: 25, collection50: 50, collection75: 75, collection100: 100,
   hardcoreDay1: 1, hardcoreDay7: 7, hardcoreDay30: 30, hardcoreDay100: 100,
+  daoFirst: 1, daoPathAll: 20, // 四路各 5 个 = 20 个节点
   friendBondAll: FRIENDS.length, expeditionTier5: EXPEDITIONS.length, branch6: BRANCHES.length, mascot7: MASCOTS.length, setMeal3: 3, chefWin10: 10,
 }
 
@@ -76,6 +78,8 @@ export function achievementProgress(p, a) {
   else if (a.id === 'mascot7') cur = MASCOTS.filter((m) => !!p.mascots?.owned?.[m.id]).length
   else if (a.id === 'setMeal3') cur = setMealBoard(p.restaurant?.menu ?? []).filter((m) => m.ok).length
   else if (a.id === 'chefWin10') cur = p.stats?.chefWins ?? 0
+  else if (a.id === 'daoFirst') cur = (p.daoUnlocked ?? []).length
+  else if (a.id === 'daoPathAll') cur = (p.daoUnlocked ?? []).length
   if (cur === null || !need) return null
   return { cur: Math.min(cur, need), need, pct: Math.min(100, (cur / need) * 100) }
 }

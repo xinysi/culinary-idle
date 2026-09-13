@@ -93,9 +93,10 @@ export class Combat {
     const gEff = this.player.gastronomyEffects?.() ?? {}
     const realm = this.player.realmModifiers?.() ?? null
     const insight = this.player.insightEffects?.() ?? {} // 菜系图谱永久加成（2026-09-09）
+    const dao = this.player.daoEffects?.() ?? {} // 厨神之路·厨武之道（v2.0）
     const atkPct = (realm?.attackPct ?? 0) + (insight.attackPct ?? 0)
     const defPct = (realm?.defensePct ?? 0) + (insight.defensePct ?? 0)
-    const hpPct = (realm?.maxHpPct ?? 0) + (insight.maxHpPct ?? 0)
+    const hpPct = (realm?.maxHpPct ?? 0) + (insight.maxHpPct ?? 0) + (dao.maxHpPct ?? 0)
     const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0) + (this.biscuitSpeedPct || 0) // +能量饼干「精力充沛」（2026-09-10）
     const speedBonus = Number(eq.speedBonus) || 0
     const baseSpeed = Math.max(1.2, (2.4 - sl * 0.02 - speedBonus) * (1 - speedPct / 100))
@@ -106,7 +107,7 @@ export class Combat {
       accuracy: Math.max(1, Math.floor((10 + sl + eq.accuracy + this.buffs.accuracy) * (1 - drunkPenalty) * (1 + (realm?.accuracyPct ?? 0) / 100))),
       defense: (heat + eq.defense + this.buffs.defense) * (1 + defPct / 100),
       evasion: Math.floor((5 + heat * 0.5 + eq.evasion + this.buffs.evasion) * (1 + (realm?.evasionPct ?? 0) / 100)),
-      critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance + (realm?.critChance ?? 0), 0.8),
+      critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance + (realm?.critChance ?? 0) + (dao.critPct ?? 0) / 100, 0.8),
       speedMs: Math.floor(baseSpeed * 1000 * (this.slowTurns > 0 ? 1.5 : 1)),
       flavorEnergy: this.player.combat.flavorEnergy,
     }
@@ -283,7 +284,7 @@ export class Combat {
     // 伤害加成：食灵（§3.3.6 dmgPct/styleDmgPct）+ 奥义（§3.4.1 dmgPct/styleDmgPct）
     const seff = this.player.spiritEffects?.() ?? {}
     const gEff = this.player.gastronomyEffects?.() ?? {}
-    const dmgPct = (seff.dmgPct ?? 0) + (gEff.dmgPct ?? 0) + (seff.styleDmgPct?.[style] ?? 0) + (gEff.styleDmgPct?.[style] ?? 0) + ((this.player.guildEffects?.() ?? {}).dmgPct ?? 0)
+    const dmgPct = (seff.dmgPct ?? 0) + (gEff.dmgPct ?? 0) + (seff.styleDmgPct?.[style] ?? 0) + (gEff.styleDmgPct?.[style] ?? 0) + ((this.player.guildEffects?.() ?? {}).dmgPct ?? 0) + (this.player.daoEffects?.()?.dmgPct ?? 0)
     let dmg = Math.max(1, Math.floor(p.attack * typeBonus * (1 - reduction) * (1 + dmgPct / 100)))
     // 暴击
     let crit = false

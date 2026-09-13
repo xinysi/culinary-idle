@@ -31,6 +31,7 @@ import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
 import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyChallenge.js'
 import { REALM_BUFFS, rollRealmChoices, realmReward } from '../game/data/mysticRealm.js'
+import { DAO_NODES, DAO_PATHS, daoNode, daoEffectSum, daoSpent, daoCanUnlock, daoPathCost } from '../game/data/daoTree.js'
 import { INSIGHT_NODES, insightEffectSum, canUnlockInsight } from '../game/data/insightTree.js'
 import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
@@ -211,7 +212,8 @@ const defaultState = () => ({
     // 食神秘境（2026-09-09 roguelike 局内模式）：{ active, floor, buffs: [id], best, pending: [def] | null }
     realm: { active: false, floor: 0, buffs: [], best: 0, pending: null },
     // 菜系图谱（2026-09-09 永久天赋树）：已解锁节点 id；货币见 stats.insights
-    insights: [],
+    insights: [], // 菜系图谱已解锁节点
+    daoUnlocked: [], // 厨神之路 · 轮回天赋树已解锁节点（v2.0，懒建；印记由 stats.prestiges 派生，不另存货币）
     // 无尽挑战塔（对决 99 解锁）：floor=当前挑战层，best=已通最高层，rewarded=已发里程碑层
     tower: { floor: 1, best: 0, rewarded: [] },
     // 月度厨艺大赛：month=YYYYMM，score=当月累计分，entries=提交记录，rewarded=已领里程碑序号
@@ -305,7 +307,8 @@ export const usePlayerStore = defineStore('player', {
       const level = s.skills.tasteAcumen?.level ?? 1
       const eq = s.equippedStats
       const aoji = s.gastronomyEffects()?.maxHpBonus ?? 0
-      return 10 + (level - 1) * 10 + eq.hpBonus + aoji
+      const daoHp = (s.daoEffectSumCache ?? daoEffectSum(s.daoUnlocked ?? [])).maxHpPct ?? 0
+      return Math.round((10 + (level - 1) * 10 + eq.hpBonus + aoji) * (1 + daoHp / 100))
     },
     totalLevels(s) {
       return Object.values(s.skills).reduce((a, sk) => a + (sk.level ?? 1), 0)
@@ -481,12 +484,13 @@ export const usePlayerStore = defineStore('player', {
       const tip = (1 + 0.03 * (favorLv - 1)) * (1 + (this.regularTipPct?.() ?? 0) / 100)
       const stars = 1 + (this.michelinIncomePct?.() ?? 0) / 100 // 米其林星级（2026-09-10）
       const staffMult = 1 + (this.staffIncomePct?.() ?? 0) / 100 // 雇工班底（2026-09-10）
+      const daoIncomePct = this.daoEffects?.()?.incomePct ?? 0 // 厨神之路·经营之道（v2.0）
       const patronIncome = 1 + (this.patronEffects?.()?.incomePct ?? 0) / 100 // 食神信仰（2026-09-10）
       // 夜市狂潮（2026-09-06）：12-20 点餐厅收入 ×2
       const market = this.marketBoost?.() ?? { restaurant: 1, combatXp: 1 }
       const honor = 1 + (this.honorState?.()?.perks?.goldPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
       const meal = setMealMult(activeSetMeal(s.restaurant?.menu ?? []).bonus) // 套餐与定食（2026-09-10）
-      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip * stars * staffMult * patronIncome * market.restaurant * honor * meal
+      return total * (1 + 0.3 * (s.restaurant.level - 1)) * (1 + decorBonus) * tip * stars * staffMult * patronIncome * market.restaurant * honor * meal * (1 + daoIncomePct / 100)
     },
     /** 公会被动效果（§13）— 函数 getter：guildEffects() */
     guildEffects(s) {
@@ -571,6 +575,7 @@ export const usePlayerStore = defineStore('player', {
         challengeBest: saved.challengeBest ?? {},
         realm: saved.realm ?? { active: false, floor: 0, buffs: [], best: 0, pending: null },
         insights: Array.isArray(saved.insights) ? saved.insights : [],
+        daoUnlocked: Array.isArray(saved.daoUnlocked) ? saved.daoUnlocked : [],
         tower: saved.tower ?? { floor: 1, best: 0, rewarded: [] },
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
@@ -692,6 +697,7 @@ export const usePlayerStore = defineStore('player', {
         challengeBest: this.challengeBest,
         realm: this.realm,
         insights: this.insights,
+        daoUnlocked: this.daoUnlocked,
         tower: this.tower,
         fest: this.fest,
         spiritBonds: this.spiritBonds,
@@ -743,7 +749,8 @@ export const usePlayerStore = defineStore('player', {
     gainGold(amount) {
       // 装备词条「金币 +%」（仅穿戴着生效）
       const gm = this.equippedStats.goldPct ?? 0
-      const n = Math.floor(amount * (1 + gm / 100))
+      const daoGold = this.daoEffects?.()?.goldPct ?? 0 // 厨神之路·火工之道（v2.0）
+      const n = Math.floor(amount * (1 + gm / 100 + daoGold / 100))
       if (n > 0) {
         this.gold += n
         this.stats.totalGoldEarned += n
@@ -1582,7 +1589,7 @@ export const usePlayerStore = defineStore('player', {
       if ((this.inventory[o.itemId] ?? 0) < o.qty) return { ok: false, msg: `需要 ${getItem(o.itemId)?.name}×${o.qty}` }
       this.spendItem(o.itemId, o.qty)
       list.splice(idx, 1)
-      const orderGold = Math.round((o.reward ?? 0) * (1 + this.staffOrderPct?.() / 100)) // 跑堂加成（2026-09-10）
+      const orderGold = Math.round((o.reward ?? 0) * (1 + this.staffOrderPct?.() / 100 + (this.daoEffects?.()?.orderGoldPct ?? 0) / 100)) // 跑堂 + 厨神之路（v2.0）
       this.gainGold(orderGold)
       const favor = this.restaurant.favor ?? { xp: 0 }
       favor.xp = (favor.xp ?? 0) + o.reward * 0.05
@@ -2397,7 +2404,7 @@ export const usePlayerStore = defineStore('player', {
       const st = this.branches?.[id]
       if (!def || !st) return 0
       const base = branchHourly(def, { manager: st.manager, restaurantLevel: this.restaurant?.level ?? 1 })
-      return Math.round(base * (this.branchThemeMult?.(id) ?? 1)) // 主题加成（2026-09-10）
+      return Math.round(base * (this.branchThemeMult?.(id) ?? 1) * (1 + (this.daoEffects?.()?.branchPct ?? 0) / 100)) // 主题（2026-09-10）+ 厨神之路（v2.0）
     },
     /** 每帧：分店收入结算（整点入账；离线按 12 小时上限补算） */
     _tickBranches() {
@@ -3929,6 +3936,41 @@ export const usePlayerStore = defineStore('player', {
     /** 已解锁节点的效果合计 */
     insightEffects() {
       return insightEffectSum(this.insights ?? [])
+    },
+
+    // ── 厨神之路 · 轮回天赋树（v2.0）──────────────────────────────
+    /** 可用轮回印记 = 累计转生次数 − 已投入（货币完全派生，不新增货币存档字段） */
+    daoPoints() {
+      return Math.max(0, (this.stats?.prestiges ?? 0) - daoSpent(this.daoUnlocked ?? []))
+    },
+    /** 已解锁节点的效果合计（各聚合点按需读取对应键） */
+    daoEffects() {
+      return daoEffectSum(this.daoUnlocked ?? [])
+    },
+    /** 已投入印记 */
+    daoSpentPoints() {
+      return daoSpent(this.daoUnlocked ?? [])
+    },
+    /** 能否解锁某节点（含层数门槛与印记校验） */
+    daoCanUnlock(id) {
+      return daoCanUnlock(id, this.daoUnlocked ?? [], this.daoPoints())
+    },
+    /** 解锁节点：消耗印记（由转生次数派生）→ 影响立即生效 */
+    daoUnlock(id) {
+      const def = daoNode(id)
+      if (!def) return { ok: false, msg: '节点不存在' }
+      const chk = this.daoCanUnlock(id)
+      if (!chk.ok) return { ok: false, msg: chk.reason }
+      this.daoUnlocked = [...(this.daoUnlocked ?? []), id]
+      this.stats.daoUnlockedTotal = (this.stats.daoUnlockedTotal ?? 0) + 1
+      EventBus.emit('dao:unlock', { id, name: def.name, cost: def.cost })
+      return { ok: true, cost: def.cost }
+    },
+    /** 某条道途的进度：{ unlocked, total, cost, spent } */
+    daoPathProgress(pathId) {
+      const nodes = DAO_NODES.filter((n) => n.path === pathId)
+      const un = nodes.filter((n) => (this.daoUnlocked ?? []).includes(n.id))
+      return { unlocked: un.length, total: nodes.length, cost: daoPathCost(pathId), spent: un.reduce((a, n) => a + n.cost, 0) }
     },
     /** 解锁节点（消耗美食见闻；前置必须已解锁） */
     unlockInsight(id) {

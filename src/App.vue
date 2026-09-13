@@ -24,6 +24,7 @@ import { sfx } from './game/core/sound.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
 
 const SkillView = defineAsyncComponent(() => import('./views/SkillView.vue'))
+const DaoView = defineAsyncComponent(() => import('./views/DaoView.vue'))
 const ShopView = defineAsyncComponent(() => import('./views/ShopView.vue'))
 const ZhenXiuView = defineAsyncComponent(() => import('./views/ZhenXiuView.vue'))
 const StatsView = defineAsyncComponent(() => import('./views/StatsView.vue'))
@@ -335,6 +336,7 @@ onMounted(() => {
           <StoryView v-else-if="ui.activeView === 'story'" />
           <CardBattleView v-else-if="ui.activeView === 'cards'" />
           <EncountersView v-else-if="ui.activeView === 'encounters'" />
+          <DaoView v-else-if="ui.activeView === 'dao'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />

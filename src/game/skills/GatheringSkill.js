@@ -128,7 +128,8 @@ export class GatheringSkill extends Skill {
     const wxPct = ((this.player.weatherEffects?.()?.gatherYield ?? 1) - 1) // 天气（2026-09-10）
     const luckyPct = target ? (this.player.luckyItemBonus?.(target.itemId) ?? 0) : 0 // 今日运势·幸运食材
     const honorPct = (this.player.honorState?.()?.perks?.gatherPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
-    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + (yMult - 1)
+    const daoPct = (this.player.daoEffects?.()?.yieldPct ?? 0) / 100 // 厨神之路·采撷之道（v2.0）
+    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + daoPct + (yMult - 1)
   }
 
   /** 产量加成后的数量：精通保底批量 + 各百分比来源的额外产出，以额外产出几率折算 */

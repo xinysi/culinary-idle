@@ -40,7 +40,7 @@ function buildSaveData() {
  *  返回 { reports, restGold, elapsedMs }（无收益返回 null）——供离线结算弹窗展示（2026-09-06） */
 export function settleOffline(player, ui, elapsedMs) {
   // §8.1：基础 12h + 能量饼干加成（上限 +12h）
-  const maxOfflineMs = DEFAULT_MAX_OFFLINE_MS + player.offlineBonusH * 3600_000
+  const maxOfflineMs = DEFAULT_MAX_OFFLINE_MS + player.offlineBonusH * 3600_000 + (player.daoEffects?.()?.offlineHours ?? 0) * 3600_000 // 厨神之路·采撷之道（v2.0）
 
   const reports = []
   // 与在线一致：只结算并行上限内实际运行的挂机技能（§3.1 活动技能优先）
