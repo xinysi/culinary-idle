@@ -286,7 +286,7 @@
 - 跨天判断统一用 `this.todayKey ?? _todayStr()`（与签到/每日任务同源），别自己 `new Date()` 取日期。
 
 ### 🚀 发布流程与「发布后核验」（2026-09-11 立）
-1. 全量回归：`vite build` → 10 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs e2e-text.spec.mjs`（14 项）。
+1. 全量回归：`vite build` → 11 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs e2e-text.spec.mjs`（14 项）。
 2. 版本号三处同步：`package.json`、`lmewexe/package.json`、README 的「当前版本」行 + 版本历史行。
 3. `git add -A` → commit（信息里写清「玩法零改动 / 新存档字段」之类的口径）→ `git push origin main` → `git tag vX.Y.Z && git push origin vX.Y.Z`。
 4. 推 tag 会触发三条 workflow（`release.yml` 打桌面版 zip、`pages.yml` 部署在线版、`ci.yml`）：`gh run list` 轮询到三条都 `completed success`。
@@ -315,6 +315,30 @@
 - 交付前实测三档宽度：**被裁按钮数必须为 0**，且 `nav.scrollWidth ≤ nav.clientWidth`（顶栏本身不许横向溢出）。
 - **导航命名要能区分不同系统**：顶栏「试炼塔」（`tower`，无尽挑战塔）与左栏「厨神试炼」（`trials`，厨神试炼）是**两个系统**，名字近似过（原左栏叫「试炼」）已改名区分。新增命名时先在某处搜一遍有没有近义条目。
 - **红点只给「稀缺的一次性待办」**：任务中心（可领取数）✓；**公会不加**——其实测是「任务完成即自动结算」（`guild.points += reward` 且进度归零），没有待领态；竞技场也不加（每 5 分钟刷新，红点会常亮成噪音）。
+
+### 🧪 全量验收（2026-09-12 用户要求「全功能走查」后立）
+用户提出「检查所有功能是否正常 / 都能走完流程 / 存档 / 效果 / 数据 / 交互 / 同步 / 错字少字 / 交互逻辑 / 长跑内存 + 回归三遍」时，
+按下面这套跑（都是可复现的命令，不是"人工点点看"）：
+
+| 维度 | 方法 | 实测结论（2026-09-12） |
+| --- | --- | --- |
+| 所有功能能跑 | `node scripts/ci/action_sweep.mjs`（**已入 CI**）：311 个 store 动作 × 满配/新档各调一次 | 0 异常；断言"调用后关键状态不变 undefined" |
+| 走完流程 | `system_test.mjs`（708 断言）+ `system_test2.mjs`（77）+ 14 项 e2e | 全绿 |
+| 存档 | 富状态 serialize→applySave→serialize **逐字段比对** + 二次读档幂等 + 4 例旧档迁移 | 仅首次读档补一个空 `gearMods` 容器（幂等，非遗漏） |
+| 效果真作用 | 逐源核对"开/关"后的输出比 = 文档公式（班底 ×1.24、信仰 ×1.16、分店 1520/1900、奥义 +20%、公会 +5%、图谱 +3%、转生 ×1.4） | 10/10 对上 |
+| 数据正确 | `content_sync_audit` / `item_triple_audit` / `season_check` / `buff_test` / `continuity_test` | 全绿 |
+| 数据同步 | 上述 + `gen_drift_audit`（产物 vs 生成器） | 全绿 |
+| 错字少字 | **`content_sync_audit` 新增「文本质量」守卫**：扫 95 个数据模块里面向玩家的中文串，查括号不配平/乱码/占位符/空串 | 抓出 3 处真缺陷（见下） |
+| 长跑内存 | `node --expose-gc scripts/sim/memory_sim.mjs`（30 万 tick ≈83 游戏小时）+ 浏览器端 Playwright 观察 30s | 保留堆 20.0→20.1MB（+0.5%）；浏览器 42.6→42.6MB；`ui.log` 恒 500 条封顶 |
+| 交互逻辑 | 14 项 e2e（页签/弹窗/响应式/无未捕获错误/无横向溢出/无标签裸露） | 全绿 |
+
+- ⚠️ **本轮真缺陷（都是"玩家能直接看到"的错字，靠人工扫描才发现）**：
+  1. `gen_tales.mjs` 的 **11 个模板丢了 `」`**（其中一个还把 `」` 打成 `】`）→ 产出 33/3588 条轶事文案括号不配平。
+     修模板后重跑生成器，**diff 只落在 33 行**（可安全重跑但要核对 diff 范围）；现已加文本质量守卫兜住这类。
+  2. `cardBattle.js` 首胜文案 `能量饼干 ×1）` 多了个 `）`；3. `LogView.vue` 状态标签 `已击败）` 同样多一个。
+- ⚠️ **审计脚本自身的两个坑（别再踩）**：
+  · **store 的 getter 是只读 computed**，`p.gastronomyEffects = ...` 之类的猴补丁会静默失败（Vue 只打 warn）→ 效果核对必须**用真实状态驱动**（如 `p.gastronomy.active = [...]`、`p.insights = [...]`、`p.guild.id`）。
+  · **动作遍历必须每个动作独立存档**：共用一份时，前一个动作（结算/转生类）会污染后一个的输入，产生"状态损坏"的假警报（首版误报 6 个）。
 
 ### ➕ 扩充「内容条目」的规矩（2026-09-12 立 · A 档 10 个系统 25 条）
 - **能加条目的**：厨友/采集队/产地/常客/供应商/吉祥物/套餐定食/名厨/厨艺大赛主题/节庆（纯数据即可）。
