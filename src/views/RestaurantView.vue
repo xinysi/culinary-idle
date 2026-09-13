@@ -140,17 +140,17 @@ function hourlyOf(dishId) {
         <span class="dim mono" :class="{ 'order-urgent': criticRemainMin <= 10 }">⏳ 还有 {{ criticRemainMin }} 分钟</span>
       </div>
       <div class="gather-card-row">
-        <span><b>{{ critic.name }}</b> 想要一份 <b>tier ≥ {{ critic.minTier }}</b> 的 <b>{{ critic.category }}</b></span>
+        <span><b>{{ critic.name }}</b> 想要一份 <b>{{ critic.minTier }} 档以上</b> 的 <b>{{ critic.category }}</b></span>
         <span class="dim">赏金 <b class="mono" style="color: var(--gold)">{{ critic.reward.toLocaleString() }}</b> 金 + 神秘调料 ×1 + 好感 +30</span>
       </div>
       <div v-if="criticCandidates.length" class="critic-row">
         <select v-model="criticPick" style="flex: 1; max-width: 320px">
           <option :value="null">选择一道符合要求的料理</option>
-          <option v-for="c in criticCandidates" :key="c.id" :value="c.id">{{ c.item.name }}（tier {{ c.item.tier }}）×{{ c.qty }}</option>
+          <option v-for="c in criticCandidates" :key="c.id" :value="c.id">{{ c.item.name }}（{{ c.item.tier }} 档）×{{ c.qty }}</option>
         </select>
         <button class="btn btn-sm btn-primary" @click="serveCriticNow()">提交</button>
       </div>
-      <p v-else class="dim" style="font-size: 12px">背包中没有符合要求的料理——去做一道 <b>tier ≥ {{ critic.minTier }}</b> 的{{ critic.category }}再来。</p>
+      <p v-else class="dim" style="font-size: 12px">背包中没有符合要求的料理——去做一道 <b>{{ critic.minTier }} 档以上</b> 的{{ critic.category }}再来。</p>
     </div>
 
     <!-- 餐厅装饰（§13）已独立成页（2026-09-11）：这里只给状态与入口 -->
@@ -187,13 +187,13 @@ function hourlyOf(dishId) {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-  background: rgba(255, 251, 244, 0.80);
+  background: rgba(var(--panel-soft-rgb), 0.80);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
-  box-shadow: 0 4px 12px rgba(150, 110, 70, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--tint-rgb), 0.12);
 }
 .restaurant-upgrade-text { flex: 1; margin: 0; line-height: 1.4; color: var(--muted); }
 /* 装饰标题行：标题 + 当前总加成 */

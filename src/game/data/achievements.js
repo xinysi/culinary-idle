@@ -198,6 +198,11 @@ export const ACHIEVEMENTS = [
   { id: 'setMeal3', name: '搭配高手', category: '特殊', desc: '同时满足 3 套套餐定食', title: '搭配高手', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => setMealBoard(p.restaurant?.menu ?? []).filter((m) => m.ok).length >= 3 },
   { id: 'daoFirst', name: '初入道途', category: '特殊', desc: '解锁第一个厨神之路节点', title: '问道者', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.daoUnlocked ?? []).length >= 1 },
   { id: 'daoPathAll', name: '四道同修', category: '特殊', desc: '四条道途各解锁 5 个节点', title: '四道同修', reward: { gold: 30000, items: { mysterySpice: 3 } }, check: (p) => DAO_PATHS.every((d) => DAO_NODES.filter((n) => n.path === d.id && (p.daoUnlocked ?? []).includes(n.id)).length >= 5) },
+  { id: 'shanhaiFirst', name: '初启食经', category: '特殊', desc: '点亮山海食经的第一个节点', title: '食经初启', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 1 },
+  { id: 'shanhai30', name: '拾遗成谱', category: '特殊', desc: '点亮 30 个山海食经节点', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 30 },
+  { id: 'shanhai90', name: '博采众长', category: '特殊', desc: '点亮 90 个山海食经节点', title: '博采众长', reward: { gold: 50000, items: { mysterySpice: 3, energyBiscuit: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 90 },
+  { id: 'shanhai180', name: '六合贯通', category: '特殊', desc: '点亮 180 个山海食经节点（跑完前 6 环）', title: '六合贯通', reward: { gold: 80000, items: { mysterySpice: 4, energyBiscuit: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 180 },
+  { id: 'shanhaiAll', name: '山海食经·全篇', category: '特殊', desc: '点亮全部 400 个山海食经节点（含满级/转生四档）', title: '山海食经', reward: { gold: 260000, items: { mysterySpice: 7, energyBiscuit: 4 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 400 },
   { id: 'chefWin10', name: '名厨克星', category: '特殊', desc: '累计战胜名厨 10 次', title: '名厨克星', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 10 },
   { id: 'friendBondMax', name: '老交情', category: '特殊', desc: '任一厨友羁绊达到 5 级', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) >= FRIEND_BOND_STEPS.at(-1)) },
 ]

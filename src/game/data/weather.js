@@ -1,8 +1,15 @@
-// 天气与运势（2026-09-10 新增）— 每日变量层：按自然日确定性抽取「天气」与「今日运势」。
-// 与「节庆」（按月固定）、「限时活动」（按整点）三层互不冲突；效果只挂在既有聚合点（采集产量/经验、制作经验、餐厅收入）。
+// 天气与运势（2026-09-10 新增；2026-09-13 追加**恶劣天气减益**）— 每日变量层：按自然日确定性抽取「天气」与「今日运势」。
+// 与「节庆」（按月固定）、「限时活动」（按整点）三层互不冲突；效果只挂在既有聚合点（采集产量/经验、制作经验、对决经验、餐厅收入）。
 // 设计约束：纯日期计算（无存档状态）、不新增物品、不改动任何固定数据。
+//
+// ⚠️ **恶劣天气（2026-09-13 用户要求）**：天气不能只有好处，否则「每日变量」等于白送。三条恶劣天气各带**真实减益**
+//    （倍率 < 1，与增益同一条乘区），并且**每条都留一个「换个玩法」的补偿项**（增益挂在另一条赛道上），
+//    避免变成「今天别玩了」的纯惩罚。减益幅度统一夹在 **≥0.70**（−30% 以内），由 `system_test` 的天气组断言守住。
+// ⚠️ **今日运势等级只缓和减益、绝不加重**（`penaltyScale ≤ 1`）：大吉减半、吉七五折、平原样 —— 让坏天气有对冲手段，
+//    但不引入第二层随机惩罚。等级按日期确定性派生（无存档字段）。
+// ⚠️ **离线结算不经过天气**（`OfflineProgress` 不读 weather）：坏天气只影响在线产出，不会在离线时被追罚。
 
-/** 天气：boost 键与 marketBoost 对齐（gatherYield 单独在采集产量处生效） */
+/** 天气：boost 键与 marketBoost 对齐（gatherYield 单独在采集产量处生效）；值 < 1 即减益 */
 export const WEATHERS = [
   { id: 'sunny', name: '晴朗', icon: '☀️', boost: { gatherXp: 1.10 }, desc: '采集经验 +10%' },
   { id: 'rain', name: '细雨', icon: '🌧️', boost: { gatherYield: 1.15 }, desc: '采集产量 +15%' },
@@ -10,7 +17,31 @@ export const WEATHERS = [
   { id: 'fog', name: '薄雾', icon: '🌫️', boost: { gatherYield: 1.08, craftXp: 1.06 }, desc: '采集产量 +8%、制作经验 +6%' },
   { id: 'thunder', name: '雷暴', icon: '⛈️', boost: { combatXp: 1.15 }, desc: '对决经验 +15%' },
   { id: 'wind', name: '劲风', icon: '🌬️', boost: { restaurant: 1.12 }, desc: '餐厅收入 +12%' },
+  // ── 恶劣天气（减益为主，各留一个换赛道的补偿）──
+  { id: 'storm', name: '台风', icon: '🌪️', harsh: true, boost: { gatherYield: 0.78, restaurant: 0.90, combatXp: 1.18 }, desc: '采集产量 −22%、餐厅收入 −10%；对决经验 +18%' },
+  { id: 'heat', name: '酷暑', icon: '🔥', harsh: true, boost: { gatherXp: 0.85, craftXp: 0.88, restaurant: 1.15 }, desc: '采集经验 −15%、制作经验 −12%；餐厅收入 +15%' },
+  { id: 'frost', name: '寒潮', icon: '🧊', harsh: true, boost: { gatherYield: 0.82, gatherXp: 0.85, craftXp: 1.15 }, desc: '采集产量 −18%、采集经验 −15%；制作经验 +15%' },
 ]
+
+/**
+ * 今日运势等级：**只用来缓和恶劣天气的减益**（`penaltyScale` ≤ 1，永不加罚）。
+ * 与幸运食材同源（都按日期确定性派生），无存档字段。
+ */
+export const FORTUNE_LEVELS = [
+  { id: 'great', name: '大吉', icon: '🌟', penaltyScale: 0.5, desc: '恶劣天气减益减半' },
+  { id: 'good', name: '吉', icon: '✨', penaltyScale: 0.75, desc: '恶劣天气减益打七五折' },
+  { id: 'plain', name: '平', icon: '⚖️', penaltyScale: 1, desc: '恶劣天气减益照常' },
+]
+
+/** 今日运势等级（按日期确定性） */
+export function fortuneLevelForDay(dayKey = dayKeyOf()) {
+  return FORTUNE_LEVELS[hash32('L#' + dayKey) % FORTUNE_LEVELS.length]
+}
+
+/** 是否恶劣天气（含任一减益项即算） */
+export function isHarshWeather(w) {
+  return !!w && Object.values(w.boost ?? {}).some((v) => v < 1)
+}
 
 /** 今日「宜做」建议池（按日抽 3 条） */
 export const FORTUNE_TIPS = [
@@ -59,13 +90,19 @@ export function fortuneForDay(dayKey = dayKeyOf(), itemPool = []) {
     if (!seen.has(t)) { seen.add(t); tips.push(t) }
     i++
   }
-  return { luckyItem, tips }
+  return { luckyItem, tips, level: fortuneLevelForDay(dayKey) }
 }
 
-/** 天气聚合加成（无参路径用；显式传日期便于测试） */
+/**
+ * 天气聚合加成（无参路径用；显式传日期便于测试）。
+ * 减益项（值 < 1）按今日运势等级缓和：`1 − (1 − v) × penaltyScale`（只缩小亏空，增益原样）。
+ */
 export function weatherBoost(dayKey = dayKeyOf()) {
   const w = weatherForDay(dayKey)
-  const out = { gatherYield: 1, gatherXp: 1, craftXp: 1, combatXp: 1, restaurant: 1, weather: w }
-  for (const [k, v] of Object.entries(w.boost ?? {})) out[k] = v
+  const luck = fortuneLevelForDay(dayKey)
+  const out = { gatherYield: 1, gatherXp: 1, craftXp: 1, combatXp: 1, restaurant: 1, weather: w, luck }
+  for (const [k, v] of Object.entries(w.boost ?? {})) {
+    out[k] = v < 1 ? 1 - (1 - v) * luck.penaltyScale : v
+  }
   return out
 }

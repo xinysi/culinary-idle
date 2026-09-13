@@ -159,13 +159,13 @@ function taskProgress(task) {
 .season-tier-card {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(150, 110, 70, 0.32);
+  border: 1px solid rgba(var(--tint-rgb), 0.32);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 6px 18px rgba(150, 110, 70, 0.16);
+  box-shadow: 0 6px 18px rgba(var(--tint-rgb), 0.16);
   transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   will-change: transform;
@@ -180,7 +180,7 @@ function taskProgress(task) {
   inset: -1px;
   border-radius: 12px;
   padding: 1.5px;
-  background: conic-gradient(from var(--spin, 0deg), transparent 0%, rgba(217, 90, 56, 0.55) 18%, transparent 36%, rgba(217, 90, 56, 0.3) 60%, transparent 80%);
+  background: conic-gradient(from var(--spin, 0deg), transparent 0%, rgba(var(--primary-tint-rgb), 0.55) 18%, transparent 36%, rgba(var(--primary-tint-rgb), 0.3) 60%, transparent 80%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -197,7 +197,7 @@ function taskProgress(task) {
 @property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .season-task-card:hover,
 .season-tier-card:hover {
-  box-shadow: 0 8px 24px rgba(217, 90, 56, 0.18);
+  box-shadow: 0 8px 24px rgba(var(--primary-tint-rgb), 0.18);
 }
 /* ── 任务卡 ── */
 .season-task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }

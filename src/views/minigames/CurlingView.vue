@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { cssVar, cssRgb } from '../../game/core/cssVar.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -355,7 +356,7 @@ function draw() {
   const rings = [
     { r: ringR(2), c: dark ? 'rgba(90,160,200,0.35)' : 'rgba(90,160,200,0.45)', fill: null },
     { r: ringR(1), c: dark ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)', fill: null },
-    { r: ringR(0), c: dark ? 'rgba(224,112,74,0.8)' : 'rgba(224,112,74,0.9)', fill: dark ? 'rgba(224,112,74,0.25)' : 'rgba(224,112,74,0.18)' },
+    { r: ringR(0), c: dark ? cssRgb('--primary-rgb', 0.8) : cssRgb('--primary-rgb', 0.9), fill: dark ? cssRgb('--primary-rgb', 0.25) : cssRgb('--primary-rgb', 0.18) },
   ]
   for (const r of rings) {
     ctx.beginPath()
@@ -368,7 +369,7 @@ function draw() {
   // 圆心靶心
   ctx.beginPath()
   ctx.arc(CX, CY, 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#d95a38'
+  ctx.fillStyle = cssVar('--primary-tint')
   ctx.fill()
   // 发射线
   ctx.strokeStyle = dark ? 'rgba(210,170,120,0.4)' : 'rgba(150,110,70,0.4)'
@@ -402,13 +403,13 @@ function draw() {
     ctx.arc(s.x, s.y, STONE_R, 0, Math.PI * 2)
     ctx.fillStyle = gg
     ctx.fill()
-    ctx.strokeStyle = s.mine ? 'rgba(217,90,56,0.75)' : 'rgba(90,110,120,0.7)'
+    ctx.strokeStyle = s.mine ? cssRgb('--primary-tint-rgb', 0.75) : 'rgba(90,110,120,0.7)'
     ctx.lineWidth = 2
     ctx.stroke()
     if (s.mine) {
       ctx.beginPath()
       ctx.arc(s.x, s.y, STONE_R * 0.42, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(217,90,56,0.35)'
+      ctx.fillStyle = cssRgb('--primary-tint-rgb', 0.35)
       ctx.fill()
     }
   }
@@ -418,14 +419,14 @@ function draw() {
     ctx.arc(LAUNCH.x, LAUNCH.y, STONE_R, 0, Math.PI * 2)
     ctx.fillStyle = dark ? 'rgba(255,248,239,0.55)' : 'rgba(255,255,255,0.8)'
     ctx.fill()
-    ctx.strokeStyle = 'rgba(217,90,56,0.6)'
+    ctx.strokeStyle = cssRgb('--primary-tint-rgb', 0.6)
     ctx.lineWidth = 2
     ctx.stroke()
   }
   // 瞄准线 + 力度
   if (aim) {
     const len = 90 + aim.power * 190
-    ctx.strokeStyle = 'rgba(217,90,56,0.85)'
+    ctx.strokeStyle = cssRgb('--primary-tint-rgb', 0.85)
     ctx.lineWidth = 3
     ctx.setLineDash([10, 8])
     ctx.beginPath()
@@ -445,7 +446,7 @@ function draw() {
       }
       ctx.beginPath()
       ctx.arc(px, py, STONE_R + 5, 0, Math.PI * 2)
-      ctx.strokeStyle = 'rgba(217,90,56,0.55)'
+      ctx.strokeStyle = cssRgb('--primary-tint-rgb', 0.55)
       ctx.lineWidth = 2
       ctx.setLineDash([5, 5])
       ctx.stroke()
@@ -464,7 +465,7 @@ function draw() {
   for (const f of floats) {
     const a = Math.max(0, 1 - f.life / f.max)
     ctx.globalAlpha = a
-    ctx.fillStyle = f.good ? (dark ? '#8cd899' : '#4c9c4c') : (dark ? '#ffb98e' : '#d95a38')
+    ctx.fillStyle = f.good ? (dark ? '#8cd899' : '#4c9c4c') : (dark ? cssVar('--on-primary-tint') : cssVar('--primary-tint'))
     ctx.font = '700 18px system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(f.text, f.x, f.y)
@@ -544,30 +545,30 @@ onUnmounted(() => stopLoop())
 <style scoped>
 .cu-page { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 10px 22px; }
 .cu-topbar { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; align-items: center; }
-.cu-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(150, 110, 70, 0.4); background: rgba(255, 252, 246, 0.8); color: var(--muted); }
-.cu-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(217, 90, 56, 0.14); color: var(--primary-strong); }
-.cu-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.cu-mode { padding: 5px 12px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 12px; border: 1px dashed rgba(var(--tint-rgb), 0.4); background: rgba(var(--panel-rgb), 0.8); color: var(--muted); }
+.cu-mode.on { border-style: solid; border-color: var(--primary-strong); background: rgba(var(--primary-tint-rgb), 0.14); color: var(--primary-strong); }
+.cu-chip { padding: 5px 12px; border-radius: 999px; background: rgba(var(--panel-rgb), 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .cu-info-btn { padding: 5px 12px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 12px; color: #fff; background: linear-gradient(135deg, #72b864, #589c4b); border: none; }
-.cu-stage { width: min(720px, 98%); border-radius: 16px; border: 1px solid rgba(150, 110, 70, 0.35); box-shadow: 0 10px 28px rgba(93, 64, 55, 0.18); overflow: hidden; }
+.cu-stage { width: min(720px, 98%); border-radius: 16px; border: 1px solid rgba(var(--tint-rgb), 0.35); box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.18); overflow: hidden; }
 .cu-canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: crosshair; }
 .cu-keys { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.cu-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
-.cu-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
-.cu-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.cu-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.cu-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35); }
+.cu-reset { padding: 10px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
+.cu-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.cu-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .cu-result-head { font-size: 18px; }
 .cu-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .cu-gold { color: var(--good-strong); font-weight: 800; }
-.cu-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.cu-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .cu-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .cu-spark { position: absolute; font-size: 22px; color: var(--gold); animation: cuSpark 1.1s ease-out forwards; }
 @keyframes cuSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
-.cu-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.cu-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(255, 252, 246, 0.94); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35); }
+.cu-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.cu-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(var(--panel-rgb), 0.94); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35); }
 .cu-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
-.cu-info-close { cursor: pointer; border: none; background: rgba(150, 110, 70, 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
+.cu-info-close { cursor: pointer; border: none; background: rgba(var(--tint-rgb), 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
 .cu-info-list { display: flex; flex-direction: column; gap: 8px; }
-.cu-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(255, 251, 244, 0.8); border: 1px solid rgba(150, 110, 70, 0.2); border-radius: 10px; padding: 8px 12px; }
+.cu-info-row { display: flex; align-items: baseline; gap: 10px; background: rgba(var(--panel-soft-rgb), 0.8); border: 1px solid rgba(var(--tint-rgb), 0.2); border-radius: 10px; padding: 8px 12px; }
 .cu-info-rule { display: block; border-color: rgba(88, 156, 75, 0.35); background: rgba(114, 184, 100, 0.1); color: var(--text); font-size: 12.5px; line-height: 1.7; }
 .cu-info-rule b { color: var(--primary-strong); }
 .cu-info-name { flex: 0 0 82px; color: var(--primary-strong); }

@@ -278,7 +278,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
   border-style: solid;
 }
 .sm-card.active {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
   box-shadow: 0 0 12px var(--gold-glow, rgba(232, 180, 95, 0.12));
 }
 .sm-card-head {

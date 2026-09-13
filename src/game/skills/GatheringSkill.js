@@ -110,9 +110,13 @@ export class GatheringSkill extends Skill {
     return Math.max(BASE_DOUBLE_CHANCE, masteryDoubleChance(mLevel))
   }
 
-  /** 精通保底批量（50 级 +1 / 100 级 +2）：写死数量、不靠随机（2026-09-09） */
+  /** 精通保底批量（50 级 +1 / 100 级 +2）：写死数量、不靠随机（2026-09-09）
+   *  + 山海食经的「固定数值」奖励（v2.1）：同样是写死数量、按技能给，**必须在这里加**
+   *  （`yieldQuantity` 与 `expectedYield` 都读它 → 在线/离线同口径，避免历史那种两条路径漂移）。 */
   yieldBatch(target = this.currentTarget) {
-    return target ? masteryYieldBonus(this.masteryLevel(target)) : 0
+    const mastery = target ? masteryYieldBonus(this.masteryLevel(target)) : 0
+    const shanhai = this.player.shanhaiEffects?.().flatYield?.[this.id] ?? 0
+    return mastery + shanhai
   }
 
   /** 「额外产出 1 个」的总几率（可 >1，调用方按上限 +1 处理）：奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）
@@ -140,9 +144,14 @@ export class GatheringSkill extends Skill {
     return qty + batch + (Math.random() < extraChance ? 1 : 0)
   }
 
-  /** 单次动作的期望产出（离线结算用，与在线 yieldQuantity 同源，避免两条路径漂移） */
+  /**
+   * 单次动作的期望产出（离线结算用，与在线 `yieldQuantity` 同源，避免两条路径漂移）。
+   * ⚠️ 额外产出几率**下限夹 0**：恶劣天气（2026-09-13）等来源会让 `yieldExtraChance` 变成负数，
+   *    在线路径 `yieldQuantity` 在 `extraChance <= 0` 时直接返回基础产量（不倒扣），
+   *    所以离线也必须 `max(0, …)` —— 否则坏天气下「离线比在线还亏」，两条路径又不一致了（C16 守这类漂移）。
+   */
   expectedYield(target = this.currentTarget) {
-    return (1 + this.doubleChance(target)) + this.yieldBatch(target) + Math.min(1, this.yieldExtraChance(target))
+    return (1 + this.doubleChance(target)) + this.yieldBatch(target) + Math.max(0, Math.min(1, this.yieldExtraChance(target)))
   }
 
   /** 单次动作的卡片精通经验倍数（在线在 award() 里作为 mult 传给 addCardXp；离线需同样带上） */

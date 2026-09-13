@@ -52,7 +52,7 @@ export function itemDetailLines(id) {
   lines.push(['类型', TYPE_LABEL[it.type] ?? it.category ?? '未知'])
   if (it.quality) lines.push(['品质', it.quality])
   if (it.slot) lines.push(['槽位', SLOT_LABEL[it.slot] ?? it.slot])
-  lines.push(['档位', `T${it.tier}`])
+  if (it.tier != null) lines.push(['档位', `${it.tier} 档`]) // 中文口径（原先显示 T3 这种英文标记；顺便挡掉 undefined
   lines.push(['价值', `${it.value} 金币`])
   // 获取等级：从获取来源文字解析最低 LvX（只读展示，不改任何等级定义）
   const lvMatches = itemSources(id).map((s) => s.match(/Lv(\d+)/)).filter(Boolean).map((m) => parseInt(m[1], 10))

@@ -302,7 +302,7 @@ const RELATED = [{ view: 'season', label: '🎪 赛季' }, { view: 'chronicle', 
 }
 .rev-season.now {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .rev-season-top {
   display: flex;

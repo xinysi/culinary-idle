@@ -304,7 +304,7 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
 }
 .av-title.equipped {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .av-ach-head {
   display: flex;

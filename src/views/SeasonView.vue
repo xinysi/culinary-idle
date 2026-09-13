@@ -83,7 +83,7 @@ const SEASON_COLORS = {
   plum: '#c58f9c', eggplant: '#5a4f8f', goat: '#c3a06a', ginkgo: '#d9b344', taro: '#7a5a8f',
   sesame: '#c9973f', chili2: '#d64545', wine: '#7a3b6f', phoenix: '#d2583a', dragon2: '#3e6d9c',
 }
-const seasonColor = computed(() => SEASON_COLORS[season.value?.id] ?? '#d95a38')
+const seasonColor = computed(() => SEASON_COLORS[season.value?.id] ?? 'var(--primary-tint)')
 // 领取礼花：点击领取在按钮位置迸发小粒子
 function doClaim(i, ev) {
   claim(i)
@@ -173,13 +173,13 @@ function doClaim(i, ev) {
 .season-tier-card {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(150, 110, 70, 0.32);
+  border: 1px solid rgba(var(--tint-rgb), 0.32);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 6px 18px rgba(150, 110, 70, 0.16);
+  box-shadow: 0 6px 18px rgba(var(--tint-rgb), 0.16);
   transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   will-change: transform;
@@ -194,7 +194,7 @@ function doClaim(i, ev) {
   inset: -1px;
   border-radius: 12px;
   padding: 1.5px;
-  background: conic-gradient(from var(--spin, 0deg), transparent 0%, rgba(217, 90, 56, 0.55) 18%, transparent 36%, rgba(217, 90, 56, 0.3) 60%, transparent 80%);
+  background: conic-gradient(from var(--spin, 0deg), transparent 0%, rgba(var(--primary-tint-rgb), 0.55) 18%, transparent 36%, rgba(var(--primary-tint-rgb), 0.3) 60%, transparent 80%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -212,7 +212,7 @@ function doClaim(i, ev) {
 @property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .season-task-card:hover,
 .season-tier-card:hover {
-  box-shadow: 0 8px 24px rgba(217, 90, 56, 0.18);
+  box-shadow: 0 8px 24px rgba(var(--primary-tint-rgb), 0.18);
 }
 /* ── 任务卡 ── */
 .season-task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -281,10 +281,10 @@ function doClaim(i, ev) {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(150, 110, 70, 0.42);
+  border: 1px solid rgba(var(--tint-rgb), 0.42);
   border-radius: 12px;
   padding: 8px 14px;
-  box-shadow: 0 4px 14px rgba(150, 110, 70, 0.18);
+  box-shadow: 0 4px 14px rgba(var(--tint-rgb), 0.18);
 }
 .season-pts-icon { width: 26px; height: 26px; image-rendering: pixelated; flex-shrink: 0; }
 .season-pts-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }

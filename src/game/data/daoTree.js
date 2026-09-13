@@ -19,6 +19,29 @@ export const DAO_PATHS = [
   { id: 'business', name: '经营之道', icon: '🏮', desc: '餐厅收入、订单赏金与分店' },
 ]
 
+/**
+ * 外环「觅珍环」（2026-09-13 用户追加）：**环绕整棵树一整圈**的 12 个节点（每 30°），
+ * 每个奖励 **觅珍抽卡券 ×100**（`player.mijian.tickets`，抽卡时优先抵扣，见小店「觅珍抽卡券」）。
+ * 口径：**不花轮回印记**（0 枚），门槛是「**全树已解锁的道途节点数**」按档递进（3 → 36），
+ * 最深一个要求把整棵树点亮（36/36），是毕业级的收尾奖励。
+ * 数值标定：100 券 ≈ 小店 39,000 游戏币（百连价），12 个 = 1,200 券 ≈ 95 万金币等值的物品，
+ * 与山海食经「汇金链」4.92M 金币同量级偏小，不会冲垮经济。
+ */
+export const DAO_OUTER_NODES = 12
+const OUTER_NAMES = ['拾贝', '藏珠', '拾翠', '探幽', '寻芳', '问道', '揽月', '观澜', '折桂', '登楼', '望海', '归元']
+export const DAO_OUTER = OUTER_NAMES.map((nm, i) => ({
+  id: `x${i + 1}`,
+  path: 'outer',
+  tier: 4,
+  ring: true,
+  name: `觅珍环·${nm}`,
+  icon: '🎟️',
+  cost: 0,
+  req: { daoNodes: 3 * (i + 1) }, // 3/6/9/…/36：全树已解锁的道途节点数门槛
+  reward: { tickets: 100 },
+  desc: '觅珍抽卡券 ×100（抽卡时优先抵扣金币）',
+}))
+
 /** 层数门槛：进入某层需要「本路已解锁节点数」≥ 该值 */
 export const DAO_TIER_REQ = { 1: 0, 2: 2, 3: 5 }
 
@@ -67,6 +90,9 @@ export const DAO_NODES = [
   { id: 'm7', path: 'business', tier: 3, name: '天下知味', icon: '🌏', cost: 3, effect: { incomePct: 10 }, desc: '餐厅收入 +10%' },
   { id: 'm8', path: 'business', tier: 3, name: '一诺千金', icon: '📜', cost: 3, effect: { orderGoldPct: 10 }, desc: '食客订单赏金 +10%' },
   { id: 'm9', path: 'business', tier: 3, name: '四海通达', icon: '🛳️', cost: 3, effect: { branchPct: 10 }, desc: '分店收入 +10%' },
+
+  // ── 外环「觅珍环」：环绕整圈的抽卡券节点（见 DAO_OUTER 定义）──
+  ...DAO_OUTER,
 ]
 
 const DAO_INDEX = new Map(DAO_NODES.map((n) => [n.id, n]))
@@ -102,10 +128,21 @@ export function daoSpent(unlocked = []) {
  * 能否解锁某节点：返回 { ok, reason }
  * 门槛：未解锁 + 本路已达该层「本路已解锁数」要求 + 印记够
  */
+/** 已解锁的**道途节点**数（不含外环；外环门槛用它，避免自引用） */
+export function daoUnlockedTotal(unlocked = []) {
+  return DAO_NODES.filter((n) => n.path !== 'outer' && unlocked.includes(n.id)).length
+}
+
 export function daoCanUnlock(id, unlocked = [], points = 0) {
   const def = DAO_INDEX.get(id)
   if (!def) return { ok: false, reason: '节点不存在' }
   if (unlocked.includes(id)) return { ok: false, reason: '已解锁' }
+  // 外环节点（觅珍环）：门槛是「全树已解锁数」，与所在道途无关
+  if (def.req?.daoNodes != null) {
+    const total = daoUnlockedTotal(unlocked)
+    if (total < def.req.daoNodes) return { ok: false, reason: `需全树已解锁 ${def.req.daoNodes} 个道途节点（当前 ${total}）` }
+    return { ok: true }
+  }
   const inPath = DAO_NODES.filter((n) => n.path === def.path && unlocked.includes(n.id)).length
   const need = DAO_TIER_REQ[def.tier] ?? 0
   if (inPath < need) return { ok: false, reason: `需本路已解锁 ${need} 个节点（当前 ${inPath}）` }

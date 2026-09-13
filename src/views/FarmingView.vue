@@ -5,6 +5,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { DERIVED_MAX } from '../game/data/caps.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const props = defineProps({
@@ -61,7 +62,7 @@ function seedName(seedId) {
   <div>
     <div class="card status-line">
       <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
-      <span class="dim">（每 5 级农耕 +1 块（上限 20）；作物枯萎 3%，施肥可降至 1%/0%）</span>
+      <span class="dim">（每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级农耕 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）；作物枯萎 3%，施肥可降至 1%/0%）</span>
       <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
     </div>
 
@@ -189,7 +190,7 @@ function seedName(seedId) {
 }
 .seed-crop-grid .item-cell.active {
   border-color: var(--primary);
-  background: rgba(217, 90, 56, 0.16);
+  background: rgba(var(--primary-tint-rgb), 0.16);
   box-shadow: 0 0 0 2px var(--primary) inset;
 }
 /* 地块「选择种子」按钮（与 plot-select 视觉一致） */

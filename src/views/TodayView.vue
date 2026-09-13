@@ -13,6 +13,7 @@ import { FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { EXCHANGE_DAILY_LIMIT } from '../game/data/exchange.js'
 import { activeMarketEvents } from '../game/data/marketEvents.js'
 import { getItem } from '../game/data/items.js'
+import { isHarshWeather } from '../game/data/weather.js'
 import RelatedPages from '../components/RelatedPages.vue'
 
 const player = usePlayerStore()
@@ -105,7 +106,7 @@ const rows = computed(() => {
   const critic = player.criticState().order
   if (critic) {
     const remain = Math.max(0, critic.expireAt - Date.now())
-    push({ tone: remain < 10 * 60_000 ? 'claim' : 'ready', icon: '📝', name: '美食评论家到访', desc: `要一份 tier ≥ ${critic.minTier} 的${critic.category} · 还剩 ${minutesText(remain)}`, cta: '去提交', go: go('restaurant') })
+    push({ tone: remain < 10 * 60_000 ? 'claim' : 'ready', icon: '📝', name: '美食评论家到访', desc: `要一份 ${critic.minTier} 档以上的${critic.category} · 还剩 ${minutesText(remain)}`, cta: '去提交', go: go('restaurant') })
   }
 
   // ── D. 本周（周度重置）──
@@ -121,7 +122,9 @@ const rows = computed(() => {
   const evs = activeMarketEvents()
   if (evs.length) push({ tone: 'info', icon: '💹', name: '限时窗口进行中', desc: evs.map((e) => `${e.icon}${e.name}（${e.desc}）`).join('、'), cta: '看排班', go: go('market') })
   const lucky = getItem(player.todayFortune().luckyItem)
-  push({ tone: 'info', icon: '🌤', name: `今日天气：${player.todayWeather().name}`, desc: lucky ? `幸运食材「${lucky.name}」采集产量 +20%` : '查看今日加成与宜做建议', cta: '看运势', go: go('weather') })
+  const wx = player.todayWeather()
+  const wxHarsh = isHarshWeather(wx)
+  push({ tone: wxHarsh ? 'warn' : 'info', icon: wx.icon, name: `今日天气：${wx.name}${wxHarsh ? '（恶劣，有减益）' : ''}`, desc: lucky ? `幸运食材「${lucky.name}」采集产量 +20%` : '查看今日加成与宜做建议', cta: '看运势', go: go('weather') })
 
   return out
 })
@@ -204,7 +207,7 @@ const TONE_LABEL = { claim: '可领取', todo: '今日待做', ready: '已就绪
   font-size: 16px;
 }
 .td-hot {
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .td-hero-btn {
   margin-left: auto;
@@ -230,7 +233,7 @@ const TONE_LABEL = { claim: '可领取', todo: '今日待做', ready: '已就绪
 }
 .td-row.td-claim {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .td-row.td-info {
   opacity: 0.82;

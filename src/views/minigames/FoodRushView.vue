@@ -147,20 +147,20 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .fs-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .fs-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -169,26 +169,26 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   width: min(420px, 92%);
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 24px 20px; border-radius: 18px;
-  background: rgba(150, 110, 70, 0.16); /* 与连连看大框一致的棕灰玻璃 */
-  border: 1px solid rgba(150, 110, 70, 0.3);
-  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
+  background: rgba(var(--tint-rgb), 0.16); /* 与连连看大框一致的棕灰玻璃 */
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
+  box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.14);
 }
 .fs-bowl-emoji { font-size: 52px; }
 .fs-bowl-num { font-size: 20px; font-weight: 800; }
 .fs-bowl-num b { font-size: 36px; color: var(--primary-strong); }
 .fs-timer { font-size: 14px; }
-.fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(234, 176, 74, 0.24); overflow: hidden; }
-.fs-progress-fill { height: 100%; background: linear-gradient(90deg, #eab04a, #d95a38); border-radius: 999px; transition: width 0.2s ease; }
+.fs-progress { width: 100%; height: 10px; border-radius: 999px; background: rgba(var(--amber-rgb), 0.24); overflow: hidden; }
+.fs-progress-fill { height: 100%; background: linear-gradient(90deg, var(--amber), var(--primary-tint)); border-radius: 999px; transition: width 0.2s ease; }
 .fs-tiers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 252, 246, 0.7); color: var(--warn-strong); }
+.fs-tier { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(var(--panel-rgb), 0.7); color: var(--warn-strong); }
 .fs-tier.on { background: rgba(242, 176, 90, 0.22); color: var(--primary-strong); font-weight: 700; }
 .fs-play { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .fs-btn {
   min-width: 280px; height: 56px; padding: 0 36px; font-size: 19px; font-weight: 800; color: #fff;
   border: none; border-radius: 999px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #d95a38, #b8442a);
-  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.4);
+  background: linear-gradient(135deg, var(--primary-tint), var(--primary-strong));
+  box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.4);
 }
 .fs-eat { background: linear-gradient(135deg, #f27c45, #d85c2c); }
 .fs-finish {
@@ -209,23 +209,23 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   background: linear-gradient(135deg, #72b864, #589c4b);
   border: none;
 }
-.fs-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.fs-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .fs-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .fs-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .fs-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -237,8 +237,8 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -261,12 +261,12 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
 }
 
 /* ── fs 结算弹窗（2026-09-09 统一）── */
-.fs-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.fs-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.fs-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.fs-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .fs-result-head { font-size: 18px; }
 .fs-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .fs-gold { color: var(--good-strong); font-weight: 800; }
-.fs-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.fs-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .fs-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .fs-spark { position: absolute; font-size: 22px; color: var(--gold); animation: fsSpark 1.1s ease-out forwards; }
 @keyframes fsSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }

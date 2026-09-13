@@ -58,10 +58,10 @@ function weekdayText(ev) {
 .market-row {
   display: flex; align-items: center; gap: 12px;
   padding: 9px 12px; border-radius: 10px;
-  background: rgba(255, 251, 244, 0.85);
-  border: 1px dashed rgba(217, 90, 56, 0.25);
+  background: rgba(var(--panel-soft-rgb), 0.85);
+  border: 1px dashed rgba(var(--primary-tint-rgb), 0.25);
 }
-.market-row.active { border-color: var(--primary); background: rgba(217, 90, 56, 0.1); }
+.market-row.active { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.1); }
 .market-icon { font-size: 24px; }
 .market-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .market-schedule { font-size: 12px; }

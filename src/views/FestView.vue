@@ -134,10 +134,10 @@ const candidates = computed(() =>
 .fest-score .mono { font-size: 24px; color: var(--primary); }
 .fest-meta { display: flex; gap: 16px; margin-top: 6px; }
 .fest-milestones { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.fest-ms { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px dashed rgba(217, 90, 56, 0.25); font-size: 13px; }
+.fest-ms { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px dashed rgba(var(--primary-tint-rgb), 0.25); font-size: 13px; }
 .fest-ms.got { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
 .fest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 8px; }
-.fest-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(217, 90, 56, 0.18); font-size: 12px; }
+.fest-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(var(--primary-tint-rgb), 0.18); font-size: 12px; }
 .fest-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fest-history { margin-top: 8px; font-size: 12px; }
 </style>

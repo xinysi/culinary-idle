@@ -2,6 +2,7 @@
 // 制作类技能视图 — 需求文档 §3.2：食谱列表 / 材料需求 / 成功率 / 制作按钮
 // 烘焙：能量饼干使用（离线加成 §8.1）；厨具锻造：成品可直接穿戴（§5.1）
 import { computed, ref } from 'vue'
+import { CAP_MAX, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem, ITEMS } from '../game/data/items.js'
@@ -90,8 +91,8 @@ function spoilRemain(id) {
   const h = Math.ceil((until - Date.now()) / 3600000)
   return h > 0 ? `⚠ ${h}h 后腐坏` : '⚠ 已腐坏'
 }
-// 冷库容量扩充（§5.4：每次 +1 格花 1000 金币，上限 100）
-const COLD_EXPAND_COST = 1000
+// 冷库容量扩充（§5.4：每次 +1 格花 1000 金币；金币可买到 PAID_CAP_MAX.cold，山海食经再 +10 → 硬顶 CAP_MAX.cold）
+// 冷库扩容价格与上限统一来自 data/caps.js（原先这里与 player.js 各写一份，改价必漏一处）
 function doExpandCold() {
   const r = player.expandColdStorage()
   ui.pushLog(r.ok ? `❄️ ${r.msg}` : r.msg, r.ok ? 'info' : 'warn')
@@ -214,7 +215,7 @@ function runCraftBatch(r, n, bonus, heatType) {
 }
 function useBiscuit() {
   const ok = player.consumeEnergyBiscuit()
-  ui.pushLog(ok ? `使用能量饼干：离线时长上限 +4h（当前 +${player.offlineBonusH}h/12h）` : '能量饼干不足或已达上限', ok ? 'info' : 'warn')
+  ui.pushLog(ok ? `使用能量饼干：离线时长上限 +4h（饼干加时 ${player.offlineBonusH}/${OFFLINE_CAP.biscuitMaxHours}h · 总离线上限 ${player.offlineMaxHours()}h）` : '能量饼干不足或已达上限', ok ? 'info' : 'warn')
 }
 
 // ── 制作队列（2026-09-06）：排队自动连续制作，每 3 秒 1 份 ──
@@ -317,8 +318,8 @@ function scrollToSection(label) {
       <div v-if="isBaking" class="biscuit-inline" style="margin-left: auto">
         <strong>能量饼干（离线加成）：</strong>
         <span>持有 <span class="mono">{{ player.inventory.energyBiscuit ?? 0 }}</span> 个</span>
-        <span class="dim">当前离线时长上限 12h + {{ player.offlineBonusH }}h（最多 +12h）</span>
-        <button class="btn btn-sm btn-primary" :disabled="!(player.inventory.energyBiscuit ?? 0) || player.offlineBonusH >= 12" @click="useBiscuit()">
+        <span class="dim">离线时长上限 {{ player.offlineMaxHours() }}h（基础 12 + 饼干 {{ player.offlineBonusH }}/{{ OFFLINE_CAP.biscuitMaxHours }} + 天赋加成）</span>
+        <button class="btn btn-sm btn-primary" :disabled="!(player.inventory.energyBiscuit ?? 0) || player.offlineBonusH >= OFFLINE_CAP.biscuitMaxHours" @click="useBiscuit()">
           使用
         </button>
         <!-- 溢出后的两个出口（2026-09-10）：战斗内使用 / 奥义页回收 -->
@@ -356,8 +357,8 @@ function scrollToSection(label) {
         </div>
         <div class="cold-cap-row">
           <span class="dim">冷库容量 <span class="mono">{{ player.coldStorageSlotsUsed }}/{{ player.coldStorageCap }}</span></span>
-          <button class="btn btn-sm btn-primary" :disabled="player.coldStorageCap >= 100 || player.gold < COLD_EXPAND_COST" @click="doExpandCold">扩一格（{{ COLD_EXPAND_COST }} 金币）</button>
-          <span class="dim" v-if="player.coldStorageCap < 100">最大 100 格</span>
+          <button class="btn btn-sm btn-primary" :disabled="player.coldStorageCap >= PAID_CAP_MAX.cold || player.gold < COLD_EXPAND_COST" @click="doExpandCold">扩一格（{{ COLD_EXPAND_COST }} 金币）</button>
+          <span class="dim" v-if="player.coldStorageCap < PAID_CAP_MAX.cold">金币可买到 {{ PAID_CAP_MAX.cold }} 格（山海食经还能再往上加）</span>
         </div>
         <p class="dim cold-tip">存入即冻结腐坏，取出继续计时；保鲜 Lv 越高腐坏越慢（+2%/级，封顶 +100%）。保鲜剂会刷新背包食材并给冷库续时。</p>
         <div class="cold-body">
@@ -528,7 +529,7 @@ function scrollToSection(label) {
   padding: 6px 10px;
   border: 1px dashed var(--border);
   border-radius: 8px;
-  background: rgba(255, 252, 246, 0.7);
+  background: rgba(var(--panel-rgb), 0.7);
 }
 .queue-item .queue-name { font-weight: 600; }
 .queue-item .queue-paused { color: var(--bad-strong); font-size: 12px; font-weight: 700; }
@@ -540,8 +541,8 @@ function scrollToSection(label) {
 }
 /* 配方树「去做」后的卡片高亮闪烁 */
 @keyframes recipeFlash {
-  0%, 100% { box-shadow: 0 0 0 rgba(217, 138, 43, 0); }
-  50% { box-shadow: 0 0 20px rgba(217, 138, 43, 0.85); }
+  0%, 100% { box-shadow: 0 0 0 rgba(var(--amber-strong-rgb), 0); }
+  50% { box-shadow: 0 0 20px rgba(var(--amber-strong-rgb), 0.85); }
 }
 .gather-card.flash { animation: recipeFlash 0.8s ease-in-out 2; }
 /* 装备品质徽章（仅锻造卡片；配色与图鉴/物品详情一致） */

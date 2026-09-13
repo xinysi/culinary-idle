@@ -9,6 +9,7 @@ import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
+import { DERIVED_MAX } from '../data/caps.js'
 
 const CROPS_15 = [
   { itemId: 'wheat', seedId: 'wheatSeed', reqLevel: 1, growSec: 90, xp: 25 },
@@ -47,7 +48,8 @@ export class FarmingSkill extends Skill {
   }
 
   get maxPlots() {
-    return Math.min(4 + Math.floor(this.level / 5), 20)
+    const { farmPlots, farmPlotsBase, farmPlotsPerLevels } = DERIVED_MAX
+    return Math.min(farmPlotsBase + Math.floor(this.level / farmPlotsPerLevels), farmPlots)
   }
 
   get plots() {
@@ -230,7 +232,8 @@ export class FarmingSkill extends Skill {
     const extraChance = (aoji.yieldPct ?? 0) / 100 + ((this.player.getYieldMultiplier?.() ?? 1) - 1)
     const fertBonus = this.plotFertilizer(i)?.bonusQty ?? 0 // 肥沃堆肥收获 +1
     const batch = masteryYieldBonus(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)) // 精通保底批量（2026-09-09）
-    let qty = 1 + farmBonus + fertBonus + batch + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
+    const shanhai = this.player.shanhaiEffects?.().flatYield?.farming ?? 0 // 山海食经：每次收获 +N 件（v2.1，固定数值）
+    let qty = 1 + farmBonus + fertBonus + batch + shanhai + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
     // 精通档位双倍（新表：5→1%…100→80%）
     if (Math.random() < masteryDoubleChance(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0))) qty *= 2
     this.player.gainItem(crop.itemId, qty)

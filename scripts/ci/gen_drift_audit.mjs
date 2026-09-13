@@ -33,6 +33,7 @@ const GENS = [
   ['gen_smith_sets', 'smithSetExt.js'],
   ['gen_spirit_tiers', 'spiritTiers.js'],
   ['gen_tales', 'tales_ext.js'],
+  ['gen_shanhai_tree', 'shanhaiTree.js'],
 ]
 
 // 已登记漂移（自证用）：列在这里的产物「应当」被检出为漂移——若报了「一致」，说明审计瞎了，直接 FAIL。

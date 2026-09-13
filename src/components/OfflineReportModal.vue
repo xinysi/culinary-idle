@@ -81,7 +81,7 @@ function fmtGolds(n) {
 <style scoped>
 .offline-modal { max-width: 460px; }
 .offline-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 40vh; overflow-y: auto; }
-.offline-row { padding: 8px 10px; border-radius: 8px; background: rgba(255, 251, 244, 0.8); border: 1px dashed rgba(217, 90, 56, 0.3); font-size: 13px; }
+.offline-row { padding: 8px 10px; border-radius: 8px; background: rgba(var(--panel-soft-rgb), 0.8); border: 1px dashed rgba(var(--primary-tint-rgb), 0.3); font-size: 13px; }
 .offline-row-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .offline-row-body { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
 .offline-row.restaurant { border-color: rgba(92, 184, 92, 0.5); background: rgba(92, 184, 92, 0.07); }

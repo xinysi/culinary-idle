@@ -219,7 +219,7 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
   gap: 6px;
 }
 .sup-card.signed {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .sup-head {
   display: flex;

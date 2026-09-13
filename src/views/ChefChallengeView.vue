@@ -207,7 +207,7 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', labe
 }
 .chef-li.now {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .chef-li-name {
   min-width: 84px;

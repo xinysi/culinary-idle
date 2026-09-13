@@ -203,7 +203,7 @@ const RELATED = [{ view: 'kitchenNotes', label: '📓 厨房笔记' }, { view: '
   font-size: 30px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .flavor-hero-max {
   font-size: 14px;
@@ -281,8 +281,8 @@ const RELATED = [{ view: 'kitchenNotes', label: '📓 厨房笔记' }, { view: '
 }
 .flavor-recipe:hover {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
-  color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
+  color: var(--accent, var(--primary-tint));
 }
 .flavor-more {
   align-self: flex-start;

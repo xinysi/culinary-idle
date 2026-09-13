@@ -543,20 +543,20 @@ reset()
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .gg-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .gg-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -575,17 +575,17 @@ reset()
 .gg-stage {
   position: relative;
   border-radius: 18px;
-  background: rgba(150, 110, 70, 0.14);
-  border: 1px solid rgba(150, 110, 70, 0.3);
-  box-shadow: 0 10px 28px rgba(93, 64, 55, 0.14);
+  background: rgba(var(--tint-rgb), 0.14);
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
+  box-shadow: 0 10px 28px rgba(var(--tint-deep-rgb), 0.14);
   overflow: hidden;
 }
-.gg-slot { position: absolute; border-radius: 10px; background: rgba(255, 251, 244, 0.5); border: 1px dashed rgba(150, 110, 70, 0.35); }
+.gg-slot { position: absolute; border-radius: 10px; background: rgba(var(--panel-soft-rgb), 0.5); border: 1px dashed rgba(var(--tint-rgb), 0.35); }
 .gg-card {
   position: absolute; border-radius: 10px; cursor: pointer; user-select: none;
   background: rgba(255, 253, 248, 0.97);
-  border: 1px solid rgba(150, 110, 70, 0.3);
-  box-shadow: 0 2px 6px rgba(93, 64, 55, 0.18);
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
+  box-shadow: 0 2px 6px rgba(var(--tint-deep-rgb), 0.18);
   display: flex; align-items: center; justify-content: center;
   padding: 4px;
   transition: left 0.28s ease, top 0.28s ease, width 0.18s ease, height 0.18s ease, filter 0.18s ease, opacity 0.2s ease;
@@ -597,12 +597,12 @@ reset()
 .gg-card.covered::after { content: ''; position: absolute; inset: 0; border-radius: 10px; background: rgba(90, 70, 50, 0.28); }
 .gg-card.slot { cursor: default; }
 .gg-card.blind { background: rgba(240, 232, 216, 0.98); }
-.gg-card.lock { border-color: rgba(217, 90, 56, 0.55); }
+.gg-card.lock { border-color: rgba(var(--primary-tint-rgb), 0.55); }
 .gg-card.clearing { animation: ggPop 0.24s ease forwards; }
 @keyframes ggPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(0); opacity: 0; } }
 .gg-card.cleared { opacity: 0; pointer-events: none; }
 .gg-card.hint { animation: ggHint 0.5s ease 3; }
-@keyframes ggHint { 0%, 100% { box-shadow: 0 2px 6px rgba(93, 64, 55, 0.18); } 50% { box-shadow: 0 0 16px rgba(232, 112, 63, 0.95); } }
+@keyframes ggHint { 0%, 100% { box-shadow: 0 2px 6px rgba(var(--tint-deep-rgb), 0.18); } 50% { box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.95); } }
 .gg-card.unlocked { animation: ggIn 0.4s ease; }
 @keyframes ggIn { from { opacity: 0.35; transform: scale(0.82); } to { opacity: 1; transform: scale(1); } }
 
@@ -613,29 +613,29 @@ reset()
   align-items: center;
   flex-wrap: wrap;
 }
-.gg-reset { padding: 9px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
-.gg-prop { padding: 9px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #eab04a, #d98a2b); border: none; }
+.gg-reset { padding: 9px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
+.gg-prop { padding: 9px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--amber), var(--amber-strong)); border: none; }
 .gg-prop:disabled { opacity: 0.45; cursor: not-allowed; }
 .gg-fire { position: fixed; inset: 0; z-index: 320; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .gg-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ggSpark 1.1s ease-out forwards; }
 @keyframes ggSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
-.gg-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.gg-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .gg-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .gg-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .gg-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -647,8 +647,8 @@ reset()
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -671,16 +671,16 @@ reset()
 }
 
 /* ── gg 结算弹窗（2026-09-09 统一）── */
-.gg-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.gg-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.gg-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.gg-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .gg-result-head { font-size: 18px; }
 .gg-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .gg-gold { color: var(--good-strong); font-weight: 800; }
-.gg-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.gg-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .gg-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .gg-spark { position: absolute; font-size: 22px; color: var(--gold); animation: ggSpark 1.1s ease-out forwards; }
 @keyframes ggSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
 /* ── gg 开始门控（2026-09-09）── */
-.gg-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35); }
+.gg-start { padding: 12px 34px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35); }
 </style>

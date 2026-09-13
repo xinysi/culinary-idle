@@ -188,7 +188,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
   font-size: 30px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .to-est-label {
   font-size: 12px;

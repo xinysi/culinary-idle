@@ -395,20 +395,20 @@ onUnmounted(() => {
   cursor: pointer;
   font-weight: 700;
   font-size: 12px;
-  border: 1px dashed rgba(150, 110, 70, 0.4);
-  background: rgba(255, 252, 246, 0.8);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  background: rgba(var(--panel-rgb), 0.8);
   color: var(--muted);
 }
 .ic-mode.on {
   border-style: solid;
   border-color: var(--primary-strong);
-  background: rgba(217, 90, 56, 0.14);
+  background: rgba(var(--primary-tint-rgb), 0.14);
   color: var(--primary-strong);
 }
 .ic-chip {
   padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(255, 252, 246, 0.8);
+  background: rgba(var(--panel-rgb), 0.8);
   border: 1px solid var(--border);
   font-size: 12px;
   font-weight: 700;
@@ -428,7 +428,7 @@ onUnmounted(() => {
 .ic-tile { position: absolute; border-radius: 8px; background: linear-gradient(135deg, rgba(240, 252, 255, 0.72), rgba(200, 234, 248, 0.55)); border: 1px solid rgba(255, 255, 255, 0.75); display: flex; align-items: center; justify-content: center; }
 .ic-tile.rock { background: linear-gradient(135deg, #9a9a94, #6e6e68); border-color: #5a5a55; }
 .ic-tile.hole { background: rgba(40, 70, 90, 0.55); border-color: rgba(30, 60, 80, 0.6); }
-.ic-order { position: absolute; right: 3px; top: 1px; font-size: 12px; font-weight: 800; color: #d95a38; }
+.ic-order { position: absolute; right: 3px; top: 1px; font-size: 12px; font-weight: 800; color: var(--primary-tint); }
 .ic-tile.target { box-shadow: inset 0 0 0 2px rgba(224, 106, 90, 0.5); }
 .ic-cherry { font-size: 20px; line-height: 1; }
 .ic-player { position: absolute; display: flex; align-items: center; justify-content: center; transition: left 0.18s cubic-bezier(0.22, 0.9, 0.35, 1), top 0.18s cubic-bezier(0.22, 0.9, 0.35, 1); filter: drop-shadow(0 3px 4px rgba(40, 70, 90, 0.35)); z-index: 3; pointer-events: none; }
@@ -446,9 +446,9 @@ onUnmounted(() => {
   font-size: 15px;
   cursor: pointer;
   color: #fff;
-  background: linear-gradient(135deg, #e8703f, #c9542e);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   border: none;
-  box-shadow: 0 6px 18px rgba(184, 68, 42, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--primary-strong-rgb), 0.35);
 }
 .ic-pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 42px); gap: 6px; }
 .ic-dir { border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #7fb8d9, #4f8fb0); border: none; }
@@ -456,35 +456,35 @@ onUnmounted(() => {
 .ic-left { grid-column: 1; grid-row: 2; }
 .ic-down { grid-column: 2; grid-row: 2; }
 .ic-right { grid-column: 3; grid-row: 2; }
-.ic-reset { padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.ic-reset { padding: 10px 18px; border-radius: 12px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 
-.ic-mask { position: fixed; inset: 0; z-index: 320; background: rgba(20, 30, 40, 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.ic-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(150, 110, 70, 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(30, 20, 12, 0.4); display: flex; flex-direction: column; gap: 10px; }
+.ic-mask { position: fixed; inset: 0; z-index: 320; background: rgba(var(--scrim-cool-rgb), 0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.ic-result { width: min(460px, 92vw); max-height: 80vh; overflow: auto; background: rgba(var(--panel-rgb), 0.96); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 18px; padding: 18px 20px; box-shadow: 0 16px 44px rgba(var(--scrim-rgb), 0.4); display: flex; flex-direction: column; gap: 10px; }
 .ic-result-head { font-size: 18px; }
 .ic-result-score { display: flex; gap: 14px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .ic-gold { color: var(--good-strong); font-weight: 800; }
-.ic-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, #e8703f, #c9542e); border: none; }
+.ic-again { align-self: center; margin-top: 4px; padding: 10px 28px; border-radius: 999px; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; }
 .ic-fire { position: fixed; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
 .ic-spark { position: absolute; font-size: 22px; color: var(--gold); animation: icSpark 1.1s ease-out forwards; }
 @keyframes icSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 
-.ic-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(30, 20, 12, 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.ic-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .ic-info-box {
   width: min(620px, 92vw);
   max-height: 76vh;
   overflow: auto;
-  background: rgba(255, 252, 246, 0.94);
-  border: 1px solid rgba(150, 110, 70, 0.35);
+  background: rgba(var(--panel-rgb), 0.94);
+  border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 14px 40px rgba(50, 30, 20, 0.35);
+  box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
 }
 .ic-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .ic-info-close {
   cursor: pointer;
   border: none;
-  background: rgba(150, 110, 70, 0.15);
+  background: rgba(var(--tint-rgb), 0.15);
   border-radius: 999px;
   width: 30px;
   height: 30px;
@@ -496,8 +496,8 @@ onUnmounted(() => {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  background: rgba(255, 251, 244, 0.8);
-  border: 1px solid rgba(150, 110, 70, 0.2);
+  background: rgba(var(--panel-soft-rgb), 0.8);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
   border-radius: 10px;
   padding: 8px 12px;
 }

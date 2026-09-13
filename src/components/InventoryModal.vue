@@ -1,6 +1,7 @@
 <script setup>
 // 背包/仓库弹窗 — §5.4 格子显示 + 选中式操作（数量条/数字输入）+ 右侧详情来源
 import { ref, computed, watch } from 'vue'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
@@ -187,7 +188,7 @@ function setUpgradeTarget(id) { upgradeTarget.value = id }
 
       <!-- 底部固定操作栏（容量扩展旁） -->
       <div class="bag-actions">
-        <span class="dim bag-cap-note">容量扩展：杂货铺购买（背包 20→100 格，仓库 100→500 格）</span>
+        <span class="dim bag-cap-note">容量扩展：杂货铺购买（背包 {{ CAP_BASE.inventory }}→{{ PAID_CAP_MAX.inventory }} 格，仓库 {{ CAP_BASE.bank }}→{{ PAID_CAP_MAX.bank }} 格）；山海食经点亮节点可再加（背包至 {{ CAP_MAX.inventory }}、仓库至 {{ CAP_MAX.bank }}、冷库至 {{ CAP_MAX.cold }} 格）</span>
         <template v-if="selected">
           <span class="bag-qty-label mono">×{{ qty }}</span>
           <input

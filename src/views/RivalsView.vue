@@ -181,7 +181,7 @@ function claim() {
         </div>
       </div>
       <p class="dim rv-sub" style="margin-top: 8px">
-        想冲榜优先做<b>分店</b>（每店 120 分）、<b>菜单</b>（每 tier 60 分）和<b>米其林评分</b>——这三项同时也在提升实际收入。
+        想冲榜优先做<b>分店</b>（每店 120 分）、<b>菜单</b>（每档 60 分）和<b>米其林评分</b>——这三项同时也在提升实际收入。
       </p>
     </div>
 
@@ -212,7 +212,7 @@ function claim() {
   font-size: 36px;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .rv-stars {
   font-size: 12px;
@@ -268,7 +268,7 @@ function claim() {
 }
 .rv-row.me {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .rv-row.top3 .rv-row-rank {
   color: var(--gold, #a8780b);

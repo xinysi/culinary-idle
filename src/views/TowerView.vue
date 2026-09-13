@@ -295,6 +295,6 @@ function fmt(g) { return g.toLocaleString() }
 <style scoped>
 .tower-top { margin-bottom: 0; }
 .tower-milestones { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; }
-.tower-ms { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(217, 90, 56, 0.18); font-size: 12px; }
+.tower-ms { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(var(--primary-tint-rgb), 0.18); font-size: 12px; }
 .tower-ms.got { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
 </style>

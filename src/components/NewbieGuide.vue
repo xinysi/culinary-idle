@@ -62,8 +62,8 @@ function skipGuide() {
   margin: 6px 0;
   padding: 7px 12px;
   border-radius: 8px;
-  background: linear-gradient(90deg, rgba(217, 90, 56, 0.12), rgba(217, 90, 56, 0.05));
-  border: 1px dashed rgba(217, 90, 56, 0.4);
+  background: linear-gradient(90deg, rgba(var(--primary-tint-rgb), 0.12), rgba(var(--primary-tint-rgb), 0.05));
+  border: 1px dashed rgba(var(--primary-tint-rgb), 0.4);
   font-size: 13px;
 }
 .newbie-step { font-weight: 600; color: var(--primary-strong); }
@@ -74,7 +74,7 @@ function skipGuide() {
    2026-09-11：此前它在每个页面都高亮显示，且定位文案含「技能页 · 采摘」，
    在「今日待办」等页面上会被误读成「页面内容/跳到了采摘页」。 */
 .newbie-guide.newbie-dim {
-  background: var(--bg-soft, rgba(255, 252, 246, 0.6));
+  background: var(--bg-soft, rgba(var(--panel-rgb), 0.6));
   border-color: var(--border);
 }
 .newbie-guide.newbie-dim .newbie-step {

@@ -197,7 +197,7 @@ function pickText(r, i) {
   font-size: 12px;
   padding: 5px 8px;
   border-radius: 5px;
-  background: rgba(217, 90, 56, 0.06);
+  background: rgba(var(--primary-tint-rgb), 0.06);
   border: 1px dashed var(--border);
 }
 .ec-choice-label {

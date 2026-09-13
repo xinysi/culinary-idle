@@ -68,9 +68,13 @@
 
 ## 6. 配色
 
-- 强调色 = **橙色系**：`#e8703f → #c9542e`（按钮 / 选中 / 进度条）、`#eab04a → #d98a2b`（道具 / 琥珀）。
-- **绿色只用于**说明按钮（`#72b864 → #589c4b`）与达标点缀（`var(--good-strong)`）。
-- 文字 / 底色一律走 CSS 变量：`var(--text)`、`var(--muted)`、`var(--border)`、`var(--primary-strong)`、`var(--good-strong)`、`var(--gold)`。
+> **v2.1 起：颜色一律写 token，不写死色值**（皮肤系统要能整份换掉）。下面括号里的色值是 token 的**默认值**（= 原味皮肤），改成 `var()` 后观感不变。
+> 新增颜色时先在 `src/styles/main.css` 的「调色板三元组」块加 token，再用 `rgba(var(--x-rgb), α)` 引用；`minigame_ui_audit.mjs` 会按 token 形式断言。
+
+- 强调色 = **橙色系**：`var(--accent)` → `var(--accent-strong)`（按钮 / 选中 / 进度条，默认 `#e8703f → #c9542e`）、`var(--amber)` → `var(--amber-strong)`（道具 / 琥珀，默认 `#eab04a → #d98a2b`）。
+- **绿色只用于**说明按钮（`#72b864 → #589c4b`，功能语义色、不随皮肤）与达标点缀（`var(--good-strong)`）。
+- 文字 / 底色一律走 CSS 变量：`var(--text)`、`var(--muted)`、`var(--border)`、`var(--primary-strong)`、`var(--good-strong)`、`var(--gold)`；玻璃底 `rgba(var(--panel-rgb), α)`、暖棕虚线/描边 `rgba(var(--tint-rgb), α)`。
+- 选中态底 `rgba(var(--primary-tint-rgb), 0.14)`（默认 `rgba(217,90,56,.14)`），文字 `var(--primary-strong)`。
 - 面板一律半透明棕灰玻璃，禁止不透明纯色大块。
 
 ## 7. 深色模式

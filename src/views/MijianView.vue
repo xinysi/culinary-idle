@@ -257,8 +257,8 @@ function typeLabel(id) {
   padding: 10px 14px;
   border-radius: 14px;
   cursor: pointer;
-  background: rgba(255, 251, 244, 0.85);
-  border: 1px solid rgba(150, 110, 70, 0.28);
+  background: rgba(var(--panel-soft-rgb), 0.85);
+  border: 1px solid rgba(var(--tint-rgb), 0.28);
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 /* 每池主题色（顶部渐变细条 + 选中态渐变底/边框/光晕） */
@@ -295,7 +295,7 @@ function typeLabel(id) {
   overflow: hidden;
   height: 108px;
   margin-bottom: 12px;
-  background: rgba(255, 252, 246, 0.96);
+  background: rgba(var(--panel-rgb), 0.96);
 }
 .mijian-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .mijian-bg-track {
@@ -310,16 +310,16 @@ function typeLabel(id) {
 }
 .pool-banner-fade {
   position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(90deg, rgba(255, 252, 246, 0.96), rgba(255, 252, 246, 0) 16%, rgba(255, 252, 246, 0) 84%, rgba(255, 252, 246, 0.96));
+  background: linear-gradient(90deg, rgba(var(--panel-rgb), 0.96), rgba(var(--panel-rgb), 0) 16%, rgba(var(--panel-rgb), 0) 84%, rgba(var(--panel-rgb), 0.96));
 }
 .pool-banner-title {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
   display: flex; align-items: center; gap: 8px; z-index: 2;
-  background: rgba(255, 252, 246, 0.88);
-  border: 1px solid rgba(217, 138, 43, 0.35);
+  background: rgba(var(--panel-rgb), 0.88);
+  border: 1px solid rgba(var(--amber-strong-rgb), 0.35);
   border-radius: 999px;
   padding: 5px 14px;
-  box-shadow: 0 2px 8px rgba(150, 110, 70, 0.15);
+  box-shadow: 0 2px 8px rgba(var(--tint-rgb), 0.15);
 }
 .pool-banner-icon { font-size: 18px; }
 .pool-banner-title b { font-size: 14px; color: var(--primary-strong); }
@@ -330,14 +330,14 @@ function typeLabel(id) {
   display: flex; gap: 6px;
 }
 .pool-banner-pity .pill {
-  background: rgba(255, 252, 246, 0.92);
-  border: 1px solid rgba(217, 138, 43, 0.45);
+  background: rgba(var(--panel-rgb), 0.92);
+  border: 1px solid rgba(var(--amber-strong-rgb), 0.45);
   border-radius: 999px;
   padding: 5px 12px;
   font-size: 12px; font-weight: 700;
   color: #8a5a12;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(150, 110, 70, 0.12);
+  box-shadow: 0 2px 6px rgba(var(--tint-rgb), 0.12);
 }
 
 @keyframes mijianScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -368,7 +368,7 @@ function typeLabel(id) {
   border: 1px solid rgba(var(--tsh1, 150, 110, 70), 0.45);
   background:
     linear-gradient(135deg, rgba(var(--tsh1, 150, 110, 70), 0.09), rgba(var(--tsh2, 249, 212, 35), 0.12)),
-    rgba(255, 252, 246, 0.82);
+    rgba(var(--panel-rgb), 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
@@ -387,7 +387,7 @@ function typeLabel(id) {
   display: flex; align-items: center; gap: 8px;
   background:
     linear-gradient(135deg, rgba(var(--tsh1, 217, 138, 43), 0.1), rgba(var(--tsh2, 249, 212, 35), 0.12)),
-    rgba(255, 252, 246, 0.82);
+    rgba(var(--panel-rgb), 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(var(--tsh1, 150, 110, 70), 0.45);
@@ -550,10 +550,10 @@ function typeLabel(id) {
 .gacha-card.q-fine .gacha-front { border-color: #6fa8dc; }
 .gacha-card.q-rare .gacha-front { border-color: #4a90d9; box-shadow: 0 0 10px rgba(74, 144, 217, 0.45); }
 .gacha-card.q-epic .gacha-front { border-color: #7b1fa2; box-shadow: 0 0 12px rgba(123, 31, 162, 0.5); }
-.gacha-card.q-legend .gacha-front { border-color: #d98a2b; box-shadow: 0 0 14px rgba(217, 138, 43, 0.6); }
+.gacha-card.q-legend .gacha-front { border-color: var(--amber-strong); box-shadow: 0 0 14px rgba(var(--amber-strong-rgb), 0.6); }
 .gacha-card.q-myth .gacha-front {
   border-color: #e0704a;
-  box-shadow: 0 0 18px rgba(224, 112, 74, 0.75);
+  box-shadow: 0 0 18px rgba(var(--primary-rgb), 0.75);
   background: linear-gradient(120deg, #fff8ec, #ffe7c9);
 }
 .gacha-card.q-myth.revealed .gacha-inner { animation: mythGlow 0.9s ease-out 2; }
@@ -569,7 +569,7 @@ function typeLabel(id) {
 /* 历史 */
 .gacha-history { margin-top: 12px; }
 .gacha-history-row { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-.gacha-hist-rare { color: #d98a2b; font-weight: 700; }
+.gacha-hist-rare { color: var(--amber-strong); font-weight: 700; }
 
 
 

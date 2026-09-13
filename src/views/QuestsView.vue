@@ -322,7 +322,7 @@ const challengeDone = computed(() => player.challenge.done)
   font-size: 16px;
 }
 .qv-hot {
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .qv-tabs {
   display: flex;
@@ -392,7 +392,7 @@ const challengeDone = computed(() => player.challenge.done)
 }
 .qv-quest.current {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .qv-quest.locked {
   opacity: 0.5;
@@ -441,7 +441,7 @@ const challengeDone = computed(() => player.challenge.done)
 .qv-daily.ready,
 .qv-weekly.ready {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .qv-daily-foot {
   display: flex;

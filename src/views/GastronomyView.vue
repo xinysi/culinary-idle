@@ -1,6 +1,7 @@
 <script setup>
 // 美食知识视图 — 需求文档 §3.4.1：品鉴点数 + 奥义激活/关闭（卡片式，参考食灵召唤页）
 import { ref, computed } from 'vue'
+import { OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
@@ -145,7 +146,7 @@ function unlockNode(id) {
         <span class="biscuit-title">🍪 能量补给（能量饼干回收）</span>
         <span class="dim biscuit-sub">
           持有 <b class="mono">{{ player.inventory.energyBiscuit ?? 0 }}</b> 块 ·
-          离线上限 {{ player.offlineBonusH ?? 0 }}h<template v-if="player.biscuitOfflineMaxed()">（已满 +12h）</template>
+          饼干加时 {{ player.offlineBonusH ?? 0 }}h<template v-if="player.biscuitOfflineMaxed()">（已满 +{{ OFFLINE_CAP.biscuitMaxHours }}h）</template> · 总离线上限 {{ player.offlineMaxHours() }}h
         </span>
       </div>
       <p class="dim biscuit-sub">

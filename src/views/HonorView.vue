@@ -186,7 +186,7 @@ const RELATED = [{ view: 'codexExchange', label: '📖 图鉴兑换' }, { view: 
   font-size: 40px;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .honor-level-max {
   font-size: 13px;
@@ -295,7 +295,7 @@ const RELATED = [{ view: 'codexExchange', label: '📖 图鉴兑换' }, { view: 
   border-style: solid;
 }
 .honor-tile.equipped {
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
   box-shadow: 0 0 12px var(--gold-glow, rgba(232, 180, 95, 0.12));
 }
 .honor-tile:disabled {

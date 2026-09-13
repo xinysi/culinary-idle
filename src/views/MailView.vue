@@ -214,7 +214,7 @@ function clearSettled() {
   font-size: 16px;
 }
 .mv-hot {
-  color: var(--accent, #d95a38);
+  color: var(--accent, var(--primary-tint));
 }
 .mv-actions {
   margin-left: auto;
@@ -247,7 +247,7 @@ function clearSettled() {
 }
 .mv-item.claimable {
   border-style: solid;
-  border-color: var(--accent, #d95a38);
+  border-color: var(--accent, var(--primary-tint));
 }
 .mv-head {
   display: flex;
@@ -259,7 +259,7 @@ function clearSettled() {
   flex-wrap: wrap;
 }
 .mv-head:hover {
-  background: rgba(217, 90, 56, 0.06);
+  background: rgba(var(--primary-tint-rgb), 0.06);
 }
 .mv-dot {
   width: 6px;
@@ -269,7 +269,7 @@ function clearSettled() {
   flex: none;
 }
 .mv-dot.on {
-  background: var(--primary, #d95a38);
+  background: var(--primary, var(--primary-tint));
 }
 .mv-icon {
   flex: none;

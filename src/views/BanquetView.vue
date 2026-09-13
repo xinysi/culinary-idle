@@ -62,7 +62,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
       <div>
         <h2>🍽 宴会承办</h2>
         <p class="dim">
-          接一桌大席：按「桌数 × {{ PORTIONS_PER_TABLE }}」交付指定类别、达到 tier 门槛的料理（消耗库存），
+          接一桌大席：按「桌数 × {{ PORTIONS_PER_TABLE }}」交付指定类别、达到档位门槛的料理（消耗库存），
           在时限内交付拿大奖（金币 + 神秘调料 + 餐厅好感）；超时自动作废，<b>放弃无惩罚</b>。
         </p>
       </div>
@@ -76,7 +76,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
       <div class="table-scroll">
         <table class="target-table">
           <thead>
-            <tr><th>档位</th><th>桌数</th><th>需求份数</th><th>限时</th><th>最低 tier</th><th>奖励</th><th>折合每份</th></tr>
+            <tr><th>档位</th><th>桌数</th><th>需求份数</th><th>限时</th><th>最低档位</th><th>奖励</th><th>折合每份</th></tr>
           </thead>
           <tbody>
             <tr v-for="t in BANQUET_TIERS" :key="t.id">
@@ -84,7 +84,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
               <td class="mono">{{ t.tables }} 桌</td>
               <td class="mono">{{ t.tables * PORTIONS_PER_TABLE }} 份</td>
               <td class="mono">{{ t.hours }}h</td>
-              <td class="mono">tier ≥ {{ t.minTier }}</td>
+              <td class="mono">{{ t.minTier }} 档以上</td>
               <td class="mono">{{ t.goldBase.toLocaleString() }} 金币<template v-if="t.spice"> + 调料 ×{{ t.spice }}</template></td>
               <td class="mono gold">{{ Math.round(t.goldBase / (t.tables * PORTIONS_PER_TABLE)).toLocaleString() }}/份</td>
             </tr>
@@ -92,7 +92,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
         </table>
       </div>
       <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
-        <b>可承办类别</b>（每次委托随机指定其中一类，交付该类别、tier ≥ 上表门槛的料理即可）：
+        <b>可承办类别</b>（每次委托随机指定其中一类，交付该类别、上表门槛档位以上的料理即可）：
         <span v-for="c in BANQUET_CATS" :key="c" class="badge" style="margin-right: 4px">{{ CATEGORY_LABEL[c] ?? c }}</span>
         份数 = 桌数 × {{ PORTIONS_PER_TABLE }}（每位客人 {{ PORTIONS_PER_TABLE }} 份）。奖励金币还会随<b>对决等级</b>上浮
         （每级 +2%），所以高档席面在中后期才真正划算；超时自动作废、放弃无惩罚。
@@ -113,7 +113,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
       </div>
       <ProgressBar :progress="progress" />
       <div class="banquet-sub mono" :class="{ ok: ready >= order.need }">
-        已备 {{ ready }} / {{ order.need }} 份（tier ≥ {{ order.minTier }}）
+        已备 {{ ready }} / {{ order.need }} 份（需 {{ order.minTier }} 档以上）
       </div>
       <div class="dim banquet-sub">
         奖励：{{ order.gold.toLocaleString() }} 金币<template v-if="order.spice"> + 神秘调料 ×{{ order.spice }}</template> + 餐厅好感
@@ -133,7 +133,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
         <h3>今日席面：{{ offer.tierName }}</h3>
         <span class="dim mono">限时 {{ offer.hours }} 小时</span>
       </div>
-      <div class="dim banquet-sub">要求：{{ offer.cat }} ×{{ offer.need }} 份（tier ≥ {{ offer.minTier }}，每桌 {{ PORTIONS_PER_TABLE }} 份）</div>
+      <div class="dim banquet-sub">要求：{{ offer.cat }} ×{{ offer.need }} 份（需 {{ offer.minTier }} 档以上，每桌 {{ PORTIONS_PER_TABLE }} 份）</div>
       <div class="dim banquet-sub">
         奖励：{{ offer.gold.toLocaleString() }} 金币<template v-if="offer.spice"> + 神秘调料 ×{{ offer.spice }}</template> + 餐厅好感 60
       </div>

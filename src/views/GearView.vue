@@ -437,7 +437,7 @@ const rerollTable = computed(() =>
 .gv-set-bar-fill {
   display: block;
   height: 100%;
-  background: var(--accent, #d95a38);
+  background: var(--accent, var(--primary-tint));
 }
 .gv-tiers {
   display: flex;

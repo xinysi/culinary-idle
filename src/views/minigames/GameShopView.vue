@@ -336,6 +336,12 @@ function buy(id) {
   }
   if (!player.spendGameCoins(p.price)) { ui.pushLog(`🛒 游戏币不足（需 ${p.price} 币）`, 'warn'); return }
   const res = p.apply ? p.apply() : (p.slot ? (player[p.slot] = p.value, `已佩戴「${p.name}」`) : '')
+  // ⚠️ 发货失败（背包与仓库都满）必须**退回游戏币**，否则就是「扣了币没东西」（审计发现）
+  if (typeof res === 'string' && res.includes('未入库')) {
+    player.gainGameCoins(p.price)
+    ui.pushLog(`🛒 购买「${p.name}」失败：${res}（已退回 ${p.price} 游戏币）`, 'warn')
+    return
+  }
   if (!p.repeat) player.shopOwned = { ...(player.shopOwned ?? {}), [id]: true }
   ui.pushLog(`🛒 购买「${p.name}」：${res}`, 'gain')
 }
@@ -375,14 +381,14 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
 <style scoped>
 .gs-page { display: flex; flex-direction: column; gap: 14px; padding: 4px 0 12px; }
 .gs-topbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.gs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(255, 252, 246, 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.gs-chip { padding: 5px 12px; border-radius: 999px; background: rgba(var(--panel-rgb), 0.8); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
 .gs-group { display: flex; flex-direction: column; gap: 8px; }
 .gs-group-title { font-size: 14px; font-weight: 800; color: var(--primary-strong); }
 .gs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
 .gs-card {
   display: flex; flex-direction: column; gap: 6px;
-  background: rgba(255, 252, 246, 0.85);
-  border: 1px solid rgba(150, 110, 70, 0.25);
+  background: rgba(var(--panel-rgb), 0.85);
+  border: 1px solid rgba(var(--tint-rgb), 0.25);
   border-radius: 14px; padding: 12px;
 }
 .gs-card.owned { background: rgba(87, 168, 97, 0.08); border-color: rgba(87, 168, 97, 0.3); }
@@ -394,7 +400,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
 .gs-buy {
   margin-top: auto; /* 按钮置底：卡片内描述下方沉底对齐 */
   width: 100%; padding: 8px 14px; border-radius: 999px; cursor: pointer;
-  background: linear-gradient(135deg, #e8703f, #c9542e); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong)); border: none; color: #fff; font-weight: 700; font-size: 12.5px;
 }
 .gs-buy:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

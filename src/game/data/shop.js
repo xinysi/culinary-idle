@@ -2,6 +2,7 @@
 
 import { ITEMS } from './items.js'
 import { SHOP_SEED_ENTRIES } from './farmSeeds.js'
+import { PAID_CAP_MAX } from './caps.js'
 
 export const SHOP_ITEMS = [
   // 狩猎弹药 / 摆盘弹药
@@ -29,9 +30,9 @@ export const SHOP_ITEMS = [
   { itemId: 'rosemarySeed', price: 195 },
   { itemId: 'saffronSeed', price: 285 },
   { itemId: 'dragonPepperSeed', price: 400 },
-  // 扩展服务（§5.4：背包 20→100，仓库 100→500）
-  { action: 'inventorySlot', price: 200, desc: '背包 +10 格（上限 100）' },
-  { action: 'bankSlot', price: 150, desc: '仓库 +20 格（上限 500）' },
+  // 扩展服务（§5.4）；上限数值一律取自 caps.js 的**金币路径天花板** PAID_CAP_MAX，勿写字面量
+  { action: 'inventorySlot', price: 200, desc: `背包 +10 格（金币可买到 ${PAID_CAP_MAX.inventory} 格；山海食经还能再往上加）` },
+  { action: 'bankSlot', price: 150, desc: `仓库 +20 格（金币可买到 ${PAID_CAP_MAX.bank} 格；山海食经还能再往上加）` },
 ]
 
 // 农耕种子扩充（生成器 gen_farm_seeds.mjs 产出，勿手改）：所有可采集/可挖掘非矿物食材的种子
