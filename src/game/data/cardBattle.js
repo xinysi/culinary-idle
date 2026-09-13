@@ -121,7 +121,7 @@ export function settleBattle(player, result, difficulty = 'normal') {
     if (isFirst) {
       firstBonus = true
       player.gainItem('energyBiscuit', 1)
-      try { useUiStore().pushLog('🎉 卡牌对战首胜：额外获得能量饼干 ×1）', 'gain') } catch (e) { /* ignore */ }
+      try { useUiStore().pushLog('🎉 卡牌对战首胜：额外获得能量饼干 ×1', 'gain') } catch (e) { /* ignore */ }
     }
   } else {
     player.stats.cardBattle.losses = (player.stats.cardBattle.losses ?? 0) + 1

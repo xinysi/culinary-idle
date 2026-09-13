@@ -285,4 +285,36 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   check(`视图：模板里用到的组件都有来源（扫描 ${scanned} 个 .vue）`, missing.length === 0, missing.slice(0, 8).join(', '))
 }
 
+// ── 文本质量守卫（2026-09-12 立）──────────────────────────────
+// 起因：gen_tales 的 **11 个模板丢了 `」`**（其中一个还把 `」` 打成 `】`），产出的 33 条轶事文案
+// 括号不配平——这是玩家能直接看到的「错字/少字」，却是靠人工扫描才发现的。
+// 这里扫**数据模块里面向玩家的中文串**（不含 .vue：模板片段会误报），查四类硬伤：
+//   ① 括号不配平（（）「」《》【】）② 乱码/替换符 ③ 占位符残留（TODO/占位/待补）④ 空串
+{
+  const BRACKETS = [['（', '）'], ['「', '」'], ['《', '》'], ['【', '】']]
+  const MOJI = /锛|鈥|锟斤拷|\uFFFD/
+  const PLACE = /TODO|FIXME|占位|待补|待定/
+  const bad = []
+  const files = fs.readdirSync('src/game/data').filter((f) => f.endsWith('.js'))
+  for (const f of files) {
+    const lines = read(`src/game/data/${f}`).split('\n')
+    lines.forEach((line, i) => {
+      for (const m of line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}(?:\1))/g)) {
+        const body = m[2].slice(0, -1)
+        if (!/[\u4e00-\u9fa5]/.test(body)) continue
+        const tag = `${f}:${i + 1}`
+        if (!body.trim()) bad.push(`${tag} 空串`)
+        if (MOJI.test(body)) bad.push(`${tag} 乱码「${body.slice(0, 24)}」`)
+        if (PLACE.test(body)) bad.push(`${tag} 占位符「${body.slice(0, 24)}」`)
+        for (const [a, b] of BRACKETS) {
+          const na = body.split(a).length - 1
+          const nb = body.split(b).length - 1
+          if (na !== nb) bad.push(`${tag} 括号不配平 ${a}${na}/${b}${nb}「${body.slice(0, 30)}」`)
+        }
+      }
+    })
+  }
+  check(`文本：数据模块里面向玩家的中文串无「括号不配平/乱码/占位符/空串」（扫描 ${files.length} 个模块）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
 process.exit(fail === 0 ? 0 : 1)

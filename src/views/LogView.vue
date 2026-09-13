@@ -554,7 +554,7 @@ const seasonPaged = computed(() => {
               <tr><td class="dim">命中 / 闪避</td><td class="mono">{{ Math.round(bossDetail.acc) }} / {{ Math.round(bossDetail.eva) }}</td></tr>
               <tr><td class="dim">暴击 / 攻速</td><td class="mono">{{ (bossDetail.crit * 100).toFixed(1) }}% / {{ (bossDetail.speedMs / 1000).toFixed(1) }}s</td></tr>
               <tr><td class="dim">机制</td><td>{{ mechText(bossDetail) }}</td></tr>
-              <tr><td class="dim">状态</td><td>{{ bossStatus(bossDetail.name) ? '已击败）' : '未击败' }}</td></tr>
+              <tr><td class="dim">状态</td><td>{{ bossStatus(bossDetail.name) ? '已击败' : '未击败' }}</td></tr>
             </tbody>
           </table>
           <div style="margin-top: 8px">
