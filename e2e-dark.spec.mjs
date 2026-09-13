@@ -30,7 +30,7 @@ const VIEWS = [
   // 2026-09-12 第十一批（卡牌对战，自图鉴页抽出）
   'cards',
   // 2026-09-12 第十二批（奇遇图鉴）
-  'encounters',
+  'encounters', 'dao',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

@@ -148,6 +148,7 @@ const FEATURE_GROUPS = [
     items: [
       { icon: '✨', name: '食灵物语', view: 'spiritStories' },
       { icon: '♻️', name: '传承', view: 'legacy' },
+      { icon: '🛤️', name: '厨神之路', view: 'dao', badge: () => (player.daoPoints() > 0 ? player.daoPoints() : 0) },
       { icon: '🏛', name: '信仰', view: 'patrons' },
       { icon: '🌗', name: '节庆', view: 'festival' },
     ],

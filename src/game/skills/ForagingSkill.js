@@ -91,7 +91,7 @@ export class ForagingSkill extends GatheringSkill {
     }
     // 10% 掉落本作物种子（仅对可种作物）
     const seedId = SEED_MAP[target.itemId]
-    if (seedId && Math.random() < SEED_CHANCE) {
+    if (seedId && Math.random() < SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100) {
       this.player.gainItem(seedId, 1)
       extras.push(seedId)
     }
@@ -117,7 +117,7 @@ export class ForagingSkill extends GatheringSkill {
     if (woods > 0) result.items.wood = woods
     const seedId = SEED_MAP[this.currentTarget?.itemId]
     if (seedId) {
-      const seeds = Math.round(result.actions * SEED_CHANCE)
+      const seeds = Math.round(result.actions * (SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100))
       if (seeds > 0) result.items[seedId] = seeds
     }
     return result

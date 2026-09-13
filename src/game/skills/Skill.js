@@ -78,6 +78,9 @@ export class Skill {
     const michelinPct = this.player.michelinXpPct?.() ?? 0
     // 荣誉殿堂（2026-09-10）：称号被动 + 荣誉等级
     const honorPct = this.player.honorState?.()?.perks?.xpPct ?? 0
+    // 厨神之路（v2.0）：全技能 + 按类别的采集/制作加成
+    const dao = this.player.daoEffects?.() ?? {}
+    const daoPct = (dao.allXpPct ?? 0) + (this.def.category === 'gathering' ? (dao.gatherXpPct ?? 0) : 0) + (this.def.category === 'production' ? (dao.craftXpPct ?? 0) : 0)
     // 食神信仰（2026-09-10）：书神全技能 + 刀灵/猎神等定向技能
     const patronFx = this.player.patronEffects?.() ?? {}
     const patronPct = (patronFx.xpPct ?? 0) + (patronFx.xpSkills?.[this.id] ?? 0)
@@ -100,7 +103,7 @@ export class Skill {
       : this.def.category === 'production' ? (market.craftXp ?? 1)
       : 1
 
-    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
+    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100 + daoPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
     let level = this.level
     let leveled = false
     while (level < this.maxLevel && exp >= this.player.xpTotalForLevel(level + 1)) {

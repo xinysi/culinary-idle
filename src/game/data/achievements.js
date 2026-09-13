@@ -12,6 +12,7 @@ import { EXPEDITIONS, expeditionTier, EXPEDITION_TIER_STEPS } from './expedition
 import { BRANCHES } from './branches.js'
 import { MASCOTS } from './mascots.js'
 import { setMealBoard } from './setMeals.js'
+import { DAO_PATHS, DAO_NODES } from './daoTree.js'
 import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { SCHOOLS } from './schools.js'
 import { MILESTONES, milestoneSummary } from './milestones.js'
@@ -195,6 +196,8 @@ export const ACHIEVEMENTS = [
   { id: 'branch6', name: '连锁大亨', category: '特殊', desc: `${BRANCHES.length} 家分店全部开业`, title: '连锁大亨', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => BRANCHES.every((b) => !!p.branches?.[b.id]) },
   { id: 'mascot7', name: '吉祥满堂', category: '特殊', desc: `${MASCOTS.length} 位吉祥物全部买下`, title: '吉祥满堂', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => MASCOTS.every((m) => !!p.mascots?.owned?.[m.id]) },
   { id: 'setMeal3', name: '搭配高手', category: '特殊', desc: '同时满足 3 套套餐定食', title: '搭配高手', reward: { gold: 12000, items: { mysterySpice: 1 } }, check: (p) => setMealBoard(p.restaurant?.menu ?? []).filter((m) => m.ok).length >= 3 },
+  { id: 'daoFirst', name: '初入道途', category: '特殊', desc: '解锁第一个厨神之路节点', title: '问道者', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.daoUnlocked ?? []).length >= 1 },
+  { id: 'daoPathAll', name: '四道同修', category: '特殊', desc: '四条道途各解锁 5 个节点', title: '四道同修', reward: { gold: 30000, items: { mysterySpice: 3 } }, check: (p) => DAO_PATHS.every((d) => DAO_NODES.filter((n) => n.path === d.id && (p.daoUnlocked ?? []).includes(n.id)).length >= 5) },
   { id: 'chefWin10', name: '名厨克星', category: '特殊', desc: '累计战胜名厨 10 次', title: '名厨克星', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 10 },
   { id: 'friendBondMax', name: '老交情', category: '特殊', desc: '任一厨友羁绊达到 5 级', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) >= FRIEND_BOND_STEPS.at(-1)) },
 ]
