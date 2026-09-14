@@ -45,8 +45,9 @@ function md(i) {
 const ownedSeeds = computed(() => {
   ui.loopTick
   const lv = player.skills?.['farming']?.level ?? 1
-  return CROPS.filter((c) => (player.inventory[c.seedId] ?? 0) > 0)
-    .map((c) => ({ ...c, qty: player.inventory[c.seedId] ?? 0, ok: lv >= c.reqLevel }))
+  // v2.3.1（用户要求）：只列「背包真的有 + 当前农耕等级能种」的种子，等级不够的不进下拉
+  return CROPS.filter((c) => (player.inventory[c.seedId] ?? 0) > 0 && lv >= c.reqLevel)
+    .map((c) => ({ ...c, qty: player.inventory[c.seedId] ?? 0, ok: true }))
     .sort((a, b) => a.reqLevel - b.reqLevel)
 })
 
@@ -196,7 +197,8 @@ function expandHive() {
               收获 {{ getItem(greenhouseCrop(sd(b.index))?.itemId)?.name }} ·
               伴生蜂蜜最高可达 {{ HONEY_TIERS[honeyTierForLevel(greenhouseCrop(sd(b.index))?.reqLevel ?? 1) - 1].name }}
             </div>
-            <button class="btn btn-sm btn-primary" @click="plant(b.index)">种下</button>
+            <div v-if="!ownedSeeds.length" class="dim gh-sub">背包里没有当前农耕等级能种的种子（去杂货铺买，或采集时 10% 掉落）。</div>
+            <button class="btn btn-sm btn-primary" :disabled="!ownedSeeds.length" @click="plant(b.index)">种下</button>
           </template>
         </div>
         <div v-if="!ownedSeeds.length" class="card gh-empty dim">背包里没有作物种子——去杂货铺买或采集时掉落。</div>

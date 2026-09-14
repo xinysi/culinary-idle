@@ -6,6 +6,15 @@ import { useUiStore } from '../stores/ui.js'
 import { RANCH_ANIMALS, RANCH_UNLOCK_LEVEL, getAnimal, nextRanchExpandCost, POND_FISH, POND_BASE, POND_MAX, getPondFish, nextPondExpandCost } from '../game/data/ranch.js'
 import { IDLE_CAP_HOURS } from '../game/data/caps.js'
 import { getItem } from '../game/data/items.js'
+import { getGoods, goodsEffectText } from '../game/data/processedGoods.js'
+
+/** 产物文案：加工品（鸡油/猪油/鱼酱…）额外标注它的增益效果，否则玩家不知道拿到手干嘛用 */
+function productLine(products = {}) {
+  return Object.entries(products).map(([id, q]) => {
+    const g = getGoods(id)
+    return `${getItem(id)?.name ?? id} ×${q}${g ? `（${g ? goodsEffectText(g) : ''}）` : ''}`
+  }).join('、')
+}
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
@@ -40,7 +49,7 @@ const pens = computed(() => {
       progress: def ? Math.min(1, elapsed / cycleMs) : 0,
       remainMs: def ? Math.max(0, cycleMs - elapsed) : 0,
       feedText: def ? Object.entries(def.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') : '',
-      productText: def ? Object.entries(def.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') : '',
+      productText: def ? productLine(def.products) : '',
     }
   })
 })
@@ -69,7 +78,7 @@ const ponds = computed(() => {
       progress: def ? Math.min(1, elapsed / cycleMs) : 0,
       remainMs: def ? Math.max(0, cycleMs - elapsed) : 0,
       feedText: def ? Object.entries(def.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') : '',
-      productText: def ? Object.entries(def.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') : '',
+      productText: def ? productLine(def.products) : '',
     }
   })
 })
@@ -174,7 +183,7 @@ const RELATED = [
             </select>
             <div v-if="draft[p.index]" class="dim ranch-sub">
               饲料 {{ Object.entries(getAnimal(d(p.index))?.feed ?? {}).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}
-              → 产出 {{ Object.entries(getAnimal(d(p.index))?.products ?? {}).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}
+              → 产出 {{ productLine(getAnimal(d(p.index))?.products) }}
             </div>
             <button class="btn btn-sm btn-primary" @click="buy(p.index)">买下并放入</button>
           </template>
@@ -189,7 +198,7 @@ const RELATED = [
               <td class="dim" style="width: 120px">{{ a.icon }} {{ a.name }}</td>
               <td class="mono dim" style="width: 110px">{{ a.cost.toLocaleString() }} 金币</td>
               <td class="dim">饲料 {{ Object.entries(a.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
-              <td>→ {{ Object.entries(a.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}<span class="dim">（{{ a.hours }} 小时 / 周期）</span></td>
+              <td>→ {{ productLine(a.products) }}<span class="dim">（{{ a.hours }} 小时 / 周期）</span></td>
             </tr>
           </tbody>
         </table>
@@ -228,7 +237,7 @@ const RELATED = [
             </select>
             <div v-if="pondDraft[p.index]" class="dim ranch-sub">
               饲料 {{ Object.entries(getPondFish(pd(p.index))?.feed ?? {}).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}
-              → 产出 {{ Object.entries(getPondFish(pd(p.index))?.products ?? {}).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}
+              → 产出 {{ productLine(getPondFish(pd(p.index))?.products) }}
             </div>
             <button class="btn btn-sm btn-primary" @click="buyPond(p.index)">投苗并养起</button>
           </template>
@@ -243,7 +252,7 @@ const RELATED = [
               <td class="dim" style="width: 120px">{{ f.icon }} {{ f.name }}</td>
               <td class="mono dim" style="width: 110px">{{ f.cost.toLocaleString() }} 金币</td>
               <td class="dim">饲料 {{ Object.entries(f.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
-              <td>→ {{ Object.entries(f.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}<span class="dim">（{{ f.hours }} 小时 / 周期）</span></td>
+              <td>→ {{ productLine(f.products) }}<span class="dim">（{{ f.hours }} 小时 / 周期）</span></td>
             </tr>
           </tbody>
         </table>

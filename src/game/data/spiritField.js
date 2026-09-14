@@ -34,6 +34,10 @@ export const SPIRIT_EXPAND_COSTS = [40000, 120000]
 export const SPIRIT_PLANTS = [
   { id: 'lingzhi', seedId: 'lingzhiSeed', name: '灵芝田', icon: '🌿', hours: 24, products: { lingzhi: 2 }, reqLevel: 40 },
   { id: 'truffle', seedId: 'truffleSeed', name: '松露圃', icon: '🫘', hours: 36, products: { truffle: 2, matsutake: 1 }, reqLevel: 55 },
+  // v2.3.1：补 Ⅴ/Ⅵ 档主料（木耳 / 银耳），使灵圃与菇床的职能不重叠：
+  //   菇床（吃肥料）= 菌灵露 **Ⅰ~Ⅳ 档**料线；灵圃（吃种子，种子不消耗）= **Ⅴ~Ⅷ 档**料线。
+  { id: 'fungus', seedId: 'foraging_ext_22Seed', name: '木耳畦', icon: '🪵', hours: 24, products: { foraging_ext_22: 2 }, reqLevel: 71 },
+  { id: 'snowFungus', seedId: 'foraging_ext_23Seed', name: '银耳架', icon: '🤍', hours: 30, products: { foraging_ext_23: 2 }, reqLevel: 75 },
   { id: 'dragonRoot', seedId: 'dragonRootSeed', name: '龙根畦', icon: '🐉', hours: 48, products: { dragonRoot: 2 }, reqLevel: 70 },
   { id: 'spiritFruit', seedId: 'spiritFruitSeed', name: '灵果藤', icon: '✨', hours: 72, products: { spiritFruit: 2 }, reqLevel: 85 },
 ]
