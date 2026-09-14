@@ -1,7 +1,7 @@
 <script setup>
 // 统计面板 — 里程碑总览（分栏式 + 赛季点数流光数字）
 // 数据全部来自 player store（已确认字段存在且口径正确）。
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useUiStore } from '../stores/ui.js'
 import { OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
@@ -85,6 +85,7 @@ const sections = computed(() => [
       { label: '硬核生存', value: player.hardcore ? `${player.hardcoreStats?.days ?? 0} 天` : '非硬核', sub: player.hardcore ? ` 最佳 ${player.hardcoreStats?.best ?? 0} 天` : '' },
     ],
   },
+  // 生产与工坊：采集/制作/加工端的累计数字
   {
     icon: '⛏️',
     title: '生产',
@@ -95,18 +96,26 @@ const sections = computed(() => [
       { label: '配方精通 ≥50 级', value: recipeMastery.value.half, sub: ` / ${recipeMastery.value.total} 张` },
       { label: '满级配方', value: recipeMastery.value.maxed, sub: ' 张（精通 100）' },
       { label: '地窖出窖', value: player.stats?.cellarRounds ?? 0, sub: ` 次 · 累计 ${(player.stats?.cellarGold ?? 0).toLocaleString()} 金币` },
-      { label: '常客招待', value: player.stats?.regularServes ?? 0, sub: ` 次 · 小费 +${player.regularTipPct()}%` },
-      { label: '食灵物语', value: player.stats?.spiritStoryClaims ?? 0, sub: ` 段 · 待领取 ${player.spiritStoryPending()}` },
       { label: '自动出售', value: player.stats?.autoSold ?? 0, sub: ` 件 · 回收 ${(player.stats?.autoSoldGold ?? 0).toLocaleString()} 金币` },
       { label: '牧场产出周期', value: player.stats?.ranchCycles ?? 0, sub: ` 次 · ${player.ranchPens()} 个栏位` },
       { label: '分店入账', value: (player.stats?.branchGold ?? 0).toLocaleString(), sub: ` 金币 · ${Object.keys(player.branches ?? {}).length} 家分店` },
-      { label: '米其林星级', value: '★'.repeat(player.michelin?.stars ?? 0) || '—', sub: ` 当前 ${player.michelin?.score ?? 0} 分 · 最高 ${player.michelin?.best ?? 0} 星` },
       { label: '风味搭配', value: player.flavorProgress().found, sub: ` / ${player.flavorProgress().total} 条` },
       { label: '厨具大赛', value: player.gearScore().score, sub: ` 分 · 历史最高 ${player.gearContest?.best ?? 0}` },
-      { label: '今日节庆', value: player.festivalBoost().active.map((f) => f.name).join('、') || '无', sub: player.festivalBoost().active.length ? '（加成已生效）' : '（见节庆日历）' },
       { label: '菜系研究', value: player.schoolTotalLevels(), sub: ' / 30 级（六派 ×5）' },
       { label: '雇工班底', value: player.staffWagePerHour().toLocaleString(), sub: ` 金币/时 · 收入 +${player.staffIncomePct()}%` },
       { label: '产地考察', value: Object.keys(player.regions ?? {}).length, sub: ` / ${REGIONS.length} 个 · 派驻 ${Object.keys(player.regionPosting ?? {}).length} 条线路` },
+      { label: '分店主题', value: Object.keys(player.branchThemes ?? {}).length, sub: ' 家已定主题（对应学派每级 +6% 时收）' },
+    ],
+  },
+  // 经营与记录：餐厅/渠道/活动与长线进度（原「生产」分区拆出，见 StatsView 样式注释）
+  {
+    icon: '💼',
+    title: '经营',
+    rows: [
+      { label: '常客招待', value: player.stats?.regularServes ?? 0, sub: ` 次 · 小费 +${player.regularTipPct()}%` },
+      { label: '食灵物语', value: player.stats?.spiritStoryClaims ?? 0, sub: ` 段 · 待领取 ${player.spiritStoryPending()}` },
+      { label: '米其林星级', value: '★'.repeat(player.michelin?.stars ?? 0) || '—', sub: ` 当前 ${player.michelin?.score ?? 0} 分 · 最高 ${player.michelin?.best ?? 0} 星` },
+      { label: '今日节庆', value: player.festivalBoost().active.map((f) => f.name).join('、') || '无', sub: player.festivalBoost().active.length ? '（加成已生效）' : '（见节庆日历）' },
       { label: '徒弟', value: `Lv${player.apprenticeState().level}`, sub: ` ${player.apprenticeRankName()} · 离线效率 ${Math.round((0.8 + player.apprenticeOfflineBonus()) * 100)}%` },
       { label: '守护神信仰', value: player.patronActiveId() ? `Lv${player.patronLevel(player.patronActiveId())}` : '无', sub: ' 信仰等级（供奉永久保留）' },
       { label: '里程碑', value: msSummary.value.done, sub: ` / ${msSummary.value.total} 项（${msSummary.value.pct}%）` },
@@ -116,7 +125,6 @@ const sections = computed(() => [
       { label: '宴会承办', value: player.stats?.banquets ?? 0, sub: ` 场 · 作废 ${player.banquetState().failed ?? 0} 场` },
       { label: '外卖接单', value: player.stats?.takeoutSold ?? 0, sub: ` 单 · Lv${player.takeoutLevel()} · 流水 ${(player.takeout?.gold ?? 0).toLocaleString()} 金币` },
       { label: '交易所成交', value: player.stats?.exchangeTrades ?? 0, sub: ` 件 · 流水 ${(player.stats?.exchangeGold ?? 0).toLocaleString()} 金币` },
-      { label: '分店主题', value: Object.keys(player.branchThemes ?? {}).length, sub: ' 家已定主题（对应学派每级 +6% 时收）' },
       { label: '供应商合约', value: player.activeContracts().length, sub: ` 份生效中 · 累计到货 ${player.stats?.contractDeliveries ?? 0} 次` },
       { label: '名厨挑战', value: player.stats?.chefWins ?? 0, sub: ` 位名厨被战胜 · 本周 ${player.chefClearedThisWeek() ? '已通过' : '未通过'}` },
       { label: '赛季档位', value: (player.seasonState().claimed ?? []).length, sub: ` 档已领（${player.activeSeasonDef?.name ?? '—'}）· 历史 ${Object.keys(player.seasons ?? {}).length} 季有记录` },
@@ -168,6 +176,36 @@ const sections = computed(() => [
     ],
   },
 ])
+
+// 分区 → 列 的分装（贪心：每块依次放进当前最矮的那一列）
+// ⚠️ 2026-09-14 用户报「统计页面排版需要重新整理」共修了两轮：
+//   ① 原为 `grid` + `auto-fill minmax(240px,1fr)` → 1440px 下排成 6 列，而内容是**按顺序灌进格子的**，
+//      实测前三列各 1812px、后三列只有 636px（右下大片空白，288px 窄列还把行挤得很紧）；
+//   ② 改 CSS 多列（`columns:3`）后，浏览器对「不许跨列的整体卡片」只会顺序装箱：
+//      一个 39 行的超长分区把首列顶到 1411px，另两列仍留几百像素空白。
+//   故改为**显式分列 + 贪心装箱**（分区按行数投给最矮的列，列高差 ≤1 张卡），列数随窗口 3/2/1 自适应。
+//   顺带把超长的「生产」按语义拆成「生产 / 经营」两块（单块过高时任何分列都配不平）。
+const colCount = ref(3)
+function syncCols() {
+  const w = typeof window === 'undefined' ? 1440 : window.innerWidth
+  colCount.value = w <= 760 ? 1 : w <= 1180 ? 2 : 3
+}
+onMounted(() => {
+  syncCols()
+  window.addEventListener('resize', syncCols)
+})
+onBeforeUnmount(() => window.removeEventListener('resize', syncCols))
+const statColumns = computed(() => {
+  const cols = Array.from({ length: colCount.value }, () => [])
+  const heights = new Array(colCount.value).fill(0)
+  for (const sec of sections.value) {
+    let i = 0
+    for (let k = 1; k < cols.length; k++) if (heights[k] < heights[i]) i = k
+    cols[i].push(sec)
+    heights[i] += sec.rows.length + 2 // +2 ≈ 分区标题与内距
+  }
+  return cols
+})
 </script>
 
 <template>
@@ -186,15 +224,17 @@ const sections = computed(() => [
         <div class="stats-label dim">{{ h.label }}</div>
       </div>
     </div>
-    <div class="stats-columns">
-      <div v-for="sec in sections" :key="sec.title" class="stats-col card">
-        <h4 class="stats-col-head">{{ sec.icon }} {{ sec.title }}</h4>
-        <div v-for="row in sec.rows" :key="row.label" class="stats-row">
-          <span class="stats-label dim">{{ row.label }}</span>
-          <span class="stats-value">
-            <span class="stats-num mono">{{ row.value }}</span>
-            <span v-if="row.sub" class="stats-sub dim">{{ row.sub }}</span>
-          </span>
+    <div class="stats-columns" :style="{ '--stat-cols': colCount }">
+      <div v-for="(col, ci) in statColumns" :key="ci" class="stats-track">
+        <div v-for="sec in col" :key="sec.title" class="stats-col card">
+          <h4 class="stats-col-head">{{ sec.icon }} {{ sec.title }}</h4>
+          <div v-for="row in sec.rows" :key="row.label" class="stats-row">
+            <span class="stats-label dim">{{ row.label }}</span>
+            <span class="stats-value">
+              <span class="stats-num mono">{{ row.value }}</span>
+              <span v-if="row.sub" class="stats-sub dim">{{ row.sub }}</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -239,23 +279,27 @@ const sections = computed(() => [
   gap: 6px;
   margin-top: 8px;
 }
-/* 分栏式：自动填充多列 */
-/* 统计分区：**自动均衡的多列布局**
-   ⚠️ 2026-09-14 用户报「统计页面排版需要重新整理」：原先用 `grid-template-columns: repeat(auto-fill, minmax(240px,1fr))`
-   → 1440px 下排成 **6 列**，而分区内容是「按索引顺序」灌进去的 → 实测前三列各 1812px、后三列只有 636px，
-   右下留出一大片空白，且 288px 的窄列把 72 行挤得很紧。
-   改用 CSS 多列（`columns`）让浏览器**按内容高度自动配平**，同时收成 3 列（每列 ~470px，行不再挤）。 */
+/* 统计分区：**显式分列 + 贪心装箱**
+   ⚠️ 2026-09-14 用户报「统计页面排版需要重新整理」，两次返工都记在这里，别再改回纯 CSS 方案：
+   ① 原 `grid-template-columns: repeat(auto-fill, minmax(240px,1fr))` → 1440px 下 6 列，
+      内容按顺序灌入 → 实测前三列各 1812px、后三列只有 636px（右下大片空白 + 288px 窄列把行挤紧）。
+   ② 改 `columns: 3` 后仍不齐：多列对 `break-inside: avoid` 的整体卡片只能顺序装箱，
+      一个超长分区就把首列顶到 1411px，另两列照样空几百像素。
+   ③ 现为「列数自适应（3/2/1）+ JS 贪心装箱（每块投给当前最矮的列）」→ 列高差 ≤1 张卡。 */
 .stats-columns {
-  columns: 3;
-  column-gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(var(--stat-cols, 3), minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
 }
-@media (max-width: 1180px) { .stats-columns { columns: 2; } }
-@media (max-width: 760px) { .stats-columns { columns: 1; } }
+.stats-track {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
 .stats-col {
   padding: 14px 16px;
-  margin: 0 0 12px;
-  break-inside: avoid;   /* 分区卡片不许被拆到两列 */
-  -webkit-column-break-inside: avoid;
 }
 .stats-col-head {
   font-size: 15px;
