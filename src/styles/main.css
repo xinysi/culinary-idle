@@ -20,6 +20,13 @@
   --bad-strong: #b23a2f;
   --bad-soft: #fae0dc;
   --info: #3b8bb8;
+  /* 小游戏/若干页面的「强调色」按钮（原字面量 #e8703f → #c9542e 的橙色渐变）。
+     ⚠️ 2026-09-14 修复：token 化那轮把它们换成了 `var(--accent*)`，但**从未定义过这三个变量**
+     → 渐变声明失效、按钮变透明，而文字仍是 `#fff` → 默认皮肤下白字压白底，完全看不见
+     （用户报「小游戏按钮文字和背景颜色怎么都变白了」）。这里补回定义，默认值＝原字面量，原味渲染逐值不变。 */
+  --accent: #e8703f;
+  --accent-strong: #c9542e;
+  --accent-rgb: 232, 112, 63;
   /* 面板 / 底色 / 金币 / 灰阶（辅助色） */
   --sidebar-bg: #f5e6d5;
   --bg-soft: #fffaf4;
@@ -39,6 +46,11 @@
   --accent-strong-rgb: 201, 84, 46;
   --amber-rgb: 234, 176, 74;          /* 小游戏琥珀（道具/进度） */
   --amber-strong-rgb: 217, 138, 43;
+  /* ⚠️ 2026-09-14 补：下面三个此前**只有 -rgb 变体、没有 hex 版**，而有 3 处直接写 `var(--amber)` / `var(--amber-strong)` /
+     `var(--warn-soft)` → 声明静默失效（边框/底色不生效）。hex 值 = 上面三元组的同色。 */
+  --amber: #eab04a;
+  --amber-strong: #d98a2b;
+  --warn-soft: #fbf0da;
   --panel-rgb: 255, 252, 246;         /* 面板/卡片底色（深色块有独立值） */
   --panel-soft-rgb: 255, 251, 244;    /* 次级表面 */
   --panel-raised-rgb: 255, 252, 246;  /* 抬升/悬停表面 */
@@ -791,6 +803,19 @@ h2 {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* 物品详情的「使用」区（增益剂/保鲜剂，2026-09-14 补使用入口时新增） */
+.item-use-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.item-use-label { font-size: 12px; }
+.item-use-buff { background: var(--good-soft); color: var(--good-strong); }
 
 .badge-on {
   background: var(--good-soft);
@@ -2449,25 +2474,70 @@ h2 {
   font-size: 14px;
 }
 
-/* 设置面板下拉框与滑块统一样式 */
-.settings-row input[type="range"] {
-  accent-color: var(--primary);
-}
-.settings-row select {
-  flex: 1;
+/* 设置面板控件统一样式（2026-09-14 用户报「有些框的样式没有统一」：
+   原先复选框是原生的、滑块是裸 range、数字框是浏览器默认白框、下拉是半定制的，四种观感混在一起。
+   现统一为同一套「玻璃框」：同一底色/描边/圆角/内距/高度/焦点环，复选框与滑块同样走主色。） */
+.settings-body input[type="text"],
+.settings-body input[type="number"],
+.settings-body select {
   background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 13px;
   color: var(--text);
-  cursor: pointer;
+  min-height: 30px;
   min-width: 0;
 }
-.settings-row select:focus-visible {
+.settings-body select {
+  flex: 1;
+  cursor: pointer;
+}
+.settings-body input[type="text"]:focus-visible,
+.settings-body input[type="number"]:focus-visible,
+.settings-body select:focus-visible {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary-soft);
+}
+/* 滑块：统一轨道与滑钮（原先是浏览器默认样式，与旁边的框差异很大） */
+.settings-body input[type="range"] {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+.settings-body input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lock-bg);
+  border: 1px solid var(--border);
+}
+.settings-body input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--card);
+  box-shadow: 0 1px 4px rgba(var(--scrim-rgb), 0.3);
+}
+.settings-body input[type="range"]:focus-visible {
+  outline: none;
+}
+.settings-body input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+/* 复选框：统一走主色（原来各浏览器默认蓝/黑） */
+.settings-body input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 
 /* ── 称号 / 任务 / 成就 / 图鉴（§6 / §7）─────────────── */

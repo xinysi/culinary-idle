@@ -10,9 +10,25 @@ const player = usePlayerStore()
 
 const enc = computed(() => ui.encounter?.encounter ?? null)
 
+/** 该分支要付出的材料是否够（costItem 此前**没有任何消费方** → 带代价的分支等于白拿，2026-09-14 修） */
+function affordable(choice) {
+  const cost = choice.costItem ?? {}
+  return Object.entries(cost).every(([id, qty]) => (player.inventory[id] ?? 0) >= qty)
+}
+function costText(choice) {
+  const cost = choice.costItem ?? {}
+  return Object.entries(cost).map(([id, qty]) => `${getItem(id)?.name ?? id}×${qty}（有 ${player.inventory[id] ?? 0}）`).join('、')
+}
+
 function pick(choice, index) {
   if (!enc.value) return
+  if (!affordable(choice)) {
+    ui.pushLog(`✨ 奇遇「${enc.value.title}」：材料不足，需要 ${costText(choice)}`, 'warn')
+    return
+  }
   player.recordEncounterPick(enc.value.id, index) // 奇遇图鉴：记录选了哪一支（2026-09-11）
+  // 先付代价，再发奖励（代价不足时上面已拦）
+  for (const [id, qty] of Object.entries(choice.costItem ?? {})) player.spendItem(id, qty)
   const e = choice.effect ?? {}
   if (e.gold) {
     const gold = Math.floor(e.gold * (1 + player.combatLevel * 0.2))
@@ -43,6 +59,9 @@ function pick(choice, index) {
           v-for="(c, i) in enc.choices"
           :key="i"
           class="btn encounter-choice"
+          :class="{ 'is-locked': !affordable(c) }"
+          :disabled="!affordable(c)"
+          :title="c.costItem ? `需要 ${costText(c)}` : ''"
           @click="pick(c, i)"
         >{{ c.label }}</button>
       </div>

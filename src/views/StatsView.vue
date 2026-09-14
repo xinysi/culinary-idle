@@ -208,12 +208,17 @@ const sections = computed(() => [
 </template>
 
 <style scoped>
+/* 顶部亮点卡：等分行内排布
+   ⚠️ 原 `auto-fill minmax(150px,1fr)` 在 888px 内容区排成 5 列 → 第 6 张（大赛最高月分）**单独落单占一行**
+   （用户报「统计页面排版需要重新整理」的一处）。改为定列数：宽屏 6 列成一行、中屏 3 列两行、窄屏 2 列。 */
 .hall-highlights {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin: 12px 0;
 }
+@media (max-width: 1180px) { .hall-highlights { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .hall-highlights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hall-card {
   padding: 12px 14px;
   text-align: center;
@@ -235,13 +240,22 @@ const sections = computed(() => [
   margin-top: 8px;
 }
 /* 分栏式：自动填充多列 */
+/* 统计分区：**自动均衡的多列布局**
+   ⚠️ 2026-09-14 用户报「统计页面排版需要重新整理」：原先用 `grid-template-columns: repeat(auto-fill, minmax(240px,1fr))`
+   → 1440px 下排成 **6 列**，而分区内容是「按索引顺序」灌进去的 → 实测前三列各 1812px、后三列只有 636px，
+   右下留出一大片空白，且 288px 的窄列把 72 行挤得很紧。
+   改用 CSS 多列（`columns`）让浏览器**按内容高度自动配平**，同时收成 3 列（每列 ~470px，行不再挤）。 */
 .stats-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  columns: 3;
+  column-gap: 12px;
 }
+@media (max-width: 1180px) { .stats-columns { columns: 2; } }
+@media (max-width: 760px) { .stats-columns { columns: 1; } }
 .stats-col {
   padding: 14px 16px;
+  margin: 0 0 12px;
+  break-inside: avoid;   /* 分区卡片不许被拆到两列 */
+  -webkit-column-break-inside: avoid;
 }
 .stats-col-head {
   font-size: 15px;

@@ -63,6 +63,9 @@ function buildLight(p) {
     '--primary-strong-rgb': rgbOf(strong),
     '--primary-tint': p,
     '--primary-tint-rgb': rgbOf(p),
+    '--accent': shade(p, 0.12),
+    '--accent-strong': shade(p, -0.08),
+    '--accent-rgb': rgbOf(shade(p, 0.12)),
     '--on-primary-tint': shade(p, 0.45),
     '--on-primary-tint-2': shade(p, 0.50),
     '--on-primary-tint-3': shade(p, 0.58),
@@ -113,6 +116,9 @@ function buildDark(pd) {
     '--primary-strong-rgb': rgbOf(strong),
     '--primary-tint': pd,
     '--primary-tint-rgb': rgbOf(pd),
+    '--accent': shade(pd, 0.12),
+    '--accent-strong': shade(pd, -0.08),
+    '--accent-rgb': rgbOf(shade(pd, 0.12)),
     '--on-primary-tint': shade(pd, 0.45),
     '--on-primary-tint-2': shade(pd, 0.50),
     '--on-primary-tint-3': shade(pd, 0.58),
@@ -176,6 +182,7 @@ export const SKINS = [
 /** 每套（非原味）皮肤必须给出的键（守卫用：system_test 的皮肤组） */
 export const SKIN_REQUIRED_KEYS = [
   '--primary', '--primary-strong', '--primary-deep', '--primary-soft',
+  '--accent', '--accent-strong', '--accent-rgb',
   '--primary-rgb', '--primary-strong-rgb', '--primary-tint', '--primary-tint-rgb',
   '--on-primary-tint', '--on-primary-tint-2', '--on-primary-tint-3', '--on-primary-tint-4', '--btn-primary-bg', '--btn-primary-border', '--btn-primary-hover', '--btn-primary-disabled-rgb',
   '--accent', '--accent-strong', '--bg', '--card', '--bg-soft', '--sidebar-bg', '--lock-bg',

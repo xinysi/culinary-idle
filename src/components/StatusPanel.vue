@@ -18,6 +18,15 @@ import { getSeason, activeSeasonId } from '../game/data/seasons.js'
 import { getGuild } from '../game/data/guilds.js'
 import { QUESTS } from '../game/data/quests.js'
 import { itemName } from '../game/data/items.js'
+const activeBuffs = computed(() => {
+  const now = Date.now()
+  const out = []
+  for (const [key, label] of [['xpMult', '经验增益'], ['yieldMult', '产量增益']]) {
+    const b = player.buffs?.[key]
+    if (b && now < b.expiresAt) out.push({ key, label, mult: b.mult, left: Math.max(1, Math.round((b.expiresAt - now) / 60000)) })
+  }
+  return out
+})
 const currentQuestDef = computed(() => {
   const q = player.currentQuest
   return q ? QUESTS.find((x) => x.id === q.id) ?? null : null
@@ -192,6 +201,15 @@ function closeAoji(id) {
       </template>
       <p v-else class="dim panel-empty">未激活奥义 — 到美食知识页激活获得被动加成</p>
       <button class="btn btn-sm" style="margin-top: 6px" @click="player.setActiveSkill('gastronomy'); ui.setView('skill')">管理奥义</button>
+    </div>
+
+    <!-- 生效中的增益剂（2026-09-14：增益剂此前无使用入口也无状态展示）-->
+    <div v-if="activeBuffs.length" class="card quick-status">
+      <h3>🧪 生效中</h3>
+      <div v-for="b in activeBuffs" :key="b.key" class="quick-group">
+        <div class="quick-row"><span>{{ b.label }}</span><b class="mono">×{{ b.mult }}</b></div>
+        <div class="dim" style="font-size: 12px">剩 {{ b.left }} 分钟</div>
+      </div>
     </div>
 
     <!-- 快捷状态（§13）-->
