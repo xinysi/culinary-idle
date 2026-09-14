@@ -8,6 +8,7 @@ import { getItem } from '../game/data/items.js'
 import { itemSources } from '../game/data/itemSources.js'
 import { itemDetailLines } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { sfx } from '../game/core/sound.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -42,6 +43,14 @@ function sortList(entries) {
 const bagList = computed(() => sortList(Object.entries(player.inventory)))
 const bankList = computed(() => sortList(Object.entries(player.bank)))
 const maxQty = computed(() => (selected.value ? (tab.value === 'bag' ? player.inventory[selected.value] ?? 0 : player.bank[selected.value] ?? 0) : 0))
+
+const usableKind = computed(() => (selected.value ? player.usableOf?.(selected.value) : null))
+function doUse() {
+  const r = player.useConsumable(selected.value)
+  ui.pushLog(r.ok ? `🧪 ${r.msg}` : r.msg, r.ok ? 'gain' : 'warn')
+  if (r.ok) sfx.reward(); else sfx.error()
+  if ((player.inventory[selected.value] ?? 0) <= 0) selected.value = null
+}
 
 function select(id) {
   selected.value = selected.value === id ? null : id
@@ -200,6 +209,8 @@ function setUpgradeTarget(id) { upgradeTarget.value = id }
           />
           <input class="bag-qty-num" type="number" min="1" :max="maxQty" :value="qty" @change="setQty($event.target.value)" />
           <template v-if="tab === 'bag'">
+            <!-- 可用消耗品（增益剂/保鲜剂）：此前没有任何使用入口（2026-09-14 补） -->
+            <button v-if="usableKind" class="btn btn-sm btn-primary" title="使用 1 个" @click="doUse">使用 1</button>
             <button class="btn btn-sm" @click="doSell">卖 {{ qty }}</button>
             <button class="btn btn-sm btn-primary" @click="doMoveToBank">存入</button>
           </template>

@@ -117,8 +117,12 @@ function seedName(seedId) {
               <ProgressBar :progress="plotProgressPct(i - 1)" />
               <div v-if="instance.isMature(i - 1)" class="plot-mature">已成熟！</div>
               <div v-else class="dim mono">剩余 {{ remainingSec(i - 1) }}s · 枯萎 {{ (instance.witherChance(i - 1) * 100).toFixed(0) }}%</div>
-              <div v-if="!instance.isMature(i - 1)" class="plot-fert">
+              <!-- ⚠️ 已施肥的田不再显示施肥按钮（2026-09-14 用户实测：原先可重复点、每次都扣肥料）。
+                   已施肥时改为一句提示；真正的拦截在 FarmingSkill.fertilize 里（防 UI 之外调用）。 -->
+              <div v-if="!instance.isMature(i - 1) && instance.plotAt(i - 1).fertilizer !== 'richCompost'" class="plot-fert">
+                <!-- 已施「堆肥」后不再显示同种按钮（同种/降级会被拒且白扣料）；「沃肥」仍可覆盖升级 -->
                 <button
+                  v-if="!instance.plotAt(i - 1).fertilizer"
                   class="btn btn-sm"
                   :disabled="!(player.inventory.compost ?? 0)"
                   @click="instance.fertilize(i - 1, 'compost')"
@@ -133,6 +137,7 @@ function seedName(seedId) {
                   沃肥{{ player.inventory.richCompost ?? 0 }}
                 </button>
               </div>
+              <div v-else-if="!instance.isMature(i - 1)" class="dim plot-fert-note">本季已施沃肥（最好的一档），等收获后再施</div>
               <button class="btn btn-sm btn-primary" :disabled="!instance.isMature(i - 1)" @click="instance.harvest(i - 1)">
                 收获
               </button>

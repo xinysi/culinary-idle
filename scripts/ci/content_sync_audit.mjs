@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances } from '../../src/game/skills/registry.js'
 import { ITEMS } from '../../src/game/data/items.js'
+import { ENCOUNTERS } from '../../src/game/data/encounters.js'
 import { COMBAT_BOSSES } from '../../src/game/data/combat.js'
 import { ALL_ACHIEVEMENTS } from '../../src/game/data/achievements.js'
 import { QUESTS } from '../../src/game/data/quests.js'
@@ -422,6 +423,52 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     })
   }
   check(`跳转：所有 setView/go/view 目标都已注册（扫描 ${keys.length} 个视图键）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
+// ── 引用的 CSS 变量必须有定义（2026-09-14 立）──
+// 起因：token 化那轮把 `linear-gradient(#e8703f, #c9542e)` 换成了 `var(--accent)`/`var(--accent-strong)`，
+//   但**从未定义这两个变量** → 声明整条失效、按钮背景变透明，而文字还是 #fff → 默认皮肤下白字压白底（用户报「小游戏按钮文字/背景都变白了」）。
+// 判定：`var(--x)` 里的 x 必须能在 main.css 里找到定义，或在 src 任意文件里被赋值（`--x:` / `setProperty`）。
+{
+  const cssPalette = read('src/styles/main.css')
+  const defined = new Set((cssPalette.match(/--[a-z0-9-]+\s*:/gi) ?? []).map((x) => x.replace(/\s*:$/, '')))
+  const assigned = new Set()
+  const used = new Map()
+  for (const f of walkSrc()) {
+    // 只看代码行：剥掉整行注释与行内 /* ... */ 片段（文档注释里常写 `var(--x)` 作示例）
+    const src = read(f).split('\n').map((l) => {
+      const t = l.trim()
+      if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')) return ''
+      return l.replace(/\/\*[\s\S]*?\*\//g, '')
+    }).join('\n')
+    for (const m of src.matchAll(/(--[a-z0-9-]+)'?\s*:/gi)) assigned.add(m[1])
+    for (const m of src.matchAll(/setProperty\(\s*'([^']+)'/g)) assigned.add(m[1])
+    for (const m of src.matchAll(/var\((--[a-z0-9-]+)/gi)) if (!used.has(m[1])) used.set(m[1], f)
+  }
+  const missing = [...used.entries()].filter(([k]) => !defined.has(k) && !assigned.has(k) && !k.startsWith('--mg-'))
+  check(`样式：var() 引用的 CSS 变量都有定义（扫描 ${used.size} 个变量）`, missing.length === 0, missing.slice(0, 6).map(([k, f]) => `${k}（${f}）`).join('; '))
+}
+
+// ── 奇遇数据完整性（2026-09-14 扩：**costItem 也要查**）──
+// 起因：`rat` 奇遇的 costItem 用了不存在的 `spice`。旧审计只扫 `effect.items`，而 costItem 当时**根本没有消费方**
+//   （选了等于白拿），两者叠加让幽灵 id 一直没被发现。现把两处物品引用都纳入校验。
+{
+  const bad = []
+  const ids = new Set()
+  for (const e of ENCOUNTERS) {
+    if (ids.has(e.id)) bad.push(`${e.id}: id 重复`)
+    ids.add(e.id)
+    if (!e.title || !e.body) bad.push(`${e.id}: 缺 title/body`)
+    if (!Array.isArray(e.choices) || e.choices.length < 2) bad.push(`${e.id}: 分支少于 2 个`)
+    for (const c of e.choices ?? []) {
+      if (!c.label) bad.push(`${e.id}: 分支缺 label`)
+      if (!Number.isFinite(c.effect?.gold)) bad.push(`${e.id}: 分支缺 gold`)
+      for (const id of [...Object.keys(c.effect?.items ?? {}), ...Object.keys(c.costItem ?? {})]) {
+        if (!ITEMS[id]) bad.push(`${e.id}: 幽灵物品「${id}」`)
+      }
+    }
+  }
+  check(`奇遇：${ENCOUNTERS.length} 个事件的 id/title/分支/物品引用都有效（含 costItem）`, bad.length === 0, bad.slice(0, 6).join('; '))
 }
 
 process.exit(fail === 0 ? 0 : 1)

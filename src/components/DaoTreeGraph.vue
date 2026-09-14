@@ -596,7 +596,7 @@ onBeforeUnmount(() => ro?.disconnect?.())
 /* ── 连线：支线色 ── */
 .dtg-link-rail {
   fill: none;
-  stroke: var(--lane-accent, var(--tint));
+  stroke: var(--lane-accent, var(--border));
   stroke-width: 7;
   stroke-linecap: round;
   opacity: 0.16;

@@ -459,6 +459,16 @@ export const usePlayerStore = defineStore('player', {
       const b = s.buffs?.yieldMult
       return b && Date.now() < b.expiresAt ? b.mult : 1
     },
+    // ── 消耗品使用（2026-09-14 补：增益剂/保鲜剂此前**没有任何使用入口**，等于死物品）──
+    /** 可使用的消耗品：{ kind, label } | null */
+    usableOf: (s) => (itemId) => {
+      const it = getItem(itemId)
+      if (!it?.use) return null
+      if (it.use.buffXp) return { kind: 'buffXp', label: `经验 ×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）` }
+      if (it.use.buffYield) return { kind: 'buffYield', label: `产量 ×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）` }
+      if (it.use.refreshSpoilMs) return { kind: 'refreshSpoil', label: `刷新背包食材腐坏计时 + 冷库续时 ${Math.round(it.use.refreshSpoilMs / 3600000)} 小时` }
+      return null
+    },
     xpTotalForLevel: () => (level) => totalXpForLevel(level),
     /** 当前主线任务（§7.2） */
     currentQuest(s) {
@@ -1027,6 +1037,53 @@ export const usePlayerStore = defineStore('player', {
       this.spendItem(itemId, qty)
       this.gainGold(price)
       return true
+    },
+
+    /**
+     * 使用消耗品（增益剂 / 保鲜剂）。
+     * 增益剂：写入 `buffs.xpMult|yieldMult`（读取方是 `getXpMultiplier`/`getYieldMultiplier`）；
+     *   **重复使用**时取「更强的倍率」并把时长顺延到更晚的到期时间（不白费）。
+     * 保鲜剂：背包里所有会腐坏的食材计时刷新为满，冷库里的按满时长续时。
+     */
+    useConsumable(itemId) {
+      const it = getItem(itemId)
+      if (!it?.use) return { ok: false, msg: '该物品无法使用' }
+      if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: `背包里没有${it.name}` }
+      const now = Date.now()
+      let msg = ''
+      if (it.use.buffXp || it.use.buffYield) {
+        const cfg = it.use.buffXp ?? it.use.buffYield
+        const key = it.use.buffXp ? 'xpMult' : 'yieldMult'
+        const cur = this.buffs?.[key]
+        const keepMult = cur && now < cur.expiresAt ? Math.max(cur.mult, cfg.mult) : cfg.mult
+        const keepUntil = Math.max(cur && now < cur.expiresAt ? cur.expiresAt : 0, now + cfg.minutes * 60_000)
+        if (!this.buffs) this.buffs = { xpMult: null, yieldMult: null }
+        this.buffs[key] = { mult: keepMult, expiresAt: keepUntil }
+        const left = Math.max(1, Math.round((keepUntil - now) / 60_000))
+        msg = `${it.use.buffXp ? '经验' : '产量'} ×${keepMult} 生效中（剩 ${left} 分钟）`
+      } else if (it.use.refreshSpoilMs) {
+        let n = 0
+        for (const id of Object.keys(this.inventory)) {
+          const t = getItem(id)
+          if (!t?.spoilMs || (this.inventory[id] ?? 0) <= 0) continue
+          this.spoilage[id] = now + t.spoilMs
+          n++
+        }
+        let cold = 0
+        for (const id of Object.keys(this.coldStorage ?? {})) {
+          const t = getItem(id)
+          if (!t?.spoilMs) continue
+          this.coldStorage[id].remainMs = t.spoilMs
+          cold++
+        }
+        msg = `已刷新 ${n} 种背包食材的腐坏计时${cold ? `，冷库续时 ${cold} 种` : ''}`
+      } else {
+        return { ok: false, msg: '该物品无法使用' }
+      }
+      this.spendItem(itemId, 1)
+      try { useUiStore().pushLog(`🧪 使用「${it.name}」：${msg}`, 'gain') } catch { /* ui 未就绪 */ }
+      EventBus.emit('item:use', { itemId, msg })
+      return { ok: true, msg }
     },
 
     // ── 容量扩展（§5.4）——**金币路径**，天花板是 PAID_CAP_MAX（杂货铺/冷库的可购买上限），

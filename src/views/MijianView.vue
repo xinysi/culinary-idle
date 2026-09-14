@@ -129,7 +129,8 @@ function typeLabel(id) {
           <span class="dim">已抽</span>
           <strong class="mono">{{ player.mijian?.stats?.pulls ?? 0 }}</strong>
           <span class="dim">次 · {{ (player.mijian?.stats?.spent ?? 0).toLocaleString() }} 金</span>
-          <span v-if="(player.mijian?.tickets ?? 0) > 0" class="dim">🎟️ 券 <strong class="mono">{{ player.mijian?.tickets ?? 0 }}</strong> 张</span>
+          <!-- 券为 0 时也照常显示（用户要求：默认显示，不因 0 张而消失） -->
+          <span class="dim">🎟️ 券 <strong class="mono">{{ player.mijian?.tickets ?? 0 }}</strong> 张</span>
         </div>
       </div>
     </header>

@@ -8,6 +8,7 @@ import { itemDetailLines, itemSourcesOf } from '../game/data/itemDetail.js'
 import { jumpForSource } from '../game/data/sourceJump.js'
 import { itemUses } from '../game/data/itemUses.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { sfx } from '../game/core/sound.js'
 
 const props = defineProps({
   itemId: { type: String, required: true },
@@ -24,6 +25,20 @@ function jumpSource(s) {
   if (t.view === 'log') ui.openLogTab(t.logTab ?? 'log')
   else ui.setView(t.view)
   emit('close')
+}
+
+// 可用消耗品（增益剂/保鲜剂）：2026-09-14 补使用入口
+const usable = computed(() => player.usableOf?.(innerId.value))
+const ownedCount = computed(() => player.inventory[innerId.value] ?? 0)
+const buffLeft = computed(() => {
+  const b = innerId.value?.startsWith('xpTonic') ? player.buffs?.xpMult : innerId.value?.startsWith('yieldTonic') ? player.buffs?.yieldMult : null
+  if (!b || Date.now() >= b.expiresAt) return null
+  return { mult: b.mult, left: Math.max(1, Math.round((b.expiresAt - Date.now()) / 60000)) }
+})
+function useNow() {
+  const r = player.useConsumable(innerId.value)
+  ui.pushLog(r.ok ? `🧪 ${r.msg}` : r.msg, r.ok ? 'gain' : 'warn')
+  if (r.ok) sfx.reward(); else sfx.error()
 }
 
 // 可在弹窗内切换查看其他物品（点击产物/来源物品名）
@@ -102,6 +117,13 @@ const shownUses = computed(() => (showAllUses.value ? uses.value : uses.value.sl
         <button v-if="sources.length > SOURCE_LIMIT" class="btn btn-sm" @click="showAllSources = !showAllSources">
           {{ showAllSources ? '收起' : `展开全部（${sources.length - SOURCE_LIMIT}）` }}
         </button>
+        <!-- 可用消耗品：使用入口（增益剂 / 保鲜剂）——2026-09-14 补 -->
+        <div v-if="usable" class="item-use-row">
+          <button v-if="ownedCount > 0" class="btn btn-sm btn-primary" @click="useNow">使用 1（持有 {{ ownedCount }}）</button>
+          <span v-else class="dim">背包中没有（持有 0）</span>
+          <span class="dim item-use-label">→ {{ usable.label }}</span>
+          <span v-if="buffLeft" class="badge item-use-buff">生效中 ×{{ buffLeft.mult }} · 剩 {{ buffLeft.left }} 分钟</span>
+        </div>
       </div>
     </div>
   </div>

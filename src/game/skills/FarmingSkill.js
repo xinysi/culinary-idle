@@ -32,6 +32,9 @@ const CROPS_15 = [
 // 合并生成器补充的所有可采集/可挖掘非矿物食材作物（含现有 15 种），按等级升序展示
 export const CROPS = [...CROPS_15, ...FARM_CROPS].sort((a, b) => a.reqLevel - b.reqLevel || a.itemId.localeCompare(b.itemId))
 
+/** 肥料档位（用于「已施肥」判定：同种/降级拒绝，升级允许覆盖） */
+const FERTILIZER_RANK = { compost: 1, richCompost: 2 }
+
 const WITHER_CHANCE = 0.03 // 成熟瞬间 3% 枯萎（堆肥 1% / 肥沃堆肥 0%）
 export const FERTILIZER = {
   compost: { name: '堆肥', wither: 0.01, bonusQty: 0 },
@@ -87,6 +90,9 @@ export class FarmingSkill extends Skill {
     const p = this.plotAt(i)
     if (!p || p.withered) return false
     if (!FERTILIZER[fertilizerId]) return false
+    // 已施肥：**同种或更差的肥料拒绝再施**（用户实测原实现可重复点 → 每次白扣一份肥料）；
+    // 但**更好的肥料允许覆盖升级**（肥沃堆肥覆盖堆肥，原有系统测试就是这么断言的）。
+    if (p?.fertilizer && (FERTILIZER_RANK[fertilizerId] ?? 0) <= (FERTILIZER_RANK[p.fertilizer] ?? 0)) return false
     if (this.isMature(i)) return false // 成熟后无需施肥
     if ((this.player.inventory[fertilizerId] ?? 0) < 1) return false
     this.player.spendItem(fertilizerId, 1)

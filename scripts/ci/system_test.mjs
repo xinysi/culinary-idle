@@ -1642,6 +1642,55 @@ console.log('══ E. 离线进度 ══')
   p4.setPlot(0, { seedId: 'wheatSeed', plantedAt: Date.now() })
   Date.now = () => realNow() + 95_000 // 跳 95s（小麦 90s）
   check('离线', '农耕时间戳生长（离线等价）', farm.isMature(0) === true)
+  // 施肥不可重复（2026-09-14 用户实测：已施肥的田还能再点、每次白扣一份肥料）
+  // 消耗品使用（2026-09-14 补：增益剂/保鲜剂此前没有任何使用入口）
+  check('消耗品', '经验/产量增益剂：使用即生效、扣 1 个；重复使用取更强倍率', (() => {
+    const p = freshPlayer()
+    p.inventory.xpTonic1 = 1
+    p.inventory.xpTonic5 = 1
+    const r1 = p.useConsumable('xpTonic1')
+    const m1 = p.getXpMultiplier()
+    const r2 = p.useConsumable('xpTonic5')
+    const m2 = p.getXpMultiplier()
+    p.inventory.yieldTonic1 = 1
+    const r3 = p.useConsumable('yieldTonic1')
+    return r1.ok && Math.abs(m1 - 1.2) < 1e-9 && (p.inventory.xpTonic1 ?? 0) === 0
+      && r2.ok && Math.abs(m2 - 4.5) < 1e-9 && r3.ok && Math.abs(p.getYieldMultiplier() - 1.5) < 1e-9
+  })())
+  check('消耗品', '不可用物品（装备/没有的/武器）一律拒绝且不扣料', (() => {
+    const p = freshPlayer()
+    const a = p.useConsumable('ironKnife')          // 装备：无 use
+    const b = p.useConsumable('xpTonic3')           // 背包里没有
+    return a.ok === false && b.ok === false && (p.inventory.xpTonic3 ?? 0) === 0
+  })())
+  check('消耗品', '保鲜剂：把背包可腐坏食材的计时刷新回满时长', (() => {
+    const p = freshPlayer()
+    const spoil = Object.values(ITEMS).find((i) => i.spoilMs)
+    if (!spoil) return false
+    p.inventory[spoil.id] = 2
+    p.spoilage[spoil.id] = Date.now() + 1000
+    p.inventory.preservTier1 = 1
+    const r = p.useConsumable('preservTier1')
+    const left = p.spoilage[spoil.id] - Date.now()
+    return r.ok && left > spoil.spoilMs * 0.95
+  })())
+  check('农耕', '同种肥料不可重复施（不白扣料），但更好的肥料可覆盖升级', (() => {
+    const p = freshPlayer()
+    const f = new FarmingSkill(p)
+    p.farming.plots[0] = null
+    p.inventory.wheatSeed = 1
+    p.inventory.compost = 2
+    p.inventory.richCompost = 1
+    if (!f.plant(0, 'wheatSeed')) return false
+    const okFirst = f.fertilize(0, 'compost')
+    const after1 = p.inventory.compost
+    const okSame = f.fertilize(0, 'compost')          // 同种：拒绝
+    const okUpgrade = f.fertilize(0, 'richCompost')   // 升级：放行
+    const okDowngrade = f.fertilize(0, 'compost')     // 降级：拒绝
+    return okFirst === true && after1 === 1 && okSame === false && p.inventory.compost === 1
+      && okUpgrade === true && (p.inventory.richCompost ?? 0) === 0 && f.plotAt(0).fertilizer === 'richCompost'
+      && okDowngrade === false && p.inventory.compost === 1
+  })())
   Date.now = realNow
   // 农耕自动收种（2026-09-09 放置化）：成熟即收获 + 补种同种种子
   {
@@ -2638,7 +2687,9 @@ console.log('══ C12. 厨友 ══')
 console.log('══ C13. 奇遇图鉴 ══')
 {
   // ① 数据完整性：8 个事件、id 唯一、每件 2~3 个分支、分支奖励引用的物品都存在
-  check('奇遇', `共 ${ENCOUNTERS.length} 个事件`, ENCOUNTERS.length === 8)
+  // 2026-09-14 扩到 22 个（用户要求「奇遇图鉴应该再加个十几种」）；这条断言跟着数量走
+  check('奇遇', `共 ${ENCOUNTERS.length} 个事件（22 个：21 三选一 + 1 二选一）`, ENCOUNTERS.length === 22
+    && ENCOUNTERS.filter((e) => e.choices.length === 3).length === 21 && ENCOUNTERS.filter((e) => e.choices.length === 2).length === 1)
   check('奇遇', 'id 唯一且有标题/正文', new Set(ENCOUNTERS.map((e) => e.id)).size === ENCOUNTERS.length
     && ENCOUNTERS.every((e) => e.title && e.body))
   check('奇遇', '每个事件 2~3 个分支且都有文案', ENCOUNTERS.every((e) => e.choices.length >= 2 && e.choices.length <= 3
