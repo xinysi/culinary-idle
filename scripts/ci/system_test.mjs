@@ -3972,6 +3972,10 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     const src = fs.readFileSync(new URL('../../src/views/GreenhouseView.vue', import.meta.url), 'utf8')
     return /\(player\.inventory\[c\.seedId\] \?\? 0\) > 0 && lv >= c\.reqLevel/.test(src)
   })())
+  check('两线分工', '灵圃菌房页列全所有灵植与培养基（缺了玩家就看不到存在哪些）', (() => {
+    const src = fs.readFileSync(new URL('../../src/views/MycoFieldView.vue', import.meta.url), 'utf8')
+    return /v-for="sp in SPIRIT_PLANTS"/.test(src) && /v-for="m in MUSHROOM_MEDIA"/.test(src)
+  })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {
     const p = freshPlayer()
