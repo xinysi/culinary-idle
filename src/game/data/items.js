@@ -731,6 +731,12 @@ for (const def of PRESERVE_TIER_ITEMS) ITEMS[def.id] = def
 import { HONEY_ITEMS } from './honey.js'
 for (const def of HONEY_ITEMS) ITEMS[def.id] = def
 
+// 菌灵露 8 档（灵圃菌房产出）与牧场/网箱加工品 8 件（2026-09-14，v2.3.0）——同样是纯新增消耗品。
+import { ESSENCE_ITEMS } from './essences.js'
+for (const def of ESSENCE_ITEMS) ITEMS[def.id] = def
+import { GOODS_ITEMS } from './processedGoods.js'
+for (const def of GOODS_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

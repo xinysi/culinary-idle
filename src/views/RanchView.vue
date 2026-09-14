@@ -110,7 +110,7 @@ import RelatedPages from '../components/RelatedPages.vue'
 const RELATED = [
   { view: 'cellar', label: '🍶 地窖' },
   { view: 'automation', label: '🤖 自动化' },
-  { view: 'mushroom', label: '🍄 菌房' },
+  { view: 'mycoField', label: '🌿 灵圃菌房' },
   { view: 'greenhouse', label: '🐝 温室蜂场' },
 ]
 </script>

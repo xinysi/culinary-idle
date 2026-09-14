@@ -2,6 +2,7 @@
 // 纯读取：只根据 player 当前状态换算进度，不改动任何成就数据（数据铁律）。
 import { ITEMS, getItem } from './items.js'
 import { HONEY_TIERS } from './honey.js'
+import { ESSENCE_TIERS } from './essences.js'
 import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel } from './friends.js'
 import { EXPEDITIONS, expeditionTier, EXPEDITION_TIER_STEPS } from './expeditions.js'
 import { BRANCHES } from './branches.js'
@@ -22,7 +23,7 @@ const NEEDS = {
   shanhaiFirst: 1, shanhai30: 30, shanhai90: 90, shanhai180: 180, shanhaiAll: 400, // 山海食经点亮节点数（v2.1：全树 400）
   friendBondAll: FRIENDS.length, expeditionTier5: EXPEDITIONS.length, branch6: BRANCHES.length, mascot7: MASCOTS.length, setMeal3: 3, chefWin10: 10,
   // 挂机产线四套（2026-09-14）
-  caravan1: 1, caravan30: 30, mushroom50: 50, spiritField10: 10, honey8: 8, honey100: 100,
+  caravan1: 1, caravan30: 30, mushroom50: 50, spiritField10: 10, honey8: 8, honey100: 100, essence1: 1, essenceAll: 8,
 }
 
 /** 图鉴总数缓存（ITEMS 全表只数一次，供 need/进度复用） */
@@ -87,6 +88,8 @@ export function achievementProgress(p, a) {
   else if (a.id.startsWith('spiritField')) cur = p.stats?.spiritHarvests ?? 0
   else if (a.id === 'honey8') cur = HONEY_TIERS.filter((h) => (p.collected?.[h.id] ?? 0) > 0).length
   else if (a.id === 'honey100') cur = p.stats?.honeyHarvests ?? 0
+  else if (a.id === 'essence1') cur = p.stats?.essenceBrews ?? 0
+  else if (a.id === 'essenceAll') cur = ESSENCE_TIERS.filter((e) => (p.collected?.[e.id] ?? 0) > 0).length
   else if (a.id === 'daoFirst') cur = (p.daoUnlocked ?? []).length
   else if (a.id === 'daoPathAll') cur = (p.daoUnlocked ?? []).length
   if (cur === null || !need) return null

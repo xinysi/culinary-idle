@@ -41,7 +41,10 @@ import { MUSHROOM_UNLOCK_LEVEL, MUSHROOM_BASE_BEDS, MUSHROOM_MAX_BEDS, MUSHROOM_
 import { SPIRIT_UNLOCK_LEVEL, SPIRIT_BASE_PLOTS, SPIRIT_MAX_PLOTS, SPIRIT_EXPAND_COSTS, SPIRIT_PLANTS } from '../../src/game/data/spiritField.js'
 import { GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GREENHOUSE_HONEY_CHANCE, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel } from '../../src/game/data/greenhouse.js'
 import { HONEY_TIERS, HONEY_ITEMS, honeyTierForLevel, honeyItemForLevel } from '../../src/game/data/honey.js'
-import { POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from '../../src/game/data/ranch.js'
+import { RANCH_ANIMALS, POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from '../../src/game/data/ranch.js'
+import { ESSENCE_TIERS, ESSENCE_ITEMS, ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS } from '../../src/game/data/essences.js'
+import { GOODS_ITEMS } from '../../src/game/data/processedGoods.js'
+
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
 import { priceMultiplier, exchangeCycleIndex } from '../../src/game/data/exchange.js'
 
@@ -3684,16 +3687,17 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     p.spiritState().plots[0].readyAt = Date.now() - 1
     const r = p.spiritHarvest(0)
     // 自动续种会再花掉一颗种子（归零删键 ⇒ undefined）
-    return r.ok && p.inventory.lingzhi === 2 && r.replanted === true && (p.inventory.lingzhiSeed ?? 0) === 0 && !!p.spiritState().plots[0]
+    // 起始 2 颗 → 种下 −1 → 收获回收 +1 → 自动续种 −1 ⇒ 净剩 1 颗
+    return r.ok && p.inventory.lingzhi === 2 && r.replanted === true && (p.inventory.lingzhiSeed ?? 0) === 1 && !!p.spiritState().plots[0]
   })())
-  check('灵田', '没有种子时收取后格子清空（不续种）', (() => {
+  check('灵田', '收获回收种子后可无限续种（灵圃是可持续的种子来源）', (() => {
     const p = freshPlayer()
     p.skills.foraging.level = 99
     p.inventory.truffleSeed = 1
     p.spiritPlant(0, 'truffleSeed')
     p.spiritState().plots[0].readyAt = Date.now() - 1
     const r = p.spiritHarvest(0)
-    return r.ok && r.replanted === false && !p.spiritState().plots[0] && p.inventory.truffle === 2
+    return r.ok && r.got.truffleSeed === 1 && r.replanted === true && !!p.spiritState().plots[0] && p.inventory.truffle === 2
   })())
   check('灵田', '未成熟不可收；撤回退还种子', (() => {
     const p = freshPlayer()
@@ -3820,6 +3824,136 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     p.mushroom.beds[0].lastAt = Date.now() - 12 * 3600e3
     p._tickMushroom() // 给足时间 → 正常产出 2 轮（12h 上限 / 6h 周期）
     return (p.inventory.mushroom ?? 0) === 4 && p.stats.mushroomCycles === 2
+  })())
+  // ⑨ 菌灵露（v2.3.0）：8 档统一阶梯 + 萃露炉酿造
+  check('菌灵露', '8 档、id/名称唯一、都进了 ITEMS、档位锚定真实材料且等级递增', (() => {
+    const ids = new Set(ESSENCE_TIERS.map((e) => e.id))
+    const names = new Set(ESSENCE_TIERS.map((e) => e.name))
+    let mono = true
+    for (let i = 1; i < ESSENCE_TIERS.length; i++) {
+      const a = ESSENCE_TIERS[i - 1], b = ESSENCE_TIERS[i]
+      if (!(b.anchorLv > a.anchorLv && b.xp >= a.xp && b.yld >= a.yld && b.hours >= a.hours && b.minutes >= a.minutes)) mono = false
+    }
+    return ESSENCE_TIERS.length === 8 && ids.size === 8 && names.size === 8 && mono
+      && ESSENCE_TIERS.every((e) => !!getItem(e.anchor) && !!getItem(e.id) && ESSENCE_ITEMS.some((x) => x.id === e.id))
+  })())
+  check('菌灵露', '主料/辅料都是既有物品（无幽灵 id）',
+    ESSENCE_TIERS.every((e) => [...Object.keys(e.material), ...Object.keys(e.aux ?? {})].every((id) => !!getItem(id))))
+  check('菌灵露', '全是 consumable/buff（不进采集/配方/抽卡/交易所/自动出售）', ESSENCE_ITEMS.every((x) => x.type === 'consumable' && x.category === 'buff'))
+  check('菌灵露', 'Ⅴ 起带采集间隔、Ⅶ 起带餐厅收入（阶梯效果逐级解锁）', (() => {
+    return ESSENCE_TIERS.filter((e) => e.gather > 0).every((e) => e.tier >= 5)
+      && ESSENCE_TIERS.filter((e) => e.restaurant > 0).every((e) => e.tier >= 7)
+      && ESSENCE_TIERS.slice(0, 4).every((e) => e.gather === 0 && e.restaurant === 0)
+  })())
+  check('菌灵露', '**唯一来源是萃露炉**（图鉴来源都指向灵圃菌房且可跳转）', (() => {
+    return ESSENCE_TIERS.every((e) => {
+      const srcs = itemSources(e.id) ?? []
+      return srcs.length > 0 && srcs.every((s) => s.includes('灵圃菌房') && !!jumpForSource(s))
+    })
+  })())
+  check('萃露炉', '备料才能开酿；开酿扣料、到点收取给露、撤回退料', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 60 // 萃露炉要求先解锁菌房/灵圃
+    p.inventory.mushroom = 10
+    if (p.essenceBrew(0, 'essence1').ok !== false) return false // 缺堆肥
+    p.inventory.compost = 3
+    if (!p.essenceBrew(0, 'essence1').ok) return false
+    if (p.inventory.mushroom !== 4 || p.inventory.compost !== 2) return false
+    if (p.essenceClaim(0).ok !== false) return false // 未到点
+    p.essenceState().vats[0].readyAt = Date.now() - 1
+    const c = p.essenceClaim(0)
+    if (!c.ok || p.inventory.essence1 !== 1 || p.stats.essenceBrews !== 1) return false
+    p.inventory.lingzhi = 5
+    p.inventory.richCompost = 5
+    p.essenceBrew(0, 'essence3')
+    return p.essenceTakeBack(0).ok === true && p.inventory.lingzhi === 5
+  })())
+  check('萃露炉', '格位上限与扩容费用档数一致（1 → 2）', ESSENCE_MAX_VATS === 2 && ESSENCE_EXPAND_COSTS.length === ESSENCE_MAX_VATS - ESSENCE_BASE_VATS)
+
+  // ⑩ 两条新乘区轴（v2.3.0）
+  check('乘区', '菌灵露·Ⅷ 一次给四条轴（经验/产量/采集间隔/餐厅）', (() => {
+    const p = freshPlayer()
+    p.inventory.essence8 = 1
+    const r = p.useConsumable('essence8')
+    const e = ESSENCE_TIERS[7]
+    return r.ok && p.buffs.xpMult?.mult === e.xp && p.buffs.yieldMult?.mult === e.yld
+      && p.buffs.gatherMult?.mult === Math.round((1 - e.gather / 100) * 100) / 100
+      && p.buffs.restaurantMult?.mult === Math.round((1 + e.restaurant / 100) * 100) / 100
+  })())
+  check('乘区', '采集间隔真的缩短了采集周期（intervalMs 乘在最终结果上）', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 50
+    createSkillInstances(p)
+    const inst = getAllSkillInstances().find((i) => i.id === 'foraging')
+    const t = inst.targets[0]
+    const before = inst.intervalMs(t)
+    p.inventory.essence8 = 1
+    p.useConsumable('essence8')
+    const after = inst.intervalMs(t)
+    return after < before && Math.abs(after / before - 0.8) < 0.02
+  })())
+  check('乘区', '「采集间隔」重复使用取**更小**（更快），其余轴取更大', (() => {
+    const p = freshPlayer()
+    p.inventory.essence8 = 1
+    p.inventory.abaloneSauce = 1
+    p.useConsumable('essence8') // −20%
+    p.useConsumable('abaloneSauce') // −8%
+    return p.buffs.gatherMult?.mult === 0.8
+  })())
+  check('乘区', '餐厅收入乘区真的进了收入 getter', (() => {
+    const p = freshPlayer()
+    p.restaurant.menu = ['whiteBread']
+    const base = p.restaurantHourlyIncome
+    p.inventory.abaloneSauce = 1
+    p.inventory.shrimpOil = 1
+    p.useConsumable('shrimpOil') // +30%
+    return p.restaurantHourlyIncome > base
+  })())
+
+  // ⑪ 牧场 / 网箱的加工品（v2.3.0：每头动物 / 每条鱼 ≥2 种产出）
+  check('加工品', '8 件、都是 consumable/buff 且都有图鉴来源', (() => {
+    return GOODS_ITEMS.length === 8 && GOODS_ITEMS.every((g) => g.type === 'consumable' && g.category === 'buff'
+      && (itemSources(g.id) ?? []).length > 0 && (itemSources(g.id) ?? []).every((s) => !!jumpForSource(s)))
+  })())
+  check('加工品', '每头动物 / 每条鱼都产出 ≥2 种（含 1 件加工品）', (() => {
+    return RANCH_ANIMALS.every((a) => Object.keys(a.products).length >= 2)
+      && POND_FISH.every((f) => Object.keys(f.products).length >= 2)
+      && RANCH_ANIMALS.every((a) => Object.keys(a.products).some((id) => GOODS_ITEMS.some((g) => g.id === id)))
+      && POND_FISH.every((f) => Object.keys(f.products).some((id) => GOODS_ITEMS.some((g) => g.id === id)))
+  })())
+  check('加工品', '牧场 / 网箱真的会把加工品发到背包', (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 60
+    p.gold = 200000 // 买动物/投苗都要金币
+    p.inventory.corn = 50
+    p.ranchBuy(0, 'chicken')
+    p.ranch.pens[0].lastAt = Date.now() - 12 * 3600e3
+    p._tickRanch()
+    p.inventory.seaweed = 50
+    p.pondBuy(0, 'crucian')
+    p.ranch.ponds[0].lastAt = Date.now() - 12 * 3600e3
+    p._tickPonds()
+    return (p.inventory.chickenOil ?? 0) > 0 && (p.inventory.fishPaste ?? 0) > 0
+  })())
+
+  // ⑫ 合并页（菌房 + 灵田 → 灵圃菌房）
+  check('灵圃菌房', '视图注册与下线：有 mycoField、无 mushroom/spiritField', (() => {
+    const ui = fs.readFileSync(new URL('../../src/stores/ui.js', import.meta.url), 'utf8')
+    const app = fs.readFileSync(new URL('../../src/App.vue', import.meta.url), 'utf8')
+    const side = fs.readFileSync(new URL('../../src/components/Sidebar.vue', import.meta.url), 'utf8')
+    return /'mycoField'/.test(ui) && !/'mushroom'/.test(ui) && !/'spiritField'/.test(ui)
+      && /mycoField/.test(app) && /mycoField/.test(side)
+      && !/views\/MushroomView/.test(app) && !/views\/SpiritFieldView/.test(app)
+  })())
+  check('灵圃菌房', '灵圃收获 = 灵植 + 回收 1 颗种子（可持续种子来源）', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 99
+    p.inventory.lingzhiSeed = 1
+    p.spiritPlant(0, 'lingzhiSeed')
+    p.spiritState().plots[0].readyAt = Date.now() - 1
+    const r = p.spiritHarvest(0)
+    // 收 1 颗种子 + 自动续种再花 1 颗 ⇒ 净剩 0，但种子确实回收过（got 里带 seedId）
+    return r.ok && r.got.lingzhiSeed === 1 && r.replanted === true && !!p.spiritState().plots[0] && (p.inventory.lingzhiSeed ?? 0) === 0
   })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {

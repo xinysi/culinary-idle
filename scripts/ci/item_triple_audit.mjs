@@ -85,7 +85,18 @@ const items = Object.values(ITEMS)
       if (v == null || v === 0 || v === false) continue
       if (!r.kw.some((k) => text.includes(k))) miss.push(r.field)
     }
-    if (it.use && !['保鲜时长', '经验增益', '产量增益'].some((k) => text.includes(k))) miss.push('use')
+    if (it.use) {
+      // 每个 use 子键都要在详情里有一句对应的话（新子键必须登记在这张表里，否则等于没覆盖）
+      const USE_KW = {
+        refreshSpoilMs: ['保鲜时长'], buffXp: ['经验增益'], buffYield: ['产量增益'],
+        buffGather: ['采集间隔'], buffRestaurant: ['餐厅收入'],
+      }
+      for (const k of Object.keys(it.use)) {
+        const kws = USE_KW[k]
+        if (!kws) miss.push(`use.${k}(未登记)`)
+        else if (!kws.some((w) => text.includes(w))) miss.push(`use.${k}`)
+      }
+    }
     if (miss.length) noEffectText.push(`${it.id}(${it.name}) 缺: ${miss.join(',')}`)
   }
   check(`详细作用：全部 ${items.length} 件物品的效果字段均已在详情中说明`, noEffectText.length === 0, noEffectText.slice(0, 8).join('; '))

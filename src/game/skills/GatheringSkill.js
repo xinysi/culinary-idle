@@ -88,8 +88,10 @@ export class GatheringSkill extends Skill {
     const sec = Math.max(target.intervalSec - levelBonus - this.toolBonusSec, MIN_INTERVAL_SECONDS)
     const byRatio = sec * masteryIntervalFactor(lv)
     const fixedSec = masteryFixedInterval(lv)
-    if (fixedSec != null) return Math.min(fixedSec, byRatio) * 1000
-    return byRatio * 1000
+    const base = fixedSec != null ? Math.min(fixedSec, byRatio) : byRatio
+    // 增益剂「采集间隔」乘区（菌灵露·Ⅴ+ / 鲍汁）：挂在唯一的间隔出口上、**乘在最终结果**上，
+    // 这样「精通固定间隔」那一支也吃得到加成（只在某一条分支里乘会静默漏掉一半情况）。
+    return base * (this.player.getGatherMultiplier?.() ?? 1) * 1000
   }
 
   /** 当前间隔由哪一支决定：'fixed'（精通固定值更快）或 'ratio'（比例口径更快）——UI 标注用 */

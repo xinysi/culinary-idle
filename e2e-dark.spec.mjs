@@ -57,7 +57,7 @@ const VIEWS = [
   // 2026-09-12 第十二批（奇遇图鉴）
   'encounters', 'dao', 'shanhai',
   // 2026-09-14 挂机产线四套
-  'caravan', 'mushroom', 'spiritField', 'greenhouse',
+  'caravan', 'mycoField', 'greenhouse',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等

@@ -127,8 +127,8 @@ const rows = computed(() => {
   else if (cellar.value?.used && cellar.value.soonest) push({ tone: 'wait', icon: '🍶', name: '地窖陈酿中', desc: `最近一槽还要 ${minutesText(cellar.value.soonest)}`, cta: '去看看', go: go('cellar') })
   if (caravan.value?.ready) push({ tone: 'ready', icon: '🐫', name: '商队归队', desc: `${caravan.value.ready} 支商队已回港，等结算`, cta: '去结算', go: go('caravan') })
   else if (caravan.value?.used && caravan.value.soonest) push({ tone: 'wait', icon: '🐫', name: '商队在途', desc: `最近一支还要 ${minutesText(caravan.value.soonest)}`, cta: '去看看', go: go('caravan') })
-  if (spiritField.value?.ready) push({ tone: 'ready', icon: '🌿', name: '灵植长成', desc: `${spiritField.value.ready} 格可以收了`, cta: '去收取', go: go('spiritField') })
-  else if (spiritField.value?.used && spiritField.value.soonest) push({ tone: 'wait', icon: '🌿', name: '灵田在长', desc: `最近一格还要 ${minutesText(spiritField.value.soonest)}`, cta: '去看看', go: go('spiritField') })
+  if (spiritField.value?.ready) push({ tone: 'ready', icon: '🌿', name: '灵植长成', desc: `${spiritField.value.ready} 格可以收了`, cta: '去收取', go: go('mycoField') })
+  else if (spiritField.value?.used && spiritField.value.soonest) push({ tone: 'wait', icon: '🌿', name: '灵圃在长', desc: `最近一格还要 ${minutesText(spiritField.value.soonest)}`, cta: '去看看', go: go('mycoField') })
   if (expedition.value?.ready) push({ tone: 'ready', icon: '🚢', name: '采集队归来', desc: `${expedition.value.ready} 个槽位已到点`, cta: '去收取', go: go('expedition') })
   else if (expedition.value?.used && expedition.value.soonest) push({ tone: 'wait', icon: '🚢', name: '采集队在外', desc: `最近一队还要 ${minutesText(expedition.value.soonest)}`, cta: '去看看', go: go('expedition') })
   const critic = player.criticState().order

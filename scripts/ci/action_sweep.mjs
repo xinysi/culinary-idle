@@ -30,6 +30,7 @@ const ARGS = {
   greenhousePlant: [0, 'wheatSeed'], greenhouseClear: [0], greenhouseExpand: [],
   hiveSet: [0, 'rose'], hiveClear: [0], hiveExpand: [],
   pondBuy: [0, 'crucian'], pondRemove: [0], pondExpand: [],
+  essenceBrew: [0, 'essence1'], essenceClaim: [0], essenceTakeBack: [0], essenceExpand: [],
   exchangeSell: ['apple', 1], exchangeBuy: ['apple', 1], exchangeTradedToday: ['apple'],
   worshipPatron: ['p_stove'], patronLevel: ['p_stove'], patronSwitch: ['p_wine'],
   claimMail: [1], deleteMail: [1], markMailRead: [1],

@@ -21,9 +21,13 @@ import { itemName } from '../game/data/items.js'
 const activeBuffs = computed(() => {
   const now = Date.now()
   const out = []
-  for (const [key, label] of [['xpMult', '经验增益'], ['yieldMult', '产量增益']]) {
+  // v2.3.0：四条乘区轴（菌灵露/蜂蜜/加工品）。采集间隔是「越小越快」，显示成「−N%」更直观。
+  for (const [key, label] of [['xpMult', '经验增益'], ['yieldMult', '产量增益'], ['gatherMult', '采集间隔'], ['restaurantMult', '餐厅收入']]) {
     const b = player.buffs?.[key]
-    if (b && now < b.expiresAt) out.push({ key, label, mult: b.mult, left: Math.max(1, Math.round((b.expiresAt - now) / 60000)) })
+    if (b && now < b.expiresAt) {
+      const shown = key === 'gatherMult' ? `−${Math.round((1 - b.mult) * 100)}%` : key === 'restaurantMult' ? `+${Math.round((b.mult - 1) * 100)}%` : `×${b.mult}`
+      out.push({ key, label, mult: b.mult, shown, left: Math.max(1, Math.round((b.expiresAt - now) / 60000)) })
+    }
   }
   return out
 })
@@ -121,11 +125,17 @@ function closeTask(id) {
 }
 
 const activeBuff = computed(() => {
+  // 快捷状态里的一行摘要：四条乘区轴都要出现（v2.3.0 补采集间隔/餐厅收入）
+  const now = Date.now()
   const parts = []
   const xp = player.buffs?.xpMult
   const yl = player.buffs?.yieldMult
-  if (xp && Date.now() < xp.expiresAt) parts.push(`经验×${xp.mult}`)
-  if (yl && Date.now() < yl.expiresAt) parts.push(`产量×${yl.mult}`)
+  const ga = player.buffs?.gatherMult
+  const rs = player.buffs?.restaurantMult
+  if (xp && now < xp.expiresAt) parts.push(`经验×${xp.mult}`)
+  if (yl && now < yl.expiresAt) parts.push(`产量×${yl.mult}`)
+  if (ga && now < ga.expiresAt) parts.push(`采集间隔−${Math.round((1 - ga.mult) * 100)}%`)
+  if (rs && now < rs.expiresAt) parts.push(`餐厅+${Math.round((rs.mult - 1) * 100)}%`)
   return parts.join('、') || null
 })
 
@@ -207,7 +217,7 @@ function closeAoji(id) {
     <div v-if="activeBuffs.length" class="card quick-status">
       <h3>🧪 生效中</h3>
       <div v-for="b in activeBuffs" :key="b.key" class="quick-group">
-        <div class="quick-row"><span>{{ b.label }}</span><b class="mono">×{{ b.mult }}</b></div>
+        <div class="quick-row"><span>{{ b.label }}</span><b class="mono">{{ b.shown }}</b></div>
         <div class="dim" style="font-size: 12px">剩 {{ b.left }} 分钟</div>
       </div>
     </div>

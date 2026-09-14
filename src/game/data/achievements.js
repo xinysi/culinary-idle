@@ -4,6 +4,7 @@
 // 技能等级成就（10/50/99 级 × 20 技能）由 buildSkillAchievements 程序化生成。
 
 import { SKILL_DEFS } from './skills.js'
+import { ESSENCE_TIERS } from './essences.js'
 import { ITEMS } from './items.js'
 import { equipSetBonuses } from './equipSets.js'
 import { masteryLevelFromCount } from '../core/mastery.js'
@@ -140,6 +141,8 @@ export const ACHIEVEMENTS = [
   { id: 'mushroom50', name: '菌房主人', category: '特殊', desc: '菌房累计产出 50 个周期', title: '菌房主人', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mushroomCycles ?? 0) >= 50 },
   { id: 'spiritField10', name: '灵田初收', category: '特殊', desc: '灵田累计收获 10 次', reward: { gold: 4000 }, check: (p) => (p.stats?.spiritHarvests ?? 0) >= 10 },
   { id: 'honey8', name: '八品齐备', category: '收集', desc: '集齐 8 个品级的蜂蜜', title: '蜜藏家', reward: { gold: 12000, items: { energyBiscuit: 1 } }, check: (p) => ['honeyPale','honeyGreen','honeyBloom','honeyAutumn','honeyLocust','honeyCinnamon','honeyRock','honeySupreme'].every((id) => (p.collected?.[id] ?? 0) > 0) },
+  { id: 'essence1', name: '初尝酿露', category: '特殊', desc: '萃露炉酿出第一瓶菌灵露', reward: { gold: 3000 }, check: (p) => (p.stats?.essenceBrews ?? 0) >= 1 },
+  { id: 'essenceAll', name: '八露齐备', category: '收集', desc: '酿全 8 档菌灵露', title: '萃露师', reward: { gold: 14000, items: { energyBiscuit: 1 } }, check: (p) => ESSENCE_TIERS.every((e) => (p.collected?.[e.id] ?? 0) > 0) },
   { id: 'honey100', name: '蜜罐子', category: '特殊', desc: '累计取得 100 瓶蜂蜜（温室伴生 + 蜂箱产蜜）', title: '蜜罐子', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.honeyHarvests ?? 0) >= 100 },
   { id: 'branch1', name: '首开分店', category: '特殊', desc: '开设第一家分店', reward: { gold: 3000 }, check: (p) => Object.keys(p.branches ?? {}).length >= 1 },
   { id: 'branchAll', name: '连锁帝国', category: '特殊', desc: '四家分店全部开业并雇满店长', title: '连锁帝国', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => ['east', 'west', 'south', 'north'].every((id) => p.branches?.[id]?.manager) },
