@@ -19,10 +19,10 @@ export const RANCH_EXPAND_COSTS = [20000, 60000]
  * 产物均为既有食材（野鸡蛋 / 牛奶 / 各类肉）。
  */
 export const RANCH_ANIMALS = [
-  { id: 'chicken', name: '野鸡', icon: '🐔', cost: 8000, hours: 4, feed: { corn: 3 }, products: { pheasantEgg: 2, pheasantMeat: 1 } },
-  { id: 'boar', name: '野猪', icon: '🐗', cost: 15000, hours: 6, feed: { potato: 4 }, products: { boarMeat: 1 } },
-  { id: 'goat', name: '山羊', icon: '🐐', cost: 25000, hours: 8, feed: { cabbage: 4 }, products: { goatMeat: 1, milk: 1 } },
-  { id: 'bison', name: '野牛', icon: '🐃', cost: 45000, hours: 12, feed: { rice: 5 }, products: { bisonMeat: 1, milk: 2 } },
+  { id: 'chicken', name: '野鸡', icon: '🐔', cost: 8000, hours: 4, feed: { corn: 3 }, products: { pheasantEgg: 2, pheasantMeat: 1, chickenOil: 1 } },
+  { id: 'boar', name: '野猪', icon: '🐗', cost: 15000, hours: 6, feed: { potato: 4 }, products: { boarMeat: 2, lard: 1 } },
+  { id: 'goat', name: '山羊', icon: '🐐', cost: 25000, hours: 8, feed: { cabbage: 4 }, products: { goatMeat: 1, milk: 1, cheese: 1 } },
+  { id: 'bison', name: '野牛', icon: '🐃', cost: 45000, hours: 12, feed: { rice: 5 }, products: { bisonMeat: 1, milk: 2, boneBroth: 1 } },
 ]
 
 const ANIMAL_INDEX = new Map(RANCH_ANIMALS.map((a) => [a.id, a]))
@@ -53,10 +53,10 @@ export const POND_EXPAND_COSTS = [25000, 70000]
 
 /** 网箱鱼种：{ id, name, icon, cost 购买金币, hours 周期, feed 每周期饲料, products 每周期产物 } */
 export const POND_FISH = [
-  { id: 'crucian', name: '鲫鱼', icon: '🐟', cost: 6000, hours: 3, feed: { seaweed: 1 }, products: { crucian: 3 } },
-  { id: 'salmon', name: '鲑鱼', icon: '🐠', cost: 15000, hours: 5, feed: { seaweed: 2 }, products: { salmon: 3, carp: 2 } },
-  { id: 'lobster', name: '龙虾', icon: '🦞', cost: 26000, hours: 8, feed: { seaweed: 3 }, products: { lobster: 2, perch: 2 } },
-  { id: 'abalone', name: '鲍鱼', icon: '🐚', cost: 48000, hours: 12, feed: { seaweed: 4 }, products: { abalone: 2, tuna: 1 } },
+  { id: 'crucian', name: '鲫鱼', icon: '🐟', cost: 6000, hours: 3, feed: { seaweed: 1 }, products: { crucian: 3, fishPaste: 1 } },
+  { id: 'salmon', name: '鲑鱼', icon: '🐠', cost: 15000, hours: 5, feed: { seaweed: 2 }, products: { salmon: 3, carp: 2, caviar: 1 } },
+  { id: 'lobster', name: '龙虾', icon: '🦞', cost: 26000, hours: 8, feed: { seaweed: 3 }, products: { lobster: 2, perch: 2, shrimpOil: 1 } },
+  { id: 'abalone', name: '鲍鱼', icon: '🐚', cost: 48000, hours: 12, feed: { seaweed: 4 }, products: { abalone: 2, tuna: 1, abaloneSauce: 1 } },
 ]
 
 const POND_INDEX = new Map(POND_FISH.map((f) => [f.id, f]))

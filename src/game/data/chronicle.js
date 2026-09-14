@@ -22,6 +22,7 @@ export const CHRONICLE_KINDS = {
   mushroom: { label: '菌房', icon: '🍄' },
   spirit: { label: '灵田', icon: '🌿' },
   bee: { label: '蜂场', icon: '🐝' },
+  essence: { label: '萃露', icon: '🧪' },
 }
 
 export const CHRONICLE_KIND_KEYS = Object.keys(CHRONICLE_KINDS)

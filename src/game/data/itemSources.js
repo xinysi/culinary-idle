@@ -29,6 +29,7 @@ import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_P
 import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
 import { HONEY_TIERS } from './honey.js'
+import { ESSENCE_TIERS } from './essences.js'
 import { MUSHROOM_MEDIA } from './mushroomHouse.js'
 import { SPIRIT_PLANTS } from './spiritField.js'
 import { POND_FISH } from './ranch.js'
@@ -168,15 +169,19 @@ for (const h of HONEY_TIERS) {
 }
 // 菌房：菇床周期产出
 for (const m of MUSHROOM_MEDIA) {
-  for (const id of Object.keys(m.products ?? {})) add(id, `菌房·${m.name}（菇床产出）`)
+  for (const id of Object.keys(m.products ?? {})) add(id, `灵圃菌房·${m.name}（菇床产出）`)
 }
 // 灵田：灵植定向收获
 for (const sp of SPIRIT_PLANTS) {
-  for (const id of Object.keys(sp.products ?? {})) add(id, `灵田·${sp.name}（灵植收获）`)
+  for (const id of Object.keys(sp.products ?? {})) add(id, `灵圃菌房·${sp.name}（灵植收获）`)
 }
 // 网箱（并入牧场页）：养鱼周期产出
 for (const f of POND_FISH) {
   for (const id of Object.keys(f.products ?? {})) add(id, `牧场·网箱（${f.name}养鱼产出）`)
+}
+// 菌灵露 8 档（v2.3.0）：灵圃菌房的萃露炉酿造（**唯一来源**）
+for (const e of ESSENCE_TIERS) {
+  add(e.id, `灵圃菌房·萃露炉（${getItem(e.anchor)?.name ?? e.anchor} Lv${e.anchorLv} 等原料酿造）`)
 }
 
 // 交易所（2026-09-10）：可买入的货品池（按类别与价值区间动态轮换）

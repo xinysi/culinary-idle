@@ -21,7 +21,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const RELATED = [
-  { view: 'mushroom', label: '🍄 菌房' },
+  { view: 'mycoField', label: '🌿 灵圃菌房' },
   { view: 'skill', skill: 'farming', label: '🌾 农耕' },
   { view: 'ranch', label: '🐄 牧场' },
 ]

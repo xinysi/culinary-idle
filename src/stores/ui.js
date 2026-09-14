@@ -20,7 +20,7 @@ export const VIEW_KEYS = [
   'minigames', 'stats', 'log', 'restaurant', 'guild', 'season', 'arena', 'tower', 'fest',
   'mijian', 'guide', 'gear', 'quests', 'achievements', 'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters', 'dao', 'shanhai',
   // 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场（蜂场与温室合并；网箱并入牧场不另开页）
-  'caravan', 'mushroom', 'spiritField', 'greenhouse',
+  'caravan', 'mycoField', 'greenhouse', // 「灵圃菌房」由原「菌房」+「灵田」合并（v2.3.0）；网箱并入牧场不另开页
 ]
 
 export const useUiStore = defineStore('ui', {

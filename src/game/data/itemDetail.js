@@ -99,6 +99,8 @@ export function itemDetailLines(id) {
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])
   if (it.use?.buffYield) lines.push(['产量增益', `×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`])
+  if (it.use?.buffGather) lines.push(['采集间隔', `−${Math.round((1 - it.use.buffGather.mult) * 100)}%（${it.use.buffGather.minutes} 分钟）`])
+  if (it.use?.buffRestaurant) lines.push(['餐厅收入', `+${Math.round((it.use.buffRestaurant.mult - 1) * 100)}%（${it.use.buffRestaurant.minutes} 分钟）`])
   if (it.spoilMs) lines.push(['腐坏时间', `${it.spoilMs / 3600000} 小时`])
   // 离线时长加成（2026-09-10 补）：能量饼干的固有效果此前在图鉴里从未描述过
   if (it.offlineBonusH) {

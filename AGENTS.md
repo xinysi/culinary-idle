@@ -281,6 +281,15 @@
 - 品级由**产出侧等级**决定：温室伴生用「作物 `reqLevel`」（可到 8 品 百花臻蜜），蜂箱用「花的 `reqLevel`」（2~4 品）。**两条路径合起来才覆盖 8 个品级**。
 - 物品 schema 不许加新键（`item_triple_audit` 的 `STRUCT_KEYS`/`EFFECT_RULES` 白名单），图片走 `type:consumable → public/images/items/tool/{中文名}.png`（用户提供的 8 张 64×64 RGBA 原样入库）。
 
+
+**v2.3.0 追加（「产线要产乘区，不要产材料」——本轮最重要的一条设计结论）**：
+- **判据**：采集是无限的（一条线约 1~2 万件/天），所以**任何「也产材料」的产线都永远没有意义**——量级差 3~4 个数量级。产线必须产出 ①**采集拿不到的独占物**、②**乘区**（作用在那条基数上）、或 ③**金币/便利**。
+- **实现**：`essences.js` 的 8 档菌灵露（锚定真实材料等级，Ⅴ 起给采集间隔、Ⅶ 起给餐厅收入）+ `processedGoods.js` 的 8 件牧场/网箱加工品，全部 `type:consumable`/`category:buff`。
+- **两条新乘区轴**：采集间隔（`GatheringSkill.intervalMs` 的**最终结果**上乘，注意「精通固定间隔」那一支也要吃到）、餐厅收入（唯一出口 `restaurantHourlyIncome`）。`BUFF_AXES` 表驱动 `useConsumable`，`better: 'min'|'max'` 决定「重复使用取更强」的方向。
+- **加新乘区轴时必须同步 6 处**：`defaultState.buffs` / `applySave` 白名单 / `useConsumable` 的轴表 / `usableOf` 标签 / `itemDetail.js` 文案行 / `item_triple_audit` 的 `USE_KW` 表（不登记 = 覆盖不到）+ `StatusPanel` 的显示（含 `shown` 格式化）。
+- ⚠️ **`essences.js` 不得 import `items.js`**：`items.js` 在模块顶层读 `ESSENCE_ITEMS` 合并物品表，一旦形成 `items → essences → items` 循环，谁先被导入谁就拿到 TDZ 里的 const 而崩（`achievements → essences → items` 这条链实测触发）。物品名一律由调用方传入（`essenceCostText(e, nameOf)`）。
+- **宽表必须包 `.table-scroll`**：新页的 8 档表在 390px 下溢出 6px，被 `e2e-test` 的「手机 390px 无横向溢出」抓到——这是项目既有约定（`main.css` 的 `.table-scroll { overflow-x: auto }`）。
+
 **新增同类系统的登记清单**（缺一即 CI FAIL）：`ui.js VIEW_KEYS` → `App.vue`（async 组件 + 分支）→ `Sidebar.vue FEATURE_GROUPS` → `e2e-dark`/`e2e-text` 两个 `VIEWS` → 页面里必须有 `<RelatedPages>` → `guide.js` 的 `GUIDE_OVERVIEW`（条目名与瓦片名一致才能过派生检查）+ `GUIDE_STAGES` → `achievements.js` + `achievementProgress.js`（`NEEDS` 与 `cur` 链，id 前缀别撞现有分支）→ `StatsView` 行 → `story.js` 需求（须有对应 `storyCur` 的 `case`）→ `chronicle.js CHRONICLE_KINDS` → `itemSources.js` + `sourceJump.js`（**新来源串必须有跳转规则**）→ `system_test` 新组 → `action_sweep` 的 `ARGS`（带参动作）→ README/AGENTS/设计文档。
 
 ## 视觉 UI 规范（毛玻璃 / 背景）

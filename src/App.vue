@@ -89,8 +89,7 @@ const CardBattleView = defineAsyncComponent(() => import('./views/CardBattleView
 const EncountersView = defineAsyncComponent(() => import('./views/EncountersView.vue'))
 // 挂机产线四套（2026-09-14）
 const CaravanView = defineAsyncComponent(() => import('./views/CaravanView.vue'))
-const MushroomView = defineAsyncComponent(() => import('./views/MushroomView.vue'))
-const SpiritFieldView = defineAsyncComponent(() => import('./views/SpiritFieldView.vue'))
+const MycoFieldView = defineAsyncComponent(() => import('./views/MycoFieldView.vue'))
 const GreenhouseView = defineAsyncComponent(() => import('./views/GreenhouseView.vue'))
 
 const ui = useUiStore()
@@ -400,8 +399,7 @@ onMounted(() => {
           <DaoView v-else-if="ui.activeView === 'dao'" />
           <ShanhaiView v-else-if="ui.activeView === 'shanhai'" />
           <CaravanView v-else-if="ui.activeView === 'caravan'" />
-          <MushroomView v-else-if="ui.activeView === 'mushroom'" />
-          <SpiritFieldView v-else-if="ui.activeView === 'spiritField'" />
+          <MycoFieldView v-else-if="ui.activeView === 'mycoField'" />
           <GreenhouseView v-else-if="ui.activeView === 'greenhouse'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->

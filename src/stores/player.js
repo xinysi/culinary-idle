@@ -78,11 +78,22 @@ import { MUSHROOM_UNLOCK_SKILL, MUSHROOM_UNLOCK_LEVEL, MUSHROOM_BASE_BEDS, MUSHR
 import { SPIRIT_UNLOCK_SKILL, SPIRIT_UNLOCK_LEVEL, SPIRIT_BASE_PLOTS, SPIRIT_MAX_PLOTS, SPIRIT_EXPAND_COSTS, SPIRIT_PLANTS, getSpiritPlant, getSpiritPlantBySeed, spiritSeedAvailable, nextSpiritExpandCost } from '../game/data/spiritField.js'
 import { GREENHOUSE_UNLOCK_SKILL, GREENHOUSE_UNLOCK_LEVEL, GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GREENHOUSE_HONEY_CHANCE, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
 import { honeyItemForLevel } from '../game/data/honey.js'
+import { ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS, getEssence, nextEssenceExpandCost } from '../game/data/essences.js'
 import { priceMultiplier } from '../game/data/exchange.js'
 import { BRANCHES, getBranch, branchHourly, BRANCH_UNLOCK_LEVEL, MANAGER_BONUS } from '../game/data/branches.js'
 import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exchangeCycleIndex, pickGoods, sellPriceOf, buyPriceOf } from '../game/data/exchange.js'
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
 import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
+/**
+ * 增益剂的乘区轴表（v2.3.0）：一件消耗品可同时带多条。
+ * `better` 决定「重复使用取更强」的方向——采集间隔越小越快，其余越大越强。
+ */
+const BUFF_AXES = [
+  ['buffXp', 'xpMult', '经验', 'max'],
+  ['buffYield', 'yieldMult', '产量', 'max'],
+  ['buffGather', 'gatherMult', '采集间隔', 'min'],
+  ['buffRestaurant', 'restaurantMult', '餐厅收入', 'max'],
+]
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
 let _restaurantAccumMs = 0
@@ -199,7 +210,9 @@ const defaultState = () => ({
     spirits: { active: [], owned: {} }, // 食灵出战列表（§3.3.6，最多 2 个）；owned=食灵阁（不占背包格，2026-09-06）
     gastronomy: { active: [] }, // 激活中的奥义（§3.4.1）
     tastePoints: 0, // 品鉴点数（对决胜利获得，奥义消耗）
-    buffs: { xpMult: null, yieldMult: null }, // 增益剂（§3.4.2）：{mult, expiresAt}
+    buffs: { xpMult: null, yieldMult: null, gatherMult: null, restaurantMult: null }, // 增益剂（§3.4.2）：{mult, expiresAt}
+    //   gatherMult = 采集间隔倍率（<1 更快，蘑菇灵露/鲍汁）；restaurantMult = 餐厅收入倍率（>1 更高）
+    essence: { vats: [], expands: 0 }, // 萃露炉（v2.3.0 灵圃菌房页）：每格 { tierId, startedAt, readyAt } | null
     spoilage: {}, // { itemId: spoilAt }（§5.4 腐坏计时）
     coldStorage: {}, // 冷库（§5.4 冻结腐坏）：{ itemId: { qty, remainMs } }，remainMs 为存入时剩余的腐坏毫秒（冻结期间不消耗）
     coldStorageCap: CAP_BASE.cold, // 冷库容量（§5.4：初始 5 格，每次扩充 +1 花 1000 金币，金币买到 100，山海食经再 +10 → 硬顶 110）
@@ -466,6 +479,16 @@ export const usePlayerStore = defineStore('player', {
       const b = s.buffs?.xpMult
       return b && Date.now() < b.expiresAt ? b.mult : 1
     },
+    /** 采集间隔倍率（<1 表示更快；菌灵露·Ⅴ+ 与鲍汁给） */
+    getGatherMultiplier: (s) => () => {
+      const b = s.buffs?.gatherMult
+      return b && Date.now() < b.expiresAt ? b.mult : 1
+    },
+    /** 餐厅收入倍率（菌灵露·Ⅶ+ 与鸡油/虾油给） */
+    getRestaurantMultiplier: (s) => () => {
+      const b = s.buffs?.restaurantMult
+      return b && Date.now() < b.expiresAt ? b.mult : 1
+    },
     /** 增益剂产量倍率 */
     getYieldMultiplier: (s) => () => {
       const b = s.buffs?.yieldMult
@@ -477,12 +500,17 @@ export const usePlayerStore = defineStore('player', {
       const it = getItem(itemId)
       if (!it?.use) return null
       // 双效（蜂蜜）与单效（增益剂）统一：分别列出实际会生效的每条乘区
-      if (it.use.buffXp || it.use.buffYield) {
+      if (BUFF_AXES.some(([k]) => it.use[k])) {
         const parts = []
-        if (it.use.buffXp) parts.push(`经验 ×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`)
-        if (it.use.buffYield) parts.push(`产量 ×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`)
-        const both = it.use.buffXp && it.use.buffYield
-        return { kind: both ? 'buffBoth' : it.use.buffXp ? 'buffXp' : 'buffYield', label: parts.join(' + ') }
+        for (const [useKey, , label] of BUFF_AXES) {
+          const cfg = it.use[useKey]
+          if (!cfg) continue
+          parts.push(label === '采集间隔'
+            ? `${label} −${Math.round((1 - cfg.mult) * 100)}%（${cfg.minutes} 分钟）`
+            : `${label} ×${cfg.mult}（${cfg.minutes} 分钟）`)
+        }
+        const kinds = BUFF_AXES.filter(([k]) => it.use[k]).map(([k]) => k)
+        return { kind: kinds.length === 1 ? kinds[0] : 'buffBoth', label: parts.join(' + ') }
       }
       if (it.use.refreshSpoilMs) return { kind: 'refreshSpoil', label: `刷新背包食材腐坏计时 + 冷库续时 ${Math.round(it.use.refreshSpoilMs / 3600000)} 小时` }
       return null
@@ -506,6 +534,8 @@ export const usePlayerStore = defineStore('player', {
         const schoolMult = 1 + (this.schoolIncomePct?.(item.category) ?? 0) / 100 // 菜系研究（2026-09-10）
         total += (item.value + (item.heal ?? 0)) * 0.5 * schoolMult
       }
+      // 增益剂（菌灵露·Ⅶ+ / 鸡油 / 虾油）：餐厅收入乘区——挂在唯一的收入 getter 上，避免多处漏乘
+      total *= this.getRestaurantMultiplier?.() ?? 1
       // 装饰加成：按每件装饰自身的收入%累加（各件 effect 随价格从 0.5% 到 3% 递增，无倒挂）
       let decorBonus = 0
       for (const id of s.restaurant?.decor ?? []) {
@@ -589,7 +619,13 @@ export const usePlayerStore = defineStore('player', {
         spirits: { active: safeList(saved.spirits?.active, SPIRIT_SLOTS), owned: saved.spirits?.owned ?? {} }, // 出战位上限
         gastronomy: { active: Array.isArray(saved.gastronomy?.active) ? saved.gastronomy.active : [] },
         tastePoints: saved.tastePoints ?? 0,
-        buffs: { xpMult: saved.buffs?.xpMult ?? null, yieldMult: saved.buffs?.yieldMult ?? null },
+        buffs: {
+          xpMult: saved.buffs?.xpMult ?? null,
+          yieldMult: saved.buffs?.yieldMult ?? null,
+          gatherMult: saved.buffs?.gatherMult ?? null,
+          restaurantMult: saved.buffs?.restaurantMult ?? null,
+        },
+        essence: { vats: safeList(saved.essence?.vats, ESSENCE_MAX_VATS), expands: safeCap(saved.essence?.expands, 0, ESSENCE_EXPAND_COSTS.length) },
         spoilage: saved.spoilage ?? {},
         coldStorage: saved.coldStorage ?? {},
         coldStorageCap: safeCap(saved.coldStorageCap, CAP_BASE.cold, CAP_MAX.cold),
@@ -729,6 +765,7 @@ export const usePlayerStore = defineStore('player', {
         gastronomy: this.gastronomy,
         tastePoints: this.tastePoints,
         buffs: this.buffs,
+        essence: this.essence,
         spoilage: this.spoilage,
         coldStorage: this.coldStorage,
         coldStorageCap: this.coldStorageCap,
@@ -1083,22 +1120,24 @@ export const usePlayerStore = defineStore('player', {
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: `背包里没有${it.name}` }
       const now = Date.now()
       let msg = ''
-      if (it.use.buffXp || it.use.buffYield) {
-        // 支持**双效**（蜂蜜：一次同时给经验 + 产量两条乘区）。原先写的是 if/else 只取一条——
-        // 物品若同时带 buffXp 与 buffYield，产量那条会被静默丢掉（2026-09-14 蜂蜜上线时修）。
+      // 条件也要用轴表：只带 buffGather / buffRestaurant 的物品（鲍汁、虾油等）否则会落到 else 报「无法使用」
+      if (BUFF_AXES.some(([k]) => it.use[k])) {
+        // **多效**：一件物品可同时给多条乘区（蜂蜜=经验+产量；菌灵露=最多四条）。
+        // ⚠️ 原先写的是 if/else 只取一条，双键物品会静默丢掉后面的键（2026-09-14 修）。
+        // 「更强」的判据按轴不同：采集间隔是**越小越强**，其余是越大越强。
         const parts = []
         let keepUntil = 0
-        for (const [useKey, buffKey, label] of [['buffXp', 'xpMult', '经验'], ['buffYield', 'yieldMult', '产量']]) {
+        for (const [useKey, buffKey, label, better] of BUFF_AXES) {
           const cfg = it.use[useKey]
           if (!cfg) continue
           const cur = this.buffs?.[buffKey]
           const active = cur && now < cur.expiresAt
-          const keepMult = active ? Math.max(cur.mult, cfg.mult) : cfg.mult
+          const keepMult = active ? (better === 'min' ? Math.min(cur.mult, cfg.mult) : Math.max(cur.mult, cfg.mult)) : cfg.mult
           const until = Math.max(active ? cur.expiresAt : 0, now + cfg.minutes * 60_000)
-          if (!this.buffs) this.buffs = { xpMult: null, yieldMult: null }
+          if (!this.buffs) this.buffs = { xpMult: null, yieldMult: null, gatherMult: null, restaurantMult: null }
           this.buffs[buffKey] = { mult: keepMult, expiresAt: until }
           keepUntil = Math.max(keepUntil, until)
-          parts.push(`${label} ×${keepMult}`)
+          parts.push(label === '采集间隔' ? `${label} −${Math.round((1 - keepMult) * 100)}%` : `${label} ×${keepMult}`)
         }
         const left = Math.max(1, Math.round((keepUntil - now) / 60_000))
         msg = `${parts.join(' / ')} 生效中（剩 ${left} 分钟）`
@@ -2371,6 +2410,11 @@ export const usePlayerStore = defineStore('player', {
           if (slot && Date.now() >= slot.readyAt) this.caravanClaim(i)
         }
       }
+      // 萃露炉（v2.3.0）：到点自动收取
+      for (let i = 0; i < this.essenceVats(); i++) {
+        const vat = this.essenceState().vats[i]
+        if (vat && Date.now() >= vat.readyAt) this.essenceClaim(i)
+      }
       // 灵田（2026-09-14）：到点自动收取（收取后会自动续种，与采集队一致）
       if (this.spiritUnlocked()) {
         for (let i = 0; i < this.spiritPlots(); i++) {
@@ -2853,7 +2897,8 @@ export const usePlayerStore = defineStore('player', {
       if (Date.now() < plot.readyAt) return { ok: false, msg: '灵植还没长成' }
       const plant = getSpiritPlantBySeed(plot.seedId)
       if (!plant) return { ok: false, msg: '灵植数据缺失' }
-      const got = { ...plant.products }
+      // 产出 = 灵植 + **回收 1 颗同类种子**（v2.3.0：灵圃因此是可持续的种子来源，产出也就有了两种）
+      const got = { ...plant.products, [plot.seedId]: (plant.products[plot.seedId] ?? 0) + 1 }
       for (const [id, q] of Object.entries(got)) this.gainItem(id, q)
       this.stats.spiritHarvests = (this.stats.spiritHarvests ?? 0) + 1
       if (this.stats.spiritHarvests === 1) this.recordChronicle?.('spirit:first', 'spirit', `灵田首次收获：${plant.name}`)
@@ -2869,6 +2914,71 @@ export const usePlayerStore = defineStore('player', {
       }
       EventBus.emit('spirit:harvest', { name: plant.name, got, replanted })
       return { ok: true, got, replanted }
+    },
+
+    // ══ 挂机产线 · 萃露炉（v2.3.0；并入「灵圃菌房」页）══════════════════════
+    // 把采集来的菌菇/灵植 + 肥料酿成 8 档「菌灵露」（采集拿不到的乘区物品）。
+    essenceState() {
+      if (!this.essence || !Array.isArray(this.essence.vats)) this.essence = { vats: [], expands: 0 }
+      while (this.essence.vats.length < this.essenceVats()) this.essence.vats.push(null)
+      return this.essence
+    },
+    essenceVats() {
+      const n = Math.max(0, Math.min(ESSENCE_EXPAND_COSTS.length, this.essence?.expands ?? 0))
+      return Math.min(ESSENCE_MAX_VATS, ESSENCE_BASE_VATS + n)
+    },
+    essenceExpand() {
+      const cost = nextEssenceExpandCost(this.essenceVats())
+      if (cost == null) return { ok: false, msg: '萃露炉已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.essence) this.essence = { vats: [], expands: 0 }
+      this.essence.expands = (this.essence.expands ?? 0) + 1
+      this.essenceState()
+      EventBus.emit('essence:expand', { vats: this.essenceVats(), cost })
+      return { ok: true, vats: this.essenceVats() }
+    },
+    /** 投入原料开酿（主料 + 辅料，全部从背包扣） */
+    essenceBrew(index, tierId) {
+      const st = this.essenceState()
+      if (index < 0 || index >= this.essenceVats()) return { ok: false, msg: '萃露格不存在' }
+      if (st.vats[index]) return { ok: false, msg: '该格已在酿造' }
+      if (!this.mushroomUnlocked() && !this.spiritUnlocked()) return { ok: false, msg: '需先解锁菌房或灵田' }
+      const e = getEssence(tierId)
+      if (!e) return { ok: false, msg: '没有这一档配方' }
+      for (const [id, q] of Object.entries({ ...e.material, ...e.aux })) {
+        if ((this.inventory[id] ?? 0) < q) return { ok: false, msg: `${getItem(id)?.name ?? id} 不足（需 ${q}）` }
+      }
+      for (const [id, q] of Object.entries({ ...e.material, ...e.aux })) this.spendItem(id, q)
+      const now = Date.now()
+      st.vats[index] = { tierId, startedAt: now, readyAt: now + e.hours * 3600_000 }
+      EventBus.emit('essence:brew', { name: e.name, hours: e.hours })
+      return { ok: true }
+    },
+    /** 撤回（退还全部投入） */
+    essenceTakeBack(index) {
+      const st = this.essenceState()
+      const vat = st.vats[index]
+      if (!vat) return { ok: false, msg: '该格是空的' }
+      const e = getEssence(vat.tierId)
+      if (e) for (const [id, q] of Object.entries({ ...e.material, ...e.aux })) this.gainItem(id, q)
+      st.vats[index] = null
+      return { ok: true }
+    },
+    /** 收取（到点才可收） */
+    essenceClaim(index) {
+      const st = this.essenceState()
+      const vat = st.vats[index]
+      if (!vat) return { ok: false, msg: '该格是空的' }
+      if (Date.now() < vat.readyAt) return { ok: false, msg: '还没酿好' }
+      const e = getEssence(vat.tierId)
+      if (!e) return { ok: false, msg: '配方数据缺失' }
+      this.gainItem(e.id, 1)
+      this.stats.essenceBrews = (this.stats.essenceBrews ?? 0) + 1
+      if (this.stats.essenceBrews === 1) this.recordChronicle?.('essence:first', 'essence', `首次酿成菌灵露：${e.name}`)
+      st.vats[index] = null
+      EventBus.emit('essence:claim', { name: e.name })
+      return { ok: true, itemId: e.id }
     },
 
     // ══ 挂机产线 · 温室蜂场（2026-09-14；温室 + 原蜂场合并）══════════════════
