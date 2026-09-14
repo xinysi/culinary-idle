@@ -218,9 +218,9 @@ function expandHive() {
               </div>
             </div>
             <ProgressBar :progress="h.progress" />
-            <div class="dim gh-sub mono">下次取蜜还有 {{ fmtMs(h.remainMs) }}</div>
+            <div v-if="h.canFeed" class="dim gh-sub mono">下次取蜜还有 {{ fmtMs(h.remainMs) }}</div>
             <div class="dim gh-sub">产出：<ItemImg v-if="h.honeyId" :item-id="h.honeyId" size="sm" /> {{ h.honeyName }} ×{{ h.def.honeyQty }}</div>
-            <div v-if="!h.canFeed" class="gh-warn">⚠ 蜜源不足（{{ h.feedText }}），已暂停</div>
+            <div v-if="!h.canFeed" class="gh-warn">⏸ 已停机：蜜源不足（{{ h.feedText }}），补上花才会重新计时</div>
             <button class="btn btn-sm" @click="clearHive(h.index)">移出蜂群</button>
           </template>
           <template v-else>

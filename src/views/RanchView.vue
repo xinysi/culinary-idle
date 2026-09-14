@@ -160,9 +160,9 @@ const RELATED = [
               </div>
             </div>
             <ProgressBar :progress="p.progress" />
-            <div class="dim ranch-sub mono">下次产出还有 {{ fmtMs(p.remainMs) }}</div>
+            <div v-if="p.canFeed" class="dim ranch-sub mono">下次产出还有 {{ fmtMs(p.remainMs) }}</div>
             <div class="dim ranch-sub">每周期产出：{{ p.productText }}</div>
-            <div v-if="!p.canFeed" class="ranch-warn">⚠ 饲料不足（{{ p.feedText }}），已暂停</div>
+            <div v-if="!p.canFeed" class="ranch-warn">⏸ 已停机：饲料不足（{{ p.feedText }}），备好料才会重新计时</div>
             <button class="btn btn-sm" @click="remove(p.index)">移出</button>
           </template>
 
@@ -215,7 +215,7 @@ const RELATED = [
               </div>
             </div>
             <ProgressBar :progress="p.progress" />
-            <div class="dim ranch-sub mono">下次起网还有 {{ fmtMs(p.remainMs) }}</div>
+            <div v-if="p.canFeed" class="dim ranch-sub mono">下次起网还有 {{ fmtMs(p.remainMs) }}</div>
             <div class="dim ranch-sub">每周期产出：{{ p.productText }}</div>
             <div v-if="!p.canFeed" class="ranch-warn">⚠ 饲料不足（{{ p.feedText }}），已暂停</div>
             <button class="btn btn-sm" @click="removePond(p.index)">清空网箱</button>

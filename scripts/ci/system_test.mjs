@@ -3782,6 +3782,45 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
   })())
   check('蜂蜜', '蜂蜜不作为任何配方/炼金材料（可用于制作为空）', HONEY_TIERS.every((h) => itemUses(h.id).length === 0))
 
+  check('挂机产线', '四套周期系统缺料时**真停机**（lastAt 推进、倒计时归零、不囤积进度）', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL
+    p.skills.farming.level = 60 // 牧场要农耕 Lv15 才开
+    p.gold = 100000
+    // 牧场：买鸡但不给玉米
+    p.ranchBuy(0, 'chicken')
+    // 网箱：投苗但不给海苔
+    p.pondBuy(0, 'crucian')
+    // 菌房：铺床但不给堆肥
+    p.mushroomBuild(0, 'compost')
+    // 蜂箱：放蜂群但不给花
+    p.hiveSet(0, 'osmanthus')
+    const oneDayAgo = Date.now() - 24 * 3600e3
+    p.ranch.pens[0].lastAt = oneDayAgo
+    p.ranch.ponds[0].lastAt = oneDayAgo
+    p.mushroom.beds[0].lastAt = oneDayAgo
+    p.greenhouse.hives[0].lastAt = oneDayAgo
+    p._tickRanch(); p._tickPonds(); p._tickMushroom(); p._tickGreenhouse()
+    const fresh = (t) => Date.now() - t < 5000 // 被推到「现在」= 倒计时归零
+    return fresh(p.ranch.pens[0].lastAt) && fresh(p.ranch.ponds[0].lastAt)
+      && fresh(p.mushroom.beds[0].lastAt) && fresh(p.greenhouse.hives[0].lastAt)
+      && !(p.stats.ranchCycles) && !(p.stats.pondCycles) && !(p.stats.mushroomCycles) && !(p.stats.honeyHarvests)
+  })())
+  check('挂机产线', '补料后恢复产出（停机不会吃掉后续进度）', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL
+    p.gold = 100000
+    p.mushroomBuild(0, 'compost')
+    p.mushroom.beds[0].lastAt = Date.now() - 24 * 3600e3
+    p._tickMushroom() // 缺料 → 停机
+    p.inventory.compost = 1
+    p._tickMushroom() // 刚停机，需要重新等满一个周期 → 仍不产出
+    if ((p.inventory.mushroom ?? 0) > 0) return false
+    p.inventory.compost = 999 // 备足料
+    p.mushroom.beds[0].lastAt = Date.now() - 12 * 3600e3
+    p._tickMushroom() // 给足时间 → 正常产出 2 轮（12h 上限 / 6h 周期）
+    return (p.inventory.mushroom ?? 0) === 4 && p.stats.mushroomCycles === 2
+  })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {
     const p = freshPlayer()
