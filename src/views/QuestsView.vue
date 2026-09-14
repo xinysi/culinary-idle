@@ -458,6 +458,6 @@ const challengeDone = computed(() => player.challenge.done)
   padding: 6px 10px;
   border-radius: 6px;
   background: var(--warn-soft, rgba(200, 150, 20, 0.16));
-  color: var(--warn-strong, #a8780b);
+  color: var(--warn-strong, var(--gold));
 }
 </style>

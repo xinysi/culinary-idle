@@ -6,12 +6,12 @@
 // 临时：长时间游玩的内存审计（用后即删）。跑法：node --expose-gc scripts/_tmp_memory_audit.mjs
 import { createPinia, setActivePinia } from 'pinia'
 
-const { usePlayerStore } = await import('../src/stores/player.js')
-const { useUiStore } = await import('../src/stores/ui.js')
-const { createSkillInstances, getSkillInstance } = await import('../src/game/skills/registry.js')
-const { Combat } = await import('../src/game/combat/Combat.js')
-const { opp } = await import('../src/game/data/combat.js')
-const { EventBus } = await import('../src/game/core/EventBus.js')
+const { usePlayerStore } = await import('../../src/stores/player.js')
+const { useUiStore } = await import('../../src/stores/ui.js')
+const { createSkillInstances, getSkillInstance } = await import('../../src/game/skills/registry.js')
+const { Combat } = await import('../../src/game/combat/Combat.js')
+const { opp } = await import('../../src/game/data/combat.js')
+const { EventBus } = await import('../../src/game/core/EventBus.js')
 
 const gc = globalThis.gc ?? (() => {})
 setActivePinia(createPinia())

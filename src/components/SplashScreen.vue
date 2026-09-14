@@ -94,7 +94,7 @@ function startNew() {
 }
 
 /* 米白柔光（仅托住文字块）+ 底部暖暗收边：壁纸是白天版（亮蓝天白云），
-   文字改用深墨色，与游戏主色板（米白 rgba(255,252,246) + 陶土红 #D95A38）一致 */
+   文字改用深墨色，与游戏主色板（米白 rgba(255,252,246) + 陶土红 var(--primary)）一致 */
 .splash-overlay {
   position: absolute;
   inset: 0;

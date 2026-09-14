@@ -785,6 +785,11 @@ h2 {
   padding: 2px 8px;
   font-size: 12px;
   margin-right: 8px;
+  /* ⚠️ 徽标是**标签**不是正文：作为 flex 子项时默认 `flex: 0 1 auto` + normal 换行，
+     在窄行里会被压到折行（实测班底页「未雇佣」被挤成两行 h=40/lh=18）。
+     统一 nowrap —— 需要缩的是同行里的长文案，不是标签（2026-09-13 全量走查发现）。 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-on {

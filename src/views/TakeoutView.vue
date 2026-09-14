@@ -206,7 +206,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
 }
 .to-est-warn {
   font-size: 12px;
-  color: var(--warn-strong, #bf7200);
+  color: var(--warn-strong, var(--warn-strong));
 }
 .to-lv-cur {
   background: var(--bg-soft);

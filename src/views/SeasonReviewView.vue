@@ -284,7 +284,7 @@ const RELATED = [{ view: 'season', label: '🎪 赛季' }, { view: 'chronicle', 
 }
 .rev-pts {
   font-size: 12px;
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
   white-space: nowrap;
 }
 .rev-rew {

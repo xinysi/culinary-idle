@@ -254,10 +254,10 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
   line-height: 1.1;
 }
 .staff-econ-main.good .staff-econ-num {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .staff-econ-main.bad .staff-econ-num {
-  color: var(--bad, #d94b3f);
+  color: var(--bad, var(--bad));
 }
 .staff-econ-side {
   flex: 1;
@@ -267,14 +267,14 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
   gap: 4px;
 }
 .staff-good {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .staff-bad {
-  color: var(--bad, #d94b3f);
+  color: var(--bad, var(--bad));
 }
 .staff-warn {
   font-size: 12px;
-  color: var(--warn-strong, #bf7200);
+  color: var(--warn-strong, var(--warn-strong));
   line-height: 1.6;
 }
 .staff-ladder {
@@ -309,7 +309,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
   border-color: var(--accent, var(--primary-tint));
 }
 .staff-ladder-perk {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .staff-head {
   display: flex;

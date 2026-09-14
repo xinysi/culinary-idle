@@ -524,7 +524,7 @@ function typeLabel(id) {
 }
 /* 卡背：池主题中档渐变 + 主题光晕（呼吸光）+ 主题字色 */
 .gacha-back {
-  background: linear-gradient(150deg, var(--tmd1, #6b3f2c), var(--tmd2, #4a2f26));
+  background: linear-gradient(150deg, var(--tmd1, #6b3f2c), var(--tmd2, var(--text)));
   border: 2px solid rgba(var(--tsh2, 255, 214, 160), 0.45);
   animation: backGlow 1.8s ease-in-out infinite;
   color: rgb(var(--tsh2, 245, 217, 168));
@@ -537,7 +537,7 @@ function typeLabel(id) {
 }
 /* 卡面：主题淡色边框（稀有度 q-* 规则仍覆盖边框色） */
 .gacha-front {
-  background: #fffdf9;
+  background: var(--card);
   border: 2px solid rgba(var(--tsh1, 200, 160, 115), 0.45);
   transform: rotateY(180deg);
 }
@@ -547,12 +547,12 @@ function typeLabel(id) {
 
 /* 品质光晕（边框 + 阴影随稀有度增强） */
 .gacha-card.q-common .gacha-front { border-color: #b9a993; }
-.gacha-card.q-fine .gacha-front { border-color: #6fa8dc; }
+.gacha-card.q-fine .gacha-front { border-color: var(--info); }
 .gacha-card.q-rare .gacha-front { border-color: #4a90d9; box-shadow: 0 0 10px rgba(74, 144, 217, 0.45); }
 .gacha-card.q-epic .gacha-front { border-color: #7b1fa2; box-shadow: 0 0 12px rgba(123, 31, 162, 0.5); }
 .gacha-card.q-legend .gacha-front { border-color: var(--amber-strong); box-shadow: 0 0 14px rgba(var(--amber-strong-rgb), 0.6); }
 .gacha-card.q-myth .gacha-front {
-  border-color: #e0704a;
+  border-color: var(--primary);
   box-shadow: 0 0 18px rgba(var(--primary-rgb), 0.75);
   background: linear-gradient(120deg, #fff8ec, #ffe7c9);
 }

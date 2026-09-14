@@ -353,7 +353,7 @@ function posStyle(t) {
 .g2048-cell2.v8 { background: #c8e39a; } .g2048-cell2.v16 { background: #b6d98a; }
 .g2048-cell2.v32 { background: #f6d9a8; } .g2048-cell2.v64 { background: #f3c684; }
 .g2048-cell2.v128 { background: #efb669; } .g2048-cell2.v256 { background: #e8a24e; }
-.g2048-cell2.v512 { background: #dd8f3c; } .g2048-cell2.v1024 { background: #e0704a; }
+.g2048-cell2.v512 { background: #dd8f3c; } .g2048-cell2.v1024 { background: var(--primary); }
 .g2048-cell2.v2048, .g2048-cell2.v4096 { background: var(--primary-tint); color: #fff; }
 .g2048-keys {
   display: flex;

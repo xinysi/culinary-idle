@@ -59,7 +59,7 @@ jobs:
             (echo '首次安装失败，15s 后重试…' && sleep 15 && npx playwright install --with-deps chromium) ||
             (echo '二次失败，30s 后再试…' && sleep 30 && npx playwright install --with-deps chromium)
 
-      - name: E2E（9 项流程 + 深色配色体检）
+      - name: E2E（流程 9 项 + 深色配色体检 + 标签裸露扫描 + 皮肤与音频）
         run: |
           npm run dev &
           for i in $(seq 1 30); do
@@ -68,3 +68,5 @@ jobs:
           done
           npx playwright test e2e-test.spec.mjs
           npx playwright test e2e-dark.spec.mjs
+          npx playwright test e2e-text.spec.mjs
+          npx playwright test e2e-audio-skin.spec.mjs
