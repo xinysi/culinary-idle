@@ -44,8 +44,8 @@ export const MUSHROOM_MEDIA = [  // cost = 铺床一次性金币（与牧场买�
     cost: 18000,
     hours: 4,
     feed: { richCompost: 1 },
-    products: { mushroom: 3, matsutake: 1 },
-    desc: '肥沃堆肥培育，周期更短并伴生松茸',
+    products: { mushroom: 3, matsutake: 1, lingzhi: 1 },
+    desc: '肥沃堆肥培育，周期更短并伴生松茸与灵芝',
   },
 ]
 

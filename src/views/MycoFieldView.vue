@@ -225,7 +225,10 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
 
       <!-- ① 菇床 -->
-      <h3 class="mf-title" @click="mOpen = !mOpen">🍄 菇床{{ mOpen ? '' : '（点击展开）' }}</h3>
+      <h3 class="mf-title" @click="mOpen = !mOpen">🍄 菇床 —— 吃肥料出菌菇，供菌灵露 <b>Ⅰ~Ⅳ 档</b>原料{{ mOpen ? '' : '（点击展开）' }}</h3>
+      <p v-if="mOpen" class="dim mf-role">
+        与灵圃的分工：菇床吃的是<b>杂货铺能买到的肥料</b>，所以它是**唯一不占并行挂机槽、也不占用背包种子**的纯挂机料线——把金币稳定换成菌灵露原料。
+      </p>
       <div v-if="mOpen" class="mf-grid">
         <div v-for="b in beds" :key="b.index" class="card mf-cell">
           <div class="mf-head"><strong>菇床 {{ b.index + 1 }}</strong><span v-if="b.def" class="dim mono mf-fs">{{ b.def.hours }}h / 周期</span></div>
@@ -251,7 +254,11 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
 
       <!-- ② 灵圃 -->
-      <h3 class="mf-title" @click="sOpen = !sOpen">🌱 灵圃{{ sOpen ? '' : '（点击展开）' }}</h3>
+      <h3 class="mf-title" @click="sOpen = !sOpen">🌱 灵圃 —— 种稀有种子出灵植，供菌灵露 <b>Ⅴ~Ⅷ 档</b>原料{{ sOpen ? '' : '（点击展开）' }}</h3>
+      <p v-if="sOpen" class="dim mf-role">
+        与菇床的分工：灵圃吃<b>采集掉落的稀有种子</b>，而收获会<b>回收 1 颗同类种子</b> ⇒ <b>一次投入、永久产出</b>；
+        它也是唯一能定向稳定拿到高阶灵植（木耳 / 银耳 / 松露 / 龙根 / 灵果）的地方（采集靠概率、还占并行槽）。
+      </p>
       <div v-if="sOpen" class="mf-grid">
         <div v-for="p in plots" :key="p.index" class="card mf-cell">
           <div class="mf-head"><strong>灵圃 {{ p.index + 1 }}</strong><span v-if="p.def" class="dim mono mf-fs">{{ p.def.icon }} {{ p.def.name }} · {{ p.def.hours }}h</span></div>
@@ -352,6 +359,7 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
 .mf-media { display: flex; align-items: center; gap: 10px; }
 .mf-icon { font-size: 24px; }
 .mf-sub { font-size: 12px; line-height: 1.5; }
+.mf-role { font-size: 12px; line-height: 1.6; margin: 6px 0 0; }
 .mf-fs { font-size: 12px; }
 .mf-ready { font-size: 12px; color: var(--good-strong); }
 .mf-warn { font-size: 12px; color: var(--warn-strong); }

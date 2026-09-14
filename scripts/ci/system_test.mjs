@@ -43,7 +43,7 @@ import { GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GRE
 import { HONEY_TIERS, HONEY_ITEMS, honeyTierForLevel, honeyItemForLevel } from '../../src/game/data/honey.js'
 import { RANCH_ANIMALS, POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from '../../src/game/data/ranch.js'
 import { ESSENCE_TIERS, ESSENCE_ITEMS, ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS } from '../../src/game/data/essences.js'
-import { GOODS_ITEMS } from '../../src/game/data/processedGoods.js'
+import { GOODS_ITEMS, goodsEffectText } from '../../src/game/data/processedGoods.js'
 
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
 import { priceMultiplier, exchangeCycleIndex } from '../../src/game/data/exchange.js'
@@ -3954,6 +3954,23 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     const r = p.spiritHarvest(0)
     // 收 1 颗种子 + 自动续种再花 1 颗 ⇒ 净剩 0，但种子确实回收过（got 里带 seedId）
     return r.ok && r.got.lingzhiSeed === 1 && r.replanted === true && !!p.spiritState().plots[0] && (p.inventory.lingzhiSeed ?? 0) === 0
+  })())
+  // ⑬ v2.3.1：两条料线的职能切分 + 显示细节
+  check('两线分工', '菇床覆盖菌灵露 Ⅰ~Ⅳ 档主料（蘑菇/茯苓/灵芝/松茸）', (() => {
+    const mats = new Set(MUSHROOM_MEDIA.flatMap((m) => Object.keys(m.products)))
+    const need = ['mushroom', 'excavation_ext_12', 'lingzhi', 'matsutake']
+    return need.every((id) => mats.has(id))
+  })())
+  check('两线分工', '灵圃覆盖菌灵露 Ⅴ~Ⅷ 档主料（木耳/银耳/松露/龙根/灵果）', (() => {
+    const mats = new Set(SPIRIT_PLANTS.flatMap((p) => Object.keys(p.products)))
+    const need = ['foraging_ext_22', 'foraging_ext_23', 'truffle', 'dragonRoot', 'spiritFruit']
+    return need.every((id) => mats.has(id))
+  })())
+  check('两线分工', '每件加工品都有非空的效果文案（牧场/网箱要显示作用，否则玩家不知道拿来干嘛）',
+    GOODS_ITEMS.every((g) => (goodsEffectText(g) ?? '').trim().length > 0))
+  check('两线分工', '温室种子下拉只列「背包有 + 等级够」（用户要求：显示有的就可以）', (() => {
+    const src = fs.readFileSync(new URL('../../src/views/GreenhouseView.vue', import.meta.url), 'utf8')
+    return /\(player\.inventory\[c\.seedId\] \?\? 0\) > 0 && lv >= c\.reqLevel/.test(src)
   })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {

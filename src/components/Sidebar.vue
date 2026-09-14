@@ -74,13 +74,14 @@ const FEATURE_GROUPS = [
     icon: '🌾',
     name: '挂机产线',
     items: [
+      // 顺序按用户 2026-09-14 指定：采集队 → 产地 → 商队线 → 自动化 → 地窖 → 牧场 → 灵圃菌房 → 温室蜂场
+      // （网箱并入牧场页，不另立瓦片）
       { icon: '🚢', name: '采集队', view: 'expedition' },
       { icon: '🌍', name: '产地', view: 'regions' },
-      { icon: '🐄', name: '牧场', view: 'ranch' },
-      { icon: '🍶', name: '地窖', view: 'cellar' },
-      { icon: '🤖', name: '自动化', view: 'automation' },
-      // 2026-09-14 新增四套（商队线/菌房/灵田/温室蜂场）；网箱按用户要求并入牧场，不另立瓦片
       { icon: '🐫', name: '商队线', view: 'caravan' },
+      { icon: '🤖', name: '自动化', view: 'automation' },
+      { icon: '🍶', name: '地窖', view: 'cellar' },
+      { icon: '🐄', name: '牧场', view: 'ranch' },
       { icon: '🌿', name: '灵圃菌房', view: 'mycoField' },
       { icon: '🐝', name: '温室蜂场', view: 'greenhouse' },
     ],
