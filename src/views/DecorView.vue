@@ -149,7 +149,7 @@ const catRows = computed(() =>
         <span class="dv-sep"></span>
         <button class="btn btn-sm" :class="{ 'btn-primary': sort === 'price' }" @click="setSort('price')">按价格</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': sort === 'value' }" @click="setSort('value')">按性价比</button>
-        <label class="dv-check"><input v-model="onlyUnowned" type="checkbox" @change="page = 1" /> 只看未购置</label>
+        <label class="dv-check"><input v-model="onlyUnowned" type="checkbox" class="ui-check" @change="page = 1" /> 只看未购置</label>
         <span class="dim">共 {{ decorList.length }} 件 · 第 {{ currentPage }}/{{ decorPages }} 页</span>
       </div>
 

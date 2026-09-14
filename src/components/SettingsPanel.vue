@@ -248,7 +248,7 @@ function openSavePanel() {
           <section class="set-group">
             <h4>玩家名字</h4>
             <div class="settings-row">
-              <input v-model="nameDraft" maxlength="16" style="flex: 1" @keyup.enter="saveName" />
+              <input v-model="nameDraft" type="text" maxlength="16" style="flex: 1" @keyup.enter="saveName" />
               <button class="btn btn-sm" @click="saveName">保存</button>
               <span v-if="nameMsg" class="dim" style="font-size: 12px">{{ nameMsg }}</span>
             </div>

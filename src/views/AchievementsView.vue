@@ -130,7 +130,7 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
             :class="{ 'btn-primary': category === c }"
             @click="pickCategory(c)"
           >{{ c }}（{{ c === '全部' ? ALL_ACHIEVEMENTS.length : catCount[c] ?? 0 }}）</button>
-          <label class="av-check"><input v-model="onlyUndone" type="checkbox" /> 只看未完成</label>
+          <label class="av-check"><input v-model="onlyUndone" type="checkbox" class="ui-check" /> 只看未完成</label>
           <input v-model="keyword" class="av-search" type="text" placeholder="搜索成就…" />
           <span class="dim">共 {{ rows.length }} 项</span>
         </div>

@@ -200,7 +200,7 @@ const rerollTable = computed(() =>
       <div class="card gv-card">
         <div class="gv-filter">
           <input v-model="keyword" class="gv-search" type="text" placeholder="搜索套装名…" />
-          <label class="gv-check"><input v-model="onlyOwned" type="checkbox" /> 只看已拥有</label>
+          <label class="gv-check"><input v-model="onlyOwned" type="checkbox" class="ui-check" /> 只看已拥有</label>
           <span class="dim">共 {{ setRows.length }} 套</span>
         </div>
 

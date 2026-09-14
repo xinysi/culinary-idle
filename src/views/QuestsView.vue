@@ -192,7 +192,7 @@ const challengeDone = computed(() => player.challenge.done)
 
       <div class="card qv-card">
         <div class="qv-filter">
-          <label class="qv-check"><input v-model="mainOnlyUndone" type="checkbox" /> 只看未完成</label>
+          <label class="qv-check"><input v-model="mainOnlyUndone" type="checkbox" class="ui-check" /> 只看未完成</label>
           <span class="dim">共 {{ mainRows.length }} 条</span>
           <span v-if="mainRows.length > mainLimit" class="dim">（显示前 {{ mainLimit }} 条）</span>
         </div>

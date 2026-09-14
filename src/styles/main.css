@@ -2474,27 +2474,29 @@ h2 {
   font-size: 14px;
 }
 
-/* 设置面板控件统一样式（2026-09-14 用户报「有些框的样式没有统一」：
+/* 设置面板控件统一样式（2026-09-14 用户报「有些框的样式没有统一」→「其它页的控件也没有统一」，两轮）：
    原先复选框是原生的、滑块是裸 range、数字框是浏览器默认白框、下拉是半定制的，四种观感混在一起。
-   现统一为同一套「玻璃框」：同一底色/描边/圆角/内距/高度/焦点环，复选框与滑块同样走主色。） */
-.settings-body input[type="text"],
-.settings-body input[type="number"],
+   现统一为同一套「玻璃框」：同一底色/描边/圆角/内距/高度/焦点环，复选框与滑块同样走主色。
+   ⚠️ 选择器必须用 `input:not([type="checkbox"]):not([type="range"])`，**不能写 `input[type="text"]`**：
+   属性选择器匹配不到「**没有 type 属性**」的 input（「👤 角色」页的改名输入框就没有 type），
+   漏掉它会让那一页的框退回浏览器默认样式（19px 高、白底、灰色直角边）——第二轮就是漏在这里。 */
+.settings-body input:not([type="checkbox"]):not([type="range"]),
 .settings-body select {
   background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 0 10px;
   font-size: 13px;
   color: var(--text);
-  min-height: 30px;
+  height: 30px;
+  box-sizing: border-box;
   min-width: 0;
 }
 .settings-body select {
   flex: 1;
   cursor: pointer;
 }
-.settings-body input[type="text"]:focus-visible,
-.settings-body input[type="number"]:focus-visible,
+.settings-body input:not([type="checkbox"]):not([type="range"]):focus-visible,
 .settings-body select:focus-visible {
   outline: none;
   border-color: var(--primary);
@@ -2532,12 +2534,56 @@ h2 {
 .settings-body input[type="range"]:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
-/* 复选框：统一走主色（原来各浏览器默认蓝/黑） */
-.settings-body input[type="checkbox"] {
+/* 复选框：与其它控件同一套「玻璃框」（原来用 accent-color 保留系统原生方块，
+   跟旁边的圆角玻璃框放一起仍是两种材质；现自绘：同底/同描边/圆角 5px，选中填主色 + 白勾）
+   —— 三处选中器共用同一套规则：① 设置面板（`.switch-row` / `.settings-body`）
+   ② 列表页筛选行（`.ui-check`，成就/装潢/装备/任务四页，原先也是原生 13px 方块）
+   ③ 以后新写的复选框直接加 `class="ui-check"` 即可。 */
+.ui-check,
+.settings-body input[type="checkbox"],
+.switch-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  accent-color: var(--primary);
+  flex: 0 0 auto;
+  margin: 0;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-soft);
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.ui-check:hover,
+.settings-body input[type="checkbox"]:hover,
+.switch-row input[type="checkbox"]:hover {
+  border-color: var(--primary);
+}
+.ui-check:checked,
+.settings-body input[type="checkbox"]:checked,
+.switch-row input[type="checkbox"]:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.ui-check:checked::after,
+.settings-body input[type="checkbox"]:checked::after,
+.switch-row input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ui-check:focus-visible,
+.settings-body input[type="checkbox"]:focus-visible,
+.switch-row input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-soft);
 }
 
 /* ── 称号 / 任务 / 成就 / 图鉴（§6 / §7）─────────────── */
