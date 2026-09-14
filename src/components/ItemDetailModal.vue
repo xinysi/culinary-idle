@@ -31,9 +31,15 @@ function jumpSource(s) {
 const usable = computed(() => player.usableOf?.(innerId.value))
 const ownedCount = computed(() => player.inventory[innerId.value] ?? 0)
 const buffLeft = computed(() => {
-  const b = innerId.value?.startsWith('xpTonic') ? player.buffs?.xpMult : innerId.value?.startsWith('yieldTonic') ? player.buffs?.yieldMult : null
-  if (!b || Date.now() >= b.expiresAt) return null
-  return { mult: b.mult, left: Math.max(1, Math.round((b.expiresAt - Date.now()) / 60000)) }
+  // 用 usableOf 的 kind 反查当前生效的乘区（原先按 id 前缀 xpTonic/yieldTonic 判断，
+  // 蜂蜜等新物品不会显示倒计时；双效取剩余时间较晚的那条）。
+  const kind = usable.value?.kind
+  if (!kind || kind === 'refreshSpoil') return null
+  const keys = kind === 'buffBoth' ? ['xpMult', 'yieldMult'] : kind === 'buffXp' ? ['xpMult'] : ['yieldMult']
+  const list = keys.map((k) => player.buffs?.[k]).filter((b) => b && Date.now() < b.expiresAt)
+  if (!list.length) return null
+  const latest = list.reduce((a, b) => (b.expiresAt > a.expiresAt ? b : a))
+  return { mult: latest.mult, left: Math.max(1, Math.round((latest.expiresAt - Date.now()) / 60000)) }
 })
 function useNow() {
   const r = player.useConsumable(innerId.value)

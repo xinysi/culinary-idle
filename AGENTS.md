@@ -252,6 +252,35 @@
   ⚠️ **验收方式是逐页签 dump 每个控件的 computed**（`height / borderRadius / borderColor / backgroundColor / appearance`）**要求同款**，不能目测——19px 那个框在截图里只是「有点小」。
 - **复选框统一走公共类 `.ui-check`**（2026-09-14 立，与上一条同轮）：规则在 `main.css`，选择器 `.ui-check, .settings-body input[type="checkbox"], .switch-row input[type="checkbox"]`。列表页筛选框（成就/装潢/装备/任务）原先也是**原生 13px 方块**紧挨 24px 玻璃输入框，现已统一。**新写复选框加 `class="ui-check"` 即自动符合规范**。
 
+
+### 🏭 「挂机产线」九件套（v2.2.0，2026-09-14 从 5 个扩到 9 个）
+
+原有 5 个：🚢采集队（占槽/零成本/领取自动续轮）· 🌍产地（只做乘区）· 🐄牧场（吃饲料/离线补算）·
+🍶地窖（投物换金币/固定倍率）· 🤖自动化（便利项）。本轮新增 4 个 + 1 个并入：
+
+| 系统 | 做什么 | 吃什么 → 产什么 | 离线语义 |
+| --- | --- | --- | --- |
+| 🐫 商队线 | 投本金做**择时贸易**（按**归队时刻**的行情结算，保底 75% 回款） | 背包里的食材/料理/饮品/调料 → 金币 + 产地特产 | 绝对时间戳（同采集队/地窖），不叠加 |
+| 🍄 菌房 | 吃肥料产菌菇（给堆肥开第二条下游） | 堆肥 6h→蘑菇×2 / 沃肥 4h→蘑菇×3+松茸×1 | `lastAt` + `IDLE_CAP_HOURS`，与牧场同口径 |
+| 🌿 灵田 | 稀有种子 → 长周期 → **定向**稀有灵植 | 灵芝/松露/龙根/灵果种子 → 对应材料（24~72h） | 绝对时间戳 + 到点自动续种 |
+| 🐝 温室蜂场 | 温室种作物（-25% 时间）+ 伴生蜂蜜；蜂箱用花类产蜜 | 种子 → 作物 + 10% 蜂蜜；花 → 蜂蜜（2~4 品） | 温室单次只收 1 轮；蜂箱同牧场口径 |
+| 🐟 网箱（**并入牧场页**） | 吃海苔按周期产鱼 | 海苔 → 鲫鱼/鲑鱼/龙虾/鲍鱼 | 同牧场 |
+
+**必须遵守的六条（都写进了 C25 守卫）**：
+1. **上限单一来源**：`caps.js` 的 `FACILITY_MAX`（商队 3 / 菌房 3 / 灵田 3 / 温室 6 / 蜂箱 3 / 网箱 4）与 `IDLE_CAP_HOURS`（12h）。**牧场与分店原先各写一份 12h 已收敛**——新增同类系统一律引这两个常量，别再抄字面量。
+2. **温室「单次只收 1 轮」**：作物周期极短（小麦 67.5 秒），若按「离线 12h 能补几轮」算，**一次上线会收 640 轮**（实测踩到）。口径与农耕一致——成熟即收、不累积，超期不补算。
+3. **商队要真的扣货、结算有保底**：`caravanStart` 扣货并记 `cargoValue`；`caravanClaim` 按 `priceMultiplier(id, 归队时刻的期次)` 定价，`gold ≥ 本金 × 0.75`。**矿物/材料类不能当货**（锻造原料不该被卖掉）。
+4. **灵田定向**：种什么得什么；收取后若背包还有同种种子则**自动续种**（与采集队「领取后续下一轮」同思路），没有就清空。
+5. **蜂蜜只能来自温室蜂场**：`type:consumable` + `category:buff` ⇒ 不进采集/配方/抽卡/交易所/自动出售；`itemSources` 里两条来源都写「温室蜂场」。
+6. **到点型要接进「自动领取」**：`_autoClaim()` 现在扫 地窖 / 采集队 / **商队** / **灵田**；牧场家族（牧场/网箱/菌房/温室/蜂箱）是 tick 自动结算，不需要接。
+
+**蜂蜜（8 品级）的两条设计约束**：
+- **双效**：`use` 里同时写 `buffXp` 与 `buffYield`。⚠️ `useConsumable` 原先写的是 `if (buffXp) … else if (buffYield)`，**双键物品会静默丢掉产量那条**——已改成循环处理两条键（蜂蜜上线时发现的）。
+- 品级由**产出侧等级**决定：温室伴生用「作物 `reqLevel`」（可到 8 品 百花臻蜜），蜂箱用「花的 `reqLevel`」（2~4 品）。**两条路径合起来才覆盖 8 个品级**。
+- 物品 schema 不许加新键（`item_triple_audit` 的 `STRUCT_KEYS`/`EFFECT_RULES` 白名单），图片走 `type:consumable → public/images/items/tool/{中文名}.png`（用户提供的 8 张 64×64 RGBA 原样入库）。
+
+**新增同类系统的登记清单**（缺一即 CI FAIL）：`ui.js VIEW_KEYS` → `App.vue`（async 组件 + 分支）→ `Sidebar.vue FEATURE_GROUPS` → `e2e-dark`/`e2e-text` 两个 `VIEWS` → 页面里必须有 `<RelatedPages>` → `guide.js` 的 `GUIDE_OVERVIEW`（条目名与瓦片名一致才能过派生检查）+ `GUIDE_STAGES` → `achievements.js` + `achievementProgress.js`（`NEEDS` 与 `cur` 链，id 前缀别撞现有分支）→ `StatsView` 行 → `story.js` 需求（须有对应 `storyCur` 的 `case`）→ `chronicle.js CHRONICLE_KINDS` → `itemSources.js` + `sourceJump.js`（**新来源串必须有跳转规则**）→ `system_test` 新组 → `action_sweep` 的 `ARGS`（带参动作）→ README/AGENTS/设计文档。
+
 ## 视觉 UI 规范（毛玻璃 / 背景）
 
 - **布局骨架：三栏 = 三块独立圆角面板（2026-09-11 重构，取代此前"逐段羽化"的一整套做法）**

@@ -6,7 +6,7 @@
 export const BRANCH_UNLOCK_LEVEL = 5
 
 /** 离线最多补算时长（小时） */
-export const BRANCH_OFFLINE_CAP_HOURS = 12
+// 单次离线补算上限已收敛到 caps.js 的 IDLE_CAP_HOURS（2026-09-14）
 
 /** 分店：cost 开店费、goldPerHour 基础时收、managerCost 店长费 */
 export const BRANCHES = [

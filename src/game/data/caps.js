@@ -39,6 +39,29 @@ export const DERIVED_MAX = {
 }
 
 /**
+ * 挂机产线的**单次离线补算上限**（小时）——牧场 / 菌房 / 网箱（并入牧场）/ 餐厅分店同源。
+ * 2026-09-14 收敛：此前牧场与分店各写一份 12h 字面量（`RANCH_OFFLINE_CAP_HOURS` /
+ * `BRANCH_OFFLINE_CAP_HOURS`），新增同族系统时必然又要抄一遍，故收进这里做单一来源。
+ */
+export const IDLE_CAP_HOURS = 12
+
+/**
+ * 挂机产线的**设施上限**（槽位 / 格数 / 箱数）——新系统一律登记在此，读档夹取与 UI 渲染都读它。
+ * 与容量类（CAP_MAX）不同，这些是「建了几个位置」而不是「能装多少件」，故单独一表。
+ */
+export const FACILITY_MAX = {
+  caravanSlots: 3,     // 商队线：1 → 3
+  mushroomBeds: 3,     // 菌房：1 → 3
+  spiritPlots: 3,      // 灵田：1 → 3
+  greenhouseBeds: 6,   // 温室：2 → 6
+  hives: 3,            // 蜂箱（原蜂场，并入温室页）：1 → 3
+  ponds: 4,            // 网箱（并入牧场）：2 → 4
+}
+
+/** 商队线：单个槽位的本金价值上限（按装载物品的 value 合计） */
+export const CARAVAN_CARGO_CAP = 30000
+
+/**
  * 读档用安全夹取：非有限数（缺字段 / 字符串 / NaN）回退默认值，负数归 0，超上限夹到上限。
  * ⚠️ 别再用裸 `Math.min(saved.x ?? d, MAX)` —— 存档里若是字符串会得到 NaN，
  * 之后 `used >= NaN` 恒为 false → **上限完全失效**（审计发现）。

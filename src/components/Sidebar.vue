@@ -79,6 +79,11 @@ const FEATURE_GROUPS = [
       { icon: '🐄', name: '牧场', view: 'ranch' },
       { icon: '🍶', name: '地窖', view: 'cellar' },
       { icon: '🤖', name: '自动化', view: 'automation' },
+      // 2026-09-14 新增四套（商队线/菌房/灵田/温室蜂场）；网箱按用户要求并入牧场，不另立瓦片
+      { icon: '🐫', name: '商队线', view: 'caravan' },
+      { icon: '🍄', name: '菌房', view: 'mushroom' },
+      { icon: '🌿', name: '灵田', view: 'spiritField' },
+      { icon: '🐝', name: '温室蜂场', view: 'greenhouse' },
     ],
   },
   {

@@ -40,6 +40,11 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['吉祥物'], target: { view: 'mascot' } },
   { kw: ['图鉴兑换所', '图鉴兑换'], target: { view: 'codexExchange' } },
   { kw: ['地窖', '陈酿'], target: { view: 'cellar' } },
+  // ── 2026-09-14 挂机产线四套（来源串若无法命中会直接 FAIL 图鉴三查）──
+  { kw: ['温室蜂场', '蜂箱'], target: { view: 'greenhouse' } },
+  { kw: ['菌房'], target: { view: 'mushroom' } },
+  { kw: ['灵田'], target: { view: 'spiritField' } },
+  { kw: ['商队'], target: { view: 'caravan' } },
   // ── 2026-09-11 补：随机奇遇（挂机动作 0.2% 触发的小事件奖励）──
   { kw: ['随机奇遇', '奇遇'], target: { view: 'encounters' } },
 ]

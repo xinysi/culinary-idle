@@ -17,6 +17,11 @@ export const CHRONICLE_KINDS = {
   branch: { label: '分店', icon: '🏬' },
   spirit: { label: '食灵', icon: '✨' },
   seasonal: { label: '赛季', icon: '🎪' },
+  // 挂机产线四套（2026-09-14）
+  caravan: { label: '商队', icon: '🐫' },
+  mushroom: { label: '菌房', icon: '🍄' },
+  spirit: { label: '灵田', icon: '🌿' },
+  bee: { label: '蜂场', icon: '🐝' },
 }
 
 export const CHRONICLE_KIND_KEYS = Object.keys(CHRONICLE_KINDS)

@@ -3,7 +3,8 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { BRANCHES, BRANCH_UNLOCK_LEVEL, BRANCH_OFFLINE_CAP_HOURS, MANAGER_BONUS } from '../game/data/branches.js'
+import { BRANCHES, BRANCH_UNLOCK_LEVEL, MANAGER_BONUS } from '../game/data/branches.js'
+import { IDLE_CAP_HOURS } from '../game/data/caps.js'
 import { BRANCH_THEMES, getBranchTheme, THEME_BONUS_PER_LEVEL } from '../game/data/branchThemes.js'
 import { SCHOOLS } from '../game/data/schools.js'
 
@@ -92,7 +93,7 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
         <p class="dim">
           在主店之外开设分店：每家分店<b>每小时自动入账</b>（随餐厅等级 ×(1+10%/级)），雇一位店长再 <b>+{{ Math.round(MANAGER_BONUS * 100) }}%</b>；
           还能给分店定个<b>主题</b>，与该主题对应学派联动——学派每级 <b>+{{ THEME_BONUS_PER_LEVEL }}%</b> 时收；
-          离线照常结算（单次最多补 {{ BRANCH_OFFLINE_CAP_HOURS }} 小时）。
+          离线照常结算（单次最多补 {{ IDLE_CAP_HOURS }} 小时）。
         </p>
       </div>
     </header>
@@ -123,7 +124,7 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
         <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
           各家的开店回本都在 <b>62~68 小时</b>（约 3 天）、店长回本都在 <b>100~109 小时</b>——差别不大，
           所以「先开哪家」主要看当前金币够不够、而不是哪家更划算（越靠后的店规模越大、时收越高）。实际时收还会被<b>餐厅等级</b>（每级 +10%）与
-          <b>主题</b>加成放大；离线单次最多补 {{ BRANCH_OFFLINE_CAP_HOURS }} 小时。
+          <b>主题</b>加成放大；离线单次最多补 {{ IDLE_CAP_HOURS }} 小时。
         </p>
       </FoldCard>
     <div v-if="!unlocked" class="card status-line">
