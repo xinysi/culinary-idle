@@ -23,6 +23,13 @@ const ARGS = {
   ranchFeed: [0, 'chicken'], ranchCollect: [0], ranchBuyAnimal: [0, 'chicken'],
   trialStart: ['t_speed'], onCombatEndTrial: [{ result: 'win', turns: 5, hpLeft: 90, hpMax: 100 }],
   startTrial: ['t_speed'], expeditionStart: ['fishery', 0], expeditionClaim: ['fishery', 0],
+  // 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场（含蜂箱）/ 网箱
+  caravanStart: [0, 'plain', { apple: 1 }], caravanClaim: [0], caravanRecall: [0], caravanExpand: [], caravanAutoLoad: [],
+  mushroomBuild: [0, 'compost'], mushroomRemove: [0], mushroomExpand: [],
+  spiritPlant: [0, 'lingzhiSeed'], spiritHarvest: [0], spiritTakeBack: [0], spiritExpand: [],
+  greenhousePlant: [0, 'wheatSeed'], greenhouseClear: [0], greenhouseExpand: [],
+  hiveSet: [0, 'rose'], hiveClear: [0], hiveExpand: [],
+  pondBuy: [0, 'crucian'], pondRemove: [0], pondExpand: [],
   exchangeSell: ['apple', 1], exchangeBuy: ['apple', 1], exchangeTradedToday: ['apple'],
   worshipPatron: ['p_stove'], patronLevel: ['p_stove'], patronSwitch: ['p_wine'],
   claimMail: [1], deleteMail: [1], markMailRead: [1],

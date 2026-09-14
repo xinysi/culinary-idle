@@ -10,6 +10,7 @@ import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
+import { EXPEDITIONS } from '../game/data/expeditions.js'
 import { EXCHANGE_DAILY_LIMIT } from '../game/data/exchange.js'
 import { activeMarketEvents } from '../game/data/marketEvents.js'
 import { getItem } from '../game/data/items.js'
@@ -43,7 +44,10 @@ const cellar = computed(() => {
   return { total: slots.length, used: used.length, ready, soonest: Number.isFinite(soonest) ? soonest : null }
 })
 const expedition = computed(() => {
-  if (!player.expeditionUnlocked()) return null
+  // 任一线路解锁即显示。⚠️ 原先写的是 `player.expeditionUnlocked()`（**没传 lineId**），
+  // 而 expeditionUnlocked(lineId) 在无参时 getExpedition(undefined) → null → 恒 false，
+  // 于是「采集队归来/采集队在外」两张卡**从来没显示过**（2026-09-14 修复）。
+  if (!EXPEDITIONS.some((e) => player.expeditionUnlocked(e.id))) return null
   const now = Date.now()
   let used = 0
   let ready = 0
@@ -57,6 +61,26 @@ const expedition = computed(() => {
     }
   }
   return { used, ready, soonest: Number.isFinite(soonest) ? soonest : null }
+})
+
+/** 商队 / 灵田：到点类（与采集队同一套判定，2026-09-14） */
+const caravan = computed(() => {
+  if (!player.caravanUnlocked()) return null
+  const now = Date.now()
+  const slots = player.caravanState().slots ?? []
+  const used = slots.filter(Boolean)
+  const ready = used.filter((s) => now >= s.readyAt).length
+  const soonest = used.filter((s) => now < s.readyAt).reduce((a, s) => Math.min(a, s.readyAt - now), Infinity)
+  return { used: used.length, ready, soonest: Number.isFinite(soonest) ? soonest : null }
+})
+const spiritField = computed(() => {
+  if (!player.spiritUnlocked()) return null
+  const now = Date.now()
+  const plots = player.spiritState().plots ?? []
+  const used = plots.filter(Boolean)
+  const ready = used.filter((s) => now >= s.readyAt).length
+  const soonest = used.filter((s) => now < s.readyAt).reduce((a, s) => Math.min(a, s.readyAt - now), Infinity)
+  return { used: used.length, ready, soonest: Number.isFinite(soonest) ? soonest : null }
 })
 
 const rows = computed(() => {
@@ -101,6 +125,10 @@ const rows = computed(() => {
   // ── C. 到货与到期（有计时的）──
   if (cellar.value?.ready) push({ tone: 'ready', icon: '🍶', name: '地窖出窖', desc: `${cellar.value.ready} 个槽位已到年份`, cta: '去出窖', go: go('cellar') })
   else if (cellar.value?.used && cellar.value.soonest) push({ tone: 'wait', icon: '🍶', name: '地窖陈酿中', desc: `最近一槽还要 ${minutesText(cellar.value.soonest)}`, cta: '去看看', go: go('cellar') })
+  if (caravan.value?.ready) push({ tone: 'ready', icon: '🐫', name: '商队归队', desc: `${caravan.value.ready} 支商队已回港，等结算`, cta: '去结算', go: go('caravan') })
+  else if (caravan.value?.used && caravan.value.soonest) push({ tone: 'wait', icon: '🐫', name: '商队在途', desc: `最近一支还要 ${minutesText(caravan.value.soonest)}`, cta: '去看看', go: go('caravan') })
+  if (spiritField.value?.ready) push({ tone: 'ready', icon: '🌿', name: '灵植长成', desc: `${spiritField.value.ready} 格可以收了`, cta: '去收取', go: go('spiritField') })
+  else if (spiritField.value?.used && spiritField.value.soonest) push({ tone: 'wait', icon: '🌿', name: '灵田在长', desc: `最近一格还要 ${minutesText(spiritField.value.soonest)}`, cta: '去看看', go: go('spiritField') })
   if (expedition.value?.ready) push({ tone: 'ready', icon: '🚢', name: '采集队归来', desc: `${expedition.value.ready} 个槽位已到点`, cta: '去收取', go: go('expedition') })
   else if (expedition.value?.used && expedition.value.soonest) push({ tone: 'wait', icon: '🚢', name: '采集队在外', desc: `最近一队还要 ${minutesText(expedition.value.soonest)}`, cta: '去看看', go: go('expedition') })
   const critic = player.criticState().order

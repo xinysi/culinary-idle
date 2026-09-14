@@ -28,6 +28,10 @@ import { QUESTS } from './quests.js'
 import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL } from './gameShopPools.js'
 import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
+import { HONEY_TIERS } from './honey.js'
+import { MUSHROOM_MEDIA } from './mushroomHouse.js'
+import { SPIRIT_PLANTS } from './spiritField.js'
+import { POND_FISH } from './ranch.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { SUPPLIERS, SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { REGIONS } from './regions.js'
@@ -154,6 +158,25 @@ for (const ex of EXPEDITIONS) {
 // 牧场养殖（2026-09-10）：驯养动物的周期产出
 for (const an of RANCH_ANIMALS) {
   for (const id of Object.keys(an.products ?? {})) add(id, `牧场养殖·${an.name}（驯养产出）`)
+}
+
+// ── 挂机产线四套（2026-09-14）──
+// 蜂蜜：**唯一来源是温室蜂场**（作物伴生 10% / 蜂箱产蜜），故必须显式登记来源
+for (const h of HONEY_TIERS) {
+  add(h.id, `温室蜂场·作物伴生（${h.name}：作物 Lv${h.minLevel}+ 时 10% 概率）`)
+  add(h.id, '温室蜂场·蜂箱（花类蜜源产蜜）')
+}
+// 菌房：菇床周期产出
+for (const m of MUSHROOM_MEDIA) {
+  for (const id of Object.keys(m.products ?? {})) add(id, `菌房·${m.name}（菇床产出）`)
+}
+// 灵田：灵植定向收获
+for (const sp of SPIRIT_PLANTS) {
+  for (const id of Object.keys(sp.products ?? {})) add(id, `灵田·${sp.name}（灵植收获）`)
+}
+// 网箱（并入牧场页）：养鱼周期产出
+for (const f of POND_FISH) {
+  for (const id of Object.keys(f.products ?? {})) add(id, `牧场·网箱（${f.name}养鱼产出）`)
 }
 
 // 交易所（2026-09-10）：可买入的货品池（按类别与价值区间动态轮换）

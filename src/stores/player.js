@@ -5,7 +5,7 @@
 // 腐坏计时（§5.4）、成就/图鉴/称号（§6）、主线任务进度（§7.2）、统计
 
 import { defineStore } from 'pinia'
-import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, safeCap, safeList } from '../game/data/caps.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList } from '../game/data/caps.js'
 import { shanhaiNodeState, shanhaiEffectSum, shanhaiNode, shanhaiPathProgress, shanhaiCapGrant } from '../game/data/shanhaiProgress.js'
 import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
@@ -71,8 +71,15 @@ import { carryFromLevel, CARRY_MAX, apprenticeOfflineBonus, apprenticeRank, APPR
 import { PATRONS, getPatron, patronCost, patronEffectAt, PATRON_MAX_LEVEL, PATRON_SWITCH_GOLD, PATRON_SWITCH_COOLDOWN_MS } from '../game/data/patrons.js'
 import { GEAR_CONTEST_UNLOCK_LEVEL, GEAR_SCORE_WEIGHTS, rankFromScore, contestWeek, themeOfWeek } from '../game/data/gearContest.js'
 import { MICHELIN_UNLOCK_LEVEL, MICHELIN_FACTORS, starFromScore, nextStar } from '../game/data/michelin.js'
-import { RANCH_UNLOCK_SKILL, RANCH_UNLOCK_LEVEL, RANCH_BASE_PENS, RANCH_MAX_PENS, RANCH_EXPAND_COSTS, RANCH_OFFLINE_CAP_HOURS, RANCH_ANIMALS, getAnimal, nextRanchExpandCost } from '../game/data/ranch.js'
-import { BRANCHES, getBranch, branchHourly, BRANCH_UNLOCK_LEVEL, BRANCH_OFFLINE_CAP_HOURS, MANAGER_BONUS } from '../game/data/branches.js'
+import { RANCH_UNLOCK_SKILL, RANCH_UNLOCK_LEVEL, RANCH_BASE_PENS, RANCH_MAX_PENS, RANCH_EXPAND_COSTS, RANCH_ANIMALS, POND_FISH, POND_BASE, POND_MAX, POND_EXPAND_COSTS, getAnimal, getPondFish, nextRanchExpandCost, nextPondExpandCost } from '../game/data/ranch.js'
+// 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场
+import { CARAVAN_UNLOCK_SKILL, CARAVAN_UNLOCK_LEVEL, CARAVAN_BASE_SLOTS, CARAVAN_MAX_SLOTS, CARAVAN_EXPAND_COSTS, CARAVAN_CARGO_LIMIT, CARAVAN_LOSS_FLOOR, CARAVAN_CARGO_TYPES, CARAVAN_EXCLUDE_CATEGORIES, caravanRoute, allCaravanRoutes, nextCaravanExpandCost } from '../game/data/caravan.js'
+import { MUSHROOM_UNLOCK_SKILL, MUSHROOM_UNLOCK_LEVEL, MUSHROOM_BASE_BEDS, MUSHROOM_MAX_BEDS, MUSHROOM_EXPAND_COSTS, MUSHROOM_MEDIA, getMushroomMedia, nextMushroomExpandCost } from '../game/data/mushroomHouse.js'
+import { SPIRIT_UNLOCK_SKILL, SPIRIT_UNLOCK_LEVEL, SPIRIT_BASE_PLOTS, SPIRIT_MAX_PLOTS, SPIRIT_EXPAND_COSTS, SPIRIT_PLANTS, getSpiritPlant, getSpiritPlantBySeed, spiritSeedAvailable, nextSpiritExpandCost } from '../game/data/spiritField.js'
+import { GREENHOUSE_UNLOCK_SKILL, GREENHOUSE_UNLOCK_LEVEL, GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GREENHOUSE_HONEY_CHANCE, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
+import { honeyItemForLevel } from '../game/data/honey.js'
+import { priceMultiplier } from '../game/data/exchange.js'
+import { BRANCHES, getBranch, branchHourly, BRANCH_UNLOCK_LEVEL, MANAGER_BONUS } from '../game/data/branches.js'
 import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exchangeCycleIndex, pickGoods, sellPriceOf, buyPriceOf } from '../game/data/exchange.js'
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
 import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
@@ -246,7 +253,12 @@ const defaultState = () => ({
     regulars: {}, // 常客名录：{ [id]: { serves, lastDay, giftClaimed } }（2026-09-10）
     spiritStories: {}, // 食灵物语：{ [spiritId]: { [stage]: true } }（2026-09-10）
     automation: { unlocked: {}, sellThreshold: SELL_THRESHOLD_DEFAULT, standby: {} }, // 自动化中心（2026-09-10）
-    ranch: { pens: [null, null], expands: 0 }, // 牧场：每栏 { animalId, lastAt } | null（2026-09-10）
+    ranch: { pens: [null, null], expands: 0, ponds: [null, null], pondExpands: 0 }, // 牧场（含并入的网箱）：每栏 { animalId, lastAt } | null（2026-09-10 / 网箱 2026-09-14）
+    // ── 挂机产线（2026-09-14 新增四套；全部懒初始化 + 三处存档声明齐备）──
+    caravan: { slots: [], expands: 0 },     // 商队线：每槽 { regionId, cargo, cargoValue, startedAt, readyAt } | null
+    mushroom: { beds: [], expands: 0 },     // 菌房：每床 { mediaId, lastAt } | null
+    spiritField: { plots: [], expands: 0 }, // 灵田：每格 { seedId, plantedAt, readyAt } | null
+    greenhouse: { beds: [], expands: 0, hives: [], hiveExpands: 0 }, // 温室（作物 + 10% 伴生蜂蜜）+ 蜂箱（原蜂场）
     branches: {}, // 餐厅分店：{ [id]: { lastAt, manager } }（2026-09-10）
     michelin: { score: 0, stars: 0, best: 0, lastReviewDay: null }, // 米其林评级（2026-09-10）
     flavors: {}, // 风味搭配册：{ [pairId]: true }（2026-09-10）
@@ -464,8 +476,14 @@ export const usePlayerStore = defineStore('player', {
     usableOf: (s) => (itemId) => {
       const it = getItem(itemId)
       if (!it?.use) return null
-      if (it.use.buffXp) return { kind: 'buffXp', label: `经验 ×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）` }
-      if (it.use.buffYield) return { kind: 'buffYield', label: `产量 ×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）` }
+      // 双效（蜂蜜）与单效（增益剂）统一：分别列出实际会生效的每条乘区
+      if (it.use.buffXp || it.use.buffYield) {
+        const parts = []
+        if (it.use.buffXp) parts.push(`经验 ×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`)
+        if (it.use.buffYield) parts.push(`产量 ×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`)
+        const both = it.use.buffXp && it.use.buffYield
+        return { kind: both ? 'buffBoth' : it.use.buffXp ? 'buffXp' : 'buffYield', label: parts.join(' + ') }
+      }
       if (it.use.refreshSpoilMs) return { kind: 'refreshSpoil', label: `刷新背包食材腐坏计时 + 冷库续时 ${Math.round(it.use.refreshSpoilMs / 3600000)} 小时` }
       return null
     },
@@ -609,6 +627,16 @@ export const usePlayerStore = defineStore('player', {
         spiritStories: saved.spiritStories ?? {}, // 食灵物语
         automation: saved.automation ?? { unlocked: {}, sellThreshold: SELL_THRESHOLD_DEFAULT, standby: {} }, // 自动化中心
         ranch: saved.ranch ?? { pens: [null, null], expands: 0 }, // 牧场
+        // 挂机产线（2026-09-14）：一律用 safeList 夹到设施上限，避免旧档/损坏档撑爆（参照 C23 的纪律）
+        caravan: { slots: safeList(saved.caravan?.slots, FACILITY_MAX.caravanSlots), expands: safeCap(saved.caravan?.expands, 0, CARAVAN_EXPAND_COSTS.length) },
+        mushroom: { beds: safeList(saved.mushroom?.beds, FACILITY_MAX.mushroomBeds), expands: safeCap(saved.mushroom?.expands, 0, MUSHROOM_EXPAND_COSTS.length) },
+        spiritField: { plots: safeList(saved.spiritField?.plots, FACILITY_MAX.spiritPlots), expands: safeCap(saved.spiritField?.expands, 0, SPIRIT_EXPAND_COSTS.length) },
+        greenhouse: {
+          beds: safeList(saved.greenhouse?.beds, FACILITY_MAX.greenhouseBeds),
+          expands: safeCap(saved.greenhouse?.expands, 0, GREENHOUSE_EXPAND_COSTS.length),
+          hives: safeList(saved.greenhouse?.hives, FACILITY_MAX.hives),
+          hiveExpands: safeCap(saved.greenhouse?.hiveExpands, 0, HIVE_EXPAND_COSTS.length),
+        },
         branches: saved.branches ?? {}, // 餐厅分店
         michelin: saved.michelin ?? { score: 0, stars: 0, best: 0, lastReviewDay: null }, // 米其林评级
         flavors: saved.flavors ?? {}, // 风味搭配册
@@ -738,6 +766,10 @@ export const usePlayerStore = defineStore('player', {
         spiritStories: this.spiritStories,
         automation: this.automation,
         ranch: this.ranch,
+        caravan: this.caravan,
+        mushroom: this.mushroom,
+        spiritField: this.spiritField,
+        greenhouse: this.greenhouse,
         branches: this.branches,
         michelin: this.michelin,
         flavors: this.flavors,
@@ -1052,15 +1084,24 @@ export const usePlayerStore = defineStore('player', {
       const now = Date.now()
       let msg = ''
       if (it.use.buffXp || it.use.buffYield) {
-        const cfg = it.use.buffXp ?? it.use.buffYield
-        const key = it.use.buffXp ? 'xpMult' : 'yieldMult'
-        const cur = this.buffs?.[key]
-        const keepMult = cur && now < cur.expiresAt ? Math.max(cur.mult, cfg.mult) : cfg.mult
-        const keepUntil = Math.max(cur && now < cur.expiresAt ? cur.expiresAt : 0, now + cfg.minutes * 60_000)
-        if (!this.buffs) this.buffs = { xpMult: null, yieldMult: null }
-        this.buffs[key] = { mult: keepMult, expiresAt: keepUntil }
+        // 支持**双效**（蜂蜜：一次同时给经验 + 产量两条乘区）。原先写的是 if/else 只取一条——
+        // 物品若同时带 buffXp 与 buffYield，产量那条会被静默丢掉（2026-09-14 蜂蜜上线时修）。
+        const parts = []
+        let keepUntil = 0
+        for (const [useKey, buffKey, label] of [['buffXp', 'xpMult', '经验'], ['buffYield', 'yieldMult', '产量']]) {
+          const cfg = it.use[useKey]
+          if (!cfg) continue
+          const cur = this.buffs?.[buffKey]
+          const active = cur && now < cur.expiresAt
+          const keepMult = active ? Math.max(cur.mult, cfg.mult) : cfg.mult
+          const until = Math.max(active ? cur.expiresAt : 0, now + cfg.minutes * 60_000)
+          if (!this.buffs) this.buffs = { xpMult: null, yieldMult: null }
+          this.buffs[buffKey] = { mult: keepMult, expiresAt: until }
+          keepUntil = Math.max(keepUntil, until)
+          parts.push(`${label} ×${keepMult}`)
+        }
         const left = Math.max(1, Math.round((keepUntil - now) / 60_000))
-        msg = `${it.use.buffXp ? '经验' : '产量'} ×${keepMult} 生效中（剩 ${left} 分钟）`
+        msg = `${parts.join(' / ')} 生效中（剩 ${left} 分钟）`
       } else if (it.use.refreshSpoilMs) {
         let n = 0
         for (const id of Object.keys(this.inventory)) {
@@ -2323,6 +2364,20 @@ export const usePlayerStore = defineStore('player', {
           if (slot && Date.now() >= slot.readyAt) this.expeditionClaim(def.id, i)
         }
       }
+      // 商队线（2026-09-14）：到点自动归队结算（按结算时刻行情，与手动领取同口径）
+      if (this.caravanUnlocked()) {
+        for (let i = 0; i < this.caravanSlots(); i++) {
+          const slot = this.caravanState().slots[i]
+          if (slot && Date.now() >= slot.readyAt) this.caravanClaim(i)
+        }
+      }
+      // 灵田（2026-09-14）：到点自动收取（收取后会自动续种，与采集队一致）
+      if (this.spiritUnlocked()) {
+        for (let i = 0; i < this.spiritPlots(); i++) {
+          const plot = this.spiritState().plots[i]
+          if (plot && Date.now() >= plot.readyAt) this.spiritHarvest(i)
+        }
+      }
     },
     /** 自动出售：价值 ≤ 阈值的采集食材（每种保留 SELL_KEEP 件；矿物/化石/材料/补给不参与） */
     _autoSell() {
@@ -2411,7 +2466,7 @@ export const usePlayerStore = defineStore('player', {
       const st = this.ranchState()
       if (!this.ranchUnlocked()) return
       const now = Date.now()
-      const capMs = RANCH_OFFLINE_CAP_HOURS * 3600_000
+      const capMs = IDLE_CAP_HOURS * 3600_000
       for (const pen of st.pens) {
         if (!pen?.animalId) continue
         const def = getAnimal(pen.animalId)
@@ -2436,6 +2491,534 @@ export const usePlayerStore = defineStore('player', {
           EventBus.emit('ranch:produce', { name: def.name, cycles: done, products: def.products })
         } else if (rawCycles > maxCycles) {
           pen.lastAt = now // 无饲料且已超上限：推进时间避免无限堆积
+        }
+      }
+    },
+
+    // ── 网箱（2026-09-14；并入牧场页）：与畜栏同一套周期模型，只是饲料/产物属水产 ──
+    /** 网箱状态（惰性初始化） */
+    pondState() {
+      if (!this.ranch || !Array.isArray(this.ranch.ponds)) {
+        this.ranch = { pens: [], expands: 0, ...(this.ranch ?? {}), ponds: [], pondExpands: 0 }
+      }
+      while (this.ranch.ponds.length < this.pondPens()) this.ranch.ponds.push(null)
+      return this.ranch
+    },
+    /** 当前网箱数 */
+    pondPens() {
+      const n = Math.max(0, Math.min(POND_EXPAND_COSTS.length, this.ranch?.pondExpands ?? 0))
+      return Math.min(POND_MAX, POND_BASE + n)
+    },
+    /** 扩建一个网箱 */
+    pondExpand() {
+      const cost = nextPondExpandCost(this.pondPens())
+      if (cost == null) return { ok: false, msg: '网箱已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      this.pondState()
+      this.ranch.pondExpands = (this.ranch.pondExpands ?? 0) + 1
+      this.pondState()
+      EventBus.emit('pond:expand', { ponds: this.pondPens(), cost })
+      return { ok: true, ponds: this.pondPens() }
+    },
+    /** 投苗：买下鱼种放进网箱 */
+    pondBuy(index, fishId) {
+      const st = this.pondState()
+      if (index < 0 || index >= this.pondPens()) return { ok: false, msg: '网箱不存在' }
+      if (st.ponds[index]) return { ok: false, msg: '该网箱已有鱼' }
+      const def = getPondFish(fishId)
+      if (!def) return { ok: false, msg: '鱼种不存在' }
+      if (this.gold < def.cost) return { ok: false, msg: `金币不足（需 ${def.cost.toLocaleString()}）` }
+      this.spendGold(def.cost)
+      st.ponds[index] = { fishId, lastAt: Date.now() }
+      EventBus.emit('pond:buy', { name: def.name, cost: def.cost })
+      return { ok: true }
+    },
+    /** 清空网箱（不退款） */
+    pondRemove(index) {
+      const st = this.pondState()
+      if (!st.ponds[index]) return false
+      st.ponds[index] = null
+      return true
+    },
+    /** 每帧：网箱结算（与牧场同口径：单次离线最多补 IDLE_CAP_HOURS 小时） */
+    _tickPonds() {
+      const st = this.pondState()
+      const now = Date.now()
+      const capMs = IDLE_CAP_HOURS * 3600_000
+      for (const pond of st.ponds) {
+        if (!pond?.fishId) continue
+        const def = getPondFish(pond.fishId)
+        if (!def) continue
+        const cycleMs = def.hours * 3600_000
+        const elapsed = now - (pond.lastAt ?? now)
+        if (elapsed < cycleMs) continue
+        const maxCycles = Math.max(1, Math.floor(capMs / cycleMs))
+        const rawCycles = Math.floor(elapsed / cycleMs)
+        const cycles = Math.min(rawCycles, maxCycles)
+        let done = 0
+        for (let i = 0; i < cycles; i++) {
+          const canFeed = Object.entries(def.feed).every(([id, q]) => (this.inventory[id] ?? 0) >= q)
+          if (!canFeed) break
+          for (const [id, q] of Object.entries(def.feed)) this.spendItem(id, q)
+          for (const [id, q] of Object.entries(def.products)) this.gainItem(id, q)
+          done++
+        }
+        if (done > 0) {
+          this.stats.pondCycles = (this.stats.pondCycles ?? 0) + done
+          pond.lastAt = rawCycles > maxCycles ? now : (pond.lastAt ?? now) + done * cycleMs
+          EventBus.emit('pond:produce', { name: def.name, cycles: done, products: def.products })
+        } else if (rawCycles > maxCycles) {
+          pond.lastAt = now
+        }
+      }
+    },
+
+    // ══ 挂机产线 · 商队线（2026-09-14）══════════════════════════════════════
+    // 投本金 → 按期数择时结算（复用 exchange.js 的确定性行情）。参见 data/caravan.js 的设计说明。
+    /** 商队状态（惰性初始化） */
+    caravanState() {
+      if (!this.caravan || !Array.isArray(this.caravan.slots)) this.caravan = { slots: [], expands: 0 }
+      while (this.caravan.slots.length < this.caravanSlots()) this.caravan.slots.push(null)
+      return this.caravan
+    },
+    caravanUnlocked() {
+      return (this.skills?.[CARAVAN_UNLOCK_SKILL]?.level ?? 1) >= CARAVAN_UNLOCK_LEVEL
+    },
+    caravanSlots() {
+      const n = Math.max(0, Math.min(CARAVAN_EXPAND_COSTS.length, this.caravan?.expands ?? 0))
+      return Math.min(CARAVAN_MAX_SLOTS, CARAVAN_BASE_SLOTS + n)
+    },
+    caravanExpand() {
+      const cost = nextCaravanExpandCost(this.caravanSlots())
+      if (cost == null) return { ok: false, msg: '商队已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.caravan) this.caravan = { slots: [], expands: 0 }
+      this.caravan.expands = (this.caravan.expands ?? 0) + 1
+      this.caravanState()
+      EventBus.emit('caravan:expand', { slots: this.caravanSlots(), cost })
+      return { ok: true, slots: this.caravanSlots() }
+    },
+    /** 可装货判定：是货物类别、不是矿物/材料、背包里有 */
+    caravanCargoOk(itemId) {
+      const it = getItem(itemId)
+      if (!it) return false
+      if (!CARAVAN_CARGO_TYPES.includes(it.type)) return false
+      if (CARAVAN_EXCLUDE_CATEGORIES.includes(it.category)) return false
+      return (it.value ?? 0) > 0
+    },
+    /** 一批货的价值合计 */
+    caravanCargoValue(cargo = {}) {
+      let v = 0
+      for (const [id, q] of Object.entries(cargo)) v += (getItem(id)?.value ?? 0) * q
+      return v
+    },
+    /** 自动装货：按价值从高到低贪心装满本金上限（不超上限） */
+    caravanAutoLoad() {
+      const cap = CARAVAN_CARGO_LIMIT
+      const pool = Object.entries(this.inventory)
+        .filter(([id, q]) => q > 0 && this.caravanCargoOk(id))
+        .map(([id, q]) => ({ id, q, v: getItem(id).value }))
+        .sort((a, b) => b.v - a.v)
+      const cargo = {}
+      let total = 0
+      for (const p of pool) {
+        if (total >= cap) break
+        const room = Math.floor((cap - total) / p.v)
+        if (room <= 0) continue
+        const qty = Math.min(p.q, room)
+        cargo[p.id] = qty
+        total += qty * p.v
+      }
+      return cargo
+    },
+    /** 派出商队：占一个空槽，装载货物出海 */
+    caravanStart(index, regionId, cargo = {}) {
+      const st = this.caravanState()
+      if (!this.caravanUnlocked()) return { ok: false, msg: `需调料调配 Lv${CARAVAN_UNLOCK_LEVEL} 解锁商队` }
+      if (index < 0 || index >= this.caravanSlots()) return { ok: false, msg: '槽位不存在' }
+      if (st.slots[index]) return { ok: false, msg: '该槽已有商队在途' }
+      const route = caravanRoute(regionId)
+      if (!route) return { ok: false, msg: '商路不存在' }
+      if (!this.regions?.[regionId]) return { ok: false, msg: `需先考察「${route.name}」` }
+      const entries = Object.entries(cargo).filter(([, q]) => q > 0)
+      if (!entries.length) return { ok: false, msg: '至少要装一件货' }
+      for (const [id, q] of entries) {
+        if (!this.caravanCargoOk(id)) return { ok: false, msg: `${getItem(id)?.name ?? id} 不能当货物` }
+        if ((this.inventory[id] ?? 0) < q) return { ok: false, msg: `${getItem(id)?.name ?? id} 数量不足` }
+      }
+      const value = this.caravanCargoValue(cargo)
+      if (value > CARAVAN_CARGO_LIMIT) return { ok: false, msg: `本金超限（上限 ${CARAVAN_CARGO_LIMIT.toLocaleString()}）` }
+      for (const [id, q] of entries) this.spendItem(id, q)
+      const now = Date.now()
+      st.slots[index] = {
+        regionId,
+        cargo: { ...cargo },
+        cargoValue: value,
+        startedAt: now,
+        readyAt: now + route.hours * 3600_000,
+      }
+      EventBus.emit('caravan:start', { route: route.name, hours: route.hours, value })
+      return { ok: true }
+    },
+    /** 撤回商队：无损退还货物 */
+    caravanRecall(index) {
+      const st = this.caravanState()
+      const slot = st.slots[index]
+      if (!slot) return { ok: false, msg: '该槽没有商队' }
+      for (const [id, q] of Object.entries(slot.cargo ?? {})) this.gainItem(id, q)
+      st.slots[index] = null
+      EventBus.emit('caravan:recall', { items: Object.keys(slot.cargo ?? {}).length })
+      return { ok: true }
+    },
+    /** 归队结算：按**归队时刻**的行情定价（可能亏，保底 CARAVAN_LOSS_FLOOR） */
+    caravanClaim(index) {
+      const st = this.caravanState()
+      const slot = st.slots[index]
+      if (!slot) return { ok: false, msg: '该槽没有商队' }
+      if (Date.now() < slot.readyAt) return { ok: false, msg: '商队还在路上' }
+      const route = caravanRoute(slot.regionId)
+      const value = slot.cargoValue ?? this.caravanCargoValue(slot.cargo)
+      // 行情：按**归队时刻**的期次（这就是「择时」的全部意义）
+      const cycle = exchangeCycleIndex()
+      let priced = 0
+      for (const [id, q] of Object.entries(slot.cargo ?? {})) {
+        priced += (getItem(id)?.value ?? 0) * q * priceMultiplier(id, cycle)
+      }
+      const avg = value > 0 ? priced / value : 1
+      const raw = value * avg * (route?.coeff ?? 1) * (route?.seasonMult ?? 1)
+      const gold = Math.max(Math.round(value * CARAVAN_LOSS_FLOOR), Math.round(raw))
+      const profit = gold - value
+      this.gainGold(gold)
+      // 特产：按产地池带回（当季概率更高）
+      const specialty = {}
+      if (route && Math.random() < (route.specialtyChance ?? 0)) {
+        const box = route.box ?? []
+        const n = 1 + (Math.random() < 0.35 ? 1 : 0)
+        for (let i = 0; i < n && box.length; i++) {
+          const id = box[Math.floor(Math.random() * box.length)]
+          this.gainItem(id, 1)
+          specialty[id] = (specialty[id] ?? 0) + 1
+        }
+      }
+      this.stats.caravanTrips = (this.stats.caravanTrips ?? 0) + 1
+      this.stats.caravanGold = (this.stats.caravanGold ?? 0) + gold
+      this.stats.caravanCargoValue = (this.stats.caravanCargoValue ?? 0) + value
+      this.stats.caravanBestProfit = Math.max(this.stats.caravanBestProfit ?? -Infinity, profit)
+      if (this.stats.caravanTrips === 1) this.recordChronicle?.('caravan:first', 'caravan', `首次商队归队：${route?.name ?? '商路'}，回款 ${gold.toLocaleString()} 金币`)
+      st.slots[index] = null
+      EventBus.emit('caravan:claim', { route: route?.name ?? '商路', gold, profit, value, specialty })
+      return { ok: true, gold, profit, specialty }
+    },
+
+    // ══ 挂机产线 · 菌房（2026-09-14）════════════════════════════════════════
+    mushroomState() {
+      if (!this.mushroom || !Array.isArray(this.mushroom.beds)) this.mushroom = { beds: [], expands: 0 }
+      while (this.mushroom.beds.length < this.mushroomBeds()) this.mushroom.beds.push(null)
+      return this.mushroom
+    },
+    mushroomUnlocked() {
+      return (this.skills?.[MUSHROOM_UNLOCK_SKILL]?.level ?? 1) >= MUSHROOM_UNLOCK_LEVEL
+    },
+    mushroomBeds() {
+      const n = Math.max(0, Math.min(MUSHROOM_EXPAND_COSTS.length, this.mushroom?.expands ?? 0))
+      return Math.min(MUSHROOM_MAX_BEDS, MUSHROOM_BASE_BEDS + n)
+    },
+    mushroomExpand() {
+      const cost = nextMushroomExpandCost(this.mushroomBeds())
+      if (cost == null) return { ok: false, msg: '菌房已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.mushroom) this.mushroom = { beds: [], expands: 0 }
+      this.mushroom.expands = (this.mushroom.expands ?? 0) + 1
+      this.mushroomState()
+      EventBus.emit('mushroom:expand', { beds: this.mushroomBeds(), cost })
+      return { ok: true, beds: this.mushroomBeds() }
+    },
+    /** 铺一张菇床（消耗金币，与牧场买动物同构） */
+    mushroomBuild(index, mediaId) {
+      const st = this.mushroomState()
+      if (!this.mushroomUnlocked()) return { ok: false, msg: `需采摘 Lv${MUSHROOM_UNLOCK_LEVEL} 解锁菌房` }
+      if (index < 0 || index >= this.mushroomBeds()) return { ok: false, msg: '菇床不存在' }
+      if (st.beds[index]) return { ok: false, msg: '该床已有培养基' }
+      const def = getMushroomMedia(mediaId)
+      if (!def) return { ok: false, msg: '培养基不存在' }
+      const cost = def.cost ?? 0
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      if (cost) this.spendGold(cost)
+      st.beds[index] = { mediaId, lastAt: Date.now() }
+      EventBus.emit('mushroom:build', { name: def.name, cost })
+      return { ok: true }
+    },
+    mushroomRemove(index) {
+      const st = this.mushroomState()
+      if (!st.beds[index]) return false
+      st.beds[index] = null
+      return true
+    },
+    /** 每帧：菌房结算（与牧场同口径） */
+    _tickMushroom() {
+      const st = this.mushroomState()
+      if (!this.mushroomUnlocked()) return
+      const now = Date.now()
+      const capMs = IDLE_CAP_HOURS * 3600_000
+      for (const bed of st.beds) {
+        if (!bed?.mediaId) continue
+        const def = getMushroomMedia(bed.mediaId)
+        if (!def) continue
+        const cycleMs = def.hours * 3600_000
+        const elapsed = now - (bed.lastAt ?? now)
+        if (elapsed < cycleMs) continue
+        const maxCycles = Math.max(1, Math.floor(capMs / cycleMs))
+        const rawCycles = Math.floor(elapsed / cycleMs)
+        const cycles = Math.min(rawCycles, maxCycles)
+        let done = 0
+        for (let i = 0; i < cycles; i++) {
+          const canFeed = Object.entries(def.feed).every(([id, q]) => (this.inventory[id] ?? 0) >= q)
+          if (!canFeed) break
+          for (const [id, q] of Object.entries(def.feed)) this.spendItem(id, q)
+          for (const [id, q] of Object.entries(def.products)) this.gainItem(id, q)
+          done++
+        }
+        if (done > 0) {
+          this.stats.mushroomCycles = (this.stats.mushroomCycles ?? 0) + done
+          bed.lastAt = rawCycles > maxCycles ? now : (bed.lastAt ?? now) + done * cycleMs
+          EventBus.emit('mushroom:produce', { name: def.name, cycles: done, products: def.products })
+        } else if (rawCycles > maxCycles) {
+          bed.lastAt = now
+        }
+      }
+    },
+
+    // ══ 挂机产线 · 灵田（2026-09-14）════════════════════════════════════════
+    spiritState() {
+      if (!this.spiritField || !Array.isArray(this.spiritField.plots)) this.spiritField = { plots: [], expands: 0 }
+      while (this.spiritField.plots.length < this.spiritPlots()) this.spiritField.plots.push(null)
+      return this.spiritField
+    },
+    spiritUnlocked() {
+      return (this.skills?.[SPIRIT_UNLOCK_SKILL]?.level ?? 1) >= SPIRIT_UNLOCK_LEVEL
+    },
+    spiritPlots() {
+      const n = Math.max(0, Math.min(SPIRIT_EXPAND_COSTS.length, this.spiritField?.expands ?? 0))
+      return Math.min(SPIRIT_MAX_PLOTS, SPIRIT_BASE_PLOTS + n)
+    },
+    spiritExpand() {
+      const cost = nextSpiritExpandCost(this.spiritPlots())
+      if (cost == null) return { ok: false, msg: '灵田已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.spiritField) this.spiritField = { plots: [], expands: 0 }
+      this.spiritField.expands = (this.spiritField.expands ?? 0) + 1
+      this.spiritState()
+      EventBus.emit('spirit:expand', { plots: this.spiritPlots(), cost })
+      return { ok: true, plots: this.spiritPlots() }
+    },
+    /** 播种（消耗种子） */
+    spiritPlant(index, seedId) {
+      const st = this.spiritState()
+      if (!this.spiritUnlocked()) return { ok: false, msg: `需采摘 Lv${SPIRIT_UNLOCK_LEVEL} 解锁灵田` }
+      if (index < 0 || index >= this.spiritPlots()) return { ok: false, msg: '灵田格不存在' }
+      if (st.plots[index]) return { ok: false, msg: '该格已有灵植' }
+      const plant = getSpiritPlantBySeed(seedId)
+      if (!plant) return { ok: false, msg: '这不是灵植种子' }
+      if (!spiritSeedAvailable(this, seedId)) return { ok: false, msg: `需采摘 Lv${plant.reqLevel} 才能种${plant.name}` }
+      if ((this.inventory[seedId] ?? 0) < 1) return { ok: false, msg: `${getItem(seedId)?.name ?? seedId} 不足` }
+      this.spendItem(seedId, 1)
+      const now = Date.now()
+      st.plots[index] = { seedId, plantedAt: now, readyAt: now + plant.hours * 3600_000 }
+      EventBus.emit('spirit:plant', { name: plant.name, hours: plant.hours })
+      return { ok: true }
+    },
+    /** 撤回并退还种子 */
+    spiritTakeBack(index) {
+      const st = this.spiritState()
+      const plot = st.plots[index]
+      if (!plot) return { ok: false, msg: '该格没有灵植' }
+      this.gainItem(plot.seedId, 1)
+      st.plots[index] = null
+      EventBus.emit('spirit:takeback', {})
+      return { ok: true }
+    },
+    /** 收取：到点后给产物，若背包还有同种种子则自动续种一轮 */
+    spiritHarvest(index) {
+      const st = this.spiritState()
+      const plot = st.plots[index]
+      if (!plot) return { ok: false, msg: '该格没有灵植' }
+      if (Date.now() < plot.readyAt) return { ok: false, msg: '灵植还没长成' }
+      const plant = getSpiritPlantBySeed(plot.seedId)
+      if (!plant) return { ok: false, msg: '灵植数据缺失' }
+      const got = { ...plant.products }
+      for (const [id, q] of Object.entries(got)) this.gainItem(id, q)
+      this.stats.spiritHarvests = (this.stats.spiritHarvests ?? 0) + 1
+      if (this.stats.spiritHarvests === 1) this.recordChronicle?.('spirit:first', 'spirit', `灵田首次收获：${plant.name}`)
+      // 自动续种（与采集队「领取后自动开下一轮」同思路）：还有种子就接着种
+      let replanted = false
+      if ((this.inventory[plot.seedId] ?? 0) >= 1) {
+        this.spendItem(plot.seedId, 1)
+        const now = Date.now()
+        st.plots[index] = { seedId: plot.seedId, plantedAt: now, readyAt: now + plant.hours * 3600_000 }
+        replanted = true
+      } else {
+        st.plots[index] = null
+      }
+      EventBus.emit('spirit:harvest', { name: plant.name, got, replanted })
+      return { ok: true, got, replanted }
+    },
+
+    // ══ 挂机产线 · 温室蜂场（2026-09-14；温室 + 原蜂场合并）══════════════════
+    greenhouseState() {
+      if (!this.greenhouse || !Array.isArray(this.greenhouse.beds)) this.greenhouse = { beds: [], expands: 0, hives: [], hiveExpands: 0 }
+      if (!Array.isArray(this.greenhouse.hives)) this.greenhouse.hives = []
+      while (this.greenhouse.beds.length < this.greenhouseBeds()) this.greenhouse.beds.push(null)
+      while (this.greenhouse.hives.length < this.hiveCount()) this.greenhouse.hives.push(null)
+      return this.greenhouse
+    },
+    greenhouseUnlocked() {
+      return (this.skills?.[GREENHOUSE_UNLOCK_SKILL]?.level ?? 1) >= GREENHOUSE_UNLOCK_LEVEL
+    },
+    greenhouseBeds() {
+      const n = Math.max(0, Math.min(GREENHOUSE_EXPAND_COSTS.length, this.greenhouse?.expands ?? 0))
+      return Math.min(GREENHOUSE_MAX_BEDS, GREENHOUSE_BASE_BEDS + n)
+    },
+    hiveCount() {
+      const n = Math.max(0, Math.min(HIVE_EXPAND_COSTS.length, this.greenhouse?.hiveExpands ?? 0))
+      return Math.min(HIVE_MAX_COUNT, HIVE_BASE_COUNT + n)
+    },
+    greenhouseExpand() {
+      const cost = nextGreenhouseExpandCost(this.greenhouseBeds())
+      if (cost == null) return { ok: false, msg: '温室已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.greenhouse) this.greenhouse = { beds: [], expands: 0, hives: [], hiveExpands: 0 }
+      this.greenhouse.expands = (this.greenhouse.expands ?? 0) + 1
+      this.greenhouseState()
+      EventBus.emit('greenhouse:expand', { beds: this.greenhouseBeds(), cost })
+      return { ok: true, beds: this.greenhouseBeds() }
+    },
+    hiveExpand() {
+      const cost = nextHiveExpandCost(this.hiveCount())
+      if (cost == null) return { ok: false, msg: '蜂箱已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.greenhouse) this.greenhouse = { beds: [], expands: 0, hives: [], hiveExpands: 0 }
+      this.greenhouse.hiveExpands = (this.greenhouse.hiveExpands ?? 0) + 1
+      this.greenhouseState()
+      EventBus.emit('hive:expand', { hives: this.hiveCount(), cost })
+      return { ok: true, hives: this.hiveCount() }
+    },
+    /** 温室播种（消耗种子；生长时间为作物 growSec × 0.75） */
+    greenhousePlant(bed, seedId) {
+      const st = this.greenhouseState()
+      if (!this.greenhouseUnlocked()) return { ok: false, msg: `需农耕 Lv${GREENHOUSE_UNLOCK_LEVEL} 解锁温室` }
+      if (bed < 0 || bed >= this.greenhouseBeds()) return { ok: false, msg: '温室格不存在' }
+      if (st.beds[bed]) return { ok: false, msg: '该格已有作物' }
+      const crop = greenhouseCrop(seedId)
+      if (!crop) return { ok: false, msg: '这不是作物种子' }
+      if ((this.skills?.[GREENHOUSE_UNLOCK_SKILL]?.level ?? 1) < crop.reqLevel) {
+        return { ok: false, msg: `需农耕 Lv${crop.reqLevel} 才能种该作物` }
+      }
+      if ((this.inventory[seedId] ?? 0) < 1) return { ok: false, msg: `${getItem(seedId)?.name ?? seedId} 不足` }
+      this.spendItem(seedId, 1)
+      st.beds[bed] = { seedId, plantedAt: Date.now() }
+      EventBus.emit('greenhouse:plant', { seedId })
+      return { ok: true }
+    },
+    /** 清空温室格（退还不了种子——已种下） */
+    greenhouseClear(bed) {
+      const st = this.greenhouseState()
+      if (!st.beds[bed]) return false
+      st.beds[bed] = null
+      return true
+    },
+    /** 投蜜源入蜂箱 */
+    hiveSet(index, mediaId) {
+      const st = this.greenhouseState()
+      if (index < 0 || index >= this.hiveCount()) return { ok: false, msg: '蜂箱不存在' }
+      const def = getHiveMedia(mediaId)
+      if (!def) return { ok: false, msg: '蜜源不存在' }
+      if (st.hives[index]) return { ok: false, msg: '该箱已有蜂群' }
+      st.hives[index] = { mediaId, lastAt: Date.now() }
+      EventBus.emit('hive:set', { name: def.name })
+      return { ok: true }
+    },
+    hiveClear(index) {
+      const st = this.greenhouseState()
+      if (!st.hives[index]) return false
+      st.hives[index] = null
+      return true
+    },
+    /**
+     * 每帧：温室收获 + 蜂箱产蜜。
+     * 温室走「到点自动收 + 自动续种」（与农耕 settings.autoFarm 同思路），
+     * 每次收获 **10% 概率伴生一瓶蜂蜜**，品级由该作物 reqLevel 决定（honey.js）。
+     */
+    _tickGreenhouse() {
+      const st = this.greenhouseState()
+      const now = Date.now()
+      const capMs = IDLE_CAP_HOURS * 3600_000
+      // ① 温室格：到点收获（含 10% 伴生蜂蜜），随后自动续种同种种子
+      if (this.greenhouseUnlocked()) {
+        for (let i = 0; i < st.beds.length; i++) {
+          const bed = st.beds[i]
+          if (!bed?.seedId) continue
+          const crop = greenhouseCrop(bed.seedId)
+          if (!crop) { st.beds[i] = null; continue }
+          const growMs = greenhouseGrowMs(bed.seedId)
+          const elapsed = now - (bed.plantedAt ?? now)
+          if (elapsed < growMs) continue
+          // ⚠️ **单次只收 1 轮**：作物周期很短（小麦 67.5 秒），若按「离线 12h 能补多少轮」去算，
+          // 一次上线会凭空收 640 轮（实测踩到，等于离线狂刷）；农耕的口径本来就是
+          // 「成熟即收、不累积」（地块成熟后停在那里等），这里照同一口径：只收一轮，
+          // 超期部分不补算（与牧场 lastAt 超顶直接置 now 的处理同思路）。
+          this.gainItem(crop.itemId, 1)
+          this.addMastery?.(GREENHOUSE_UNLOCK_SKILL, crop.itemId, 1)
+          let honey = null
+          if (Math.random() < GREENHOUSE_HONEY_CHANCE) {
+            const hid = honeyItemForLevel(crop.reqLevel)
+            this.gainItem(hid, 1)
+            honey = hid
+            this.stats.honeyHarvests = (this.stats.honeyHarvests ?? 0) + 1
+            if (this.stats.honeyHarvests === 1) this.recordChronicle?.('bee:first', 'bee', `首次取得蜂蜜：${getItem(hid)?.name ?? hid}`)
+          }
+          this.stats.greenhouseCycles = (this.stats.greenhouseCycles ?? 0) + 1
+          EventBus.emit('greenhouse:harvest', { itemId: crop.itemId, cycles: 1, honey })
+          // 自动续种（还有种子就继续，与农耕 autoFarm 一致）
+          if ((this.inventory[bed.seedId] ?? 0) >= 1) {
+            this.spendItem(bed.seedId, 1)
+            st.beds[i] = { seedId: bed.seedId, plantedAt: now }
+          } else {
+            st.beds[i] = null
+          }
+        }
+      }
+      // ② 蜂箱：吃花产蜜（品级由花的等级决定），与牧场同口径补算
+      for (const hive of st.hives) {
+        if (!hive?.mediaId) continue
+        const def = getHiveMedia(hive.mediaId)
+        if (!def) continue
+        const cycleMs = def.hours * 3600_000
+        const elapsed = now - (hive.lastAt ?? now)
+        if (elapsed < cycleMs) continue
+        const maxCycles = Math.max(1, Math.floor(capMs / cycleMs))
+        const rawCycles = Math.floor(elapsed / cycleMs)
+        const cycles = Math.min(rawCycles, maxCycles)
+        const honeyId = honeyItemForLevel(hiveMediaLevel(def.id))
+        let done = 0
+        for (let i = 0; i < cycles; i++) {
+          const canFeed = Object.entries(def.feed).every(([id, q]) => (this.inventory[id] ?? 0) >= q)
+          if (!canFeed) break
+          for (const [id, q] of Object.entries(def.feed)) this.spendItem(id, q)
+          this.gainItem(honeyId, def.honeyQty ?? 1)
+          done++
+        }
+        if (done > 0) {
+          this.stats.honeyHarvests = (this.stats.honeyHarvests ?? 0) + done
+          hive.lastAt = rawCycles > maxCycles ? now : (hive.lastAt ?? now) + done * cycleMs
+          EventBus.emit('hive:produce', { name: def.name, cycles: done, honeyId })
+        } else if (rawCycles > maxCycles) {
+          hive.lastAt = now
         }
       }
     },
@@ -2491,7 +3074,7 @@ export const usePlayerStore = defineStore('player', {
     _tickBranches() {
       if (!this.branches) return
       const now = Date.now()
-      const capMs = BRANCH_OFFLINE_CAP_HOURS * 3600_000
+      const capMs = IDLE_CAP_HOURS * 3600_000
       for (const def of BRANCHES) {
         const st = this.branches[def.id]
         if (!st) continue
@@ -4662,6 +5245,9 @@ export const usePlayerStore = defineStore('player', {
       this._tickAutoSupply(deltaMs) // 弹药自动补给（2026-09-09）
       this._tickAutomation(deltaMs) // 自动化中心（2026-09-10）
       this._tickRanch() // 牧场养殖（2026-09-10）
+      this._tickPonds() // 网箱（2026-09-14，并入牧场页）
+      this._tickMushroom() // 菌房（2026-09-14）
+      this._tickGreenhouse() // 温室 + 蜂箱（2026-09-14）
       this._tickBranches() // 餐厅分店（2026-09-10）
       this._tickMichelin() // 米其林评级（2026-09-10）
       this._tickStaff() // 雇工班底发薪（2026-09-10）

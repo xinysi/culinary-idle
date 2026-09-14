@@ -12,7 +12,7 @@ export const RANCH_MAX_PENS = 4
 export const RANCH_EXPAND_COSTS = [20000, 60000]
 
 /** 离线最多补算时长（小时） */
-export const RANCH_OFFLINE_CAP_HOURS = 12
+// 单次离线补算上限已收敛到 caps.js 的 IDLE_CAP_HOURS（与菌房/网箱同源，2026-09-14）
 
 /**
  * 可驯养的动物：{ id, name, icon, cost 购买金币, hours 周期, feed 每周期饲料, products 每周期产物 }
@@ -40,4 +40,33 @@ export function nextRanchExpandCost(pens) {
 /** 单周期产物文字（用于日志/界面） */
 export function productText(def) {
   return Object.entries(def?.products ?? {}).map(([id, q]) => `${id} ×${q}`).join('、')
+}
+
+// ── 网箱（2026-09-14 新增；按用户要求**并入牧场页**，不单独开页）──
+// 与畜栏同构：占位 + 吃饲料 + 按小时产鱼。差别只在饲料与产物都属水产一脉，
+// 且「数量更多、单价更低」（对照畜栏：野鸡 4h 吃玉米×3 → 蛋×2 + 肉×1）。
+// 饲料用**海苔**（现有食材，可采集）：项目里没有任何「鱼饵/饵料」物品，新增会牵动图鉴三查
+// 与自动出售白名单，故刻意复用既有食材。
+export const POND_BASE = 2
+export const POND_MAX = 4
+export const POND_EXPAND_COSTS = [25000, 70000]
+
+/** 网箱鱼种：{ id, name, icon, cost 购买金币, hours 周期, feed 每周期饲料, products 每周期产物 } */
+export const POND_FISH = [
+  { id: 'crucian', name: '鲫鱼', icon: '🐟', cost: 6000, hours: 3, feed: { seaweed: 1 }, products: { crucian: 3 } },
+  { id: 'salmon', name: '鲑鱼', icon: '🐠', cost: 15000, hours: 5, feed: { seaweed: 2 }, products: { salmon: 3, carp: 2 } },
+  { id: 'lobster', name: '龙虾', icon: '🦞', cost: 26000, hours: 8, feed: { seaweed: 3 }, products: { lobster: 2, perch: 2 } },
+  { id: 'abalone', name: '鲍鱼', icon: '🐚', cost: 48000, hours: 12, feed: { seaweed: 4 }, products: { abalone: 2, tuna: 1 } },
+]
+
+const POND_INDEX = new Map(POND_FISH.map((f) => [f.id, f]))
+
+export function getPondFish(id) {
+  return POND_INDEX.get(id) ?? null
+}
+
+/** 网箱下一档扩建费用（已满返回 null） */
+export function nextPondExpandCost(ponds) {
+  const idx = Math.max(0, Math.round(ponds - POND_BASE))
+  return POND_EXPAND_COSTS[idx] ?? null
 }

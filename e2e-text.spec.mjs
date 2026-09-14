@@ -13,7 +13,9 @@ const VIEWS = [
   'guild', 'season', 'arena', 'tower', 'fest', 'mijian', 'stats', 'log', 'guide',
   'milestones', 'chronicle', 'weather', 'mascot', 'banquet', 'takeout', 'suppliers', 'chefChallenge',
   'seasonReview', 'honor', 'codexExchange', 'setMeals', 'rivals', 'gear', 'quests', 'achievements',
-  'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters',
+  'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters', 'dao', 'shanhai',
+  // 2026-09-14 挂机产线四套
+  'caravan', 'mushroom', 'spiritField', 'greenhouse',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 

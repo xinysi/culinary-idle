@@ -35,6 +35,16 @@ import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, DERIVED_MAX, OFFLINE_CAP, safeCap } fr
 import { SHANHAI_EFFECT_FIELDS, SHANHAI_EFFECT_CAPS, shanhaiIndex, shanhaiNodeState, shanhaiEffectSum } from '../../src/game/data/shanhaiProgress.js'
 import { shanhaiGraphLayout } from '../../src/game/data/shanhaiGraph.js'
 import { DAO_PATHS, DAO_NODES, DAO_OUTER, daoNodesOf, daoPathCost, daoUnlockedTotal } from '../../src/game/data/daoTree.js'
+// 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场（含蜂蜜）+ 并入牧场的网箱
+import { CARAVAN_UNLOCK_LEVEL, CARAVAN_BASE_SLOTS, CARAVAN_MAX_SLOTS, CARAVAN_CARGO_LIMIT, CARAVAN_LOSS_FLOOR, CARAVAN_EXPAND_COSTS, allCaravanRoutes } from '../../src/game/data/caravan.js'
+import { MUSHROOM_UNLOCK_LEVEL, MUSHROOM_BASE_BEDS, MUSHROOM_MAX_BEDS, MUSHROOM_EXPAND_COSTS, MUSHROOM_MEDIA } from '../../src/game/data/mushroomHouse.js'
+import { SPIRIT_UNLOCK_LEVEL, SPIRIT_BASE_PLOTS, SPIRIT_MAX_PLOTS, SPIRIT_EXPAND_COSTS, SPIRIT_PLANTS } from '../../src/game/data/spiritField.js'
+import { GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GREENHOUSE_HONEY_CHANCE, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel } from '../../src/game/data/greenhouse.js'
+import { HONEY_TIERS, HONEY_ITEMS, honeyTierForLevel, honeyItemForLevel } from '../../src/game/data/honey.js'
+import { POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from '../../src/game/data/ranch.js'
+import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
+import { priceMultiplier, exchangeCycleIndex } from '../../src/game/data/exchange.js'
+
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS, BISCUIT_TASTE_RATE } from '../../src/game/data/biscuitUse.js'
 import { WEATHERS, weatherForDay, weatherBoost, fortuneLevelForDay, isHarshWeather, FORTUNE_LEVELS } from '../../src/game/data/weather.js'
 import { MASCOTS, mascotBondLevel, mascotReward } from '../../src/game/data/mascots.js'
@@ -53,6 +63,8 @@ import { MAIL_CAP, MAIL_HARD_CAP, mailKindLabel } from '../../src/game/data/mail
 import { FRIENDS, friendBondLevel, friendBondProgress, friendVisitReward } from '../../src/game/data/friends.js'
 import { ENCOUNTERS, getEncounter } from '../../src/game/data/encounters.js'
 import { itemSources } from '../../src/game/data/itemSources.js'
+import { jumpForSource } from '../../src/game/data/sourceJump.js'
+import { itemUses } from '../../src/game/data/itemUses.js'
 
 // 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
 const ACH = (id) => ALL_ACHIEVEMENTS.find((a) => a.id === id)
@@ -3536,6 +3548,292 @@ console.log('══ C24. 外环觅珍环 ══')
   check('觅珍环', '外环总奖励 1200 张券、且不占道途效果与轮回印记', (() => {
     const total = DAO_OUTER.reduce((a, n) => a + (n.reward?.tickets ?? 0), 0)
     return total === 1200 && DAO_OUTER.every((n) => !n.effect && (n.cost ?? 0) === 0)
+  })())
+}
+
+// ── C25. 挂机产线四套（2026-09-14：商队线 / 菌房 / 灵田 / 温室蜂场 + 并入牧场的网箱）──
+console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱）══')
+{
+  // ① 数据与上限
+  check('挂机产线', `设施上限与 caps.js 一致（商队 ${FACILITY_MAX.caravanSlots} / 菌房 ${FACILITY_MAX.mushroomBeds} / 灵田 ${FACILITY_MAX.spiritPlots} / 温室 ${FACILITY_MAX.greenhouseBeds} / 蜂箱 ${FACILITY_MAX.hives} / 网箱 ${FACILITY_MAX.ponds}）`,
+    FACILITY_MAX.caravanSlots === CARAVAN_MAX_SLOTS && FACILITY_MAX.mushroomBeds === MUSHROOM_MAX_BEDS
+    && FACILITY_MAX.spiritPlots === SPIRIT_MAX_PLOTS && FACILITY_MAX.greenhouseBeds === GREENHOUSE_MAX_BEDS
+    && FACILITY_MAX.hives === HIVE_MAX_COUNT && FACILITY_MAX.ponds === POND_MAX)
+  check('挂机产线', `扩建费用档数 = 「初始 → 上限」的差（商队 ${CARAVAN_BASE_SLOTS}→${CARAVAN_MAX_SLOTS} 等）`,
+    CARAVAN_EXPAND_COSTS.length === CARAVAN_MAX_SLOTS - CARAVAN_BASE_SLOTS
+    && MUSHROOM_EXPAND_COSTS.length === MUSHROOM_MAX_BEDS - MUSHROOM_BASE_BEDS
+    && SPIRIT_EXPAND_COSTS.length === SPIRIT_MAX_PLOTS - SPIRIT_BASE_PLOTS
+    && GREENHOUSE_EXPAND_COSTS.length === GREENHOUSE_MAX_BEDS - GREENHOUSE_BASE_BEDS
+    && HIVE_EXPAND_COSTS.length === HIVE_MAX_COUNT - HIVE_BASE_COUNT
+    && POND_EXPAND_COSTS.length === POND_MAX - POND_BASE)
+  check('挂机产线', '所有周期产物/饲料都是既有物品（无幽灵 id）',
+    [...MUSHROOM_MEDIA, ...HIVE_MEDIA].every((m) => [...Object.keys(m.products ?? {}), ...Object.keys(m.feed ?? {})].every((id) => !!getItem(id)))
+    && SPIRIT_PLANTS.every((s) => !!getItem(s.seedId) && Object.keys(s.products).every((id) => !!getItem(id)))
+    && POND_FISH.every((f) => Object.keys(f.products).every((id) => !!getItem(id))))
+  check('挂机产线', `离线上限单一来源（IDLE_CAP_HOURS=${IDLE_CAP_HOURS}：牧场/分店不再各写一份 12h）`, (() => {
+    const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+    const R = fs.readFileSync(new URL('../../src/game/data/ranch.js', import.meta.url), 'utf8')
+    const B = fs.readFileSync(new URL('../../src/game/data/branches.js', import.meta.url), 'utf8')
+    return !/RANCH_OFFLINE_CAP_HOURS|BRANCH_OFFLINE_CAP_HOURS/.test(P + R + B)
+      && (P.match(/IDLE_CAP_HOURS/g) ?? []).length >= 3
+  })())
+
+  // ② 商队线
+  check('商队', '未达等级 / 未考察产地都不能派遣', (() => {
+    const p = freshPlayer()
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL - 1
+    const a = p.caravanStart(0, 'plain', { apple: 1 }).ok === false
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL
+    const b = p.caravanStart(0, 'plain', { apple: 1 }).ok === false
+    return a && b
+  })())
+  check('商队', `本金超限拒发（上限 ${CARAVAN_CARGO_LIMIT.toLocaleString()}）`, (() => {
+    const p = freshPlayer()
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL
+    p.regions = { plain: true }
+    p.inventory.truffle = 999
+    return p.caravanStart(0, 'plain', { truffle: 999 }).ok === false
+  })())
+  check('商队', '矿物/材料类不能当货物（锻造原料不该被卖掉）', (() => {
+    const p = freshPlayer()
+    return !p.caravanCargoOk('copperOre') && !p.caravanCargoOk('wood') && p.caravanCargoOk('apple')
+  })())
+  check('商队', '出货真扣货；结算必给金币且不低于保底', (() => {
+    const p = freshPlayer()
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL
+    p.regions = { plain: true }
+    p.inventory.apple = 100
+    const r = p.caravanStart(0, 'plain', { apple: 50 })
+    if (!r.ok || p.inventory.apple !== 50) return false
+    p.caravanState().slots[0].readyAt = Date.now() - 1
+    const gold0 = p.gold
+    const c = p.caravanClaim(0)
+    const value = 50 * getItem('apple').value
+    return c.ok && p.gold - gold0 >= Math.round(value * CARAVAN_LOSS_FLOOR) && p.stats.caravanTrips === 1
+  })())
+  check('商队', '撤回无损退还货物', (() => {
+    const p = freshPlayer()
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL
+    p.regions = { plain: true }
+    p.inventory.apple = 20
+    p.caravanStart(0, 'plain', { apple: 10 })
+    const r = p.caravanRecall(0)
+    return r.ok && p.inventory.apple === 20 && !p.caravanState().slots[0]
+  })())
+  check('商队', '行情确实参与定价（同期同货恒定、跨期会变，且落在 [0.60,1.60]）', (() => {
+    const c0 = exchangeCycleIndex()
+    const v = [0, 1, 2, 3, 4, 5].map((c) => priceMultiplier('apple', c0 + c))
+    return new Set(v).size > 1 && v.every((x) => x >= 0.6 && x <= 1.6) && priceMultiplier('apple', c0) === priceMultiplier('apple', c0)
+  })())
+  check('商队', '七条商路：近路 4h、远路 12h，系数随距离递增', (() => {
+    const rs = allCaravanRoutes(3)
+    return rs.length === 7 && rs[0].hours === 4 && rs[rs.length - 1].hours === 12 && rs[rs.length - 1].coeff > rs[0].coeff
+  })())
+
+  // ③ 菌房
+  check('菌房', '未达采摘等级不能铺床；铺床消耗金币', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL - 1
+    const a = p.mushroomBuild(0, 'compost').ok === false
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL
+    p.gold = 100000 // 新档初始金币不足以铺床，这里先给足（铺床要钱本身由下一句断言）
+    const gold0 = p.gold
+    const b = p.mushroomBuild(0, 'richCompost').ok === true && p.gold === gold0 - 18000
+    return a && b
+  })())
+  check('菌房', '无肥料则暂停；有肥料按周期出菇并扣料', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL
+    p.gold = 100000
+    p.mushroomBuild(0, 'richCompost')
+    p.mushroomState().beds[0].lastAt = Date.now() - 24 * 3600e3
+    p._tickMushroom()
+    if ((p.inventory.mushroom ?? 0) > 0) return false
+    p.inventory.richCompost = 3
+    p.mushroomState().beds[0].lastAt = Date.now() - 24 * 3600e3
+    p._tickMushroom()
+    // 12h 上限 / 4h 周期 = 3 轮 → 蘑菇 9 + 松茸 3，沃肥被扣光（spendItem 归零会删键 ⇒ 读出来是 undefined）
+    return (p.inventory.mushroom ?? 0) === 9 && (p.inventory.matsutake ?? 0) === 3 && (p.inventory.richCompost ?? 0) === 0
+  })())
+  check('菌房', `离线单次最多补 ${IDLE_CAP_HOURS} 小时（6h/周期 → 恰好 2 轮，不无限累积）`, (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = MUSHROOM_UNLOCK_LEVEL
+    p.gold = 100000
+    p.mushroomBuild(0, 'compost')
+    p.inventory.compost = 999
+    p.mushroomState().beds[0].lastAt = Date.now() - 100 * 3600e3
+    p._tickMushroom()
+    return (p.inventory.mushroom ?? 0) === 4 && p.stats.mushroomCycles === 2
+  })())
+
+  // ④ 灵田
+  check('灵田', '未达等级不能种；非灵植种子拒收', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = SPIRIT_UNLOCK_LEVEL - 1
+    p.inventory.lingzhiSeed = 1
+    const a = p.spiritPlant(0, 'lingzhiSeed').ok === false
+    p.skills.foraging.level = 99
+    const b = p.spiritPlant(0, 'wheatSeed').ok === false
+    return a && b
+  })())
+  check('灵田', '种什么得什么（定向）+ 消耗种子 + 收取后自动续种', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 99
+    p.inventory.lingzhiSeed = 2
+    if (!p.spiritPlant(0, 'lingzhiSeed').ok || p.inventory.lingzhiSeed !== 1) return false
+    p.spiritState().plots[0].readyAt = Date.now() - 1
+    const r = p.spiritHarvest(0)
+    // 自动续种会再花掉一颗种子（归零删键 ⇒ undefined）
+    return r.ok && p.inventory.lingzhi === 2 && r.replanted === true && (p.inventory.lingzhiSeed ?? 0) === 0 && !!p.spiritState().plots[0]
+  })())
+  check('灵田', '没有种子时收取后格子清空（不续种）', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 99
+    p.inventory.truffleSeed = 1
+    p.spiritPlant(0, 'truffleSeed')
+    p.spiritState().plots[0].readyAt = Date.now() - 1
+    const r = p.spiritHarvest(0)
+    return r.ok && r.replanted === false && !p.spiritState().plots[0] && p.inventory.truffle === 2
+  })())
+  check('灵田', '未成熟不可收；撤回退还种子', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 99
+    p.inventory.lingzhiSeed = 1
+    p.spiritPlant(0, 'lingzhiSeed')
+    if (p.spiritHarvest(0).ok !== false) return false
+    const r = p.spiritTakeBack(0)
+    return r.ok && p.inventory.lingzhiSeed === 1 && !p.spiritState().plots[0]
+  })())
+
+  // ⑤ 温室蜂场
+  check('温室', '温室生长 = 农耕 growSec × 0.75（小麦 90s → 67.5s）', (() => {
+    const crop = greenhouseCrop('wheatSeed')
+    return greenhouseGrowMs('wheatSeed') === Math.round(crop.growSec * 0.75 * 1000)
+  })())
+  check('温室', `作物伴生蜂蜜概率 = ${GREENHOUSE_HONEY_CHANCE * 100}%（常量，不随等级变）`, GREENHOUSE_HONEY_CHANCE === 0.1)
+  check('温室', '**单次只收 1 轮**（防离线狂刷：小麦 67.5s/轮，限 12h 会一次收 640 轮）', (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 99
+    p.inventory.wheatSeed = 10
+    p.greenhousePlant(0, 'wheatSeed')
+    p.greenhouseState().beds[0].plantedAt = Date.now() - 12 * 3600e3
+    p._tickGreenhouse()
+    return (p.inventory.wheat ?? 0) === 1 && p.stats.greenhouseCycles === 1
+  })())
+  check('温室', '收获后自动续种（背包还有同种种子）', (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 99
+    p.inventory.wheatSeed = 3
+    p.greenhousePlant(0, 'wheatSeed')
+    p.greenhouseState().beds[0].plantedAt = Date.now() - 12 * 3600e3
+    p._tickGreenhouse()
+    return !!p.greenhouseState().beds[0] && p.inventory.wheatSeed === 1
+  })())
+  check('蜂箱', '蜜源品级随花等级（菊花 Lv12→2 品、桂花 Lv34→4 品）',
+    honeyTierForLevel(hiveMediaLevel('chrysanthemum')) === 2 && honeyTierForLevel(hiveMediaLevel('osmanthus')) === 4)
+  check('蜂箱', '产蜜消耗花，并按品级发对应蜂蜜', (() => {
+    const p = freshPlayer()
+    p.inventory.osmanthus = 10
+    p.hiveSet(0, 'osmanthus')
+    p.greenhouseState().hives[0].lastAt = Date.now() - 48 * 3600e3
+    p._tickGreenhouse()
+    return p.inventory.osmanthus === 8 && (p.inventory.honeyAutumn ?? 0) === 2 && p.stats.honeyHarvests === 1
+  })())
+  check('蜂箱', '蜜源不足时暂停（不发蜜、不计次）', (() => {
+    const p = freshPlayer()
+    p.hiveSet(0, 'osmanthus')
+    p.greenhouseState().hives[0].lastAt = Date.now() - 48 * 3600e3
+    p._tickGreenhouse()
+    return !Object.keys(p.inventory).some((k) => k.startsWith('honey')) && p.stats.honeyHarvests === undefined
+  })())
+
+  // ⑥ 蜂蜜
+  check('蜂蜜', '8 品级、id/名称唯一、都进了 ITEMS', (() => {
+    const ids = new Set(HONEY_TIERS.map((h) => h.id))
+    const names = new Set(HONEY_TIERS.map((h) => h.name))
+    return HONEY_TIERS.length === 8 && ids.size === 8 && names.size === 8 && HONEY_ITEMS.every((h) => !!getItem(h.id))
+  })())
+  check('蜂蜜', '效果/时长/门槛/价值随品级单调递增', (() => {
+    let ok = true
+    for (let i = 1; i < HONEY_TIERS.length; i++) {
+      const a = HONEY_TIERS[i - 1], b = HONEY_TIERS[i]
+      if (!(b.xp > a.xp && b.yield > a.yield && b.minutes > a.minutes && b.minLevel > a.minLevel && b.value > a.value)) ok = false
+    }
+    return ok
+  })())
+  check('蜂蜜', '全是 consumable/buff（⇒ 不进采集/配方/抽卡/交易所/自动出售）',
+    HONEY_ITEMS.every((h) => h.type === 'consumable' && h.category === 'buff'))
+  check('蜂蜜', '**双效**：使用后经验与产量两条乘区同时生效', (() => {
+    const p = freshPlayer()
+    p.inventory.honeySupreme = 1
+    const r = p.useConsumable('honeySupreme')
+    const h = HONEY_TIERS[7]
+    return r.ok && p.buffs.xpMult?.mult === h.xp && p.buffs.yieldMult?.mult === h.yield
+  })())
+  check('蜂蜜', '品级映射：Lv1→1 品、Lv34→4 品、灵果(Lv90)→8 品', (() => {
+    return honeyTierForLevel(1) === 1 && honeyTierForLevel(34) === 4 && honeyTierForLevel(90) === 8
+      && honeyItemForLevel(greenhouseCrop('spiritFruitSeed').reqLevel) === 'honeySupreme'
+  })())
+  check('蜂蜜', '获取来源全在「温室蜂场」（唯一来源）且可跳转', (() => {
+    return HONEY_TIERS.every((h) => {
+      const srcs = itemSources(h.id) ?? []
+      return srcs.length > 0 && srcs.every((s) => s.includes('温室蜂场') && !!jumpForSource(s))
+    })
+  })())
+  check('蜂蜜', '蜂蜜不作为任何配方/炼金材料（可用于制作为空）', HONEY_TIERS.every((h) => itemUses(h.id).length === 0))
+
+  // ⑦ 网箱（并入牧场）
+  check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {
+    const p = freshPlayer()
+    p.pondState()
+    return Array.isArray(p.ranch.ponds) && p.pondPens() === POND_BASE
+  })())
+  check('网箱', '投苗吃海苔、按周期出鱼并计数', (() => {
+    const p = freshPlayer()
+    p.gold = 100000
+    p.inventory.seaweed = 10
+    p.pondBuy(0, 'abalone')
+    p.pondState().ponds[0].lastAt = Date.now() - 24 * 3600e3
+    p._tickPonds()
+    return p.inventory.seaweed === 6 && (p.inventory.abalone ?? 0) === 2 && p.stats.pondCycles === 1
+  })())
+
+  // ⑧ 存档往返 / 旧档迁移 / 自动化接线
+  check('挂机产线', '存档往返：四套新系统的状态都在', (() => {
+    const p = freshPlayer()
+    p.skills.spiceMixing.level = CARAVAN_UNLOCK_LEVEL
+    p.skills.foraging.level = 99
+    p.skills.farming.level = 99
+    p.regions = { plain: true }
+    p.inventory.apple = 10
+    p.caravanStart(0, 'plain', { apple: 5 })
+    p.gold = 500000
+    p.mushroomBuild(0, 'compost')
+    p.inventory.lingzhiSeed = 1
+    p.spiritPlant(0, 'lingzhiSeed')
+    p.inventory.wheatSeed = 1
+    p.greenhousePlant(0, 'wheatSeed')
+    p.hiveSet(0, 'rose')
+    p.pondBuy(0, 'crucian')
+    const saved = JSON.parse(JSON.stringify(p.serialize()))
+    const q = freshPlayer()
+    q.applySave(saved)
+    return !!q.caravan.slots[0]?.regionId && !!q.mushroom.beds[0]?.mediaId && !!q.spiritField.plots[0]?.seedId
+      && !!q.greenhouse.beds[0]?.seedId && !!q.greenhouse.hives[0]?.mediaId && !!q.ranch.ponds[0]?.fishId
+  })())
+  check('挂机产线', '旧档（无这四个字段）读档不炸并回退默认', (() => {
+    const p = freshPlayer()
+    const saved = p.serialize()
+    delete saved.caravan; delete saved.mushroom; delete saved.spiritField; delete saved.greenhouse
+    saved.ranch = { pens: [null, null], expands: 0 }
+    const q = freshPlayer()
+    q.applySave(saved)
+    return q.caravanSlots() === CARAVAN_BASE_SLOTS && q.mushroomBeds() === MUSHROOM_BASE_BEDS
+      && q.spiritPlots() === SPIRIT_BASE_PLOTS && q.greenhouseBeds() === GREENHOUSE_BASE_BEDS && q.hiveCount() === HIVE_BASE_COUNT
+  })())
+  check('挂机产线', '自动领取已覆盖商队与灵田（与地窖/采集队共用同一条自动化）', (() => {
+    const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+    return /caravanClaim\(i\)/.test(P) && /spiritHarvest\(i\)/.test(P)
   })())
 }
 

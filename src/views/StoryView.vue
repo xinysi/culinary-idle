@@ -53,6 +53,8 @@ function storyCur(kind) {
     case 'card': return p.stats.cardBattle?.wins ?? 0
     case 'explore': return p.stats.explorations ?? 0
     case 'prestiges': return p.stats.prestiges ?? 0
+    // 挂机产线：商队出航次数（2026-09-14）
+    case 'caravan': return p.stats?.caravanTrips ?? 0
     case 'signin': return p.signIn?.day ?? 0
     case 'gold': return p.stats.totalGoldEarned ?? 0
     case 'alchemy': return p.stats.alchemyCrafts ?? 0

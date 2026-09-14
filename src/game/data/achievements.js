@@ -134,6 +134,13 @@ export const ACHIEVEMENTS = [
   { id: 'auto3', name: '自动化大师', category: '特殊', desc: '解锁全部 3 项自动化', title: '自动化大师', reward: { gold: 6000, items: { energyBiscuit: 1 } }, check: (p) => ['sell', 'queue', 'claim'].every((k) => p.automation?.unlocked?.[k]) },
   { id: 'ranch1', name: '牧场开张', category: '特殊', desc: '首次买下动物', reward: { gold: 1200 }, check: (p) => (p.ranch?.pens ?? []).some((x) => x?.animalId) },
   { id: 'ranch50', name: '牧场主', category: '特殊', desc: '牧场累计产出 50 个周期', title: '牧场主', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.ranchCycles ?? 0) >= 50 },
+  // ── 挂机产线四套（2026-09-14）──
+  { id: 'caravan1', name: '首航', category: '特殊', desc: '商队线完成 1 次归队结算', reward: { gold: 1500 }, check: (p) => (p.stats?.caravanTrips ?? 0) >= 1 },
+  { id: 'caravan30', name: '商队领队', category: '特殊', desc: '商队线累计出航 30 次', title: '商队领队', reward: { gold: 9000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.caravanTrips ?? 0) >= 30 },
+  { id: 'mushroom50', name: '菌房主人', category: '特殊', desc: '菌房累计产出 50 个周期', title: '菌房主人', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mushroomCycles ?? 0) >= 50 },
+  { id: 'spiritField10', name: '灵田初收', category: '特殊', desc: '灵田累计收获 10 次', reward: { gold: 4000 }, check: (p) => (p.stats?.spiritHarvests ?? 0) >= 10 },
+  { id: 'honey8', name: '八品齐备', category: '收集', desc: '集齐 8 个品级的蜂蜜', title: '蜜藏家', reward: { gold: 12000, items: { energyBiscuit: 1 } }, check: (p) => ['honeyPale','honeyGreen','honeyBloom','honeyAutumn','honeyLocust','honeyCinnamon','honeyRock','honeySupreme'].every((id) => (p.collected?.[id] ?? 0) > 0) },
+  { id: 'honey100', name: '蜜罐子', category: '特殊', desc: '累计取得 100 瓶蜂蜜（温室伴生 + 蜂箱产蜜）', title: '蜜罐子', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.honeyHarvests ?? 0) >= 100 },
   { id: 'branch1', name: '首开分店', category: '特殊', desc: '开设第一家分店', reward: { gold: 3000 }, check: (p) => Object.keys(p.branches ?? {}).length >= 1 },
   { id: 'branchAll', name: '连锁帝国', category: '特殊', desc: '四家分店全部开业并雇满店长', title: '连锁帝国', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => ['east', 'west', 'south', 'north'].every((id) => p.branches?.[id]?.manager) },
   { id: 'michelin1', name: '初登榜单', category: '特殊', desc: '餐厅获得米其林一星', reward: { gold: 4000, items: { mysterySpice: 1 } }, check: (p) => (p.michelin?.best ?? 0) >= 1 },

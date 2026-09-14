@@ -268,6 +268,7 @@ export const STORY = [
       { kind: 'seasons', need: 8, label: '赛季领奖' },
       { kind: 'card', need: 15, label: '卡牌对战胜利' },
       { kind: 'gold', need: 300000, label: '累计金币' },
+      { kind: 'caravan', need: 10, label: '商队出航' },
     ],
     parts: [
       {
@@ -279,6 +280,11 @@ export const STORY = [
         title: '万法归一',
         body: '八季食节领奖、十五场卡牌对决战无不胜——从初学的五味，到如今掌控百般技艺，你终于站上了厨道之巅。',
         ties: ['seasons', 'card'],
+      },
+      {
+        title: '九线并转',
+        body: '商队载着山海货物归来，菌房与灵田并排吐纳地气，温室里蜂群绕花而鸣——九条挂机产线各安其位，从前的你亲手采下的每一叶，如今都成了会自己生长的流水。',
+        ties: ['caravan'],
       },
       {
         title: '新的传说',

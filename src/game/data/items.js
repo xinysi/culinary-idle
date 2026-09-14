@@ -726,6 +726,11 @@ for (const def of ITEMS_SUPPLEMENT) ITEMS[def.id] = { ...def, stackable: false }
 import { PRESERVE_TIER_ITEMS } from './preserveTiers.js'
 for (const def of PRESERVE_TIER_ITEMS) ITEMS[def.id] = def
 
+// 蜂蜜（2026-09-14 新增）：8 品级、**唯一来源是「温室蜂场」**（作物伴生 10% + 蜂箱产蜜），
+// 双效增益（一次同时给经验 + 产量）。type=consumable ⇒ 不进采集/配方/抽卡/交易所/自动出售。
+import { HONEY_ITEMS } from './honey.js'
+for (const def of HONEY_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

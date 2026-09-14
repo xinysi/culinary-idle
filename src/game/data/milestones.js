@@ -13,7 +13,7 @@ export const MILESTONES = [
   { id: 'm_school30', group: '成长', icon: '📜', name: '六派研究 30 级', target: 30, unit: '级', hint: '六派各 5 级', value: (p) => p.schoolTotalLevels?.() ?? 0 },
   { id: 'm_insight12', group: '成长', icon: '🗺️', name: '菜系图谱 12 节点', target: 12, unit: '节点', hint: '美食见闻解锁', value: (p) => (p.insights ?? []).length },
   // ── 收集 ──
-  { id: 'm_collection100', group: '收集', icon: '📖', name: '图鉴 100%', target: 100, unit: '%', hint: '2210 件物品全收集', value: (p) => Math.floor(p.collectionPct ?? 0) },
+  { id: 'm_collection100', group: '收集', icon: '📖', name: '图鉴 100%', target: 100, unit: '%', hint: '2218 件物品全收集', value: (p) => Math.floor(p.collectionPct ?? 0) },
   { id: 'm_flavor28', group: '收集', icon: '📔', name: '风味搭配 28 条', target: 28, unit: '条', hint: '食材组合全点亮', value: (p) => Object.keys(p.flavors ?? {}).length },
   { id: 'm_spirit160', group: '收集', icon: '✨', name: '食灵 160 种', target: 160, unit: '种', hint: '食灵阁收集', value: (p) => Object.keys(p.spirits?.owned ?? {}).length },
   { id: 'm_season40', group: '收集', icon: '🎪', name: '40 季全部领奖', target: 40, unit: '季', hint: '时空穿梭者成就', value: (p) => Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length },
