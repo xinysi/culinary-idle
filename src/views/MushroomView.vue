@@ -118,9 +118,9 @@ function expand() {
               </div>
             </div>
             <ProgressBar :progress="b.progress" />
-            <div class="dim mh-sub mono">下次出菇还有 {{ fmtMs(b.remainMs) }}</div>
+            <div v-if="b.canFeed" class="dim mh-sub mono">下次出菇还有 {{ fmtMs(b.remainMs) }}</div>
             <div class="dim mh-sub">每周期产出：{{ b.productText }}</div>
-            <div v-if="!b.canFeed" class="mh-warn">⚠ 培养基不足（{{ b.feedText }}），已暂停</div>
+            <div v-if="!b.canFeed" class="mh-warn">⏸ 已停机：培养基不足（{{ b.feedText }}），备好料才会重新计时</div>
             <button class="btn btn-sm" @click="remove(b.index)">清空菇床</button>
           </template>
 

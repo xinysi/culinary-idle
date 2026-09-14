@@ -2489,8 +2489,12 @@ export const usePlayerStore = defineStore('player', {
           this.stats.ranchCycles = (this.stats.ranchCycles ?? 0) + done
           pen.lastAt = rawCycles > maxCycles ? now : (pen.lastAt ?? now) + done * cycleMs
           EventBus.emit('ranch:produce', { name: def.name, cycles: done, products: def.products })
-        } else if (rawCycles > maxCycles) {
-          pen.lastAt = now // 无饲料且已超上限：推进时间避免无限堆积
+        } else {
+          // 本轮一件没产出（缺饲料 / 已超离线补算上限）：**停机**——把 lastAt 推到当前时刻，
+          // 倒计时归零并保持为 0，补料后从 0 开始一个完整周期。
+          // ⚠️ 别再改回「只在超上限时才推进」：那样缺料时进度条会挂在 100%、
+          // 倒计时显示「还有 0 秒」，玩家看到的是「在跑但不出货」（2026-09-14 用户报的就是这个）。
+          pen.lastAt = now
         }
       }
     },
@@ -2568,8 +2572,8 @@ export const usePlayerStore = defineStore('player', {
           this.stats.pondCycles = (this.stats.pondCycles ?? 0) + done
           pond.lastAt = rawCycles > maxCycles ? now : (pond.lastAt ?? now) + done * cycleMs
           EventBus.emit('pond:produce', { name: def.name, cycles: done, products: def.products })
-        } else if (rawCycles > maxCycles) {
-          pond.lastAt = now
+        } else {
+          pond.lastAt = now // 停机（同上：缺料或超上限都不囤积进度）
         }
       }
     },
@@ -2785,8 +2789,8 @@ export const usePlayerStore = defineStore('player', {
           this.stats.mushroomCycles = (this.stats.mushroomCycles ?? 0) + done
           bed.lastAt = rawCycles > maxCycles ? now : (bed.lastAt ?? now) + done * cycleMs
           EventBus.emit('mushroom:produce', { name: def.name, cycles: done, products: def.products })
-        } else if (rawCycles > maxCycles) {
-          bed.lastAt = now
+        } else {
+          bed.lastAt = now // 停机（同上）
         }
       }
     },
@@ -3017,8 +3021,8 @@ export const usePlayerStore = defineStore('player', {
           this.stats.honeyHarvests = (this.stats.honeyHarvests ?? 0) + done
           hive.lastAt = rawCycles > maxCycles ? now : (hive.lastAt ?? now) + done * cycleMs
           EventBus.emit('hive:produce', { name: def.name, cycles: done, honeyId })
-        } else if (rawCycles > maxCycles) {
-          hive.lastAt = now
+        } else {
+          hive.lastAt = now // 停机（同上：蜜源不足时不再偷跑倒计时）
         }
       }
     },
