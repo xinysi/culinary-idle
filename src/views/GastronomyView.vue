@@ -212,6 +212,6 @@ function unlockNode(id) {
 }
 .biscuit-preview {
   font-size: 13px;
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 </style>

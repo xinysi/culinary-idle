@@ -97,11 +97,11 @@ const SKILL_VIEW = { foraging: 'skill', fishing: 'skill', hunting: 'skill', exca
 function goCollect(pk) {
   // 汇金节点横跨两条线：跳到第一条线对应的技能页
   const skill = pk.gap ? (pk.gapAskill ?? 'foraging') : SHANHAI_PATHS.find((x) => x.id === pk.pathId)?.skill
-  if (skill === 'farming') ui.setView('farming')
-  else {
-    player.setActiveSkill(skill ?? 'foraging')
-    ui.setView('skill')
-  }
+  // ⚠️ 农耕**没有独立视图键**（`farming` 不在 `ui.VIEW_KEYS` 里，App.vue 也没有该分支）——
+  // 原先写 `ui.setView('farming')` 会落到兜底技能页（生产环境表现为「点名跳农耕、结果停在采摘」）。
+  // 正确做法与其它线一致：切到该技能 + 进技能页（技能页会按实例渲染 FarmingView）。
+  player.setActiveSkill(skill ?? 'foraging')
+  ui.setView('skill')
 }
 
 const RELATED = [

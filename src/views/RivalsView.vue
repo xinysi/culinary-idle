@@ -216,7 +216,7 @@ function claim() {
 }
 .rv-stars {
   font-size: 12px;
-  color: var(--gold, #a8780b);
+  color: var(--gold, var(--gold));
 }
 .rv-hero-right {
   flex: 1;
@@ -271,7 +271,7 @@ function claim() {
   border-color: var(--accent, var(--primary-tint));
 }
 .rv-row.top3 .rv-row-rank {
-  color: var(--gold, #a8780b);
+  color: var(--gold, var(--gold));
   font-weight: 700;
 }
 .rv-row-rank {

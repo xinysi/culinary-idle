@@ -450,7 +450,7 @@ const rerollTable = computed(() =>
   color: var(--muted);
 }
 .gv-tier.on {
-  color: var(--gold, #a8780b);
+  color: var(--gold, var(--gold));
   font-weight: 600;
 }
 .gv-parts {

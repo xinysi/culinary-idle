@@ -238,7 +238,7 @@ const RELATED = [{ view: 'codexExchange', label: '📖 图鉴兑换' }, { view: 
 }
 .honor-ch-val {
   margin-left: auto;
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .honor-ch-desc {
   font-size: 12px;
@@ -314,10 +314,10 @@ const RELATED = [{ view: 'codexExchange', label: '📖 图鉴兑换' }, { view: 
   border-radius: 999px;
   background: rgba(127, 127, 127, 0.14);
 }
-.perk-xpPct { color: var(--info, #3b8bb8); }
-.perk-gatherPct { color: var(--good, #57a861); }
-.perk-craftPct { color: var(--warn, #e08c0e); }
-.perk-goldPct { color: var(--gold, #a8780b); }
+.perk-xpPct { color: var(--info, var(--info)); }
+.perk-gatherPct { color: var(--good, var(--good)); }
+.perk-craftPct { color: var(--warn, var(--warn)); }
+.perk-goldPct { color: var(--gold, var(--gold)); }
 .honor-tip {
   font-size: 12px;
   margin-top: 10px;

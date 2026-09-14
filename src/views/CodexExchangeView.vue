@@ -209,10 +209,10 @@ const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', l
   font-size: 13px;
 }
 .cx-cost {
-  color: var(--bad, #d94b3f);
+  color: var(--bad, var(--bad));
 }
 .cx-cost.afford {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .cx-tiers {
   margin-top: 12px;

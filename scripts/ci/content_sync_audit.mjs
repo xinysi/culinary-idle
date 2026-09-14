@@ -407,4 +407,21 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   check(`文本：面向玩家的中文里无英文标识符裸露（字符串字面量 + 模板文本，共扫 ${scanned} 条；插值不计）`, bad.length === 0, bad.slice(0, 6).join('; '))
 }
 
+// ── 跳转目标必须是已注册视图（2026-09-13 全量走查发现：山海食经「去收集」调了 `setView('farming')`，
+//    而 `farming` 既不在 ui.VIEW_KEYS 也没有 App.vue 分支 → 生产环境落到兜底技能页，表现为「点农耕跳到采摘」）──
+{
+  const keysSrc = read('src/stores/ui.js')
+  const keys = ((keysSrc.match(/VIEW_KEYS\s*=\s*\[([\s\S]*?)\]/) ?? ['', ''])[1].match(/'([a-zA-Z]+)'/g) ?? []).map((x) => x.slice(1, -1))
+  const bad = []
+  for (const f of walkSrc()) {
+    read(f).split('\n').forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return
+      for (const m of line.matchAll(/(?:setView|go|view)\s*[:(]\s*'([a-zA-Z]{2,})'/g)) {
+        if (!keys.includes(m[1])) bad.push(`${f}:${i + 1} 「${m[1]}」`)
+      }
+    })
+  }
+  check(`跳转：所有 setView/go/view 目标都已注册（扫描 ${keys.length} 个视图键）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
 process.exit(fail === 0 ? 0 : 1)

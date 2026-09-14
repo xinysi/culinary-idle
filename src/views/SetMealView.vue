@@ -204,10 +204,10 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
   gap: 4px;
 }
 .sm-bonus {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .sm-gain {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 .sm-sub {
   font-size: 12px;

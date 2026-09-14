@@ -518,7 +518,7 @@ function scrollToSection(label) {
 <style scoped>
 .biscuit-overflow {
   font-size: 12px;
-  color: var(--warn-strong, #bf7200);
+  color: var(--warn-strong, var(--warn-strong));
 }
 /* 制作队列（2026-09-06） */
 .queue-card { margin-bottom: 12px; }

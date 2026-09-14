@@ -243,6 +243,6 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
   font-size: 13px;
 }
 .up {
-  color: var(--good, #57a861);
+  color: var(--good, var(--good));
 }
 </style>

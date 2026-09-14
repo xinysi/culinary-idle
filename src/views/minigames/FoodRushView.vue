@@ -197,7 +197,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
   display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #7d8894, #5a646e);
 }
-.fs-rage { background: linear-gradient(135deg, #d94b3f, #b23a2f); animation: fsPop 0.25s ease infinite; }
+.fs-rage { background: linear-gradient(135deg, var(--bad), var(--bad-strong)); animation: fsPop 0.25s ease infinite; }
 @keyframes fsPop { 0% { transform: scale(1); } 50% { transform: scale(0.96); } 100% { transform: scale(1); } }
 .fs-info-btn {
   padding: 5px 12px;
