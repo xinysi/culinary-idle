@@ -13,6 +13,8 @@ import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '.
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import FoldCard from '../components/FoldCard.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -112,50 +114,49 @@ function seedName(seedId) {
 <template>
   <div>
     <!-- 页头状态（v2.5.3）：农田 / 农具 / 农时 / 产出 / 规则 各成一「块」，块内是「标签 + 值」，一眼能分出类别 -->
-    <div class="card status-line farm-head">
-      <div class="farm-head-row">
-        <span class="farm-seg">
-          <span class="farm-seg-label">农田</span>
+    <StatusChips>
+      <div class="status-chips-row">
+        <span class="status-chip">
+          <span class="status-chip-label">农田</span>
           <b class="mono">{{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</b>
         </span>
-        <span v-if="instance.harvestableCount" class="farm-seg farm-seg-good">
-          <span class="farm-seg-label">待收</span>
+        <span v-if="instance.harvestableCount" class="status-chip status-chip-good">
+          <span class="status-chip-label">待收</span>
           <b class="mono">{{ instance.harvestableCount }}</b> 块
         </span>
-        <span class="farm-seg">
-          <span class="farm-seg-label">🧰 农具</span>
+        <span class="status-chip">
+          <span class="status-chip-label">🧰 农具</span>
           Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }} · 生长 <b class="mono">−{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</b>
         </span>
-        <span class="farm-seg">
-          <span class="farm-seg-label">🌱 当季</span>
+        <span class="status-chip">
+          <span class="status-chip-label">🌱 当季</span>
           {{ farmSeason().name }}季 · {{ farmSeason().label }} <b class="mono">×{{ SEASONAL_BONUS }}</b>
         </span>
-        <span class="farm-seg" :class="isHarshWeather(player.todayWeather()) ? 'farm-seg-bad' : ''">
-          <span class="farm-seg-label">🌦 天气</span>
+        <span class="status-chip" :class="isHarshWeather(player.todayWeather()) ? 'status-chip-bad' : ''">
+          <span class="status-chip-label">🌦 天气</span>
           {{ player.todayWeather().icon }} {{ player.todayWeather().name }} · 农田 <b class="mono">{{ farmWeatherText }}</b>
-          <span v-if="isHarshWeather(player.todayWeather())" class="farm-seg-note">⚠️ 恶劣，温室不受影响</span>
+          <span v-if="isHarshWeather(player.todayWeather())" class="dim">⚠️ 恶劣，温室不受影响</span>
         </span>
         <button v-if="toolCost != null" class="btn btn-sm" style="margin-left: auto" @click="upgradeTool">
           🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
         </button>
-        <span v-else class="farm-seg" style="margin-left: auto"><span class="farm-seg-label">🧰 农具</span>已满级</span>
       </div>
-      <div class="farm-head-row">
-        <span class="farm-seg">
-          <span class="farm-seg-label">📈 产出</span>
+      <div class="status-chips-row">
+        <span class="status-chip">
+          <span class="status-chip-label">📈 产出</span>
           折合 <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分 · 约 <b class="mono">{{ farmRate.lines.toFixed(1) }}</b> 条满精通采集线
-          <span class="farm-seg-note">农田不占并行挂机槽</span>
+          <span class="dim">农田不占并行挂机槽</span>
         </span>
-        <span class="farm-seg">
-          <span class="farm-seg-label">📋 规则</span>
+        <span class="status-chip">
+          <span class="status-chip-label">📋 规则</span>
           枯萎 3%（施肥 1%/0%）· 每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）
         </span>
-        <span class="farm-seg">
-          <span class="farm-seg-label">🧺 精耕作物</span>
+        <span class="status-chip">
+          <span class="status-chip-label">🧺 精耕作物</span>
           <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件
         </span>
       </div>
-    </div>
+    </StatusChips>
 
     <!-- 机制说明（v2.5.2 收进折叠卡）：精耕作物（农耕独占产物）+ 精通联动（越会种越会采） -->
     <FoldCard
@@ -315,25 +316,5 @@ function seedName(seedId) {
 }
 /* 地块「选择种子」按钮（与 plot-select 视觉一致） */
 .plot-select-btn { justify-content: flex-start; }
-/* 页头状态卡（v2.5.3）：两行 + 「分类块」。块底/描边/文字一律用主题变量
-   （--panel-soft-rgb / --border / --muted / --bad-soft 都是主题感知且被皮肤覆盖的 token），
-   所以浅色 / 深色 / 15 套皮肤下都不需要额外分支。 */
-.farm-head { flex-direction: column; align-items: stretch; gap: 6px; }
-.farm-head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.farm-seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 8px;
-  background: rgba(var(--panel-soft-rgb), 0.72);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.farm-seg-label { color: var(--muted); font-size: 12px; }
-.farm-seg-note { color: var(--text-dim); font-size: 12px; }
-.farm-seg-good { background: var(--good-soft); border-color: var(--good-soft); }
-.farm-seg-bad { background: var(--bad-soft); border-color: var(--bad-soft); }
+
 </style>

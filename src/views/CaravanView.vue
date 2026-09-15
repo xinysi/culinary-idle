@@ -11,6 +11,8 @@ import { exchangeCycleIndex, EXCHANGE_CYCLE_HOURS } from '../game/data/exchange.
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -149,13 +151,15 @@ function expand() {
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">商队 {{ player.caravanSlots() }} 支</span>
-        <span class="dim">出航 <b class="mono">{{ stats.trips.toLocaleString() }}</b> 次 ·
-          累计本金 <b class="mono">{{ stats.cargo.toLocaleString() }}</b> ·
-          回款 <b class="mono">{{ stats.gold.toLocaleString() }}</b> 金币 ·
-          单次最佳 <b class="mono">{{ stats.best > 0 ? '+' : '' }}{{ Math.round(stats.best).toLocaleString() }}</b></span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="商队" tone="on">{{ player.caravanSlots() }} 支</StatusChip>
+        <StatusChip label="出航"><b class="mono">{{ stats.trips.toLocaleString() }}</b> 次</StatusChip>
+        <StatusChip label="累计本金"><b class="mono">{{ stats.cargo.toLocaleString() }}</b></StatusChip>
+        <StatusChip label="回款"><b class="mono">{{ stats.gold.toLocaleString() }}</b> 金币</StatusChip>
+        <StatusChip label="单次最佳" tone="good"><b class="mono">{{ stats.best > 0 ? '+' : '' }}{{ Math.round(stats.best).toLocaleString() }}</b></StatusChip>
       </div>
+      </StatusChips>
 
       <div class="cv-grid">
         <div v-for="s in slots" :key="s.index" class="card cv-slot">

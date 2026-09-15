@@ -50,6 +50,8 @@ function run() {
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'chefChallenge', label: '🃏 名厨' }, { view: 'log', label: '📖 图鉴/装备' }]
 </script>
@@ -73,11 +75,13 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'chefChalleng
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">第 {{ week }} 届 · {{ theme }}</span>
-        <span class="dim">当前评分 <b class="mono">{{ fmt(live.score) }}</b> → 预计档位 <b>{{ liveRank.name }}</b></span>
-        <span v-if="st.best" class="dim">历史最高 {{ fmt(st.best) }} 分 · 已参赛 {{ st.runs ?? 0 }} 届</span>
-      </div>
+      <StatusChips>
+        <div class="status-chips-row">
+          <StatusChip label="本届" tone="on">第 {{ week }} 届 · {{ theme }}</StatusChip>
+          <StatusChip label="当前评分"><b class="mono">{{ fmt(live.score) }}</b> → 预计 <b>{{ liveRank.name }}</b></StatusChip>
+          <StatusChip v-if="st.best" label="历史最高"><b class="mono">{{ fmt(st.best) }}</b> 分 · 已参赛 {{ st.runs ?? 0 }} 届</StatusChip>
+        </div>
+      </StatusChips>
 
       <div class="contest-actions">
         <button class="btn btn-primary" :disabled="done" @click="run">

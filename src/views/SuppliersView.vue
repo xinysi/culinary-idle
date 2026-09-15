@@ -60,6 +60,8 @@ function gotoShop() {
 }
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', label: '💹 交易所' }]
 </script>
@@ -108,10 +110,13 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
         货款金币不足时当日不到货、次日再试，合约不因此作废。
       </p>
     </FoldCard>
-    <div class="card status-line">
-      <span class="badge badge-on">生效中 {{ activeCount }} / {{ SUPPLIER_MAX_CONTRACTS }}</span>
-      <span class="dim">可再签 <b class="mono">{{ remain }}</b> 份 · 累计到货 <b class="mono">{{ (player.stats?.contractDeliveries ?? 0).toLocaleString() }}</b> 次</span>
-    </div>
+    <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="生效中" tone="on">{{ activeCount }} / {{ SUPPLIER_MAX_CONTRACTS }}</StatusChip>
+        <StatusChip label="可再签"><b class="mono">{{ remain }}</b> 份</StatusChip>
+        <StatusChip label="累计到货"><b class="mono">{{ (player.stats?.contractDeliveries ?? 0).toLocaleString() }}</b> 次</StatusChip>
+      </div>
+    </StatusChips>
 
     <div v-if="active.length" class="card">
       <div class="sup-h">📦 生效中的合约</div>

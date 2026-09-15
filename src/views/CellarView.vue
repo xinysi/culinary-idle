@@ -100,6 +100,8 @@ const expandLadder = computed(() => {
 })
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'automation', label: '🤖 自动化' }]
 </script>
@@ -161,11 +163,14 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">槽位 {{ player.cellarSlots() }} 格</span>
-        <span class="dim">累计出窖 <b class="mono">{{ stats.rounds }}</b> 次 · 累计金币 <b class="mono">{{ stats.gold.toLocaleString() }}</b></span>
-        <span class="dim">档位：12h ×1.5 / 24h ×2 / 48h ×3 / 96h ×4</span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="槽位" tone="on">{{ player.cellarSlots() }} 格</StatusChip>
+        <StatusChip label="累计出窖"><b class="mono">{{ stats.rounds }}</b> 次</StatusChip>
+        <StatusChip label="累计金币"><b class="mono">{{ stats.gold.toLocaleString() }}</b></StatusChip>
+        <StatusChip label="档位"><span class="dim">12h ×1.5 / 24h ×2 / 48h ×3 / 96h ×4</span></StatusChip>
       </div>
+      </StatusChips>
 
       <!-- 档位对照表（2026-09-12 补） -->
 
