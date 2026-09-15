@@ -11,7 +11,7 @@ import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '..
 import { Combat } from '../../src/game/combat/Combat.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../../src/game/data/combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
-import { countForMasteryLevel, masteryXpMultiplier } from '../../src/game/core/mastery.js'
+import { countForMasteryLevel, masteryXpMultiplier, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
 import { EQUIPMENT_SETS, equipSetBonuses } from '../../src/game/data/equipSets.js'
 import { regularLevelFromServes, REGULARS } from '../../src/game/data/regulars.js'
@@ -4310,6 +4310,80 @@ console.log('══ C26. 效果总览 ══')
     const S = fs.readFileSync(new URL('../../src/views/StatsView.vue', import.meta.url), 'utf8')
     return A.includes('effectsSeenMax') && S.includes('effectsSeenMax')
   })())
+}
+
+// ── C27. 精通档位表（2026-09-16：表必须**派生**自 mastery.js，且三处页面共用同一组件）──
+console.log('══ C27. 精通档位说明 ══')
+{
+  // 1) 派生不变量：每一格的四个数值都必须等于对应函数在**刚好达到该档**时的返回值
+  //    （改为手写数组后，若手写值与函数不一致，这条立刻 FAIL）
+  const drift = []
+  for (const t of MASTERY_TIERS) {
+    if (t.xpMult !== masteryXpMultiplier(t.level)) drift.push(`${t.level}: 经验`)
+    if (t.double !== masteryDoubleChance(t.level)) drift.push(`${t.level}: 双倍`)
+    if (t.batch !== masteryYieldBonus(t.level)) drift.push(`${t.level}: 保底`)
+    if (t.intervalFactor !== masteryIntervalFactor(t.level)) drift.push(`${t.level}: 间隔比例`)
+    if (t.fixedInterval !== masteryFixedInterval(t.level)) drift.push(`${t.level}: 固定档`)
+  }
+  check('精通档位', `档位表 ${MASTERY_TIERS.length} 行全部由 mastery.js 的函数派生（无手写漂移）`, drift.length === 0, drift.slice(0, 6).join(', '))
+  check('精通档位', `档位覆盖 ${MASTERY_TIER_LEVELS.length} 档（5~100）且严格递增`, MASTERY_TIER_LEVELS.length === 11 && MASTERY_TIER_LEVELS.every((lv, i) => i === 0 || lv > MASTERY_TIER_LEVELS[i - 1]))
+
+  // 2) 单调性：档位越高，经验 / 双倍 / 保底只能不减，固定档只能更短、比例只能更小
+  let mono = true
+  for (let i = 1; i < MASTERY_TIERS.length; i++) {
+    const a = MASTERY_TIERS[i - 1]
+    const b = MASTERY_TIERS[i]
+    if (b.xpMult < a.xpMult || b.double < a.double || b.batch < a.batch) mono = false
+    if (b.intervalFactor > a.intervalFactor) mono = false
+    if ((b.fixedInterval ?? Infinity) > (a.fixedInterval ?? Infinity)) mono = false
+  }
+  check('精通档位', '档位单调：经验/双倍/保底不减，间隔不变慢（升级永远不会变差）', mono)
+
+  // 3) 关键边界值（改动平衡时这几条会第一时间报出来）
+  check('精通档位', '边界：5 级 ×1.1 / 50 级 双倍 30% 保底 +1 / 100 级 ×4 双倍 80% 保底 +2', (() => {
+    const t5 = MASTERY_TIERS.find((t) => t.level === 5)
+    const t50 = MASTERY_TIERS.find((t) => t.level === 50)
+    const t100 = MASTERY_TIERS.find((t) => t.level === 100)
+    return t5.xpMult === 1.1 && t50.double === 0.3 && t50.batch === 1 && t100.xpMult === 4 && t100.double === 0.8 && t100.batch === 2
+  })())
+  check('精通档位', '边界：固定档 20 级起 3.6s（19 级为 null，避免「整段替换」回归）', masteryFixedInterval(20) === 3.6 && masteryFixedInterval(19) === null && masteryFixedInterval(100) === 2)
+  check('精通档位', '展示格式：间隔列「减 1/3 / 减半 / ≤ 3.6s / ≤ 3.0s / ≤ 2.0s」（一位小数不能丢）', (() => {
+    const f = (lv) => masteryIntervalText(MASTERY_TIERS.find((t) => t.level === lv))
+    return f(5) === '减 1/3' && f(10) === '减半' && f(20) === '≤ 3.6s' && f(40) === '≤ 3.0s' && f(100) === '≤ 2.0s'
+  })())
+
+  // 4) 「下一档」口径：跨档次数必须与 countForMasteryLevel 对齐；满级为 null
+  check('精通档位', '「下一档」次数与升级门槛一致（Lv7→10 级、Lv100 为 null）', (() => {
+    const n7 = masteryToNextTier(7, countForMasteryLevel(7))
+    const need10 = countForMasteryLevel(10) - countForMasteryLevel(7)
+    return n7?.tier.level === 10 && n7.remaining === need10 && masteryToNextTier(100, 999999) === null
+  })())
+
+  // 5) 页面契约：三处都改用共用组件，且**视图里不再手写档位数字**（防「又抄一份」）
+  const V = (f) => fs.readFileSync(new URL(`../../src/views/${f}`, import.meta.url), 'utf8')
+  const gatherSrc = V('GatheringView.vue')
+  const prodSrc = V('ProductionView.vue')
+  const notesSrc = V('KitchenNotesView.vue')
+  const helpSrc = fs.readFileSync(new URL('../../src/components/MasteryHelp.vue', import.meta.url), 'utf8')
+  check('精通档位', '采集页 / 制作页 / 厨房笔记 三处都用共用组件 <MasteryHelp>', ['GatheringView.vue', 'ProductionView.vue', 'KitchenNotesView.vue'].every((f) => V(f).includes('<MasteryHelp')))
+  check('精通档位', '共用组件从 MASTERY_TIERS 派生（组件里不出现档位数字）', helpSrc.includes('MASTERY_TIERS') && !/×2\.2|×3\.6|≤ 3\.6s/.test(helpSrc))
+  check('精通档位', '视图里不再手写档位数字（此前 GatheringView 手抄过 11 行）', ![gatherSrc, prodSrc, notesSrc].some((s) => /×2\.2/.test(s) || /'减 1\/3'/.test(s)))
+  check('精通档位', '制作页配方卡真的显示精通（含「下一档」与等级/进度）', prodSrc.includes('masteryOf(') && prodSrc.includes('masteryToNextTier') && prodSrc.includes('masteryProgress'))
+  check('精通档位', '弹窗必须 Teleport 出卡片树（卡片祖先有 backdrop-filter，否则定位错）', helpSrc.includes('<Teleport to="body">'))
+
+  // 6) 行为级：制作类配方确实带精通（厨房笔记与制作页读的就是它）
+  const pc = freshPlayer({ cooking: 30 })
+  const cinst = getSkillInstance('cooking')
+  const rec = cinst.recipes[0]
+  const cnt = cinst.masteryCount(rec)
+  const pr = cinst.masteryProgress(rec)
+  check('精通档位', '制作配方有 masteryCount / masteryProgress（0~100 级、进度 0~1）', Number.isFinite(cnt) && cnt >= 0 && pr.level >= 0 && pr.level <= 100 && pr.progress >= 0 && pr.progress <= 1)
+  check('精通档位', '制作类也能吃到保底与双倍（与采集同一组函数）', (() => {
+    cinst.mastery[rec.id] = countForMasteryLevel(60)
+    const p60 = cinst.masteryProgress(rec)
+    return p60.level === 60 && masteryYieldBonus(p60.level) === 1 && masteryDoubleChance(p60.level) === 0.4 && masteryXpMultiplier(p60.level) === 2.5
+  })())
+  void pc
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
