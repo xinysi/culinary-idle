@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList } from '../game/data/caps.js'
+import { TOOL_MAX_LEVEL, nextToolCost, toolTimeFactor } from '../game/data/farmTools.js'
 import { shanhaiNodeState, shanhaiEffectSum, shanhaiNode, shanhaiPathProgress, shanhaiCapGrant } from '../game/data/shanhaiProgress.js'
 import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
@@ -204,7 +205,7 @@ const defaultState = () => ({
     activeTarget: null,
     skillTargets: {}, // 每技能选择的挂机目标（多技能并行，§3.1）；新档为空 = 待机，由玩家选择目标开始
     lastOnlineAt: Date.now(),
-    farming: { plots: [] }, // 农田（§3.1.5）
+    farming: { plots: [], tool: 0 }, // 农田（§3.1.5）；tool = 农具等级（v2.4.1，缩短生长时间）
     offlineBonusH: 0, // 离线时长加成（§8.1），上限 +12h
     combat: { style: 'knife', hp: 10, flavorEnergy: 50 }, // §4
     spirits: { active: [], owned: {} }, // 食灵出战列表（§3.3.6，最多 2 个）；owned=食灵阁（不占背包格，2026-09-06）
@@ -613,7 +614,10 @@ export const usePlayerStore = defineStore('player', {
         activeTarget: saved.activeTarget ?? null,
         skillTargets: saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
         settings: { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }, // 并行挂机只接受 0/1/2/3
-        farming: { plots: safeList(saved.farming?.plots, DERIVED_MAX.farmPlots) }, // 农田块数上限由技能等级派生，这里只兜住绝对上限
+        farming: {
+          plots: safeList(saved.farming?.plots, DERIVED_MAX.farmPlots), // 农田块数上限由技能等级派生，这里只兜住绝对上限
+          tool: safeCap(saved.farming?.tool, 0, TOOL_MAX_LEVEL), // 农具等级（v2.4.1）
+        },
         offlineBonusH: safeCap(saved.offlineBonusH, 0, OFFLINE_CAP.biscuitMaxHours),
         combat: { ...this.combat, ...(saved.combat ?? {}) },
         spirits: { active: safeList(saved.spirits?.active, SPIRIT_SLOTS), owned: saved.spirits?.owned ?? {} }, // 出战位上限
@@ -2454,6 +2458,28 @@ export const usePlayerStore = defineStore('player', {
         if (!inst.canCraft?.(recipe)) continue
         inst.enqueue?.(recipe, 1)
       }
+    },
+
+    // ── 农具（v2.4.1）：花金币缩短农田生长时间，回应「农耕要等、采集能速刷」 ──
+    /** 农具等级（懒建） */
+    farmToolLevel() {
+      return Math.max(0, Math.min(TOOL_MAX_LEVEL, Number(this.farming?.tool) || 0))
+    },
+    /** 农田生长速度系数（0.70 ~ 1.00） */
+    farmTimeFactor() {
+      return toolTimeFactor(this.farmToolLevel())
+    },
+    /** 购置/升级农具 */
+    upgradeFarmTool() {
+      const lv = this.farmToolLevel()
+      const cost = nextToolCost(lv)
+      if (cost == null) return { ok: false, msg: '农具已满级' }
+      if (this.gold < cost) return { ok: false, msg: `金币不足（需 ${cost.toLocaleString()}）` }
+      this.spendGold(cost)
+      if (!this.farming) this.farming = { plots: [], tool: 0 }
+      this.farming.tool = lv + 1
+      EventBus.emit('farm:tool', { level: lv + 1, cost })
+      return { ok: true, level: lv + 1, factor: this.farmTimeFactor() }
     },
 
     // ── 牧场养殖（2026-09-10）：驯养动物按周期消耗作物产出蛋/奶/肉 ──
