@@ -12,6 +12,7 @@ import { PRIME_BASE_CHANCE, PRIME_CROP_ID, PRIME_MAX_CHANCE, PRIME_MIN_LEVEL } f
 import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
+import FoldCard from '../components/FoldCard.vue'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -110,43 +111,43 @@ function seedName(seedId) {
 
 <template>
   <div>
-    <div class="card status-line">
-      <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
-      <span class="dim">（每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级农耕 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）；作物枯萎 3%，施肥可降至 1%/0%）</span>
-      <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
+    <!-- 页头状态（v2.5.2 合并）：农田 / 农具 / 农时 合成一张两行讲完；细节说明收进下面的折叠卡 -->
+    <div class="card status-line farm-head">
+      <div class="farm-head-row">
+        <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
+        <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
+        <span class="dim">🧰 农具 Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }} · 生长 −{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</span>
+        <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🌱 {{ seasonalTip() }}</span>
+        <span class="dim">
+          天气 <b>{{ player.todayWeather().icon }} {{ player.todayWeather().name }}</b> 农田 <b class="mono">{{ farmWeatherText }}</b>
+          <template v-if="isHarshWeather(player.todayWeather())">⚠️ 恶劣（<b>温室不受影响</b>）</template>
+        </span>
+        <button v-if="toolCost != null" class="btn btn-sm" style="margin-left: auto" @click="upgradeTool">
+          🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
+        </button>
+        <span v-else class="badge" style="margin-left: auto">农具已满级</span>
+      </div>
+      <div class="farm-head-row dim">
+        全部地块折合 ≈ <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分（约 {{ farmRate.lines.toFixed(1) }} 条满精通采集线，农田不占并行挂机槽）
+        ｜ 枯萎 3%（施肥 1%/0%）｜ 每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）
+        ｜ 🧺 精耕作物 <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件
+      </div>
     </div>
 
-    <!-- 农具（v2.4.1）：用金币缩短「等」的时间；折合产出让「农耕值不值」一目了然 -->
-    <div class="card status-line">
-      <span class="badge badge-on">🧰 农具 Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }}</span>
-      <span class="dim">农田生长时间 <b class="mono">−{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</b>（小麦 {{ toolTimeText(90) }} · 灵果 {{ toolTimeText(990) }}）</span>
-      <span class="dim">全部地块折合 ≈ <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分 ·
-        约 <b class="mono">{{ farmRate.lines.toFixed(1) }}</b> 条满精通采集线（农田不占并行挂机槽）</span>
-      <button v-if="toolCost != null" class="btn btn-sm" style="margin-left: auto" @click="upgradeTool">
-        🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
-      </button>
-      <span v-else class="badge">农具已满级</span>
-    </div>
-
-    <!-- 农耕的独占产物（v2.5.0）：把「农耕」与「采摘/挖掘」拉开差异 -->
-    <div class="card status-line">
-      <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🧺 精耕作物</span>
-      <span class="dim">
-        {{ primeRange }}——这是<b>农田独有</b>的高级产物（采集/商店/抽奖都拿不到），持有 <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件；
-        可给<b>萃露炉加料</b>（酿造时间 −40%）或在商店出售。
-      </span>
-      <span class="dim">精通联动：把某作物种到精通，<b>采集该物品</b>时额外产出几率也随之提高（每 10 级 +2%、上限 +20%）</span>
-    </div>
-
-    <!-- 农时（v2.4.0）：当季作物 ×1.5 + 天气对农田的影响；温室不吃天气 ⇒ 坏天气时的避风港 -->
-    <div class="card status-line">
-      <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🌱 {{ seasonalTip() }}</span>
-      <span class="dim">
-        今日天气 <b>{{ player.todayWeather().icon }} {{ player.todayWeather().name }}</b>：
-        农田产量 <b class="mono">{{ farmWeatherText }}</b>
-        <template v-if="isHarshWeather(player.todayWeather())">（⚠️ 恶劣天气——<b>温室不受天气影响</b>，可先种到温室去）</template>
-      </span>
-    </div>
+    <!-- 机制说明（v2.5.2 收进折叠卡）：精耕作物（农耕独占产物）+ 精通联动（越会种越会采） -->
+    <FoldCard
+      title="🧺 精耕作物与精通联动（农耕的独占产物）"
+      :hint="`等级 ${PRIME_MIN_LEVEL} 以上的作物收获时附产（4%~10%，随精通提高）；把作物种到精通，采集它时也更快：+2%/10 级、上限 +20%`"
+    >
+      <p class="dim" style="line-height: 1.7; font-size: 13px">
+        <b>🧺 精耕作物</b>：{{ primeRange }}。这是<b>农田独有</b>的高级产物（采集 / 商店 / 抽奖都拿不到），
+        当前持有 <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件；用途两条——<b>给萃露炉加料</b>（该次酿造时间 −40%）或在商店·出售页换金币。
+      </p>
+      <p class="dim" style="line-height: 1.7; font-size: 13px; margin-top: 6px">
+        <b>🔁 精通联动（越会种越会采）</b>：把某作物种到精通，<b>采集该物品</b>时的额外产出几率也随之提高——
+        每 10 级精通 +2%、上限 +20%（选种时每个种子会显示当前数值；未精通时显示「精通后 +2%~20%」）。
+      </p>
+    </FoldCard>
 
     <!-- 农田网格 -->
     <div class="card">
@@ -198,7 +199,9 @@ function seedName(seedId) {
               </div>
               <ProgressBar :progress="plotProgressPct(i - 1)" />
               <div v-if="instance.isMature(i - 1)" class="plot-mature">已成熟！</div>
-              <div v-else class="dim mono">剩余 {{ remainingSec(i - 1) }}s · 枯萎 {{ (instance.witherChance(i - 1) * 100).toFixed(0) }}%</div>
+              <div v-else class="dim mono">
+                剩余 {{ remainingSec(i - 1) }}s · 枯萎 {{ (instance.witherChance(i - 1) * 100).toFixed(0) }}%<template v-if="farmGatherPct(instance.plotCrop(i - 1)?.itemId) > 0"> · 采集 +{{ Math.round(farmGatherPct(instance.plotCrop(i - 1)?.itemId) * 100) }}%</template>
+              </div>
               <!-- ⚠️ 已施肥的田不再显示施肥按钮（2026-09-14 用户实测：原先可重复点、每次都扣肥料）。
                    已施肥时改为一句提示；真正的拦截在 FarmingSkill.fertilize 里（防 UI 之外调用）。 -->
               <div v-if="!instance.isMature(i - 1) && instance.plotAt(i - 1).fertilizer !== 'richCompost'" class="plot-fert">
@@ -259,8 +262,9 @@ function seedName(seedId) {
               <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
               <span class="dim">{{ c.xp }} 经验</span>
             </div>
-            <div v-if="farmGatherPct(c.itemId) > 0" class="item-cell-sub" style="font-size: 12px">
-              <span class="badge" style="background: var(--good-soft); color: var(--good-strong)">采集 +{{ Math.round(farmGatherPct(c.itemId) * 100) }}%</span>
+            <div class="item-cell-sub" style="font-size: 12px">
+              <span v-if="farmGatherPct(c.itemId) > 0" class="badge" style="background: var(--good-soft); color: var(--good-strong)">采集 +{{ Math.round(farmGatherPct(c.itemId) * 100) }}%</span>
+              <span v-else class="dim">精通后：采集 +2%~20%</span>
             </div>
             <div v-if="isSeasonal(getItem(c.itemId)?.category)" class="item-cell-sub" style="font-size: 12px">
               <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">当季 ×{{ SEASONAL_BONUS }}</span>
@@ -288,4 +292,7 @@ function seedName(seedId) {
 }
 /* 地块「选择种子」按钮（与 plot-select 视觉一致） */
 .plot-select-btn { justify-content: flex-start; }
+/* 页头状态卡（v2.5.2 合并版）：两行紧凑排布，行内元素自动折行 */
+.farm-head { flex-direction: column; align-items: stretch; gap: 4px; }
+.farm-head-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 </style>
