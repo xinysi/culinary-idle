@@ -9,6 +9,8 @@ import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
+import { seasonalCropBonus } from '../data/farmingSeason.js'
+import { getItem } from '../data/items.js'
 import { DERIVED_MAX } from '../data/caps.js'
 
 const CROPS_15 = [
@@ -242,6 +244,12 @@ export class FarmingSkill extends Skill {
     let qty = 1 + farmBonus + fertBonus + batch + shanhai + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
     // 精通档位双倍（新表：5→1%…100→80%）
     if (Math.random() < masteryDoubleChance(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0))) qty *= 2
+    // 农时乘区（v2.4.0）：**天气**（农田吃天气、温室不吃）+ **当季作物**（按月份轮换类别 ×1.5）。
+    // 农耕没有离线结算（成熟后停在地里等玩家来收），所以直接作用于本次收成即可；
+    // 取整后至少 1 件 —— 坏天气也不会让玩家颗粒无收。
+    const wx = this.player.weatherEffects?.() ?? {}
+    const farmMult = (wx.farmYield ?? 1) * seasonalCropBonus(getItem(crop.itemId)?.category ?? '')
+    if (farmMult !== 1) qty = Math.max(1, Math.round(qty * farmMult))
     this.player.gainItem(crop.itemId, qty)
     this.player.addMastery(this.id, crop.itemId, 1)
     const expGained = this.addCardXp(crop.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)))

@@ -17,6 +17,7 @@ const luck = computed(() => fx.value.luck ?? FORTUNE_LEVELS[FORTUNE_LEVELS.lengt
 /** 五条赛道的当前倍率（<1 就是减益，界面标红） */
 const FX_ROWS = [
   { key: 'gatherYield', label: '采集产量' },
+  { key: 'farmYield', label: '农田产量' },
   { key: 'gatherXp', label: '采集经验' },
   { key: 'craftXp', label: '制作经验' },
   { key: 'combatXp', label: '对决经验' },

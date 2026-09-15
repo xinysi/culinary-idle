@@ -1,5 +1,8 @@
 // 天气与运势（2026-09-10 新增；2026-09-13 追加**恶劣天气减益**）— 每日变量层：按自然日确定性抽取「天气」与「今日运势」。
-// 与「节庆」（按月固定）、「限时活动」（按整点）三层互不冲突；效果只挂在既有聚合点（采集产量/经验、制作经验、对决经验、餐厅收入）。
+// 与「节庆」（按月固定）、「限时活动」（按整点）三层互不冲突；效果只挂在既有聚合点
+// （采集产量/经验、制作经验、对决经验、餐厅收入、**农田产量 farmYield**）。
+// ⚠️ `farmYield`（2026-09-14 v2.4.0 新增）只作用于**农田**：**温室不吃天气**（这是温室不可替代的定位——
+//    恶劣天气时农田减产、温室如常，玩家因此有「换到温室」的对策）。
 // 设计约束：纯日期计算（无存档状态）、不新增物品、不改动任何固定数据。
 //
 // ⚠️ **恶劣天气（2026-09-13 用户要求）**：天气不能只有好处，否则「每日变量」等于白送。三条恶劣天气各带**真实减益**
@@ -11,16 +14,16 @@
 
 /** 天气：boost 键与 marketBoost 对齐（gatherYield 单独在采集产量处生效）；值 < 1 即减益 */
 export const WEATHERS = [
-  { id: 'sunny', name: '晴朗', icon: '☀️', boost: { gatherXp: 1.10 }, desc: '采集经验 +10%' },
-  { id: 'rain', name: '细雨', icon: '🌧️', boost: { gatherYield: 1.15 }, desc: '采集产量 +15%' },
-  { id: 'snow', name: '落雪', icon: '❄️', boost: { craftXp: 1.12 }, desc: '制作经验 +12%' },
-  { id: 'fog', name: '薄雾', icon: '🌫️', boost: { gatherYield: 1.08, craftXp: 1.06 }, desc: '采集产量 +8%、制作经验 +6%' },
-  { id: 'thunder', name: '雷暴', icon: '⛈️', boost: { combatXp: 1.15 }, desc: '对决经验 +15%' },
-  { id: 'wind', name: '劲风', icon: '🌬️', boost: { restaurant: 1.12 }, desc: '餐厅收入 +12%' },
+  { id: 'sunny', name: '晴朗', icon: '☀️', boost: { gatherXp: 1.10, farmYield: 1.10 }, desc: '采集经验 +10%、农田产量 +10%' },
+  { id: 'rain', name: '细雨', icon: '🌧️', boost: { gatherYield: 1.15, farmYield: 1.18 }, desc: '采集产量 +15%、农田产量 +18%' },
+  { id: 'snow', name: '落雪', icon: '❄️', boost: { craftXp: 1.12, farmYield: 0.90 }, desc: '制作经验 +12%；农田产量 −10%' },
+  { id: 'fog', name: '薄雾', icon: '🌫️', boost: { gatherYield: 1.08, craftXp: 1.06, farmYield: 1.05 }, desc: '采集产量 +8%、制作经验 +6%、农田产量 +5%' },
+  { id: 'thunder', name: '雷暴', icon: '⛈️', boost: { combatXp: 1.15, farmYield: 0.92 }, desc: '对决经验 +15%；农田产量 −8%' },
+  { id: 'wind', name: '劲风', icon: '🌬️', boost: { restaurant: 1.12, farmYield: 1.06 }, desc: '餐厅收入 +12%、农田产量 +6%' },
   // ── 恶劣天气（减益为主，各留一个换赛道的补偿）──
-  { id: 'storm', name: '台风', icon: '🌪️', harsh: true, boost: { gatherYield: 0.78, restaurant: 0.90, combatXp: 1.18 }, desc: '采集产量 −22%、餐厅收入 −10%；对决经验 +18%' },
-  { id: 'heat', name: '酷暑', icon: '🔥', harsh: true, boost: { gatherXp: 0.85, craftXp: 0.88, restaurant: 1.15 }, desc: '采集经验 −15%、制作经验 −12%；餐厅收入 +15%' },
-  { id: 'frost', name: '寒潮', icon: '🧊', harsh: true, boost: { gatherYield: 0.82, gatherXp: 0.85, craftXp: 1.15 }, desc: '采集产量 −18%、采集经验 −15%；制作经验 +15%' },
+  { id: 'storm', name: '台风', icon: '🌪️', harsh: true, boost: { gatherYield: 0.78, restaurant: 0.90, farmYield: 0.75, combatXp: 1.18 }, desc: '采集产量 −22%、餐厅收入 −10%、农田产量 −25%；对决经验 +18%' },
+  { id: 'heat', name: '酷暑', icon: '🔥', harsh: true, boost: { gatherXp: 0.85, craftXp: 0.88, farmYield: 0.80, restaurant: 1.15 }, desc: '采集经验 −15%、制作经验 −12%、农田产量 −20%；餐厅收入 +15%' },
+  { id: 'frost', name: '寒潮', icon: '🧊', harsh: true, boost: { gatherYield: 0.82, gatherXp: 0.85, farmYield: 0.72, craftXp: 1.15 }, desc: '采集产量 −18%、采集经验 −15%、农田产量 −28%；制作经验 +15%' },
 ]
 
 /**
@@ -100,7 +103,7 @@ export function fortuneForDay(dayKey = dayKeyOf(), itemPool = []) {
 export function weatherBoost(dayKey = dayKeyOf()) {
   const w = weatherForDay(dayKey)
   const luck = fortuneLevelForDay(dayKey)
-  const out = { gatherYield: 1, gatherXp: 1, craftXp: 1, combatXp: 1, restaurant: 1, weather: w, luck }
+  const out = { gatherYield: 1, gatherXp: 1, craftXp: 1, combatXp: 1, restaurant: 1, farmYield: 1, weather: w, luck }
   for (const [k, v] of Object.entries(w.boost ?? {})) {
     out[k] = v < 1 ? 1 - (1 - v) * luck.penaltyScale : v
   }
