@@ -111,26 +111,49 @@ function seedName(seedId) {
 
 <template>
   <div>
-    <!-- 页头状态（v2.5.2 合并）：农田 / 农具 / 农时 合成一张两行讲完；细节说明收进下面的折叠卡 -->
+    <!-- 页头状态（v2.5.3）：农田 / 农具 / 农时 / 产出 / 规则 各成一「块」，块内是「标签 + 值」，一眼能分出类别 -->
     <div class="card status-line farm-head">
       <div class="farm-head-row">
-        <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
-        <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
-        <span class="dim">🧰 农具 Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }} · 生长 −{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</span>
-        <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🌱 {{ seasonalTip() }}</span>
-        <span class="dim">
-          天气 <b>{{ player.todayWeather().icon }} {{ player.todayWeather().name }}</b> 农田 <b class="mono">{{ farmWeatherText }}</b>
-          <template v-if="isHarshWeather(player.todayWeather())">⚠️ 恶劣（<b>温室不受影响</b>）</template>
+        <span class="farm-seg">
+          <span class="farm-seg-label">农田</span>
+          <b class="mono">{{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</b>
+        </span>
+        <span v-if="instance.harvestableCount" class="farm-seg farm-seg-good">
+          <span class="farm-seg-label">待收</span>
+          <b class="mono">{{ instance.harvestableCount }}</b> 块
+        </span>
+        <span class="farm-seg">
+          <span class="farm-seg-label">🧰 农具</span>
+          Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }} · 生长 <b class="mono">−{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</b>
+        </span>
+        <span class="farm-seg">
+          <span class="farm-seg-label">🌱 当季</span>
+          {{ farmSeason().name }}季 · {{ farmSeason().label }} <b class="mono">×{{ SEASONAL_BONUS }}</b>
+        </span>
+        <span class="farm-seg" :class="isHarshWeather(player.todayWeather()) ? 'farm-seg-bad' : ''">
+          <span class="farm-seg-label">🌦 天气</span>
+          {{ player.todayWeather().icon }} {{ player.todayWeather().name }} · 农田 <b class="mono">{{ farmWeatherText }}</b>
+          <span v-if="isHarshWeather(player.todayWeather())" class="farm-seg-note">⚠️ 恶劣，温室不受影响</span>
         </span>
         <button v-if="toolCost != null" class="btn btn-sm" style="margin-left: auto" @click="upgradeTool">
           🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
         </button>
-        <span v-else class="badge" style="margin-left: auto">农具已满级</span>
+        <span v-else class="farm-seg" style="margin-left: auto"><span class="farm-seg-label">🧰 农具</span>已满级</span>
       </div>
-      <div class="farm-head-row dim">
-        全部地块折合 ≈ <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分（约 {{ farmRate.lines.toFixed(1) }} 条满精通采集线，农田不占并行挂机槽）
-        ｜ 枯萎 3%（施肥 1%/0%）｜ 每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）
-        ｜ 🧺 精耕作物 <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件
+      <div class="farm-head-row">
+        <span class="farm-seg">
+          <span class="farm-seg-label">📈 产出</span>
+          折合 <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分 · 约 <b class="mono">{{ farmRate.lines.toFixed(1) }}</b> 条满精通采集线
+          <span class="farm-seg-note">农田不占并行挂机槽</span>
+        </span>
+        <span class="farm-seg">
+          <span class="farm-seg-label">📋 规则</span>
+          枯萎 3%（施肥 1%/0%）· 每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）
+        </span>
+        <span class="farm-seg">
+          <span class="farm-seg-label">🧺 精耕作物</span>
+          <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件
+        </span>
       </div>
     </div>
 
@@ -292,7 +315,25 @@ function seedName(seedId) {
 }
 /* 地块「选择种子」按钮（与 plot-select 视觉一致） */
 .plot-select-btn { justify-content: flex-start; }
-/* 页头状态卡（v2.5.2 合并版）：两行紧凑排布，行内元素自动折行 */
-.farm-head { flex-direction: column; align-items: stretch; gap: 4px; }
-.farm-head-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 页头状态卡（v2.5.3）：两行 + 「分类块」。块底/描边/文字一律用主题变量
+   （--panel-soft-rgb / --border / --muted / --bad-soft 都是主题感知且被皮肤覆盖的 token），
+   所以浅色 / 深色 / 15 套皮肤下都不需要额外分支。 */
+.farm-head { flex-direction: column; align-items: stretch; gap: 6px; }
+.farm-head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.farm-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(var(--panel-soft-rgb), 0.72);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.farm-seg-label { color: var(--muted); font-size: 12px; }
+.farm-seg-note { color: var(--text-dim); font-size: 12px; }
+.farm-seg-good { background: var(--good-soft); border-color: var(--good-soft); }
+.farm-seg-bad { background: var(--bad-soft); border-color: var(--bad-soft); }
 </style>
