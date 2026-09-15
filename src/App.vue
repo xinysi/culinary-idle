@@ -91,6 +91,7 @@ const EncountersView = defineAsyncComponent(() => import('./views/EncountersView
 const CaravanView = defineAsyncComponent(() => import('./views/CaravanView.vue'))
 const MycoFieldView = defineAsyncComponent(() => import('./views/MycoFieldView.vue'))
 const GreenhouseView = defineAsyncComponent(() => import('./views/GreenhouseView.vue'))
+const EffectsView = defineAsyncComponent(() => import('./views/EffectsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -401,6 +402,7 @@ onMounted(() => {
           <CaravanView v-else-if="ui.activeView === 'caravan'" />
           <MycoFieldView v-else-if="ui.activeView === 'mycoField'" />
           <GreenhouseView v-else-if="ui.activeView === 'greenhouse'" />
+          <EffectsView v-else-if="ui.activeView === 'effects'" />
           <!-- 27 款小游戏统一由 MinigamesView 内部注册与切换（它自带 activeComp 与 GAMES 表）；
                这里不再逐个注册——2026-09-10 清理了 6 个永远命中不到的旧分支 -->
           <MinigamesView v-else-if="ui.activeView === 'minigames'" />

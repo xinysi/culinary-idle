@@ -269,6 +269,7 @@ export const STORY = [
       { kind: 'card', need: 15, label: '卡牌对战胜利' },
       { kind: 'gold', need: 300000, label: '累计金币' },
       { kind: 'caravan', need: 10, label: '商队出航' },
+      { kind: 'effects', need: 12, label: '同时生效的效果' },
     ],
     parts: [
       {

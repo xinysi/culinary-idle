@@ -56,6 +56,8 @@ const VIEWS = [
   'cards',
   // 2026-09-12 第十二批（奇遇图鉴）
   'encounters', 'dao', 'shanhai',
+  // 2026-09-16 效果总览（今日组：此刻生效的全部增益 / 效果 / 减益）
+  'effects',
   // 2026-09-14 挂机产线四套
   'caravan', 'mycoField', 'greenhouse',
 ]

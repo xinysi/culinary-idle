@@ -16,6 +16,8 @@ const VIEWS = [
   'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters', 'dao', 'shanhai',
   // 2026-09-14 挂机产线四套
   'caravan', 'mycoField', 'greenhouse',
+  // 2026-09-16 效果总览（今日组）
+  'effects',
 ]
 const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
 

@@ -24,6 +24,7 @@ const NEEDS = {
   friendBondAll: FRIENDS.length, expeditionTier5: EXPEDITIONS.length, branch6: BRANCHES.length, mascot7: MASCOTS.length, setMeal3: 3, chefWin10: 10,
   // 挂机产线四套（2026-09-14）
   caravan1: 1, caravan30: 30, mushroom50: 50, spiritField10: 10, honey8: 8, honey100: 100, essence1: 1, essenceAll: 8, prime10: 10, prime200: 200,
+  effects25: 25, effects45: 45, // 效果总览：同时生效项数（v2.6.0；新档约 15 项）
 }
 
 /** 图鉴总数缓存（ITEMS 全表只数一次，供 need/进度复用） */
@@ -89,6 +90,7 @@ export function achievementProgress(p, a) {
   else if (a.id === 'honey8') cur = HONEY_TIERS.filter((h) => (p.collected?.[h.id] ?? 0) > 0).length
   else if (a.id === 'honey100') cur = p.stats?.honeyHarvests ?? 0
   else if (a.id.startsWith('prime')) cur = p.stats?.primeCrops ?? 0
+  else if (a.id.startsWith('effects')) cur = p.stats?.effectsSeenMax ?? 0
   else if (a.id === 'essence1') cur = p.stats?.essenceBrews ?? 0
   else if (a.id === 'essenceAll') cur = ESSENCE_TIERS.filter((e) => (p.collected?.[e.id] ?? 0) > 0).length
   else if (a.id === 'daoFirst') cur = (p.daoUnlocked ?? []).length

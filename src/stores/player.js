@@ -221,7 +221,7 @@ const defaultState = () => ({
     achievements: [], // 已解锁成就 id（§6.1）
     collected: {}, // 图鉴（§6.2）：{ itemId: true }
     quests: { index: 0, completed: [], progress: {} }, // 主线任务（§7.2）
-    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0 },
+    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0 }, // 效果总览：历史「同时生效项数」的最高值（v2.6.0）
     // §13 扩展：餐厅 / 公会 / 赛季 / 竞技场
     restaurant: { level: 1, menu: [], incomeAccum: 0, decor: [] }, // 餐厅经营：菜单为料理 itemId 列表；decor 装饰（§13）
     guild: { id: null, points: 0, day: null, taskProgress: {} }, // 公会：被动+任务+商店
@@ -2479,6 +2479,17 @@ export const usePlayerStore = defineStore('player', {
     /** 农田生长速度系数（0.70 ~ 1.00） */
     farmTimeFactor() {
       return toolTimeFactor(this.farmToolLevel())
+    },
+    /**
+     * 效果总览（v2.6.0）：记录「此刻同时生效的效果项数」的历史最高值。
+     * 只由 EffectsView 打开时调用（纯只读统计口径，不影响任何乘区）；供成就与统计页使用。
+     */
+    noteEffectsSeen(n) {
+      const v = Math.max(0, Math.floor(Number(n) || 0))
+      if (!(v > (this.stats?.effectsSeenMax ?? 0))) return false
+      if (!this.stats) this.stats = {}
+      this.stats.effectsSeenMax = v
+      return true
     },
     /** 购置/升级农具 */
     upgradeFarmTool() {

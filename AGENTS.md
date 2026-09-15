@@ -297,6 +297,23 @@
 
 **新增同类系统的登记清单**（缺一即 CI FAIL）：`ui.js VIEW_KEYS` → `App.vue`（async 组件 + 分支）→ `Sidebar.vue FEATURE_GROUPS` → `e2e-dark`/`e2e-text` 两个 `VIEWS` → 页面里必须有 `<RelatedPages>` → `guide.js` 的 `GUIDE_OVERVIEW`（条目名与瓦片名一致才能过派生检查）+ `GUIDE_STAGES` → `achievements.js` + `achievementProgress.js`（`NEEDS` 与 `cur` 链，id 前缀别撞现有分支）→ `StatsView` 行 → `story.js` 需求（须有对应 `storyCur` 的 `case`）→ `chronicle.js CHRONICLE_KINDS` → `itemSources.js` + `sourceJump.js`（**新来源串必须有跳转规则**）→ `system_test` 新组 → `action_sweep` 的 `ARGS`（带参动作）→ README/AGENTS/设计文档。
 
+## 🧿 「效果总览」与效果注册表（v2.6.0，2026-09-16 立，最高优先阅读）
+
+**背景（用户原话）**：「我觉得今日缺一个 BUFF 页，统计当前所有正在生效的 buff、效果、debuff，**一定不能漏下任何一个，必须严查**。」
+
+- **审计结论（动手改之前必须先知道）**：全项目**只有 4 个真正的乘区聚合出口**——`Skill.addXp`（经验）/ `GatheringSkill.yieldExtraChance`（采集产量）/ `player.restaurantHourlyIncome`（餐厅时收）/ `Combat.playerStats`（对决属性）；其余 **20 多个来源是散装的**：天气的农田产量只在 `FarmingSkill` 里读、节庆的采集产量只在 `GatheringSkill` 里读、农耕精通→采集联动只在 `GatheringSkill` 里读、采种概率在 4 处各读一次、料理回血三条散在 `Combat`、`gainGold` 的金币加成与荣誉的 `goldPct` 甚至**不是同一个口径**（后者只作用于餐厅时收）。
+  ⇒ **任何「只看聚合出口」的汇总页必然漏项**，必须逐条登记来源。
+- **唯一清单 = `src/game/data/activeEffects.js`**（当前 **85 行**，7 分组：全局环境 / 采集与产量 / 经验与制作 / 餐厅与经营 / 农田与产线 / 对决与挑战 / 离线与容量）。每行声明 `id / group / icon / name / kind(buff|debuff|rule) / src / view` + `read(player, ctx) → { on, text, why, left }`。
+  - **只读契约**：`collectEffects()` 不写任何状态（C26 用「汇总前后逐字段快照一致」钉住）；**不新增货币**；唯一新的存档字段是统计量 `stats.effectsSeenMax`（历史同时生效最多项数，只增不减、随存档往返）。
+  - **未生效的项不许隐藏**：收进「本期未生效」折叠区并**逐条写明原因**——这既是玩家信息，也是「没有漏掉任何一项」的**证据**。
+  - ⚠️ **生效项与被压下的项必须互斥**（`groups[].items` 只装 on、`dormant[].items` 只装 off）：早先两边都装会让「生效 + 未生效 = 总行数」不成立、页面也会重复渲染（C26 抓出来过）。
+  - 文案面向玩家：**技能 id 一律过 `SKILL_CN` 表**，不写内部字段名（撞「英文标识符裸露」守卫会被 CI 拦）。
+- **两道守卫（这是「严查」的可验证化——别只跑一遍脚本就以为没漏）**：
+  1. **静态**（`content_sync_audit`）：`player.js` 里每个 `*Effects|*Boost|*Multiplier|*Mult|*Pct|*Bonus|*Factor|*Chance|*Modifiers|*Hours` 访问器（当前 28 个）都必须在注册表源码里出现；豁免表 `EXEMPT` 必须写清理由、并按「该函数在 `player.js` 里是否还存在」判过期；注册表行数 ≥40（防「表被清空后守卫恒真」）。**已反向验证**：抹掉任一名字立刻 FAIL、整表清空报 28/28 漏登记。
+  2. **运行时**（`system_test` **C26**，15 项）：注册表 id 唯一 / 分组有效 / 字段齐备；**新档与富档都必须跑得通且不许出现「读取失败」**；未生效行必须有原因；生效 + 未生效 = 总行数；文案里不许有 `undefined`/`NaN`/未求值插值；**只读契约**；战斗内 7 条临时状态「无战斗全 off 且有原因 / 战斗中全亮」；统计峰值只增不减并随存档往返。
+- 🔑 **新增任何效果来源时的规矩**：① 在注册表加一行（**漏了 CI 直接 FAIL**）；② 若它是新的访问器且落在上面那串后缀里，**必须让 `read` 真的去调用它**——别在页面里自己重算一遍公式（公式改了页面就会骗人；静态守卫正是把「自算」判成漏登记）；③ 只在战斗内存在的状态走 `ctx.combat`（`getCombat()` 在单测里可能为 null，`read` 要能容忍）；④ 跑 `content_sync_audit` + `system_test`。
+- **页面**（`src/views/EffectsView.vue`，左栏「今日」组第二格，图标 🧿）：顶部沿用 `StatusChips` 分类块（生效 N 项 / 增益 / 减益 / 规则 / 本期未生效 / 登记总数）；**减益单独提到最上方**（玩家最需要先看到「我正在被扣什么」）；按 7 个赛道分组；每行 = 图标 + 名称 + 「增益/减益/规则」标签 + 来源 + 数值 + 剩余分钟 + 直达按钮；页脚有「口径说明」。成就门槛按「新档通常只有 15 项左右」定档（25 / 45 项），别再用 10/20 这种新档就自动达成的数。
+
 ## 视觉 UI 规范（毛玻璃 / 背景）
 
 - **布局骨架：三栏 = 三块独立圆角面板（2026-09-11 重构，取代此前"逐段羽化"的一整套做法）**
