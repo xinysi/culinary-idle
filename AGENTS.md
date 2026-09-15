@@ -526,6 +526,14 @@
 - 统一用**码位比较**：`const cmpId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)`（`gen_shanhai_tree.mjs` 里已定义，其它生成器照抄）。对「同键排序」的任何 tie-break 同理——**只认语言无关的比较**。
 - 自查方式：`GEN_OUT_DIR=<临时目录1> LANG=C LC_ALL=C node scripts/gen/X.mjs` 与 `... LANG=zh_CN.UTF-8 ...` 各跑一次，两份产物必须**逐字节相同**（再与仓库产物比对，`gen_drift_audit` 要求「一致」）。
 
+### ⚠️ 发布顺序：**先 bump 三处版本号，再打 tag**（2026-09-15 亲手踩过）
+- 正确顺序：① 全量回归 → ② `package.json` / `lmewexe/package.json` / README 当前版本 + 版本历史行 **三处同步** → ③ `git add -A` + commit → ④ `git tag vX.Y.Z` + push tag → ⑤ 看三条 workflow → ⑥ 线上核验 → ⑦ 发布后备份。
+- **别把「代码修复」和「版本号」拆成两个 commit**：v2.5.1 我先提交了文案修复、忘了 bump，于是桌面包内部版本显示旧值，
+  只能删掉已建好的 release、重打 tag、再重跑 Release workflow 才让它一致。
+- **tag 打错的补救**（tag 与 release 都是刚建的、无人依赖时）：`git tag -d vX && git push origin :refs/tags/vX` → `gh release delete vX --yes` → 在新提交上 `git tag vX` + push。
+  ⚠️ 若旧 tag 的 Release 已经成功建过，**必须先删 release**，否则新 tag 触发的 Release 会因「同名 release 已存在」直接失败。
+- 版本号三处之外，**附件名取自 tag**（`culinary-idle-$GITHUB_REF_NAME-win32-x64.zip`），所以 tag 名要与 `package.json` 一致。
+
 ### 🚀 发布流程与「发布后核验」（2026-09-11 立）
 1. 全量回归：`vite build` → 11 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs e2e-text.spec.mjs e2e-audio-skin.spec.mjs`（15 项）。
 2. 版本号三处同步：`package.json`、`lmewexe/package.json`、README 的「当前版本」行 + 版本历史行。
