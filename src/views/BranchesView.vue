@@ -81,6 +81,8 @@ function hire(def) {
 }
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin', label: '⭐ 评级' }]
 </script>
@@ -160,11 +162,14 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">已开业 {{ openCount }} / {{ BRANCHES.length }}</span>
-        <span class="badge">🏮 已定主题 {{ themedCount }}</span>
-        <span class="dim">合计时收 <b class="mono">{{ totalHourly.toLocaleString() }}</b> 金币/小时 · 累计入账 <b class="mono">{{ totalGold.toLocaleString() }}</b></span>
-      </div>
+      <StatusChips>
+        <div class="status-chips-row">
+          <StatusChip label="已开业" tone="on">{{ openCount }} / {{ BRANCHES.length }}</StatusChip>
+          <StatusChip label="🏮 已定主题">{{ themedCount }}</StatusChip>
+          <StatusChip label="合计时收"><b class="mono">{{ totalHourly.toLocaleString() }}</b> 金币/小时</StatusChip>
+          <StatusChip label="累计入账"><b class="mono">{{ totalGold.toLocaleString() }}</b></StatusChip>
+        </div>
+      </StatusChips>
 
       <div class="branch-grid">
         <div v-for="r in rows" :key="r.def.id" class="card branch-card" :class="{ locked: !r.opened }">

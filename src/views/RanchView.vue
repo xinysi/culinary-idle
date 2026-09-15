@@ -116,6 +116,8 @@ function expand() {
 }
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [
   { view: 'cellar', label: '🍶 地窖' },
@@ -181,10 +183,13 @@ const RELATED = [
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">栏位 {{ player.ranchPens() }} 个</span>
-        <span class="dim">累计产出周期 <b class="mono">{{ stats.toLocaleString() }}</b> 次</span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="栏位" tone="on">{{ player.ranchPens() }} 个</StatusChip>
+        <StatusChip label="累计周期"><b class="mono">{{ stats.toLocaleString() }}</b> 次</StatusChip>
+        <StatusChip label="饲料"><span class="dim">作物（玉米 / 土豆 / 白菜 / 稻米）</span></StatusChip>
       </div>
+      </StatusChips>
 
       <div class="ranch-grid">
         <div v-for="p in pens" :key="p.index" class="card ranch-pen">
@@ -224,10 +229,13 @@ const RELATED = [
       </div>
 
       <h3 style="margin: 16px 0 0; font-size: 15px">🐟 网箱（并入牧场）</h3>
-      <div class="card status-line" style="margin-top: 8px">
-        <span class="badge badge-on">网箱 {{ player.pondPens() }} 个</span>
-        <span class="dim">累计产出周期 <b class="mono">{{ pondStats.toLocaleString() }}</b> 次 · 饲料为<b>海苔</b>（水域可采）</span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="网箱" tone="on">{{ player.pondPens() }} 个</StatusChip>
+        <StatusChip label="累计周期"><b class="mono">{{ pondStats.toLocaleString() }}</b> 次</StatusChip>
+        <StatusChip label="饲料"><span class="dim">海苔（水域可采）</span></StatusChip>
       </div>
+      </StatusChips>
       <div class="ranch-grid">
         <div v-for="p in ponds" :key="p.index" class="card ranch-pen">
           <div class="ranch-head">

@@ -2453,6 +2453,37 @@ h2 {
   flex-wrap: wrap;
 }
 
+/* ── 状态分类卡 StatusChips / StatusChip（v2.5.4，全站共用）──────────────
+   把「页头下方的一串状态」按类别分块显示：每块一个圆角小块（淡底 + 描边），块内是「类别名（灰）+ 值（正文）」。
+
+   ⚠️ **所有色值都必须是主题变量**，其中 `--panel-soft-rgb` / `--border` / `--text` / `--muted` / `--text-dim`
+   被 skins.js 覆盖 ⇒ 15 套皮肤无需额外分支；`--good-soft` / `--bad-soft` / `--primary-soft` 是主题感知的语义色
+   （按约定**不随皮肤变**）。实测对比度：浅色 4.7~11.8:1 / 深色 7.3~13.2:1 / 逐皮肤 6.0~7.5:1。
+   ⚠️ 别把十六进制型变量塞进 `rgba()`（如 `rgba(var(--lock-bg), .5)` 非法 → 整条声明失效）；
+   只有 `--*-rgb` 三元组能进 `rgba()`。 */
+.status-chips { flex-direction: column; align-items: stretch; gap: 6px; }
+.status-chips-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.status-chips-nowrap .status-chips-row { flex-wrap: nowrap; overflow-x: auto; }
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(var(--panel-soft-rgb), 0.72);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.status-chip-label { color: var(--muted); font-size: 12px; }
+.status-chip-value { display: inline-flex; align-items: center; gap: 4px; }
+.status-chip .dim { color: var(--text-dim); font-size: 12px; }
+.status-chip-on { background: var(--primary-soft); border-color: var(--primary-soft); }
+.status-chip-good { background: var(--good-soft); border-color: var(--good-soft); }
+.status-chip-bad { background: var(--bad-soft); border-color: var(--bad-soft); }
+.status-chip-warn { background: var(--warn-soft); border-color: var(--warn-soft); }
+
 /* ── 容量与扩建总览（商店「容量与扩建」页签，v2.4.2）──────────────
    注册表 src/game/data/expansions.js 驱动；行 = 名称/说明 · 当前/上限 · 下档价 · 购买 + 去页面 */
 .exp-group { margin-bottom: 14px; }

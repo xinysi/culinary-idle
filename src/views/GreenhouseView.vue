@@ -17,6 +17,8 @@ import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -188,11 +190,15 @@ function expandHive() {
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">温室 {{ player.greenhouseBeds() }} 格 · 蜂箱 {{ player.hiveCount() }} 只</span>
-        <span class="dim">累计收获 <b class="mono">{{ stats.cycles.toLocaleString() }}</b> 次 ·
-          累计得蜜 <b class="mono">{{ stats.honey.toLocaleString() }}</b> 瓶（离线单次最多补 {{ IDLE_CAP_HOURS }} 小时）</span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="温室" tone="on">{{ player.greenhouseBeds() }} 格</StatusChip>
+        <StatusChip label="蜂箱" tone="on">{{ player.hiveCount() }} 只</StatusChip>
+        <StatusChip label="累计收获"><b class="mono">{{ stats.cycles.toLocaleString() }}</b> 次</StatusChip>
+        <StatusChip label="累计得蜜"><b class="mono">{{ stats.honey.toLocaleString() }}</b> 瓶</StatusChip>
+        <StatusChip label="离线"><span class="dim">单次最多补 {{ IDLE_CAP_HOURS }} 小时</span></StatusChip>
       </div>
+      </StatusChips>
 
       <h3 class="gh-title">🌱 温室（作物 + 伴生蜂蜜）</h3>
       <div class="gh-grid">

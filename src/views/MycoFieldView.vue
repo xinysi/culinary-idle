@@ -18,6 +18,8 @@ import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -294,14 +296,16 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">菇床 {{ player.mushroomBeds() }} · 灵圃 {{ player.spiritPlots() }} · 萃露炉 {{ player.essenceVats() }}</span>
-        <span class="dim">
-          累计：出菇 <b class="mono">{{ stats.mushroom.toLocaleString() }}</b> 轮 ·
-          收获 <b class="mono">{{ stats.spirit.toLocaleString() }}</b> 次 ·
-          酿露 <b class="mono">{{ stats.essence.toLocaleString() }}</b> 瓶
-        </span>
+      <StatusChips>
+      <div class="status-chips-row">
+        <StatusChip label="🍄 菇床" tone="on">{{ player.mushroomBeds() }}</StatusChip>
+        <StatusChip label="🌱 灵圃" tone="on">{{ player.spiritPlots() }}</StatusChip>
+        <StatusChip label="🧪 萃露炉" tone="on">{{ player.essenceVats() }}</StatusChip>
+        <StatusChip label="累计出菇"><b class="mono">{{ stats.mushroom.toLocaleString() }}</b> 轮</StatusChip>
+        <StatusChip label="累计收获"><b class="mono">{{ stats.spirit.toLocaleString() }}</b> 次</StatusChip>
+        <StatusChip label="累计酿露"><b class="mono">{{ stats.essence.toLocaleString() }}</b> 瓶</StatusChip>
       </div>
+      </StatusChips>
 
       <!-- ① 菇床 -->
       <h3 class="mf-title" @click="mOpen = !mOpen">🍄 菇床 —— 吃肥料出菌菇，供菌灵露 <b>Ⅰ~Ⅳ 档</b>原料{{ mOpen ? '' : '（点击展开）' }}</h3>

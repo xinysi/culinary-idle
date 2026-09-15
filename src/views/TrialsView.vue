@@ -71,6 +71,8 @@ function abort(r) {
   ui.pushLog('已退出试炼', 'info')
 }
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'arena', label: '🏆 竞技场' }, { view: 'chefChallenge', label: '🃏 名厨' }, { view: 'gearContest', label: '🃏 厨具赛' }]
 </script>
@@ -93,10 +95,12 @@ const RELATED = [{ view: 'arena', label: '🏆 竞技场' }, { view: 'chefChalle
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on">累计通关 {{ totalClears }} 次</span>
-        <span class="dim">试炼失败会自动退出（连胜试炼除外，失败即连胜清零）</span>
-      </div>
+      <StatusChips>
+        <div class="status-chips-row">
+          <StatusChip label="累计通关" tone="on">{{ totalClears }} 次</StatusChip>
+          <StatusChip label="规则"><span class="dim">失败自动退出（连胜试炼失败即连胜清零）</span></StatusChip>
+        </div>
+      </StatusChips>
 
       <!-- 对决面板（风格+属性组合框 / 对决框）：与对决页共用 CombatPanel -->
     <CombatPanel />

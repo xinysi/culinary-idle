@@ -112,6 +112,8 @@ function buy(g) {
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
 import RelatedPages from '../components/RelatedPages.vue'
+import StatusChip from '../components/StatusChip.vue'
+import StatusChips from '../components/StatusChips.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'suppliers', label: '🤝 供应商' }, { view: 'rivals', label: '🏪 同业榜' }]
 </script>
@@ -137,13 +139,14 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'suppliers', la
     </div>
 
     <template v-else>
-      <div class="card status-line">
-        <span class="badge badge-on" :title="`内部期号 ${cycle}（自 1970 年起的 ${EXCHANGE_CYCLE_HOURS} 小时时间槽，全局统一）`">
-          {{ cycleWindow.dayLabel }} 第 {{ cycleWindow.slot }} 期（{{ cycleWindow.range }}）
-        </span>
-        <span class="dim">累计成交 <b class="mono">{{ stats.trades.toLocaleString() }}</b> 件 · 累计流水 <b class="mono">{{ stats.gold.toLocaleString() }}</b> 金币</span>
-        <span class="dim">📈 收购价高 → 宜卖出 · 📉 收购价低 → 宜买入</span>
-      </div>
+      <StatusChips>
+        <div class="status-chips-row">
+          <StatusChip label="当前期" tone="on"><span :title="`内部期号 ${cycle}（自 1970 年起的 ${EXCHANGE_CYCLE_HOURS} 小时时间槽，全局统一）`">{{ cycleWindow.dayLabel }} 第 {{ cycleWindow.slot }} 期（{{ cycleWindow.range }}）</span></StatusChip>
+          <StatusChip label="累计成交"><b class="mono">{{ stats.trades.toLocaleString() }}</b> 件</StatusChip>
+          <StatusChip label="累计流水"><b class="mono">{{ stats.gold.toLocaleString() }}</b> 金币</StatusChip>
+          <StatusChip label="口诀"><span class="dim">收购价高 → 宜卖出 · 收购价低 → 宜买入</span></StatusChip>
+        </div>
+      </StatusChips>
 
       <div class="ex-grid">
         <div v-for="g in goods" :key="g.item.id" class="card ex-card">
