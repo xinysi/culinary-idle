@@ -24,7 +24,7 @@ const selections = reactive({})
 /** 精通联动（v2.5.0）：该作物的农耕精通给采集带来的额外产出几率（0 ~ 20%） */
 const farmGatherPct = (itemId) => player.farmMasteryGatherChance?.(itemId) ?? 0
 /** 精耕作物（农耕独占产物）的附产区间说明 */
-const primeRange = `reqLevel ≥ ${PRIME_MIN_LEVEL} 的作物收获时 ${Math.round(PRIME_BASE_CHANCE * 100)}%~${Math.round(PRIME_MAX_CHANCE * 100)}% 附产「精耕作物」（随该作物精通提高）`
+const primeRange = `等级 ${PRIME_MIN_LEVEL} 以上的作物收获时 ${Math.round(PRIME_BASE_CHANCE * 100)}%~${Math.round(PRIME_MAX_CHANCE * 100)}% 附产「精耕作物」（随该作物精通提高）`
 
 /** 本月当季类别（UI 里给作物打「当季」标） */
 const seasonCats = computed(() => farmSeason().cats)
