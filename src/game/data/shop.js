@@ -30,10 +30,12 @@ export const SHOP_ITEMS = [
   { itemId: 'rosemarySeed', price: 195 },
   { itemId: 'saffronSeed', price: 285 },
   { itemId: 'dragonPepperSeed', price: 400 },
-  // 扩展服务（§5.4）；上限数值一律取自 caps.js 的**金币路径天花板** PAID_CAP_MAX，勿写字面量
-  { action: 'inventorySlot', price: 200, desc: `背包 +10 格（金币可买到 ${PAID_CAP_MAX.inventory} 格；山海食经还能再往上加）` },
-  { action: 'bankSlot', price: 150, desc: `仓库 +20 格（金币可买到 ${PAID_CAP_MAX.bank} 格；山海食经还能再往上加）` },
 ]
+
+// ⚠️ 「容量/扩建」类条目（背包/仓库/冷库 + 各产线设施 + 农具 + 自动化）**不在商品列表里**，
+// 统一登记在 `src/game/data/expansions.js`，由商店的「容量扩展」页签渲染成总览面板
+// （2026-09-15 v2.4.2：用户要求把农耕升级与各功能扩建统一到商店的容量扩展分类）。
+// 商品列表只保留**真物品**（弹药原料/肥料/种子），避免同一件事两处入口、两套价格。
 
 // 农耕种子扩充（生成器 gen_farm_seeds.mjs 产出，勿手改）：所有可采集/可挖掘非矿物食材的种子
 SHOP_ITEMS.push(...SHOP_SEED_ENTRIES)

@@ -5,6 +5,7 @@ import { PAID_CAP_MAX } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SHOP_ITEMS, shopItemName } from '../game/data/shop.js'
+import { expansionsByGroup } from '../game/data/expansions.js'
 import { getItem } from '../game/data/items.js'
 import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
@@ -27,7 +28,7 @@ const SHOP_TABS = [
   { id: 'ammo', name: '弹药/原料' },
   { id: 'fertilizer', name: '肥料' },
   { id: 'seed', name: '种子' },
-  { id: 'expansion', name: '容量扩展' },
+  { id: 'expansion', name: '容量与扩建' },
 ]
 function shopCat(entry) {
   if (entry.action) return 'expansion'
@@ -36,8 +37,27 @@ function shopCat(entry) {
   if (entry.itemId === 'compost' || entry.itemId === 'richCompost') return 'fertilizer'
   return 'ammo'
 }
+// 扩建总览面板（v2.4.2，注册表驱动）：分组 + 每项「当前/上限/下档价」+ 购买 + 去页面
+const expansionGroups = computed(() => expansionsByGroup())
+function expPrice(e) { return e.price(player) }
+function expMaxed(e) { return e.current(player) >= e.max }
+function expCanBuy(e) {
+  const price = expPrice(e)
+  return price != null && player.gold >= price
+}
+function buyExpansion(e) {
+  const r = e.apply(player)
+  if (r.ok) ui.pushLog(`🧱 ${e.name}：${r.msg ?? '已升级'}`, 'gain')
+  else ui.pushLog(`${e.name}：${r.msg ?? '无法升级'}`, 'warn')
+}
+function goExpansionPage(e) {
+  if (e.view === 'skill' && e.skill) player.setActiveSkill(e.skill)
+  ui.setView(e.view)
+}
+
+// 商品网格只列**真物品**（扩建类统一在「容量与扩建」页签，见 shop.js 末尾注释）
 const buyList = computed(() =>
-  SHOP_ITEMS.filter((s) => cat.value === 'all' || shopCat(s) === cat.value)
+  SHOP_ITEMS.filter((s) => !s.action).filter((s) => cat.value === 'all' || shopCat(s) === cat.value)
     .filter((s) => !q.value.trim() || (getItem(s.itemId)?.name ?? '').includes(q.value.trim()) || (s.itemId ?? '').includes(q.value.trim().toLowerCase()))
 )
 function buyListCount(tabId) {
@@ -159,7 +179,39 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
         <input v-model="q" class="plot-select" style="margin-left: auto; width: 170px" placeholder="🔍 搜索商品" />
       </div>
       <p class="dim" style="margin-bottom: 8px">种子在「杂货铺 + 珍馐阁」均可购买；部分高级种子也可由采摘/挖掘掉落（10%）</p>
-      <div class="gather-grid grid-n-6">
+      <!-- 容量与扩建：注册表总览（2026-09-15 v2.4.2；各产线页面仍保留同款按钮，两处入口等价） -->
+      <template v-if="cat === 'expansion'">
+        <p class="dim" style="margin-bottom: 8px">
+          这里汇总可用金币扩张/升级的**全部**项目（存储容量 · 挂机产线设施 · 农具 · 便利解锁）；
+          各产线页面上也有同款按钮，两处等价。上限与价格一律取自各自数据模块，不另设一套。
+        </p>
+        <div v-for="g in expansionGroups" :key="g.id" class="exp-group">
+          <h4 class="exp-group-head">{{ g.icon }} {{ g.name }}</h4>
+          <div class="exp-rows">
+            <div v-for="e in g.rows" :key="e.id" class="card exp-row">
+              <div class="exp-main">
+                <div class="exp-name">{{ e.icon }} {{ e.name }}</div>
+                <div class="dim exp-desc">{{ e.desc }}</div>
+              </div>
+              <div class="exp-state mono">
+                {{ e.current(player) }}<span class="dim"> / {{ e.max }}{{ e.unit }}</span>
+              </div>
+              <div class="exp-price mono">
+                <span v-if="expMaxed(e)" class="dim">已满级</span>
+                <span v-else>{{ expPrice(e)?.toLocaleString() }} 金币</span>
+              </div>
+              <div class="exp-actions">
+                <button class="btn btn-sm btn-primary" :disabled="!expCanBuy(e)" @click="buyExpansion(e)">
+                  {{ expMaxed(e) ? '已满级' : '购买' }}
+                </button>
+                <button class="btn btn-sm" @click="goExpansionPage(e)">去页面 ↗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div v-else class="gather-grid grid-n-6">
         <template v-for="(entry, ei) in buyListPaged" :key="entry.itemId ?? entry.action ?? 'pad-' + ei">
           <div v-if="!entry._pad" v-tilt class="gather-card shop-card" :class="{ locked: !canAffordBuy(entry), affordable: canAffordBuy(entry) }">
           <div class="gather-card-head">
