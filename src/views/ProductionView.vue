@@ -12,7 +12,7 @@ import QuantityModal from '../components/QuantityModal.vue'
 import ItemImg from '../components/ItemImg.vue'
 import MasteryHelp from '../components/MasteryHelp.vue'
 import ProgressBar from '../components/ProgressBar.vue'
-import { masteryDoubleChance, masteryToNextTier, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 
@@ -145,11 +145,14 @@ function outputEffect(itemId) {
 }
 
 // 分类：装备按八槽位，其余按食谱分类
-/** 某配方的精通档位信息（制作类与采集类共用 mastery.js 的口径；含「下一档还差几次」） */
+/**
+ * 某配方的精通档位信息（与采集类共用 mastery.js 的口径）。
+ * ⚠️ 卡片上**只显示「当前」**（等级 / 进度 / x-y 次），不显示「再 N 次到 M 级」——
+ *    用户 2026-09-16 明确要求去掉那个后缀（卡片已经够密；升档规划看「📖 精通档位说明」或厨房笔记）。
+ *    system_test C27 有反向断言钉住这一点，别再加回来。
+ */
 function masteryOf(r) {
-  const inst = props.instance
-  const count = inst.masteryCount?.(r) ?? 0
-  const prog = inst.masteryProgress?.(r) ?? { level: 0, current: 0, needed: 0, progress: 0 }
+  const prog = props.instance.masteryProgress?.(r) ?? { level: 0, current: 0, needed: 0, progress: 0 }
   return {
     level: prog.level,
     current: prog.current,
@@ -158,7 +161,6 @@ function masteryOf(r) {
     xpMult: masteryXpMultiplier(prog.level),
     dbl: masteryDoubleChance(prog.level),
     batch: masteryYieldBonus(prog.level),
-    next: masteryToNextTier(prog.level, count),
   }
 }
 function recipeCategory(r) {
@@ -498,7 +500,7 @@ function scrollToSection(label) {
             </div>
             <ProgressBar :progress="masteryOf(r).progress" class="mastery-bar" />
             <div class="dim mono" style="font-size: 12px; text-align: right">
-              {{ masteryOf(r).current }} / {{ masteryOf(r).needed }} 次<template v-if="masteryOf(r).next"> · 再 {{ masteryOf(r).next.remaining }} 次到 {{ masteryOf(r).next.tier.level }} 级</template>
+              {{ masteryOf(r).current }} / {{ masteryOf(r).needed }} 次
             </div>
             <div class="gather-card-row effect-row">
               <span class="effect-label">效果</span>

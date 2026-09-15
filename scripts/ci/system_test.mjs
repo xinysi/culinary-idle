@@ -4368,7 +4368,10 @@ console.log('══ C27. 精通档位说明 ══')
   check('精通档位', '采集页 / 制作页 / 厨房笔记 三处都用共用组件 <MasteryHelp>', ['GatheringView.vue', 'ProductionView.vue', 'KitchenNotesView.vue'].every((f) => V(f).includes('<MasteryHelp')))
   check('精通档位', '共用组件从 MASTERY_TIERS 派生（组件里不出现档位数字）', helpSrc.includes('MASTERY_TIERS') && !/×2\.2|×3\.6|≤ 3\.6s/.test(helpSrc))
   check('精通档位', '视图里不再手写档位数字（此前 GatheringView 手抄过 11 行）', ![gatherSrc, prodSrc, notesSrc].some((s) => /×2\.2/.test(s) || /'减 1\/3'/.test(s)))
-  check('精通档位', '制作页配方卡真的显示精通（含「下一档」与等级/进度）', prodSrc.includes('masteryOf(') && prodSrc.includes('masteryToNextTier') && prodSrc.includes('masteryProgress'))
+  check('精通档位', '制作页配方卡只显示「当前精通」（等级/进度/x-y 次）', prodSrc.includes('masteryOf(') && prodSrc.includes('masteryProgress'))
+  // 反向断言：用户 2026-09-16 明确要求卡片上**不要**「再 N 次到 M 级」那个后缀（卡片已够密）——
+  // 加回来会 FAIL。升档规划交给「📖 精通档位说明」弹窗与厨房笔记页。
+  check('精通档位', '制作页配方卡不再出现「再 N 次到 M 级」（用户要求去掉；别加回来）', !prodSrc.includes('masteryToNextTier') && !/再 \{\{/.test(prodSrc))
   check('精通档位', '弹窗必须 Teleport 出卡片树（卡片祖先有 backdrop-filter，否则定位错）', helpSrc.includes('<Teleport to="body">'))
 
   // 6) 行为级：制作类配方确实带精通（厨房笔记与制作页读的就是它）
