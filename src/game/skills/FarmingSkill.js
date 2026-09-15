@@ -10,6 +10,7 @@ import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
 import { seasonalCropBonus } from '../data/farmingSeason.js'
+import { toolTimeFactor } from '../data/farmTools.js'
 import { getItem } from '../data/items.js'
 import { DERIVED_MAX } from '../data/caps.js'
 
@@ -104,18 +105,23 @@ export class FarmingSkill extends Skill {
   }
 
   /** 生长进度 0~1 */
+  /** 该作物的**有效生长秒数** = 基础 growSec × 农具系数（v2.4.1：农具缩短等待；不改动作物数据本身） */
+  growSecOf(crop) {
+    if (!crop) return 0
+    return crop.growSec * (this.player.farmTimeFactor?.() ?? 1)
+  }
   plotProgress(i) {
     const p = this.plotAt(i)
     const crop = this.plotCrop(i)
     if (!p || !crop) return 0
-    return Math.min(1, (Date.now() - p.plantedAt) / (crop.growSec * 1000))
+    return Math.min(1, (Date.now() - p.plantedAt) / (this.growSecOf(crop) * 1000))
   }
 
   isMature(i) {
     const p = this.plotAt(i)
     const crop = this.plotCrop(i)
     if (!p || !crop) return false
-    return Date.now() - p.plantedAt >= crop.growSec * 1000
+    return Date.now() - p.plantedAt >= this.growSecOf(crop) * 1000
   }
 
   /** 该种子可种植（等级足够 + 已拥有 + 地块空） */

@@ -45,6 +45,7 @@ import { RANCH_ANIMALS, POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from
 import { ESSENCE_TIERS, ESSENCE_ITEMS, ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS } from '../../src/game/data/essences.js'
 import { GOODS_ITEMS, goodsEffectText } from '../../src/game/data/processedGoods.js'
 import { FARM_SEASONS, SEASONAL_BONUS, seasonalCropBonus } from '../../src/game/data/farmingSeason.js'
+import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, TOOL_COSTS, nextToolCost, toolTimeFactor } from '../../src/game/data/farmTools.js'
 
 
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
@@ -4023,6 +4024,38 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
   check('两线分工', '灵圃菌房页列全所有灵植与培养基（缺了玩家就看不到存在哪些）', (() => {
     const src = fs.readFileSync(new URL('../../src/views/MycoFieldView.vue', import.meta.url), 'utf8')
     return /v-for="sp in SPIRIT_PLANTS"/.test(src) && /v-for="m in MUSHROOM_MEDIA"/.test(src)
+  })())
+  // ⑭ 农具（v2.4.1）：用金币缩短农田生长时间（回应「农耕要等、采集能速刷」）
+  check('农具', `等级 0~${TOOL_MAX_LEVEL}、生长时间最多 −${Math.round(TOOL_MAX_LEVEL * TOOL_TIME_PER_LEVEL * 100)}%，且单调递减`, (() => {
+    if (toolTimeFactor(0) !== 1) return false
+    if (Math.abs(toolTimeFactor(TOOL_MAX_LEVEL) - 0.70) > 1e-9) return false
+    for (let i = 1; i <= TOOL_MAX_LEVEL; i++) if (!(toolTimeFactor(i) < toolTimeFactor(i - 1))) return false
+    return nextToolCost(0) != null && nextToolCost(TOOL_MAX_LEVEL) == null
+  })())
+  check('农具', '升级扣金币、满级拒绝、读档超限被夹取', (() => {
+    const p = freshPlayer()
+    if (p.farmToolLevel() !== 0) return false
+    p.gold = 100
+    if (p.upgradeFarmTool().ok !== false) return false // 金币不足
+    p.gold = TOOL_COSTS.reduce((a, b) => a + b, 0) + 1000
+    for (let i = 0; i < TOOL_MAX_LEVEL; i++) if (!p.upgradeFarmTool().ok) return false
+    if (p.farmToolLevel() !== TOOL_MAX_LEVEL || p.upgradeFarmTool().ok !== false) return false
+    const q = freshPlayer()
+    q.applySave({ ...q.serialize(), farming: { plots: [], tool: 99 } })
+    return q.farmToolLevel() === TOOL_MAX_LEVEL
+  })())
+  check('农具', '成熟判定用「有效生长时间」（农具买好后原本没熟的作物会熟）', (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 99
+    const inst = getAllSkillInstances().find((i) => i.id === 'farming')
+    p.inventory.wheatSeed = 2
+    const crop = inst.getCrop('wheatSeed')
+    const halfWay = Date.now() - Math.round(crop.growSec * 0.75 * 1000) // 75% 时长：未买农具是没熟的
+    inst.plant(0, 'wheatSeed')
+    p.farming.plots[0].plantedAt = halfWay
+    if (inst.isMature(0) !== false) return false
+    p.farming.tool = TOOL_MAX_LEVEL // 农具满级 → 有效时长 0.7 → 此刻已成熟
+    return inst.isMature(0) === true && inst.growSecOf(crop) < crop.growSec
   })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {

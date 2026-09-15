@@ -7,6 +7,8 @@ import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { DERIVED_MAX } from '../game/data/caps.js'
 import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSeason.js'
+import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, nextToolCost } from '../game/data/farmTools.js'
+import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
@@ -28,12 +30,42 @@ const farmWeatherText = computed(() => {
   return `×${m.toFixed(2)}（${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%）`
 })
 
+// ── 农具（v2.4.1）：花金币缩短生长时间；顺带把「折合产出」算出来，避免玩家以为农耕没用 ──
+const toolLv = computed(() => player.farmToolLevel())
+const toolCost = computed(() => nextToolCost(toolLv.value))
+const toolTimeText = (growSec) => `${Math.round(growSec * player.farmTimeFactor())}s`
+/** 某作物的「每次收获期望件数」（含精通保底批量与双倍；丰沃肥料/山海食经等按未施状态估） */
+function expectedPerHarvest(crop) {
+  const m = masteryLevelFromCount(props.instance.mastery?.[crop.itemId] ?? 0)
+  const base = 1 + masteryYieldBonus(m)
+  return base * (1 + masteryDoubleChance(m))
+}
+/** 全部地块折合「件/分钟」，并与一条满精通采集线（约 30 件/分）做对照 */
+const farmRate = computed(() => {
+  ui.loopTick
+  const perMin = props.instance.plots.reduce((acc, _p, i) => {
+    const crop = props.instance.plotCrop(i)
+    if (!crop) return acc
+    const sec = props.instance.growSecOf(crop)
+    if (!sec) return acc
+    return acc + (expectedPerHarvest(crop) / sec) * 60
+  }, 0)
+  const wx = player.weatherEffects?.().farmYield ?? 1
+  const total = perMin * wx
+  return { perMin: total, lines: total / 30 }
+})
+function upgradeTool() {
+  const r = player.upgradeFarmTool()
+  if (r.ok) ui.pushLog(`🧰 农具升到 Lv${r.level}：农田生长时间 −${r.level * TOOL_TIME_PER_LEVEL * 100}%`, 'gain')
+  else ui.pushLog(r.msg, 'warn')
+}
+
 function remainingSec(i) {
   ui.loopTick // 依赖全局循环计数：每帧重算倒计时（实时刷新）
   const crop = props.instance.plotCrop(i)
   const p = props.instance.plotAt(i)
   if (!crop || !p) return 0
-  const remain = crop.growSec * 1000 - (Date.now() - p.plantedAt)
+  const remain = props.instance.growSecOf(crop) * 1000 - (Date.now() - p.plantedAt)
   return Math.max(0, Math.ceil(remain / 1000))
 }
 /** 生长进度（实时）：依据 ui.loopTick 逐帧刷新 */
@@ -76,6 +108,18 @@ function seedName(seedId) {
       <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
       <span class="dim">（每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级农耕 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）；作物枯萎 3%，施肥可降至 1%/0%）</span>
       <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
+    </div>
+
+    <!-- 农具（v2.4.1）：用金币缩短「等」的时间；折合产出让「农耕值不值」一目了然 -->
+    <div class="card status-line">
+      <span class="badge badge-on">🧰 农具 Lv{{ toolLv }}/{{ TOOL_MAX_LEVEL }}</span>
+      <span class="dim">农田生长时间 <b class="mono">−{{ toolLv * TOOL_TIME_PER_LEVEL * 100 }}%</b>（小麦 {{ toolTimeText(90) }} · 灵果 {{ toolTimeText(990) }}）</span>
+      <span class="dim">全部地块折合 ≈ <b class="mono">{{ farmRate.perMin.toFixed(1) }}</b> 件/分 ·
+        约 <b class="mono">{{ farmRate.lines.toFixed(1) }}</b> 条满精通采集线（农田不占并行挂机槽）</span>
+      <button v-if="toolCost != null" class="btn btn-sm" style="margin-left: auto" @click="upgradeTool">
+        🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
+      </button>
+      <span v-else class="badge">农具已满级</span>
     </div>
 
     <!-- 农时（v2.4.0）：当季作物 ×1.5 + 天气对农田的影响；温室不吃天气 ⇒ 坏天气时的避风港 -->
@@ -196,7 +240,7 @@ function seedName(seedId) {
               <span class="mono">×{{ player.inventory[c.seedId] ?? 0 }}</span>
             </div>
             <div class="item-cell-sub" style="font-size: 12px">
-              <span class="dim">{{ c.growSec }}s 生长</span>
+              <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
               <span class="dim">{{ c.xp }} 经验</span>
             </div>
             <div v-if="isSeasonal(getItem(c.itemId)?.category)" class="item-cell-sub" style="font-size: 12px">
