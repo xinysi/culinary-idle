@@ -15,6 +15,7 @@ import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 
 const player = usePlayerStore()
@@ -154,6 +155,33 @@ function expandHive() {
       </div>
     </header>
 
+    <FoldCard title="🍯 蜂蜜一览（8 品级 · 双效增益）" hint="一瓶同时给经验与产量；品级随作物/花的等级，且只能在这里获得">
+      <div class="card" style="margin-top: 14px">
+        <h3>🍯 蜂蜜一览（8 品级 · 双效增益）</h3>
+        <table class="target-table">
+          <tbody>
+            <tr>
+              <th class="dim" style="width: 70px">品级</th><th class="dim" style="width: 110px">名称</th>
+              <th class="dim" style="width: 110px">来源等级</th><th class="dim">效果（使用后同时生效）</th>
+              <th class="dim" style="width: 110px">时长</th><th class="dim" style="width: 90px">持有</th>
+            </tr>
+            <tr v-for="h in HONEY_TIERS" :key="h.id">
+              <td class="mono dim">{{ h.tier }} 品</td>
+              <td><ItemImg :item-id="h.id" size="sm" /> {{ h.name }}</td>
+              <td class="mono dim">作物 Lv{{ h.minLevel }}+</td>
+              <td>经验 ×{{ h.xp }} + 产量 ×{{ h.yield }} <span class="dim">· {{ h.desc }}</span></td>
+              <td class="mono dim">{{ h.minutes }} 分钟</td>
+              <td class="mono">{{ player.inventory[h.id] ?? 0 }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="dim gh-sub" style="margin-top: 8px">
+          蜂蜜是**双效**增益（一次同时给经验与产量两条乘数），单瓶弱于「两支同阶增益剂叠加」，
+          但只占一个背包格子；在背包或物品详情里点「使用 1」即可饮用。
+        </p>
+      </div>
+    </FoldCard>
+
     <div v-if="!unlocked" class="card status-line">
       <span class="badge">🔒 未解锁</span>
       <span class="dim">需 {{ getSkillDef('farming')?.name ?? '农耕' }} Lv{{ GREENHOUSE_UNLOCK_LEVEL }} 解锁温室蜂场</span>
@@ -240,30 +268,6 @@ function expandHive() {
         </div>
       </div>
 
-      <div class="card" style="margin-top: 14px">
-        <h3>🍯 蜂蜜一览（8 品级 · 双效增益）</h3>
-        <table class="target-table">
-          <tbody>
-            <tr>
-              <th class="dim" style="width: 70px">品级</th><th class="dim" style="width: 110px">名称</th>
-              <th class="dim" style="width: 110px">来源等级</th><th class="dim">效果（使用后同时生效）</th>
-              <th class="dim" style="width: 110px">时长</th><th class="dim" style="width: 90px">持有</th>
-            </tr>
-            <tr v-for="h in HONEY_TIERS" :key="h.id">
-              <td class="mono dim">{{ h.tier }} 品</td>
-              <td><ItemImg :item-id="h.id" size="sm" /> {{ h.name }}</td>
-              <td class="mono dim">作物 Lv{{ h.minLevel }}+</td>
-              <td>经验 ×{{ h.xp }} + 产量 ×{{ h.yield }} <span class="dim">· {{ h.desc }}</span></td>
-              <td class="mono dim">{{ h.minutes }} 分钟</td>
-              <td class="mono">{{ player.inventory[h.id] ?? 0 }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="dim gh-sub" style="margin-top: 8px">
-          蜂蜜是**双效**增益（一次同时给经验与产量两条乘数），单瓶弱于「两支同阶增益剂叠加」，
-          但只占一个背包格子；在背包或物品详情里点「使用 1」即可饮用。
-        </p>
-      </div>
     </template>
     <RelatedPages :links="RELATED" />
   </div>

@@ -59,6 +59,7 @@ function upgrade() {
   const r = player.takeoutUpgrade()
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals', label: '🍱 套餐定食' }, { view: 'banquet', label: '🍽 宴会' }]
@@ -79,36 +80,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
       </button>
     </header>
 
-    <div class="card status-line">
-      <span class="badge badge-on">外卖 Lv{{ level }} / {{ TAKEOUT_MAX_LEVEL }}</span>
-      <span class="dim">每小时并发 <b class="mono">{{ conc }}</b> 单 · 累计接单 <b class="mono">{{ (st.exp ?? 0).toLocaleString() }}</b> · 流水 <b class="mono">{{ (st.gold ?? 0).toLocaleString() }}</b> 金币</span>
-    </div>
-
-    <div class="card">
-      <div class="dim" style="margin-bottom: 6px">距离下一级（每完成 50 单升 1 级）</div>
-      <ProgressBar :progress="expProgress" />
-      <div class="dim" style="font-size: 12px; margin-top: 6px">
-        <template v-if="level >= TAKEOUT_MAX_LEVEL">已满级（{{ (st.exp ?? 0) % 50 }} / 50）</template>
-        <template v-else>{{ (st.exp ?? 0) % 50 }} / 50 单</template>
-      </div>
-    </div>
-
-    <!-- 收入预估（2026-09-10 补） -->
-    <div class="card to-est">
-      <div class="to-est-main">
-        <div class="to-est-num">{{ hourlyEstimate.hour.toLocaleString() }}</div>
-        <div class="dim to-est-label">金币 / 小时（库存充足时的上限）</div>
-        <div class="dim to-est-sub">
-          并发 {{ conc }} 单 × 均价 {{ hourlyEstimate.perOrder.toLocaleString() }} 金币<template v-if="player.setMealBonus() > 0">（已含套餐加成）</template>
-        </div>
-      </div>
-      <div class="to-est-side">
-        <div class="dim to-est-sub">菜单可外送料理 <b class="mono">{{ hourlyEstimate.count }}</b> 种 · 库存合计 <b class="mono">{{ stockTotal.toLocaleString() }}</b> 份</div>
-        <div class="dim to-est-sub">按当前并发，库存还够送 <b class="mono">{{ stockHours }}</b> 小时</div>
-        <div v-if="stockTotal <= 0" class="to-est-warn">⚠️ 菜单料理已缺货——外卖这一小时不会成交，去补货或做菜。</div>
-      </div>
-    </div>
-
+    <FoldCard title="📋 等级阶梯" hint="每完成 50 单自然升 1 级（并发 +1）；花钱升级只是提前跳级">
     <!-- 等级阶梯（2026-09-10 补）：升到下一级值不值，一眼看清 -->
     <h3 style="margin-top: 14px">等级阶梯</h3>
     <div class="card">
@@ -142,6 +114,37 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
       <p class="dim to-est-sub" style="margin-top: 8px">
         升级有新单量加成，但主要靠<b>自然成长</b>：每累计完成 50 单自动升 1 级，花钱只是提前跳级。
       </p>
+    </div>
+    </FoldCard>
+
+    <div class="card status-line">
+      <span class="badge badge-on">外卖 Lv{{ level }} / {{ TAKEOUT_MAX_LEVEL }}</span>
+      <span class="dim">每小时并发 <b class="mono">{{ conc }}</b> 单 · 累计接单 <b class="mono">{{ (st.exp ?? 0).toLocaleString() }}</b> · 流水 <b class="mono">{{ (st.gold ?? 0).toLocaleString() }}</b> 金币</span>
+    </div>
+
+    <div class="card">
+      <div class="dim" style="margin-bottom: 6px">距离下一级（每完成 50 单升 1 级）</div>
+      <ProgressBar :progress="expProgress" />
+      <div class="dim" style="font-size: 12px; margin-top: 6px">
+        <template v-if="level >= TAKEOUT_MAX_LEVEL">已满级（{{ (st.exp ?? 0) % 50 }} / 50）</template>
+        <template v-else>{{ (st.exp ?? 0) % 50 }} / 50 单</template>
+      </div>
+    </div>
+
+    <!-- 收入预估（2026-09-10 补） -->
+    <div class="card to-est">
+      <div class="to-est-main">
+        <div class="to-est-num">{{ hourlyEstimate.hour.toLocaleString() }}</div>
+        <div class="dim to-est-label">金币 / 小时（库存充足时的上限）</div>
+        <div class="dim to-est-sub">
+          并发 {{ conc }} 单 × 均价 {{ hourlyEstimate.perOrder.toLocaleString() }} 金币<template v-if="player.setMealBonus() > 0">（已含套餐加成）</template>
+        </div>
+      </div>
+      <div class="to-est-side">
+        <div class="dim to-est-sub">菜单可外送料理 <b class="mono">{{ hourlyEstimate.count }}</b> 种 · 库存合计 <b class="mono">{{ stockTotal.toLocaleString() }}</b> 份</div>
+        <div class="dim to-est-sub">按当前并发，库存还够送 <b class="mono">{{ stockHours }}</b> 小时</div>
+        <div v-if="stockTotal <= 0" class="to-est-warn">⚠️ 菜单料理已缺货——外卖这一小时不会成交，去补货或做菜。</div>
+      </div>
     </div>
 
     <h3 style="margin-top: 14px">菜单备货（外卖只会卖菜单里的料理）</h3>

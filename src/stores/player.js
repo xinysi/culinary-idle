@@ -45,7 +45,7 @@ import { gemDef, socketCountOf, gemsBonus } from '../game/data/gems.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
 import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
-import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay } from '../game/data/restaurantOrders.js'
+import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay, catLabel } from '../game/data/restaurantOrders.js'
 import { SHOP_ITEMS } from '../game/data/shop.js'
 import { EXPEDITIONS, getExpedition, expeditionTier, expeditionYieldMult, expeditionRareBonus } from '../game/data/expeditions.js'
 import { REGULARS, getRegular, regularLevelFromServes, REGULAR_LEVEL_REQ, REGULAR_MAX_GIFT } from '../game/data/regulars.js'
@@ -2054,7 +2054,7 @@ export const usePlayerStore = defineStore('player', {
       if (now < c.nextAt) return
       c.order = makeCriticOrder(this)
       c.nextAt = now + criticDelay()
-      try { useUiStore().pushLog(`📝 美食评论家「${c.order.name}」到访：想要 ${c.order.minTier} 档以上的${c.order.category}`, 'info') } catch (e) { /* ignore */ }
+      try { useUiStore().pushLog(`📝 美食评论家「${c.order.name}」到访：想要一份「${catLabel(c.order.category)}」${c.order.minTier} 档以上的料理（60 分钟内提交）`, 'info') } catch (e) { /* ignore */ }
     },
     /** 提交料理给评论家（消耗 1 件，给大奖 + 好感） */
     serveCritic(itemId) {
@@ -2064,7 +2064,7 @@ export const usePlayerStore = defineStore('player', {
       const item = getItem(itemId)
       if (!item || item.type !== 'food') return { ok: false, msg: '只能提交料理' }
       if (item.category !== o.category || (item.tier ?? 0) < o.minTier) {
-        return { ok: false, msg: `不符合要求（需 ${o.minTier} 档以上的${o.category}）` }
+        return { ok: false, msg: `不符合要求（需「${catLabel(o.category)}」${o.minTier} 档以上的料理）` }
       }
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
       this.spendItem(itemId, 1)
@@ -2272,8 +2272,8 @@ export const usePlayerStore = defineStore('player', {
       if (this.regularServedToday(id)) return { ok: false, msg: '今日已招待过这位常客（每天 1 次）' }
       const it = getItem(itemId)
       if (!it || it.type !== 'food') return { ok: false, msg: '只能招待料理' }
-      if (it.category !== def.category) return { ok: false, msg: `他只爱「${def.category}」` }
-      if ((it.tier ?? 0) < def.minTier) return { ok: false, msg: `需 ${def.minTier} 档以上的${def.category}` }
+      if (it.category !== def.category) return { ok: false, msg: `他只爱「${catLabel(def.category)}」` }
+      if ((it.tier ?? 0) < def.minTier) return { ok: false, msg: `需「${catLabel(def.category)}」${def.minTier} 档以上的料理` }
       if ((this.inventory[itemId] ?? 0) < 1) return { ok: false, msg: '数量不足' }
       const beforeLv = regularLevelFromServes(st.serves)
       this.spendItem(itemId, 1)
@@ -3956,7 +3956,7 @@ export const usePlayerStore = defineStore('player', {
         const use = Math.min(qty, left)
         take.push([id, use]); left -= use
       }
-      if (left > 0) return { ok: false, msg: `还差 ${left} 份${o.cat}（需 ${o.minTier} 档以上）` }
+      if (left > 0) return { ok: false, msg: `还差 ${left} 份「${catLabel(o.cat)}」料理（需 ${o.minTier} 档以上）` }
       for (const [id, qty] of take) this.spendItem(id, qty)
       this.gainGold(o.gold)
       if (o.spice) this.gainItem('mysterySpice', o.spice)

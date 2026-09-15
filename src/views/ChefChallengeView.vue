@@ -49,6 +49,7 @@ function abort() {
   player.chefAbort()
   ui.pushLog('已退出名厨挑战', 'info')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', label: '🏆 竞技场' }, { view: 'gearContest', label: '🃏 厨具赛' }]
@@ -66,6 +67,30 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', labe
         </p>
       </div>
     </header>
+
+    <FoldCard title="📋 名厨名录（按周轮换）" hint="每位名厨各有绝活与专属奖励；每周轮换一批，可按周挑着打">
+    <div class="card">
+      <div class="chef-h">📋 名厨名录（按周轮换）</div>
+      <div class="chef-list">
+        <div
+          v-for="c in CHEFS"
+          :key="c.id"
+          class="chef-li"
+          :class="{ now: c.id === chef.id }"
+        >
+          <span class="chef-icon-sm">{{ c.icon }}</span>
+          <span class="chef-li-name">{{ c.name }}</span>
+          <span class="dim mono">{{ STYLE_INFO[c.style].name }}</span>
+          <span class="dim mono">+{{ c.levelOffset }} 级</span>
+          <span v-if="c.id === chef.id" class="badge badge-on">本周</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="dim" style="margin-top: 10px">
+      提示：名厨沿用你的自动进食/料理策略；开打前记得在<b>班底</b>与<b>信仰</b>页确认加成、备足高回血料理。
+    </p>
+    </FoldCard>
 
     <!-- 对决面板（风格+属性组合框 / 对决框）：与对决页共用 CombatPanel -->
     <CombatPanel />
@@ -118,27 +143,6 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', labe
       </template>
     </div>
 
-    <div class="card">
-      <div class="chef-h">📋 名厨名录（按周轮换）</div>
-      <div class="chef-list">
-        <div
-          v-for="c in CHEFS"
-          :key="c.id"
-          class="chef-li"
-          :class="{ now: c.id === chef.id }"
-        >
-          <span class="chef-icon-sm">{{ c.icon }}</span>
-          <span class="chef-li-name">{{ c.name }}</span>
-          <span class="dim mono">{{ STYLE_INFO[c.style].name }}</span>
-          <span class="dim mono">+{{ c.levelOffset }} 级</span>
-          <span v-if="c.id === chef.id" class="badge badge-on">本周</span>
-        </div>
-      </div>
-    </div>
-
-    <p class="dim" style="margin-top: 10px">
-      提示：名厨沿用你的自动进食/料理策略；开打前记得在<b>班底</b>与<b>信仰</b>页确认加成、备足高回血料理。
-    </p>
     <RelatedPages :links="RELATED" />
 </div>
 </template>

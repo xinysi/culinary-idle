@@ -114,6 +114,7 @@ function expand() {
   const r = player.ranchExpand()
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [
@@ -141,6 +142,38 @@ const RELATED = [
         🧱 扩建 +1 网箱（{{ pondCost.toLocaleString() }} 金币）
       </button>
     </header>
+
+    <FoldCard title="🐾 可驯养动物一览" hint="野鸡 4h 最勤、野牛 12h 单产最高；四种各带一件加工品（鸡油/猪油/羊酪/牛骨高汤）">
+      <div class="card" style="margin-top: 14px">
+        <h3>🐾 可驯养动物一览</h3>
+        <table class="target-table">
+          <tbody>
+            <tr v-for="a in RANCH_ANIMALS" :key="a.id">
+              <td class="dim" style="width: 120px">{{ a.icon }} {{ a.name }}</td>
+              <td class="mono dim" style="width: 110px">{{ a.cost.toLocaleString() }} 金币</td>
+              <td class="dim">饲料 {{ Object.entries(a.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
+              <td>→ {{ productLine(a.products) }}<span class="dim">（{{ a.hours }} 小时 / 周期）</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </FoldCard>
+
+    <FoldCard title="🐠 可养鱼种一览" hint="鲫鱼 3h 最快、鲍鱼 12h 最贵；都额外产一件水产加工品（鱼酱/鱼子酱/虾油/鲍汁）">
+      <div class="card" style="margin-top: 14px">
+        <h3>🐠 可养鱼种一览</h3>
+        <table class="target-table">
+          <tbody>
+            <tr v-for="f in POND_FISH" :key="f.id">
+              <td class="dim" style="width: 120px">{{ f.icon }} {{ f.name }}</td>
+              <td class="mono dim" style="width: 110px">{{ f.cost.toLocaleString() }} 金币</td>
+              <td class="dim">饲料 {{ Object.entries(f.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
+              <td>→ {{ productLine(f.products) }}<span class="dim">（{{ f.hours }} 小时 / 周期）</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </FoldCard>
 
     <div v-if="!unlocked" class="card status-line">
       <span class="badge">🔒 未解锁</span>
@@ -190,20 +223,6 @@ const RELATED = [
         </div>
       </div>
 
-      <div class="card" style="margin-top: 14px">
-        <h3>🐾 可驯养动物一览</h3>
-        <table class="target-table">
-          <tbody>
-            <tr v-for="a in RANCH_ANIMALS" :key="a.id">
-              <td class="dim" style="width: 120px">{{ a.icon }} {{ a.name }}</td>
-              <td class="mono dim" style="width: 110px">{{ a.cost.toLocaleString() }} 金币</td>
-              <td class="dim">饲料 {{ Object.entries(a.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
-              <td>→ {{ productLine(a.products) }}<span class="dim">（{{ a.hours }} 小时 / 周期）</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       <h3 style="margin: 16px 0 0; font-size: 15px">🐟 网箱（并入牧场）</h3>
       <div class="card status-line" style="margin-top: 8px">
         <span class="badge badge-on">网箱 {{ player.pondPens() }} 个</span>
@@ -244,19 +263,6 @@ const RELATED = [
         </div>
       </div>
 
-      <div class="card" style="margin-top: 14px">
-        <h3>🐠 可养鱼种一览</h3>
-        <table class="target-table">
-          <tbody>
-            <tr v-for="f in POND_FISH" :key="f.id">
-              <td class="dim" style="width: 120px">{{ f.icon }} {{ f.name }}</td>
-              <td class="mono dim" style="width: 110px">{{ f.cost.toLocaleString() }} 金币</td>
-              <td class="dim">饲料 {{ Object.entries(f.feed).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
-              <td>→ {{ productLine(f.products) }}<span class="dim">（{{ f.hours }} 小时 / 周期）</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </template>
     <RelatedPages :links="RELATED" />
 </div>

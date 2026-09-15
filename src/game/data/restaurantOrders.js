@@ -2,6 +2,7 @@
 // 与餐厅菜单联动：从菜单（且背包有成品）抽样；收益为玩家侧奖励，不动料理固定数值。
 
 import { getItem, ITEMS } from './items.js'
+import { CATEGORY_LABEL } from './itemDetail.js'
 
 export const NAMES = [
   '老饕老王', '顾小姐', '美食同好', '夜市常客', '旅行美食家', '神秘食客',
@@ -43,6 +44,9 @@ export function makeOrder(player) {
 // ── 美食评论家（2026-09-09）：稀有高要求食客 ──
 // 随机 2~4 小时到访一次，要求「tier ≥ N 的某类料理」，满足给大奖（金币 + 神秘调料 + 好感），
 // 60 分钟未满足则离开并留下差评（无惩罚，仅错过奖励）。
+// 料理类别在物品数据里**中英混用**（「主菜」「汤品」「甜点」是中文，`baking`/`pickled` 等是英文 id），
+// 而 CRITIC_CATS 直接混着取 ⇒ 玩家会看到「想要一份 6 档以上的 baking」。
+// 凡是要显示给玩家看的类别，一律过这张表转中文。
 export const CRITIC_NAMES = ['美食评论家·老饕', '米其林密探', '食评专栏作家', '御膳房总管', '舌尖巡礼人', '甜点女王']
 export const CRITIC_CATS = ['主菜', '汤品', '甜点', 'baking'] // 主食仅 18 种，不参与要求
 export const CRITIC_MIN_INTERVAL_MS = 2 * 3600_000
@@ -56,6 +60,11 @@ function maxTierOf(category) {
     if (it.type === 'food' && it.category === category) m = Math.max(m, it.tier ?? 1)
   }
   return m
+}
+
+/** 类别 id → 玩家可读的中文（「主菜」这类本来就是中文的原样返回；`baking` → 「烘焙品」） */
+export function catLabel(cat) {
+  return CATEGORY_LABEL[cat] ?? cat
 }
 
 /** 生成一位评论家的要求：{ name, category, minTier, reward, createdMs, expireAt } */
