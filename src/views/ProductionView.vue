@@ -10,6 +10,9 @@ import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
 import QuantityModal from '../components/QuantityModal.vue'
 import ItemImg from '../components/ItemImg.vue'
+import MasteryHelp from '../components/MasteryHelp.vue'
+import ProgressBar from '../components/ProgressBar.vue'
+import { masteryDoubleChance, masteryToNextTier, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 
@@ -142,6 +145,22 @@ function outputEffect(itemId) {
 }
 
 // 分类：装备按八槽位，其余按食谱分类
+/** 某配方的精通档位信息（制作类与采集类共用 mastery.js 的口径；含「下一档还差几次」） */
+function masteryOf(r) {
+  const inst = props.instance
+  const count = inst.masteryCount?.(r) ?? 0
+  const prog = inst.masteryProgress?.(r) ?? { level: 0, current: 0, needed: 0, progress: 0 }
+  return {
+    level: prog.level,
+    current: prog.current,
+    needed: prog.needed,
+    progress: prog.progress,
+    xpMult: masteryXpMultiplier(prog.level),
+    dbl: masteryDoubleChance(prog.level),
+    batch: masteryYieldBonus(prog.level),
+    next: masteryToNextTier(prog.level, count),
+  }
+}
 function recipeCategory(r) {
   const it = getItem(r.output.itemId)
   if (it?.type === 'equipment' && it.slot) return SLOT_LABEL[it.slot] ?? r.category
@@ -414,7 +433,12 @@ function scrollToSection(label) {
     </div>
 
     <div class="card">
-      <h3>{{ isSmithing ? '锻造配方' : isPreservation ? '保鲜配方' : '食谱' }}（按等级分段，点击段标题折叠）</h3>
+      <h3 class="target-head-row">
+        <span>{{ isSmithing ? '锻造配方' : isPreservation ? '保鲜配方' : '食谱' }}（按等级分段，点击段标题折叠）</span>
+        <span class="target-head-extra">
+          <MasteryHelp mode="craft" :show-interval="false" />
+        </span>
+      </h3>
       <div v-if="sections.length > 1" class="quick-nav">
         <span class="dim" style="font-size: 12px">快速跳转：</span>
         <button v-for="sec in sections" :key="sec.label" class="btn btn-sm" @click="scrollToSection(sec.label)">{{ sec.label }}</button>
@@ -461,6 +485,20 @@ function scrollToSection(label) {
                 <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
                 <div class="dim" style="font-size: 12px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
+            </div>
+            <div class="gather-card-row">
+              <span>经验</span>
+              <span class="mono">{{ r.xp }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
+            </div>
+            <div class="gather-card-row">
+              <span>精通</span>
+              <span class="mono">
+                {{ masteryOf(r).level }} / 100 级<span v-if="masteryOf(r).batch" class="mastery-hl">&nbsp;· 保底 +{{ masteryOf(r).batch }}</span>
+              </span>
+            </div>
+            <ProgressBar :progress="masteryOf(r).progress" class="mastery-bar" />
+            <div class="dim mono" style="font-size: 12px; text-align: right">
+              {{ masteryOf(r).current }} / {{ masteryOf(r).needed }} 次<template v-if="masteryOf(r).next"> · 再 {{ masteryOf(r).next.remaining }} 次到 {{ masteryOf(r).next.tier.level }} 级</template>
             </div>
             <div class="gather-card-row effect-row">
               <span class="effect-label">效果</span>

@@ -112,3 +112,39 @@ export function masteryXpMultiplier(level) {
   if (level >= 5) return 1.1
   return 1
 }
+
+// ── 档位阶梯（展示用，2026-09-16 新增）────────────────────────────────
+// ⚠️ 这张表**必须保持派生**（直接由上面那组函数算出来），不要在页面里手写数字：
+//    `MasteryHelp.vue`（采集页 / 制作页 / 厨房笔记共用的「📖 精通档位说明」）读的就是它。
+//    在此之前 GatheringView 里手抄过一份 11 行档位表，改平衡时极易只改一处、页面照旧骗人
+//    （system_test C27 会校验本表与函数逐格一致、且组件里不再出现手写档位数字）。
+export const MASTERY_TIER_LEVELS = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+export const MASTERY_TIERS = MASTERY_TIER_LEVELS.map((level) => ({
+  level,
+  xpMult: masteryXpMultiplier(level),
+  double: masteryDoubleChance(level),
+  batch: masteryYieldBonus(level),
+  intervalFactor: masteryIntervalFactor(level),
+  fixedInterval: masteryFixedInterval(level),
+}))
+
+/** 下一个档位（已满级返回 null） */
+export function nextMasteryTier(level) {
+  return MASTERY_TIERS.find((t) => t.level > level) ?? null
+}
+
+/** 距离下一档还差多少次（已满级返回 null） */
+export function masteryToNextTier(level, count) {
+  const t = nextMasteryTier(level)
+  if (!t) return null
+  return { tier: t, remaining: Math.max(0, countForMasteryLevel(t.level) - (count ?? 0)) }
+}
+
+/** 档位表里「采集间隔」一列的中文口径（仅采集类卡片有意义；制作类不显示该列） */
+export function masteryIntervalText(tier) {
+  if (tier.intervalFactor >= 1) return '不变'
+  if (tier.intervalFactor > 0.5 && tier.fixedInterval == null) return '减 1/3'
+  if (tier.fixedInterval == null) return '减半'
+  return `≤ ${tier.fixedInterval.toFixed(1)}s`
+}

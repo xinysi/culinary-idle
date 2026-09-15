@@ -8,7 +8,8 @@ import { useUiStore } from '../stores/ui.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { getItem } from '../game/data/items.js'
-import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { masteryDoubleChance, masteryToNextTier, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import MasteryHelp from '../components/MasteryHelp.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import Pagination from '../components/Pagination.vue'
 
@@ -49,6 +50,7 @@ const rows = computed(() => {
         xpMult: masteryXpMultiplier(prog.level),
         dbl: masteryDoubleChance(prog.level),
         batch: masteryYieldBonus(prog.level),
+        next: masteryToNextTier(prog.level, count),
         unlocked: (player.skills[id]?.level ?? 1) >= r.reqLevel,
       })
     }
@@ -75,6 +77,19 @@ const paged = computed(() => {
   while (arr.length < PAGE_SIZE) arr.push({ _pad: true })
   return arr
 })
+/** 「下一档」文案：只列与当前档位相比真的会变的项（满级时返回 null） */
+const n1 = (v) => Number(Number(v).toFixed(2))
+function nextText(r) {
+  const t = r.next?.tier
+  if (!t) return null
+  const parts = []
+  if (n1(t.xpMult) !== n1(r.xpMult)) parts.push(`经验 ×${n1(r.xpMult)}→×${n1(t.xpMult)}`)
+  const d0 = Math.round(r.dbl * 100)
+  const d1 = Math.round(t.double * 100)
+  if (d1 !== d0) parts.push(`双倍 ${d0}%→${d1}%`)
+  if (t.batch !== r.batch) parts.push(`保底 ${r.batch ? `+${r.batch}` : '无'}→${t.batch ? `+${t.batch}` : '无'}`)
+  return `下一档 ${t.level} 级（再 ${r.next.remaining.toLocaleString()} 次）：${parts.join('、') || '该档位只改采集间隔，制作类不受影响'}`
+}
 function setFilter(v) {
   skillFilter.value = v
   page.value = 1
@@ -113,6 +128,7 @@ const RELATED = [{ view: 'flavorBook', label: '📔 风味册' }, { view: 'schoo
       <span class="badge badge-on">满级配方 {{ summary.maxed }}</span>
       <span class="badge">精通 ≥50 级 {{ summary.half }}</span>
       <span class="dim">档位效果：5 级起经验 ×1.1；50 级保底产量 +1；100 级 双倍 80%、保底 +2</span>
+      <span class="note-help"><MasteryHelp mode="craft" :show-interval="false" /></span>
     </div>
 
     <div class="region-tabs" style="flex-wrap: wrap">
@@ -154,6 +170,7 @@ const RELATED = [{ view: 'flavorBook', label: '📔 风味册' }, { view: 'schoo
           <div class="dim note-sub">
             经验 ×{{ r.xpMult }}<template v-if="r.dbl > 0"> · 双倍 {{ Math.round(r.dbl * 100) }}%</template><template v-if="r.batch > 0"> · 保底 +{{ r.batch }}</template>
           </div>
+          <div v-if="nextText(r)" class="dim note-sub note-next">{{ nextText(r) }}</div>
           <div v-if="!r.unlocked" class="dim note-sub">🔒 需技能 Lv{{ r.reqLevel }}</div>
         </div>
       </template>
@@ -195,5 +212,11 @@ const RELATED = [{ view: 'flavorBook', label: '📔 风味册' }, { view: 'schoo
 .note-sub {
   font-size: 12px;
   line-height: 1.5;
+}
+.note-next {
+  color: var(--text-dim);
+}
+.note-help {
+  margin-left: auto;
 }
 </style>
