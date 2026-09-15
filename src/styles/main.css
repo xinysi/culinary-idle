@@ -2453,6 +2453,27 @@ h2 {
   flex-wrap: wrap;
 }
 
+/* ── 容量与扩建总览（商店「容量与扩建」页签，v2.4.2）──────────────
+   注册表 src/game/data/expansions.js 驱动；行 = 名称/说明 · 当前/上限 · 下档价 · 购买 + 去页面 */
+.exp-group { margin-bottom: 14px; }
+.exp-group-head { margin: 10px 0 6px; font-size: 15px; }
+.exp-rows { display: flex; flex-direction: column; gap: 8px; }
+.exp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 130px 200px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+}
+.exp-name { font-weight: 600; }
+.exp-desc { font-size: 12px; line-height: 1.5; margin-top: 2px; }
+.exp-state, .exp-price { font-size: 13px; }
+.exp-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .exp-row { grid-template-columns: minmax(0, 1fr) 1fr; }
+  .exp-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
 .import-btn {
   margin-top: 6px;
   border-style: dashed;

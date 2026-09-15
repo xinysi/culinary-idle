@@ -46,6 +46,7 @@ import { ESSENCE_TIERS, ESSENCE_ITEMS, ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSE
 import { GOODS_ITEMS, goodsEffectText } from '../../src/game/data/processedGoods.js'
 import { FARM_SEASONS, SEASONAL_BONUS, seasonalCropBonus } from '../../src/game/data/farmingSeason.js'
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, TOOL_COSTS, nextToolCost, toolTimeFactor } from '../../src/game/data/farmTools.js'
+import { EXPANSIONS, EXPANSION_GROUPS } from '../../src/game/data/expansions.js'
 
 
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
@@ -4056,6 +4057,49 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     if (inst.isMature(0) !== false) return false
     p.farming.tool = TOOL_MAX_LEVEL // 农具满级 → 有效时长 0.7 → 此刻已成熟
     return inst.isMature(0) === true && inst.growSecOf(crop) < crop.growSec
+  })())
+  // ⑮ 扩建注册表（v2.4.2）：商店「容量与扩建」= 唯一总表，漏登记即 FAIL
+  check('扩建注册表', `共登记 ${EXPANSIONS.length} 项、分组 4 组、含存储/产线/农耕/便利四类`, (() => {
+    const groups = new Set(EXPANSIONS.map((e) => e.group))
+    return EXPANSIONS.length >= 16 && groups.size === 4
+      && ['storage', 'idle', 'farm', 'convenience'].every((g) => groups.has(g))
+  })())
+  check('扩建注册表', 'store 里所有「花金币扩张/升级」动作都已登记（漏登记会两处入口不一致）', (() => {
+    const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+    const names = [...new Set([...P.matchAll(/^\s{4}(\w*(?:[Ee]xpand|upgradeFarmTool|automationUnlock)\w*)\(/gm)].map((m) => m[1]))].filter((n) => !/Unlocked$/.test(n))
+    const src = fs.readFileSync(new URL('../../src/game/data/expansions.js', import.meta.url), 'utf8')
+    const missing = names.filter((n) => !new RegExp(`p\\.${n}\\(`).test(src))
+    return names.length >= 14 && missing.length === 0
+  })(), (() => {
+    const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+    const names = [...new Set([...P.matchAll(/^\s{4}(\w*(?:[Ee]xpand|upgradeFarmTool|automationUnlock)\w*)\(/gm)].map((m) => m[1]))].filter((n) => !/Unlocked$/.test(n))
+    const src = fs.readFileSync(new URL('../../src/game/data/expansions.js', import.meta.url), 'utf8')
+    return names.filter((n) => !new RegExp(`p\\.${n}\\(`).test(src)).join(',')
+  })())
+  check('扩建注册表', '每项自洽：当前值 ≤ 上限、满级时价格为 null、未满时价格为数字', (() => {
+    const p = freshPlayer()
+    p.gold = 1e9
+    return EXPANSIONS.every((e) => {
+      const cur = e.current(p)
+      if (cur > e.max) return false
+      const price = e.price(p)
+      return cur >= e.max ? price == null : typeof price === 'number'
+    })
+  })())
+  check('扩建注册表', '商店商品列表里不再有扩建类条目（避免一处两卖、两套价格）',
+    !SHOP_ITEMS.some((s) => s.action))
+  check('扩建注册表', 'apply() 全权处理：买一次涨一档、且每次都扣到金币', (() => {
+    const p = freshPlayer()
+    p.gold = 1e9
+    let ok = true
+    for (const e of EXPANSIONS) {
+      const c0 = e.current(p)
+      const g0 = p.gold
+      const r = e.apply(p)
+      const c1 = e.current(p)
+      if (!r.ok || c1 <= c0 || p.gold >= g0) ok = false
+    }
+    return ok
   })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {
