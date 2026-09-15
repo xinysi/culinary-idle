@@ -15,6 +15,7 @@ import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 
 const player = usePlayerStore()
@@ -207,6 +208,81 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
     </header>
 
+    <FoldCard title="🧫 培养基一览" hint="堆肥 6h → 蘑菇+茯苓；沃肥 4h → 蘑菇+松茸+灵芝（吃肥料、不占并行槽、不吃种子）">
+      <div class="card mf-table-card">
+        <h3>🧫 培养基一览（菇床吃肥料，不占并行槽、不吃种子）</h3>
+        <div class="table-scroll">
+        <table class="target-table">
+          <tbody>
+            <tr v-for="m in MUSHROOM_MEDIA" :key="m.id">
+              <td class="dim" style="width: 130px">{{ m.icon }} {{ m.name }}</td>
+              <td class="mono dim" style="width: 110px">{{ (m.cost ?? 0).toLocaleString() }} 金币</td>
+              <td class="dim" style="width: 200px">消耗 {{ Object.entries(m.feed).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('、') }}</td>
+              <td>→ {{ Object.entries(m.products).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('、') }}<span class="dim">（{{ m.hours }} 小时 / 周期）</span></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim mf-sub" style="margin-top: 8px">肥料从<b>杂货铺</b>买、或由<b>保鲜</b>技能产出；产出覆盖菌灵露 <b>Ⅰ~Ⅳ 档</b>的主料。</p>
+      </div>
+    </FoldCard>
+
+    <FoldCard title="🌱 可种灵植一览" hint="6 种灵植需采摘 Lv40~85；收获回收 1 颗同类种子 ⇒ 一次投入、永久产出">
+      <div class="card mf-table-card">
+        <h3>🌱 可种灵植一览（灵圃吃稀有种子，收获回收种子 ⇒ 一次投入、永久产出）</h3>
+        <div class="table-scroll">
+        <table class="target-table">
+          <tbody>
+            <tr>
+              <th class="dim" style="width: 120px">灵植</th><th class="dim" style="width: 130px">种子</th>
+              <th class="dim" style="width: 100px">采摘等级</th><th class="dim" style="width: 80px">周期</th>
+              <th>产出</th><th class="dim" style="width: 90px">持有种子</th>
+            </tr>
+            <tr v-for="sp in SPIRIT_PLANTS" :key="sp.id">
+              <td>{{ sp.icon }} {{ sp.name }}</td>
+              <td class="dim"><ItemImg :item-id="sp.seedId" size="sm" /> {{ getItem(sp.seedId)?.name ?? sp.seedId }}</td>
+              <td class="mono dim">Lv{{ sp.reqLevel }}</td>
+              <td class="mono dim">{{ sp.hours }}h</td>
+              <td>→ {{ Object.entries(sp.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
+              <td class="mono">{{ player.inventory[sp.seedId] ?? 0 }}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim mf-sub" style="margin-top: 8px">种子来自<b>采摘/挖掘掉落</b>（10% 概率）与<b>杂货铺</b>；产出覆盖菌灵露 <b>Ⅴ~Ⅷ 档</b>的主料（灵芝另可回 Ⅲ 档）。</p>
+      </div>
+    </FoldCard>
+
+    <FoldCard title="🧪 菌灵露 8 档（按材料等级锚定）" hint="Ⅰ~Ⅳ 给经验+产量、Ⅴ 起加采集间隔、Ⅶ 起加餐厅收入——全是采集拿不到的乘区">
+      <div class="card mf-table-card">
+        <h3>🧪 菌灵露 8 档（越靠后越强 · 全是采集拿不到的乘区）</h3>
+        <div class="table-scroll">
+        <table class="target-table">
+          <tbody>
+            <tr>
+              <th class="dim" style="width: 132px">档位</th><th class="dim" style="width: 130px">主料（等级）</th>
+              <th class="dim" style="width: 190px">投入</th><th class="dim" style="width: 70px">周期</th>
+              <th>效果</th><th class="dim" style="width: 80px">时长</th><th class="dim" style="width: 70px">持有</th>
+            </tr>
+            <tr v-for="e in essenceRows" :key="e.id">
+              <td style="white-space: nowrap"><ItemImg :item-id="e.id" size="sm" /> {{ e.name }}</td>
+              <td class="dim">{{ getItem(e.anchor)?.name }}（Lv{{ e.anchorLv }}）</td>
+              <td class="dim mf-fs">{{ e.costText }}</td>
+              <td class="mono dim">{{ e.hours }}h</td>
+              <td>{{ e.effectText }}</td>
+              <td class="mono dim">{{ e.minutes }} 分</td>
+              <td class="mono">{{ player.inventory[e.id] ?? 0 }}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim mf-sub" style="margin-top: 8px">
+          菌灵露是<b>多效增益</b>：一瓶可同时给经验 / 产量 / 采集间隔 / 餐厅收入（按档位逐级解锁后两条）。
+          单瓶弱于「两支同阶增益剂叠加」，价值在于把<b>无限的采集产出</b>放大——采集越多，酿露越快。
+        </p>
+      </div>
+    </FoldCard>
+
     <div v-if="!unlocked" class="card status-line">
       <span class="badge">🔒 未解锁</span>
       <span class="dim">
@@ -289,47 +365,6 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
         </div>
       </div>
 
-      <div v-if="mOpen" class="card mf-table-card">
-        <h3>🧫 培养基一览（菇床吃肥料，不占并行槽、不吃种子）</h3>
-        <div class="table-scroll">
-        <table class="target-table">
-          <tbody>
-            <tr v-for="m in MUSHROOM_MEDIA" :key="m.id">
-              <td class="dim" style="width: 130px">{{ m.icon }} {{ m.name }}</td>
-              <td class="mono dim" style="width: 110px">{{ (m.cost ?? 0).toLocaleString() }} 金币</td>
-              <td class="dim" style="width: 200px">消耗 {{ Object.entries(m.feed).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('、') }}</td>
-              <td>→ {{ Object.entries(m.products).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('、') }}<span class="dim">（{{ m.hours }} 小时 / 周期）</span></td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-        <p class="dim mf-sub" style="margin-top: 8px">肥料从<b>杂货铺</b>买、或由<b>保鲜</b>技能产出；产出覆盖菌灵露 <b>Ⅰ~Ⅳ 档</b>的主料。</p>
-      </div>
-
-      <div v-if="sOpen" class="card mf-table-card">
-        <h3>🌱 可种灵植一览（灵圃吃稀有种子，收获回收种子 ⇒ 一次投入、永久产出）</h3>
-        <div class="table-scroll">
-        <table class="target-table">
-          <tbody>
-            <tr>
-              <th class="dim" style="width: 120px">灵植</th><th class="dim" style="width: 130px">种子</th>
-              <th class="dim" style="width: 100px">采摘等级</th><th class="dim" style="width: 80px">周期</th>
-              <th>产出</th><th class="dim" style="width: 90px">持有种子</th>
-            </tr>
-            <tr v-for="sp in SPIRIT_PLANTS" :key="sp.id">
-              <td>{{ sp.icon }} {{ sp.name }}</td>
-              <td class="dim"><ItemImg :item-id="sp.seedId" size="sm" /> {{ getItem(sp.seedId)?.name ?? sp.seedId }}</td>
-              <td class="mono dim">Lv{{ sp.reqLevel }}</td>
-              <td class="mono dim">{{ sp.hours }}h</td>
-              <td>→ {{ Object.entries(sp.products).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、') }}</td>
-              <td class="mono">{{ player.inventory[sp.seedId] ?? 0 }}</td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-        <p class="dim mf-sub" style="margin-top: 8px">种子来自<b>采摘/挖掘掉落</b>（10% 概率）与<b>杂货铺</b>；产出覆盖菌灵露 <b>Ⅴ~Ⅷ 档</b>的主料（灵芝另可回 Ⅲ 档）。</p>
-      </div>
-
       <!-- ③ 萃露炉 -->
       <h3 class="mf-title" @click="eOpen = !eOpen">🧪 萃露炉（菌菇 / 灵植 → 菌灵露）{{ eOpen ? '' : '（点击展开）' }}</h3>
       <div v-if="eOpen" class="mf-grid">
@@ -360,33 +395,6 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
         </div>
       </div>
 
-      <div class="card mf-table-card">
-        <h3>🧪 菌灵露 8 档（越靠后越强 · 全是采集拿不到的乘区）</h3>
-        <div class="table-scroll">
-        <table class="target-table">
-          <tbody>
-            <tr>
-              <th class="dim" style="width: 132px">档位</th><th class="dim" style="width: 130px">主料（等级）</th>
-              <th class="dim" style="width: 190px">投入</th><th class="dim" style="width: 70px">周期</th>
-              <th>效果</th><th class="dim" style="width: 80px">时长</th><th class="dim" style="width: 70px">持有</th>
-            </tr>
-            <tr v-for="e in essenceRows" :key="e.id">
-              <td style="white-space: nowrap"><ItemImg :item-id="e.id" size="sm" /> {{ e.name }}</td>
-              <td class="dim">{{ getItem(e.anchor)?.name }}（Lv{{ e.anchorLv }}）</td>
-              <td class="dim mf-fs">{{ e.costText }}</td>
-              <td class="mono dim">{{ e.hours }}h</td>
-              <td>{{ e.effectText }}</td>
-              <td class="mono dim">{{ e.minutes }} 分</td>
-              <td class="mono">{{ player.inventory[e.id] ?? 0 }}</td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-        <p class="dim mf-sub" style="margin-top: 8px">
-          菌灵露是<b>多效增益</b>：一瓶可同时给经验 / 产量 / 采集间隔 / 餐厅收入（按档位逐级解锁后两条）。
-          单瓶弱于「两支同阶增益剂叠加」，价值在于把<b>无限的采集产出</b>放大——采集越多，酿露越快。
-        </p>
-      </div>
     </template>
     <RelatedPages :links="RELATED" />
   </div>

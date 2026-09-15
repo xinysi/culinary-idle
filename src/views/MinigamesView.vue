@@ -91,6 +91,7 @@ watch(active, (id) => {
 function onBack() { active.value = 'heat' }
 onMounted(() => EventBus.on('mg:back', onBack))
 onUnmounted(() => EventBus.off('mg:back', onBack))
+import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
 const RELATED = [{ view: 'honor', label: '🎖 荣誉殿堂' }, { view: 'log', label: '📖 图鉴/统计' }]
@@ -156,8 +157,8 @@ function select(id) {
       </div>
     </div>
     <!-- 游戏区域：自然流 -->
-    <component :is="activeComp" />
 
+    <FoldCard title="🏆 记录墙" :hint="`已玩 ${wallSummary.games}/${GAMES.length} 款 · 累计 ${wallSummary.plays} 局（每局结算留档）`">
     <!-- 记录墙（2026-09-12 补）：27 款跨游戏汇总——此前只有 6 款把成绩写进存档，其余关掉页面就没了 -->
     <div class="card mg-wall">
       <h3>
@@ -185,6 +186,9 @@ function select(id) {
         每款游戏结算时记录最好一局与局数（步数 / 用时类取最小）；「—」表示该玩法没有分数概念，只计局数。
       </p>
     </div>
+    </FoldCard>
+    <component :is="activeComp" />
+
     <RelatedPages :links="RELATED" />
 </div>
 </template>
