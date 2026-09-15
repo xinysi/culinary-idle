@@ -21,6 +21,7 @@ export const VIEW_KEYS = [
   'mijian', 'guide', 'gear', 'quests', 'achievements', 'realm', 'decor', 'mail', 'logs', 'market', 'friends', 'today', 'story', 'cards', 'encounters', 'dao', 'shanhai',
   // 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场（蜂场与温室合并；网箱并入牧场不另开页）
   'caravan', 'mycoField', 'greenhouse', // 「灵圃菌房」由原「菌房」+「灵田」合并（v2.3.0）；网箱并入牧场不另开页
+  'effects', // 效果总览（v2.6.0）：今日组，汇总此刻生效的全部增益 / 效果 / 减益
 ]
 
 export const useUiStore = defineStore('ui', {

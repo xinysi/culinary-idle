@@ -49,6 +49,7 @@ import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, TOOL_COSTS, nextToolCost, toolTime
 import { EXPANSIONS, EXPANSION_GROUPS } from '../../src/game/data/expansions.js'
 import { PRIME_CROP_ID, PRIME_MIN_LEVEL, PRIME_BASE_CHANCE, PRIME_MAX_CHANCE, PRIME_CATALYST_TIME, FARM_MASTERY_GATHER_MAX, primeCropChance } from '../../src/game/data/primeCrop.js'
 import { itemDetailLines } from '../../src/game/data/itemDetail.js'
+import { collectEffects, EFFECT_ROWS, EFFECT_GROUPS } from '../../src/game/data/activeEffects.js'
 import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 
 
@@ -4218,6 +4219,96 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
   check('挂机产线', '自动领取已覆盖商队与灵田（与地窖/采集队共用同一条自动化）', (() => {
     const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
     return /caravanClaim\(i\)/.test(P) && /spiritHarvest\(i\)/.test(P)
+  })())
+}
+
+
+// ── C26. 效果总览（v2.6.0：「此刻生效的增益/效果/减益」唯一注册表 + 一个都不能漏）──
+console.log('══ C26. 效果总览 ══')
+{
+  const ids = new Set()
+  const gids = new Set(EFFECT_GROUPS.map((g) => g.id))
+  const bad = []
+  for (const r of EFFECT_ROWS) {
+    if (ids.has(r.id)) bad.push(`${r.id}: id 重复`)
+    ids.add(r.id)
+    if (!gids.has(r.group)) bad.push(`${r.id}: 分组不在 EFFECT_GROUPS`)
+    if (!r.name || !r.icon || !r.src) bad.push(`${r.id}: 缺 name/icon/src`)
+    if (!['buff', 'debuff', 'rule'].includes(r.kind)) bad.push(`${r.id}: kind 非法`)
+    if (typeof r.read !== 'function') bad.push(`${r.id}: 缺 read`)
+  }
+  check('效果总览', `注册表 ${EFFECT_ROWS.length} 行：id 唯一 / 分组有效 / 字段齐备`, bad.length === 0, bad.slice(0, 5).join('; '))
+  check('效果总览', '注册表规模够大（≥40 行，防「表被清空后守卫恒真」）', EFFECT_ROWS.length >= 40, `仅 ${EFFECT_ROWS.length}`)
+
+  const ctxOf = (pl, combat = null) => ({ combat, skill: (id) => getSkillInstance(id), allSkills: () => getAllSkillInstances() })
+
+  // 1) 新档：每一行都必须跑得通（不许有「读取失败」），未生效的行必须写明原因
+  const p0 = freshPlayer()
+  const r0 = collectEffects(p0, ctxOf(p0))
+  const all0 = [...r0.groups, ...r0.dormant].flatMap((g) => g.items)
+  check('效果总览', '新档汇总不抛错、每行都有结果（无「读取失败」）', all0.length === EFFECT_ROWS.length && !all0.some((i) => i.text.includes('读取失败')), `${all0.length}/${EFFECT_ROWS.length}`)
+  check('效果总览', '未生效的行都给出了原因（这就是「没有漏掉」的证据）', all0.filter((i) => !i.on).every((i) => !!i.why && i.why !== '—'), all0.filter((i) => !i.on && !i.why).map((i) => i.id).slice(0, 5).join(','))
+  check('效果总览', '生效项 + 未生效项 = 注册表行数（分组聚合不丢行）', r0.stats.on + r0.stats.off === EFFECT_ROWS.length, `${r0.stats.on}+${r0.stats.off}`)
+
+  // 2) 富档：多条路径真的能亮（增益与减益都要能亮）
+  const p1 = freshPlayer({ foraging: 60, farming: 50, knife: 70 })
+  p1.gold = 5_000_000
+  p1.inventory = { corn: 50, seaweed: 20, compost: 5, primeCrop: 2 }
+  p1.ranch = { pens: [{ animalId: 'chicken', lastAt: Date.now() }], expands: 1, ponds: [{ fishId: 'crucian', lastAt: Date.now() }], pondExpands: 1 }
+  p1.spoilage = { pheasantMeat: Date.now() + 3600_000 }
+  p1.buffs = {
+    xpMult: { mult: 1.5, expiresAt: Date.now() + 600_000 },
+    yieldMult: { mult: 1.25, expiresAt: Date.now() + 600_000 },
+    gatherMult: { mult: 0.85, expiresAt: Date.now() + 600_000 },
+    restaurantMult: { mult: 1.4, expiresAt: Date.now() + 600_000 },
+  }
+  const r1 = collectEffects(p1, ctxOf(p1))
+  const all1 = [...r1.groups, ...r1.dormant].flatMap((g) => g.items)
+  const on1 = all1.filter((i) => i.on)
+  check('效果总览', `富档能亮出多条生效项（实到 ${on1.length} 条，≥8）`, on1.length >= 8, `${on1.length}`)
+  check('效果总览', '四条增益剂轴都能单独亮起（经验/产量/采集间隔/餐厅收入）', ['buffXp', 'buffYield', 'buffGather', 'buffRestaurant'].every((id) => all1.find((i) => i.id === id)?.on))
+  check('效果总览', '减益也能亮（食材腐坏 / 停机类）', all1.some((i) => i.on && i.kind === 'debuff'), '')
+  check('效果总览', '生效项的数值文案里不含未求值的插值 / 异常值', on1.every((i) => i.text && !/undefined|NaN|\[object|\$\{/.test(i.text)), on1.filter((i) => /undefined|NaN|\[object/.test(i.text)).map((i) => `${i.id}:${i.text}`).slice(0, 3).join(' | '))
+
+  // 3) 只读契约：汇总不得改动任何状态
+  const snap = (pl) => JSON.stringify({ g: pl.gold, inv: pl.inventory, b: pl.buffs, s: pl.spoilage, r: pl.ranch })
+  const before = snap(p1)
+  collectEffects(p1, ctxOf(p1))
+  check('效果总览', '汇总只读：金币/背包/增益/腐坏/牧场状态前后完全一致', before === snap(p1))
+
+  // 4) 战斗内临时状态：无战斗一律 off 且有原因；战斗中确实能亮
+  const p2 = freshPlayer()
+  const r2 = collectEffects(p2, ctxOf(p2, null))
+  const fights = [...r2.groups, ...r2.dormant].flatMap((g) => g.items).filter((i) => i.id.startsWith('fight'))
+  check('效果总览', `战斗内临时状态共 ${fights.length} 条：无战斗时全部未生效且有原因`, fights.length >= 6 && fights.every((i) => !i.on && !!i.why), `${fights.length}`)
+  const cb = new Combat(p2)
+  cb.inFight = true
+  cb.buff = { atk: 5, accuracy: 8 }
+  cb.buffTurns = 3
+  cb.drunkTurns = 2
+  cb.burnTurns = 2
+  cb.poisonTurns = 2
+  cb.slowTurns = 2
+  cb.regenTurns = 2
+  cb.regenPerTurn = 6
+  cb.biscuitSpeedPct = 10
+  cb.biscuitCooldown = 2
+  const r3 = collectEffects(p2, ctxOf(p2, cb))
+  const onFight = [...r3.groups, ...r3.dormant].flatMap((g) => g.items).filter((i) => i.id.startsWith('fight') && i.on)
+  check('效果总览', `战斗中 ${onFight.length} 条临时效果亮起（增益/醉酒/灼烧/中毒/束缚/回血/饼干）`, onFight.length >= 6, `${onFight.length}`)
+
+  // 5) 统计口径：noteEffectsSeen 只增不减，且随存档往返
+  const p3 = freshPlayer()
+  const grew = p3.noteEffectsSeen(9)
+  const grew2 = p3.noteEffectsSeen(3)
+  check('效果总览', '历史峰值只增不减（noteEffectsSeen 幂等向上）', grew === true && grew2 === false && p3.stats.effectsSeenMax === 9, `${p3.stats.effectsSeenMax}`)
+  const round = freshPlayer()
+  round.applySave(p3.serialize())
+  check('效果总览', '历史峰值随存档往返保留', round.stats.effectsSeenMax === 9, `${round.stats.effectsSeenMax}`)
+  check('效果总览', '成就 / 统计页的取数口径指向同一个字段', (() => {
+    const A = fs.readFileSync(new URL('../../src/game/data/achievements.js', import.meta.url), 'utf8')
+    const S = fs.readFileSync(new URL('../../src/views/StatsView.vue', import.meta.url), 'utf8')
+    return A.includes('effectsSeenMax') && S.includes('effectsSeenMax')
   })())
 }
 

@@ -51,6 +51,8 @@ const FEATURE_GROUPS = [
     items: [
       // 「今日待办」放本组第一格：它是「上线先看什么」的落地页（汇总其余每日动作）
       { icon: '📌', name: '今日待办', view: 'today', badge: () => player.pendingClaimCount() + player.mailUnclaimedCount() + player.friendsVisitableCount() },
+      // 「效果总览」（v2.6.0）：此刻生效的全部增益 / 效果 / 减益，含本期未生效的原因清单
+      { icon: '🧿', name: '效果总览', view: 'effects' },
       { icon: '🌤', name: '天气运势', view: 'weather' },
       { icon: '🍀', name: '吉祥物', view: 'mascot' },
       { icon: '📋', name: '任务中心', view: 'quests', badge: () => player.pendingClaimCount() },

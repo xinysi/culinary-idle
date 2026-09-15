@@ -102,6 +102,7 @@ const sections = computed(() => [
       { label: '菌房产出周期', value: player.stats?.mushroomCycles ?? 0, sub: ` 次 · ${player.mushroomBeds()} 张菇床` },
       { label: '温室收获', value: player.stats?.greenhouseCycles ?? 0, sub: ` 次 · ${player.greenhouseBeds()} 格` },
       { label: '商队出航', value: player.stats?.caravanTrips ?? 0, sub: ` 次 · 回款 ${(player.stats?.caravanGold ?? 0).toLocaleString()} 金币` },
+      { label: '效果总览', value: player.stats?.effectsSeenMax ?? 0, sub: ' 项 · 历史同时生效最多（含规律性加成）' },
       { label: '分店入账', value: (player.stats?.branchGold ?? 0).toLocaleString(), sub: ` 金币 · ${Object.keys(player.branches ?? {}).length} 家分店` },
       { label: '风味搭配', value: player.flavorProgress().found, sub: ` / ${player.flavorProgress().total} 条` },
       { label: '厨具大赛', value: player.gearScore().score, sub: ` 分 · 历史最高 ${player.gearContest?.best ?? 0}` },

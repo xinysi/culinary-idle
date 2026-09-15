@@ -167,6 +167,8 @@ const sidebarSrc = read('src/components/Sidebar.vue')
     '山海食经', '轮回印记',
     // 2026-09-14 挂机产线四套（手抄白名单；另有从 Sidebar 派生的那道检查，两者都要过）
     '商队线', '灵圃菌房', '温室蜂场',
+    // v2.6.0：效果总览（今日组）
+    '效果总览',
   ]
   // ── 2026-09-11 修「守卫自身有盲区」：上面这份白名单是**手抄**的，新系统忘了往里加时这条检查恒真，
   //    等于 PASS 而不设防（本轮就是这么漏掉信箱/厨友的）。因此再叠加一条**从侧栏派生**的检查：
@@ -471,6 +473,55 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     }
   }
   check(`奇遇：${ENCOUNTERS.length} 个事件的 id/title/分支/物品引用都有效（含 costItem）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
+// ── 效果总览：注册表完整性（v2.6.0，「一个都不能漏」的技术落点）──
+// 背景：全项目只有 4 个真正的乘区聚合出口（Skill.addXp / GatheringSkill.yieldExtraChance /
+//   player.restaurantHourlyIncome / Combat.playerStats），其余 20 多个效果来源散装在各技能与视图里。
+//   因此「效果总览」页必须逐条登记来源（src/game/data/activeEffects.js），而不是只读那几个出口。
+// 本项检查：player.js 里每个**效果型访问器**（*Effects / *Boost / *Multiplier / *Mult / *Pct /
+//   *Bonus / *Factor / *Chance / *Modifiers / *Hours）都必须在注册表源码里出现；
+//   少数不属于「对玩家的效果」的（如 UI 进度、内部倍率）在此显式豁免并写明理由。
+// ⚠️ 新增效果来源却忘了登记 → 这里 FAIL；反过来，把某条注册表行删掉也会 FAIL（双向都拦）。
+{
+  const playerSrc = read('src/stores/player.js')
+  const effSrc = read('src/game/data/activeEffects.js')
+  // 豁免：不是「作用于玩家的效果」，故不需要出现在效果总览里（每条都要写清理由）
+  const EXEMPT = {
+    collectionPct: '图鉴收集百分比：进度口径，不是加成（效果总览不需要展示进度）',
+    yieldExtraChance: '采集额外产出几率的**内部聚合函数**，其各来源已在注册表逐条登记',
+    marketBoost: '内部聚合出口（活动⊕节庆⊕天气），三者已分别登记，不重复展示合计',
+    weatherBoost: '天气定义表的取值函数（按日派生），展示入口是 weatherEffects',
+    aggregateMarketBoost: '限时窗口的合计函数，各窗口已逐条登记',
+    expeditionRareBonus: '采集队稀有权重：已在「采集队加成」一行内合并展示',
+    gemsBonus: '宝石属性：已并入「装备与强化」一行展示',
+    upgradeMult: '装备强化倍率：已并入「装备与强化」一行展示',
+    themeMult: '分店主题倍率：已并入「分店店长与主题」一行展示',
+    toolTimeFactor: '农具时间的纯函数（数据层），展示入口是 farmTimeFactor',
+    priceMultiplier: '交易所行情倍率：属于页面内价格，不是玩家增益',
+    boostCraftQueues: '商店道具的一次性快进，不是持续效果',
+    checkSetBonuses: '套装集齐的一次性发奖判定，属性已并入装备一行',
+    setMealMult: '套餐定食的倍率换算函数，展示入口是 setMealBonus',
+    favorLevelFromXp: '餐厅好感的等级换算函数，展示入口是「顾客好感小费」一行',
+    regularLevelFromServes: '常客等级换算函数，展示入口是 regularTipPct',
+    branchHourlyOf: '分店时收的结算入口，加成来源已在「分店店长与主题」登记',
+    gainGold: '金币入账出口：其两条加成已在「金币获取加成」登记',
+    noteEffectsSeen: '效果总览自身的统计写入，不是效果',
+    offlineMaxHours: '离线上限的唯一出口：已在「离线结算上限」登记',
+    shanhaiUnlockedTotal: '山海食经点亮数：进度口径',
+  }
+  const found = new Set()
+  for (const m of playerSrc.matchAll(/^\s{2,}([a-zA-Z_$][\w$]*(?:Effects|Boost|Multiplier|Mult|Pct|Bonus|Factor|Chance|Modifiers|Hours))\s*\(/gm)) {
+    found.add(m[1])
+  }
+  const missing = [...found].filter((n) => !effSrc.includes(n) && !EXEMPT[n])
+  // 过期豁免 = 该名字在 player.js 里已经彻底不存在了（改名/删除后要顺手清理豁免表）
+  const unusedExempt = Object.keys(EXEMPT).filter((n) => !playerSrc.includes(n))
+  check(`效果总览：player.js 的 ${found.size} 个效果型访问器都已登记进效果注册表`, missing.length === 0, `漏登记: ${missing.join(', ')}`)
+  check('效果总览：豁免表没有过期条目（改名/删除后要同步清理）', unusedExempt.length === 0, `失效豁免: ${unusedExempt.join(', ')}`)
+  // 反向断言：注册表行数必须够多（防止有人把表清空后本项恒真）
+  const rowCount = (effSrc.match(/\n\s+id: '/g) ?? []).length
+  check(`效果总览：注册表登记了 ${rowCount} 条效果行（≥40 才算完整）`, rowCount >= 40, `仅 ${rowCount} 条`)
 }
 
 process.exit(fail === 0 ? 0 : 1)
