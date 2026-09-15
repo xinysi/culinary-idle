@@ -1,11 +1,13 @@
 <script setup>
 // 农耕视图 — 需求文档 §3.1.5：农田格 / 种植 / 生长进度 / 收获
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { DERIVED_MAX } from '../game/data/caps.js'
+import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSeason.js'
+import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const props = defineProps({
@@ -15,6 +17,16 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const selections = reactive({})
+
+/** 本月当季类别（UI 里给作物打「当季」标） */
+const seasonCats = computed(() => farmSeason().cats)
+const isSeasonal = (cat) => seasonCats.value.includes(cat)
+/** 天气对农田产量的一句话（好天气加成 / 坏天气减益）——温室不吃天气，见页面提示 */
+const farmWeatherText = computed(() => {
+  const m = player.weatherEffects?.().farmYield ?? 1
+  if (m === 1) return '×1.00（无影响）'
+  return `×${m.toFixed(2)}（${m > 1 ? '+' : ''}${Math.round((m - 1) * 100)}%）`
+})
 
 function remainingSec(i) {
   ui.loopTick // 依赖全局循环计数：每帧重算倒计时（实时刷新）
@@ -64,6 +76,16 @@ function seedName(seedId) {
       <span class="badge badge-on">农田 {{ instance.plots.filter((p) => p).length }}/{{ instance.maxPlots }}</span>
       <span class="dim">（每 {{ DERIVED_MAX.farmPlotsPerLevels }} 级农耕 +1 块（上限 {{ DERIVED_MAX.farmPlots }}）；作物枯萎 3%，施肥可降至 1%/0%）</span>
       <span v-if="instance.harvestableCount" class="badge" style="background: var(--good-soft); color: var(--good-strong)">可收获 {{ instance.harvestableCount }}</span>
+    </div>
+
+    <!-- 农时（v2.4.0）：当季作物 ×1.5 + 天气对农田的影响；温室不吃天气 ⇒ 坏天气时的避风港 -->
+    <div class="card status-line">
+      <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🌱 {{ seasonalTip() }}</span>
+      <span class="dim">
+        今日天气 <b>{{ player.todayWeather().icon }} {{ player.todayWeather().name }}</b>：
+        农田产量 <b class="mono">{{ farmWeatherText }}</b>
+        <template v-if="isHarshWeather(player.todayWeather())">（⚠️ 恶劣天气——<b>温室不受天气影响</b>，可先种到温室去）</template>
+      </span>
     </div>
 
     <!-- 农田网格 -->
@@ -176,6 +198,9 @@ function seedName(seedId) {
             <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ c.growSec }}s 生长</span>
               <span class="dim">{{ c.xp }} 经验</span>
+            </div>
+            <div v-if="isSeasonal(getItem(c.itemId)?.category)" class="item-cell-sub" style="font-size: 12px">
+              <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">当季 ×{{ SEASONAL_BONUS }}</span>
             </div>
           </div>
         </div>

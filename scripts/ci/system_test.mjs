@@ -44,6 +44,8 @@ import { HONEY_TIERS, HONEY_ITEMS, honeyTierForLevel, honeyItemForLevel } from '
 import { RANCH_ANIMALS, POND_BASE, POND_MAX, POND_EXPAND_COSTS, POND_FISH } from '../../src/game/data/ranch.js'
 import { ESSENCE_TIERS, ESSENCE_ITEMS, ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS } from '../../src/game/data/essences.js'
 import { GOODS_ITEMS, goodsEffectText } from '../../src/game/data/processedGoods.js'
+import { FARM_SEASONS, SEASONAL_BONUS, seasonalCropBonus } from '../../src/game/data/farmingSeason.js'
+
 
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
 import { priceMultiplier, exchangeCycleIndex } from '../../src/game/data/exchange.js'
@@ -146,7 +148,7 @@ function freshPlayer(skills = {}) {
   // 天气（按自然日生效）同理：风天 gatherYield>1 会让产量变成概率 +1，断言随机失败
   // → 保留天气定义本身（供「加成为 marketBoost 口径」断言读 weather 字段），只把各乘区压平
   const realWeather = p.weatherEffects.bind(p)
-  p.weatherEffects = () => ({ ...realWeather(), restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1, gatherYield: 1 })
+  p.weatherEffects = () => ({ ...realWeather(), restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1, gatherYield: 1, farmYield: 1 })
   p.activeMarketEvents = (...a) => (a.length ? realActive(...a) : [])
   for (const [id, lv] of Object.entries(skills)) p.setSkillState(id, { level: lv, exp: totalXpForLevel(lv) })
   createSkillInstances(p)
@@ -1016,9 +1018,55 @@ console.log('══ E. 离线进度 ══')
     check('天气', 'marketBoost 已乘入天气倍率', Math.abs(mb.gatherXp - expect) < 1e-9, `mb=${mb.gatherXp} wx=${expect}`)
     // ── 恶劣天气（2026-09-13 用户要求：天气不能只有好处）──
     const harsh = WEATHERS.filter((w) => w.harsh)
-    const ALLOWED = ['gatherYield', 'gatherXp', 'craftXp', 'combatXp', 'restaurant']
+    const ALLOWED = ['gatherYield', 'gatherXp', 'craftXp', 'combatXp', 'restaurant', 'farmYield']
     check('天气', `共 ${WEATHERS.length} 种天气，其中恶劣 ${harsh.length} 种且各带至少一条减益`, WEATHERS.length === 9 && harsh.length === 3
       && harsh.every((w) => isHarshWeather(w) && Object.values(w.boost).some((v) => v < 1)))
+    // ── 农时（v2.4.0）：农田吃「当日天气 + 当季作物」，温室不吃天气 ──
+    check('农时', `农田产量乘区：好天气加成、恶劣天气减益且 ≥0.70（与其它赛道同口径）`, (() => {
+      const good = WEATHERS.filter((w) => !w.harsh)
+      const harsh = WEATHERS.filter((w) => w.harsh)
+      return good.some((w) => (w.boost.farmYield ?? 1) > 1)
+        && harsh.every((w) => { const v = w.boost.farmYield ?? 1; return v < 1 && v >= 0.70 })
+    })())
+    check('农时', '四季覆盖 12 个月且各季都有当季作物类别', (() => {
+      const months = new Set(FARM_SEASONS.flatMap((s) => s.months))
+      return FARM_SEASONS.length === 4 && months.size === 12 && FARM_SEASONS.every((s) => s.cats.length > 0)
+    })())
+    check('农时', `当季 ×${SEASONAL_BONUS}、非当季 ×1`, (() => {
+      const springCat = FARM_SEASONS[0].cats[0] // 春
+      const winterCat = FARM_SEASONS[3].cats[0] // 冬
+      return seasonalCropBonus(springCat, 4) === SEASONAL_BONUS && seasonalCropBonus(winterCat, 4) === 1
+        && seasonalCropBonus(springCat, 1) === 1 && seasonalCropBonus(winterCat, 1) === SEASONAL_BONUS
+    })())
+    check('农时', '农田收获真的乘了「天气 × 当季」（坏天气不会颗粒无收）', (() => {
+      const p = freshPlayer()
+      p.skills.farming.level = 99
+      const seeds = getAllSkillInstances().find((i) => i.id === 'farming')
+      const wheat = { seedId: 'wheatSeed', itemId: 'wheat' }
+      const cat = getItem(wheat.itemId)?.category ?? ''
+      const run = (farmYield) => {
+        p.inventory[wheat.seedId] = 1
+        seeds.plant(0, wheat.seedId)
+        p.farming.plots[0].plantedAt = Date.now() - 10 * 60 * 1000
+        const before = p.inventory[wheat.itemId] ?? 0
+        p.weatherEffects = () => ({ farmYield })
+        withRandom([0.99, 0.99, 0.99], () => seeds.harvest(0))
+        return (p.inventory[wheat.itemId] ?? 0) - before
+      }
+      const normal = run(1)
+      const doubled = run(2)
+      const halved = run(0.5)
+      const expectNormal = Math.max(1, Math.round(1 * 1 * seasonalCropBonus(cat)))
+      const expectDouble = Math.max(1, Math.round(1 * 2 * seasonalCropBonus(cat)))
+      return normal === expectNormal && doubled === expectDouble && halved >= 1
+    })())
+    check('农时', '温室不吃天气（静态：温室那段逻辑里没有 farmYield）', (() => {
+      const P = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+      const i = P.indexOf('_tickGreenhouse()')
+      const j = P.indexOf('// ══ 挂机产线 · 萃露炉', i)
+      const body = P.slice(i, j > i ? j : i + 6000)
+      return i > 0 && !/farmYield|weatherEffects/.test(body)
+    })())
     check('天气', '每条恶劣天气都留了「换个赛道」的补偿项（至少一条增益）', harsh.every((w) => Object.values(w.boost).some((v) => v > 1)))
     // 只削「额外产出几率」对早期玩家等于没影响 → 每条恶劣天气都必须有一条**硬乘区**减益（经验/收入）
     const HARD = ['gatherXp', 'craftXp', 'combatXp', 'restaurant']
