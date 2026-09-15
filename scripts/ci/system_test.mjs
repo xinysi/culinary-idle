@@ -47,6 +47,9 @@ import { GOODS_ITEMS, goodsEffectText } from '../../src/game/data/processedGoods
 import { FARM_SEASONS, SEASONAL_BONUS, seasonalCropBonus } from '../../src/game/data/farmingSeason.js'
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, TOOL_COSTS, nextToolCost, toolTimeFactor } from '../../src/game/data/farmTools.js'
 import { EXPANSIONS, EXPANSION_GROUPS } from '../../src/game/data/expansions.js'
+import { PRIME_CROP_ID, PRIME_MIN_LEVEL, PRIME_BASE_CHANCE, PRIME_MAX_CHANCE, PRIME_CATALYST_TIME, FARM_MASTERY_GATHER_MAX, primeCropChance } from '../../src/game/data/primeCrop.js'
+import { itemDetailLines } from '../../src/game/data/itemDetail.js'
+import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 
 
 import { FACILITY_MAX, IDLE_CAP_HOURS } from '../../src/game/data/caps.js'
@@ -4100,6 +4103,68 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
       if (!r.ok || c1 <= c0 || p.gold >= g0) ok = false
     }
     return ok
+  })())
+  // ⑯ 精耕作物 + 精通联动（v2.5.0）：把农耕与采摘/挖掘拉开差异
+  check('精耕作物', '农耕独占：type=consumable ⇒ 不在商店/采集表/配方/炼金/抽奖池里', (() => {
+    const it = getItem(PRIME_CROP_ID)
+    if (!it || it.type !== 'consumable') return false
+    if ((SHOP_ITEMS ?? []).some((x) => x.itemId === PRIME_CROP_ID)) return false
+    const inGather = getAllSkillInstances().some((inst) => (inst.targets ?? []).some((t) => t.itemId === PRIME_CROP_ID))
+    const inRecipe = getAllSkillInstances().some((inst) => (inst.recipes ?? []).some((r) => r.output?.itemId === PRIME_CROP_ID || r.ingredients?.[PRIME_CROP_ID]))
+    return !inGather && !inRecipe && itemUses(PRIME_CROP_ID).length === 0
+  })())
+  check('精耕作物', `附产门槛 reqLevel ≥ ${PRIME_MIN_LEVEL}、概率 ${PRIME_BASE_CHANCE * 100}%~${PRIME_MAX_CHANCE * 100}% 且随精通递增`, (() => {
+    if (PRIME_MIN_LEVEL < 40) return false
+    const ps = [0, 25, 50, 75, 100].map((l) => primeCropChance(l))
+    for (let i = 1; i < ps.length; i++) if (!(ps[i] >= ps[i - 1])) return false
+    return Math.abs(ps[0] - PRIME_BASE_CHANCE) < 1e-9 && Math.abs(ps[4] - PRIME_MAX_CHANCE) < 1e-9 && ps[4] <= 0.1
+  })())
+  check('精耕作物', '真的只有高阶作物附产（低阶作物不产）', (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 99
+    const farm = getAllSkillInstances().find((i) => i.id === 'farming')
+    const high = CROPS.find((c) => c.reqLevel >= PRIME_MIN_LEVEL && c.reqLevel <= 60)
+    const run = (crop, plot) => {
+      p.inventory[crop.seedId] = 1
+      farm.plant(plot, crop.seedId)
+      p.farming.plots[plot].plantedAt = Date.now() - 20 * 60 * 1000
+      const before = p.inventory[PRIME_CROP_ID] ?? 0
+      withRandom([0, 0, 0, 0], () => farm.harvest(plot))
+      return (p.inventory[PRIME_CROP_ID] ?? 0) - before
+    }
+    const wheat = CROPS.find((c) => c.seedId === 'wheatSeed')
+    return run(high, 0) === 1 && run(wheat, 1) === 0 && (p.stats.primeCrops ?? 0) === 1
+  })())
+  check('精耕作物', '萃露炉加料：时间 ×0.6、扣 1 件、没料时拒绝', (() => {
+    const p = freshPlayer()
+    p.skills.foraging.level = 60
+    p.inventory.mushroom = 20
+    p.inventory.compost = 20
+    if (p.essenceBrew(0, 'essence1', true).ok !== false) return false // 没料
+    p.inventory[PRIME_CROP_ID] = 1
+    const r = p.essenceBrew(0, 'essence1', true)
+    const vat = p.essenceState().vats[0]
+    const hours = (vat.readyAt - vat.startedAt) / 3600e3
+    return r.ok && Math.abs(hours - 1 * 4 * PRIME_CATALYST_TIME) < 1e-6 && (p.inventory[PRIME_CROP_ID] ?? 0) === 0
+  })())
+  check('精通联动', `农耕精通 → 采集额外产出几率：每 10 级 +2%、上限 +20%、未种过为 0`, (() => {
+    const p = freshPlayer()
+    p.skills.farming.level = 99
+    const farm = getAllSkillInstances().find((i) => i.id === 'farming')
+    const gather = getAllSkillInstances().find((i) => i.id === 'foraging')
+    const crop = CROPS.find((c) => c.reqLevel >= 40 && c.reqLevel <= 60)
+    const t = { itemId: crop.itemId }
+    if (p.farmMasteryGatherChance(crop.itemId) !== 0) return false
+    const beforeY = gather.expectedYield(t)
+    farm.mastery[crop.itemId] = 99999 // 满精通
+    const pct = p.farmMasteryGatherChance(crop.itemId)
+    return Math.abs(pct - 0.2) < 1e-9 && gather.yieldExtraChance(t) >= pct - 1e-9
+      && Math.abs(gather.expectedYield(t) - (beforeY + 0.2)) < 1e-6 // 在线与离线同源（期望值同步提高）
+  })(), (() => `联动上限 ${FARM_MASTERY_GATHER_MAX * 100}%`))
+  check('精耕作物', '图鉴：有「用途」说明 + 来源指向农耕且可跳转', (() => {
+    const lines = itemDetailLines(PRIME_CROP_ID).map((l) => l.join(' ')).join(' ')
+    const srcs = itemSources(PRIME_CROP_ID) ?? []
+    return /用途/.test(lines) && /萃露炉/.test(lines) && srcs.some((s) => s.includes('农耕')) && srcs.every((s) => !!jumpForSource(s))
   })())
   // ⑦ 网箱（并入牧场）
   check('网箱', '网箱挂在 player.ranch 下（并入牧场、不另开页）', (() => {

@@ -8,6 +8,7 @@ import { itemImage } from '../game/data/itemImage.js'
 import { DERIVED_MAX } from '../game/data/caps.js'
 import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSeason.js'
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, nextToolCost } from '../game/data/farmTools.js'
+import { PRIME_BASE_CHANCE, PRIME_CROP_ID, PRIME_MAX_CHANCE, PRIME_MIN_LEVEL } from '../game/data/primeCrop.js'
 import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -19,6 +20,11 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const selections = reactive({})
+
+/** 精通联动（v2.5.0）：该作物的农耕精通给采集带来的额外产出几率（0 ~ 20%） */
+const farmGatherPct = (itemId) => player.farmMasteryGatherChance?.(itemId) ?? 0
+/** 精耕作物（农耕独占产物）的附产区间说明 */
+const primeRange = `reqLevel ≥ ${PRIME_MIN_LEVEL} 的作物收获时 ${Math.round(PRIME_BASE_CHANCE * 100)}%~${Math.round(PRIME_MAX_CHANCE * 100)}% 附产「精耕作物」（随该作物精通提高）`
 
 /** 本月当季类别（UI 里给作物打「当季」标） */
 const seasonCats = computed(() => farmSeason().cats)
@@ -120,6 +126,16 @@ function seedName(seedId) {
         🧰 升级农具（{{ toolCost.toLocaleString() }} 金币）
       </button>
       <span v-else class="badge">农具已满级</span>
+    </div>
+
+    <!-- 农耕的独占产物（v2.5.0）：把「农耕」与「采摘/挖掘」拉开差异 -->
+    <div class="card status-line">
+      <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">🧺 精耕作物</span>
+      <span class="dim">
+        {{ primeRange }}——这是<b>农田独有</b>的高级产物（采集/商店/抽奖都拿不到），持有 <b class="mono">{{ player.inventory[PRIME_CROP_ID] ?? 0 }}</b> 件；
+        可给<b>萃露炉加料</b>（酿造时间 −40%）或在商店出售。
+      </span>
+      <span class="dim">精通联动：把某作物种到精通，<b>采集该物品</b>时额外产出几率也随之提高（每 10 级 +2%、上限 +20%）</span>
     </div>
 
     <!-- 农时（v2.4.0）：当季作物 ×1.5 + 天气对农田的影响；温室不吃天气 ⇒ 坏天气时的避风港 -->
@@ -242,6 +258,9 @@ function seedName(seedId) {
             <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
               <span class="dim">{{ c.xp }} 经验</span>
+            </div>
+            <div v-if="farmGatherPct(c.itemId) > 0" class="item-cell-sub" style="font-size: 12px">
+              <span class="badge" style="background: var(--good-soft); color: var(--good-strong)">采集 +{{ Math.round(farmGatherPct(c.itemId) * 100) }}%</span>
             </div>
             <div v-if="isSeasonal(getItem(c.itemId)?.category)" class="item-cell-sub" style="font-size: 12px">
               <span class="badge" style="background: var(--primary-soft); color: var(--primary-deep)">当季 ×{{ SEASONAL_BONUS }}</span>

@@ -10,6 +10,7 @@ import { useUiStore } from '../stores/ui.js'
 import { MUSHROOM_UNLOCK_LEVEL, MUSHROOM_MEDIA, getMushroomMedia, nextMushroomExpandCost } from '../game/data/mushroomHouse.js'
 import { SPIRIT_UNLOCK_LEVEL, SPIRIT_PLANTS, getSpiritPlant, getSpiritPlantBySeed, nextSpiritExpandCost } from '../game/data/spiritField.js'
 import { ESSENCE_TIERS, getEssence, essenceCostText, essenceEffectText, nextEssenceExpandCost } from '../game/data/essences.js'
+import { PRIME_CATALYST_TIME, PRIME_CROP_ID } from '../game/data/primeCrop.js'
 import { IDLE_CAP_HOURS } from '../game/data/caps.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
@@ -30,6 +31,7 @@ const RELATED = [
 const mushroomDraft = ref({})
 const seedDraft = ref({})
 const essenceDraft = ref({})
+const primeDraft = ref({}) // 每格是否加「精耕作物」催化剂（v2.5.0：酿造时间 −40%）
 const mOpen = ref(true)
 const sOpen = ref(true)
 const eOpen = ref(true)
@@ -172,7 +174,7 @@ function takeBack(index) {
   else ui.pushLog('已撤回并退还种子', 'info')
 }
 function brew(index) {
-  const r = player.essenceBrew(index, ed(index))
+  const r = player.essenceBrew(index, ed(index), !!primeDraft.value[index])
   if (!r.ok) ui.pushLog(r.msg, 'warn')
 }
 function claim(index) {
@@ -197,7 +199,8 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
         <h2>🌿 灵圃菌房</h2>
         <p class="dim">
           菇床吃<b>肥料</b>出菌菇、灵圃种<b>稀有种子</b>出灵植，两条料线都汇入<b>萃露炉</b>——
-          酿成 8 档<b>菌灵露</b>（采集<b>拿不到</b>的乘区物品：经验 / 产量 / 采集间隔 / 餐厅收入）。
+          酿成 8 档<b>菌灵露</b>（采集<b>拿不到</b>的乘区物品：经验 / 产量 / 采集间隔 / 餐厅收入）；
+          开酿时可加 1 件<b>精耕作物</b>当催化剂，本次酿造时间 <b>−{{ Math.round((1 - PRIME_CATALYST_TIME) * 100) }}%</b>。
           离线照常结算，单次最多补 {{ IDLE_CAP_HOURS }} 小时；缺料即停机。
         </p>
       </div>
@@ -390,6 +393,10 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
               产出：{{ essenceRows.find((x) => x.id === ed(v.index))?.effectText }}
             </div>
             <div v-if="ed(v.index) && !essenceRows.find((x) => x.id === ed(v.index))?.can" class="mf-warn">原料不足：{{ essenceRows.find((x) => x.id === ed(v.index))?.lackText }}</div>
+            <label class="switch-row mf-sub" style="cursor: pointer">
+              <input type="checkbox" class="ui-check" v-model="primeDraft[v.index]" :disabled="(player.inventory[PRIME_CROP_ID] ?? 0) < 1" />
+              <span>加料：🧺 精耕作物 ×1（酿造时间 −40%）<span class="dim">持有 {{ player.inventory[PRIME_CROP_ID] ?? 0 }}</span></span>
+            </label>
             <button class="btn btn-sm btn-primary" :disabled="!essenceRows.find((x) => x.id === ed(v.index))?.can" @click="brew(v.index)">开酿</button>
           </template>
         </div>

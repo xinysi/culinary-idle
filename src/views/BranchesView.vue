@@ -98,6 +98,33 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
       </div>
     </header>
 
+    <FoldCard title="🎨 经营主题对照" hint="主题 = 把一家分店押注到一个学派：该学派每级 +% 时收（只作用这一家店，换主题要重付费）">
+      <!-- 主题对照（2026-09-12 补） -->
+      <div class="card">
+        <h3>🎨 经营主题对照 <span class="dim" style="font-weight: 400; font-size: 12px">主题 = 把一家分店押注到一个学派上</span></h3>
+        <div class="table-scroll">
+        <table class="target-table">
+          <thead>
+            <tr><th>主题</th><th>联动学派</th><th>你当前学派等级</th><th>定主题费</th><th>当前加成</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in themeCompare" :key="t.id">
+              <td>{{ t.icon }} {{ t.name }}</td>
+              <td>{{ t.schoolLabel }}</td>
+              <td class="mono">Lv{{ t.lv }}</td>
+              <td class="mono">{{ t.cost.toLocaleString() }}</td>
+              <td class="mono" :class="{ 'mastery-hl': t.lv > 0 }">×{{ t.mult.toFixed(2) }}<span class="dim">（该店时收）</span></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+          每个主题绑定一个菜系学派，该学派<b>每级 +{{ THEME_BONUS_PER_LEVEL }}%</b> 时收（只作用于这一家分店）。
+          换主题要重新付定主题费、旧主题不回退——所以先把对应学派升几级再定，收益更明显。
+        </p>
+      </div>
+    </FoldCard>
+
 
       <FoldCard
         title="📋 开店与店长回本对照"
@@ -203,30 +230,6 @@ const RELATED = [{ view: 'schools', label: '📜 菜系研究' }, { view: 'resta
 
       <!-- 开店 / 店长回本对照（2026-09-12 补） -->
 
-      <!-- 主题对照（2026-09-12 补） -->
-      <div class="card">
-        <h3>🎨 经营主题对照 <span class="dim" style="font-weight: 400; font-size: 12px">主题 = 把一家分店押注到一个学派上</span></h3>
-        <div class="table-scroll">
-        <table class="target-table">
-          <thead>
-            <tr><th>主题</th><th>联动学派</th><th>你当前学派等级</th><th>定主题费</th><th>当前加成</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="t in themeCompare" :key="t.id">
-              <td>{{ t.icon }} {{ t.name }}</td>
-              <td>{{ t.schoolLabel }}</td>
-              <td class="mono">Lv{{ t.lv }}</td>
-              <td class="mono">{{ t.cost.toLocaleString() }}</td>
-              <td class="mono" :class="{ 'mastery-hl': t.lv > 0 }">×{{ t.mult.toFixed(2) }}<span class="dim">（该店时收）</span></td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-        <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
-          每个主题绑定一个菜系学派，该学派<b>每级 +{{ THEME_BONUS_PER_LEVEL }}%</b> 时收（只作用于这一家分店）。
-          换主题要重新付定主题费、旧主题不回退——所以先把对应学派升几级再定，收益更明显。
-        </p>
-      </div>
     </template>
     <RelatedPages :links="RELATED" />
 </div>

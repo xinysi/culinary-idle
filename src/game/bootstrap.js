@@ -404,6 +404,10 @@ export function registerGameEvents() {
   })
 
   // 牧场养殖（2026-09-10）
+  // 农耕附产「精耕作物」（v2.5.0）：农耕独占产物，出了就告诉一声
+  EventBus.on('farm:prime', () => {
+    ui.pushLog('🌾 农田附产「精耕作物」×1（萃露炉加料可让酿造时间 −40%）', 'gain')
+  })
   EventBus.on('ranch:produce', ({ name, cycles, products }) => {
     const parts = Object.entries(products ?? {}).map(([id, q]) => `${itemName(id)} ×${q * cycles}`)
     ui.pushLog(`🐄 牧场：${name} 产出 ${parts.join('、')}`, 'gain')

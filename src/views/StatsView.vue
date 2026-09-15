@@ -161,6 +161,7 @@ const sections = computed(() => [
       { label: '灵田收获', value: player.stats?.spiritHarvests ?? 0, sub: ` 次 · ${player.spiritPlots()} 格` },
       { label: '蜂蜜到手', value: player.stats?.honeyHarvests ?? 0, sub: ' 瓶（温室伴生 + 蜂箱产蜜）' },
       { label: '菌灵露酿成', value: player.stats?.essenceBrews ?? 0, sub: ` 瓶 · 萃露炉 ${player.essenceVats()} 格` },
+      { label: '精耕作物', value: player.stats?.primeCrops ?? 0, sub: ` 件（农耕独占产物）· 农具 Lv${player.farmToolLevel()}` },
       { label: '信箱待领', value: player.mailUnclaimedCount(), sub: ` 封 · 累计领取 ${player.stats?.mailClaimed ?? 0} 次` },
       { label: '厨友往来', value: Object.values(player.friends?.data ?? {}).filter((f) => (f?.bond ?? 0) > 0).length, sub: ` / ${FRIENDS.length} 位 · 累计互动 ${Object.values(player.friends?.data ?? {}).reduce((a, f) => a + (f?.bond ?? 0), 0)} 次` },
     ],
