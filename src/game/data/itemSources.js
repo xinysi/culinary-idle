@@ -30,6 +30,7 @@ import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
 import { HONEY_TIERS } from './honey.js'
 import { ESSENCE_TIERS } from './essences.js'
+import { PRIME_CROP_ID } from './primeCrop.js'
 import { MUSHROOM_MEDIA } from './mushroomHouse.js'
 import { SPIRIT_PLANTS } from './spiritField.js'
 import { POND_FISH } from './ranch.js'
@@ -179,6 +180,9 @@ for (const sp of SPIRIT_PLANTS) {
 for (const f of POND_FISH) {
   for (const id of Object.keys(f.products ?? {})) add(id, `牧场·网箱（${f.name}养鱼产出）`)
 }
+// 精耕作物（v2.5.0）：**只有农田能出**（reqLevel ≥ 40 的作物附产，概率随该作物精通提高）
+add(PRIME_CROP_ID, '农耕收获附产（reqLevel ≥ 40 的作物，概率 4%~10%）')
+
 // 菌灵露 8 档（v2.3.0）：灵圃菌房的萃露炉酿造（**唯一来源**）
 for (const e of ESSENCE_TIERS) {
   add(e.id, `灵圃菌房·萃露炉（${getItem(e.anchor)?.name ?? e.anchor} Lv${e.anchorLv} 等原料酿造）`)

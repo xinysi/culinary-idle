@@ -141,6 +141,8 @@ export const ACHIEVEMENTS = [
   { id: 'mushroom50', name: '菌房主人', category: '特殊', desc: '菌房累计产出 50 个周期', title: '菌房主人', reward: { gold: 7000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.mushroomCycles ?? 0) >= 50 },
   { id: 'spiritField10', name: '灵田初收', category: '特殊', desc: '灵田累计收获 10 次', reward: { gold: 4000 }, check: (p) => (p.stats?.spiritHarvests ?? 0) >= 10 },
   { id: 'honey8', name: '八品齐备', category: '收集', desc: '集齐 8 个品级的蜂蜜', title: '蜜藏家', reward: { gold: 12000, items: { energyBiscuit: 1 } }, check: (p) => ['honeyPale','honeyGreen','honeyBloom','honeyAutumn','honeyLocust','honeyCinnamon','honeyRock','honeySupreme'].every((id) => (p.collected?.[id] ?? 0) > 0) },
+  { id: 'prime10', name: '精耕细作', category: '特殊', desc: '累计获得 10 件精耕作物（农耕独占产物）', reward: { gold: 2500 }, check: (p) => (p.stats?.primeCrops ?? 0) >= 10 },
+  { id: 'prime200', name: '精耕农场主', category: '特殊', desc: '累计获得 200 件精耕作物', title: '精耕农场主', reward: { gold: 12000, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.primeCrops ?? 0) >= 200 },
   { id: 'essence1', name: '初尝酿露', category: '特殊', desc: '萃露炉酿出第一瓶菌灵露', reward: { gold: 3000 }, check: (p) => (p.stats?.essenceBrews ?? 0) >= 1 },
   { id: 'essenceAll', name: '八露齐备', category: '收集', desc: '酿全 8 档菌灵露', title: '萃露师', reward: { gold: 14000, items: { energyBiscuit: 1 } }, check: (p) => ESSENCE_TIERS.every((e) => (p.collected?.[e.id] ?? 0) > 0) },
   { id: 'honey100', name: '蜜罐子', category: '特殊', desc: '累计取得 100 瓶蜂蜜（温室伴生 + 蜂箱产蜜）', title: '蜜罐子', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.stats?.honeyHarvests ?? 0) >= 100 },

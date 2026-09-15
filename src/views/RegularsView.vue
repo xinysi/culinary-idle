@@ -113,9 +113,42 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       </div>
     </header>
 
+    <FoldCard title="👥 常客一览" hint="越晚解锁的常客单次金币越高；「偏好」是料理类别、「最低档位」是下限（更高档也满足）">
+    <!-- 好感阶梯 + 常客一览（2026-09-12 补） -->
+
+    <div class="card">
+      <h3>👥 常客一览</h3>
+      <div class="table-scroll">
+      <table class="target-table">
+        <thead>
+          <tr><th>常客</th><th>解锁</th><th>偏好</th><th>最低档位</th><th>单次金币</th><th>好感进度</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in regularCompare" :key="r.id" :class="{ locked: !r.unlocked }">
+            <td>{{ r.icon }} {{ r.name }}</td>
+            <td class="mono">餐厅 Lv{{ r.unlockLevel }}</td>
+            <td>{{ catLabel(r.category) }}</td>
+            <td class="mono">{{ r.minTier }} 档</td>
+            <td class="mono">{{ r.gold.toLocaleString() }}</td>
+            <td class="mono">
+              <template v-if="!r.unlocked">🔒 未解锁</template>
+              <template v-else>Lv{{ r.level }} · {{ r.serves }}/{{ r.maxServes }} 次</template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
+        「偏好」= 类别，「最低档位」= 该类别料理的档位下限——档位越高的料理同样能满足，所以后期可以直接喂高阶菜。
+        越晚解锁的常客单次金币越高（{{ regularCompare[0].gold }} → {{ regularCompare[regularCompare.length - 1].gold }}），
+        但招待消耗的料理也更贵，按自己的产能选人即可。
+      </p>
+    </div>
+    </FoldCard>
+
 
     <FoldCard
-      title="📋 好感阶梯 + 常客一览"
+      title="📋 好感阶梯"
       hint="一位满好感需 25 次招待；全部刷满 = 每级小费 +2% 累加"
     >
       <div class="table-scroll">
@@ -188,36 +221,6 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
       </div>
     </div>
 
-    <!-- 好感阶梯 + 常客一览（2026-09-12 补） -->
-
-    <div class="card">
-      <h3>👥 常客一览</h3>
-      <div class="table-scroll">
-      <table class="target-table">
-        <thead>
-          <tr><th>常客</th><th>解锁</th><th>偏好</th><th>最低档位</th><th>单次金币</th><th>好感进度</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in regularCompare" :key="r.id" :class="{ locked: !r.unlocked }">
-            <td>{{ r.icon }} {{ r.name }}</td>
-            <td class="mono">餐厅 Lv{{ r.unlockLevel }}</td>
-            <td>{{ catLabel(r.category) }}</td>
-            <td class="mono">{{ r.minTier }} 档</td>
-            <td class="mono">{{ r.gold.toLocaleString() }}</td>
-            <td class="mono">
-              <template v-if="!r.unlocked">🔒 未解锁</template>
-              <template v-else>Lv{{ r.level }} · {{ r.serves }}/{{ r.maxServes }} 次</template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-      <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
-        「偏好」= 类别，「最低档位」= 该类别料理的档位下限——档位越高的料理同样能满足，所以后期可以直接喂高阶菜。
-        越晚解锁的常客单次金币越高（{{ regularCompare[0].gold }} → {{ regularCompare[regularCompare.length - 1].gold }}），
-        但招待消耗的料理也更贵，按自己的产能选人即可。
-      </p>
-    </div>
     <RelatedPages :links="RELATED" />
 </div>
 </template>

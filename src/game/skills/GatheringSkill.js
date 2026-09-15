@@ -124,6 +124,10 @@ export class GatheringSkill extends Skill {
   /** 「额外产出 1 个」的总几率（可 >1，调用方按上限 +1 处理）：奥义「丰收祝福」（§3.4.1）+ 产量增益剂（§3.4.2）
    *  + 公会被动（§13）+ 菜系图谱 + 节庆 + 食神信仰 + 天气 + 今日运势 + 荣誉殿堂 */
   yieldExtraChance(target = this.currentTarget) {
+    // 精通联动（v2.5.0）：把该物品「农耕精通」的成果算进采集——每 10 级 +2%、上限 +20%。
+    // 挂在 yieldExtraChance 上（`yieldQuantity` 与 `expectedYield` 都读它 ⇒ 在线/离线同口径），
+    // 对基础 1 件/次的动作来说，+0.20 几率 ≈ 产出 +20%，正是「越会种、越会采」。
+    const farmLink = this.player?.farmMasteryGatherChance?.(target?.itemId) ?? 0
     const aoji = this.player.gastronomyEffects?.() ?? {}
     const yPct = aoji.yieldPct ?? 0
     const guildPct = this.player.guildEffects?.()?.yieldPct ?? 0
@@ -135,7 +139,7 @@ export class GatheringSkill extends Skill {
     const luckyPct = target ? (this.player.luckyItemBonus?.(target.itemId) ?? 0) : 0 // 今日运势·幸运食材
     const honorPct = (this.player.honorState?.()?.perks?.gatherPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
     const daoPct = (this.player.daoEffects?.()?.yieldPct ?? 0) / 100 // 厨神之路·采撷之道（v2.0）
-    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + daoPct + (yMult - 1)
+    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + daoPct + (yMult - 1) + farmLink
   }
 
   /** 产量加成后的数量：精通保底批量 + 各百分比来源的额外产出，以额外产出几率折算 */

@@ -7,6 +7,7 @@
 import { defineStore } from 'pinia'
 import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList } from '../game/data/caps.js'
 import { TOOL_MAX_LEVEL, nextToolCost, toolTimeFactor } from '../game/data/farmTools.js'
+import { PRIME_CATALYST_TIME, PRIME_CROP_ID, farmMasteryGatherChance } from '../game/data/primeCrop.js'
 import { shanhaiNodeState, shanhaiEffectSum, shanhaiNode, shanhaiPathProgress, shanhaiCapGrant } from '../game/data/shanhaiProgress.js'
 import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
@@ -2465,6 +2466,16 @@ export const usePlayerStore = defineStore('player', {
     farmToolLevel() {
       return Math.max(0, Math.min(TOOL_MAX_LEVEL, Number(this.farming?.tool) || 0))
     },
+    /**
+     * 精通联动（v2.5.0）：某物品的「农耕精通」给采集带来的额外产出几率（0 ~ 0.20）。
+     * 采集侧由 `GatheringSkill.yieldExtraChance()` 读取（在线/离线同源）。
+     */
+    farmMasteryGatherChance(itemId) {
+      if (!itemId) return 0
+      const farm = getSkillInstance('farming')
+      const count = farm?.mastery?.[itemId] ?? 0
+      return count > 0 ? farmMasteryGatherChance(masteryLevelFromCount(count)) : 0
+    },
     /** 农田生长速度系数（0.70 ~ 1.00） */
     farmTimeFactor() {
       return toolTimeFactor(this.farmToolLevel())
@@ -2964,8 +2975,11 @@ export const usePlayerStore = defineStore('player', {
       EventBus.emit('essence:expand', { vats: this.essenceVats(), cost })
       return { ok: true, vats: this.essenceVats() }
     },
-    /** 投入原料开酿（主料 + 辅料，全部从背包扣） */
-    essenceBrew(index, tierId) {
+    /**
+     * 投入原料开酿（主料 + 辅料，全部从背包扣）。
+     * `usePrime`（v2.5.0）：额外投入 1 件「精耕作物」当**催化剂**，该次酿造时间 ×0.6（−40%）。
+     */
+    essenceBrew(index, tierId, usePrime = false) {
       const st = this.essenceState()
       if (index < 0 || index >= this.essenceVats()) return { ok: false, msg: '萃露格不存在' }
       if (st.vats[index]) return { ok: false, msg: '该格已在酿造' }
@@ -2975,11 +2989,14 @@ export const usePlayerStore = defineStore('player', {
       for (const [id, q] of Object.entries({ ...e.material, ...e.aux })) {
         if ((this.inventory[id] ?? 0) < q) return { ok: false, msg: `${getItem(id)?.name ?? id} 不足（需 ${q}）` }
       }
+      if (usePrime && (this.inventory[PRIME_CROP_ID] ?? 0) < 1) return { ok: false, msg: '没有精耕作物可加' }
       for (const [id, q] of Object.entries({ ...e.material, ...e.aux })) this.spendItem(id, q)
+      if (usePrime) this.spendItem(PRIME_CROP_ID, 1)
       const now = Date.now()
-      st.vats[index] = { tierId, startedAt: now, readyAt: now + e.hours * 3600_000 }
-      EventBus.emit('essence:brew', { name: e.name, hours: e.hours })
-      return { ok: true }
+      const hours = e.hours * (usePrime ? PRIME_CATALYST_TIME : 1)
+      st.vats[index] = { tierId, startedAt: now, readyAt: now + hours * 3600_000, prime: usePrime }
+      EventBus.emit('essence:brew', { name: e.name, hours, prime: usePrime })
+      return { ok: true, hours }
     },
     /** 撤回（退还全部投入） */
     essenceTakeBack(index) {

@@ -96,6 +96,10 @@ export function itemDetailLines(id) {
     const set = equipSetOf(id)
     if (set) lines.push(['所属套装', `${set.name}（穿戴 2/4/6 件触发加成）`])
   }
+  // 精耕作物（v2.5.0）：农耕独占产物，两条出口都要在图鉴里写清
+  if (id === 'primeCrop') {
+    lines.push(['用途', '萃露炉加料（酿造时间 −40%）', '可在商店·出售页按价值 ×0.5 换金币'])
+  }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])
   if (it.use?.buffYield) lines.push(['产量增益', `×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`])

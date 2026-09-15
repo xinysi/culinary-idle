@@ -10,6 +10,7 @@ import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
 import { seasonalCropBonus } from '../data/farmingSeason.js'
+import { PRIME_CROP_ID, PRIME_MIN_LEVEL, primeCropChance } from '../data/primeCrop.js'
 import { toolTimeFactor } from '../data/farmTools.js'
 import { getItem } from '../data/items.js'
 import { DERIVED_MAX } from '../data/caps.js'
@@ -257,6 +258,16 @@ export class FarmingSkill extends Skill {
     const farmMult = (wx.farmYield ?? 1) * seasonalCropBonus(getItem(crop.itemId)?.category ?? '')
     if (farmMult !== 1) qty = Math.max(1, Math.round(qty * farmMult))
     this.player.gainItem(crop.itemId, qty)
+    // 附产「精耕作物」（v2.5.0）：农耕的**独占产物**——只有农田能出，采集/商店/抽奖都拿不到。
+    // 只有 reqLevel ≥ PRIME_MIN_LEVEL 的作物才可能出（低阶作物收获太频繁，附产会泛滥），概率随该作物精通提高（4% → 10%）。
+    if (crop.reqLevel >= PRIME_MIN_LEVEL) {
+      const mLevel = masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)
+      if (Math.random() < primeCropChance(mLevel)) {
+        this.player.gainItem(PRIME_CROP_ID, 1)
+        this.player.stats.primeCrops = (this.player.stats.primeCrops ?? 0) + 1
+        EventBus.emit('farm:prime', { crop: crop.itemId })
+      }
+    }
     this.player.addMastery(this.id, crop.itemId, 1)
     const expGained = this.addCardXp(crop.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)))
     this.player.clearPlot(i)
