@@ -28,14 +28,16 @@ export function nextOrderDelay(speedPct = 0) {
  * 赏金 = 料理价值 × 数量 × (1.5~2.2) × (1 + 餐厅等级 × 10%)
  * @returns {object|null} 无菜单可点时返回 null
  */
-export function makeOrder(player) {
+export function makeOrder(player, goldBonusPct = 0) {
   const menu = (player.restaurant?.menu ?? []).filter((id) => getItem(id)?.type === 'food')
   if (!menu.length) return null
   const stock = menu.filter((id) => (player.inventory[id] ?? 0) > 0)
   const itemId = (Math.random() < 0.7 && stock.length) ? stock[Math.floor(Math.random() * stock.length)] : menu[Math.floor(Math.random() * menu.length)]
   const item = getItem(itemId)
   const qty = 1 + (Math.random() < 0.3 ? 1 : 0)
-  const reward = Math.max(10, Math.round(item.value * qty * (1.5 + Math.random() * 0.7) * (1 + 0.1 * (player.restaurant?.level ?? 1))))
+  // 副业·制皂（v2.14.0）：订单赏金 +%（夹 ≤40%）。**只放大单笔，不改到访间隔**（那是香道的轴）
+  const bonus = 1 + Math.max(0, Math.min(40, goldBonusPct || 0)) / 100
+  const reward = Math.max(10, Math.round(item.value * qty * (1.5 + Math.random() * 0.7) * (1 + 0.1 * (player.restaurant?.level ?? 1)) * bonus))
   return {
     id: 'o' + Date.now() + Math.floor(Math.random() * 10000),
     name: NAMES[Math.floor(Math.random() * NAMES.length)],

@@ -47,6 +47,11 @@ const TASKS = {
     // v2.13.0 第二批
     ['制货签 ×10', 'skill', 'goodsTag', 10, 20],
     ['打造工具 ×10', 'skill', 'miningGear', 10, 20],
+    // v2.14.0 四支
+    ['造纸 ×10', 'skill', 'papermaking', 10, 20],
+    ['制乐器 ×10', 'skill', 'instrument', 10, 20],
+    ['制皂 ×10', 'skill', 'soapmaking', 10, 20],
+    ['理账 ×10', 'skill', 'exchequer', 10, 20],
     ['对决胜利 ×5', 'combatWin', 'any', 5, 25],
     ['击败首领 ×2', 'boss', 'any', 2, 30],
   ]),

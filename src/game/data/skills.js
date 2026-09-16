@@ -57,6 +57,11 @@ export const SKILL_DEFS = {
   // v2.13.0 第二批
   goodsTag: { id: 'goodsTag', name: '货签', category: 'sideline', desc: '木牌与兽胶做货签封条，在交易所卖出更值钱' },
   miningGear: { id: 'miningGear', name: '采掘器具', category: 'sideline', desc: '木料与矿物做矿镐矿灯，采矿有概率多产出一份' },
+  // v2.14.0 四支
+  papermaking: { id: 'papermaking', name: '造纸', category: 'sideline', desc: '木料与果胶造纸墨砚，提高徒弟的离线效率上限' },
+  instrument: { id: 'instrument', name: '乐器', category: 'sideline', desc: '木料与筋弦做乐器，常客好感涨得更快' },
+  soapmaking: { id: 'soapmaking', name: '制皂', category: 'sideline', desc: '木灰与矿物碱做皂，食客订单赏金更高' },
+  exchequer: { id: 'exchequer', name: '钱庄', category: 'sideline', desc: '木料与贝币做账具，一切金币收入都多一点' },
 }
 
 /**
@@ -88,6 +93,7 @@ const SKILL_ICONS = {
   woodworking: '🪚', pottery: '🏺', weaving: '🧶', embroidery: '🪡', candles: '🕯️',
   fletching: '🏹', netmaking: '🎣', incense: '🧴', festivalGoods: '🧧', jadecraft: '🔮',
   goodsTag: '🪙', miningGear: '⛏️',
+  papermaking: '📜', instrument: '🎼', soapmaking: '🧼', exchequer: '🏦',
 }
 for (const [id, icon] of Object.entries(SKILL_ICONS)) {
   if (SKILL_DEFS[id]) SKILL_DEFS[id].icon = icon

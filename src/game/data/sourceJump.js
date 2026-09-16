@@ -57,6 +57,11 @@ export const SOURCE_JUMP_RULES = [
   // v2.13.0 第二批（货签要放在『交易所』规则之前也无妨：来源串是「货签制作」，只含『货签』）
   { kw: ['货签'], target: { view: 'skill', skill: 'goodsTag' } },
   { kw: ['采掘器具'], target: { view: 'skill', skill: 'miningGear' } },
+  // v2.14.0 四支
+  { kw: ['造纸'], target: { view: 'skill', skill: 'papermaking' } },
+  { kw: ['乐器'], target: { view: 'skill', skill: 'instrument' } },
+  { kw: ['制皂'], target: { view: 'skill', skill: 'soapmaking' } },
+  { kw: ['钱庄'], target: { view: 'skill', skill: 'exchequer' } },
   { kw: ['餐厅装潢', '装潢'], target: { view: 'decor' } },
   { kw: ['保鲜'], target: { view: 'skill', skill: 'preservation' } },
   { kw: ['探索'], target: { view: 'skill', skill: 'exploration' } },

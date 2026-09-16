@@ -604,6 +604,22 @@ export const usePlayerStore = defineStore('player', {
   },
 
   actions: {
+    /** 副业·钱庄：金币获取 +%（**唯一出口**，含 ≤15% 夹取——效果总览与实际到账都读它） */
+    goldGainPct() {
+      return Math.min(15, this.sidelineEffectTotal?.('goldGainPct') ?? 0)
+    },
+
+    /** 常客/餐厅好感的**唯一写入出口**（副业·乐器 v2.14.0：好感增速乘在这里）。
+     *  ⚠️ 好感原本散在 5 处各写一次 `favor.xp +=` —— 任何「好感倍率」类新轴都必须走本函数，
+     *  否则会出现「订单一处生效、上菜另一处没生效」这种静默不一致。 */
+    favorGain(n) {
+      if (!this.restaurant) return
+      if (!this.restaurant.favor) this.restaurant.favor = { xp: 0 }
+      const mul = 1 + (this.sidelineEffectTotal?.('favorGainPct') ?? 0) / 100
+      this.restaurant.favor.xp = (this.restaurant.favor.xp ?? 0) + n * mul
+    },
+
+
     newGame() {
       // 全新档：整体重置为默认状态（单一来源 defaultState，防止嵌套字段残留/漂移，2026-09-06）
       this.$state = defaultState()
@@ -929,7 +945,9 @@ export const usePlayerStore = defineStore('player', {
       // 装备词条「金币 +%」（仅穿戴着生效）
       const gm = this.equippedStats.goldPct ?? 0
       const daoGold = this.daoEffects?.()?.goldPct ?? 0 // 厨神之路·火工之道（v2.0）
-      const n = Math.floor(amount * (1 + gm / 100 + daoGold / 100))
+      // 副业·钱庄（v2.14.0）：金币获取 +%（夹 ≤15% —— 这是唯一直接放大全局金币的轴，低上限防通胀）
+      const tagGold = this.goldGainPct?.() ?? 0
+      const n = Math.floor(amount * (1 + gm / 100 + daoGold / 100 + tagGold / 100))
       if (n > 0) {
         this.gold += n
         this.stats.totalGoldEarned += n
@@ -1837,8 +1855,11 @@ export const usePlayerStore = defineStore('player', {
       return apprenticeRank(this.apprenticeState().level).name
     },
     /** 离线收益效率加成（0.8 → 最高 1.0） */
+    /** 徒弟离线效率加成（传承系统）。副业·造纸（v2.14.0）：把上限从 +20% 往上松，夹在 +40% 内 */
     apprenticeOfflineBonus() {
-      return apprenticeOfflineBonus(this.apprenticeState().level)
+      const base = apprenticeOfflineBonus(this.apprenticeState().level)
+      const extra = (this.sidelineEffectTotal?.('apprenticePP') ?? 0) / 100
+      return Math.min(0.4, base + Math.max(0, extra))
     },
     /** 每帧：徒弟按自然日成长 */
     _tickApprentice() {
@@ -1924,7 +1945,7 @@ export const usePlayerStore = defineStore('player', {
           this.stats.restaurantTotal = (this.stats.restaurantTotal ?? 0) + whole
           // 顾客好感（2026-09-06）：每入账 1 金获得 0.02 好感经验，升反馈于小费加成
           const favor = this.restaurant.favor ?? { xp: 0 }
-          favor.xp = (favor.xp ?? 0) + whole * 0.02
+          this.favorGain(whole * 0.02)
           this.restaurant.favor = favor
           try { useUiStore().pushLog(`餐厅结算：过去 1 分钟收入 ${whole} 金币`, 'gain') } catch (e) { /* ui 未就绪时忽略日志 */ }
         }
@@ -1952,7 +1973,7 @@ export const usePlayerStore = defineStore('player', {
       if (this._orderAccum < 1000) return
       this._orderAccum = 0
       if (this.orders.nextAt > now) return
-      const order = makeOrder(this)
+      const order = makeOrder(this, this.sidelineEffectTotal?.('orderGoldPct') ?? 0)
       if (order) {
         this.orders.list.push(order)
         try { useUiStore().pushLog(`📋 食客「${order.name}」到访：需要 ${getItem(order.itemId)?.name}×${order.qty}，赏金 ${order.reward} 金`, 'info') } catch (e) { /* ignore */ }
@@ -1972,7 +1993,7 @@ export const usePlayerStore = defineStore('player', {
       const orderGold = Math.round((o.reward ?? 0) * (1 + this.staffOrderPct?.() / 100 + (this.daoEffects?.()?.orderGoldPct ?? 0) / 100)) // 跑堂 + 厨神之路（v2.0）
       this.gainGold(orderGold)
       const favor = this.restaurant.favor ?? { xp: 0 }
-      favor.xp = (favor.xp ?? 0) + o.reward * 0.05
+      this.favorGain(o.reward * 0.05)
       this.restaurant.favor = favor
       this.stats.ordersServed = (this.stats.ordersServed ?? 0) + 1 // 米其林「出餐口碑」计数
       return { ok: true, reward: orderGold, name: o.name }
@@ -2286,7 +2307,7 @@ export const usePlayerStore = defineStore('player', {
       this.gainGold(o.reward)
       this.gainItem('mysterySpice', 1)
       const favor = this.restaurant.favor ?? { xp: 0 }
-      favor.xp = (favor.xp ?? 0) + 30
+      this.favorGain(30)
       this.restaurant.favor = favor
       const name = o.name
       c.order = null
@@ -2497,7 +2518,7 @@ export const usePlayerStore = defineStore('player', {
       st.lastDay = this.todayKey ?? _todayStr()
       // 餐厅好感（与食客订单同源）
       const favor = this.restaurant.favor ?? { xp: 0 }
-      favor.xp = (favor.xp ?? 0) + 20
+      this.favorGain(20)
       this.restaurant.favor = favor
       this.stats.regularServes = (this.stats.regularServes ?? 0) + 1
       const afterLv = regularLevelFromServes(st.serves)
@@ -4210,7 +4231,7 @@ export const usePlayerStore = defineStore('player', {
       this.gainGold(o.gold)
       if (o.spice) this.gainItem('mysterySpice', o.spice)
       const favor = this.restaurant.favor ?? { xp: 0 }
-      favor.xp = (favor.xp ?? 0) + 60
+      this.favorGain(60)
       this.restaurant.favor = favor
       st.done = (st.done ?? 0) + 1
       st.order = null

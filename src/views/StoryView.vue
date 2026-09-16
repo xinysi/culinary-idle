@@ -118,6 +118,7 @@ const QUIRK_SUB_NAMES = {
   pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
   goodsTag: '货签', miningGear: '采掘器具',
+  papermaking: '造纸', instrument: '乐器', soapmaking: '制皂', exchequer: '钱庄',
   battle: '战斗', spirit: '食灵召唤',
   gastronomy: '美食知识', preservation: '食材保鲜', exploration: '美食探索',
 }

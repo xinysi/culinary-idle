@@ -54,6 +54,7 @@ export const SKILL_CN = {
   craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
   goodsTag: '货签', miningGear: '采掘器具',
+  papermaking: '造纸', instrument: '乐器', soapmaking: '制皂', exchequer: '钱庄',
   knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
   plating: '摆盘技巧', tasteAcumen: '品鉴力', spiritSummoning: '食灵召唤', gastronomy: '美食知识',
   preservation: '食材保鲜', exploration: '美食探索',
@@ -546,6 +547,38 @@ export const EFFECT_ROWS = [
       const v = p.sidelineEffectTotal?.('miningExtraPP') ?? 0
       if (!v) return off('还没把器具做成作品、也没投入量产阶梯——每件 +2%、每档 +1.5%')
       return { on: true, text: `采矿有 ${pct(v)} 概率多产出一份（只对采矿生效；在线与离线同源）` }
+    },
+  },
+  {
+    id: 'papermakingApprentice', group: 'idle', icon: '📜', name: '造纸·徒弟离线效率', kind: 'buff', src: '副业·造纸', view: 'skill:papermaking',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('apprenticePP') ?? 0
+      if (!v) return off('还没把文房做成作品、也没投入量产阶梯——每件 +0.8pp、每档 +0.5pp')
+      return { on: true, text: `徒弟离线效率额外 ${pct(v)}pp（基础封顶 +20%，本项把它顶到 ${Math.round(p.apprenticeOfflineBonus?.() * 100 ?? 0)}%）` }
+    },
+  },
+  {
+    id: 'instrumentFavor', group: 'income', icon: '🎼', name: '乐器·常客好感增速', kind: 'buff', src: '副业·乐器', view: 'skill:instrument',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('favorGainPct') ?? 0
+      if (!v) return off('还没把乐器做成作品、也没投入量产阶梯——每件 +1.5%、每档 +1%')
+      return { on: true, text: `常客与餐厅好感增速 ${pct(v)}（好感本身给餐厅小费，这是加速不是破顶）` }
+    },
+  },
+  {
+    id: 'soapmakingOrderGold', group: 'income', icon: '🧼', name: '制皂·订单赏金', kind: 'buff', src: '副业·制皂', view: 'skill:soapmaking',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('orderGoldPct') ?? 0
+      if (!v) return off('还没把皂品做成作品、也没投入量产阶梯——每件 +1%、每档 +0.8%')
+      return { on: true, text: `食客订单赏金 ${pct(v)}（只放大单笔；到访间隔是香道的轴）` }
+    },
+  },
+  {
+    id: 'exchequerGold', group: 'income', icon: '🏦', name: '钱庄·金币获取', kind: 'buff', src: '副业·钱庄', view: 'skill:exchequer',
+    read: (p) => {
+      const v = p.goldGainPct?.() ?? 0
+      if (!v) return off('还没把账具做成作品、也没投入量产阶梯——每件 +0.8%、每档 +0.6%（夹 ≤15%）')
+      return { on: true, text: `一切金币收入 ${pct(v)}（与装备词条、厨神之路并列叠加；上限 15% 防通胀）` }
     },
   },
   {

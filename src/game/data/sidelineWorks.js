@@ -35,6 +35,8 @@ export const SIDELINE_ITEM_CATEGORIES = [
   'huntingGear', 'fishingGear', 'incense', 'gift', 'jade',
   // v2.13.0 第二批
   'goodsTag', 'miningGear',
+  // v2.14.0 四支
+  'stationery', 'instrument', 'soap', 'voucher',
 ]
 
 /**
@@ -62,6 +64,15 @@ export const SIDELINE_AXES = {
   tagSellPct: { label: '交易所卖出价', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
   /** **采矿附产率**（百分点）：加进 `GatheringSkill.yieldExtraChance`（**在线/离线同源，只改一处**），且**只对采矿生效** */
   miningExtraPP: { label: '采矿附产率', amountLabel: (v) => `+${v}%`, perItem: 2 },
+  // ── v2.14.0：四支「既有系统接线」副业 ──
+  /** **徒弟离线效率上限**（百分点）：加在 `player.apprenticeOfflineBonus()` 上，基础封顶 +20% */
+  apprenticePP: { label: '徒弟离线效率', amountLabel: (v) => `+${v}pp`, perItem: 0.8 },
+  /** **常客好感增速**（%）：乘在唯一的 `player.favorGain()` 上（5 处好感来源统一走它） */
+  favorGainPct: { label: '常客好感增速', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  /** **订单赏金**（%）：乘在 `makeOrder` 的赏金上（只放大单笔，不改到访间隔——那是香道的轴） */
+  orderGoldPct: { label: '订单赏金', amountLabel: (v) => `+${v}%`, perItem: 1 },
+  /** **金币获取**（%）：加在 `gainGold` 的乘数上（与装备词条 goldPct、厨神之路并列）。夹 ≤15% 防通胀 */
+  goldGainPct: { label: '金币获取', amountLabel: (v) => `+${v}%`, perItem: 0.8 },
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -140,6 +151,11 @@ export const SIDELINE_LADDERS = [
   // ── v2.13.0 第二批 ──
   { skill: 'goodsTag', name: '货签', catLabel: '货签', axis: 'tagSellPct', perTier: 1.5, unit: (v) => `交易所卖出价 +${v}%` },
   { skill: 'miningGear', name: '采掘器具', catLabel: '器具', axis: 'miningExtraPP', perTier: 1.5, unit: (v) => `采矿附产 +${v}%` },
+  // ── v2.14.0 ──
+  { skill: 'papermaking', name: '造纸', catLabel: '文房', axis: 'apprenticePP', perTier: 0.5, unit: (v) => `徒弟离线效率 +${v}pp` },
+  { skill: 'instrument', name: '乐器', catLabel: '乐器', axis: 'favorGainPct', perTier: 1, unit: (v) => `好感增速 +${v}%` },
+  { skill: 'soapmaking', name: '制皂', catLabel: '皂品', axis: 'orderGoldPct', perTier: 0.8, unit: (v) => `订单赏金 +${v}%` },
+  { skill: 'exchequer', name: '钱庄', catLabel: '账具', axis: 'goldGainPct', perTier: 0.6, unit: (v) => `金币获取 +${v}%` },
 ]
 
 /** 阶梯轴 → 文案（供 UI/效果总览复用） */
@@ -156,6 +172,10 @@ export const LADDER_AXIS_LABEL = {
   gemPct: '宝石镶嵌效果',
   tagSellPct: '交易所卖出价',
   miningExtraPP: '采矿附产率',
+  apprenticePP: '徒弟离线效率',
+  favorGainPct: '常客好感增速',
+  orderGoldPct: '订单赏金',
+  goldGainPct: '金币获取',
 }
 
 /** 每支的产物（含木工）与「一件值多少点」——`feedSideline` 的唯一数据来源。
@@ -335,6 +355,71 @@ const DEFS = {
       [71, '龙鳞矿镐', 'giltOre', 4, 2],
       [81, '星辰矿灯', 'excavation_ext_26', 5, 2],
       [91, '太虚神镐', 'excavation_ext_29', 5, 2],
+    ],
+  },
+  // ── v2.14.0：四支「既有系统接线」副业（辅料依次取水果/肉类/矿物/海鲜，均按档位取件）──
+  papermaking: {
+    skill: 'papermaking', name: '造纸', icon: '📜', category: 'stationery', catLabel: '文房',
+    axis: 'apprenticePP', materialNote: '纸料用木料、纤维与胶取水果（桑皮/果胶）；做成后**徒弟的离线效率更高**（基础封顶 +20%）',
+    rows: [
+      [1, '竹纸', 'foraging_ext_02', 2, 2],
+      [11, '麻纸', 'foraging_ext_05', 2, 2],
+      [21, '宣纸', 'hamimelon', 3, 2],
+      [31, '桑皮纸', 'banana', 3, 2],
+      [41, '澄心堂纸', 'foraging_ext_14', 3, 2],
+      [51, '松烟墨', 'foraging_ext_17', 4, 2],
+      [61, '徽墨', 'foraging_ext_20', 4, 2],
+      [71, '端砚', 'foraging_ext2_23', 4, 2],
+      [81, '御墨', 'foraging_ext2_26', 5, 2],
+      [91, '天工宝砚', 'foraging_ext2_29', 5, 2],
+    ],
+  },
+  instrument: {
+    skill: 'instrument', name: '乐器', icon: '🎼', category: 'instrument', catLabel: '乐器',
+    axis: 'favorGainPct', materialNote: '琴身用木料、弦取动物筋与肠衣；做成后**常客好感涨得更快**（好感本身给小费，这是加速而非破顶）',
+    rows: [
+      [1, '竹笛', 'hunting_ext_02', 2, 2],
+      [11, '木鱼', 'boarMeat', 2, 2],
+      [21, '陶埙', 'venison', 3, 2],
+      [31, '二胡', 'goatMeat', 3, 2],
+      [41, '琵琶', 'bisonMeat', 3, 2],
+      [51, '古筝', 'crocodileMeat', 4, 2],
+      [61, '编钟', 'bearMeat', 4, 2],
+      [71, '玉笛', 'hunting_ext_23', 4, 2],
+      [81, '龙吟琴', 'hunting_ext_26', 5, 2],
+      [91, '天音编磬', 'dragonMeat', 5, 2],
+    ],
+  },
+  soapmaking: {
+    skill: 'soapmaking', name: '制皂', icon: '🧼', category: 'soap', catLabel: '皂品',
+    axis: 'orderGoldPct', materialNote: '皂基用木灰与油脂、碱取矿物；做成后**食客订单赏金更高**（只放大单笔，不改到访间隔）',
+    rows: [
+      [1, '草木灰皂', 'ironOre', 2, 2],
+      [11, '猪胰皂', 'steelOre', 2, 2],
+      [21, '香皂', 'mithrilOre', 3, 2],
+      [31, '澡豆', 'adamantOre', 3, 2],
+      [41, '澡药皂', 'darkIronOre', 3, 2],
+      [51, '檀香皂', 'meteoriteOre', 4, 2],
+      [61, '龙脑香皂', 'dragonScaleOre', 4, 2],
+      [71, '珍珠皂', 'giltOre', 4, 2],
+      [81, '御用贡皂', 'excavation_ext_26', 5, 2],
+      [91, '天香净皂', 'excavation_ext_29', 5, 2],
+    ],
+  },
+  exchequer: {
+    skill: 'exchequer', name: '钱庄', icon: '🏦', category: 'voucher', catLabel: '账具',
+    axis: 'goldGainPct', materialNote: '算具用木料、钱范取贝币与海鲜；做成后**一切金币收入都多一点**（夹 ≤15% 防通胀）',
+    rows: [
+      [1, '木算筹', 'carp', 2, 2],
+      [11, '贝币串', 'salmon', 2, 2],
+      [21, '铜钱串', 'tuna', 3, 2],
+      [31, '算盘', 'eel', 3, 2],
+      [41, '账本', 'lobster', 3, 2],
+      [51, '钱匣', 'crab', 4, 2],
+      [61, '银票', 'abalone', 4, 2],
+      [71, '金印', 'seaCucumber', 4, 2],
+      [81, '宝钞', 'bluefin', 5, 2],
+      [91, '天库金券', 'grouper', 5, 2],
     ],
   },
   jadecraft: {
