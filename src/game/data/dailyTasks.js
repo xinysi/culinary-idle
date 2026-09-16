@@ -17,6 +17,9 @@ export const DAILY_POOL = [
   { name: '⛰️ 矿井深处', kind: 'gather', param: 'mining', qty: 30, gold: 220 },
   // v2.9.0：副业·木工（它是**制作类**技能，所以 kind 用 craft、param 仍是技能 id）
   { name: '🪚 木工坊', kind: 'craft', param: 'woodworking', qty: 15, gold: 240 },
+  // v2.10.0：副业四支（同样是 craft + 技能 id）
+  { name: '🏺 陶窑日', kind: 'craft', param: 'pottery', qty: 12, gold: 240 },
+  { name: '🧶 织机日', kind: 'craft', param: 'weaving', qty: 12, gold: 240 },
   { name: '🧪 炼金大师', kind: 'alchemy', param: 'any', qty: 6, gold: 280 },
   { name: '🕶️ 快手收成', kind: 'gather', param: 'foraging', qty: 40, gold: 200 },
   { name: '🍖 狩猎时刻', kind: 'gather', param: 'hunting', qty: 25, gold: 220 },
@@ -36,6 +39,9 @@ export const WEEKLY_POOL = [
   { name: '🪓 伐木周', kind: 'gather', param: 'woodcutting', qty: 300, gold: 1600, items: { pineWood: 20 } },
   { name: '⛰️ 采矿周', kind: 'gather', param: 'mining', qty: 300, gold: 1600, items: { ironOre: 10 } },
   { name: '🪚 木工周', kind: 'craft', param: 'woodworking', qty: 120, gold: 1600, items: { nanmuWood: 10 } },
+  { name: '🏺 陶艺周', kind: 'craft', param: 'pottery', qty: 100, gold: 1600, items: { ironOre: 20 } },
+  { name: '🪡 刺绣周', kind: 'craft', param: 'embroidery', qty: 100, gold: 1600, items: { banana: 20 } },
+  { name: '🕯️ 蜡烛周', kind: 'craft', param: 'candles', qty: 80, gold: 1600, items: { pineWood: 20 } },
 ]
 
 // 每日全部完成礼包（一次性）

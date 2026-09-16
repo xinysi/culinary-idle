@@ -8,6 +8,7 @@ import { equipSetOf } from './equipSets.js'
 import { CELLAR_CATEGORIES } from './cellar.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { CRAFTED_DECOR } from './woodworking.js'
+import { sidelineWorkOf, SIDELINE_AXES } from './sidelineWorks.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -22,6 +23,8 @@ export const CATEGORY_LABEL = {
   '种植产物': '种植产物',
   // 副业·木工的木器（v2.9.0）：与 `material`（材料）区分开，玩家一眼能看出「这是自己做的家具」
   furniture: '木器',
+  // 副业四支的产物类别（v2.10.0）
+  pottery: '陶器', textile: '织物', embroidery: '绣品', candle: '蜡烛',
   // 全物品图鉴审计（2026-09-06）补齐的类别标签（仅展示层映射）
   '主菜': '主菜', '甜点': '甜点', '汤品': '汤品', '主食': '主食',
   '木器': '木器', // 副业·木工配方的分类（`ProductionView` 用它做配方卡标签）
@@ -29,7 +32,7 @@ export const CATEGORY_LABEL = {
 export const SLOT_LABEL = { weapon: '武器', offhand: '副手', body: '身体', helmet: '头盔', amulet: '饰品1', ring: '饰品2', legs: '腿部', boots: '脚部' }
 const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击率', hpBonus: '品鉴值加成', speedBonus: '攻速提升' }
 const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速', duration: '持续' }
-const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
+const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
 const STYLE_LABEL = { knife: '刀工', plating: '摆盘', flavor: '调味' }
 
 // 属性数字统一保留两位小数（仅展示层格式化，不改底层数据/计算）
@@ -109,6 +112,14 @@ export function itemDetailLines(id) {
   if (woodDecor) {
     lines.push(['类型', '木器（副业·木工制作，采集与商店都拿不到）'])
     lines.push(['用途', `做成手工装潢「${woodDecor.name}」：餐厅收入 +${woodDecor.effect}%（在「餐厅装潢」页操作，不花金币）`])
+    lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
+  }
+  // 副业四支的产物（v2.10.0）：每件对应一条经营侧乘区，出口唯一（见 sidelineWorks.js）
+  const work = sidelineWorkOf(id)
+  if (work) {
+    const ax = SIDELINE_AXES[work.axis]
+    lines.push(['类型', `${work.catLabel}（副业·${work.skillName}制作，采集与商店都拿不到）`])
+    lines.push(['用途', `做成${work.skillName}作品：${ax.label} ${ax.amountLabel(work.amount)}（在「${work.skillName}」技能页下方操作，不花金币）`])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])

@@ -43,6 +43,11 @@ export const SOURCE_JUMP_RULES = [
   // 副业·木工（v2.9.0）：要放在别的规则之前能命中的位置不重要，
   // 但两条来源串「木工制作」与「餐厅装潢」都必须有规则，否则图鉴里是死文本（图鉴三查会 FAIL）
   { kw: ['木工'], target: { view: 'skill', skill: 'woodworking' } },
+  // 副业四支（v2.10.0）：来源串「陶艺制作」等必须能跳（图鉴三查会查）
+  { kw: ['陶艺'], target: { view: 'skill', skill: 'pottery' } },
+  { kw: ['编织'], target: { view: 'skill', skill: 'weaving' } },
+  { kw: ['刺绣'], target: { view: 'skill', skill: 'embroidery' } },
+  { kw: ['蜡烛'], target: { view: 'skill', skill: 'candles' } },
   { kw: ['餐厅装潢', '装潢'], target: { view: 'decor' } },
   { kw: ['保鲜'], target: { view: 'skill', skill: 'preservation' } },
   { kw: ['探索'], target: { view: 'skill', skill: 'exploration' } },

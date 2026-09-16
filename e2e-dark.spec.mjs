@@ -382,6 +382,19 @@ test.describe('深色模式配色体检', () => {
       scannedTotal += r.scanned
       for (const b of r.bad) bad.push({ page: `sidebar-tab#${ti}`, ...b })
     }
+    // 副业技能页（v2.10.0）：`skill` 视图只会渲染「当时激活的那一个技能」，副业五支共用一个
+    // ProductionView（含新的「作品面板」.sw-*）——不切 activeSkill 就一次都扫不到。
+    for (const sid of ['woodworking', 'pottery', 'weaving', 'embroidery', 'candles']) {
+      await page.evaluate((s) => {
+        const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+        pinia._s.get('ui').setView('skill')
+        pinia._s.get('player').setActiveSkill(s)
+      }, sid)
+      await page.waitForTimeout(280)
+      const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme: 'dark', skin: 'classic' })
+      scannedTotal += r.scanned
+      for (const b of r.bad) bad.push({ page: 'sideline:' + sid, ...b })
+    }
     console.log(`扫描元素合计 ${scannedTotal}`)
     if (bad.length) console.log('深色问题明细：\n' + bad.slice(0, 25).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''}`).join('\n'))
     // 自检：扫描量太小说明页面/数据没渲染出来（守卫本身失效）

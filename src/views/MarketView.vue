@@ -2,7 +2,8 @@
 // 行情与限时窗口（2026-09-11 新增）— 把原先只在弹窗里看得到的限时活动做成可查的排班表。
 // 纯读取 data/marketEvents.js：当前命中、今日 24 小时排班、每周固定档、全部活动与叠加倍率。
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { MARKET_EVENTS, activeMarketEvents, aggregateMarketBoost } from '../game/data/marketEvents.js'
+import { activeMarketEvents, aggregateMarketBoost, NIGHT_MARKET_MAX_EXTRA_HOURS } from '../game/data/marketEvents.js'
+import { usePlayerStore } from '../stores/player.js'
 import RelatedPages from '../components/RelatedPages.vue'
 
 const RELATED = [
@@ -11,6 +12,12 @@ const RELATED = [
   { view: 'festival', label: '🌗 节庆日历' },
   { view: 'stats', label: '📊 统计' },
 ]
+
+const player = usePlayerStore()
+// 副业·蜡烛（v2.10.0）：夜市狂潮窗口会按已做的蜡烛延长 —— 本页必须读**同一个来源**
+// （`player.marketEventsNow()`），否则页面显示的时段与真实加成会不一致。
+const EVENTS = computed(() => player.marketEventsNow())
+const extraHours = computed(() => player.nightMarketExtraHours())
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 // 每秒刷新「当前命中」，跨过整点/午夜时自动换档（切页即卸载，定时器随组件清理）
@@ -22,8 +29,8 @@ const now = computed(() => new Date(nowMs.value))
 const nowHour = computed(() => now.value.getHours())
 const nowWeekday = computed(() => now.value.getDay())
 
-const activeNow = computed(() => activeMarketEvents(nowHour.value, nowWeekday.value))
-const boostNow = computed(() => aggregateMarketBoost(nowHour.value, nowWeekday.value))
+const activeNow = computed(() => activeMarketEvents(nowHour.value, nowWeekday.value, EVENTS.value))
+const boostNow = computed(() => aggregateMarketBoost(nowHour.value, nowWeekday.value, EVENTS.value))
 // 实际生效倍率（叠加了玩家的其它乘区后，这里只展示市场窗口这一层，故直接读 marketBoost 的乘法项）
 const BOOST_LABELS = [
   { key: 'restaurant', label: '餐厅收入' },
@@ -38,23 +45,23 @@ const boostRows = computed(() =>
 /** 今日 24 小时排班：每小时命中的活动 */
 const dayGrid = computed(() =>
   Array.from({ length: 24 }, (_, h) => {
-    const evs = activeMarketEvents(h, nowWeekday.value)
-    const agg = aggregateMarketBoost(h, nowWeekday.value)
+    const evs = activeMarketEvents(h, nowWeekday.value, EVENTS.value)
+    const agg = aggregateMarketBoost(h, nowWeekday.value, EVENTS.value)
     return { h, evs, agg, hot: Object.values(agg).some((v) => v !== 1) }
   })
 )
 /** 本周 7 天的固定档（只有带 weekday 的活动才是「固定档」） */
 const weeklyFixed = computed(() =>
-  MARKET_EVENTS.filter((e) => e.weekday !== undefined).map((e) => ({ ...e, dayName: WEEKDAYS[e.weekday] }))
+  EVENTS.value.filter((e) => e.weekday !== undefined).map((e) => ({ ...e, dayName: WEEKDAYS[e.weekday] }))
 )
 /** 每天常态化（无 weekday）的活动 */
-const dailyEvents = computed(() => MARKET_EVENTS.filter((e) => e.weekday === undefined))
+const dailyEvents = computed(() => EVENTS.value.filter((e) => e.weekday === undefined))
 
 const selectedHour = ref(null)
 const selectedDetail = computed(() => {
   const h = selectedHour.value
   if (h === null) return null
-  return { h, evs: activeMarketEvents(h, nowWeekday.value), agg: aggregateMarketBoost(h, nowWeekday.value) }
+  return { h, evs: activeMarketEvents(h, nowWeekday.value, EVENTS.value), agg: aggregateMarketBoost(h, nowWeekday.value, EVENTS.value) }
 })
 
 function hoursText(ev) {
@@ -88,8 +95,14 @@ function remainText(ev) {
       <div>
         <h2>💹 行情与限时窗口</h2>
         <p class="dim">
-          每天 <b>{{ MARKET_EVENTS.length }}</b> 个限时窗口按<b>本地时段</b>轮换（部分只在固定星期开放）。
+          每天 <b>{{ EVENTS.length }}</b> 个限时窗口按<b>本地时段</b>轮换（部分只在固定星期开放）。
           命中期间给的是<b>基础乘区</b>，多个窗口重叠时<b>相乘叠加</b>；与天气、节庆、奥义等其它乘区也相乘。
+          <template v-if="extraHours > 0">
+            · 副业·蜡烛已把<b>夜市狂潮</b>延长 <b>+{{ extraHours }} 小时</b>（上限 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h，去左侧「副业 → 蜡烛制作」继续做）。
+          </template>
+          <template v-else>
+            · 副业·蜡烛每做 1 件可把<b>夜市狂潮</b>延后 1 小时（最多 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h），去左侧「副业 → 蜡烛制作」。
+          </template>
         </p>
       </div>
       <div class="skill-head-right">

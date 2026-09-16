@@ -104,10 +104,10 @@ const shownUses = computed(() => (showAllUses.value ? uses.value : uses.value.sl
         <!-- 可用于制作：该物品作为材料参与的配方（点击产物名查看产物详情）-->
         <h4 v-if="uses.length">可用于制作 <span v-if="uses.length > USE_LIMIT" class="dim" style="font-size:12px">（共 {{ uses.length }} 种，显示前 {{ USE_LIMIT }} 种）</span></h4>
         <ul v-if="uses.length" class="item-detail-src">
-          <!-- kind==='decor'：产物是**装潢**（不是物品），没有物品详情可跳，只能纯文本展示 -->
+          <!-- 带 kind 的产物（'decor' 装潢 / 'work' 副业作品）都不是物品，没有详情可跳，只能纯文本展示 -->
           <li v-for="u in shownUses" :key="u.outputId">
-            · <a v-if="u.kind !== 'decor'" class="link-item" @click="show(u.outputId)">{{ u.name }}</a>
-            <span v-else>{{ u.name }}（装潢）</span> ×{{ u.qty }}
+            · <a v-if="!u.kind" class="link-item" @click="show(u.outputId)">{{ u.name }}</a>
+            <span v-else>{{ u.name }}</span> ×{{ u.qty }}
           </li>
         </ul>
         <button v-if="uses.length > USE_LIMIT" class="btn btn-sm" @click="showAllUses = !showAllUses">

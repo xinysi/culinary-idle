@@ -53,6 +53,7 @@ import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { STAGE_INFO } from './spiritStories.js'
 import { CHALLENGES } from './weeklyChallenge.js'
 import { WOODWORKING_RECIPES } from './woodworking.js'
+import { SIDELINE_RECIPES, SIDELINE_SKILL_LIST } from './sidelineWorks.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -115,6 +116,14 @@ for (const r of PRESERVE_EXT2) add(r.output?.itemId, `食材保鲜制作（Lv${r
 for (const r of WOODWORKING_RECIPES) {
   const mats = Object.entries(r.ingredients).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('+')
   add(r.output?.itemId, `木工制作（${mats}，Lv${r.reqLevel} 可学）`)
+}
+// 副业四支（v2.10.0）：陶器/织物/绣品/蜡烛同样是技能独占产物；来源串必须是「技能名 + 制作」，
+// sourceJump.js 里有对应的跳转规则（图鉴三查会查「来源串都能跳转」）。
+for (const def of SIDELINE_SKILL_LIST) {
+  for (const r of SIDELINE_RECIPES[def.id] ?? []) {
+    const mats = Object.entries(r.ingredients).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('+')
+    add(r.output?.itemId, `${def.name}制作（${mats}，Lv${r.reqLevel} 可学）`)
+  }
 }
 
 // 炼金（合成）

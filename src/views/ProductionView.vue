@@ -15,7 +15,9 @@ import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
+import SidelineWorkPanel from '../components/SidelineWorkPanel.vue'
 import { decorOfWoodwork } from '../game/data/woodworking.js'
+import { sidelineWorkOf, SIDELINE_AXES } from '../game/data/sidelineWorks.js'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -143,10 +145,13 @@ function outputEffect(itemId) {
     parts.push(`腐坏 ${it.spoilMs / 3600000} 小时`)
   }
   if (!parts.length) {
-    // 副业产物（木器）没有 buff/use 字段，它的「效果」就是能做成的装潢加成（v2.9.0）。
-    // 数据驱动：凡是有对应手工装潢的产物都走这里，将来陶艺/编织等新副业不必再改本文件。
+    // 副业产物没有 buff/use 字段，它的「效果」就是它能换来的经营侧加成：
+    // 木器 → 手工装潢（餐厅收入）；陶器/织物/绣品/蜡烛 → 各自的乘区轴（v2.10.0）。
+    // 数据驱动：新增副业不必再改本文件。
     const dec = decorOfWoodwork(itemId)
+    const work = sidelineWorkOf(itemId)
     if (dec) parts.push(`装潢：餐厅收入 +${dec.effect}%`)
+    else if (work) parts.push(`${SIDELINE_AXES[work.axis].label} ${SIDELINE_AXES[work.axis].amountLabel(work.amount)}`)
   }
   return parts.length ? parts : ['原料']
 }
@@ -562,6 +567,8 @@ function scrollToSection(label) {
       @result="onHeatResult"
       @close="heatModal = null"
     />
+    <!-- 副业作品（v2.10.0）：只有陶艺/编织/刺绣/蜡烛会渲染，其它制作类技能内部 v-if 为假 -->
+    <SidelineWorkPanel :instance="instance" />
   </div>
 </template>
 

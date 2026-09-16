@@ -38,10 +38,16 @@ export const SKILL_DEFS = {
   preservation: { id: 'preservation', name: '食材保鲜', category: 'support', desc: '制作保鲜剂和增益剂' },
   exploration: { id: 'exploration', name: '美食探索', category: 'support', desc: '探索美食秘境，偷师学艺' },
 
-  // ── 副业类（§3.5，v2.9.0）──
+  // ── 副业类（§3.5，v2.9.0 木工；v2.10.0 陶艺/编织/刺绣/蜡烛）──
   // 与制作类的区别：制作类把食材变成**能吃/能用**的东西，副业把**采集原料**变成
-  // 「采集拿不到、只能自己做」的经营侧乘区与独占品（木工 → 餐厅装潢）。
+  // 「采集拿不到、只能自己做」的经营侧乘区与独占品。
+  // 每支只接**一条**乘区出口（陶艺→地窖单槽价值上限 / 编织→小费 / 刺绣→米其林招牌分 / 蜡烛→夜市窗口），
+  // 定义与口径见 `data/sidelineWorks.js`。
   woodworking: { id: 'woodworking', name: '木工', category: 'sideline', desc: '伐木所得的木料做成木器与手工装潢（餐厅收入）' },
+  pottery: { id: 'pottery', name: '陶艺', category: 'sideline', desc: '木料与矿物烧制陶器，给地窖扩容（单槽能陈酿更贵的酒）' },
+  weaving: { id: 'weaving', name: '编织', category: 'sideline', desc: '竹木条与茎叶编成织物，提升餐厅小费' },
+  embroidery: { id: 'embroidery', name: '刺绣', category: 'sideline', desc: '木料与果染绣成绣品，进米其林「招牌绣屏」评分' },
+  candles: { id: 'candles', name: '蜡烛制作', category: 'sideline', desc: '木料与动物脂熬制蜡烛，延长夜市狂潮的营业时段' },
 }
 
 /** 左栏页签分组：技能页签显示前四类，副业页签只显示 sideline（2026-09-16） */
@@ -65,7 +71,7 @@ const SKILL_ICONS = {
   cooking: '🍳', baking: '🥖', preserving: '🫙', brewing: '🍷', spiceMixing: '🌶️', craftsmithing: '🔨',
   knife: '🔪', heatControl: '🔥', flavorArtistry: '✨', plating: '🍽️', tasteAcumen: '❤️', spiritSummoning: '👻',
   gastronomy: '📜', preservation: '❄️', exploration: '🕵️',
-  woodworking: '🪚',
+  woodworking: '🪚', pottery: '🏺', weaving: '🧶', embroidery: '🪡', candles: '🕯️',
 }
 for (const [id, icon] of Object.entries(SKILL_ICONS)) {
   if (SKILL_DEFS[id]) SKILL_DEFS[id].icon = icon

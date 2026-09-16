@@ -132,6 +132,17 @@ test('全部页面与常用弹窗：无前端标记裸露', async ({ page }) => 
       await scan(v + '·tab' + i)
     }
   }
+  // 副业技能页（v2.10.0）：`skill` 视图只会渲染「当时激活的那一个技能」，而副业五支共用一个
+  // ProductionView（含新的「作品面板」）——不切 activeSkill 就一次都扫不到。逐个切过去扫。
+  for (const sid of ['woodworking', 'pottery', 'weaving', 'embroidery', 'candles']) {
+    await page.evaluate((s) => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      pinia._s.get('ui').setView('skill')
+      pinia._s.get('player').setActiveSkill(s)
+    }, sid)
+    await page.waitForTimeout(260)
+    await scan('sideline:' + sid)
+  }
   for (const m of MODALS) {
     await page.evaluate((mm) => {
       const ui = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')

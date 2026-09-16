@@ -2,10 +2,10 @@
 // 纯新增获取来源（不动任何物品数值）；图鉴三查见 itemSources.js 的「觅珍」来源。
 import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
-import { WOODWORK_CATEGORY } from './woodworking.js'
+import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
 
-/** 抽卡池一律排除的类别：矿物（不对口径）与木器（副业木工独占品，抽卡能出就等于绕过整条技能线） */
-const POOL_EXCLUDED_CATEGORIES = ['mineral', WOODWORK_CATEGORY]
+/** 抽卡池一律排除的类别：矿物（不对口径）与**全部副业独占品**（抽卡能出就等于绕过整条技能线） */
+const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
 
 export const MIJIAN_POOLS = [
   { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },

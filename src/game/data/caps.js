@@ -64,6 +64,17 @@ export const FACILITY_MAX = {
 export const CARAVAN_CARGO_CAP = 30000
 
 /**
+ * 地窖**单槽基础价值上限**（2026-09-17，v2.10.0 收进此处）——原本写死在 `cellar.js` 的
+ * `CELLAR_MAX_BASE_VALUE = 16000`，现按「上限单一来源」规矩收敛，并区分**基础**与**硬顶**：
+ * 副业·陶艺的 10 件陶器每件 +1500 ⇒ 硬顶 31000。
+ * ⚠️ 消费方（`cellarPut` 校验 / `CellarView` 的输入夹取、满额估算、文案）一律走
+ * `player.cellarSlotValueMax()`（= 基础 + 陶艺已做的量），**别再引用固定值**——
+ * 否则玩家做了陶器之后，地窖页仍按 16000 报价，等于奖励没生效（C33 有断言）。
+ */
+export const CELLAR_SLOT_VALUE_BASE = 16000
+export const CELLAR_SLOT_VALUE_MAX = 31000
+
+/**
  * 读档用安全夹取：非有限数（缺字段 / 字符串 / NaN）回退默认值，负数归 0，超上限夹到上限。
  * ⚠️ 别再用裸 `Math.min(saved.x ?? d, MAX)` —— 存档里若是字符串会得到 NaN，
  * 之后 `used >= NaN` 恒为 false → **上限完全失效**（审计发现）。

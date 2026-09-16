@@ -14,9 +14,10 @@ export const CELLAR_BASE_SLOTS = 3
 export const CELLAR_MAX_SLOTS = 9
 export const CELLAR_EXPAND_COSTS = [5000, 25000] // 3→6→9
 
-/** 单槽限制：件数 1~99，且基础价值（Σ 单价×件数）不超过该上限 */
+/** 单槽限制：件数 1~99；**价值上限已收敛到 `caps.js`**（`CELLAR_SLOT_VALUE_BASE/_MAX`，2026-09-17）
+ *  —— 玩家实际可用的上限走 `player.cellarSlotValueMax()`（副业·陶艺的陶器可把它抬到硬顶）。
+ *  ⚠️ 不要再在本模块或视图里写 16000 这个字面量。 */
 export const CELLAR_MAX_QTY = 99
-export const CELLAR_MAX_BASE_VALUE = 16000
 
 /** 成熟档位：{ hours 时长, mult 价值倍率 } */
 export const CELLAR_TIERS = [

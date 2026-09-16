@@ -16,6 +16,7 @@ import { HUNTING_TARGETS } from '../../src/game/skills/HuntingSkill.js'
 import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../../src/game/skills/ExcavationSkill.js'
 import { WOODCUTTING_TARGETS } from '../../src/game/data/timbers.js'
 import { RESTAURANT_DECOR_BY_ID } from '../../src/game/data/restaurantDecor.js'
+import { sidelineWorkOf } from '../../src/game/data/sidelineWorks.js'
 import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 import { SHOP_ITEMS } from '../../src/game/data/shop.js'
 import { EXPLORATION_TARGETS_ALL } from '../../src/game/data/explorationTargets.js'
@@ -124,8 +125,11 @@ const items = Object.values(ITEMS)
   for (const it of items) {
     for (const u of itemUses(it.id)) {
       // kind==='decor'（v2.9.0）：产物是**装潢**不是物品，改为校验它确实是已登记的装潢定义。
-      // 早先一律要求 `ITEMS[u.outputId]` 存在 —— 木器做成手工装潢这条用途会被判成坏链。
-      const ok = u.kind === 'decor' ? !!RESTAURANT_DECOR_BY_ID[u.outputId] : !!ITEMS[u.outputId]
+      // kind==='work'（v2.10.0）：产物是**副业作品**，改为校验「该物品本身就是已登记的作品」。
+      // 早先一律要求 `ITEMS[u.outputId]` 存在 —— 这两类用途都会被判成坏链。
+      const ok = u.kind === 'decor' ? !!RESTAURANT_DECOR_BY_ID[u.outputId]
+        : u.kind === 'work' ? !!sidelineWorkOf(it.id)
+        : !!ITEMS[u.outputId]
       if (!ok) { bad++; if (badIds.length < 5) badIds.push(`${it.id} → ${u.outputId}`) }
     }
   }
