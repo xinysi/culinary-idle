@@ -29,13 +29,19 @@ export const WOODWORK_ITEMS_DEF = [
   { level: 91, id: 'sacredAltar', name: '神木供案', wood: 'voidWood', woodQty: 5, tier: '传说' },
 ]
 
-/** 手工装潢：每件木器对应一件装潢，效果（餐厅收入 %）随等级递增（0.6→4.2，合计 +24.0%） */
+/**
+ * 手工装潢：每件木器对应一件装潢，效果（餐厅收入 %）随等级递增。
+ * ⚠️ v2.10.1（2026-09-17 用户要求「300 件装潢的加成应该下调，加成比手工的太多了」）：
+ *   商店 300 件的合计从 +469% 压到 **+209%**（改生成器的曲线），同时把手工从 0.6~4.2（合计 +24）
+ *   抬到 **2~11（合计 +65）** —— 于是手工在装潢总乘区里从 **4% 升到 ~24%**，10 件就能顶商店 300 件的三成，
+ *   且单件（2%~11%）明显强于商店最贵的那件（1.3%）。要再调只改这一个系数即可整体平移。
+ */
 export const CRAFTED_DECOR = WOODWORK_ITEMS_DEF.map((it) => ({
   id: `decor_hand_${it.id}`,
   name: `🪚 ${it.name}`,
   category: 'handmade', // 不进商店的 category 页签（DECOR_CATEGORIES 里没有它）
   price: null, // 不可金币购买：只能用手工品做
-  effect: Math.round((0.6 + (it.level - 1) * 0.04) * 10) / 10,
+  effect: Math.round((2 + (it.level - 1) * 0.1) * 10) / 10,
   craftedFrom: { itemId: it.id, qty: 1 },
   wood: it.wood,
 }))

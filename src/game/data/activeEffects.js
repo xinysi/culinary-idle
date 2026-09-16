@@ -490,7 +490,7 @@ export const EFFECT_ROWS = [
       const list = p.restaurant?.decor ?? []
       let sum = 0
       for (const id of list) sum += (RESTAURANT_DECOR_BY_ID[id]?.effect ?? 0) / 100
-      if (!list.length) return off('还没有摆放任何装潢（每件 +0.5%~3% 时收）')
+      if (!list.length) return off('还没有摆放任何装潢（商店每件 +0.25%~1.3%、手工每件 +2%~11% 时收）')
       return { on: true, text: `已摆放 ${list.length} 件，合计时收 ${pct(sum * 100)}` }
     },
   },

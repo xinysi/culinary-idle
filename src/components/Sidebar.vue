@@ -234,7 +234,7 @@ function onAvatarPick(e) {
 
     <!-- 技能列表（按类别分组，按钮内直接显示等级与经验） -->
     <nav v-show="sideTab === 'skills'" class="skill-nav">
-      <template v-for="cat in skillCategoriesOfTab('skill')" :key="cat.id">
+      <template v-for="cat in skillCategoriesOfTab('skills')" :key="cat.id">
         <div class="skill-cat">{{ cat.name }}</div>
         <button
           v-for="def in skillsInCategory(cat.id)"

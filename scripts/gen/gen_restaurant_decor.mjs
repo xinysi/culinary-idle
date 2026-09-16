@@ -1,5 +1,8 @@
 // 餐厅装饰生成器：读 restaurantDecorBase.js（100 件基线 id/name）→ 补 200 件新增 → 按统一曲线重铺 price/effect/category → 产出 restaurantDecor.js
-// 数值曲线：price 从 500 → 750000 单调递增（低段平缓、高段陡），effect 随 price 从 +0.5% → +3% 线性（无倒挂）
+// 数值曲线：price 从 500 → 750000 单调递增（低段平缓、高段陡），effect 随 price 线性（无倒挂）。
+// ⚠️ v2.10.1（2026-09-17 用户要求「300 件装潢的加成应该下调，加成比手工的太多了」）：
+//   商店 300 件的单件加成从 +0.5%~3% 压到 +0.25%~1.3%（合计 +469% → **+210%**）。
+//   价格**一分未动**（它是标定过的金币沉淀口），只压加成，让手工装潢（+51.5%）在总乘区里占到 ~20%（原先只有 4%）。
 // 勿手改产物 restaurantDecor.js，改曲线/新增请改本脚本并重跑
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -89,7 +92,9 @@ if (items.length !== 300) { console.error('期望 300，实际', items.length); 
 const MIN_P = 500, MAX_P = 750000
 const N = items.length
 const priceFor = (i) => Math.round(MIN_P + (MAX_P - MIN_P) * Math.pow(i / (N - 1), 1.35))
-const effectFor = (p) => +(0.5 + ((p - MIN_P) / (MAX_P - MIN_P)) * 2.5).toFixed(1)
+// 单件加成曲线：低段 0.25% → 高段 1.3%（v2.10.1 下调；只改这里与下面的注释文案）
+const EFF_MIN = 0.25, EFF_MAX = 1.3
+const effectFor = (p) => +(EFF_MIN + ((p - MIN_P) / (MAX_P - MIN_P)) * (EFF_MAX - EFF_MIN)).toFixed(2)
 
 const rich = items.map((it, i) => {
   const price = priceFor(i)
@@ -108,7 +113,7 @@ for (const k of Object.keys(byCat)) byCat[k].sort((a, b) => a.price - b.price)
 // 生成 JS 文件（按分类固定顺序输出）
 const catOrder = Object.keys(CATEGORY_LABEL)
 let body = `// 餐厅装饰（生成器自动生成，勿手改）：${rich.length} 件（基线 ${RESTAURANT_DECOR_BASE.length} + 新增 ${rich.length - RESTAURANT_DECOR_BASE.length}）
-// 曲线：price ${MIN_P}→${MAX_P} 单调；effect 随 price 从 +0.5% → +3% 递增（收入%梯度，无倒挂）
+// 曲线：price ${MIN_P}→${MAX_P} 单调；effect 随 price 从 +${EFF_MIN}% → +${EFF_MAX}% 递增（收入%梯度，无倒挂）
 // 生成：node scripts/gen/gen_restaurant_decor.mjs
 import { RESTAURANT_DECOR_BASE } from './restaurantDecorBase.js'
 // v2.9.0：手工装潢（副业·木工产物做成）并入索引用；定义在 woodworking.js（非生成器产物）

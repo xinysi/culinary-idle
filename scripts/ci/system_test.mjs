@@ -4756,10 +4756,21 @@ console.log('══ C32. 副业·木工 ══')
     def?.category === 'sideline' && !!def?.name && !!def?.icon && def.icon !== '•', `${def?.category}/${def?.icon}`)
 
   // ② 页签分组：skill 页签 4 类 / side 页签只有 1 类（左栏第三页签）
-  const skillTabCats = skillCategoriesOfTab('skill')
+  const skillTabCats = skillCategoriesOfTab('skills')
   const sideTabCats = skillCategoriesOfTab('side')
   check('副业·木工', '左栏页签分组：技能 4 类 / 副业 1 类，且分类总数守恒（不重不漏）',
     skillTabCats.length === 4 && sideTabCats.length === 1 && sideTabCats[0].id === 'sideline' && skillTabCats.length + sideTabCats.length === SKILL_CATEGORIES.length)
+
+  // ②b **跨文件契约（2026-09-17 实测踩过）**：`SKILL_CATEGORIES[].tab` 的取值必须与 Sidebar.vue 里
+  //     `sideTab` 的 key 完全一致 —— 早先这里写单数 `'skill'`、侧栏判的是 `'skills'`，
+  //     于是**点任何技能都会把三个列表全部隐藏、左栏空白**（v2.9.0 引入，v2.10.1 修）。
+  //     断言方式：从 Sidebar 源码抽出全部 `sideTab === 'X'` 字面量，要求每个 tab 值都在其中。
+  const sidebarSrc2 = fs.readFileSync(new URL('../../src/components/Sidebar.vue', import.meta.url), 'utf8')
+  const sideTabKeys = [...new Set([...sidebarSrc2.matchAll(/sideTab === '([a-zA-Z]+)'/g)].map((m) => m[1]))]
+  const catTabs = [...new Set(SKILL_CATEGORIES.map((c) => c.tab))]
+  check('副业·木工', `页签 key 与侧栏一致（SKILL_CATEGORIES.tab ⊂ Sidebar 的 ${sideTabKeys.length} 个 sideTab 取值）`,
+    sideTabKeys.length >= 3 && catTabs.every((t) => sideTabKeys.includes(t)) && catTabs.every((t) => skillCategoriesOfTab(t).length > 0),
+    `catTabs=${catTabs.join(',')} 不在侧栏里的=${catTabs.filter((t) => !sideTabKeys.includes(t)).join(',')}`)
 
   // ③ 木器物品：10 件、id 唯一、类别为 furniture（与材料 material 区分）
   const badItems = []
@@ -4771,6 +4782,14 @@ console.log('══ C32. 副业·木工 ══')
     WOODWORKING_ITEMS.length === 10 && new Set(WOODWORKING_ITEMS.map((i) => i.id)).size === 10 && badItems.length === 0, badItems.join('; '))
   check('副业·木工', '每件木器都有图片文件（占位图也算，但文件必须真实存在）',
     WOODWORKING_ITEMS.every((it) => imgExists(it.id)), WOODWORKING_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
+  // 木器价值 == 木材投入合计（v2.10.1：多余木器半价卖回即等于把木材整包卖掉）
+  applyValueBalance()
+  const wvBad = WOODWORKING_RECIPES.filter((r) => {
+    const want = Math.max(1, Math.round(Object.entries(r.ingredients).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
+    return ITEMS[r.output.itemId]?.value !== want
+  })
+  check('副业·木工', '10 件木器的价值 == 其木材投入合计（半价卖出即等于把木材整包卖掉）',
+    wvBad.length === 0, wvBad.map((r) => r.id).join(','))
 
   // ④ 配方：每 10 级一件、材料是该档木材、数量 2~5、产物是自己
   const bandTimbers = new Set(TIMBERS.map((t) => t.id))
@@ -4911,6 +4930,15 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     SIDELINE_ITEMS.length === 38 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 38 && iBad.length === 0, iBad.slice(0, 4).join('; '))
   check('副业四支', '38 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
     SIDELINE_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
+  // ②b 产物价值 = 配方材料价值合计（v2.10.1：让「多做出来的」半价卖回时不亏）
+  applyValueBalance()
+  const vBad = []
+  for (const def of SIDELINE_SKILL_LIST) for (const r of SIDELINE_RECIPES[def.id]) {
+    const want = Math.max(1, Math.round(Object.entries(r.ingredients).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
+    const got = ITEMS[r.output.itemId]?.value
+    if (got !== want) vBad.push(`${r.id}: ${got}≠${want}`)
+  }
+  check('副业四支', '38 件产物的价值 == 其配方材料价值合计（半价卖出即等于把材料整包卖掉）', vBad.length === 0, vBad.slice(0, 4).join('; '))
 
   // ③ 配方：基材是该档木材、辅料等级 ≤ 配方+5、产物是自己、等级严格递增且落在阶梯上
   const rBad = []

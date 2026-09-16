@@ -112,6 +112,7 @@ export function itemDetailLines(id) {
   if (woodDecor) {
     lines.push(['类型', '木器（副业·木工制作，采集与商店都拿不到）'])
     lines.push(['用途', `做成手工装潢「${woodDecor.name}」：餐厅收入 +${woodDecor.effect}%（在「餐厅装潢」页操作，不花金币）`])
+    lines.push(['多余收益', `价值等于所用木材的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）`])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
   // 副业四支的产物（v2.10.0）：每件对应一条经营侧乘区，出口唯一（见 sidelineWorks.js）
@@ -120,6 +121,7 @@ export function itemDetailLines(id) {
     const ax = SIDELINE_AXES[work.axis]
     lines.push(['类型', `${work.catLabel}（副业·${work.skillName}制作，采集与商店都拿不到）`])
     lines.push(['用途', `做成${work.skillName}作品：${ax.label} ${ax.amountLabel(work.amount)}（在「${work.skillName}」技能页下方操作，不花金币）`])
+    lines.push(['多余收益', '价值等于配方材料的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])

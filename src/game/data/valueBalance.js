@@ -20,6 +20,8 @@ import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT, SPIRIT_EXT }
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2, SPIRIT_EXT2 } from './expansion2.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { resetMijianPoolCache } from './mijianDraws.js'
+import { WOODWORKING_RECIPES } from './woodworking.js'
+import { SIDELINE_RECIPES } from './sidelineWorks.js'
 
 const isMineral = (id) => { const it = ITEMS[id]; return it?.category === 'mineral' || /Ore|fossil|salt|矿/.test(id) }
 const round = (v) => Math.round(v)
@@ -79,6 +81,32 @@ export function applyValueBalance() {
     item.value = Math.round(Math.max(c * 0.7, Math.min(c * 1.3, item.value)))
   }
   applyAlchemyRatioCap()
+  applySidelineProductValues() // 副业产物 value = 其材料投入合计（必须在材料平衡之后，见函数注释）
   resetMijianPoolCache() // 池子按 value 筛选 → 平衡改过 value 后必须重算（顺序敏感，见 mijianDraws 注释）
+}
+
+/**
+ * 副业产物的 value = **其配方材料的价值合计**（2026-09-17，v2.10.1）。
+ *
+ * 起因（用户实测提问）：「木工、陶艺、编织、刺绣、蜡烛制作是技能，但是做了一件后就能用了，
+ * 多制作出来的没用了」——产物原先按「等级的曲线值」定价（Lv1 陶碗只值 5 金币），
+ * 而它的材料（松木×2 + 铁矿×2）值 40 上下，于是「半价卖给杂货铺」这条出口名义上存在、实际等于零。
+ *
+ * 现在把产物价值锚到材料投入上 ⇒ **卖一件产物 = 把这份材料整包卖掉的收入**（产物 ×0.5 = 材料 ×0.5），
+ * 多做出来的永远不浪费；不需要新增任何机制、货币或存档字段。
+ * ⚠️ 安全性：副业产物已被排除出全部池子与自动出口（抽卡/礼包/珍馐阁/交易所/商队/自动出售，
+ * 见 `SIDELINE_ITEM_CATEGORIES` 的 5 个消费方），且**没有任何配方把它们当材料** ⇒ 调高 value 不产生套利。
+ * ⚠️ 必须在**材料价值平衡之后**调用：材料 value 是上面那段改过的，先算会拿到旧值。
+ */
+export function applySidelineProductValues() {
+  const sumOf = (ingredients) => {
+    let s = 0
+    for (const [id, qty] of Object.entries(ingredients ?? {})) s += (ITEMS[id]?.value ?? 0) * qty
+    return Math.max(1, Math.round(s))
+  }
+  for (const r of [...WOODWORKING_RECIPES, ...Object.values(SIDELINE_RECIPES).flat()]) {
+    const it = ITEMS[r?.output?.itemId]
+    if (it) it.value = sumOf(r.ingredients)
+  }
 }
 
