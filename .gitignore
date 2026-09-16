@@ -21,3 +21,6 @@ lmewexe/release2/
 
 # ZCode 规划模式生成的计划文件（非项目产物）
 .zcode/
+
+# Python 脚本缓存（scripts/gen/process_item_images.py 会生成）
+__pycache__/
