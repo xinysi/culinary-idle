@@ -571,7 +571,10 @@ export const usePlayerStore = defineStore('player', {
     gatherLevels(s) {
       return ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].reduce((a, id) => a + (s.skills[id]?.level ?? 1), 0)
     },
-    /** 制作技能总等级（公会加入需求，§13） */
+    /** 制作技能总等级（公会加入需求，§13）
+     *  ⚠️ v2.9.0 的副业·木工**刻意不计入**：副业是独立第三页签（用户 2026-09-16 决策），
+     *  且本访问器的门槛（见 guilds.js）是按「6 个制作技能」标定的；把木工算进来会让
+     *  所有已标定门槛静默上浮。木工的公会任务改用 `skill` 类型单列（见 guilds.js）。 */
     craftLevels(s) {
       return ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing'].reduce((a, id) => a + (s.skills[id]?.level ?? 1), 0)
     },
@@ -1052,6 +1055,28 @@ export const usePlayerStore = defineStore('player', {
         this.inventory[itemId] = have - qty
       }
       return true
+    },
+
+    // ── 餐厅（§5.4）──
+    /**
+     * 把一件**手工木器**做成对应的手工装潢（v2.9.0，副业·木工的落地口）。
+     * 与商店装潢（`DecorView` 里 `spendGold` + push id）的区别：这里消耗的是**物品**不是金币，
+     * 且装潢定义必须带 `craftedFrom`（否则视为非法目标，防 UI 传错 id 白拿）。
+     * @returns {'ok'|'owned'|'denied'|'bad'}
+     */
+    craftDecor(decorId) {
+      const d = RESTAURANT_DECOR_BY_ID[decorId]
+      if (!d || !d.craftedFrom) return 'bad'
+      const list = this.restaurant.decor ?? []
+      if (list.includes(decorId)) return 'owned'
+      const { itemId, qty } = d.craftedFrom
+      if ((this.inventory[itemId] ?? 0) < qty) return 'denied'
+      this.spendItem(itemId, qty)
+      this.restaurant.decor = [...list, decorId]
+      try {
+        useUiStore().pushLog(`🏮 手工装潢：${d.name}（收入 +${d.effect}%）`, 'gain')
+      } catch { /* ui 未就绪 */ }
+      return 'ok'
     },
 
     // ── 仓库（§5.4）──

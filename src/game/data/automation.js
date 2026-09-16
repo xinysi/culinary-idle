@@ -44,5 +44,5 @@ export const FREE_AUTOMATIONS = [
 /** 自动出售：默认阈值与保留件数 */
 export const SELL_THRESHOLD_DEFAULT = 30
 export const SELL_KEEP = 1
-/** 不参与自动出售的类别（矿物/化石/材料/补给——它们是锻造/宝石/肥料的原料） */
-export const SELL_EXCLUDED_CATEGORIES = ['mineral', 'fossil', 'material', 'supply']
+/** 不参与自动出售的类别（矿物/化石/材料/补给/木器——它们是锻造/宝石/肥料/装潢的原料） */
+export const SELL_EXCLUDED_CATEGORIES = ['mineral', 'fossil', 'material', 'supply', 'furniture']

@@ -50,6 +50,8 @@ const ARGS = {
   finishQuestIfReady: [{ objectives: [] }], canGainItems: [[{ id: 'apple', qty: 1 }]],
   moveToInventory: ['apple', null], moveToBank: ['apple', null],
   spendGameCoins: [1], gainGameCoins: [1], gainGold: [1], spendGold: [1],
+  // 副业·木工（v2.9.0）：木器 → 手工装潢
+  craftDecor: ['decor_hand_bowlRack'],
 }
 
 function makePlayer(kind) {

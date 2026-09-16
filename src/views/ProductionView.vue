@@ -15,6 +15,7 @@ import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
+import { decorOfWoodwork } from '../game/data/woodworking.js'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -140,6 +141,12 @@ function outputEffect(itemId) {
     parts.push(`离线时长 +${it.offlineBonusH} 小时`)
   } else if (it.spoilMs) {
     parts.push(`腐坏 ${it.spoilMs / 3600000} 小时`)
+  }
+  if (!parts.length) {
+    // 副业产物（木器）没有 buff/use 字段，它的「效果」就是能做成的装潢加成（v2.9.0）。
+    // 数据驱动：凡是有对应手工装潢的产物都走这里，将来陶艺/编织等新副业不必再改本文件。
+    const dec = decorOfWoodwork(itemId)
+    if (dec) parts.push(`装潢：餐厅收入 +${dec.effect}%`)
   }
   return parts.length ? parts : ['原料']
 }
@@ -521,7 +528,10 @@ function scrollToSection(label) {
             <div class="recipe-action">
               <div class="gather-card-row">
                 <span>成功率</span>
-                <span class="mono">{{ (instance.successChance(r) * 100).toFixed(0) }}%</span>
+                <!-- 未解锁（技能等级 < 配方等级）时 successChance() 会算出负数（基础值 + 负的等级差），
+                     显示成「成功率 -41%」纯属误导：这个等级根本做不了它。改为显示解锁要求。 -->
+                <span v-if="player.skillState(instance.id).level < r.reqLevel" class="mono dim">Lv{{ r.reqLevel }} 解锁</span>
+                <span v-else class="mono">{{ (instance.successChance(r) * 100).toFixed(0) }}%</span>
               </div>
               <div class="queue-btns">
                 <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>

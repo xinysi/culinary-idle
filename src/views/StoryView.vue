@@ -114,7 +114,7 @@ const QUIRK_SUB_NAMES = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', farming: '农耕',
   woodcutting: '伐木', mining: '采矿',
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒',
-  spiceMixing: '调料调配', craftsmithing: '厨具锻造',
+  spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工',
   battle: '战斗', spirit: '食灵召唤',
   gastronomy: '美食知识', preservation: '食材保鲜', exploration: '美食探索',
 }

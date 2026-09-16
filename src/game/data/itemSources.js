@@ -52,6 +52,7 @@ import { GEAR_RANKS } from './gearContest.js'
 import { FLAVOR_PAIRS } from './flavorPairs.js'
 import { STAGE_INFO } from './spiritStories.js'
 import { CHALLENGES } from './weeklyChallenge.js'
+import { WOODWORKING_RECIPES } from './woodworking.js'
 
 const SOURCES = {}
 const add = (id, src) => {
@@ -110,6 +111,11 @@ for (const [skill, name] of [['cooking', '烹饪制作'], ['baking', '烘焙制�
 }
 for (const r of PRESERVE_EXT) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
 for (const r of PRESERVE_EXT2) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
+// 副业·木工（v2.9.0）：木器是**技能独占产物**（采集/商店/抽卡都拿不到，见 woodworking.js 的口径）
+for (const r of WOODWORKING_RECIPES) {
+  const mats = Object.entries(r.ingredients).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('+')
+  add(r.output?.itemId, `木工制作（${mats}，Lv${r.reqLevel} 可学）`)
+}
 
 // 炼金（合成）
 for (const a of ALCHEMY_RECIPES) {

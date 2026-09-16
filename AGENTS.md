@@ -222,6 +222,58 @@
 - ⚠️ **跨组件状态字段名必须对齐（实测踩坑）**：厨神之路的画布读 `owned`/`can`，而山海食经的派生状态里叫 `unlocked` → 首版**已点亮的节点被画成「未达标」**（页面不报错，只是全灰）。现两边都修：视图映射 `owned: st.unlocked === true`，组件 `nodeClass` 同时兼容 `owned === true || unlocked === true`。复用同一画布的其它树别再踩。
 - **守卫**：`system_test` **C22 二十余项**（552 节点 / 12 线 / id 唯一 / **每系每环节点数 = `SHANHAI_RING_SLOTS`（3 或 5）** / 条件只用 codex 且数值合法 / **转生环不得写等级要求** / **里程碑严格递增 100→1→5→10** / 前 6 环门槛严格递增且第 6~10 环持平 / 奖励字段在白名单且为正整数 / **全树总量 ≤ 上限** / 各线清单非空且最高环门槛 ≤ 清单长度 / 新档 0 可点亮 / 收集够即点亮且**不扣金币**、容量即时到账 / **满上限顺位转投不蒸发** / **商店买满后背包节点仍落在背包** / 条件不足给原因 / **旧档对账补发** / **对账幂等** / 存档往返与旧档迁移 / 道途标题不重叠 / 画布 552 节点·12 扇区·10 环且零重叠）。
 
+## 🪚 「副业」大类与首支技能「木工」（v2.9.0，2026-09-16 立）
+
+**用户当时的原话**：「假如我想在技能加个新的大类，叫做副业，然后技能是编织、陶艺、刺绣、木工、蜡烛制作等」，决策是
+**「可以在左侧导航栏上面加个大类：副业，于是就是变成了：技能 功能 副业，不吃食灵经验加成，不加入山海食经」**。
+
+### 定位（先读这条，别把它做成「第二个制作大类」）
+**副业不产食材，产「餐厅经营侧的乘区与独占品」。** 制作类是把食材变成能吃/能用的东西；副业是把**采集原料**变成
+**采集拿不到的、只能自己做的**经营侧加成。木工 = 伐木木材 → 木器 → 手工装潢（餐厅收入）。将来 陶艺/编织/刺绣/蜡烛 照此定位。
+
+### 两条硬设计决策（已固化进 C32 守卫，不得回退）
+1. **不吃食灵经验加成**：`spiritTiers.js` 的 `effect.xpPct` 是**显式枚举**（不含副业 id）⇒ 自动成立。C32 断言 160 只食灵的经验域都不含 `woodworking`。
+2. **不进入山海食经**：山海线↔技能是 1:1 白名单（加线会改写已定稿的 552 节点布局与 `CAP_MAX`）。C32 断言 `SHANHAI_NODES` 里没有副业技能。
+   ⇒ 这两条是**拿守卫钉住的设计**，不是「暂时没做」。
+
+### 第三页签（左栏）
+- `SKILL_CATEGORIES` 每项有 **`tab: 'skill' | 'side'`**；**页签内容一律走 `skillCategoriesOfTab(tab)`**（Sidebar 与守卫共用这一口径，别再手抄分类列表）。
+- 左栏三格在 **170px 窄栏**下的可用宽约 142px ⇒ `.sidebar-tabs` 的 gap/padding/字号是**算过的**（4px / 6px 4px / 11px + `nowrap`），改页签数量或文案要重新核这一条（否则换行）。
+- ⚠️ **切页签不能只盯 `ui.activeView`**：从搜索/图鉴跳到「木工」时 `activeView` 本来就是 `skill`，watch 不触发 → 页签留在「技能」，**木工那一行看不见**（首版踩过）。现同时 watch `player.activeSkill`，且 `selectSkill()` 也按技能大类切页签。
+- **`craftLevels`（公会「制作总等级」）刻意不含木工**：该访问器的门槛（70/130/200/280）是按「6 个制作技能」标定的，把木工算进来会让所有已标定门槛**静默上浮**。木工的公会任务改用 `skill` 类型单列一条。
+
+### 独占品口径（新增副业产物时必须同步这 5 处，缺一即「有捷径」）
+木器是 `type:'ingredient'` + **`category:'furniture'`**（与 `material` 区分、`CATEGORY_LABEL` 有 `furniture: '木器'`），于是**默认会被当成普通食材**，必须显式排除：
+| 处 | 文件 | 做法 |
+| --- | --- | --- |
+| 觅珍抽卡 5 池 + 素材池 | `mijianDraws.js` | `POOL_EXCLUDED_CATEGORIES = ['mineral', WOODWORK_CATEGORY]` |
+| 礼包池（鲜味食材礼包） | `gameShopPools.js` | `INGREDIENT_POOL` 过滤 |
+| 珍馐阁售卖 | `gameShopPools.js` | `DELUXE_EXCLUDED_CATEGORIES` |
+| 商队货舱 | `caravan.js` | `CARAVAN_EXCLUDE_CATEGORIES` |
+| 自动出售 | `automation.js` | `SELL_EXCLUDED_CATEGORIES` |
+**全部引用 `woodworking.js` 导出的 `WOODWORK_CATEGORY` 常量**，不要在五个地方各写 `'furniture'`。交易所是显式 allow-list（不用改）。
+C32 有断言：木器不进任何池、不进交易所/商队/自动出售。
+
+### 装潢（木器的唯一去处）
+- **`RESTAURANT_DECOR` 保持只含商店 300 件**（分类页签、`catCount`、性价比排序一行都不用改）；手工装潢只并入 **`RESTAURANT_DECOR_BY_ID`**。
+- ⚠️ **分母必须用 `DECOR_TOTAL`**（= 商店 + 手工），别再写 `RESTAURANT_DECOR.length`——否则做满 10 件手工装潢后会显示 `305/300`（`DecorView` 与 `RestaurantView` 各一处）。
+- 手工装潢带 **`craftedFrom: { itemId, qty }` 且 `price: null`**；`player.craftDecor(id)` 是唯一入口，返回 **`'ok' | 'owned' | 'denied' | 'bad'`**（`bad` = 目标不是手工装潢，防 UI 传错 id 白拿）。收入走**既有** `restaurantHourlyIncome` 的 `RESTAURANT_DECOR_BY_ID[id].effect` 求和 ⇒ **公式零改动**。
+- ⚠️ **`restaurantDecor.js` 是 `gen_restaurant_decor.mjs` 的产物**：手工装潢的 import 与 `DECOR_TOTAL` **写进生成器**，不要手改产物（手改会被下次重跑冲掉，`gen_drift_audit` 也会报「未登记的漂移」）。
+
+### 图鉴三查的 `kind:'decor'`
+`itemUses()` 对木器返回 `{ outputId: 装潢id, kind:'decor' }` —— **装潢 id 不在 `ITEMS` 里**，所以：
+- `ItemDetailModal` 对它**渲染为纯文本**（点不了，没有物品详情可跳）；
+- `item_triple_audit` 的坏链校验改为「`kind==='decor'` 则校验 `RESTAURANT_DECOR_BY_ID`，否则校验 `ITEMS`」。
+新增「产物不是物品」的用途时照这套走，别把审计放宽成「跳过」。
+
+### 顺手修掉的两个既有显示缺陷（截图核验时发现，已修勿回退）
+1. **制作页未解锁配方显示负成功率**（`successChance()` = 基础值 + 负的等级差 ⇒ 出现「成功率 -41%」）。现 `level < reqLevel` 时显示「Lv71 解锁」。
+2. **制作卡「效果」行对无效果产物恒为「原料」**。现数据驱动：有对应手工装潢的产物显示「装潢：餐厅收入 +3.4%」。
+
+### 守卫
+`system_test` **C32（24 项）**：技能实例/类型/大类/图标 · 页签分组守恒 · 木器 10 件且类别正确 + 有图片 · 配方材料为同档木材且数量 2~5 · 配方等级 Lv1,11,…,91 · **技能构造后配方零漂移** · 五处独占过滤 · 不进山海食经 · 不吃食灵经验 · 手工装潢 10 件并递增 + 索引/分母 · `craftDecor` 四种语义 + **收入真的上升** + 幂等 · 存档往返 · 图鉴三查三条 · 两条来源串可跳转 · 木材的「可用于制作」含木工 · 工会/每日/周常任务登记。
+`e2e-dark` 已补**左栏三页签扫描**（逐页只 `setView` ⇒ 副业页签在整套体检里**一次都不会被渲染**，是盲区；与「设置弹窗漏扫新页签」同一类）。**新增页签/在页签里塞内容时，记得把它纳入深色体检。**
+
 ## 🧯 「静默失效」三兄弟 + v2.1.3 用户实测 7 项（2026-09-14 立，最高优先阅读）
 
 用户实测报的 7 项里，**有 4 项是「代码/数据都在，但没有任何东西读它」的静默失效**——不报错、不白屏、既有守卫全绿，只有玩家点进去才发现。这类缺陷是守卫的盲区，故单列一节：
@@ -308,6 +360,8 @@
 - **宽表必须包 `.table-scroll`**：新页的 8 档表在 390px 下溢出 6px，被 `e2e-test` 的「手机 390px 无横向溢出」抓到——这是项目既有约定（`main.css` 的 `.table-scroll { overflow-x: auto }`）。
 
 **新增同类系统的登记清单**（缺一即 CI FAIL）：`ui.js VIEW_KEYS` → `App.vue`（async 组件 + 分支）→ `Sidebar.vue FEATURE_GROUPS` → `e2e-dark`/`e2e-text` 两个 `VIEWS` → 页面里必须有 `<RelatedPages>` → `guide.js` 的 `GUIDE_OVERVIEW`（条目名与瓦片名一致才能过派生检查）+ `GUIDE_STAGES` → `achievements.js` + `achievementProgress.js`（`NEEDS` 与 `cur` 链，id 前缀别撞现有分支）→ `StatsView` 行 → `story.js` 需求（须有对应 `storyCur` 的 `case`）→ `chronicle.js CHRONICLE_KINDS` → `itemSources.js` + `sourceJump.js`（**新来源串必须有跳转规则**）→ `system_test` 新组 → `action_sweep` 的 `ARGS`（带参动作）→ README/AGENTS/设计文档。
+
+**新增「技能」的登记清单**（与上面不同：技能没有独立页面，复用 `SkillView` 分派）：`skills/<X>Skill.js` → `registry.js` 的 `factories` → `skills.js` 的 `SKILL_DEFS` + `SKILL_ICONS` +（若是新大类）`SKILL_CATEGORIES` 的 `tab` → `Sidebar.vue` 的 `tabOfSkill`（新大类要确认落在哪个页签）→ **若 `type==='production'` 再补**：`recipeBalance.js` 的锚、`achievements.js PROD_SKILL_IDS`、`KitchenNotesView.vue PROD_SKILLS`、`AutomationView.vue PROD_SKILLS`、`itemSources.js` 的制作来源、`sourceJump.js` 跳转、`itemDetail.js SKILL_LABEL` + 类别标签、`activeEffects.js SKILL_CN`、`StoryView.vue QUIRK_SUB_NAMES` → 公会/每日/周常各一条任务 → `system_test` 的**技能总数断言**（当前 23 / 5 大类）→ `content_sync_audit` 的攻略关键词白名单。**副业产物还要过上面那 5 处独占过滤。**
 
 ## 🪓 技能 20 → 22：伐木 / 采矿与「20 档木材」（v2.7.0，2026-09-16 立）
 

@@ -358,6 +358,30 @@ test.describe('深色模式配色体检', () => {
       await page.keyboard.press('Escape')
       await page.waitForTimeout(200)
     }
+    // 左栏三个页签（技能 / 功能 / 副业）—— 2026-09-16 补：
+    // 逐页扫描只 setView，左栏会停在当时的页签上，于是「副业」页签里的内容（木工行 + 说明）
+    // 在整套体检里一次都不会被渲染 → 是盲区（与「设置弹窗漏扫新页签」同一类）。三个页签各点开扫一遍。
+    await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      // 先把上一段逐弹窗扫描留下的浮层全部显式关掉（Escape 不保证关得掉存档/签到面板），
+      // 否则 backdrop 会盖住左栏、下面点页签会一直等不到可点状态。
+      const ui = pinia._s.get('ui')
+      ui.toggleBagModal(false)
+      ui.toggleEquipModal(false)
+      ui.toggleSettingsPanel(false)
+      ui.toggleSavePanel(false)
+      ui.toggleSignIn(false)
+      ui.setView('skill')
+    })
+    await page.waitForTimeout(400)
+    const sideTabCount = await page.locator('.sidebar-tabs .sidebar-tab').count()
+    for (let ti = 0; ti < sideTabCount; ti++) {
+      await page.locator('.sidebar-tabs .sidebar-tab').nth(ti).click({ force: true })
+      await page.waitForTimeout(240)
+      const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme: 'dark', skin: 'classic' })
+      scannedTotal += r.scanned
+      for (const b of r.bad) bad.push({ page: `sidebar-tab#${ti}`, ...b })
+    }
     console.log(`扫描元素合计 ${scannedTotal}`)
     if (bad.length) console.log('深色问题明细：\n' + bad.slice(0, 25).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''}`).join('\n'))
     // 自检：扫描量太小说明页面/数据没渲染出来（守卫本身失效）

@@ -28,8 +28,8 @@ export const CARAVAN_LOSS_FLOOR = 0.75 // 最差情况：连本带利只回 75%�
 
 /** 可装载的货物类别（食材/料理/饮品/调料；排除装备、种子、食灵、矿物——它们不是「货」） */
 export const CARAVAN_CARGO_TYPES = ['ingredient', 'food', 'drink', 'spice']
-/** 排除的类别（矿物/化石/材料/补给：锻造与宝石原料，不该被当货卖掉） */
-export const CARAVAN_EXCLUDE_CATEGORIES = ['mineral', 'fossil', 'material', 'supply']
+/** 排除的类别（矿物/化石/材料/补给/木器：锻造、宝石与装潢的原料，不该被当货卖掉） */
+export const CARAVAN_EXCLUDE_CATEGORIES = ['mineral', 'fossil', 'material', 'supply', 'furniture']
 
 /**
  * 商路：**每个已考察的产地各是一条商路**，按考察费档位分远近：

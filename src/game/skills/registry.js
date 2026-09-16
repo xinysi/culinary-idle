@@ -21,6 +21,7 @@ import { SpiceMixingSkill } from './SpiceMixingSkill.js'
 import { CraftsmithingSkill } from './CraftsmithingSkill.js'
 import { WoodcuttingSkill } from './WoodcuttingSkill.js'
 import { MiningSkill } from './MiningSkill.js'
+import { WoodworkingSkill } from './WoodworkingSkill.js'
 
 const factories = {
   // §3.1 采集类（7/7 已实现；v2.7.0 新增伐木与采矿——采矿从挖掘独立而来）
@@ -38,6 +39,8 @@ const factories = {
   brewing: (player) => new BrewingSkill(player),
   spiceMixing: (player) => new SpiceMixingSkill(player),
   craftsmithing: (player) => new CraftsmithingSkill(player),
+  // §3.5 副业类（v2.9.0 新增；不吃食灵经验加成、不入山海食经）
+  woodworking: (player) => new WoodworkingSkill(player),
   // §3.3.6 食灵召唤 / §3.4 辅助类
   spiritSummoning: (player) => new SpiritSummoningSkill(player),
   gastronomy: (player) => new GastronomySkill(player),

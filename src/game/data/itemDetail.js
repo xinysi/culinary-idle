@@ -7,6 +7,7 @@ import { gemDef, socketCountOf } from './gems.js'
 import { equipSetOf } from './equipSets.js'
 import { CELLAR_CATEGORIES } from './cellar.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
+import { CRAFTED_DECOR } from './woodworking.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -19,13 +20,16 @@ export const CATEGORY_LABEL = {
   spice: '调料', spirit: '食灵', supply: '补给', tea: '茶饮', vegetable: '蔬菜', weapon: '武器', wine: '酒类',
   flower: '花卉', herb: '香草', dairy: '乳品', drinkBase: '饮品基底', legume: '豆类', spicePlant: '香料植物',
   '种植产物': '种植产物',
+  // 副业·木工的木器（v2.9.0）：与 `material`（材料）区分开，玩家一眼能看出「这是自己做的家具」
+  furniture: '木器',
   // 全物品图鉴审计（2026-09-06）补齐的类别标签（仅展示层映射）
   '主菜': '主菜', '甜点': '甜点', '汤品': '汤品', '主食': '主食',
+  '木器': '木器', // 副业·木工配方的分类（`ProductionView` 用它做配方卡标签）
 }
 export const SLOT_LABEL = { weapon: '武器', offhand: '副手', body: '身体', helmet: '头盔', amulet: '饰品1', ring: '饰品2', legs: '腿部', boots: '脚部' }
 const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击率', hpBonus: '品鉴值加成', speedBonus: '攻速提升' }
 const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速', duration: '持续' }
-const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
+const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
 const STYLE_LABEL = { knife: '刀工', plating: '摆盘', flavor: '调味' }
 
 // 属性数字统一保留两位小数（仅展示层格式化，不改底层数据/计算）
@@ -99,6 +103,13 @@ export function itemDetailLines(id) {
   // 精耕作物（v2.5.0）：农耕独占产物，两条出口都要在图鉴里写清
   if (id === 'primeCrop') {
     lines.push(['用途', '萃露炉加料（酿造时间 −40%）', '可在商店·出售页按价值 ×0.5 换金币'])
+  }
+  // 木器（v2.9.0，副业·木工独占产物）：唯一出口是做成手工装潢
+  const woodDecor = CRAFTED_DECOR.find((d) => d.craftedFrom?.itemId === id)
+  if (woodDecor) {
+    lines.push(['类型', '木器（副业·木工制作，采集与商店都拿不到）'])
+    lines.push(['用途', `做成手工装潢「${woodDecor.name}」：餐厅收入 +${woodDecor.effect}%（在「餐厅装潢」页操作，不花金币）`])
+    lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])
