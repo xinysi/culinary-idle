@@ -5231,6 +5231,18 @@ console.log('══ C34. 副业量产阶梯 ══')
   const panelSrc2 = fs.readFileSync(new URL('../../src/components/SidelineWorkPanel.vue', import.meta.url), 'utf8')
   check('量产阶梯', '作品面板真的接了阶梯（含「投入」动作与档位展示）',
     panelSrc2.includes('feedSideline(') && panelSrc2.includes('sidelineLadderTier(') && panelSrc2.includes('LADDER_TIERS'))
+  // 木工也必须有作品层（2026-09-17 用户实测报「木工这里虚线上面没显示」：
+  //  木工原先没有作品层，只剩一条悬空的虚线。现补上「木器 → 手工装潢」的就地入口，这里钉住它别再消失）
+  check('量产阶梯', '作品面板对木工也有作品层（走 craftDecor，不是 craftWork），且分隔虚线只在真有作品层时出现',
+    panelSrc2.includes('craftDecor(') && panelSrc2.includes('isWoodworking') && panelSrc2.includes('sw-ladder--sep')
+    && panelSrc2.includes("rows.length > 0"))
+  // 副业页**平铺**（2026-09-17 用户要求「副业的卡片去掉等级段分类和折叠，因为物品不多」）：
+  // 产物只有 8~10 件，按等级段切十段 + 默认全部折叠 = 每次进来都看不到东西。
+  const prodSrc = fs.readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
+  check('量产阶梯', '副业制作页走平铺（不分等级段、不折叠、隐藏快速跳转），且五支都在平铺名单里',
+    prodSrc.includes('flatMode') && prodSrc.includes('SIDELINE_LADDER_SKILL_IDS')
+    && prodSrc.includes('v-if="!flatMode"') && prodSrc.includes('flatMode || isOpen(')
+    && SIDELINE_LADDER_SKILL_IDS.length === 5)
 
   // ⑪ **比值守卫**（把「满加成后会不会平衡崩坏」变成可执行断言）：
   //    对每条轴算「满配/空配」的放大，超阈值即 FAIL —— 以后谁想把某一支偷偷调高一档，CI 直接拦住。
