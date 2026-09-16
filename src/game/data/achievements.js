@@ -25,7 +25,10 @@ import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel } from './friends.js'
 // 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
 // v2.9.0：加上副业·木工（它同样是 ProductionSkill，精通结构与其余制作类完全一致）
 // v2.10.0：再加副业四支（陶艺/编织/刺绣/蜡烛，同样是 ProductionSkill，精通结构一致）
-const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'preservation', 'spiritSummoning']
+const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles',
+  // v2.12.0 第一批：五支「干净轴」副业
+  'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft',
+  'preservation', 'spiritSummoning']
 
 /** 全部配方的精通等级列表（0~100） */
 function recipeMasteryLevels(p) {

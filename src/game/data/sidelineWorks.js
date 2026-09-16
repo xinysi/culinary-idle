@@ -29,7 +29,11 @@ import { WOODWORK_CATEGORY, WOODWORKING_RECIPES } from './woodworking.js'
  *  消费方：`gameShopPools`（礼包池 + 珍馐阁）/ `mijianDraws`（抽卡池）/ `automation`（自动出售）/
  *  `caravan`（商队货舱）。交易所是显式 allow-list，天然不含这些类别。
  *  ⚠️ 新增副业一律往这里加，别在别处再抄一份类别字符串。 */
-export const SIDELINE_ITEM_CATEGORIES = [WOODWORK_CATEGORY, 'pottery', 'textile', 'embroidery', 'candle']
+export const SIDELINE_ITEM_CATEGORIES = [
+  WOODWORK_CATEGORY, 'pottery', 'textile', 'embroidery', 'candle',
+  // v2.12.0 第一批（5 支干净轴副业）
+  'huntingGear', 'fishingGear', 'incense', 'gift', 'jade',
+]
 
 /**
  * 效果轴定义：每个副业**作品**（每件一次）贡献的那条轴。
@@ -40,6 +44,17 @@ export const SIDELINE_AXES = {
   tipPct: { label: '餐厅小费', amountLabel: (v) => `+${v}%`, perItem: 2 },
   michelinScore: { label: '米其林评分', amountLabel: (v) => `+${v} 分`, perItem: 12 },
   nightHours: { label: '夜市狂潮时长', amountLabel: (v) => `+${v} 小时`, perItem: 1 },
+  // ── v2.12.0：五支「干净轴」（每支占一条此前**没人占**的乘区，判据见文件头）──
+  /** 狩猎时**不消耗陷阱**的概率（百分点）。基础 0 ⇒ 满配约 38%。出口在 HuntingSkill 的弹药扣减与离线动作上限 */
+  huntSavePct: { label: '狩猎省箭', amountLabel: (v) => `+${v}%`, perItem: 2 },
+  /** **稀有鱼（金龙鱼）概率的绝对增量**（百分点）。基础 0.5% ⇒ 满配约 0.94%。出口在 FishingSkill 的 RARE_CHANCE */
+  rareFishPP: { label: '稀有鱼概率', amountLabel: (v) => `+${v}%`, perItem: 0.02 },
+  /** 食客订单**到访提速**（%）。基础 25~45 分钟一位 ⇒ 满配约 −27% 间隔。出口在订单生成的时间戳 */
+  orderSpeedPct: { label: '订单到访提速', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  /** **节庆加成放大**（%）：只放大 boost 中 >1 的部分，绝不放大减益。出口在 festivalBoost */
+  festivalPct: { label: '节庆加成放大', amountLabel: (v) => `+${v}%`, perItem: 1 },
+  /** **宝石镶嵌效果**（%）：乘在 gemsBonus 的合计上。出口在 player 的宝石加成读取处 */
+  gemPct: { label: '宝石镶嵌效果', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -109,6 +124,12 @@ export const SIDELINE_LADDERS = [
   { skill: 'embroidery', name: '刺绣', catLabel: '绣品', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${v}` },
   // 蜡烛：**时长**已封顶 +8h（再延就失去「时段」意义），所以阶梯给它加**倍率**
   { skill: 'candles', name: '蜡烛制作', catLabel: '蜡烛', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${v.toFixed(2)}` },
+  // ── v2.12.0 第一批：五支「干净轴」副业（阶梯每档 = 该轴的一个小增量，与作品层叠加）──
+  { skill: 'fletching', name: '制箭', catLabel: '猎具', axis: 'huntSavePct', perTier: 1.5, unit: (v) => `狩猎省箭 +${v}%` },
+  { skill: 'netmaking', name: '制网', catLabel: '渔具', axis: 'rareFishPP', perTier: 0.02, unit: (v) => `稀有鱼概率 +${v.toFixed(2)}%` },
+  { skill: 'incense', name: '香道', catLabel: '香品', axis: 'orderSpeedPct', perTier: 1, unit: (v) => `订单提速 +${v}%` },
+  { skill: 'festivalGoods', name: '年货', catLabel: '节礼', axis: 'festivalPct', perTier: 0.8, unit: (v) => `节庆放大 +${v}%` },
+  { skill: 'jadecraft', name: '玉作', catLabel: '玉器', axis: 'gemPct', perTier: 1.5, unit: (v) => `宝石效果 +${v}%` },
 ]
 
 /** 阶梯轴 → 文案（供 UI/效果总览复用） */
@@ -118,6 +139,11 @@ export const LADDER_AXIS_LABEL = {
   tipPct: '餐厅小费',
   michelinScore: '米其林招牌分',
   nightMult: '夜市狂潮倍率',
+  huntSavePct: '狩猎省箭',
+  rareFishPP: '稀有鱼概率',
+  orderSpeedPct: '订单到访提速',
+  festivalPct: '节庆加成放大',
+  gemPct: '宝石镶嵌效果',
 }
 
 /** 每支的产物（含木工）与「一件值多少点」——`feedSideline` 的唯一数据来源。
@@ -197,6 +223,89 @@ const DEFS = {
       [61, '香薰浮烛', 'bearMeat', 4, 2],
       [73, '幽蓝寒烛', 'hunting_ext_24', 4, 2],
       [85, '满福金烛', 'hunting_ext_27', 5, 2],
+    ],
+  },
+  // ── v2.12.0 第一批：五支「干净轴」副业 ──
+  // 每支占一条**目前没人占**的乘区（判据见文件头的四條硬规矩；轴的现状由 C35 的比值守卫钉住）：
+  //   制箭→狩猎省箭 · 制网→垂钓稀有鱼率 · 香道→食客订单到访提速 · 年货→节庆加成放大 · 玉作→宝石镶嵌效果
+  fletching: {
+    skill: 'fletching', name: '制箭', icon: '🏹', category: 'huntingGear', catLabel: '猎具',
+    axis: 'huntSavePct', materialNote: '箭杆用木料、箭头取矿物；做成后狩猎**更省陷阱**——离线结算按持有陷阱数封顶动作数，所以省箭直接提高离线吞吐',
+    rows: [
+      [1, '木箭', 'ironOre', 2, 2],
+      [11, '骨镞箭', 'steelOre', 2, 2],
+      [21, '铁镞箭', 'mithrilOre', 3, 2],
+      [31, '猎弓', 'adamantOre', 3, 2],
+      [41, '连弩', 'darkIronOre', 3, 2],
+      [51, '精钢猎弩', 'meteoriteOre', 4, 2],
+      [61, '追风猎弓', 'dragonScaleOre', 4, 2],
+      [71, '秘银连弩', 'giltOre', 4, 2],
+      [81, '龙筋强弓', 'excavation_ext_26', 5, 2],
+      [91, '天工神弩', 'excavation_ext_29', 5, 2],
+    ],
+  },
+  netmaking: {
+    skill: 'netmaking', name: '制网', icon: '🎣', category: 'fishingGear', catLabel: '渔具',
+    axis: 'rareFishPP', materialNote: '浮子与竿用木料、网绳取茎叶纤维；做成后**稀有鱼（金龙鱼，基础 0.5%）更容易上钩**',
+    rows: [
+      [1, '竹鱼笼', 'foraging_ext_15_young', 2, 2],
+      [11, '麻线渔网', 'foraging_ext2_19_young', 2, 2],
+      [21, '浮漂组', 'rosemary_young', 3, 2],
+      [31, '精细手竿', 'foraging_ext2_10', 3, 2],
+      [41, '撒网', 'pumpkin', 3, 2],
+      [51, '海钓大竿', 'seaweed', 4, 2],
+      [61, '拖网', 'seaweed', 4, 2],
+      [71, '龙骨鱼竿', 'seaweed', 4, 2],
+      [81, '月华渔网', 'foraging_ext_26', 5, 2],
+      [91, '太虚神网', 'foraging_ext_29', 5, 2],
+    ],
+  },
+  incense: {
+    skill: 'incense', name: '香道', icon: '🧴', category: 'incense', catLabel: '香品',
+    axis: 'orderSpeedPct', materialNote: '香骨用木料、香方取香料；做成后**食客订单到访更快**（基础 25~45 分钟一位，订单多则金币/好感/米其林三项一起涨）',
+    rows: [
+      [1, '艾草线香', 'salt', 2, 2],
+      [11, '檀香盘', 'fangfengPowder', 2, 2],
+      [21, '茉莉香丸', 'peppercorn', 3, 2],
+      [31, '龙脑香饼', 'starAnise', 3, 2],
+      [41, '沉香卧炉', 'cassia', 3, 2],
+      [51, '龙涎香篆', 'basil', 4, 2],
+      [61, '百和香囊', 'rosemary', 4, 2],
+      [71, '御用香牌', 'saffron', 4, 2],
+      [81, '瑞龙脑香', 'dragonPepper', 5, 2],
+      [91, '天香供篆', 'dragonPepper', 5, 2],
+    ],
+  },
+  festivalGoods: {
+    skill: 'festivalGoods', name: '年货', icon: '🧧', category: 'gift', catLabel: '节礼',
+    axis: 'festivalPct', materialNote: '礼盒用木料、干货取腌味年货；做成后**节庆日的加成被放大**（只放大 >1 的部分，不会放大减益）',
+    rows: [
+      [1, '春联礼帖', 'preserving_ext_02', 2, 2],
+      [11, '年糕礼盒', 'waxApplePreserve', 2, 2],
+      [21, '腊味礼篮', 'guavaJam', 3, 2],
+      [31, '蜜饯果匣', 'preserving_ext_11', 3, 2],
+      [41, '八宝年礼', 'pistachioRoast', 3, 2],
+      [51, '金华火腿礼', 'peppercornOil', 4, 2],
+      [61, '参茸礼盒', 'preserving_ext_20', 4, 2],
+      [71, '御膳节礼', 'truffleSauce', 4, 2],
+      [81, '山海献礼', 'preserving_ext_26', 5, 2],
+      [91, '太初神礼', 'preserving_ext_29', 5, 2],
+    ],
+  },
+  jadecraft: {
+    skill: 'jadecraft', name: '玉作', icon: '🔮', category: 'jade', catLabel: '玉器',
+    axis: 'gemPct', materialNote: '磨盘与架用木料、玉料取贝玉珍珠；做成后**宝石镶嵌的效果更强**',
+    rows: [
+      [1, '磨石', 'carp', 2, 2],
+      [11, '贝壳扣', 'salmon', 2, 2],
+      [21, '螺钿片', 'tuna', 3, 2],
+      [31, '玉髓珠', 'eel', 3, 2],
+      [41, '珍珠镶', 'lobster', 3, 2],
+      [51, '青玉摆件', 'crab', 4, 2],
+      [61, '玛瑙串', 'abalone', 4, 2],
+      [71, '翡翠佩', 'seaCucumber', 4, 2],
+      [81, '月华宝鉴', 'bluefin', 5, 2],
+      [91, '太虚璧', 'grouper', 5, 2],
     ],
   },
 }

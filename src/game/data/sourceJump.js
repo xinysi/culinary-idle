@@ -48,6 +48,12 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['编织'], target: { view: 'skill', skill: 'weaving' } },
   { kw: ['刺绣'], target: { view: 'skill', skill: 'embroidery' } },
   { kw: ['蜡烛'], target: { view: 'skill', skill: 'candles' } },
+  // v2.12.0 第一批：五支「干净轴」副业
+  { kw: ['制箭'], target: { view: 'skill', skill: 'fletching' } },
+  { kw: ['制网'], target: { view: 'skill', skill: 'netmaking' } },
+  { kw: ['香道'], target: { view: 'skill', skill: 'incense' } },
+  { kw: ['年货'], target: { view: 'skill', skill: 'festivalGoods' } },
+  { kw: ['玉作'], target: { view: 'skill', skill: 'jadecraft' } },
   { kw: ['餐厅装潢', '装潢'], target: { view: 'decor' } },
   { kw: ['保鲜'], target: { view: 'skill', skill: 'preservation' } },
   { kw: ['探索'], target: { view: 'skill', skill: 'exploration' } },

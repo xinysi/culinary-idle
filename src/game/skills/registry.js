@@ -22,7 +22,7 @@ import { CraftsmithingSkill } from './CraftsmithingSkill.js'
 import { WoodcuttingSkill } from './WoodcuttingSkill.js'
 import { MiningSkill } from './MiningSkill.js'
 import { WoodworkingSkill } from './WoodworkingSkill.js'
-import { PotterySkill, WeavingSkill, EmbroiderySkill, CandleMakingSkill } from './SidelineSkills.js'
+import { PotterySkill, WeavingSkill, EmbroiderySkill, CandleMakingSkill, FletchingSkill, NetmakingSkill, IncenseSkill, FestivalGoodsSkill, JadecraftSkill } from './SidelineSkills.js'
 
 const factories = {
   // §3.1 采集类（7/7 已实现；v2.7.0 新增伐木与采矿——采矿从挖掘独立而来）
@@ -47,6 +47,12 @@ const factories = {
   weaving: (player) => new WeavingSkill(player),
   embroidery: (player) => new EmbroiderySkill(player),
   candles: (player) => new CandleMakingSkill(player),
+  // v2.12.0 第一批：五支「干净轴」副业
+  fletching: (player) => new FletchingSkill(player),
+  netmaking: (player) => new NetmakingSkill(player),
+  incense: (player) => new IncenseSkill(player),
+  festivalGoods: (player) => new FestivalGoodsSkill(player),
+  jadecraft: (player) => new JadecraftSkill(player),
   // §3.3.6 食灵召唤 / §3.4 辅助类
   spiritSummoning: (player) => new SpiritSummoningSkill(player),
   gastronomy: (player) => new GastronomySkill(player),

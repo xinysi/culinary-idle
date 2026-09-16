@@ -29,9 +29,16 @@ export class HuntingSkill extends GatheringSkill {
     super('hunting', player, [...HUNTING_TARGETS, ...GATHERING_EXT.hunting, ...GATHERING_EXT2.hunting], { ammoItemId: 'trap' })
   }
 
+  /** 副业·制箭：**不消耗陷阱**的概率（0~0.9，封顶防「永不耗箭」）——只读累计产出，绝不读技能等级 */
+  get ammoSaveChance() {
+    const pct = this.player.sidelineEffectTotal?.('huntSavePct') ?? 0
+    return Math.max(0, Math.min(0.9, pct / 100))
+  }
+
   performAction(target) {
     this.actionsDone++
-    if (this.ammoItemId) this.player.spendItem(this.ammoItemId, this.ammoPerAction)
+    // 省箭时本次不扣陷阱（制箭每件 +2%、量产阶梯每档 +1.5%）
+    if (this.ammoItemId && Math.random() >= this.ammoSaveChance) this.player.spendItem(this.ammoItemId, this.ammoPerAction)
 
     const doubled = Math.random() < this.doubleChance(target)
     const qty = this.yieldQuantity(doubled ? 2 : 1)
@@ -58,17 +65,21 @@ export class HuntingSkill extends GatheringSkill {
     })
   }
 
-  /** 离线结算：动作数受持有陷阱数量约束，返回 consumed 供启动时扣减 */
+  /** 离线结算：动作数受持有陷阱数量约束（**制箭省箭会放宽这个上限**），返回 consumed 供启动时扣减 */
   computeOffline(durationMs, efficiency) {
     const result = super.computeOffline(durationMs, efficiency)
     if (!result) return null
     const traps = this.player.inventory.trap ?? 0
-    const actions = Math.min(result.actions, traps)
+    const save = this.ammoSaveChance
+    // 省箭 ⇒ 同样的陷阱能支撑更多次动作（每件 +2% 概率不耗 ⇒ 期望耗箭 = 动作数 ×(1−save)）
+    const usable = Math.floor(save > 0 ? traps / (1 - save) : traps)
+    const actions = Math.min(result.actions, usable)
     if (actions <= 0) return null
     const exp = actions * (result.exp / result.actions)
     const items = {}
     const expectedQty = Math.round(actions * this.expectedYield()) // 与在线同源（含精通保底产量/产量加成）
     if (expectedQty > 0) items[this.currentTarget.itemId] = expectedQty
-    return { actions, exp: Math.floor(exp), xpMult: result.xpMult ?? 1, items, consumed: { trap: actions } }
+    const consumedTraps = Math.max(1, Math.round(actions * (1 - save)))
+    return { actions, exp: Math.floor(exp), xpMult: result.xpMult ?? 1, items, consumed: { trap: consumedTraps } }
   }
 }

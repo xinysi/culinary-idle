@@ -48,6 +48,12 @@ export const SKILL_DEFS = {
   weaving: { id: 'weaving', name: '编织', category: 'sideline', desc: '竹木条与茎叶编成织物，提升餐厅小费' },
   embroidery: { id: 'embroidery', name: '刺绣', category: 'sideline', desc: '木料与果染绣成绣品，进米其林「招牌绣屏」评分' },
   candles: { id: 'candles', name: '蜡烛制作', category: 'sideline', desc: '木料与动物脂熬制蜡烛，延长夜市狂潮的营业时段' },
+  // v2.12.0 第一批：五支「干净轴」副业（每支占一条此前**没人占**的乘区）
+  fletching: { id: 'fletching', name: '制箭', category: 'sideline', desc: '木料与矿物做猎具，让狩猎更省陷阱（离线结算按陷阱数封顶动作数，省箭 = 提高离线吞吐）' },
+  netmaking: { id: 'netmaking', name: '制网', category: 'sideline', desc: '木料与茎叶纤维做渔具，让稀有鱼（金龙鱼）更容易上钩' },
+  incense: { id: 'incense', name: '香道', category: 'sideline', desc: '木料与香料做香品，让食客订单到访更快' },
+  festivalGoods: { id: 'festivalGoods', name: '年货', category: 'sideline', desc: '木料与腌味年货做节礼，放大节庆日的加成' },
+  jadecraft: { id: 'jadecraft', name: '玉作', category: 'sideline', desc: '木料与贝玉做玉器，增强宝石镶嵌的效果' },
 }
 
 /**
@@ -77,6 +83,7 @@ const SKILL_ICONS = {
   knife: '🔪', heatControl: '🔥', flavorArtistry: '✨', plating: '🍽️', tasteAcumen: '❤️', spiritSummoning: '👻',
   gastronomy: '📜', preservation: '❄️', exploration: '🕵️',
   woodworking: '🪚', pottery: '🏺', weaving: '🧶', embroidery: '🪡', candles: '🕯️',
+  fletching: '🏹', netmaking: '🎣', incense: '🧴', festivalGoods: '🧧', jadecraft: '🔮',
 }
 for (const [id, icon] of Object.entries(SKILL_ICONS)) {
   if (SKILL_DEFS[id]) SKILL_DEFS[id].icon = icon

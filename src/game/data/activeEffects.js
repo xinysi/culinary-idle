@@ -52,6 +52,7 @@ export const SKILL_CN = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕',
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配',
   craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
+  fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
   knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
   plating: '摆盘技巧', tasteAcumen: '品鉴力', spiritSummoning: '食灵召唤', gastronomy: '美食知识',
   preservation: '食材保鲜', exploration: '美食探索',
@@ -486,6 +487,48 @@ export const EFFECT_ROWS = [
       const v = p.sidelineLadderTotal?.('decorPct') ?? 0
       if (!v) return off('还没把多余木器投入量产阶梯——每档装潢加成 +2%')
       return { on: true, text: `装潢加成 ${pct(v)}（加在商店+手工装潢的合计上）` }
+    },
+  },
+
+  // ── v2.12.0 第一批：五支「干净轴」副业（每支占一条此前没人占的乘区）──
+  {
+    id: 'fletchingAmmo', group: 'gather', icon: '🏹', name: '制箭·狩猎省箭', kind: 'buff', src: '副业·制箭', view: 'skill:fletching',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('huntSavePct') ?? 0
+      if (!v) return off('还没把猎具做成作品、也没投入量产阶梯——每件 +2% 概率不消耗陷阱、每档 +1.5%')
+      return { on: true, text: `狩猎有 ${pct(v)} 概率不消耗陷阱（离线结算按陷阱数封顶动作数，省箭 = 提高离线吞吐）` }
+    },
+  },
+  {
+    id: 'netmakingRare', group: 'gather', icon: '🎣', name: '制网·稀有鱼概率', kind: 'buff', src: '副业·制网', view: 'skill:netmaking',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('rareFishPP') ?? 0
+      if (!v) return off('还没把渔具做成作品、也没投入量产阶梯——每件 +0.02%、每档 +0.02%')
+      return { on: true, text: `稀有鱼（金龙鱼）概率 ${n1(0.5 + v)}%（基础 0.5%，在线与离线同源）` }
+    },
+  },
+  {
+    id: 'incenseOrderSpeed', group: 'income', icon: '🧴', name: '香道·订单到访提速', kind: 'buff', src: '副业·香道', view: 'skill:incense',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('orderSpeedPct') ?? 0
+      if (!v) return off('还没把香品做成作品、也没投入量产阶梯——每件 +1.5%、每档 +1%')
+      return { on: true, text: `食客订单到访间隔 ${pct(-v)}（基础 25~45 分钟一位；订单多则金币/好感/米其林一起涨）` }
+    },
+  },
+  {
+    id: 'festivalGoodsBoost', group: 'global', icon: '🧧', name: '年货·节庆加成放大', kind: 'buff', src: '副业·年货', view: 'skill:festivalGoods',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('festivalPct') ?? 0
+      if (!v) return off('还没把节礼做成作品、也没投入量产阶梯——每件 +1%、每档 +0.8%')
+      return { on: true, text: `节庆日的增益 ${pct(v)}（只放大 >1 的部分，不会放大减益）` }
+    },
+  },
+  {
+    id: 'jadecraftGem', group: 'combat', icon: '🔮', name: '玉作·宝石镶嵌效果', kind: 'buff', src: '副业·玉作', view: 'skill:jadecraft',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('gemPct') ?? 0
+      if (!v) return off('还没把玉器做成作品、也没投入量产阶梯——每件 +1.5%、每档 +1.5%')
+      return { on: true, text: `宝石镶嵌的合计效果 ${pct(v)}（乘在 gemsBonus 的合计上）` }
     },
   },
   {

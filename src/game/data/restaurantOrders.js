@@ -13,8 +13,14 @@ export const ORDER_MAX_MS = 45 * 60_000
 export const ORDER_TTL_MS = 60 * 60_000 // 订单有效期 60 分钟
 export const MAX_ORDERS = 3
 
-export function nextOrderDelay() {
-  return ORDER_MIN_MS + Math.random() * (ORDER_MAX_MS - ORDER_MIN_MS)
+/**
+ * 下一单的到访延迟。`speedPct` = 副业·香道的「订单到访提速」（%，0~40 夹取）——
+ * 只缩短间隔、不改订单本身（赏金/有效期/上限都不动），所以不会放大单笔收益。
+ */
+export function nextOrderDelay(speedPct = 0) {
+  const raw = ORDER_MIN_MS + Math.random() * (ORDER_MAX_MS - ORDER_MIN_MS)
+  const speed = Math.max(0, Math.min(40, speedPct || 0))
+  return raw / (1 + speed / 100)
 }
 
 /**

@@ -44,11 +44,17 @@ export class FishingSkill extends GatheringSkill {
     return Math.min(base + accPct / 100, 0.99)
   }
 
+  /** 副业·制网：稀有鱼（金龙鱼）的**实际**概率 = 基础 0.5% + 渔具加成（封顶 5%，即 10×） */
+  get rareChance() {
+    const pp = (this.player.sidelineEffectTotal?.('rareFishPP') ?? 0) / 100
+    return Math.max(0, Math.min(0.05, RARE_CHANCE + pp))
+  }
+
   performAction(target) {
     this.actionsDone++
     if (Math.random() < this.successChance(target)) {
       // 稀有鱼：替换本次产出
-      if (Math.random() < RARE_CHANCE) {
+      if (Math.random() < this.rareChance) {
         this.player.gainItem(RARE_FISH_ID, 1)
         this.player.addMastery(this.id, target.itemId, 1)
         const expGained = this.addCardXp(target.xpPerAction * 2, masteryXpMultiplier(this.masteryLevel(target)))
@@ -103,7 +109,7 @@ export class FishingSkill extends GatheringSkill {
 
     const rate = this.successChance(target)
     const ok = Math.round(actions * rate)
-    const rare = Math.round(ok * RARE_CHANCE)
+    const rare = Math.round(ok * this.rareChance)
     const normal = ok - rare
     const exp = Math.floor(normal * target.xpPerAction + (actions - ok) * target.xpPerAction * FAIL_XP_RATIO)
 
