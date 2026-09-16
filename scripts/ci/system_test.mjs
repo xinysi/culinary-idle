@@ -5,10 +5,20 @@
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
 import { MIJIAN_POOLS, poolItems } from '../../src/game/data/mijianDraws.js'
-import { DAILY_POOL, WEEKLY_POOL } from '../../src/game/data/dailyTasks.js'
+import { DAILY_POOL, WEEKLY_POOL, DAILY_BONUS } from '../../src/game/data/dailyTasks.js'
 import { GUILDS } from '../../src/game/data/guilds.js'
 import { SKILL_DEFS } from '../../src/game/data/skills.js'
 import { QUIRKS } from '../../src/game/data/tales_ext.js'
+import { deluxeSellable } from '../../src/game/data/gameShopPools.js'
+import { materialFoodItems } from '../../src/game/data/mijianDraws.js'
+import { SEED_MAP } from '../../src/game/data/farmSeeds.js'
+import { STAGE_INFO } from '../../src/game/data/spiritStories.js'
+import { GEAR_RANKS } from '../../src/game/data/gearContest.js'
+import { TRIALS } from '../../src/game/data/trials.js'
+import { CHALLENGES } from '../../src/game/data/weeklyChallenge.js'
+import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../../src/game/data/combat.js'
+import { GUILD_SHOP } from '../../src/game/data/guilds.js'
+import { sourceIds } from '../../src/game/data/itemSources.js'
 import { SELL_EXCLUDED_CATEGORIES } from '../../src/game/data/automation.js'
 import { EXCHANGE_POOL_CATEGORIES } from '../../src/game/data/exchange.js'
 import { INGREDIENT_POOL } from '../../src/game/data/gameShopPools.js'
@@ -22,7 +32,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { Combat } from '../../src/game/combat/Combat.js'
-import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../../src/game/data/combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel, masteryXpMultiplier, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
@@ -4634,6 +4643,76 @@ console.log('== C30. 新技能内容适配 ==')
   check('内容适配', `挖掘轶事 ${exTales.length} 条里不再有矿物 param`, exTales.length === 200 && exTales.every((q) => !MINING_IDS.has(q.unlock.param)))
   check('内容适配', `采矿轶事 ${miTales.length} 条覆盖矿物（含盐矿/同名矿）`, miTales.length === 200 && miTales.some((q) => q.unlock.param === 'saltOre') && miTales.some((q) => q.unlock.param === 'steelOre'))
   check('内容适配', '旧的「矿物轶事补记旧键」兼容补丁已删除（挖掘轶事不再含矿物 → 无需补记）', !fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8').includes('LEGACY_EXCAVATION_MINERALS'))
+}
+
+
+// ── C31. 图鉴「获取来源」完整性（v2.8.1：全量比对发现 ≥20 个系统从没登记过，全补）──
+// 这一节把「能把物品给到玩家的系统」逐个钉住：它的物品集合必须都能在对应关键词的来源里找到。
+console.log('== C31. 图鉴来源完整性 ==')
+{
+  const ids = sourceIds()
+  const has = (id, kw) => itemSources(id).some((x) => x.includes(kw))
+
+  // ① 按数据驱动的系统逐个核对（每条都是「该系统能给的所有物品都必须有对应来源串」）
+  const checks = []
+  checks.push(['珍馐阁', Object.values(ITEMS).filter(deluxeSellable).map((it) => it.id), '珍馐阁'])
+  checks.push(['公会商店', GUILD_SHOP.map((g) => g.itemId), '公会商店'])
+  checks.push(['区域对手掉落', [...new Set(COMBAT_REGIONS.flatMap((r) => (r.opponents ?? []).flatMap((o) => (o.drops ?? []).map((d) => d.itemId))))], '区域对手'])
+  checks.push(['每日任务奖励', DAILY_POOL.flatMap((t) => Object.keys(t.items ?? {})), '每日任务'])
+  checks.push(['周常任务奖励', WEEKLY_POOL.flatMap((t) => Object.keys(t.items ?? {})), '周常任务'])
+  checks.push(['每日全清礼包', Object.keys(DAILY_BONUS.items ?? {}), '每日任务全清'])
+  checks.push(['每周挑战赛', CHALLENGES.flatMap((c) => Object.keys(c.items ?? {})), '每周挑战赛'])
+  checks.push(['厨神试炼', TRIALS.flatMap((t) => Object.keys(t.reward?.items ?? {})), '厨神试炼'])
+  checks.push(['厨具大赛', GEAR_RANKS.flatMap((r) => Object.keys(r.items ?? {})), '厨具大赛'])
+  checks.push(['风味搭配', FLAVOR_PAIRS.flatMap((x) => Object.keys(x.reward?.items ?? {})), '风味搭配'])
+  checks.push(['食灵物语', Object.values(STAGE_INFO).flatMap((x) => Object.keys(x.reward?.items ?? {})), '食灵物语'])
+  checks.push(['采集/挖掘附产种子', Object.values(SEED_MAP).filter(Boolean), '附产物（10%）'])
+  const miss = []
+  for (const [name, list, kw] of checks) {
+    for (const id of new Set(list)) if (id && !has(id, kw)) miss.push(`${name}:${id}`)
+  }
+  check('来源完整性', `${checks.length} 个「此前未登记」的系统，其全部物品都有对应来源串`, miss.length === 0, miss.slice(0, 6).join(' '))
+
+  // ② 觅珍：三池 + 混池 + 限时池（混池/限时池 v2.8.1 才补上）
+  const mixMiss = [...materialFoodItems(60), ...materialFoodItems(150)].filter((it) => !has(it.id, '觅珍'))
+  check('来源完整性', '觅珍混池/限时池的非装备分支成员都有「觅珍·…（抽卡）」来源', mixMiss.length === 0, mixMiss.slice(0, 5).map((i) => i.id).join(' '))
+
+  // ③ 交易所：登记集合必须与「运行时按 value 筛出的货池」完全一致（惰性登记不变量）
+  const pool = Object.values(ITEMS).filter((it) => it.type === 'ingredient' && EXCHANGE_POOL_CATEGORIES.includes(it.category) && (it.value ?? 0) >= 20 && (it.value ?? 0) <= 300)
+  const exMiss = pool.filter((it) => !has(it.id, '交易所'))
+  const exFake = ids.filter((id) => has(id, '交易所') && !pool.some((it) => it.id === id))
+  check('来源完整性', '交易所：登记集合与运行时货池完全一致（惰性登记 + 版本失效）', exMiss.length === 0 && exFake.length === 0, `缺 ${exMiss.length} / 假 ${exFake.length}`)
+
+  // ④ 任何物品的来源串都不重复（本轮实测有 78 件重复显示两遍 → add() 已去重）
+  const dups = []
+  for (const id of ids) {
+    const list = itemSources(id)
+    if (new Set(list).size !== list.length) dups.push(id)
+  }
+  check('来源完整性', '全部物品的来源串无重复（add() 去重不变量）', dups.length === 0, dups.slice(0, 5).join(' '))
+
+  // ⑤ 登记的是真实物品：SOURCES 的键必须都在 ITEMS 里，**唯一例外是已知的幽灵炼金配方产物**
+  const ghosts = new Set(ALCHEMY_RECIPES.map((r) => r.out))
+  const bad = ids.filter((id) => !ITEMS[id] && !ghosts.has(id))
+  check('来源完整性', '来源索引只登记真实物品（幽灵炼金产物为已知白名单例外）', bad.length === 0, bad.slice(0, 5).join(' '))
+
+  // ⑥ 珍馐阁不得售卖「产线独占品」：蜂蜜/菌灵露/精耕作物/加工品只能来自各自的产线
+  const exclusive = [
+    ...HONEY_TIERS.map((h) => h.id), ...ESSENCE_TIERS.map((e) => e.id), PRIME_CROP_ID,
+    ...GOODS_ITEMS.map((g) => g.id),
+  ]
+  const soldExclusive = exclusive.filter((id) => deluxeSellable(ITEMS[id]))
+  const claimedExclusive = exclusive.filter((id) => has(id, '珍馐阁'))
+  check('来源完整性', `珍馐阁不售卖 ${exclusive.length} 件产线独占品（蜂蜜/菌灵露/精耕作物/加工品）`, soldExclusive.length === 0 && claimedExclusive.length === 0, `在售 ${soldExclusive.length} / 误登记 ${claimedExclusive.length}`)
+  check('来源完整性', '珍馐阁的售卖口径是单一来源（视图与图鉴登记共用 deluxeSellable）', (() => {
+    const view = fs.readFileSync(new URL('../../src/views/ZhenXiuView.vue', import.meta.url), 'utf8')
+    const src = fs.readFileSync(new URL('../../src/game/data/itemSources.js', import.meta.url), 'utf8')
+    return view.includes('deluxeSellable(') && src.includes('deluxeSellable(')
+  })())
+
+  // ⑦ 木材/矿石：至少要有「采集 + 一个下游系统」两类来源（防止将来又退回只剩一两种）
+  const woodOk = ['pineWood', 'elmWood', 'glazeWood', 'primalWood'].every((id) => itemSources(id).some((x) => x.includes('伐木')) && itemSources(id).some((x) => x.includes('珍馐阁')))
+  check('来源完整性', '木材既有「伐木获得」也有下游来源（珍馐阁）——不再是孤零零一两种', woodOk)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

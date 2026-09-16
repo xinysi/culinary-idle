@@ -13,6 +13,17 @@ export const SPICE_POOL = Object.values(ITEMS).filter((i) => i.type === 'spice')
 export const MINERAL_POOL = Object.values(ITEMS)
   .filter((i) => i.category === 'mineral' || /矿|Ore|fossil/.test((i.name ?? '') + i.id))
   .map((i) => i.id)
+/**
+ * 珍馐阁（金币应急购买）的售卖口径 —— **单一来源**，视图与图鉴来源登记共用。
+ * 除装备/食灵外，还要**排除「产线独占品」**（类别 buff / supply）：
+ * 蜂蜜只能来自温室蜂场、菌灵露只能来自萃露炉、精耕作物只能来自农耕、加工品只能来自牧场/网箱 ——
+ * 金币商店若能直接买到它们，等于绕过整条产线，图鉴的「获取来源」也会因此说谎。
+ * （v2.8.1 实测踩到：登记珍馐阁时才发现商店一直在卖 8 档蜂蜜与 8 档菌灵露。）
+ */
+export const DELUXE_EXCLUDED_CATEGORIES = ['buff', 'supply']
+export const deluxeSellable = (it) =>
+  !!it && it.type !== 'equipment' && it.type !== 'spirit' && !DELUXE_EXCLUDED_CATEGORIES.includes(it.category)
+
 // 普通食材（鲜味食材礼包，不含稀有与矿物）
 export const INGREDIENT_POOL = Object.values(ITEMS)
   // v2.7.4：排除 material（含 20 档木材）——与交易所货池/商队货/自动出售同一口径，
