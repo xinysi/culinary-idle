@@ -6,6 +6,7 @@ import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { ITEMS, getItem } from '../game/data/items.js'
+import { deluxeSellable } from '../game/data/gameShopPools.js'
 import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
 import QuantityModal from '../components/QuantityModal.vue'
@@ -45,7 +46,8 @@ function canAfford(id) {
 
 const goods = computed(() =>
   Object.entries(ITEMS)
-    .filter(([, it]) => it && it.type !== 'equipment' && it.type !== 'spirit')
+    // v2.8.1：改用与图鉴来源登记同源的售卖口径（排除装备/食灵 + 产线独占的 buff/supply 类目）
+    .filter(([, it]) => deluxeSellable(it))
     .filter(([, it]) => cat.value === 'all' || it.type === cat.value)
     .filter(([id, it]) => !q.value.trim() || it.name.includes(q.value.trim()) || id.includes(q.value.trim().toLowerCase()))
     .sort((a, b) => (getItem(b[0])?.tier ?? 0) - (getItem(a[0])?.tier ?? 0) || (getItem(b[0])?.value ?? 0) - (getItem(a[0])?.value ?? 0))

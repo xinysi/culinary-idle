@@ -7,6 +7,26 @@
 
 /** 判定顺序敏感：越具体的规则要越靠前（如「游戏商店」须先于「商店」） */
 export const SOURCE_JUMP_RULES = [
+  // v2.8.1：新登记系统（越具体越靠前；顺序敏感）
+  { kw: ['珍馐阁'], target: { view: 'deluxe' } },
+  { kw: ['公会商店'], target: { view: 'guild' } },
+  { kw: ['区域对手'], target: { view: 'skill', skill: 'knife' } },
+  { kw: ['每日签到'], target: { view: 'today' } },
+  { kw: ['周常任务', '每日任务'], target: { view: 'quests' } },
+  { kw: ['每周挑战赛'], target: { view: 'quests' } },
+  { kw: ['无尽挑战塔'], target: { view: 'tower' } },
+  { kw: ['食神秘境'], target: { view: 'realm' } },
+  { kw: ['厨神试炼'], target: { view: 'trials' } },
+  { kw: ['厨具大赛'], target: { view: 'gearContest' } },
+  { kw: ['风味搭配'], target: { view: 'flavorBook' } },
+  { kw: ['同业竞争榜'], target: { view: 'rivals' } },
+  { kw: ['食灵物语'], target: { view: 'spiritStories' } },
+  { kw: ['常客'], target: { view: 'regulars' } },
+  { kw: ['美食评论家'], target: { view: 'restaurant' } },
+  { kw: ['宴会承办'], target: { view: 'banquet' } },
+  { kw: ['美食节'], target: { view: 'fest' } },
+  { kw: ['锻造套装'], target: { view: 'gear' } },
+  { kw: ['卡牌对战'], target: { view: 'cards' } },
   { kw: ['采摘'], target: { view: 'skill', skill: 'foraging' } },
   { kw: ['垂钓'], target: { view: 'skill', skill: 'fishing' } },
   { kw: ['狩猎'], target: { view: 'skill', skill: 'hunting' } },

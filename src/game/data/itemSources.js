@@ -1,6 +1,5 @@
 // 物品获取来源索引 — 图鉴悬浮详情用
 // 运行时反查：采集目标/制作食谱/农耕/商店/探索/赛季/BOSS掉落/食灵契约/成就/任务/附产物
-import { FORAGING_TARGETS } from '../skills/ForagingSkill.js'
 import { FISHING_TARGETS } from '../skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../skills/HuntingSkill.js'
 import { isMineralTarget, EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../skills/ExcavationSkill.js'
@@ -19,7 +18,7 @@ import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '.
 import { SHOP_ITEMS } from './shop.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { getItem, ITEMS } from './items.js'
-import { MIJIAN_POOLS, poolItems, mijianPoolVersion } from './mijianDraws.js'
+import { MIJIAN_POOLS, poolItems, materialFoodItems, mijianPoolVersion } from './mijianDraws.js'
 import { ENCOUNTERS } from './encounters.js'
 import { COMBAT_BOSSES } from './combat.js'
 import { SEASONS } from './seasons.js'
@@ -27,7 +26,7 @@ import { seasonTiers } from './seasonContent.js'
 import { SPIRITS } from './spiritTiers.js'
 import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { QUESTS } from './quests.js'
-import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL } from './gameShopPools.js'
+import { RARE_POOL, SEED_POOL, INGREDIENT_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL, deluxeSellable } from './gameShopPools.js'
 import { EXPEDITIONS } from './expeditions.js'
 import { RANCH_ANIMALS } from './ranch.js'
 import { HONEY_TIERS } from './honey.js'
@@ -42,11 +41,24 @@ import { REGIONS } from './regions.js'
 import { MASCOTS } from './mascots.js'
 import { CHEFS, chefReward } from './chefChallenges.js'
 import { CODEX_REWARDS } from './codexShop.js'
+// v2.8.1 补登记所需
+import { GUILD_SHOP } from './guilds.js'
+import { COMBAT_REGIONS } from './combat.js'
+import { DAILY_POOL, WEEKLY_POOL, DAILY_BONUS } from './dailyTasks.js'
+import { SEED_MAP } from './farmSeeds.js'
+import { FORAGING_TARGETS } from '../skills/ForagingSkill.js'
+import { TRIALS } from './trials.js'
+import { GEAR_RANKS } from './gearContest.js'
+import { FLAVOR_PAIRS } from './flavorPairs.js'
+import { STAGE_INFO } from './spiritStories.js'
+import { CHALLENGES } from './weeklyChallenge.js'
 
 const SOURCES = {}
 const add = (id, src) => {
   if (!id) return
-  ;(SOURCES[id] ??= []).push(src)
+  const list = (SOURCES[id] ??= [])
+  // 去重：同一串只登记一次（多个循环/多条路径可能给出完全相同的串，实测有 78 件重复显示两遍）
+  if (!list.includes(src)) list.push(src)
 }
 
 // 采集（基础 + 扩充）
@@ -148,19 +160,33 @@ add('pheasantEgg', '狩猎野鸡附产物（15%）')
 //    现改为**直接复用池函数** `poolItems()`，登记侧与判定侧永远同源（`mijianDraws.js` 是唯一真身）。
 // 惰性登记（见下方 ensureMijianSources）：池子按 value 筛成员，而 value 会被 `applyValueBalance()` 改，
 // 所以这份登记**不能**在模块加载期算一次就算完——那会让结果取决于 import 顺序（实测踩过）。
-let _mijianRegisteredVersion = -1
-function ensureMijianSources() {
+let _dynRegisteredVersion = -1
+const DYN_PREFIXES = ['觅珍·', '交易所（行情买入）']
+/** 「按 value 筛选」的来源（交易所货池 / 觅珍各池）必须**惰性 + 版本感知**：
+ *  value 会被 applyValueBalance() 改，而它在收尾时会 bump 池版本号（resetMijianPoolCache）。 */
+function ensureDynamicSources() {
   const v = mijianPoolVersion()
-  if (v === _mijianRegisteredVersion) return
+  if (v === _dynRegisteredVersion) return
   for (const id of Object.keys(SOURCES)) {
-    const kept = SOURCES[id].filter((x) => !x.startsWith('觅珍·'))
+    const kept = SOURCES[id].filter((x) => !DYN_PREFIXES.some((p) => x.startsWith(p)))
     if (kept.length !== SOURCES[id].length) SOURCES[id] = kept
   }
+  // ① 交易所货池（与 exchange.js 的 pickGoods 同口径）
+  for (const it of Object.values(ITEMS)) {
+    if (it.type !== 'ingredient' || !EXCHANGE_POOL_CATEGORIES.includes(it.category)) continue
+    if ((it.value ?? 0) < 20 || (it.value ?? 0) > 300) continue
+    add(it.id, '交易所（行情买入）')
+  }
+  // ② 觅珍：普通三池 + 混池/限时池的「非装备分支」
+  //    （v2.8.1 补：混池/限时池此前完全没登记，而它们能给出 materialFoodItems(60/150) 的材料，
+  //     含 oakWood / ironwoodTimber / bogWood 等木材）
   for (const p of MIJIAN_POOLS) {
-    if (p.id === 'mix' || p.id === 'limited') continue // 混池/限时池是「按权重混合」的组合池，不逐件登记
+    if (p.id === 'mix' || p.id === 'limited') continue
     for (const it of poolItems(p.id)) add(it.id, `觅珍·${p.name}（抽卡）`)
   }
-  _mijianRegisteredVersion = v
+  for (const it of materialFoodItems(60)) add(it.id, '觅珍·混池（抽卡）')
+  for (const it of materialFoodItems(150)) add(it.id, '觅珍·限时池（抽卡）')
+  _dynRegisteredVersion = v
 }
 
 // 游戏商店（2026-09-09 小游戏游戏币商店）：礼包/盲盒/种子袋随机获取（池定义与商店发货共用 gameShopPools）
@@ -211,11 +237,9 @@ for (const e of ESSENCE_TIERS) {
 }
 
 // 交易所（2026-09-10）：可买入的货品池（按类别与价值区间动态轮换）
-for (const it of Object.values(ITEMS)) {
-  if (it.type !== 'ingredient' || !EXCHANGE_POOL_CATEGORIES.includes(it.category)) continue
-  if ((it.value ?? 0) < 20 || (it.value ?? 0) > 300) continue
-  add(it.id, '交易所（行情买入）')
-}
+// ⚠️ 与觅珍同一个坑：这个池按 value 筛（20~300），而 value 会被 applyValueBalance() 改 ——
+//    在模块加载期算一次会让结果取决于 import 顺序（实测：平衡后有 5 件能买却没登记 = 假缺失）。
+//    故改为惰性登记 + 版本感知（见下面的 ensureDynamicSources）。
 
 // 产地与风土（2026-09-12 补录）：把采集队线路派驻到产地后，该产地物资箱物品会混入产出。
 // 此前产地从未登记为来源——玩家在图鉴里看不到「这里也能产出它」，也点不进去（sourceJump 同步补了跳转）。
@@ -236,6 +260,62 @@ for (const c of CHEFS) {
 }
 add('mysterySpice', '名厨挑战对手掉落（25%）')
 
+// ══ v2.8.1 补登记：此前**完全没有**来源索引的系统（全量比对发现 ≥20 个）══
+
+// 珍馐阁（金币应急购买，价值 ×2.2；除装备/食灵外全部在售，含 20 档木材与 43 种矿）
+// ⚠️ 串里不写具体价格：价格由 item.value 推导，而 value 会被 applyValueBalance() 改。
+for (const [id, it] of Object.entries(ITEMS)) {
+  if (!deluxeSellable(it)) continue
+  add(id, '珍馐阁购买（价值×2.2 金币）')
+}
+
+// 公会商店（公会点数兑换，清单见 guilds.js 的 GUILD_SHOP）
+for (const g of GUILD_SHOP) add(g.itemId, `公会商店购买（${g.cost} 公会点数）`)
+
+// 区域对手掉落（对决区域内的普通对手；BOSS 另有上面的「首领掉落」）
+for (const r of COMBAT_REGIONS) {
+  for (const o of r.opponents ?? []) {
+    for (const d of o.drops ?? []) add(d.itemId, `区域对手「${o.name}」掉落`)
+  }
+}
+
+// 每日 / 周常任务奖励 + 每日全清礼包
+for (const t of DAILY_POOL) for (const id of Object.keys(t.items ?? {})) add(id, `每日任务「${t.name}」奖励`)
+for (const t of WEEKLY_POOL) for (const id of Object.keys(t.items ?? {})) add(id, `周常任务「${t.name}」奖励`)
+for (const id of Object.keys(DAILY_BONUS.items ?? {})) add(id, '每日任务全清礼包')
+
+// 每周挑战赛 / 厨神试炼 / 厨具大赛 / 风味搭配 / 食灵物语（奖励在各数据模块里，直接读）
+for (const c of CHALLENGES) for (const id of Object.keys(c.items ?? {})) add(id, `每周挑战赛「${c.name}」奖励`)
+for (const t of TRIALS) for (const id of Object.keys(t.reward?.items ?? {})) add(id, `厨神试炼「${t.name}」奖励`)
+for (const r of GEAR_RANKS) for (const id of Object.keys(r.items ?? {})) add(id, `厨具大赛 ${r.id} 档奖励`)
+for (const p of FLAVOR_PAIRS) for (const id of Object.keys(p.reward?.items ?? {})) add(id, `风味搭配「${p.name}」点亮奖励`)
+for (const st of Object.values(STAGE_INFO)) for (const id of Object.keys(st.reward?.items ?? {})) add(id, `食灵物语「${st.name}」奖励`)
+
+// 采集 / 挖掘附产物种子（可种作物每次动作 10% 掉落对应种子）
+for (const [itemId, seedId] of Object.entries(SEED_MAP ?? {})) {
+  if (!seedId) continue
+  add(seedId, `${FORAGING_TARGETS.some((t) => t.itemId === itemId) ? '采摘' : '挖掘'}附产物（10%）`)
+}
+
+// ══ 批次 2：奖励**写死在 player.js 里**、无法导入的小系统（按既有先例硬编码并注明出处）══
+// 出处：player.js 的 signInRewardFor（签到）/ onCriticDeliver（评论家）/ banquetDeliver（宴会）/
+//       checkSetBonuses（套装集齐）/ cardBattle 首胜 / onTowerWin / onArenaEnd / realmEnd / onRivalClaim
+add('mysterySpice', '每日签到第 2 天奖励')            // player.js:117 SIGN_IN_REWARDS[1]
+for (const n of [1, 2, 3, 4, 5]) add(`xpTonic${n}`, '每日签到第 4 天奖励')      // 经验增益剂（档位随等级）
+for (const n of [1, 2, 3, 4, 5]) add(`yieldTonic${n}`, '每日签到第 6 天奖励')   // 产量增益剂（档位随等级）
+add('energyBiscuit', '每日签到第 3 / 7 天奖励')
+add('mysterySpice', '美食评论家到访奖励')
+add('mysterySpice', '宴会承办奖励')
+add('mysterySpice', '锻造套装集齐奖励')
+add('energyBiscuit', '卡牌对战首胜')
+add('mysterySpice', '无尽挑战塔里程碑奖励')
+add('energyBiscuit', '无尽挑战塔里程碑奖励')
+add('mysterySpice', '食神秘境结算奖励')
+add('energyBiscuit', '食神秘境结算奖励')
+add('mysterySpice', '同业竞争榜月度奖励')
+add('energyBiscuit', '竞技场 5 连胜宝箱（10 连起）')
+add('energyBiscuit', '常客满好感礼物')
+
 // 图鉴兑换所（2026-09-10）：按图鉴完成度档位发放的点数兑换（限量道具）
 for (const r of CODEX_REWARDS) for (const id of Object.keys(r.items ?? {})) add(id, `图鉴兑换所兑换（${r.cost} 图鉴点数）`)
 
@@ -248,8 +328,13 @@ for (const enc of ENCOUNTERS) {
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {
-  ensureMijianSources() // 惰性登记：首次取来源时（必然已在价值平衡之后）才算一遍
+  ensureDynamicSources() // 惰性登记：首次取来源时（必然已在价值平衡之后）才算一遍
   return SOURCES[id] ?? []
+}
+/** 有来源索引的全部 id（供守卫校验「登记的是真实物品」） */
+export function sourceIds() {
+  ensureDynamicSources()
+  return Object.keys(SOURCES)
 }
 /** 有来源索引的物品数（图鉴覆盖率统计用） */
 export function sourcedCount() {
