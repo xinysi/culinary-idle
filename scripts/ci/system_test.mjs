@@ -4,6 +4,11 @@
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
+import { SKILL_DEFS } from '../../src/game/data/skills.js'
+import { QUIRKS } from '../../src/game/data/tales_ext.js'
+import { SELL_EXCLUDED_CATEGORIES } from '../../src/game/data/automation.js'
+import { EXCHANGE_POOL_CATEGORIES } from '../../src/game/data/exchange.js'
+import { INGREDIENT_POOL } from '../../src/game/data/gameShopPools.js'
 import { itemNavs } from '../../src/game/data/itemNav.js'
 import { EXCAVATION_ALL_TARGETS, isMineralTarget } from '../../src/game/skills/ExcavationSkill.js'
 import { oreOfLevel, equipmentLevelOf as equipLevelOf } from '../../src/game/data/timberRecipes.js'
@@ -4494,6 +4499,60 @@ console.log('== C28. 伐木 / 采矿 / 20 档木材 ==')
   check('伐木采矿', '20 档木材都有「伐木获得」来源串且可跳转到伐木页', missSrc.length === 0 && badJump.length === 0 && itemSources('pineWood').some((x) => x.includes('伐木')), `${missSrc.length}/${badJump.length}`)
   const missNav = TIMBERS.filter((t) => !itemNavs(t.id).some((n) => n.skillId === 'woodcutting'))
   check('伐木采矿', '20 档木材在配方树里都有「去伐木」入口', missNav.length === 0, `${missNav.length}`)
+}
+
+
+// ── C29. 新技能（伐木/采矿）的「全功能适配」守卫（v2.7.4）──
+// 这一轮逐页排查出的适配点，全部钉住防回退：数据口径一致 + 派生清单含新技能 + 不再引用旧材料字段。
+console.log('== C29. 新技能适配一致性 ==')
+{
+  const V = (f) => fs.readFileSync(new URL(`../../src/views/${f}`, import.meta.url), 'utf8')
+  const C = (f) => fs.readFileSync(new URL(`../../src/components/${f}`, import.meta.url), 'utf8')
+  const D = (f) => fs.readFileSync(new URL(`../../src/game/data/${f}`, import.meta.url), 'utf8')
+
+  // ① 采集队：每条线的技能都必须已注册，且产矿物的那条线不能再绑挖掘
+  check('适配', '采集队每条线路绑定的是已注册技能，矿脉线绑采矿', EXPEDITIONS.every((e) => !!SKILL_DEFS[e.skill]) && EXPEDITIONS.find((e) => e.id === 'oreSurvey')?.skill === 'mining', EXPEDITIONS.map((e) => `${e.id}:${e.skill}`).join(' '))
+
+  // ② 经济口径一致：档位木材不进「鲜味食材礼包」、不在交易所货池、不被自动出售
+  const timberIdSet = new Set(TIMBERS.map((t) => t.id))
+  check('适配', '鲜味食材礼包不含档位木材（与交易所/商队/自动出售口径一致）', INGREDIENT_POOL.filter((id) => timberIdSet.has(id)).length === 0)
+  check('适配', '档位木材不在交易所货池、也不在自动出售范围（material 类别）', EXCHANGE_POOL_CATEGORIES.includes('material') === false && SELL_EXCLUDED_CATEGORIES.includes('material'))
+
+  // ③ 强化与「装备来源」不再引用旧材料字段
+  const pc = freshPlayer()
+  pc.gold = 100000
+  pc.inventory = { copperKnife: 1, pineWood: 9, copperOre: 9 }
+  const cost = pc.upgradeCost('copperKnife')
+  check('适配', 'upgradeCost 只返回 timber*/ore* 字段（旧 ironOre/saltOre 已不存在）', !!cost && 'timberId' in cost && 'oreId' in cost && !('ironOre' in cost) && !('saltOre' in cost), JSON.stringify(cost))
+  check('适配', '强化费用 UI（右侧面板 + 装备弹窗）都不再读 ironOre/saltOre', !/\.ironOre|\.saltOre/.test(C('StatusPanel.vue')) && !/\.ironOre|\.saltOre/.test(C('EquipmentModal.vue')))
+
+  // ④ 装备页/弹窗的来源技能指向采矿与伐木（而不是跳错到挖掘）
+  check('适配', '装备页与装备弹窗都提供「去采矿 + 去伐木」入口且指向正确技能', V('GearView.vue').includes("id: 'mining'") && V('GearView.vue').includes("id: 'woodcutting'") && C('EquipmentModal.vue').includes("goToSkill('mining')") && C('EquipmentModal.vue').includes("goToSkill('woodcutting')"))
+
+  // ⑤ 派生清单全部含两个新技能（逐处静态校验，防回退成手抄清单）
+  check('适配', '挂机计划（SkillView.PLAN_SKILLS）含采矿与伐木', V('SkillView.vue').includes("'mining'") && V('SkillView.vue').includes("'woodcutting'"))
+  check('适配', '采集页类别分组与 id 分支含采矿/伐木（含「木料」分组标签）', V('GatheringView.vue').includes('isMining') && V('GatheringView.vue').includes('isWoodcutting') && V('GatheringView.vue').includes('material: '))
+  check('适配', '赛季页类别→技能映射含 mineral→mining / material→woodcutting', V('SeasonView.vue').includes("c === 'mineral') return 'mining'") && V('SeasonView.vue').includes("c === 'material') return 'woodcutting'"))
+  check('适配', '故事页轶事子类中文名含采矿/伐木', V('StoryView.vue').includes("mining: '采矿'") && V('StoryView.vue').includes("woodcutting: '伐木'"))
+  check('适配', '图鉴导航表（itemNav.GATHER_TABLES）含采矿/伐木两条新表', (() => {
+    const src = D('itemNav.js')
+    return src.includes("['mining', MINING_TARGETS") && src.includes("['woodcutting', WOODCUTTING_TARGETS")
+  })())
+  check('适配', '来源跳转表含「采矿」「伐木」两条规则', (() => {
+    const src = D('sourceJump.js')
+    return src.includes("kw: ['采矿']") && src.includes("kw: ['伐木']")
+  })())
+  check('适配', '效果总览的技能中文表含伐木/采矿（否则页面会打印英文 id）', D('activeEffects.js').includes("woodcutting: '伐木'") && D('activeEffects.js').includes("mining: '采矿'"))
+  check('适配', '美食讲堂的干扰项技能池改为从 SKILL_DEFS 派生（不再手抄 13 项）', V('minigames/TriviaView.vue').includes('Object.values(SKILL_DEFS).map'))
+
+  // ⑥ 轶事：7 条采集线各有 200 条（含新技能），且解锁键按 kind:sub:param
+  const subs = {}
+  for (const q of QUIRKS) subs[q.unlock.sub] = (subs[q.unlock.sub] ?? 0) + 1
+  const gatherSubs = ['foraging', 'fishing', 'hunting', 'excavation', 'mining', 'woodcutting', 'farming']
+  check('适配', `轶事覆盖全部 7 条采集线（各 200 条，含采矿与伐木）`, gatherSubs.every((k) => (subs[k] ?? 0) === 200), gatherSubs.map((k) => `${k}:${subs[k] ?? 0}`).join(' '))
+
+  // ⑦ 技能总量与采集总等级口径
+  check('适配', '技能总数为 22、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 22 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

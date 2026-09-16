@@ -325,6 +325,12 @@
   ⚠️ **迁移里删除键必须用「patch 之后直接赋值」**：Pinia 的 `$patch` 是**深合并**，`delete` 掉的键不会消失（实测：矿物精通永远留在挖掘里）。
 - **`currentTarget` 兜底**（`GatheringSkill.js`）：目标 id 不在本技能目标表里时**回退到首个目标**而不是返回 null。返回 null 是彻底静默的停产（tick 直接 return、离线返回 null、并行挂机列表剔除），玩家只会觉得「技能不干活了」。
 - **轶事向上兼容**：矿物 param 的 200 条挖掘轶事（解锁键 `gather:excavation:<矿物>`）在拆分后永远解锁不了 → `addMastery` 里对**从挖掘移走的矿物**额外补记旧键（只写故事进度，不改数据）。
+- **v2.7.4 全功能适配排查（新增技能时照这张单子走，守卫 C29 已钉住大部分）**：
+  - 真缺陷集中在四类，值得记：**① 改了数据形状但 UI 还在读旧字段**（`upgradeCost` 改成 timber*/ore* 后，`StatusPanel.vue` 仍读 `ironOre/saltOre` → 显示 `undefined`）；**② 文案与跳转不一致**（装备页按钮写「去采矿」却 `goToSkill('excavation')`）；**③ 经济口径不一致**（`INGREDIENT_POOL` 只排除 `mineral`，于是 20 档木材从「鲜味食材礼包」可抽 —— 而交易所/商队/自动出售都按 `material` 排除）；**④ 派生清单漏项**（`SKILL_CN` 漏两个技能 → 效果总览打印英文 id；美食讲堂手抄 13 个技能名）。
+  - **检查口径**：凡「按类别分流」的地方（交易所货池 `EXCHANGE_POOL_CATEGORIES`、商队货 `caravan.js`、自动出售 `SELL_EXCLUDED_CATEGORIES`、觅珍 `mijianDraws`、地窖 `CELLAR_CATEGORIES`、宝石白名单、礼包池 `gameShopPools`）都要问一句「新类别的物品该不该进来」；凡「派生清单」（`PLAN_SKILLS`/`GATHER_TABLES`/`QUIRK_SUB_NAMES`/`CAT_SECTION_LABEL`/`SeasonView.gatherSkillFor`/`SKILL_CN`）都要加新技能。
+  - **轶事可补、主线任务不可补**：`gen_tales` 在「可直接重跑」清单内（已补伐木/采矿各 200 条，**解锁键 `kind:sub:param` 与 id 无关**，所以重跑只会新增、既有 1650 键一条未变）；而 **`gen_quests` 属硬门禁冻结数据，明令不得重跑** → 新技能**没有专属主线任务**，这是有意的取舍，别再试图重跑。
+  - 采集队线路的 `skill` 字段要跟着技能归属走（矿脉勘探队产出全是矿物 → 绑 `mining`；旧档已由等级迁移保证门槛等价）。
+  - 新增技能/类别后，除了跑守卫，**一定要人工过一遍「文案里提到旧机制」的地方**：本轮就是靠这一步抓到「铜刀=木材×2」「挖掘挖盐矿」「采集队三条线路」「图鉴 2218 件」这类过期描述。
 
 ## 🧿 「效果总览」与效果注册表（v2.6.0，2026-09-16 立，最高优先阅读）
 

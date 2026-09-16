@@ -183,7 +183,8 @@ function close() { ui.toggleEquipModal(false) }
           <template v-if="!equipList.length">
             <p class="dim" style="font-size: 12px">背包中没有该分类的可穿戴装备。</p>
             <div class="equip-guide">
-              <button class="btn btn-sm" @click="goToSkill('excavation')">⛏️ 去采矿</button>
+              <button class="btn btn-sm" @click="goToSkill('mining')">⛏️ 去采矿</button>
+              <button class="btn btn-sm" @click="goToSkill('woodcutting')">🪓 去伐木</button>
               <button class="btn btn-sm" @click="goToSkill('craftsmithing')">🔨 去锻造</button>
             </div>
           </template>

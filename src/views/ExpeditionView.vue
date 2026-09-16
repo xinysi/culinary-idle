@@ -69,7 +69,7 @@ function claim(lineId, i) {
 function stop(lineId, i) {
   if (player.expeditionStop(lineId, i)) ui.pushLog('已撤回该槽位（本轮进度放弃）', 'info')
 }
-// 熟练度阶梯（8 档）与三条线档案（2026-09-12 补）：数值与 store 的结算同源
+// 熟练度阶梯（8 档）与全部线路档案（2026-09-12 补；v2.7.4 起条数跟随 EXPEDITIONS，不再写死）：数值与 store 的结算同源
 //   每轮产出件数 = 周期小时 × 5 × 产量倍率；每轮金币 = 槽位 goldPerHour × 周期
 const tierLadder = computed(() =>
   EXPEDITION_TIER_STEPS.map((need, i) => ({
@@ -109,9 +109,9 @@ const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automati
       </div>
     </header>
 
-    <!-- 熟练度阶梯 + 三条线档案（2026-09-12 补） -->
+    <!-- 熟练度阶梯 + 全部线路档案（2026-09-12 补；v2.7.4 起随 EXPEDITIONS 动态） -->
     <FoldCard
-      title="📋 熟练度阶梯 + 三条线档案"
+      :title="`📋 熟练度阶梯 + ${EXPEDITIONS.length} 条线路档案`"
       hint="熟练度 8 档：每档产量 +10%、稀有率 +0.5%；满档需累计 128 轮"
     >
       <div class="table-scroll">
@@ -152,7 +152,7 @@ const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automati
       <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
         每条线 4 个槽位、按<b>对应技能等级</b>解锁（线路本身 Lv{{ EXPEDITIONS[0].reqLevel }}~{{ EXPEDITIONS[EXPEDITIONS.length - 1].reqLevel }} 解锁）。
         「每轮产出」按<b>基础</b>熟练度算（≈周期小时 × 5 件，熟练度每档 +10%），「每轮金币」= 槽位时收 × 周期；
-        三条线的<b>稀有掉落</b>：<template v-for="(l, i) in lineArchive" :key="l.def.id"><template v-if="i"> · </template>{{ l.def.icon }} {{ l.rareName }}</template>。
+        各线路的<b>稀有掉落</b>：<template v-for="(l, i) in lineArchive" :key="l.def.id"><template v-if="i"> · </template>{{ l.def.icon }} {{ l.rareName }}</template>。
         熟练度按线路独立累计，所以常跑同一条线收益更高。
       </p>
     </FoldCard>

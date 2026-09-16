@@ -63,7 +63,7 @@ export const EXPEDITIONS = [
     id: 'oreSurvey',
     name: '矿脉勘探队',
     icon: '⛏️',
-    skill: 'excavation',
+    skill: 'mining',
     reqLevel: 25,
     desc: '勘探深层矿脉，运回整箱矿石',
     rare: { itemId: 'excavation_ext2_18', chance: 0.02 }, // 黄金矿

@@ -15,5 +15,7 @@ export const MINERAL_POOL = Object.values(ITEMS)
   .map((i) => i.id)
 // 普通食材（鲜味食材礼包，不含稀有与矿物）
 export const INGREDIENT_POOL = Object.values(ITEMS)
-  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral')
+  // v2.7.4：排除 material（含 20 档木材）——与交易所货池/商队货/自动出售同一口径，
+  // 避免「鲜味食材礼包」变成跳过伐木拿高阶木头的捷径（描述也只写蔬菜/鲜肉/水产）
+  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral' && i.category !== 'material')
   .map((i) => i.id)
