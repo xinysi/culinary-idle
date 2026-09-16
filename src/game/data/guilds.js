@@ -20,6 +20,9 @@ const TASKS = {
   gather: (id) => mkTasks(id, [
     ['采集任意食材 ×200', 'gather', 'any', 200, 10],
     ['垂钓成功 ×40', 'skill', 'fishing', 40, 15],
+    // v2.8.0：新技能各一条（与「垂钓成功」同款：kind='skill' + param=技能 id）
+    ['伐木 ×40', 'skill', 'woodcutting', 40, 15],
+    ['开采矿石 ×40', 'skill', 'mining', 40, 15],
     ['收获作物 ×30', 'harvest', 'any', 30, 20],
     ['对决胜利 ×5', 'combatWin', 'any', 5, 25],
     ['制作料理 ×20（任意）', 'craft', 'any', 20, 30],

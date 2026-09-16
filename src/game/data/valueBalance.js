@@ -19,6 +19,7 @@ import { SPIRIT_RECIPES } from '../skills/SpiritSummoningSkill.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT, SPIRIT_EXT } from './expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2, SPIRIT_EXT2 } from './expansion2.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
+import { resetMijianPoolCache } from './mijianDraws.js'
 
 const isMineral = (id) => { const it = ITEMS[id]; return it?.category === 'mineral' || /Ore|fossil|salt|矿/.test(id) }
 const round = (v) => Math.round(v)
@@ -78,5 +79,6 @@ export function applyValueBalance() {
     item.value = Math.round(Math.max(c * 0.7, Math.min(c * 1.3, item.value)))
   }
   applyAlchemyRatioCap()
+  resetMijianPoolCache() // 池子按 value 筛选 → 平衡改过 value 后必须重算（顺序敏感，见 mijianDraws 注释）
 }
 

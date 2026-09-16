@@ -33,7 +33,22 @@ const NORMAL_EXP = 0.85
  *  mix：全品类混合（材料/香料/料理/饮品/装备，排除矿物）
  *  limited：全品类大奖池（池大 → 极品概率天然极低；另用 value^1.8 陡加权） */
 const POOL_CACHE = {}
-function poolItems(poolId) {
+/** ⚠️ 池子按 `value` 筛选（cap），而 `applyValueBalance()` 会改 value —— 所以它在收尾时会调本函数清缓存，
+ *  否则「谁先被 import」会决定池子成员（实测：itemSources 先加载 → 缓存住平衡前的筛选结果 →
+ *  材料池里混进了平衡后价值 >50 的物品，`system_test` 的「无珍品」断言 FAIL）。 */
+let _poolVersion = 0
+/** 池版本：每次清缓存 +1。图鉴来源登记侧据此判断「需要重新登记」（见 itemSources.js）。 */
+export function mijianPoolVersion() {
+  return _poolVersion
+}
+
+export function resetMijianPoolCache() {
+  for (const k of Object.keys(POOL_CACHE)) delete POOL_CACHE[k]
+  _materialFoodCache = null
+  _poolVersion++
+}
+
+export function poolItems(poolId) {
   if (POOL_CACHE[poolId]) return POOL_CACHE[poolId]
   const def = MIJIAN_POOLS.find((p) => p.id === poolId)
   const all = Object.values(ITEMS)
@@ -116,7 +131,7 @@ export function pickItem(poolId, rng = Math.random, pity = 0) {
 
 /** 非装备素材缓存（混池/限时池的非装备分支与展示用） */
 let _materialFoodCache = null
-function materialFoodItems(cap = Infinity) {
+export function materialFoodItems(cap = Infinity) {
   if (!_materialFoodCache) {
     _materialFoodCache = Object.values(ITEMS).filter((it) =>
       ['ingredient', 'spice', 'food', 'drink'].includes(it.type) &&

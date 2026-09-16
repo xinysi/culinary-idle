@@ -175,10 +175,6 @@ export function favorLevelFromXp(xp) {
 
 /** 采矿的目标物品集合（存档迁移用：判断旧档的挖掘目标是否已被移交给采矿） */
 const MINING_TARGET_IDS = new Set(MINING_TARGETS.map((t) => t.itemId))
-/** 同上，但**排除铜矿/铁矿**（它们从来不是挖掘目标，只是附产物，没有对应的挖掘轶事） */
-const LEGACY_EXCAVATION_MINERALS = new Set(
-  MINING_TARGETS.filter((t) => t.itemId !== 'copperOre' && t.itemId !== 'ironOre').map((t) => t.itemId)
-)
 
 function defaultSkills() {
   const skills = {}
@@ -1266,13 +1262,10 @@ export const usePlayerStore = defineStore('player', {
     addMastery(skillId, itemId, amount = 1) {
       if (!this.skills[skillId]) this.skills[skillId] = { level: 1, exp: 0, mastery: {}, prestiges: 0 }
       // 采集类技能每次产出都计入轶事「采集·<技能>·<物品>」进度（覆盖各采集子类，含自定义 performAction 的采摘等）
-      if (SKILL_DEFS[skillId]?.category === 'gathering' && itemId) {
-        this.bumpStory('gather', skillId + ':' + itemId)
-        // v2.7.0 向上兼容：矿物从「挖掘」独立为「采矿」后，`tales_ext.js` 里那 200 条**矿物 param 的挖掘轶事**
-        // （解锁键 `gather:excavation:<矿物>`）会永远解锁不了（新动作记的是 `gather:mining:<矿物>`）。
-        // 这里对**从挖掘移走的矿物**同时补记旧键——只写故事进度，不改任何数值、也不改轶事数据本身。
-        if (skillId === 'mining' && LEGACY_EXCAVATION_MINERALS.has(itemId)) this.bumpStory('gather', 'excavation:' + itemId)
-      }
+      // 采集类技能每次产出都计入轶事「采集·<技能>·<物品>」进度
+      // （v2.7.0 曾为「矿物从挖掘拆走」加过一个「补记旧键」的兼容补丁；v2.8.0 起挖掘轶事已不含矿物、
+      //   矿物轶事统一归采矿，该补丁已删除——故事进度不在存档里，无需回填。）
+      if (SKILL_DEFS[skillId]?.category === 'gathering' && itemId) this.bumpStory('gather', skillId + ':' + itemId)
       const m = this.skills[skillId].mastery
       const before = masteryLevelFromCount(m[itemId] ?? 0)
       m[itemId] = (m[itemId] ?? 0) + amount

@@ -1503,4 +1503,27 @@ export const ALCHEMY_RECIPES = [
   { id: 'multi_glassOre_al', name: '龙鳞矿→琉璃矿', in: { dragonScaleOre: 1, saltOre: 1, ironOre: 1 }, out: 'glassOre' }, // ratio=1.25
   { id: 'multi_giltOre_al', name: '琉璃矿→鎏金矿', in: { glassOre: 1, saltOre: 1, ironOre: 1 }, out: 'giltOre' }, // ratio=1.23
   { id: 'multi_fossilIngredient_al', name: '鎏金矿→化石食材', in: { giltOre: 4, saltOre: 1, ironOre: 1 }, out: 'fossilIngredient' }, // ratio=1.15
+  // ── v2.8.0 新增：木材链（20 档木材参与炼金，与既有矿物链同构）──
+  // ⚠️ 每条都满足「投入价值 ≥ 产出价值」：否则启动时的 applyAlchemyRatioCap() 会把产物 value 压到投入总和，
+  //    静默削掉木材的档位价值曲线（也会牵连 valueBalance 的 ±30% 带与锻造配方价值锚）。
+  { id: 'wood_pine', name: '木材→松木', in: {wood: 2}, out: 'pineWood' },
+  { id: 'wood_pineWood', name: '松木→杉木', in: {pineWood: 3}, out: 'cedarWood' },
+  { id: 'wood_cedarWood', name: '杉木→桦木', in: {cedarWood: 2}, out: 'birchWood' },
+  { id: 'wood_birchWood', name: '桦木→榆木', in: {birchWood: 2}, out: 'elmWood' },
+  { id: 'wood_elmWood', name: '榆木→橡木', in: {elmWood: 2}, out: 'oakWood' },
+  { id: 'wood_oakWood', name: '橡木→樟木', in: {oakWood: 2}, out: 'camphorWood' },
+  { id: 'wood_camphorWood', name: '樟木→楠木', in: {camphorWood: 2}, out: 'nanmuWood' },
+  { id: 'wood_nanmuWood', name: '楠木→花梨木', in: {nanmuWood: 2}, out: 'rosePearWood' },
+  { id: 'wood_rosePearWood', name: '花梨木→紫檀木', in: {rosePearWood: 2}, out: 'redSandalWood' },
+  { id: 'wood_redSandalWood', name: '紫檀木→乌木', in: {redSandalWood: 2}, out: 'ebonyWood' },
+  { id: 'wood_ebonyWood', name: '乌木→铁力木', in: {ebonyWood: 2}, out: 'ironwoodTimber' },
+  { id: 'wood_ironwoodTimber', name: '铁力木→阴沉木', in: {ironwoodTimber: 2}, out: 'bogWood' },
+  { id: 'wood_bogWood', name: '阴沉木→降香木', in: {bogWood: 2}, out: 'fragrantRosewood' },
+  { id: 'wood_fragrantRosewood', name: '降香木→龙脑木', in: {fragrantRosewood: 2}, out: 'borneolWood' },
+  { id: 'wood_borneolWood', name: '龙脑木→琉璃木', in: {borneolWood: 2}, out: 'glazeWood' },
+  { id: 'wood_glazeWood', name: '琉璃木→鎏金木', in: {glazeWood: 2}, out: 'giltWood' },
+  { id: 'wood_giltWood', name: '鎏金木→星辰木', in: {giltWood: 2}, out: 'starWood' },
+  { id: 'wood_starWood', name: '星辰木→月华木', in: {starWood: 2}, out: 'moonWood' },
+  { id: 'wood_moonWood', name: '月华木→太虚木', in: {moonWood: 2}, out: 'voidWood' },
+  { id: 'wood_voidWood', name: '太虚木→太初神木', in: {voidWood: 2}, out: 'primalWood' },
 ]
