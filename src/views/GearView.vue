@@ -20,7 +20,8 @@ const RELATED = [
 ]
 // 装备的两个来源技能：直接切到对应技能页（RelatedPages 只能切 view，切不了具体技能）
 const SOURCE_SKILLS = [
-  { id: 'excavation', label: '⛏️ 去采矿' },
+  { id: 'mining', label: '⛏️ 去采矿' },
+  { id: 'woodcutting', label: '🪓 去伐木' },
   { id: 'craftsmithing', label: '🔨 去厨具锻造' },
 ]
 function goSkill(id) {

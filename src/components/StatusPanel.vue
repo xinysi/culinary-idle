@@ -320,7 +320,7 @@ function closeAoji(id) {
           <div v-if="player.equipment[eqTarget]" class="upgrade-box">
             <div class="dim">强化等级：<strong>+{{ player.upgrades[player.equipment[eqTarget]] ?? 0 }}</strong>/5（每级属性 +10%）</div>
             <div v-if="(player.upgrades[player.equipment[eqTarget]] ?? 0) < 5" class="dim" style="font-size: 12px">
-              费用：{{ upgradeCostFor(player.equipment[eqTarget])?.gold }} 金币 + 铁矿×{{ upgradeCostFor(player.equipment[eqTarget])?.ironOre }} + 盐矿×{{ upgradeCostFor(player.equipment[eqTarget])?.saltOre }}
+              费用：{{ upgradeCostFor(player.equipment[eqTarget])?.gold }} 金币 + {{ upgradeCostFor(player.equipment[eqTarget])?.timberName }}×{{ upgradeCostFor(player.equipment[eqTarget])?.qty }} + {{ upgradeCostFor(player.equipment[eqTarget])?.oreName }}×{{ upgradeCostFor(player.equipment[eqTarget])?.qty }}<span class="dim">（按装备等级取同档木材与矿）</span>
             </div>
             <button
               class="btn btn-sm btn-primary"

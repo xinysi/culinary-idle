@@ -28,7 +28,7 @@ const QUESTS_BASE = [
     reward: { gold: 120 },
   },
   {
-    id: 'q5', name: '地底宝藏', desc: '挖掘 5 个土豆和 5 份盐矿。',
+    id: 'q5', name: '地底宝藏', desc: '挖掘 5 个土豆，并到采矿采 5 份盐矿。',
     objectives: [{ kind: 'gather', param: 'potato', qty: 5 }, { kind: 'gather', param: 'saltOre', qty: 5 }],
     reward: { gold: 150 },
   },
@@ -48,7 +48,7 @@ const QUESTS_BASE = [
     reward: { gold: 250 },
   },
   {
-    id: 'q9', name: '铁匠的考验', desc: '锻造 1 把铜刀（需木材与铜矿）。',
+    id: 'q9', name: '铁匠的考验', desc: '锻造 1 把铜刀（需松木与铜矿）。',
     objectives: [{ kind: 'craft', param: 'copperKnife', qty: 1 }],
     reward: { gold: 300 },
   },

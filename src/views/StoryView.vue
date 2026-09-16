@@ -27,7 +27,7 @@ const QUIRK_PAGE = 24
 
 // ── 以下逻辑自 LogView 原样搬来（2026-09-12）──
 const talesExt = ref(null) // TALES_EXT（500 篇传闻）
-const quirks = ref(null) // QUIRKS（3588 条轶事）
+const quirks = ref(null) // QUIRKS（3988 条轶事，v2.7.4 起含伐木/采矿）
 const quirkList = computed(() => quirks.value ?? [])
 const quirkPage = ref(1)
 // ── 故事（§13：线性七章，每章覆盖全部功能，需求全达标解锁下一章）──
@@ -119,7 +119,7 @@ const QUIRK_SUB_NAMES = {
   gastronomy: '美食知识', preservation: '食材保鲜', exploration: '美食探索',
 }
 function quirkSubName(sub) { return QUIRK_SUB_NAMES[sub] ?? sub }
-// 轶事计数（QUIRKS 3588 条：按大类/子类一次性统计；模板不再内联反复 filter 全表）
+// 轶事计数（QUIRKS 条数随生成器增长：按大类/子类一次性统计；模板不再内联反复 filter 全表）
 const quirkCats = computed(() => quirkCategoryStats(quirkList.value, taleUnlocked))
 // 当前大类下的子子类列表（按首次出现顺序，带解锁计数）
 const activeQuirkSubs = computed(() => {
@@ -171,7 +171,7 @@ onMounted(() => {
         <h2>📜 故事与传闻</h2>
         <p class="dim">
           三个层次：<b>主线章节</b>（八章，每章需求全达标才解锁下一章）、<b>传闻</b>（按系列分组，随进度解锁）、
-          <b>轶事</b>（3588 条，按大类 → 子类两级浏览）。全部按你的专属进度解锁，只读展示，不影响任何数值。
+          <b>轶事</b>（按大类 → 子类两级浏览）。全部按你的专属进度解锁，只读展示，不影响任何数值。
         </p>
       </div>
     </header>

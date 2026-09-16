@@ -1,5 +1,6 @@
 <script setup>
 // 美食讲堂（2026-09-07 v3 改版）：十种模式分类（知识/对比/连线 × 规模）· 单面板流式答题 · 顶栏状态胶囊 · 模式说明弹窗
+import { SKILL_DEFS } from '../../game/data/skills.js'
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
@@ -40,7 +41,8 @@ const LINK = [
   ['pumpkinPie', '香酥甜点，需要哪个技能？', '烘焙'],
   ['spiritBrew', '食灵一族的佳酿，需要哪类技能？', '食灵召唤'],
 ]
-const SKILLS_ALL = ['采摘', '垂钓', '狩猎', '挖掘', '农耕', '烹饪', '烘焙', '腌制', '调酒', '厨具锻造', '食材保鲜', '美食探索', '食灵召唤']
+// v2.7.4：改为从 SKILL_DEFS 派生（原来手抄 13 项、漏了采矿/伐木/刀工/火候等 9 个技能）
+const SKILLS_ALL = Object.values(SKILL_DEFS).map((d) => d.name)
 
 const mode = ref('all12')
 const MODES = {
