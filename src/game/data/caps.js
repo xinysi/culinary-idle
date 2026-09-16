@@ -72,7 +72,8 @@ export const CARAVAN_CARGO_CAP = 30000
  * 否则玩家做了陶器之后，地窖页仍按 16000 报价，等于奖励没生效（C33 有断言）。
  */
 export const CELLAR_SLOT_VALUE_BASE = 16000
-export const CELLAR_SLOT_VALUE_MAX = 31000
+/** 硬顶 = 基础 16,000 + 陶艺 10 件作品（+15,000）+ 陶艺量产阶梯 12 档（+9,000） */
+export const CELLAR_SLOT_VALUE_MAX = 40000
 
 /**
  * 读档用安全夹取：非有限数（缺字段 / 字符串 / NaN）回退默认值，负数归 0，超上限夹到上限。

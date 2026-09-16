@@ -16,7 +16,7 @@ import { HUNTING_TARGETS } from '../../src/game/skills/HuntingSkill.js'
 import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../../src/game/skills/ExcavationSkill.js'
 import { WOODCUTTING_TARGETS } from '../../src/game/data/timbers.js'
 import { RESTAURANT_DECOR_BY_ID } from '../../src/game/data/restaurantDecor.js'
-import { sidelineWorkOf } from '../../src/game/data/sidelineWorks.js'
+import { sidelineWorkOf, sidelineSkillOfItem } from '../../src/game/data/sidelineWorks.js'
 import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 import { SHOP_ITEMS } from '../../src/game/data/shop.js'
 import { EXPLORATION_TARGETS_ALL } from '../../src/game/data/explorationTargets.js'
@@ -129,6 +129,7 @@ const items = Object.values(ITEMS)
       // 早先一律要求 `ITEMS[u.outputId]` 存在 —— 这两类用途都会被判成坏链。
       const ok = u.kind === 'decor' ? !!RESTAURANT_DECOR_BY_ID[u.outputId]
         : u.kind === 'work' ? !!sidelineWorkOf(it.id)
+        : u.kind === 'ladder' ? !!sidelineSkillOfItem(it.id)
         : !!ITEMS[u.outputId]
       if (!ok) { bad++; if (badIds.length < 5) badIds.push(`${it.id} → ${u.outputId}`) }
     }

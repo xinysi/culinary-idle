@@ -23,7 +23,7 @@
 //    `raiseRecipeLevels` 对它们是**恒等变换**（实测 `h − 5 ≤ reqLevel` 全部成立，C33 有「零漂移」断言）。
 
 import { timberOfLevel } from './timbers.js'
-import { WOODWORK_CATEGORY } from './woodworking.js'
+import { WOODWORK_CATEGORY, WOODWORKING_RECIPES } from './woodworking.js'
 
 /** 副业产物的物品类别 —— **「副业独占品」的单一来源清单**（木工的 furniture + 本模块四个）。
  *  消费方：`gameShopPools`（礼包池 + 珍馐阁）/ `mijianDraws`（抽卡池）/ `automation`（自动出售）/
@@ -32,8 +32,8 @@ import { WOODWORK_CATEGORY } from './woodworking.js'
 export const SIDELINE_ITEM_CATEGORIES = [WOODWORK_CATEGORY, 'pottery', 'textile', 'embroidery', 'candle']
 
 /**
- * 效果轴定义：每个副业一条。
- * `read(player)` 只读（C26 的只读契约同样适用），`label/unit` 供 UI 与图鉴文案复用。
+ * 效果轴定义：每个副业**作品**（每件一次）贡献的那条轴。
+ * `perItem` = 单件增量；`label/amountLabel` 供 UI 与图鉴文案复用。
  */
 export const SIDELINE_AXES = {
   cellarValue: { label: '地窖单槽价值上限', amountLabel: (v) => `${v.toLocaleString()} 金币`, perItem: 1500 },
@@ -41,6 +41,86 @@ export const SIDELINE_AXES = {
   michelinScore: { label: '米其林评分', amountLabel: (v) => `+${v} 分`, perItem: 12 },
   nightHours: { label: '夜市狂潮时长', amountLabel: (v) => `+${v} 小时`, perItem: 1 },
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 量产阶梯（v2.11.0，2026-09-17）——回答「练满级必然做出几十万件，绝大多数用不掉」
+//
+// 用户实测提问：「要升满级肯定要制作很多个吧，那也不可能全部都用到」。
+// 这个量级是算过的：升到 100 级需要 **3,182,176,592** 经验（曲线按「99→100 = 3 亿」缩放），
+// 用最高档配方也要 **≈263 万次**、叠满经验加成后仍是**几万到十几万次**。
+// ⇒ 任何「把具体物件用掉」的设计（每槽配一件陶器、每件绣品换一次招牌…）吸收量都是个位数到几十件，
+//   对几十万件的产量**等于没设计**。所以产物不该被设计成「要被用掉」，而该按**数量**计价：
+//   **喂进一条深阶梯，边练级边推进，一件都不浪费。**
+//
+// 三层分工：
+//   1. **作品**（每件一次，加成大）—— 收集向，10 件
+//   2. **量产阶梯**（吃任意产物，按档位计点，加成小但深）—— 量产向，12 档
+//   3. **回收**（多余产物半价卖回 = 材料整包卖掉）—— 满档后的兜底（见 valueBalance 的说明）
+//
+// ⚠️ **绝不能把阶梯/轴挂到「当前技能等级」上**：`prestigeSkill` 在满 100 级时把等级重置为
+//    `1 + carry`（carry = ⌊100×0.05⌋ = 5 ⇒ **回到 6 级**）。挂等级 = **转生自罚**，玩家会永远不敢
+//    转生这五支，而转生是全局主要长期目标（每层 +20% 经验、上限抬到 120、还给轮回印记）。
+//    阶梯吃的是**累计投入点**（只增不减、转生不碰）⇒ 转生只赚不亏。C34 有**行为断言**钉住这条：
+//    把五支的技能等级全改成 1，五条轴的派生值必须**一分不变**。
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** 阶梯门槛（累计**点**，12 档，×2.5 递增；末档 ≈ 与练到 100 级的产量同量级） */
+export const LADDER_TIERS = [10, 25, 60, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000]
+
+/** 计点：**按档位加权**，`点 = 1 + ⌊配方等级/10⌋` ⇒ Lv1 陶碗 1 点、Lv91 龙凤陶瓮 10 点。
+ *  （一件一律 1 点会让高段产物被当柴烧——那正是「高段配方」最不该有的待遇。） */
+export function pointsOfLevel(level) {
+  return 1 + Math.floor(Math.max(0, level || 0) / 10)
+}
+
+/** 累计点 → 已达成档位（0~12；0 = 还没到第一档） */
+export function ladderTierOf(points) {
+  let tier = 0
+  for (const t of LADDER_TIERS) if ((points || 0) >= t) tier++
+  return tier
+}
+
+/** 下一档还差多少点（已满返回 null） */
+export function ladderNextOf(points) {
+  for (const t of LADDER_TIERS) if ((points || 0) < t) return { need: t, left: t - (points || 0) }
+  return null
+}
+
+/** 累计点 → 该轴的阶梯加成合计 */
+export function ladderTotalOf(skillId, points) {
+  const cfg = SIDELINE_LADDERS.find((l) => l.skill === skillId)
+  if (!cfg) return 0
+  return Math.round(ladderTierOf(points) * cfg.perTier * 1000) / 1000
+}
+
+/**
+ * 五支的量产阶梯配置（**含木工**）。
+ * `axis` 指阶梯加在哪条轴上；木工的产物已经是「手工装潢」（走 restaurant.decor），
+ * 所以它的阶梯加在 `decorPct`（装潢加成）上，而不是自己的新轴。
+ */
+export const SIDELINE_LADDERS = [
+  { skill: 'woodworking', name: '木工', axis: 'decorPct', perTier: 2, unit: (v) => `装潢加成 +${v}%` },
+  { skill: 'pottery', name: '陶艺', axis: 'cellarValue', perTier: 750, unit: (v) => `地窖单槽上限 +${v.toLocaleString()}` },
+  { skill: 'weaving', name: '编织', axis: 'tipPct', perTier: 1.5, unit: (v) => `小费 +${v}%` },
+  { skill: 'embroidery', name: '刺绣', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${v}` },
+  // 蜡烛：**时长**已封顶 +8h（再延就失去「时段」意义），所以阶梯给它加**倍率**
+  { skill: 'candles', name: '蜡烛制作', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${v.toFixed(2)}` },
+]
+
+/** 阶梯轴 → 文案（供 UI/效果总览复用） */
+export const LADDER_AXIS_LABEL = {
+  decorPct: '手工装潢效果',
+  cellarValue: '地窖单槽价值上限',
+  tipPct: '餐厅小费',
+  michelinScore: '米其林招牌分',
+  nightMult: '夜市狂潮倍率',
+}
+
+/** 每支的产物（含木工）与「一件值多少点」——`feedSideline` 的唯一数据来源。
+ *  ⚠️ 必须在下面的配方表展开**之后**才求值（它是 const，不是惰性函数）→ 定义在文件末尾。 */
+
+/** 五支的技能 id（阶梯口径；`SIDELINE_SKILL_IDS` 只含"有自己轴"的四支，两者刻意不同） */
+export const SIDELINE_LADDER_SKILL_IDS = SIDELINE_LADDERS.map((l) => l.skill)
 
 /** 10 级一档的常用阶梯（陶艺/编织/刺绣），与 20 档木材天然咬合 */
 const LADDER10 = [1, 11, 21, 31, 41, 51, 61, 71, 81, 91]
@@ -174,3 +254,26 @@ export function isSidelineCategory(category) {
 
 /** 副业技能 id 列表（守卫与内容同步共用） */
 export const SIDELINE_SKILL_IDS = SIDELINE_SKILL_LIST.map((s) => s.id)
+
+/**
+ * 每支（**含木工**）的产物与「一件值多少点」——`player.feedSideline()` 的唯一数据来源。
+ * 定义在文件末尾：它读的 `SIDELINE_RECIPES` 由上面的 DEFS 循环展开，早求值会拿到空表。
+ */
+export const SIDELINE_PRODUCTS = (() => {
+  const out = {}
+  for (const [skill, rows] of Object.entries(SIDELINE_RECIPES)) {
+    out[skill] = rows.map((r) => ({ itemId: r.output.itemId, name: r.name, points: pointsOfLevel(r.reqLevel) }))
+  }
+  // 木工：产物定义在 woodworking.js（它的作品 = 手工装潢，走 restaurant.decor，不在 sidelineWorks 里）
+  out.woodworking = WOODWORKING_RECIPES.map((r) => ({ itemId: r.output.itemId, name: r.name, points: pointsOfLevel(r.reqLevel) }))
+  return out
+})()
+
+/** 某产物属于哪一支（`feedSideline` 反查用；非副业产物返回 null） */
+export function sidelineSkillOfItem(itemId) {
+  for (const [skill, list] of Object.entries(SIDELINE_PRODUCTS)) {
+    const hit = list.find((x) => x.itemId === itemId)
+    if (hit) return { skill, points: hit.points, name: hit.name }
+  }
+  return null
+}

@@ -46,7 +46,7 @@ import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRI
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
 import { gemDef, socketCountOf, gemsBonus } from '../game/data/gems.js'
-import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost, marketEventsWithNightExtension, nightMarketEndHour } from '../game/data/marketEvents.js'
+import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost, marketEventsWithNightExtension, nightMarketEndHour, NIGHT_MARKET_BASE_MULT } from '../game/data/marketEvents.js'
 import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
 import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay, catLabel } from '../game/data/restaurantOrders.js'
@@ -90,7 +90,10 @@ import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exc
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
 import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
 import { CELLAR_SLOT_VALUE_BASE } from '../game/data/caps.js'
-import { SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf } from '../game/data/sidelineWorks.js'
+import {
+  SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
+  SIDELINE_PRODUCTS, SIDELINE_LADDERS, LADDER_TIERS, ladderTierOf, ladderNextOf, ladderTotalOf,
+} from '../game/data/sidelineWorks.js'
 /**
  * 增益剂的乘区轴表（v2.3.0）：一件消耗品可同时带多条。
  * `better` 决定「重复使用取更强」的方向——采集间隔越小越快，其余越大越强。
@@ -229,7 +232,7 @@ const defaultState = () => ({
     achievements: [], // 已解锁成就 id（§6.1）
     collected: {}, // 图鉴（§6.2）：{ itemId: true }
     quests: { index: 0, completed: [], progress: {} }, // 主线任务（§7.2）
-    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0, splitMiningMigrated: false }, // 效果总览峰值（v2.6.0）+ 采矿拆分迁移账本（v2.7.0；必须进 schema，否则存档往返会「多出一个字段」）
+    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0, splitMiningMigrated: false, sidelinePoints: { woodworking: 0, pottery: 0, weaving: 0, embroidery: 0, candles: 0 } }, // 副业量产阶梯的累计投入点（v2.11.0；**只增不减、转生不碰**） // 效果总览峰值（v2.6.0）+ 采矿拆分迁移账本（v2.7.0；必须进 schema，否则存档往返会「多出一个字段」）
     // §13 扩展：餐厅 / 公会 / 赛季 / 竞技场
     restaurant: { level: 1, menu: [], incomeAccum: 0, decor: [] }, // 餐厅经营：菜单为料理 itemId 列表；decor 装饰（§13）
     guild: { id: null, points: 0, day: null, taskProgress: {} }, // 公会：被动+任务+商店
@@ -556,6 +559,8 @@ export const usePlayerStore = defineStore('player', {
         const d = RESTAURANT_DECOR_BY_ID[id]
         if (d) decorBonus += (d.effect ?? 1) / 100
       }
+      // 副业·木工的量产阶梯（v2.11.0）：多余木器喂出来的「手艺」直接加装潢乘区
+      decorBonus += (this.sidelineLadderTotal?.('decorPct') ?? 0) / 100
       // 顾客好感小费（2026-09-06）：每级 +3%，封顶 20 级（+57%）
       const favorLv = favorLevelFromXp(s.restaurant?.favor?.xp ?? 0)
       // 副业·编织（v2.10.0）：织物提升小费——乘在小费因子上（**唯一出口**，别再往别处加）
@@ -1106,12 +1111,64 @@ export const usePlayerStore = defineStore('player', {
       } catch { /* ui 未就绪 */ }
       return 'ok'
     },
-    /** 某效果轴的已获得加成合计 —— **唯一派生出口**，消费方别再自己遍历 sidelineWorks */
+    // ── 副业量产阶梯（v2.11.0）：产物按**数量**喂进深阶梯，边练级边推进、一件都不浪费 ──
+    // 起因：练到 100 级需要 3.18e9 经验（≈263 万次制作），产物数量是几十万级，
+    // 而「作品」每件只吃一次（10 件）——任何「把具体物件用掉」的设计在这个量级下都等于没设计。
+    // ⚠️ 累计点存在 `stats.sidelinePoints`：**只增不减、转生不碰**（绝不能挂「当前技能等级」——
+    //    prestigeSkill 会把满级技能打回 6 级，那会变成「转生自罚」，见 sidelineWorks.js 的长注释）。
+    /** 某支的累计投入点 */
+    sidelinePointsOf(skillId) {
+      return this.stats?.sidelinePoints?.[skillId] ?? 0
+    },
+    /** 某支已达成的阶梯档位（0~12） */
+    sidelineLadderTier(skillId) {
+      return ladderTierOf(this.sidelinePointsOf(skillId))
+    },
+    /** 某支距下一档还差多少点（已满返回 null） */
+    sidelineLadderNext(skillId) {
+      return ladderNextOf(this.sidelinePointsOf(skillId))
+    },
+    /**
+     * 把背包里某支的产物投入阶梯（按档位计点：Lv1 陶碗 1 点、Lv91 龙凤陶瓮 10 点）。
+     * 缺省一次投入该支**所有**产物；`only` 可指定单个 itemId（UI 分项投入用）。
+     * @returns {{ok:boolean, reason?:string, fed:number, points:number, tier:number, tierUp:number, byItem:Array}}
+     */
+    feedSideline(skillId, only = null) {
+      const list = SIDELINE_PRODUCTS[skillId]
+      if (!list) return { ok: false, reason: 'bad', fed: 0, points: 0, tier: 0, tierUp: 0, byItem: [] }
+      if (!this.stats) this.stats = {}
+      if (!this.stats.sidelinePoints) this.stats.sidelinePoints = {}
+      const before = this.sidelinePointsOf(skillId)
+      const tierBefore = ladderTierOf(before)
+      let fed = 0
+      let points = 0
+      const byItem = []
+      for (const p of list) {
+        if (only && p.itemId !== only) continue
+        const have = this.inventory[p.itemId] ?? 0
+        if (have <= 0) continue
+        this.spendItem(p.itemId, have)
+        fed += have
+        points += have * p.points
+        byItem.push({ itemId: p.itemId, name: p.name, qty: have, points: have * p.points })
+      }
+      if (!fed) return { ok: false, reason: 'empty', fed: 0, points: 0, tier: tierBefore, tierUp: 0, byItem: [] }
+      this.stats.sidelinePoints[skillId] = before + points
+      const tier = ladderTierOf(this.stats.sidelinePoints[skillId])
+      return { ok: true, fed, points, tier, tierUp: tier - tierBefore, byItem }
+    },
+    /** 某条**阶梯轴**的已获得加成合计（木工→装潢% / 陶艺→地窖上限 / 编织→小费 / 刺绣→招牌分 / 蜡烛→夜市倍率） */
+    sidelineLadderTotal(axis) {
+      const cfg = SIDELINE_LADDERS.find((l) => l.axis === axis)
+      if (!cfg) return 0
+      return ladderTotalOf(cfg.skill, this.sidelinePointsOf(cfg.skill))
+    },
+    /** 某效果轴的已获得加成合计（**作品 + 量产阶梯**两段求和）—— **唯一派生出口**，消费方别再自己遍历 */
     sidelineEffectTotal(axis) {
       const per = SIDELINE_AXES[axis]?.perItem ?? 0
       let n = 0
       for (const id of this.sidelineWorks ?? []) if (SIDELINE_WORKS[id]?.axis === axis) n++
-      return n * per
+      return n * per + this.sidelineLadderTotal(axis)
     },
     /** 地窖单槽基础价值上限（基础 + 陶艺）。⚠️ 地窖校验与 CellarView 一律走这里，别再引用固定值 */
     cellarSlotValueMax() {
@@ -1131,7 +1188,12 @@ export const usePlayerStore = defineStore('player', {
     },
     /** 计入蜡烛延长后的限时活动表（命中判定与行情页**共用这一个来源**，避免页面与实际不一致） */
     marketEventsNow() {
-      return marketEventsWithNightExtension(this.nightMarketExtraHours())
+      // 时长来自「作品」、倍率来自「量产阶梯」，两者都只在蜡烛这条线上
+      return marketEventsWithNightExtension(this.nightMarketExtraHours(), this.nightMarketMult() - NIGHT_MARKET_BASE_MULT)
+    },
+    /** 夜市狂潮当前的餐厅倍率（基础 ×2 + 蜡烛阶梯每档 +0.03） */
+    nightMarketMult() {
+      return NIGHT_MARKET_BASE_MULT + (this.sidelineLadderTotal?.('nightMult') ?? 0)
     },
     /** 夜市窗口结束小时（>24 表示跨夜）；UI 文案用 */
     nightMarketEndHour() {

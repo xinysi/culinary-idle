@@ -69,22 +69,38 @@ const NIGHT_MARKET_BASE_START = 16
 const NIGHT_MARKET_BASE_END = 22
 /** 蜡烛能延长的上限小时数（= 8 件蜡烛各 +1h，见 `SIDELINE_AXIS_TOTALS.nightHours`） */
 export const NIGHT_MARKET_MAX_EXTRA_HOURS = 8
+/** 蜡烛**量产阶梯**能加到的倍率上限（= 12 档 × +0.03，见 `SIDELINE_LADDERS`）。
+ *  ⚠️ 阶梯只加**倍率**、不加时长：时长已经封顶 +8h（16:00–次日 06:00），再延就没有「时段」可言了。 */
+export const NIGHT_MARKET_BASE_MULT = 2
+export const NIGHT_MARKET_MAX_EXTRA_MULT = 0.36
 
 /**
- * 把夜市狂潮窗口按 `extraHours` 向**后**延长，返回一份替换过的活动表。
+ * 把夜市狂潮窗口按 `extraHours` 向**后**延长、按 `extraMult` 提高倍率，返回一份替换过的活动表。
  * 结束时间越过 24 点就拆成两段（`[[16,24],[0,余]]`）——与既有「午夜食堂」跨夜的写法一致，
  * 于是 `hoursText()`、排班表、命中判定**全部不用改**就能正确显示与判定。
- * @param {number} extraHours 已解锁的延长小时数（0 = 原样返回 `MARKET_EVENTS`）
+ * 倍率并进 `effect.restaurant`：**这是唯一出口**，行情页/命中判定/聚合乘区自动一致（页面不会说谎）。
+ * @param {number} extraHours 已解锁的延长小时数（0 = 不延长）
+ * @param {number} extraMult  已解锁的倍率增量（0 = 基础 ×2）
  */
-export function marketEventsWithNightExtension(extraHours = 0) {
+export function marketEventsWithNightExtension(extraHours = 0, extraMult = 0) {
   const extra = Math.max(0, Math.min(NIGHT_MARKET_MAX_EXTRA_HOURS, Math.floor(extraHours || 0)))
-  if (!extra) return MARKET_EVENTS
+  const mult = NIGHT_MARKET_BASE_MULT + Math.max(0, Math.min(NIGHT_MARKET_MAX_EXTRA_MULT, extraMult || 0))
+  if (!extra && Math.abs(mult - NIGHT_MARKET_BASE_MULT) < 1e-9) return MARKET_EVENTS
   return MARKET_EVENTS.map((ev) => {
     if (ev.id !== NIGHT_MARKET_ID) return ev
     const end = NIGHT_MARKET_BASE_END + extra
     const hours = end <= 24 ? [[NIGHT_MARKET_BASE_START, end]] : [[NIGHT_MARKET_BASE_START, 24], [0, end - 24]]
-    return { ...ev, hours, desc: `餐厅收入 ×2 · 对决经验 ×1.5（蜡烛延长至次日 ${String(end % 24).padStart(2, '0')}:00）` }
+    const tips = []
+    if (extra) tips.push(`延长至次日 ${String(end % 24).padStart(2, '0')}:00`)
+    if (Math.abs(mult - NIGHT_MARKET_BASE_MULT) > 1e-9) tips.push(`收入 ×${mult.toFixed(2)}`)
+    return { ...ev, hours, effect: { ...ev.effect, restaurant: mult }, desc: `餐厅收入 ×${mult.toFixed(2)} · 对决经验 ×1.5${tips.length ? `（蜡烛${tips.join(' · ')}）` : ''}` }
   })
+}
+
+/** 夜市狂潮当前的餐厅倍率（UI 文案用） */
+export function nightMarketMult(events = MARKET_EVENTS) {
+  const ev = events.find((e) => e.id === NIGHT_MARKET_ID)
+  return ev?.effect?.restaurant ?? NIGHT_MARKET_BASE_MULT
 }
 
 /** 夜市狂潮的结束小时（可 >24 表示跨夜；UI 文案用） */
