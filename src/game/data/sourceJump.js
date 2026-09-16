@@ -54,6 +54,9 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['香道'], target: { view: 'skill', skill: 'incense' } },
   { kw: ['年货'], target: { view: 'skill', skill: 'festivalGoods' } },
   { kw: ['玉作'], target: { view: 'skill', skill: 'jadecraft' } },
+  // v2.13.0 第二批（货签要放在『交易所』规则之前也无妨：来源串是「货签制作」，只含『货签』）
+  { kw: ['货签'], target: { view: 'skill', skill: 'goodsTag' } },
+  { kw: ['采掘器具'], target: { view: 'skill', skill: 'miningGear' } },
   { kw: ['餐厅装潢', '装潢'], target: { view: 'decor' } },
   { kw: ['保鲜'], target: { view: 'skill', skill: 'preservation' } },
   { kw: ['探索'], target: { view: 'skill', skill: 'exploration' } },

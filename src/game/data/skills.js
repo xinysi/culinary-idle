@@ -54,6 +54,9 @@ export const SKILL_DEFS = {
   incense: { id: 'incense', name: '香道', category: 'sideline', desc: '木料与香料做香品，让食客订单到访更快' },
   festivalGoods: { id: 'festivalGoods', name: '年货', category: 'sideline', desc: '木料与腌味年货做节礼，放大节庆日的加成' },
   jadecraft: { id: 'jadecraft', name: '玉作', category: 'sideline', desc: '木料与贝玉做玉器，增强宝石镶嵌的效果' },
+  // v2.13.0 第二批
+  goodsTag: { id: 'goodsTag', name: '货签', category: 'sideline', desc: '木牌与兽胶做货签封条，在交易所卖出更值钱' },
+  miningGear: { id: 'miningGear', name: '采掘器具', category: 'sideline', desc: '木料与矿物做矿镐矿灯，采矿有概率多产出一份' },
 }
 
 /**
@@ -84,6 +87,7 @@ const SKILL_ICONS = {
   gastronomy: '📜', preservation: '❄️', exploration: '🕵️',
   woodworking: '🪚', pottery: '🏺', weaving: '🧶', embroidery: '🪡', candles: '🕯️',
   fletching: '🏹', netmaking: '🎣', incense: '🧴', festivalGoods: '🧧', jadecraft: '🔮',
+  goodsTag: '🪙', miningGear: '⛏️',
 }
 for (const [id, icon] of Object.entries(SKILL_ICONS)) {
   if (SKILL_DEFS[id]) SKILL_DEFS[id].icon = icon

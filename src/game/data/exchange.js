@@ -42,9 +42,12 @@ export function priceMultiplier(itemId, cycle = exchangeCycleIndex()) {
   return 0.6 + ((hash32(`${itemId}#${cycle}`) % 101) / 100) * 1.0
 }
 
-/** 玩家卖出价（收购价） */
-export function sellPriceOf(item, cycle = exchangeCycleIndex()) {
-  return Math.max(1, Math.round((item?.value ?? 0) * priceMultiplier(item.id, cycle)))
+/** 玩家卖出价（收购价）。`bonusPct` = 副业·货签的「卖出价 +%」（0~50 夹取）
+ *  ⚠️ 唯二调用点（player 的实际结算 + ExchangeView 的展示）必须传**同一个值**，否则页面与到账不一致 */
+export function sellPriceOf(item, cycle = exchangeCycleIndex(), bonusPct = 0) {
+  const base = Math.max(1, Math.round((item?.value ?? 0) * priceMultiplier(item.id, cycle)))
+  const bonus = Math.max(0, Math.min(50, bonusPct || 0))
+  return Math.max(1, Math.round(base * (1 + bonus / 100)))
 }
 
 /** 玩家买入价（含价差） */

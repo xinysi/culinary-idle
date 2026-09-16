@@ -48,6 +48,8 @@ export const WEEKLY_POOL = [
   { name: '🧧 年货周', kind: 'craft', param: 'festivalGoods', qty: 100, gold: 1600, items: { salt: 30 } },
   { name: '🔮 玉作周', kind: 'craft', param: 'jadecraft', qty: 100, gold: 1600, items: { carp: 20 } },
   { name: '🎣 网绳周', kind: 'craft', param: 'netmaking', qty: 100, gold: 1600, items: { seaweed: 20 } },
+  { name: '🪙 货签周', kind: 'craft', param: 'goodsTag', qty: 100, gold: 1600, items: { venison: 20 } },
+  { name: '⛏️ 器具周', kind: 'craft', param: 'miningGear', qty: 100, gold: 1600, items: { ironOre: 20 } },
 ]
 
 // 每日全部完成礼包（一次性）

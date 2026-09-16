@@ -33,6 +33,8 @@ export const SIDELINE_ITEM_CATEGORIES = [
   WOODWORK_CATEGORY, 'pottery', 'textile', 'embroidery', 'candle',
   // v2.12.0 第一批（5 支干净轴副业）
   'huntingGear', 'fishingGear', 'incense', 'gift', 'jade',
+  // v2.13.0 第二批
+  'goodsTag', 'miningGear',
 ]
 
 /**
@@ -55,6 +57,11 @@ export const SIDELINE_AXES = {
   festivalPct: { label: '节庆加成放大', amountLabel: (v) => `+${v}%`, perItem: 1 },
   /** **宝石镶嵌效果**（%）：乘在 gemsBonus 的合计上。出口在 player 的宝石加成读取处 */
   gemPct: { label: '宝石镶嵌效果', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  // ── v2.13.0 第二批 ──
+  /** **交易所卖出价**（%）：乘在 sellPriceOf 上（玩家卖出所得）。出口只有这一个函数，两个调用点都传同一个值 */
+  tagSellPct: { label: '交易所卖出价', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  /** **采矿附产率**（百分点）：加进 `GatheringSkill.yieldExtraChance`（**在线/离线同源，只改一处**），且**只对采矿生效** */
+  miningExtraPP: { label: '采矿附产率', amountLabel: (v) => `+${v}%`, perItem: 2 },
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -130,6 +137,9 @@ export const SIDELINE_LADDERS = [
   { skill: 'incense', name: '香道', catLabel: '香品', axis: 'orderSpeedPct', perTier: 1, unit: (v) => `订单提速 +${v}%` },
   { skill: 'festivalGoods', name: '年货', catLabel: '节礼', axis: 'festivalPct', perTier: 0.8, unit: (v) => `节庆放大 +${v}%` },
   { skill: 'jadecraft', name: '玉作', catLabel: '玉器', axis: 'gemPct', perTier: 1.5, unit: (v) => `宝石效果 +${v}%` },
+  // ── v2.13.0 第二批 ──
+  { skill: 'goodsTag', name: '货签', catLabel: '货签', axis: 'tagSellPct', perTier: 1.5, unit: (v) => `交易所卖出价 +${v}%` },
+  { skill: 'miningGear', name: '采掘器具', catLabel: '器具', axis: 'miningExtraPP', perTier: 1.5, unit: (v) => `采矿附产 +${v}%` },
 ]
 
 /** 阶梯轴 → 文案（供 UI/效果总览复用） */
@@ -144,6 +154,8 @@ export const LADDER_AXIS_LABEL = {
   orderSpeedPct: '订单到访提速',
   festivalPct: '节庆加成放大',
   gemPct: '宝石镶嵌效果',
+  tagSellPct: '交易所卖出价',
+  miningExtraPP: '采矿附产率',
 }
 
 /** 每支的产物（含木工）与「一件值多少点」——`feedSideline` 的唯一数据来源。
@@ -290,6 +302,39 @@ const DEFS = {
       [71, '御膳节礼', 'truffleSauce', 4, 2],
       [81, '山海献礼', 'preserving_ext_26', 5, 2],
       [91, '太初神礼', 'preserving_ext_29', 5, 2],
+    ],
+  },
+  // ── v2.13.0 第二批 ──
+  goodsTag: {
+    skill: 'goodsTag', name: '货签', icon: '🪙', category: 'goodsTag', catLabel: '货签',
+    axis: 'tagSellPct', materialNote: '木牌用木料、封条取兽胶；做成后**在交易所卖出更值钱**（每日每件限 60 件，吞吐有上限，不会通胀）',
+    rows: [
+      [1, '木货签', 'hunting_ext_02', 2, 2],
+      [11, '火漆封', 'boarMeat', 2, 2],
+      [21, '麻绳货牌', 'venison', 3, 2],
+      [31, '铜牌货签', 'goatMeat', 3, 2],
+      [41, '商队路引', 'bisonMeat', 3, 2],
+      [51, '官印封条', 'crocodileMeat', 4, 2],
+      [61, '银牌路引', 'bearMeat', 4, 2],
+      [71, '金印封条', 'hunting_ext_23', 4, 2],
+      [81, '山海通宝牌', 'hunting_ext_26', 5, 2],
+      [91, '太虚通行令', 'dragonMeat', 5, 2],
+    ],
+  },
+  miningGear: {
+    skill: 'miningGear', name: '采掘器具', icon: '⛏️', category: 'miningGear', catLabel: '器具',
+    axis: 'miningExtraPP', materialNote: '镐柄与灯架用木料、镐头取矿物；做成后**采矿有概率多产出一份**（采矿原本完全没有附产）',
+    rows: [
+      [1, '木柄矿镐', 'ironOre', 2, 2],
+      [11, '铁头矿镐', 'steelOre', 2, 2],
+      [21, '矿灯', 'mithrilOre', 3, 2],
+      [31, '精钢矿镐', 'adamantOre', 3, 2],
+      [41, '淘金筛', 'darkIronOre', 3, 2],
+      [51, '秘银矿锤', 'meteoriteOre', 4, 2],
+      [61, '探矿罗盘', 'dragonScaleOre', 4, 2],
+      [71, '龙鳞矿镐', 'giltOre', 4, 2],
+      [81, '星辰矿灯', 'excavation_ext_26', 5, 2],
+      [91, '太虚神镐', 'excavation_ext_29', 5, 2],
     ],
   },
   jadecraft: {

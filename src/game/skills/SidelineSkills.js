@@ -61,3 +61,16 @@ export class JadecraftSkill extends ProductionSkill {
     super('jadecraft', player, raiseRecipeLevels(SIDELINE_RECIPES.jadecraft))
   }
 }
+
+// ── v2.13.0 第二批 ──
+export class GoodsTagSkill extends ProductionSkill {
+  constructor(player) {
+    super('goodsTag', player, raiseRecipeLevels(SIDELINE_RECIPES.goodsTag))
+  }
+}
+
+export class MiningGearSkill extends ProductionSkill {
+  constructor(player) {
+    super('miningGear', player, raiseRecipeLevels(SIDELINE_RECIPES.miningGear))
+  }
+}

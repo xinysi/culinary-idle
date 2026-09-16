@@ -247,6 +247,8 @@
 | 🧴 香道（v2.12.0） | 香品 | **订单到访提速**（`nextOrderDelay(speedPct)`，**两个调用点都要传**） | +1.5% | 间隔 −27% |
 | 🧧 年货（v2.12.0） | 节礼 | **节庆加成放大**（`player.festivalBoost` 包一层，**只放大 >1 的部分**） | +1% | +19.6% |
 | 🔮 玉作（v2.12.0） | 玉器 | **宝石镶嵌效果**（`gemsBonus` 的合计上乘一层） | +1.5% | +33% |
+| 🪙 货签（v2.13.0） | 货签 | **交易所卖出价**（`sellPriceOf(item, cycle, bonusPct)`，**两个调用点都要传**） | +1.5% | +33% |
+| ⛏️ 采掘器具（v2.13.0） | 器具 | **采矿附产**（挂进 `GatheringSkill.yieldExtraChance`，用技能 id 限定只对采矿） | +2% | +38% |
 
 定义与口径全在 **`src/game/data/sidelineWorks.js`**（木工除外，它在 `woodworking.js`）：四支的 `rows` 每行 = `[等级, 物品名, 辅料 id, 木材数量, 辅料数量]`，
 木材由 `timberOfLevel()` 自动取该档、产物/配方/作品表全由它展开。**加一支新副业 = 往 `DEFS` 加一段 + 在 `SIDELINE_AXES` 加一条轴**，其余（物品/配方/作品/面板）自动生成。
@@ -314,6 +316,11 @@
 ⚠️ **新轴的接线位置（每条只能有一个写入点）**：狩猎省箭在 `HuntingSkill`（**在线扣箭 + 离线动作上限两处都要改**，否则在线/离线不一致）；稀有鱼在 `FishingSkill.rareChance`；订单提速必须把 `speedPct` 传给**两个** `nextOrderDelay()` 调用点；节庆在 `player.festivalBoost` 包一层（只放大 >1）；宝石在 `gemsBonus` 结果上乘。
 ⚠️ 所有新轴都要**夹取上限**（省箭 ≤90%、稀有率 ≤5%、订单提速 ≤40%）——防极端存档值把某条轴拉到崩坏点。
 ⚠️ **新类别必须加进 `SIDELINE_ITEM_CATEGORIES`**（v2.12.0 实测漏了 5 个 → 新产物漏进抽卡/礼包池，被 C35 抓出）。
+
+
+⚠️ **附产/产量类新轴一律挂 `GatheringSkill.yieldExtraChance`**：在线 `yieldQuantity` 与离线 `expectedYield` 都读它 ⇒ **只改一处就自动在线/离线同源**（v2.13.0 的采矿附产就是这么做的）。
+⚠️ **只想影响单一采集线时用 `this.id === '<skillId>'` 判定**，并写一条「其它采集线不受影响」断言。
+⚠️ **价格/时间类新轴先看「函数有几个调用点」**：`sellPriceOf` 与 `nextOrderDelay` 各有 2 个（结算 + 展示），**两处必须传同一个值**，否则页面与到账不一致。
 
 ### 作品机制（v2.10.0）
 - `player.craftWork(itemId)` → `'ok' | 'owned' | 'denied' | 'bad'`（消耗 **1 件产物**，不花金币）；登记进新存档字段 **`sidelineWorks: string[]`**（一件一次、幂等）。

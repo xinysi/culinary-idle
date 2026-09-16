@@ -17,7 +17,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 // 制作类技能（含保鲜/食灵召唤——它们的配方同样累计精通；v2.9.0 加副业·木工）
-const PROD_SKILLS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'preservation', 'spiritSummoning']
+const PROD_SKILLS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear', 'preservation', 'spiritSummoning']
 const PAGE_SIZE = 24
 
 const skillFilter = ref('all') // all | 技能 id

@@ -53,6 +53,7 @@ export const SKILL_CN = {
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配',
   craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
+  goodsTag: '货签', miningGear: '采掘器具',
   knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
   plating: '摆盘技巧', tasteAcumen: '品鉴力', spiritSummoning: '食灵召唤', gastronomy: '美食知识',
   preservation: '食材保鲜', exploration: '美食探索',
@@ -529,6 +530,22 @@ export const EFFECT_ROWS = [
       const v = p.sidelineEffectTotal?.('gemPct') ?? 0
       if (!v) return off('还没把玉器做成作品、也没投入量产阶梯——每件 +1.5%、每档 +1.5%')
       return { on: true, text: `宝石镶嵌的合计效果 ${pct(v)}（乘在 gemsBonus 的合计上）` }
+    },
+  },
+  {
+    id: 'goodsTagSell', group: 'income', icon: '🪙', name: '货签·交易所卖出价', kind: 'buff', src: '副业·货签', view: 'skill:goodsTag',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('tagSellPct') ?? 0
+      if (!v) return off('还没把货签做成作品、也没投入量产阶梯——每件 +1.5%、每档 +1.5%')
+      return { on: true, text: `在交易所卖东西 ${pct(v)}（每日每件限 60 件，吞吐有上限）` }
+    },
+  },
+  {
+    id: 'miningGearExtra', group: 'gather', icon: '⛏️', name: '采掘器具·采矿附产', kind: 'buff', src: '副业·采掘器具', view: 'skill:miningGear',
+    read: (p) => {
+      const v = p.sidelineEffectTotal?.('miningExtraPP') ?? 0
+      if (!v) return off('还没把器具做成作品、也没投入量产阶梯——每件 +2%、每档 +1.5%')
+      return { on: true, text: `采矿有 ${pct(v)} 概率多产出一份（只对采矿生效；在线与离线同源）` }
     },
   },
   {
