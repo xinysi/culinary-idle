@@ -1,7 +1,7 @@
 <script setup>
 // 制作类技能视图 — 需求文档 §3.2：食谱列表 / 材料需求 / 成功率 / 制作按钮
 // 烘焙：能量饼干使用（离线加成 §8.1）；厨具锻造：成品可直接穿戴（§5.1）
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { CAP_MAX, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -17,7 +17,7 @@ import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 import SidelineWorkPanel from '../components/SidelineWorkPanel.vue'
 import { decorOfWoodwork } from '../game/data/woodworking.js'
-import { sidelineWorkOf, SIDELINE_AXES } from '../game/data/sidelineWorks.js'
+import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDER_SKILL_IDS, SIDELINE_LADDERS } from '../game/data/sidelineWorks.js'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -305,7 +305,11 @@ function goTree(nav) {
 }
 
 // ── 卡片式分段（按 reqLevel 每 5 级一段，可折叠）──
+// 副业五支**走平铺**：产物只有 8~10 件，按等级段切十段再默认全部折叠，等于每次进来都看不到东西
+// （2026-09-17 用户要求「副业的卡片去掉等级段分类和折叠，因为物品不多」）。
+const flatMode = computed(() => SIDELINE_LADDER_SKILL_IDS.includes(props.instance.id))
 const sections = computed(() => {
+  if (flatMode.value) return [{ label: '全部', list: [...props.instance.recipes].sort((a, b) => a.reqLevel - b.reqLevel) }]
   const map = new Map()
   for (const r of props.instance.recipes) {
     const start = Math.floor((r.reqLevel - 1) / 5) * 5 + 1
@@ -315,7 +319,17 @@ const sections = computed(() => {
   }
   return [...map.entries()].map(([label, list]) => ({ label, list }))
 })
-const collapsed = ref(new Set(sections.value.map((s) => s.label))) // 默认全部折叠(等级段)
+const collapsed = ref(new Set(flatMode.value ? [] : sections.value.map((s) => s.label))) // 默认全部折叠(等级段)
+/** 标题与量词：副业做的不是「食谱」（陶艺出陶器、木工出木器），用产物类别名 */
+// 用 `SIDELINE_LADDERS`（**五支齐全，含木工**）而不是 `SIDELINE_SKILL_LIST`（只含四支）
+const sidelineCatLabel = computed(() => SIDELINE_LADDERS.find((x) => x.skill === props.instance.id)?.catLabel ?? null)
+const headTitle = computed(() => (isSmithing.value ? '锻造配方' : isPreservation.value ? '保鲜配方' : sidelineCatLabel.value ? `${sidelineCatLabel.value}配方` : '食谱'))
+const recipeNoun = computed(() => (sidelineCatLabel.value ? '配方' : '食谱'))
+// 切换技能时重置折叠状态：组件实例在制作类技能之间会被复用，不重置会出现
+// 「从陶艺（平铺）切回烹饪 → 所有等级段都是展开的」（与默认全折叠不一致）
+watch(() => props.instance.id, () => {
+  collapsed.value = new Set(flatMode.value ? [] : sections.value.map((s) => s.label))
+})
 function toggleSection(label) {
   const s = new Set(collapsed.value)
   if (s.has(label)) s.delete(label)
@@ -336,7 +350,7 @@ function scrollToSection(label) {
 <template>
   <div>
     <div class="card status-line">
-      <span class="dim">共 {{ instance.recipes.length }} 个食谱 · 制作失败消耗材料但获得半额经验 · 成功率随等级提升<template v-if="isPreservation"> · 保鲜 Lv 越高腐坏越慢（每级 +2%，封顶 +100%）</template></span>
+      <span class="dim">共 {{ instance.recipes.length }} 个{{ recipeNoun }} · 制作失败消耗材料但获得半额经验 · 成功率随等级提升<template v-if="isPreservation"> · 保鲜 Lv 越高腐坏越慢（每级 +2%，封顶 +100%）</template></span>
       <template v-if="isPreservation">
         <button
           class="btn btn-sm cold-store-btn"
@@ -448,12 +462,12 @@ function scrollToSection(label) {
 
     <div class="card">
       <h3 class="target-head-row">
-        <span>{{ isSmithing ? '锻造配方' : isPreservation ? '保鲜配方' : '食谱' }}（按等级分段，点击段标题折叠）</span>
+        <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点击段标题折叠' }}）</span>
         <span class="target-head-extra">
           <MasteryHelp mode="craft" :show-interval="false" />
         </span>
       </h3>
-      <div v-if="sections.length > 1" class="quick-nav">
+      <div v-if="!flatMode && sections.length > 1" class="quick-nav">
         <span class="dim" style="font-size: 12px">快速跳转：</span>
         <button v-for="sec in sections" :key="sec.label" class="btn btn-sm" @click="scrollToSection(sec.label)">{{ sec.label }}</button>
       </div>
@@ -478,13 +492,13 @@ function scrollToSection(label) {
         </div>
       </div>
       <div v-for="sec in sections" :key="sec.label" class="gather-section" :id="'sec-' + sec.label">
-        <div class="gather-section-title" @click="toggleSection(sec.label)">
+        <div v-if="!flatMode" class="gather-section-title" @click="toggleSection(sec.label)">
           <span class="mono">{{ isOpen(sec.label) ? '▾' : '▸' }}</span>
           <strong>Lv {{ sec.label }}</strong>
           <span class="dim">{{ sec.list.length }} 个配方</span>
           <span v-if="sec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
         </div>
-        <div v-if="isOpen(sec.label)" class="gather-grid recipe-grid">
+        <div v-if="flatMode || isOpen(sec.label)" class="gather-grid recipe-grid">
           <div
             v-for="r in sec.list"
             :key="r.id"

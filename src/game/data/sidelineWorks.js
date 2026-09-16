@@ -98,13 +98,17 @@ export function ladderTotalOf(skillId, points) {
  * `axis` 指阶梯加在哪条轴上；木工的产物已经是「手工装潢」（走 restaurant.decor），
  * 所以它的阶梯加在 `decorPct`（装潢加成）上，而不是自己的新轴。
  */
+/**
+ * 五支的量产阶梯配置（**含木工**）。`catLabel` = 产物类别名（副业页标题/文案用；
+ * 木工不在 `SIDELINE_SKILL_LIST` 里——它的产物走 `restaurant.decor`，所以类别名在这里也要有一份）。
+ */
 export const SIDELINE_LADDERS = [
-  { skill: 'woodworking', name: '木工', axis: 'decorPct', perTier: 2, unit: (v) => `装潢加成 +${v}%` },
-  { skill: 'pottery', name: '陶艺', axis: 'cellarValue', perTier: 750, unit: (v) => `地窖单槽上限 +${v.toLocaleString()}` },
-  { skill: 'weaving', name: '编织', axis: 'tipPct', perTier: 1.5, unit: (v) => `小费 +${v}%` },
-  { skill: 'embroidery', name: '刺绣', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${v}` },
+  { skill: 'woodworking', name: '木工', catLabel: '木器', axis: 'decorPct', perTier: 2, unit: (v) => `装潢加成 +${v}%` },
+  { skill: 'pottery', name: '陶艺', catLabel: '陶器', axis: 'cellarValue', perTier: 750, unit: (v) => `地窖单槽上限 +${v.toLocaleString()}` },
+  { skill: 'weaving', name: '编织', catLabel: '织物', axis: 'tipPct', perTier: 1.5, unit: (v) => `小费 +${v}%` },
+  { skill: 'embroidery', name: '刺绣', catLabel: '绣品', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${v}` },
   // 蜡烛：**时长**已封顶 +8h（再延就失去「时段」意义），所以阶梯给它加**倍率**
-  { skill: 'candles', name: '蜡烛制作', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${v.toFixed(2)}` },
+  { skill: 'candles', name: '蜡烛制作', catLabel: '蜡烛', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${v.toFixed(2)}` },
 ]
 
 /** 阶梯轴 → 文案（供 UI/效果总览复用） */

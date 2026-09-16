@@ -15,6 +15,7 @@ import {
   LADDER_TIERS, LADDER_AXIS_LABEL,
 } from '../game/data/sidelineWorks.js'
 import { getItem } from '../game/data/items.js'
+import { CRAFTED_DECOR, WOODWORK_ITEMS_DEF } from '../game/data/woodworking.js'
 import ItemImg from './ItemImg.vue'
 
 const props = defineProps({
@@ -24,13 +25,33 @@ const props = defineProps({
 const player = usePlayerStore()
 const ui = useUiStore()
 
-/** 本技能的作品定义（木工等非本表技能返回 null → 只显示阶梯） */
+/** 本技能的作品定义（木工不在本表：它的产物直接变成「手工装潢」，见下面的 isWoodworking 分支） */
 const def = computed(() => SIDELINE_SKILL_LIST.find((s) => s.id === props.instance.id) ?? null)
 const axis = computed(() => (def.value ? SIDELINE_AXES[def.value.axis] : null))
 /** 本技能的阶梯定义（木工也在内） */
 const ladder = computed(() => SIDELINE_LADDERS.find((l) => l.skill === props.instance.id) ?? null)
+/** 木工：产物 → 「手工装潢」（走 restaurant.decor），动作与另外四支不同（craftDecor 而非 craftWork） */
+const isWoodworking = computed(() => props.instance.id === 'woodworking')
 
+/** 作品行的统一形态；木工=手工装潢、其余=各自的轴 */
 const rows = computed(() => {
+  if (isWoodworking.value) {
+    const owned = new Set(player.restaurant?.decor ?? [])
+    return CRAFTED_DECOR.map((d) => {
+      const itemId = d.craftedFrom.itemId
+      const it = getItem(itemId)
+      const lv = WOODWORK_ITEMS_DEF.find((x) => x.id === itemId)?.level ?? 1
+      return {
+        itemId,
+        decorId: d.id,
+        name: it?.name ?? itemId,
+        level: lv,
+        amount: d.effect,
+        owned: owned.has(d.id),
+        have: player.inventory[itemId] ?? 0,
+      }
+    }).sort((a, b) => a.level - b.level)
+  }
   if (!def.value) return []
   const owned = new Set(player.sidelineWorks ?? [])
   return (props.instance.recipes ?? []).map((r) => {
@@ -47,8 +68,18 @@ const rows = computed(() => {
   }).sort((a, b) => a.level - b.level)
 })
 
+/** 作品层的文案（木工是「餐厅收入」，其余取轴定义） */
+const workTitle = computed(() => (isWoodworking.value ? '木工作品' : `${def.value?.name}作品`))
+const workIcon = computed(() => (isWoodworking.value ? '🪚' : (def.value?.icon ?? '•')))
+const workAxisLabel = computed(() => (isWoodworking.value ? '餐厅收入' : axis.value.label))
+const amountText = (v) => (isWoodworking.value ? `+${v}%` : axis.value.amountLabel(v))
+const workNote = computed(() => (isWoodworking.value
+  ? '木材做成木器、木器做成手工装潢——两处都能做（这里就地做，或去「餐厅装潢 → 🪚 手工装潢」），不花金币'
+  : def.value.materialNote))
+
 const ownedCount = computed(() => rows.value.filter((r) => r.owned).length)
-const workOnlyTotal = computed(() => (def.value ? ownedCount.value * axis.value.perItem : 0))
+const workOnlyTotal = computed(() => rows.value.filter((r) => r.owned).reduce((a, r) => a + r.amount, 0))
+const workMaxTotal = computed(() => rows.value.reduce((a, r) => a + r.amount, 0))
 
 // ── 量产阶梯 ──
 const ladderPoints = computed(() => (ladder.value ? player.sidelinePointsOf(ladder.value.skill) : 0))
@@ -65,7 +96,7 @@ const feedPts = computed(() => feedRows.value.reduce((a, x) => a + x.have * x.po
 const feedQty = computed(() => feedRows.value.reduce((a, x) => a + x.have, 0))
 
 function craft(row) {
-  const res = player.craftWork(row.itemId)
+  const res = isWoodworking.value ? player.craftDecor(row.decorId) : player.craftWork(row.itemId)
   if (res === 'denied') ui.pushLog(`背包里没有「${row.name}」——先去上面做一件`, 'warn')
   else if (res === 'bad') ui.pushLog('这个产物不是副业作品', 'warn')
   else if (res === 'owned') ui.pushLog(`「${row.name}」已经做成过了`, 'warn')
@@ -82,15 +113,15 @@ function feed() {
 
 <template>
   <div v-if="def || ladder" class="card sw-card">
-    <!-- ① 作品（木工没有这一层：它的产物直接变成手工装潢） -->
-    <template v-if="def">
+    <!-- ① 作品（木工也有：它的产物 → 手工装潢，动作是 craftDecor） -->
+    <template v-if="rows.length">
       <div class="sw-head">
-        <span class="sw-h">{{ def.icon }} {{ def.name }}作品</span>
-        <span class="dim">做成后给 <b>{{ axis.label }}</b> 永久加成（每件 {{ axis.amountLabel(axis.perItem) }}）</span>
+        <span class="sw-h">{{ workIcon }} {{ workTitle }}</span>
+        <span class="dim">做成后给 <b>{{ workAxisLabel }}</b> 永久加成（每件 {{ amountText(rows[0]?.amount ?? 0) }} 起）</span>
       </div>
       <p class="dim sw-note">
-        {{ def.materialNote }} · 已完成 <b>{{ ownedCount }}/{{ rows.length }}</b> 件，
-        作品合计 <b>{{ axis.amountLabel(workOnlyTotal) }}</b>（满级 {{ axis.amountLabel(axis.perItem * rows.length) }}）。
+        {{ workNote }} · 已完成 <b>{{ ownedCount }}/{{ rows.length }}</b> 件，
+        作品合计 <b>{{ amountText(workOnlyTotal) }}</b>（满级 {{ amountText(workMaxTotal) }}）。
       </p>
       <div class="sw-grid">
         <div
@@ -102,14 +133,14 @@ function feed() {
           <ItemImg :item-id="r.itemId" />
           <div class="sw-body">
             <div class="sw-name">{{ r.name }} <span class="dim mono">Lv{{ r.level }}</span></div>
-            <div class="dim sw-eff">{{ axis.label }} {{ axis.amountLabel(r.amount) }}</div>
+            <div class="dim sw-eff">{{ workAxisLabel }} {{ amountText(r.amount) }}</div>
             <button
               v-if="!r.owned"
               class="btn btn-sm"
               :class="r.have > 0 ? 'btn-primary' : ''"
               @click="craft(r)"
             >
-              {{ r.have > 0 ? '做成作品' : '背包没有' }}
+              {{ r.have > 0 ? (isWoodworking ? '做成装潢' : '做成作品') : '背包没有' }}
             </button>
             <span v-else class="badge badge-on">已完成</span>
           </div>
@@ -118,7 +149,7 @@ function feed() {
     </template>
 
     <!-- ② 量产阶梯 -->
-    <div v-if="ladder" class="sw-ladder">
+    <div v-if="ladder" class="sw-ladder" :class="{ 'sw-ladder--sep': rows.length > 0 }">
       <div class="sw-head">
         <span class="sw-h">🏭 {{ ladder.name }}量产阶梯</span>
         <span class="dim">
@@ -172,6 +203,9 @@ function feed() {
 .sw-ladder {
   margin-top: 14px;
   padding-top: 12px;
+}
+/* 只在**上面真有作品层**时才画分隔虚线（木工以前没有作品层 → 只留一条悬空虚线） */
+.sw-ladder--sep {
   border-top: 1px dashed var(--border);
 }
 .sw-feed {
