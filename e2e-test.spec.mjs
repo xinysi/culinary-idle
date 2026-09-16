@@ -189,6 +189,32 @@ test.describe('游戏全流程', () => {
     expect(await page.locator('.mobile-skills').count(), '选完技能抽屉应收起').toBe(0)
   })
 
+  test('左栏：点任意技能后技能列表仍在（页签 key 不能与侧栏不一致）', async ({ page }) => {
+    const errors = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(300)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await page.waitForTimeout(800)
+
+    // 逐个点技能（含副业五支），每次都要有「某个 nav 可见」——
+    // 三个 nav 的 v-show 全为假时左栏会**整个空白**（2026-09-17 用户实测报过：
+    // `SKILL_CATEGORIES.tab` 写了单数 'skill'，而侧栏判的是 'skills' ⇒ 点任何技能都清空左栏）
+    const ids = await page.evaluate(() => [...document.querySelectorAll('.app-sidebar button.skill-item')].length
+      ? Object.keys(document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').skills)
+      : [])
+    expect(ids.length, '应能取到技能 id 列表').toBeGreaterThan(20)
+    for (const id of ids) {
+      await page.evaluate((sid) => {
+        document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').setActiveSkill(sid)
+      }, id)
+      await page.waitForTimeout(80)
+      const visible = await page.evaluate(() => [...document.querySelectorAll('.app-sidebar nav')].filter((n) => n.offsetParent !== null).length)
+      expect(visible, `技能「${id}」激活后左栏应有可见列表（实际 0 个）`).toBeGreaterThan(0)
+    }
+    expect(errors, `控制台错误：${errors.join(' | ')}`).toEqual([])
+  })
+
   // 守卫：390px 手机下**任何页面都不得横向溢出**（2026-09-12 立）
   // 起因：新增的 7 列对照表与 6 列榜单行把主区撑宽（实测分店 +22px、同业榜 +6px）——
   // 桌面上完全看不出，只有手机才会出现「页面能左右滑」的怪状。宽表请包 `.table-scroll`。

@@ -50,12 +50,17 @@ export const SKILL_DEFS = {
   candles: { id: 'candles', name: '蜡烛制作', category: 'sideline', desc: '木料与动物脂熬制蜡烛，延长夜市狂潮的营业时段' },
 }
 
-/** 左栏页签分组：技能页签显示前四类，副业页签只显示 sideline（2026-09-16） */
+/**
+ * 左栏页签分组：技能页签显示前四类，副业页签只显示 sideline（2026-09-16）。
+ * ⚠️ **`tab` 的取值必须与 Sidebar.vue 里 `sideTab` 的三个 key 完全一致**（`'skills'` / `'features'` / `'side'`）。
+ * 2026-09-17 实测踩过：这里写成单数 `'skill'`，而侧栏三个 `v-show` 判的是 `'skills'`，
+ * 于是**点任何技能都会把三个列表全部隐藏、左栏空白**（v2.9.0 引入，v2.10.1 修）。C32 有派生断言读 Sidebar 源码钉住这条。
+ */
 export const SKILL_CATEGORIES = [
-  { id: 'gathering', name: '采集', tab: 'skill' },
-  { id: 'production', name: '制作', tab: 'skill' },
-  { id: 'combat', name: '对决', tab: 'skill' },
-  { id: 'support', name: '辅助', tab: 'skill' },
+  { id: 'gathering', name: '采集', tab: 'skills' },
+  { id: 'production', name: '制作', tab: 'skills' },
+  { id: 'combat', name: '对决', tab: 'skills' },
+  { id: 'support', name: '辅助', tab: 'skills' },
   { id: 'sideline', name: '副业', tab: 'side' },
 ]
 
