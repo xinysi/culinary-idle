@@ -22,7 +22,12 @@ const ui = useUiStore()
 const isFishing = computed(() => props.instance.id === 'fishing')
 const isHunting = computed(() => props.instance.id === 'hunting')
 const isExcavation = computed(() => props.instance.id === 'excavation')
-const isForagingLike = computed(() => !isFishing.value && !isHunting.value) // 采摘/挖掘（有可种作物目标）
+const isMining = computed(() => props.instance.id === 'mining')
+const isWoodcutting = computed(() => props.instance.id === 'woodcutting')
+// v2.7.0：按类别分组现在适用于挖掘（根茎/菌类）、采矿（矿物）、伐木（木料）
+const byCategory = computed(() => isExcavation.value || isMining.value || isWoodcutting.value)
+// 只有**采摘与挖掘**的目标里含可种作物（采矿/伐木没有种子），别把种子提示错加到新技能上
+const isForagingLike = computed(() => !isFishing.value && !isHunting.value && !isMining.value && !isWoodcutting.value)
 
 // 目标查找表：一次构建，卡片回调不再对 targets 线性查找（O(n²) → O(1)）
 const targetMap = computed(() => {
@@ -79,14 +84,14 @@ function goShop() {
   ui.setView('shop')
 }
 
-// ── 分段（挖掘按产出类别分组；其余按 reqLevel 每 5 级一段）──
-const CAT_SECTION_LABEL = { root: '🥔 根茎食材', mineral: '⛏️ 矿物', fungus: '🍄 菌类' }
+// ── 分段（挖掘/采矿/伐木按产出类别分组；其余按 reqLevel 每 5 级一段）──
+const CAT_SECTION_LABEL = { root: '🥔 根茎食材', mineral: '⛏️ 矿物', fungus: '🍄 菌类', material: '🪵 木料' }
 const sections = computed(() => {
   const map = new Map()
   for (const t of props.instance?.targets ?? []) {
     let label, kind
-    if (isExcavation.value) {
-      // 挖掘：食材/矿物/菌类 分开归类
+    if (byCategory.value) {
+      // 挖掘/采矿/伐木：按产出类别归类（根茎/菌类 · 矿物 · 木料）
       const it = getItem(t.itemId)
       kind = 'category'
       label = it ? (CAT_SECTION_LABEL[it.category] ?? it.category) : '其他'
@@ -98,7 +103,7 @@ const sections = computed(() => {
     if (!map.has(label)) map.set(label, { kind, list: [] })
     map.get(label).list.push(t)
   }
-  // 挖掘组：类别固定顺序（食材→矿物→菌类→其他）；其余按等级升序
+  // 类别组：固定顺序（根茎→矿物→菌类→木料→其他）；其余按等级升序
   const order = Object.keys(CAT_SECTION_LABEL)
   return [...map.entries()]
     .map(([label, v]) => ({ label, kind: v.kind, list: v.list }))
@@ -137,8 +142,8 @@ function scrollToSection(label) {
          挂机的停止/继续与到达进度展示在右侧“挂机中”列表） -->
     <div class="card status-line">
       <span class="dim">
-        共 {{ instance.targets.length }} 个{{ isFishing ? '垂钓目标' : isHunting ? '狩猎目标' : isExcavation ? '挖掘目标' : '采集目标' }}
-        · {{ isFishing ? '成功率随等级提升（基础 55%），失败得 20% 经验；4.5% 概率稀有金龙鱼' : isHunting ? '1% 双倍产出；野鸡 15% 概率额外掉落野鸡蛋' : isExcavation ? '2% 化石食材（远古食谱原料）+ 50% 铜矿 + 30% 铁矿附带' : '1% 双倍产出（随专精提升）+ 50% 附带木材' }}
+        共 {{ instance.targets.length }} 个{{ isFishing ? '垂钓目标' : isHunting ? '狩猎目标' : isExcavation ? '挖掘目标' : isMining ? '采矿目标' : isWoodcutting ? '伐木目标' : '采集目标' }}
+        · {{ isFishing ? '成功率随等级提升（基础 55%），失败得 20% 经验；4.5% 概率稀有金龙鱼' : isHunting ? '1% 双倍产出；野鸡 15% 概率额外掉落野鸡蛋' : isExcavation ? '2% 化石食材（远古食谱原料）+ 50% 铜矿 + 30% 铁矿附带（矿物本身已归采矿）' : isMining ? '矿物供锻造、保鲜与宝石镶嵌；铜矿与铁矿此前只能靠挖掘附带，现在可定向开采' : isWoodcutting ? '每 5 级一档木材，供锻造同档装备与装备强化（N 级装备用 N 级木材）' : '1% 双倍产出（随专精提升）+ 50% 附带木材' }}
         <template v-if="isForagingLike">· 可种作物每次动作 10% 掉落对应种子（矿物目标不掉）</template>
       </span>
       <!-- 弹药提示（狩猎）：放到本框最右侧 -->

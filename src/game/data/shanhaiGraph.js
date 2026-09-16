@@ -1,22 +1,35 @@
 // 山海食经 · 图谱布局（v2.1）— **纯函数**，只读 shanhaiTree.js 算画布几何。
-// 形态：辐射式巨树 —— 中心「根」+ **10 个扇区**（收集线）+ **10 圈同心环**（环门槛递进），每环每系 3 节点。
+// 形态：辐射式巨树 —— 中心「根」+ **N 个扇区**（N = 收集线数，现 12）+ **10 圈同心环**（环门槛递进）。
 // 与 daoGraph.js 同一套视觉语言（圆形节点、支线色、环导轨、中心根与干枝、顶部牌匾），
-// 差别只在规模（10×10×3 = 300 节点，画布 ~3800px，**一屏看不完是设计意图**）。
+// 差别只在规模（12×40 分支 = 480 + 汇金 60 + 珍券 12 = 552 节点，画布 ~4100px，**一屏看不完是设计意图**）。
 // 前 6 环＝收集/等级曲线，第 7~10 环＝大后期里程碑（技能 100 级 / 转生 1 / 5 / 10 次）。
-// 另有「汇金链」：相邻两分支之间的 12° 空隙里，第 6~10 环各一个金币节点，沿空隙射线由内向外排成一条链；
-// 以及外圈「珍券环」：最外侧环绕整圈的 10 个抽卡券节点（每 36°、对准各线射线、闭合成圈）。
+// 另有「汇金链」：相邻两分支之间的空隙里，第 6~10 环各一个金币节点，沿空隙射线由内向外排成一条链；
+// 以及外圈「珍券环」：最外侧环绕整圈、对准各线射线的抽卡券节点（闭合成圈）。
+// ⚠️ **扇区数/角跨/标题半径全部按 `SHANHAI_PATHS.length` 派生**，加线（或减线）只需重跑生成器，
+//    本文件的几何会自动跟着变（角度预算见 SHANHAI_METRICS 与 TITLE_R 的推导）。
 import { SHANHAI_PATHS, SHANHAI_NODES, SHANHAI_RING_COUNT, SHANHAI_GAPS, SHANHAI_TICKET_RING } from './shanhaiTree.js'
+
+/** 收集线数（扇区数）——几何的唯一定量来源 */
+const PATH_COUNT = SHANHAI_PATHS.length || 1
+/** 每扇区角跨（度）＝360 / 线数（12 线 = 30°） */
+const SECTOR_STEP = 360 / PATH_COUNT
+/**
+ * 道途标题的半径：由「相邻扇区标题的弦距 ≥ 底片宽 130px」反解 —— `2·r·sin(π/N) ≥ 130`：
+ * N=12 → r ≥ 251.2（取 252）；N=10 → r ≥ 210.3（被历史下限 215 兜住，观感不变）。
+ * 标题必须夹在「根」与第 1 环之间（守卫会断言 r0+20 < titleR < rings[0]）。
+ */
+const TITLE_R = Math.max(215, Math.ceil(130 / (2 * Math.sin(Math.PI / PATH_COUNT))))
 
 /** 画布度量（改这里只影响观感，不影响玩法） */
 export const SHANHAI_METRICS = {
   r: 28,               // 节点基准半径（实际按环分档：越外圈略大）
-  // 角度预算（10 扇区 / 360° = 每系 36°）：**环内 2 段 + 扇区间隙 1 段，三段等宽 12°**
-  //   → 环内相邻弦距 = 2R·sin(6°)、跨扇区弦距 = 2R·sin(6°)，都要 ≥ 节点直径 + 净距（≈72px）
-  //   → 第 1 环至少 420。外圈按非线性步长拉开（越外越疏，观感更像巨树）
+  // 角度预算（12 扇区 / 360° = 每系 30°）：**环内 2 段 + 扇区间隙 1 段，三段等宽 10°**
+  //   → 环内相邻弦距 = 2R·sin(5°)、跨扇区弦距 = 2R·sin(5°)，都要 ≥ 节点直径 + 净距（≈60px）
+  //   → 第 1 环（420）实测 73px ≥ 60，**故环半径数组不需要动**（加线只让角跨变窄，不动半径）
   //   环间步长 ≥ 120（节点直径 + 净距），越外越疏（非线性放大，观感更像巨树）：
   //   120/128/136/144/152/160/168/176/184 —— 第 7~10 环对应大后期四档里程碑
   rings: [420, 540, 668, 804, 948, 1100, 1260, 1428, 1604, 1788],
-  spread: 24,          // 每扇区跨度（留 12° 间隙给相邻扇区）
+  spread: 20,          // 每扇区跨度（留 10° 间隙给相邻扇区与汇金链）
   rootR: 44,
   labelGap: 0,         // 画布上不画名称（纯图标），保留字段以对齐 daoGraph 的接口
   padTop: 26,
@@ -24,8 +37,8 @@ export const SHANHAI_METRICS = {
   jitterR: 5,          // 半径方向确定性抖动（有机感，但别吃掉环间/节点间净距）
   jitterA: 0.7,        // 角度方向抖动（度）
 }
-/** 10 条收集线在圆周上的中心角（度）：从上开始顺时针排布 */
-const SECTOR_CENTERS = Array.from({ length: 10 }, (_, i) => -90 + i * 36)
+/** 各收集线在圆周上的中心角（度）：从上开始顺时针均分一圈 */
+const SECTOR_CENTERS = Array.from({ length: PATH_COUNT }, (_, i) => -90 + i * SECTOR_STEP)
 
 const RAD = Math.PI / 180
 /** 确定性伪随机：同一 id 永远同一个值（布局可复现，截图/守卫都能复现） */
@@ -77,18 +90,18 @@ export function shanhaiGraphLayout() {
     return {
       id: p.id, name: p.name, icon: p.icon, desc: p.desc, index: pi, centerDeg,
       // 标题放在**中心附近、自己那条干枝上**（用户要求：显示在中心节点几条线的中间之间）——
-      // 10 扇区相邻弦距 = 2r·sin(18°) ≈ 0.62r，标题底片宽约 110px → r ≥ 178，取 215 留余量。
-      titleAt: polar(cx, cy, 215, centerDeg),
-      // 每扇区一个「支线色」类（10 个色轮换 5 个语义色，相邻必不同）
+      // N 扇区相邻弦距 = 2r·sin(180°/N)，标题底片宽约 130px → 半径由 TITLE_R 反解（12 线取 252）。
+      titleAt: polar(cx, cy, TITLE_R, centerDeg),
+      // 每扇区一个「支线色」类（轮换 5 个语义色，相邻必不同）
       accent: `lane-a${pi}`,
       d: `M ${p1.x} ${p1.y} A ${rIn} ${rIn} 0 0 1 ${p2.x} ${p2.y} L ${p3.x} ${p3.y} A ${rOut} ${rOut} 0 0 0 ${p4.x} ${p4.y} Z`,
     }
   })
 
-  // ── 汇金链：相邻两分支**之间**的空隙射线（两扇区中心角的中线 = +18°）──
+  // ── 汇金链：相邻两分支**之间**的空隙射线（两扇区中心角的中线 = +半个扇区角）──
   // 槽位只有 1 个（每环 1 个节点），所以不做扇区展开，直接落在空隙射线上、由内向外串成一条链。
   const gapResults = SHANHAI_GAPS.map((g, gi) => {
-    const gapDeg = SECTOR_CENTERS[gi % SECTOR_CENTERS.length] + 360 / SECTOR_CENTERS.length / 2
+    const gapDeg = SECTOR_CENTERS[gi % SECTOR_CENTERS.length] + SECTOR_STEP / 2
     const own = SHANHAI_NODES.filter((n) => n.path === g.id)
     own.forEach((n) => {
       const radius = R[n.ring - 1] + (rand01(n.id + 'r') - 0.5) * M.jitterR
@@ -97,7 +110,7 @@ export function shanhaiGraphLayout() {
       nodes.push({
         id: n.id, name: n.name, icon: n.icon, cost: n.req?.count ?? 0, effect: n.effect, desc: n.desc,
         // pathId 固定为 'gold' —— 画布按 `lane-<pathId>` 上色，`lane-gold` 就是金币支线色（见组件 CSS）
-        pathId: 'gold', pathName: g.name, pathIcon: '🪙', pathIndex: 10 + g.index, tier: n.ring,
+        pathId: 'gold', pathName: g.name, pathIcon: '🪙', pathIndex: SHANHAI_PATHS.length + g.index, tier: n.ring,
         gap: true, gapA: g.aName, gapB: g.bName, gapAskill: g.aSkill, gapBskill: g.bSkill,
         iconItem: n.iconItem, tierReq: n.req?.level ?? 0, tierDesc: '',
         r, cx: pos.x, cy: pos.y, x: pos.x - r, y: pos.y - r, deg: gapDeg, radius,
@@ -107,7 +120,7 @@ export function shanhaiGraphLayout() {
   })
 
   // ── 外圈「珍券环」（2026-09-13 用户追加，与厨神之路外环同款）：**环绕整棵树一整圈**的抽卡券节点 ──
-  // 10 个节点对准 10 条线的射线（扇区中心角），落在第 10 环之外的半径上，互相连成**闭合的圈**。
+  // 每线 1 个节点（现 12 个）：对准各线的射线（扇区中心角），落在第 10 环之外的半径上，互相连成**闭合的圈**。
   SHANHAI_PATHS.forEach((p, i) => {
     const n = SHANHAI_NODES.find((x) => x.path === 'ticket' && x.name.startsWith(p.name))
     if (!n) return
@@ -190,7 +203,7 @@ export function shanhaiGraphLayout() {
     }
   }
 
-  // 中心根 + 10 条干枝（连到各系第 1 环的中间那颗）
+  // 中心根 + 每线一条干枝（连到各系第 1 环的中间那颗）
   const root = { x: cx, y: cy, r: M.rootR }
   const trunks = SHANHAI_PATHS.map((p, pi) => {
     const mid = nodes.filter((n) => n.pathId === p.id && n.tier === 1).sort((a, b) => Math.abs(a.deg - SECTOR_CENTERS[pi]) - Math.abs(b.deg - SECTOR_CENTERS[pi]))[0]

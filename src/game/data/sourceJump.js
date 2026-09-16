@@ -11,6 +11,8 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['垂钓'], target: { view: 'skill', skill: 'fishing' } },
   { kw: ['狩猎'], target: { view: 'skill', skill: 'hunting' } },
   { kw: ['挖掘'], target: { view: 'skill', skill: 'excavation' } },
+  { kw: ['采矿'], target: { view: 'skill', skill: 'mining' } },
+  { kw: ['伐木'], target: { view: 'skill', skill: 'woodcutting' } },
   { kw: ['农耕'], target: { view: 'skill', skill: 'farming' } },
   { kw: ['烹饪'], target: { view: 'skill', skill: 'cooking' } },
   { kw: ['烘焙'], target: { view: 'skill', skill: 'baking' } },

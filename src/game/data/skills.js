@@ -1,13 +1,16 @@
-// 技能注册表 — 需求文档 §3：20 个技能，4 大类
+// 技能注册表 — 需求文档 §3：22 个技能，4 大类（v2.7.0：+伐木、+采矿）
 // category: gathering(采集) / production(制作) / combat(对决) / support(辅助)
 // 等级上限 100（§3），转生后可突破至 120（后续迭代）
+// 图标约定：挖掘从 ⛏️ 改为 🥔（镐子让给采矿），避免两个技能撞图标
 
 export const SKILL_DEFS = {
   // ── 采集类（§3.1）──
   foraging: { id: 'foraging', name: '采摘', category: 'gathering', desc: '从植物上采集水果、蔬菜、坚果等食材' },
   fishing: { id: 'fishing', name: '垂钓', category: 'gathering', desc: '在不同水域钓取鱼类和海鲜' },
   hunting: { id: 'hunting', name: '狩猎', category: 'gathering', desc: '猎取野味和家禽，获得肉类食材' },
-  excavation: { id: 'excavation', name: '挖掘', category: 'gathering', desc: '挖掘根茎类食材、食用菌类和矿物盐' },
+  excavation: { id: 'excavation', name: '挖掘', category: 'gathering', desc: '挖掘根茎类食材与食用菌（矿物已独立为采矿）' },
+  woodcutting: { id: 'woodcutting', name: '伐木', category: 'gathering', desc: '砍伐 20 档木材，供厨具锻造与装备强化按档取用' },
+  mining: { id: 'mining', name: '采矿', category: 'gathering', desc: '开采矿物与宝石原料（v2.7.0 从挖掘独立）' },
   farming: { id: 'farming', name: '农耕', category: 'gathering', desc: '种植作物，定时收获' },
 
   // ── 制作类（§3.2）──
@@ -41,7 +44,8 @@ export const SKILL_CATEGORIES = [
 
 // 技能图标（emoji）
 const SKILL_ICONS = {
-  foraging: '🌿', fishing: '🎣', hunting: '🏹', excavation: '⛏️', farming: '🌾',
+  foraging: '🌿', fishing: '🎣', hunting: '🏹', excavation: '🥔', farming: '🌾',
+  woodcutting: '🪓', mining: '⛏️',
   cooking: '🍳', baking: '🥖', preserving: '🫙', brewing: '🍷', spiceMixing: '🌶️', craftsmithing: '🔨',
   knife: '🔪', heatControl: '🔥', flavorArtistry: '✨', plating: '🍽️', tasteAcumen: '❤️', spiritSummoning: '👻',
   gastronomy: '📜', preservation: '❄️', exploration: '🕵️',

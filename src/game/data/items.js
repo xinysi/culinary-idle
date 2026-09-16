@@ -740,6 +740,8 @@ for (const def of GOODS_ITEMS) ITEMS[def.id] = def
 // 精耕作物（2026-09-15，v2.5.0）：**农耕专属**的高级产物（采集/商店/抽奖都拿不到）。
 import { PRIME_CROP_ITEM } from './primeCrop.js'
 ITEMS[PRIME_CROP_ITEM.id] = PRIME_CROP_ITEM
+import { TIMBER_ITEMS } from './timbers.js'
+for (const def of TIMBER_ITEMS) ITEMS[def.id] = def
 
 export function getItem(id) {
   return ITEMS[id] ?? null

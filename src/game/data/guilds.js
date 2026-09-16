@@ -54,10 +54,11 @@ export const GUILDS = [
   { id: 'duelArena', name: '料理斗士盟', type: '战斗', desc: '战斗型公会：对决伤害 +10%', passive: { dmgPct: 10 }, requirements: { combatLevel: 55, gold: 12000 }, tasks: TASKS.combat('duelArena') },
 
   // ── 采集型 ×4：采集总等级 + 金币，产量 增益 递增 ──
-  { id: 'harvestField', name: '丰收麦田', type: '采集', desc: '采集型公会：采集产量 +6%', passive: { yieldPct: 6 }, requirements: { gatherLevel: 50, gold: 800 }, tasks: TASKS.gather('harvestField') },
-  { id: 'blueSea', name: '碧海渔村', type: '采集', desc: '采集型公会：采集产量 +7%', passive: { yieldPct: 7 }, requirements: { gatherLevel: 90, gold: 1500 }, tasks: TASKS.gather('blueSea') },
-  { id: 'forestTeam', name: '森语采集队', type: '采集', desc: '采集型公会：采集产量 +8%', passive: { yieldPct: 8 }, requirements: { gatherLevel: 140, gold: 3000 }, tasks: TASKS.gather('forestTeam') },
-  { id: 'veinCorps', name: '矿脉开拓团', type: '采集', desc: '采集型公会：采集产量 +9%', passive: { yieldPct: 9 }, requirements: { gatherLevel: 200, gold: 6000 }, tasks: TASKS.gather('veinCorps') },
+  // v2.7.0：采集线从 5 条增到 7 条（+伐木/采矿），门槛按 7/5 等比上调以保持同等入会节奏（勿只改其中一个）。
+  { id: 'harvestField', name: '丰收麦田', type: '采集', desc: '采集型公会：采集产量 +6%', passive: { yieldPct: 6 }, requirements: { gatherLevel: 70, gold: 800 }, tasks: TASKS.gather('harvestField') },
+  { id: 'blueSea', name: '碧海渔村', type: '采集', desc: '采集型公会：采集产量 +7%', passive: { yieldPct: 7 }, requirements: { gatherLevel: 130, gold: 1500 }, tasks: TASKS.gather('blueSea') },
+  { id: 'forestTeam', name: '森语采集队', type: '采集', desc: '采集型公会：采集产量 +8%', passive: { yieldPct: 8 }, requirements: { gatherLevel: 200, gold: 3000 }, tasks: TASKS.gather('forestTeam') },
+  { id: 'veinCorps', name: '矿脉开拓团', type: '采集', desc: '采集型公会：采集产量 +9%', passive: { yieldPct: 9 }, requirements: { gatherLevel: 280, gold: 6000 }, tasks: TASKS.gather('veinCorps') },
 
   // ── 制作型 ×4：制作总等级 + 金币，成功率 增益 递增 ──
   { id: 'millerGuild', name: '百味磨坊', type: '制作', desc: '制作型公会：制作成功率 +6%', passive: { craftPct: 6 }, requirements: { craftLevel: 50, gold: 800 }, tasks: TASKS.craft('millerGuild') },

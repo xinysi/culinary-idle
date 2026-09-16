@@ -7,6 +7,7 @@ import { ProductionSkill } from './ProductionSkill.js'
 import { SMITHING_EXT } from '../data/expansion1.js'
 import { SMITHING_EXT2 } from '../data/expansion2.js'
 import { SMITHING_SET_RECIPES } from '../data/smithSetExt.js'
+import { retargetTimberMaterials } from '../data/timberRecipes.js'
 import { balanceRecipeLevels } from './recipeBalance.js'
 
 export const SMITHING_RECIPES = [
@@ -82,6 +83,9 @@ export const SMITHING_RECIPES = [
 
 export class CraftsmithingSkill extends ProductionSkill {
   constructor(player) {
+    // v2.7.0：先把 20 品质套的木材材料按档入配方（用户授权的一次固定层改写，范围见 data/timberRecipes.js），
+    // 再跑既有的等级/材料平衡——顺序不能反：先入档位木材，平衡才看得到最终材料构成。
+    retargetTimberMaterials(SMITHING_SET_RECIPES)
     super('craftsmithing', player, balanceRecipeLevels(SMITHING_SET_RECIPES))
   }
 }

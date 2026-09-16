@@ -53,7 +53,7 @@ function doPrestige() {
 }
 
 // ── 挂机计划（2026-09-09）：按顺序挂机 → 条件满足自动换目标 → 全部完成自动暂停 ──
-const PLAN_SKILLS = ['foraging', 'fishing', 'hunting', 'excavation', 'exploration', 'farming']
+const PLAN_SKILLS = ['foraging', 'fishing', 'hunting', 'excavation', 'mining', 'woodcutting', 'exploration', 'farming']
 const planOpen = ref(false)
 const planSkill = ref('foraging')
 const planTarget = ref(null)

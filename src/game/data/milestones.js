@@ -7,7 +7,7 @@
  */
 export const MILESTONES = [
   // ── 成长 ──
-  { id: 'm_totalLevels', group: '成长', icon: '📈', name: '总等级 500', target: 500, unit: '级', hint: '20 技能等级合计', value: (p) => p.totalLevels },
+  { id: 'm_totalLevels', group: '成长', icon: '📈', name: '总等级 500', target: 500, unit: '级', hint: '22 技能等级合计', value: (p) => p.totalLevels },
   { id: 'm_skill120', group: '成长', icon: '🔝', name: '单个技能 120 级', target: 120, unit: '级', hint: '转生后上限解锁', value: (p) => Math.max(0, ...Object.values(p.skills ?? {}).map((s) => s.level ?? 1)) },
   { id: 'm_prestige12', group: '成长', icon: '♻️', name: '转生 12 次', target: 12, unit: '次', hint: '每层 +20% 经验', value: (p) => p.stats?.prestiges ?? 0 },
   { id: 'm_school30', group: '成长', icon: '📜', name: '六派研究 30 级', target: 30, unit: '级', hint: '六派各 5 级', value: (p) => p.schoolTotalLevels?.() ?? 0 },

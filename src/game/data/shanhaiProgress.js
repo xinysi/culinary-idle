@@ -166,5 +166,15 @@ export function shanhaiCapGrant(unlockedIds = []) {
 
 /** 效果字段白名单（守卫与展示共用） */
 export const SHANHAI_EFFECT_FIELDS = ['inventoryCap', 'bankCap', 'coldStorageCap', 'offlineH', 'flatYield', 'gold']
-/** 全树效果上限（守卫：防日后悄悄加码；容量类按「一次性发放」计） */
-export const SHANHAI_EFFECT_CAPS = { inventoryCap: 240, bankCap: 400, coldStorageCap: 65, offlineH: 6, flatYieldPerSkill: 2, gold: 5200000 }
+/**
+ * 全树效果上限（守卫：防日后悄悄加码；容量类按「一次性发放」计）。
+ * ⚠️ **加线/改环奖励后必须同步这里**（`system_test` C22 会断言「全树实际总量 ≤ 上限」，
+ *    C23 还会断言 `offlineH` 与 `flatYieldPerSkill` **恰好等于**上限——多了会被 `offlineMaxHours`
+ *    与采集逻辑夹掉＝发了读不到的奖励，少了＝浪费设计位）。
+ * 当前（2026-09-16，12 条线：10 原有 + 伐薪/矿脉，552 节点）**实测总量**：
+ *   背包 276 · 仓库 456 · 冷库 70 · 离线 8h（= `OFFLINE_CAP.shanhaiMaxHours`）·
+ *   每技能每次 +2 件（7 条采集线各自用满）· 金币 5,904,000（12 个汇金空隙 × 492k）。
+ * 取值口径：**贴着实测值取**（不预留余量）——留余量等于给「悄悄加码」放行，而这里正是那道闸门。
+ * 另注：容量三档必须满足 `CAP_MAX.x ≥ PAID_CAP_MAX.x + 本表.x`（C23 断言），改这里要回头看 caps.js。
+ */
+export const SHANHAI_EFFECT_CAPS = { inventoryCap: 276, bankCap: 456, coldStorageCap: 70, offlineH: 8, flatYieldPerSkill: 2, gold: 5904000 }

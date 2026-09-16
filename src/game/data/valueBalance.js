@@ -5,7 +5,8 @@ import { ITEMS } from './items.js'
 import { FORAGING_TARGETS } from '../skills/ForagingSkill.js'
 import { FISHING_TARGETS } from '../skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../skills/HuntingSkill.js'
-import { EXCAVATION_TARGETS } from '../skills/ExcavationSkill.js'
+import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../skills/ExcavationSkill.js'
+import { WOODCUTTING_TARGETS } from './timbers.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { COOKING_RECIPES } from '../skills/CookingSkill.js'
 import { BAKING_RECIPES } from '../skills/BakingSkill.js'
@@ -25,7 +26,12 @@ const round = (v) => Math.round(v)
 // 物品 -> 最低获取等级（采集/农耕/探索掉落 ∪ 配方产物能力）
 const level = {}
 const addLv = (id, lv) => { if (id != null && (level[id] == null || lv < level[id])) level[id] = lv }
-for (const [arr] of [[FORAGING_TARGETS], [FISHING_TARGETS], [HUNTING_TARGETS], [EXCAVATION_TARGETS]]) for (const t of arr) addLv(t.itemId, t.reqLevel)
+// ⚠️ v2.7.0：与 recipeBalance 同源——矿物拆出后要把「挖掘地面 / 采矿 / 伐木」三份清单都登记，
+// 否则新木材的 value 不参与「随等级 ±30% 带」校正，会与同级材料倒挂。
+for (const [arr] of [
+  [FORAGING_TARGETS], [FISHING_TARGETS], [HUNTING_TARGETS],
+  [EXCAVATION_TARGETS], [EXCAVATION_GROUND_TARGETS], [MINING_TARGETS], [WOODCUTTING_TARGETS],
+]) for (const t of arr) addLv(t.itemId, t.reqLevel)
 for (const s of ['foraging', 'fishing', 'hunting', 'excavation']) { for (const t of GATHERING_EXT[s] ?? []) addLv(t.itemId, t.reqLevel); for (const t of GATHERING_EXT2[s] ?? []) addLv(t.itemId, t.reqLevel) }
 for (const c of CROPS) addLv(c.itemId, c.reqLevel)
 // 注意：探索掉落【不】作为物品价值等级来源。探索卡片等级是“探索区难度”，不代表物品真实等级；

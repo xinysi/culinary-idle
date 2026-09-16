@@ -2,7 +2,8 @@
 import { FORAGING_TARGETS } from '../skills/ForagingSkill.js'
 import { FISHING_TARGETS } from '../skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../skills/HuntingSkill.js'
-import { EXCAVATION_TARGETS } from '../skills/ExcavationSkill.js'
+import { EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../skills/ExcavationSkill.js'
+import { WOODCUTTING_TARGETS } from './timbers.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { SHOP_ITEMS } from './shop.js'
 
@@ -10,7 +11,9 @@ const GATHER_TABLES = [
   ['foraging', FORAGING_TARGETS, '采集'],
   ['fishing', FISHING_TARGETS, '垂钓'],
   ['hunting', HUNTING_TARGETS, '狩猎'],
-  ['excavation', EXCAVATION_TARGETS, '挖掘'],
+  ['excavation', EXCAVATION_GROUND_TARGETS, '挖掘'],
+  ['mining', MINING_TARGETS, '采矿'],
+  ['woodcutting', WOODCUTTING_TARGETS, '伐木'],
 ]
 
 /** 某物品可跳转的获取入口列表（采集 > 农耕 > 商店 > 制作在各节点单独处理） */
@@ -30,7 +33,7 @@ export function itemNavs(itemId) {
 export function navText(nav) {
   switch (nav.type) {
     case 'gather':
-      return { foraging: '去采集', fishing: '去垂钓', hunting: '去狩猎', excavation: '去挖掘' }[nav.skillId] ?? '去采集'
+      return { foraging: '去采集', fishing: '去垂钓', hunting: '去狩猎', excavation: '去挖掘', mining: '去采矿', woodcutting: '去伐木' }[nav.skillId] ?? '去采集'
     case 'farming': return '去种植'
     case 'shop': return '去商店'
     case 'craft': return '去做'

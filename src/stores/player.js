@@ -13,6 +13,9 @@ import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
 import { totalXpForLevel } from '../game/core/Experience.js'
 import { getItem, ITEMS } from '../game/data/items.js'
+import { MINING_TARGETS } from '../game/skills/ExcavationSkill.js'
+import { timberOfLevel } from '../game/data/timbers.js'
+import { equipmentLevelOf, oreOfLevel } from '../game/data/timberRecipes.js'
 import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
@@ -170,6 +173,13 @@ export function favorLevelFromXp(xp) {
   return lv
 }
 
+/** 采矿的目标物品集合（存档迁移用：判断旧档的挖掘目标是否已被移交给采矿） */
+const MINING_TARGET_IDS = new Set(MINING_TARGETS.map((t) => t.itemId))
+/** 同上，但**排除铜矿/铁矿**（它们从来不是挖掘目标，只是附产物，没有对应的挖掘轶事） */
+const LEGACY_EXCAVATION_MINERALS = new Set(
+  MINING_TARGETS.filter((t) => t.itemId !== 'copperOre' && t.itemId !== 'ironOre').map((t) => t.itemId)
+)
+
 function defaultSkills() {
   const skills = {}
   for (const id of Object.keys(SKILL_DEFS)) {
@@ -221,7 +231,7 @@ const defaultState = () => ({
     achievements: [], // 已解锁成就 id（§6.1）
     collected: {}, // 图鉴（§6.2）：{ itemId: true }
     quests: { index: 0, completed: [], progress: {} }, // 主线任务（§7.2）
-    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0 }, // 效果总览：历史「同时生效项数」的最高值（v2.6.0）
+    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0, splitMiningMigrated: false }, // 效果总览峰值（v2.6.0）+ 采矿拆分迁移账本（v2.7.0；必须进 schema，否则存档往返会「多出一个字段」）
     // §13 扩展：餐厅 / 公会 / 赛季 / 竞技场
     restaurant: { level: 1, menu: [], incomeAccum: 0, decor: [] }, // 餐厅经营：菜单为料理 itemId 列表；decor 装饰（§13）
     guild: { id: null, points: 0, day: null, taskProgress: {} }, // 公会：被动+任务+商店
@@ -561,9 +571,9 @@ export const usePlayerStore = defineStore('player', {
     guildEffects(s) {
       return () => getGuild(s.guild?.id)?.passive ?? {}
     },
-    /** 采集技能总等级（公会加入需求，§13） */
+    /** 采集技能总等级（公会加入需求，§13）——v2.7.0 起含伐木与采矿（共 7 条采集线） */
     gatherLevels(s) {
-      return ['foraging', 'fishing', 'hunting', 'excavation', 'farming'].reduce((a, id) => a + (s.skills[id]?.level ?? 1), 0)
+      return ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].reduce((a, id) => a + (s.skills[id]?.level ?? 1), 0)
     },
     /** 制作技能总等级（公会加入需求，§13） */
     craftLevels(s) {
@@ -593,6 +603,52 @@ export const usePlayerStore = defineStore('player', {
       for (const [id, s] of Object.entries(saved.skills ?? {})) {
         if (skills[id]) skills[id] = { ...skills[id], ...s, mastery: s.mastery ?? {}, prestiges: s.prestiges ?? 0 }
       }
+      // ── v2.7.0 一次性迁移：矿物从「挖掘」独立为「采矿」（幂等；账本写在 stats.splitMiningMigrated）──
+      // 规则：旧档（没有采矿存档）由采矿**继承挖掘的等级与经验**（矿物占原挖掘 41/83 的大头），
+      //      挖掘自身等级保持不动；矿物的卡片精通键从挖掘迁到采矿；若旧档正在挖某个矿物，
+      //      把那个目标改挂到采矿（挖掘本身有 currentTarget 兜底，不会停产）。
+      const splitTargets = { ...(saved.skillTargets ?? {}) }
+      let splitMasteryFix = null // ⚠️ $patch 是**深合并**，删除键不会生效 → patch 之后必须直接赋值（见块末）
+      let splitMovedTarget = false // 迁移是否改过目标表（决定  里用哪一份）
+      let splitDid = false // ⚠️ 账本同理：$patch 的 `stats` 会用存档里的值覆盖，必须在 patch 之后赋值
+      // ⚠️ 只有「真的有东西要迁移」时才动账本：否则新档（flag=false、采矿已存在且都是空的）会被翻成 true，
+      //    导致「序列化 → 读档 → 再序列化」出现差异（存档往返守卫会 FAIL，实测踩过）。
+      const _srcSkill = saved.skills?.excavation
+      const _hasMining = !!saved.skills?.mining
+      const _oldTarget = saved.skillTargets?.excavation
+      const _needsSplit =
+        !!_srcSkill &&
+        (!_hasMining ||
+          Object.keys(_srcSkill.mastery ?? {}).some((id) => MINING_TARGET_IDS.has(id)) ||
+          !!(_oldTarget && MINING_TARGET_IDS.has(_oldTarget)))
+      if (!this.stats?.splitMiningMigrated && _needsSplit) {
+        const src = saved.skills?.excavation
+        const hasMining = !!saved.skills?.mining
+        if (src && !hasMining) {
+          skills.mining = { ...skills.mining, level: src.level ?? 1, exp: src.exp ?? 0, prestiges: 0, mastery: {} }
+        }
+        const miningMastery = { ...(hasMining ? saved.skills.mining.mastery ?? {} : {}) }
+        const restMastery = { ...(src?.mastery ?? {}) }
+        let moved = 0
+        for (const id of Object.keys(restMastery)) {
+          if (MINING_TARGET_IDS.has(id)) {
+            miningMastery[id] = (miningMastery[id] ?? 0) + restMastery[id]
+            delete restMastery[id]
+            moved++
+          }
+        }
+        skills.excavation = { ...skills.excavation, mastery: restMastery }
+        skills.mining = { ...skills.mining, mastery: miningMastery }
+        splitMasteryFix = { excavation: restMastery, mining: miningMastery }
+        splitDid = true // 账本在 $patch 之后写（patch 的 stats 会覆盖这里）
+        // 旧档正在挖的若是矿物 → 把该目标改挂到采矿（挖掘有 currentTarget 兜底，不会停产）
+        const oldT = saved.skillTargets?.excavation
+        if (oldT && MINING_TARGET_IDS.has(oldT)) {
+          splitTargets.mining = oldT
+          delete splitTargets.excavation
+          splitMovedTarget = true
+        }
+      }
       this.$patch({
         name: saved.name ?? this.name,
         title: saved.title ?? null,
@@ -613,7 +669,9 @@ export const usePlayerStore = defineStore('player', {
         equipment: { ...defaultEquipment(), ...(saved.equipment ?? {}) },
         activeSkill: saved.activeSkill && SKILL_DEFS[saved.activeSkill] ? saved.activeSkill : 'foraging',
         activeTarget: saved.activeTarget ?? null,
-        skillTargets: saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
+        // ⚠️ 只有迁移改过目标表时才用 splitTargets：否则沿用既有语义（ 而非「空对象即默认」）——
+        // 空  是合法存档（玩家还没选目标），误判成「没有」会往存档里塞进默认目标（往返守卫实测抓过）
+        skillTargets: splitMovedTarget ? splitTargets : saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
         settings: { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }, // 并行挂机只接受 0/1/2/3
         farming: {
           plots: safeList(saved.farming?.plots, DERIVED_MAX.farmPlots), // 农田块数上限由技能等级派生，这里只兜住绝对上限
@@ -720,6 +778,14 @@ export const usePlayerStore = defineStore('player', {
         },
         lastOnlineAt: saved.lastOnlineAt ?? Date.now(),
       })
+      // $patch 深合并无法删除键：迁移掉的矿物精通必须在此直接赋值（否则会永远留在挖掘的 mastery 里）
+      if (splitMasteryFix) {
+        this.skills.excavation.mastery = splitMasteryFix.excavation
+        this.skills.mining.mastery = splitMasteryFix.mining
+      }
+      if (splitDid) this.stats.splitMiningMigrated = true
+      // 同上：迁移删掉的旧目标键也会被 $patch 深合并留下 → 直接赋值覆盖整张表
+      if (splitMovedTarget) this.skillTargets = { ...splitTargets } // 账本：必须在 $patch 之后写（patch 的 stats 会覆盖）
       // 食灵阁迁移（2026-09-06）：旧档背包内的食灵物品移入独立食灵阁（不占背包格）
       const owned = { ...(this.spirits?.owned ?? {}) }
       let migrated = 0
@@ -1200,7 +1266,13 @@ export const usePlayerStore = defineStore('player', {
     addMastery(skillId, itemId, amount = 1) {
       if (!this.skills[skillId]) this.skills[skillId] = { level: 1, exp: 0, mastery: {}, prestiges: 0 }
       // 采集类技能每次产出都计入轶事「采集·<技能>·<物品>」进度（覆盖各采集子类，含自定义 performAction 的采摘等）
-      if (SKILL_DEFS[skillId]?.category === 'gathering' && itemId) this.bumpStory('gather', skillId + ':' + itemId)
+      if (SKILL_DEFS[skillId]?.category === 'gathering' && itemId) {
+        this.bumpStory('gather', skillId + ':' + itemId)
+        // v2.7.0 向上兼容：矿物从「挖掘」独立为「采矿」后，`tales_ext.js` 里那 200 条**矿物 param 的挖掘轶事**
+        // （解锁键 `gather:excavation:<矿物>`）会永远解锁不了（新动作记的是 `gather:mining:<矿物>`）。
+        // 这里对**从挖掘移走的矿物**同时补记旧键——只写故事进度，不改任何数值、也不改轶事数据本身。
+        if (skillId === 'mining' && LEGACY_EXCAVATION_MINERALS.has(itemId)) this.bumpStory('gather', 'excavation:' + itemId)
+      }
       const m = this.skills[skillId].mastery
       const before = masteryLevelFromCount(m[itemId] ?? 0)
       m[itemId] = (m[itemId] ?? 0) + amount
@@ -5339,7 +5411,13 @@ export const usePlayerStore = defineStore('player', {
       if (it?.type !== 'equipment') return null
       const lv = this.upgrades[itemId] ?? 0
       const rank = { 神话: 6, 传说: 5, 史诗: 4, 稀有: 3, 精良: 2, 普通: 1 }[it.quality] ?? 1
-      return { gold: 300 + lv * 400 + rank * 200, ironOre: 1 + lv, saltOre: lv + 1, level: lv }
+      // v2.7.0：材料从写死的「铁矿 + 盐矿」改为**同档木材 + 同档矿**（用户要求「N 级装备用 N 级木材」）——
+      // 档位由装备自身等级决定（`equipmentLevelOf`），木材/矿配对表见 `data/timberRecipes.js` 的 BAND_MATERIALS。
+      const bandLv = equipmentLevelOf(itemId)
+      const timber = timberOfLevel(bandLv)
+      const oreId = oreOfLevel(bandLv)
+      const qty = 1 + lv
+      return { gold: 300 + lv * 400 + rank * 200, timberId: timber.id, timberName: timber.name, oreId, oreName: getItem(oreId)?.name ?? oreId, qty, level: lv, bandLv }
     },
     upgradeItem(itemId) {
       const it = getItem(itemId)
@@ -5347,10 +5425,12 @@ export const usePlayerStore = defineStore('player', {
       const cost = this.upgradeCost(itemId)
       if (cost.level >= 5) return { ok: false, msg: '已达最高强化等级' }
       if (this.gold < cost.gold) return { ok: false, msg: '金币不足' }
-      if ((this.inventory.ironOre ?? 0) < cost.ironOre || (this.inventory.saltOre ?? 0) < cost.saltOre) return { ok: false, msg: '材料不足（铁矿/盐矿）' }
+      if ((this.inventory[cost.timberId] ?? 0) < cost.qty || (this.inventory[cost.oreId] ?? 0) < cost.qty) {
+        return { ok: false, msg: `材料不足（${cost.timberName}×${cost.qty} + ${cost.oreName}×${cost.qty}）` }
+      }
       this.spendGold(cost.gold)
-      this.spendItem('ironOre', cost.ironOre)
-      this.spendItem('saltOre', cost.saltOre)
+      this.spendItem(cost.timberId, cost.qty)
+      this.spendItem(cost.oreId, cost.qty)
       this.upgrades[itemId] = cost.level + 1
       EventBus.emit('equip:upgrade', { itemId, level: cost.level + 1 })
       return { ok: true, level: cost.level + 1 }

@@ -5,7 +5,8 @@
 import { FORAGING_TARGETS } from './ForagingSkill.js'
 import { FISHING_TARGETS } from './FishingSkill.js'
 import { HUNTING_TARGETS } from './HuntingSkill.js'
-import { EXCAVATION_TARGETS } from './ExcavationSkill.js'
+import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from './ExcavationSkill.js'
+import { WOODCUTTING_TARGETS } from '../data/timbers.js'
 import { CROPS } from './FarmingSkill.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT, SPIRIT_EXT } from '../data/expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2, SPIRIT_EXT2 } from '../data/expansion2.js'
@@ -23,7 +24,12 @@ const add = (id, lv) => {
   if (id == null) return
   if (minLevel[id] == null || lv < minLevel[id]) minLevel[id] = lv
 }
-for (const [arr] of [[FORAGING_TARGETS], [FISHING_TARGETS], [HUNTING_TARGETS], [EXCAVATION_TARGETS]]) {
+// ⚠️ v2.7.0：矿物独立成采矿后，**必须**把 EXCAVATION_GROUND_TARGETS 与 MINING_TARGETS 都登记进来，
+// 否则矿物的材料锚会整体消失 → 锻造 365 条配方与 15 条保鲜配方的等级/材料会在**每次启动**被重算改写。
+for (const [arr] of [
+  [FORAGING_TARGETS], [FISHING_TARGETS], [HUNTING_TARGETS],
+  [EXCAVATION_TARGETS], [EXCAVATION_GROUND_TARGETS], [MINING_TARGETS], [WOODCUTTING_TARGETS],
+]) {
   for (const t of arr) add(t.itemId, t.reqLevel)
 }
 for (const s of ['foraging', 'fishing', 'hunting', 'excavation']) {

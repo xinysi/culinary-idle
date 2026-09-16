@@ -19,10 +19,14 @@ import { PreservingSkill } from './PreservingSkill.js'
 import { BrewingSkill } from './BrewingSkill.js'
 import { SpiceMixingSkill } from './SpiceMixingSkill.js'
 import { CraftsmithingSkill } from './CraftsmithingSkill.js'
+import { WoodcuttingSkill } from './WoodcuttingSkill.js'
+import { MiningSkill } from './MiningSkill.js'
 
 const factories = {
-  // §3.1 采集类（5/5 已实现）
+  // §3.1 采集类（7/7 已实现；v2.7.0 新增伐木与采矿——采矿从挖掘独立而来）
   foraging: (player) => new ForagingSkill(player),
+  woodcutting: (player) => new WoodcuttingSkill(player),
+  mining: (player) => new MiningSkill(player),
   fishing: (player) => new FishingSkill(player),
   hunting: (player) => new HuntingSkill(player),
   excavation: (player) => new ExcavationSkill(player),

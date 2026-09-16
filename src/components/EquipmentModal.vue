@@ -156,7 +156,7 @@ function close() { ui.toggleEquipModal(false) }
             <div class="equip-upgrade-name">{{ getItem(upgradeTarget)?.name }}</div>
             <div class="dim" style="font-size: 12px; margin-top: 4px">强化等级：<strong>+{{ player.upgrades[upgradeTarget] ?? 0 }}</strong>/5（每级属性 +10%）</div>
             <div v-if="(player.upgrades[upgradeTarget] ?? 0) < 5" class="dim" style="font-size: 12px; margin-top: 2px">
-              费用：{{ upgradeCostFor(upgradeTarget)?.gold }} 金币 + 铁矿×{{ upgradeCostFor(upgradeTarget)?.ironOre }} + 盐矿×{{ upgradeCostFor(upgradeTarget)?.saltOre }}
+              费用：{{ upgradeCostFor(upgradeTarget)?.gold }} 金币 + {{ upgradeCostFor(upgradeTarget)?.timberName }}×{{ upgradeCostFor(upgradeTarget)?.qty }} + {{ upgradeCostFor(upgradeTarget)?.oreName }}×{{ upgradeCostFor(upgradeTarget)?.qty }}<span class="dim">（按装备等级取同档木材与矿）</span>
             </div>
             <button class="btn btn-sm btn-primary" :disabled="(player.upgrades[upgradeTarget] ?? 0) >= 5" @click="doUpgrade(upgradeTarget)" style="margin-top: 6px">强化</button>
           </template>

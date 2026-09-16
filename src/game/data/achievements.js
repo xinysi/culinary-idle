@@ -1,7 +1,7 @@
 // 成就系统 — 需求文档 §6
 // 5 大类：技能(§6.1)/对决/收集/探索/特殊；完成获得金币、道具、称号。
 // check(player) 返回布尔；reward: { gold?, items?: {itemId: qty}, title? }
-// 技能等级成就（10/50/99 级 × 20 技能）由 buildSkillAchievements 程序化生成。
+// 技能等级成就（10/50/99 级 × 22 技能）由 buildSkillAchievements 程序化生成。
 
 import { SKILL_DEFS } from './skills.js'
 import { ESSENCE_TIERS } from './essences.js'
@@ -216,8 +216,8 @@ export const ACHIEVEMENTS = [
   { id: 'shanhaiFirst', name: '初启食经', category: '特殊', desc: '点亮山海食经的第一个节点', title: '食经初启', reward: { gold: 8000, items: { mysterySpice: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 1 },
   { id: 'shanhai30', name: '拾遗成谱', category: '特殊', desc: '点亮 30 个山海食经节点', reward: { gold: 20000, items: { mysterySpice: 2 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 30 },
   { id: 'shanhai90', name: '博采众长', category: '特殊', desc: '点亮 90 个山海食经节点', title: '博采众长', reward: { gold: 50000, items: { mysterySpice: 3, energyBiscuit: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 90 },
-  { id: 'shanhai180', name: '六合贯通', category: '特殊', desc: '点亮 180 个山海食经节点（跑完前 6 环）', title: '六合贯通', reward: { gold: 80000, items: { mysterySpice: 4, energyBiscuit: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 180 },
-  { id: 'shanhaiAll', name: '山海食经·全篇', category: '特殊', desc: '点亮全部 400 个山海食经节点（含满级/转生四档）', title: '山海食经', reward: { gold: 260000, items: { mysterySpice: 7, energyBiscuit: 4 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 400 },
+  { id: 'shanhai180', name: '六合贯通', category: '特殊', desc: '点亮 180 个山海食经节点', title: '六合贯通', reward: { gold: 80000, items: { mysterySpice: 4, energyBiscuit: 1 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 180 },
+  { id: 'shanhaiAll', name: '山海食经·全篇', category: '特殊', desc: '点亮全部 552 个山海食经节点（含满级/转生四档）', title: '山海食经', reward: { gold: 260000, items: { mysterySpice: 7, energyBiscuit: 4 } }, check: (p) => (p.shanhaiUnlocked ?? []).length >= 552 },
   { id: 'chefWin10', name: '名厨克星', category: '特殊', desc: '累计战胜名厨 10 次', title: '名厨克星', reward: { gold: 15000, items: { mysterySpice: 2 } }, check: (p) => (p.stats?.chefWins ?? 0) >= 10 },
   { id: 'friendBondMax', name: '老交情', category: '特殊', desc: '任一厨友羁绊达到 5 级', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => Object.values(p.friends?.data ?? {}).some((f) => (f?.bond ?? 0) >= FRIEND_BOND_STEPS.at(-1)) },
 ]
