@@ -316,9 +316,10 @@
   6. `spiritTiers`（食灵阶 1「采耕」的技能域，改生成器后重跑）· `gen_tales`（轶事子类）· `GatheringView`（id 分支/分组/文案）· `SkillView` 的 `PLAN_SKILLS` · `SeasonView` 的类别→技能映射 · `StoryView` 的 `QUIRK_SUB_NAMES` · `itemDetail` 的 `SKILL_LABEL`
   7. **山海食经**：若给新技能加线，见下一节
 - 🔒 **「20 档木材」的配方改写是用户授权的一次例外**（AGENTS 数据铁律里「配方材料已固定」的唯一缺口，**不要扩大解释**）：
-  - 授权范围 = **只把 `ingredients` 里的木材那一项按档替换/补齐**；**不碰 reqLevel、不碰其它材料、不碰任何数值**；21 独立矿套与赛季装备**不动**；基础款 `木材`（id `wood`）及其既有用途（采摘 50% 附产/炼金/奇遇/公会任务/对决掉落）**一律不动**。
+  - 授权范围 = **只把 `ingredients` 里的木材那一项按档替换/补齐**；**不碰 reqLevel、不碰其它材料、不碰任何数值**；基础款 `木材`（id `wood`）及其既有用途（采摘 50% 附产/炼金/奇遇/公会任务/对决掉落）**一律不动**。
+    ⚠️ v2.7.0 里「21 独立矿套不动」的限制**已在 v2.7.1 被用户解除**（新要求：「所有装备所需材料都要加上对应等级的木材」）。
   - 实现方式是 `src/game/data/timberRecipes.js` 的 `retargetTimberMaterials()`（在 `CraftsmithingSkill` 构造时、`balanceRecipeLevels()` **之前**调用；顺序反了平衡就看不到最终材料构成）。
-  - 结果：18 条既有配方换档 + 14 条逐档兜底补料 = **20/20 档全覆盖**，20 套里**不再有任何 `wood` 残留**（C28 断言）。
+  - 结果（v2.7.1）：**365 条装备配方逐条都含它那一档的木材**（20 品质套 176 + 21 独立矿套 189 全覆盖），数量 1~5 按档递增、**每条恰好一种木材（不混档）**，20 套里**不再有任何 `wood` 残留**（C28 有 26 项断言）。
 - **装备强化按档消耗**：`upgradeCost()` 用 `equipmentLevelOf(itemId)`（**优先取产出它的锻造配方 reqLevel**——那才是解锁等级；`ITEM_LEVEL` 由掉落生成器推导、实测差 3 级）→ `timberOfLevel` + `oreOfLevel`（**矿从 20 套配方派生**，见 `BAND_MATERIALS`；盐矿刻意排最后——它的 id 也以 `Ore` 结尾，会顶掉钢矿/银矿，实测踩过）。玩家侧文案在 `EquipmentModal.vue`。
 - **存档迁移（幂等，账本 `stats.splitMiningMigrated`）**：`applySave` 里做——采矿继承挖掘等级/经验、矿物精通键迁到采矿、旧目标改挂到采矿。
   ⚠️ **迁移里删除键必须用「patch 之后直接赋值」**：Pinia 的 `$patch` 是**深合并**，`delete` 掉的键不会消失（实测：矿物精通永远留在挖掘里）。

@@ -4430,8 +4430,19 @@ console.log('== C28. 伐木 / 采矿 / 20 档木材 ==')
   check('伐木采矿', '365 条锻造配方数不变（改写只动材料、不动条目）', SMITHING_SET_RECIPES.length === 365, `${SMITHING_SET_RECIPES.length}`)
   check('伐木采矿', '20 品质套里不再有任何基础木材（wood）残留', withWood.length === 0, `${withWood.length}`)
   check('伐木采矿', '每条含木材的配方用的都是**该配方等级对应的档位木材**', wrongBand.length === 0, wrongBand.slice(0, 3).map((r) => r.id).join(','))
-  check('伐木采矿', '20 个档位全都有同档木材需求（含 8 槽高段套用锅做木柄）', bandsCovered === 20, `${bandsCovered}/20`)
-  check('伐木采矿', '改写范围只含 ingredients：21 独立矿套与赛季装备的配方未被碰', twenty.every((r) => r.ingredients && typeof r.ingredients === 'object') && SMITHING_SET_RECIPES.filter((r) => String(r.id).startsWith('ext-')).length === 189)
+  // v2.7.1：用户要求「所有装备所需材料都要加上对应等级的木材」→ 365 条逐条都要有
+  const allWithTimber = SMITHING_SET_RECIPES.filter((r) => Object.keys(r.ingredients ?? {}).some((k) => timberIds.has(k)))
+  const mixedBand = SMITHING_SET_RECIPES.filter((r) => Object.keys(r.ingredients ?? {}).filter((k) => timberIds.has(k)).length > 1)
+  const badQty = SMITHING_SET_RECIPES.filter((r) => {
+    const v = Object.entries(r.ingredients ?? {}).filter(([k]) => timberIds.has(k)).map(([, n]) => n)
+    return v.some((n) => !(n >= 1 && n <= 5))
+  })
+  const extRecipes = SMITHING_SET_RECIPES.filter((r) => String(r.id).startsWith('ext-'))
+  check('伐木采矿', `全部 ${SMITHING_SET_RECIPES.length} 条装备配方都含**该档**木材（20 品质套 176 + 独立矿套 189 全覆盖）`, allWithTimber.length === SMITHING_SET_RECIPES.length, `${allWithTimber.length}/${SMITHING_SET_RECIPES.length}`)
+  check('伐木采矿', '每件装备恰好一种档位木材（不混档）、数量在 1~5 之间', mixedBand.length === 0 && badQty.length === 0, `mixed=${mixedBand.length} badQty=${badQty.length}`)
+  check('伐木采矿', '21 独立矿套（189 条）也逐条含同档木材', extRecipes.length === 189 && extRecipes.every((r) => Object.keys(r.ingredients ?? {}).some((k) => timberIds.has(k))))
+  check('伐木采矿', '改写只动 ingredients：配方条目数与 reqLevel 未变（365 条、每档 5 级区间）', SMITHING_SET_RECIPES.length === 365 && SMITHING_SET_RECIPES.every((r) => timberOfLevel(r.reqLevel) != null))
+  check('伐木采矿', '每档仍有装备需求（20/20，由逐条覆盖自动满足）', bandsCovered === 20, `${bandsCovered}/20`)
   check('伐木采矿', '基础款「木材」保持原样：value 仍为 4、且不在任何 20 套配方里', ITEMS.wood.value === 4 && !twenty.some((r) => r.ingredients?.wood))
 
   // 装备强化按档消耗
