@@ -44,6 +44,9 @@ const TASKS = {
     ['制香 ×10', 'skill', 'incense', 10, 20],
     ['备年货 ×10', 'skill', 'festivalGoods', 10, 20],
     ['琢磨玉器 ×10', 'skill', 'jadecraft', 10, 20],
+    // v2.13.0 第二批
+    ['制货签 ×10', 'skill', 'goodsTag', 10, 20],
+    ['打造工具 ×10', 'skill', 'miningGear', 10, 20],
     ['对决胜利 ×5', 'combatWin', 'any', 5, 25],
     ['击败首领 ×2', 'boss', 'any', 2, 30],
   ]),

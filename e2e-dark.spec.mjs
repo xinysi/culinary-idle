@@ -384,7 +384,7 @@ test.describe('深色模式配色体检', () => {
     }
     // 副业技能页（v2.10.0）：`skill` 视图只会渲染「当时激活的那一个技能」，副业五支共用一个
     // ProductionView（含新的「作品面板」.sw-*）——不切 activeSkill 就一次都扫不到。
-    for (const sid of ['woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft']) {
+    for (const sid of ['woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear']) {
       await page.evaluate((s) => {
         const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
         pinia._s.get('ui').setView('skill')

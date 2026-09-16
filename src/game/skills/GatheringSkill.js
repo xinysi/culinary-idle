@@ -145,7 +145,11 @@ export class GatheringSkill extends Skill {
     const luckyPct = target ? (this.player.luckyItemBonus?.(target.itemId) ?? 0) : 0 // 今日运势·幸运食材
     const honorPct = (this.player.honorState?.()?.perks?.gatherPct ?? 0) / 100 // 荣誉殿堂（2026-09-10）
     const daoPct = (this.player.daoEffects?.()?.yieldPct ?? 0) / 100 // 厨神之路·采撷之道（v2.0）
-    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + daoPct + (yMult - 1) + farmLink
+    // 副业·采掘器具（v2.13.0）：**只对采矿生效**的附产率（采矿原本没有附产）。
+    // 挂在这里 ⇒ `yieldQuantity`（在线）与 `expectedYield`（离线）都会读到，无需另做同源处理。
+    // 注意：`yieldQuantity` 会把总额外几率夹在 1（单次最多多给 1 个）⇒ 本项在极高产量加成下会被自然摊薄。
+    const miningGear = this.id === 'mining' ? (this.player.sidelineEffectTotal?.('miningExtraPP') ?? 0) / 100 : 0
+    return yPct / 100 + guildPct / 100 + insightPct / 100 + festPct + patronPct + wxPct + luckyPct + honorPct + daoPct + (yMult - 1) + farmLink + miningGear
   }
 
   /** 产量加成后的数量：精通保底批量 + 各百分比来源的额外产出，以额外产出几率折算 */

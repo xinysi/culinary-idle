@@ -73,7 +73,7 @@ const upcoming = computed(() => {
       at,
       inMs: at - now,
       rows: pickGoods(ITEMS, c).map((it) => {
-        const sell = sellPriceOf(it, c)
+        const sell = sellPriceOf(it, c, player.sidelineEffectTotal?.('tagSellPct') ?? 0)
         const ref = cur.get(it.id) // 本期同货的收购价（若本期也有）
         return {
           item: it,

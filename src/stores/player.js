@@ -3488,7 +3488,7 @@ export const usePlayerStore = defineStore('player', {
         return {
           item: it,
           cycle,
-          sell: sellPriceOf(it, cycle),
+          sell: sellPriceOf(it, cycle, this.sidelineEffectTotal?.('tagSellPct') ?? 0),
           buy: buyPriceOf(it, cycle),
           traded,
           remain: Math.max(0, EXCHANGE_DAILY_LIMIT - traded),

@@ -28,6 +28,8 @@ import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel } from './friends.js'
 const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles',
   // v2.12.0 第一批：五支「干净轴」副业
   'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft',
+  // v2.13.0 第二批
+  'goodsTag', 'miningGear',
   'preservation', 'spiritSummoning']
 
 /** 全部配方的精通等级列表（0~100） */
