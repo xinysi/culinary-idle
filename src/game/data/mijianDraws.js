@@ -2,6 +2,10 @@
 // 纯新增获取来源（不动任何物品数值）；图鉴三查见 itemSources.js 的「觅珍」来源。
 import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
+import { WOODWORK_CATEGORY } from './woodworking.js'
+
+/** 抽卡池一律排除的类别：矿物（不对口径）与木器（副业木工独占品，抽卡能出就等于绕过整条技能线） */
+const POOL_EXCLUDED_CATEGORIES = ['mineral', WOODWORK_CATEGORY]
 
 export const MIJIAN_POOLS = [
   { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
@@ -56,12 +60,12 @@ export function poolItems(poolId) {
   if (poolId === 'mix' || poolId === 'limited') {
     items = all.filter((it) =>
       ['ingredient', 'spice', 'food', 'drink', 'equipment'].includes(it.type) &&
-      !(it.category === 'mineral' || /矿$/.test(it.name))
+      !(POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name))
     )
   } else {
     items = all.filter((it) =>
       def.kinds.includes(it.type) &&
-      !(it.category === 'mineral' || /矿$/.test(it.name)) &&
+      !(POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name)) &&
       (!def.cap || it.value <= def.cap)
     )
   }
@@ -135,7 +139,7 @@ export function materialFoodItems(cap = Infinity) {
   if (!_materialFoodCache) {
     _materialFoodCache = Object.values(ITEMS).filter((it) =>
       ['ingredient', 'spice', 'food', 'drink'].includes(it.type) &&
-      !(it.category === 'mineral' || /矿$/.test(it.name))
+      !(POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name))
     )
   }
   return cap === Infinity ? _materialFoodCache : _materialFoodCache.filter((it) => it.value <= cap)

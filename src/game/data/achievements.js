@@ -23,7 +23,8 @@ import { REGIONS } from './regions.js'
 import { FRIENDS, FRIEND_BOND_STEPS, friendBondLevel } from './friends.js'
 
 // 制作类技能 id（厨房笔记/配方精通成就用；精通存于 player.skills[id].mastery[recipeId]）
-const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
+// v2.9.0：加上副业·木工（它同样是 ProductionSkill，精通结构与其余制作类完全一致）
+const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'preservation', 'spiritSummoning']
 
 /** 全部配方的精通等级列表（0~100） */
 function recipeMasteryLevels(p) {

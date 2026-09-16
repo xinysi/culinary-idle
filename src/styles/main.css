@@ -892,18 +892,21 @@ h2 {
   vertical-align: middle;
 }
 
-/* 左栏页签（2026-09-10）：技能 / 功能 */
+/* 左栏页签（2026-09-10）：技能 / 功能；2026-09-16 加第三页签「副业」。
+   三格在 170px 窄栏下的可用宽约 142px → gap/padding/字号都必须收紧才不会换行。 */
 .sidebar-tabs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   padding: 8px 8px 0;
   flex-shrink: 0;
 }
 
 .sidebar-tab {
-  flex: 1;
-  padding: 6px 8px;
-  font-size: 12px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 11px;
+  white-space: nowrap;
   color: var(--text);
   background: rgba(var(--panel-rgb), 0.30);
   backdrop-filter: blur(12px);
@@ -1085,6 +1088,14 @@ h2 {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(var(--primary-tint-rgb), 0.45);
   color: var(--primary-deep); /* 压在壁纸底上，--primary-strong 实测仅 3.8:1（2026-09-11） */
+}
+
+/* 副业页签下的一句说明（2026-09-16）：讲清「副业与制作类的区别」，
+   否则玩家看到的就是「又一个制作技能」。 */
+.side-note {
+  margin: 10px 4px 0;
+  font-size: 11px;
+  line-height: 1.55;
 }
 
 .skill-item.active .dim,

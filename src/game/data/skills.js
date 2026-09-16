@@ -1,7 +1,11 @@
-// 技能注册表 — 需求文档 §3：22 个技能，4 大类（v2.7.0：+伐木、+采矿）
-// category: gathering(采集) / production(制作) / combat(对决) / support(辅助)
+// 技能注册表 — 需求文档 §3：23 个技能，5 大类（v2.7.0：+伐木、+采矿；v2.9.0：+副业·木工）
+// category: gathering(采集) / production(制作) / combat(对决) / support(辅助) / sideline(副业)
 // 等级上限 100（§3），转生后可突破至 120（后续迭代）
 // 图标约定：挖掘从 ⛏️ 改为 🥔（镐子让给采矿），避免两个技能撞图标
+//
+// ⚠️ 副业（sideline）是**独立第三页签**，与「技能/功能」并列（2026-09-16 用户决策）：
+// 它**不吃食灵经验加成**（食灵域是白名单，见 spiritTiers.js）也**不入山海食经**
+// （山海线↔技能 1:1 绑定，加线会改写已定稿的 552 节点布局），故 category 必须与 production 分开。
 
 export const SKILL_DEFS = {
   // ── 采集类（§3.1）──
@@ -33,14 +37,26 @@ export const SKILL_DEFS = {
   gastronomy: { id: 'gastronomy', name: '美食知识', category: 'support', desc: '激活美食奥义提供被动加成（消耗品鉴点数）' },
   preservation: { id: 'preservation', name: '食材保鲜', category: 'support', desc: '制作保鲜剂和增益剂' },
   exploration: { id: 'exploration', name: '美食探索', category: 'support', desc: '探索美食秘境，偷师学艺' },
+
+  // ── 副业类（§3.5，v2.9.0）──
+  // 与制作类的区别：制作类把食材变成**能吃/能用**的东西，副业把**采集原料**变成
+  // 「采集拿不到、只能自己做」的经营侧乘区与独占品（木工 → 餐厅装潢）。
+  woodworking: { id: 'woodworking', name: '木工', category: 'sideline', desc: '伐木所得的木料做成木器与手工装潢（餐厅收入）' },
 }
 
+/** 左栏页签分组：技能页签显示前四类，副业页签只显示 sideline（2026-09-16） */
 export const SKILL_CATEGORIES = [
-  { id: 'gathering', name: '采集' },
-  { id: 'production', name: '制作' },
-  { id: 'combat', name: '对决' },
-  { id: 'support', name: '辅助' },
+  { id: 'gathering', name: '采集', tab: 'skill' },
+  { id: 'production', name: '制作', tab: 'skill' },
+  { id: 'combat', name: '对决', tab: 'skill' },
+  { id: 'support', name: '辅助', tab: 'skill' },
+  { id: 'sideline', name: '副业', tab: 'side' },
 ]
+
+/** 某页签下要显示的分类（Sidebar 与守卫共用同一口径） */
+export function skillCategoriesOfTab(tab) {
+  return SKILL_CATEGORIES.filter((c) => c.tab === tab)
+}
 
 // 技能图标（emoji）
 const SKILL_ICONS = {
@@ -49,6 +65,7 @@ const SKILL_ICONS = {
   cooking: '🍳', baking: '🥖', preserving: '🫙', brewing: '🍷', spiceMixing: '🌶️', craftsmithing: '🔨',
   knife: '🔪', heatControl: '🔥', flavorArtistry: '✨', plating: '🍽️', tasteAcumen: '❤️', spiritSummoning: '👻',
   gastronomy: '📜', preservation: '❄️', exploration: '🕵️',
+  woodworking: '🪚',
 }
 for (const [id, icon] of Object.entries(SKILL_ICONS)) {
   if (SKILL_DEFS[id]) SKILL_DEFS[id].icon = icon

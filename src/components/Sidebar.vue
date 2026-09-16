@@ -3,7 +3,7 @@
 import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { SKILL_CATEGORIES, SKILL_DEFS } from '../game/data/skills.js'
+import { SKILL_CATEGORIES, SKILL_DEFS, skillCategoriesOfTab } from '../game/data/skills.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { nameColorOf } from '../game/data/cosmetics.js'
 import ProgressBar from './ProgressBar.vue'
@@ -35,7 +35,7 @@ function xpText(id) {
   return `${pr.current.toLocaleString()} / ${pr.needed.toLocaleString()}`
 }
 function selectSkill(id) {
-  sideTab.value = 'skills' // 选技能时回到技能页签
+  sideTab.value = tabOfSkill(id) // 选副业技能时切到副业页签（2026-09-16）
   player.setActiveSkill(id)
   ui.setView('skill') // 关键：从餐厅/公会/商店/日志等页面切回技能视图
   ui.toggleMobileSkills(false) // 移动端选择技能后收起抽屉
@@ -162,14 +162,21 @@ const FEATURE_GROUPS = [
     ],
   },
 ]
-// 左栏页签（2026-09-10）：技能 / 功能，一次只显示一栏、各自占满高度
+// 左栏页签（2026-09-10 技能/功能；2026-09-16 加第三页签「副业」），一次只显示一栏、各自占满高度
 const sideTab = ref('skills')
 const FEATURE_VIEWS = FEATURE_GROUPS.flatMap((g) => g.items.map((i) => i.view))
+/** 当前激活技能属于哪个页签（副业技能必须落在副业页签，否则点了木工会被切回技能页签） */
+function tabOfSkill(skillId) {
+  const cat = SKILL_DEFS[skillId]?.category
+  return SKILL_CATEGORIES.find((c) => c.id === cat)?.tab ?? 'skill'
+}
 watch(
-  () => ui.activeView,
-  (v) => {
-    if (FEATURE_VIEWS.includes(v)) sideTab.value = 'features'
-    else if (v === 'skill') sideTab.value = 'skills'
+  // 同时盯 activeSkill：从搜索/图鉴跳转到「木工」时 activeView 可能本来就是 skill，
+  // 只盯 activeView 会漏掉这次切换（页签留在「技能」，木工那一行看不见）。
+  [() => ui.activeView, () => player.activeSkill],
+  () => {
+    if (FEATURE_VIEWS.includes(ui.activeView)) sideTab.value = 'features'
+    else if (ui.activeView === 'skill') sideTab.value = tabOfSkill(player.activeSkill)
   },
 )
 
@@ -218,15 +225,16 @@ function onAvatarPick(e) {
       </div>
     </div>
 
-    <!-- 页签：技能 / 功能（2026-09-10） -->
+    <!-- 页签：技能 / 功能 / 副业（2026-09-10 前两者；2026-09-16 加副业） -->
     <div class="sidebar-tabs">
-      <button class="sidebar-tab" :class="{ active: sideTab === 'skills' }" @click="sideTab = 'skills'">🌾 技能</button>
-      <button class="sidebar-tab" :class="{ active: sideTab === 'features' }" @click="sideTab = 'features'">🧩 功能</button>
+      <button class="sidebar-tab" :class="{ active: sideTab === 'skills' }" @click="sideTab = 'skills'">🌾技能</button>
+      <button class="sidebar-tab" :class="{ active: sideTab === 'features' }" @click="sideTab = 'features'">🧩功能</button>
+      <button class="sidebar-tab" :class="{ active: sideTab === 'side' }" @click="sideTab = 'side'">🪚副业</button>
     </div>
 
     <!-- 技能列表（按类别分组，按钮内直接显示等级与经验） -->
     <nav v-show="sideTab === 'skills'" class="skill-nav">
-      <template v-for="cat in SKILL_CATEGORIES" :key="cat.id">
+      <template v-for="cat in skillCategoriesOfTab('skill')" :key="cat.id">
         <div class="skill-cat">{{ cat.name }}</div>
         <button
           v-for="def in skillsInCategory(cat.id)"
@@ -244,6 +252,29 @@ function onAvatarPick(e) {
           <div class="skill-xp dim mono">{{ xpText(def.id) }}</div>
         </button>
       </template>
+    </nav>
+
+    <!-- 副业列表（与技能页签同构；副业不吃食灵经验、不入山海食经） -->
+    <nav v-show="sideTab === 'side'" class="skill-nav">
+      <template v-for="cat in skillCategoriesOfTab('side')" :key="cat.id">
+        <div class="skill-cat">{{ cat.name }}</div>
+        <button
+          v-for="def in skillsInCategory(cat.id)"
+          :key="def.id"
+          class="skill-item"
+          :class="{ active: player.activeSkill === def.id }"
+          @click="selectSkill(def.id)"
+        >
+          <div class="skill-item-top">
+            <span class="skill-icon">{{ def.icon ?? '•' }}</span>
+            <span class="skill-name">{{ def.name }}</span>
+            <span class="skill-level">等级 {{ levelOf(def.id) }}</span>
+          </div>
+          <ProgressBar class="skill-bar" :progress="barProgress(def.id)" />
+          <div class="skill-xp dim mono">{{ xpText(def.id) }}</div>
+        </button>
+      </template>
+      <p class="dim side-note">副业把采集原料做成经营侧加成：木器可做成餐厅装潢。</p>
     </nav>
 
     <!-- 功能页网格（2026-09-10 用户要求：全部展开、方块显示；2026-09-11 实测改一行四个：

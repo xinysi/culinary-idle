@@ -5,7 +5,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
-import { RESTAURANT_DECOR, RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
+import { RESTAURANT_DECOR_BY_ID, DECOR_TOTAL } from '../game/data/restaurantDecor.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -156,7 +156,7 @@ function hourlyOf(dishId) {
     <!-- 餐厅装饰（§13）已独立成页（2026-09-11）：这里只给状态与入口 -->
     <div class="card">
       <div class="decor-title-row">
-        <h3>🏮 餐厅装潢（已购 {{ (player.restaurant.decor ?? []).length }}/{{ RESTAURANT_DECOR.length }}）</h3>
+        <h3>🏮 餐厅装潢（已购 {{ (player.restaurant.decor ?? []).length }}/{{ DECOR_TOTAL }}）</h3>
         <span class="dim mono">当前总加成 +{{ decorTotalBonus }}%</span>
         <button class="btn btn-sm btn-primary" style="margin-left: auto" @click="ui.setView('decor')">去装潢 ↗</button>
       </div>

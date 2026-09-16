@@ -2,10 +2,14 @@
 // 餐厅装潢（2026-09-11 从「餐厅」页的装饰区块抽出为独立页）— 300 件装饰的图鉴式选购：
 // 分类进度、总加成、性价比排序，避免在一张长列表里翻找。
 // 纯读取 + 调用既有 player.spendGold，不改动任何装饰数值（数据铁律；装饰数据由生成器产出，勿手改）。
+// v2.9.0（2026-09-16）：新增「🪚 手工装潢」分区 —— 副业·木工做出木器后，在这里把它做成装潢
+// （走 `player.craftDecor`，消耗**物品**而非金币）。手工装潢的数值定义在 `woodworking.js`。
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { RESTAURANT_DECOR, DECOR_CATEGORIES, RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
+import { RESTAURANT_DECOR, DECOR_CATEGORIES, RESTAURANT_DECOR_BY_ID, DECOR_TOTAL } from '../game/data/restaurantDecor.js'
+import { CRAFTED_DECOR } from '../game/data/woodworking.js'
+import { getItem } from '../game/data/items.js'
 import Pagination from '../components/Pagination.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 
@@ -78,6 +82,30 @@ function buyDecor(d) {
   ui.pushLog(`🏮 餐厅装饰：${d.name}（收入 +${d.effect}%）`, 'gain')
 }
 
+// ── 手工装潢（v2.9.0）：木器 → 装潢。消耗物品，不花金币 ──
+/** 每件手工装潢 + 它所需木器的持有量 / 名称，供卡片显示 */
+const craftedRows = computed(() =>
+  CRAFTED_DECOR.map((d) => {
+    const need = d.craftedFrom
+    const it = getItem(need.itemId)
+    return {
+      ...d,
+      needName: it?.name ?? need.itemId,
+      needQty: need.qty,
+      have: player.inventory[need.itemId] ?? 0,
+      owned: owned.value.has(d.id),
+    }
+  })
+)
+const craftedOwned = computed(() => craftedRows.value.filter((r) => r.owned).length)
+const craftedBonus = computed(() => +craftedRows.value.filter((r) => r.owned).reduce((a, r) => a + r.effect, 0).toFixed(1))
+function doCraft(row) {
+  const res = player.craftDecor(row.id)
+  if (res === 'denied') ui.pushLog(`材料不足：需要「${row.needName}」×${row.needQty}`, 'warn')
+  else if (res === 'bad') ui.pushLog('该装潢无法手工制作', 'warn')
+  // owned / ok 都已在 player 侧给过日志（ok 会写一条 gain 日志）
+}
+
 // 分类进度（含每类已购/总数与合计加成）
 const catRows = computed(() =>
   DECOR_CATEGORIES.map((c) => {
@@ -99,7 +127,8 @@ const catRows = computed(() =>
       <div>
         <h2>🏮 餐厅装潢</h2>
         <p class="dim">
-          共 <b>{{ RESTAURANT_DECOR.length }}</b> 件装饰，每件永久提升<b>餐厅收入 %</b>（与餐厅等级、菜单、套餐相乘叠加）。
+          共 <b>{{ DECOR_TOTAL }}</b> 件装潢（商店 {{ RESTAURANT_DECOR.length }} 件 + 手工 {{ CRAFTED_DECOR.length }} 件），
+          每件永久提升<b>餐厅收入 %</b>（与餐厅等级、菜单、套餐相乘叠加）。
           已购 {{ owned.size }} 件，当前总加成 <b>+{{ decorTotalBonus }}%</b>。
         </p>
       </div>
@@ -108,7 +137,7 @@ const catRows = computed(() =>
     <!-- 概览 + 下一件推荐 -->
     <div class="card dv-hero">
       <div class="dv-stats">
-        <div class="dv-stat"><span class="dim">已购置</span><b class="mono">{{ owned.size }}/{{ RESTAURANT_DECOR.length }}</b></div>
+        <div class="dv-stat"><span class="dim">已购置</span><b class="mono">{{ owned.size }}/{{ DECOR_TOTAL }}</b></div>
         <div class="dv-stat"><span class="dim">总加成</span><b class="mono">+{{ decorTotalBonus }}%</b></div>
         <div class="dv-stat"><span class="dim">当前收入</span><b class="mono">{{ player.restaurantHourlyIncome.toFixed(1) }}/时</b></div>
       </div>
@@ -137,6 +166,36 @@ const catRows = computed(() =>
           {{ c.label }} <span class="dim mono">{{ c.owned }}/{{ c.total }}</span>
           <span class="dim mono">+{{ c.bonus }}%</span>
         </button>
+      </div>
+    </div>
+
+    <!-- 手工装潢（v2.9.0，副业·木工）：木器 → 装潢，消耗物品不花金币 -->
+    <div class="card dv-card">
+      <div class="dv-h">🪚 手工装潢 <span class="dim">（木工做出木器后在此做成装潢，不花金币）</span></div>
+      <p class="dim dv-note">
+        去左侧「🪚 副业 → 木工」把木材做成木器，再回来做成装潢。
+        已做 {{ craftedOwned }}/{{ CRAFTED_DECOR.length }} 件，合计 <b>+{{ craftedBonus }}%</b>。
+      </p>
+      <div class="guild-shop-grid grid-n-5">
+        <div
+          v-for="r in craftedRows"
+          :key="r.id"
+          class="guild-shop-card"
+          :class="{ 'guild-locked': r.owned, 'dv-can': !r.owned && r.have >= r.needQty }"
+        >
+          <div class="guild-shop-name">{{ r.name }}</div>
+          <div class="dim guild-shop-price">收入 +{{ r.effect }}%</div>
+          <div class="dim dv-need">需 {{ r.needName }} ×{{ r.needQty }}（持有 {{ r.have }}）</div>
+          <button
+            v-if="!r.owned"
+            class="btn btn-sm"
+            :class="r.have >= r.needQty ? 'btn-primary' : ''"
+            @click="doCraft(r)"
+          >
+            {{ r.have >= r.needQty ? '做成装潢' : '材料不足' }}
+          </button>
+          <span v-else class="badge badge-on">已做成</span>
+        </div>
       </div>
     </div>
 
@@ -247,5 +306,16 @@ const catRows = computed(() =>
   gap: 4px;
   cursor: pointer;
   font-size: 12px;
+}
+/* 手工装潢分区（v2.9.0） */
+.dv-note {
+  margin: 6px 0 10px;
+  font-size: 12px;
+}
+.dv-need {
+  font-size: 11px;
+}
+.dv-can {
+  border-color: rgba(var(--primary-tint-rgb), 0.45);
 }
 </style>

@@ -2,6 +2,8 @@
 // 曲线：price 500→750000 单调；effect 随 price 从 +0.5% → +3% 递增（收入%梯度，无倒挂）
 // 生成：node scripts/gen/gen_restaurant_decor.mjs
 import { RESTAURANT_DECOR_BASE } from './restaurantDecorBase.js'
+// v2.9.0：手工装潢（副业·木工产物做成）并入索引用；定义在 woodworking.js（非生成器产物）
+import { CRAFTED_DECOR } from './woodworking.js'
 
 // 类别显示名
 export const DECOR_CATEGORIES = [
@@ -328,4 +330,10 @@ export const RESTAURANT_DECOR = [
 ]
 
 // 兼容旧用法：仍从 baseline 复用 id/name（供 buyDecor 显示）
-export const RESTAURANT_DECOR_BY_ID = Object.fromEntries(RESTAURANT_DECOR.map((d) => [d.id, d]))
+// v2.9.0（2026-09-16）：**手工装潢**（副业·木工产物做成，craftedFrom 非空、price 为 null）
+// 一并并入索引 —— 收入求和、详情显示都要能查到它们；但 RESTAURANT_DECOR 本身**保持只含商店货**，
+// 于是既有「商店 300 件」的计数与分类页签一行都不用改（手工装潢走 DecorView 的独立分区）。
+export const RESTAURANT_DECOR_BY_ID = Object.fromEntries([...RESTAURANT_DECOR, ...CRAFTED_DECOR].map((d) => [d.id, d]))
+
+/** 装潢总数（商店货 + 手工）：页头/进度分母用这个，别用 RESTAURANT_DECOR.length */
+export const DECOR_TOTAL = RESTAURANT_DECOR.length + CRAFTED_DECOR.length

@@ -1,5 +1,6 @@
 // 游戏商店礼包池（2026-09-09）：商店发货与图鉴来源索引共用，避免两处定义漂移
 import { ITEMS, getItem } from './items.js'
+import { WOODWORK_CATEGORY } from './woodworking.js'
 
 // 稀有食材池（盲盒）
 export const RARE_POOL = ['spiritFruit', 'dragonRoot', 'truffle', 'lingzhi'].filter((id) => !!getItem(id))
@@ -20,7 +21,7 @@ export const MINERAL_POOL = Object.values(ITEMS)
  * 金币商店若能直接买到它们，等于绕过整条产线，图鉴的「获取来源」也会因此说谎。
  * （v2.8.1 实测踩到：登记珍馐阁时才发现商店一直在卖 8 档蜂蜜与 8 档菌灵露。）
  */
-export const DELUXE_EXCLUDED_CATEGORIES = ['buff', 'supply']
+export const DELUXE_EXCLUDED_CATEGORIES = ['buff', 'supply', WOODWORK_CATEGORY]
 export const deluxeSellable = (it) =>
   !!it && it.type !== 'equipment' && it.type !== 'spirit' && !DELUXE_EXCLUDED_CATEGORIES.includes(it.category)
 
@@ -28,5 +29,6 @@ export const deluxeSellable = (it) =>
 export const INGREDIENT_POOL = Object.values(ITEMS)
   // v2.7.4：排除 material（含 20 档木材）——与交易所货池/商队货/自动出售同一口径，
   // 避免「鲜味食材礼包」变成跳过伐木拿高阶木头的捷径（描述也只写蔬菜/鲜肉/水产）
-  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral' && i.category !== 'material')
+  // v2.9.0：同样排除 furniture（木器）——它是副业木工的独占产物，礼包若能开出来就等于绕过整条技能线
+  .filter((i) => i.type === 'ingredient' && !RARE_POOL.includes(i.id) && i.category !== 'mineral' && i.category !== 'material' && i.category !== WOODWORK_CATEGORY)
   .map((i) => i.id)

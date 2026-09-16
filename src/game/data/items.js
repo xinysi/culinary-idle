@@ -743,6 +743,11 @@ ITEMS[PRIME_CROP_ITEM.id] = PRIME_CROP_ITEM
 import { TIMBER_ITEMS } from './timbers.js'
 for (const def of TIMBER_ITEMS) ITEMS[def.id] = def
 
+// 木器（2026-09-16，v2.9.0）：**副业·木工专属**的产物（采集/商店/抽卡都拿不到，
+// 见 woodworking.js 的「独占品」口径）。它们的去处是做成手工装潢（餐厅收入）。
+import { WOODWORKING_ITEMS } from './woodworking.js'
+for (const def of WOODWORKING_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

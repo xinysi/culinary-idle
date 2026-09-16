@@ -40,6 +40,10 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['调酒'], target: { view: 'skill', skill: 'brewing' } },
   { kw: ['调料', '香料'], target: { view: 'skill', skill: 'spiceMixing' } },
   { kw: ['锻造'], target: { view: 'skill', skill: 'craftsmithing' } },
+  // 副业·木工（v2.9.0）：要放在别的规则之前能命中的位置不重要，
+  // 但两条来源串「木工制作」与「餐厅装潢」都必须有规则，否则图鉴里是死文本（图鉴三查会 FAIL）
+  { kw: ['木工'], target: { view: 'skill', skill: 'woodworking' } },
+  { kw: ['餐厅装潢', '装潢'], target: { view: 'decor' } },
   { kw: ['保鲜'], target: { view: 'skill', skill: 'preservation' } },
   { kw: ['探索'], target: { view: 'skill', skill: 'exploration' } },
   { kw: ['游戏商店'], target: { view: 'minigames' } }, // 小游戏游戏币商店（须先于通用「商店」判定）

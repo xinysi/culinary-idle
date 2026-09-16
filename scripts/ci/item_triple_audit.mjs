@@ -15,6 +15,7 @@ import { FISHING_TARGETS } from '../../src/game/skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../../src/game/skills/HuntingSkill.js'
 import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../../src/game/skills/ExcavationSkill.js'
 import { WOODCUTTING_TARGETS } from '../../src/game/data/timbers.js'
+import { RESTAURANT_DECOR_BY_ID } from '../../src/game/data/restaurantDecor.js'
 import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 import { SHOP_ITEMS } from '../../src/game/data/shop.js'
 import { EXPLORATION_TARGETS_ALL } from '../../src/game/data/explorationTargets.js'
@@ -119,8 +120,16 @@ const items = Object.values(ITEMS)
 // ── 3. 可用于制作（itemUses）：产物必须存在（幽灵配方引用不入图鉴）──
 {
   let bad = 0
-  for (const it of items) for (const u of itemUses(it.id)) if (!ITEMS[u.outputId]) bad++
-  check('可用于制作：itemUses 无坏链（产出引用均存在）', bad === 0, `bad=${bad}`)
+  const badIds = []
+  for (const it of items) {
+    for (const u of itemUses(it.id)) {
+      // kind==='decor'（v2.9.0）：产物是**装潢**不是物品，改为校验它确实是已登记的装潢定义。
+      // 早先一律要求 `ITEMS[u.outputId]` 存在 —— 木器做成手工装潢这条用途会被判成坏链。
+      const ok = u.kind === 'decor' ? !!RESTAURANT_DECOR_BY_ID[u.outputId] : !!ITEMS[u.outputId]
+      if (!ok) { bad++; if (badIds.length < 5) badIds.push(`${it.id} → ${u.outputId}`) }
+    }
+  }
+  check('可用于制作：itemUses 无坏链（产出引用均存在）', bad === 0, `bad=${bad} ${badIds.join('; ')}`)
 }
 
 // ── 4. 获取来源：来源跳转覆盖（jump 关键字更新时同步维护此表）──

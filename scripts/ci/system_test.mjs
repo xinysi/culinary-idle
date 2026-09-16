@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import { MIJIAN_POOLS, poolItems } from '../../src/game/data/mijianDraws.js'
 import { DAILY_POOL, WEEKLY_POOL, DAILY_BONUS } from '../../src/game/data/dailyTasks.js'
 import { GUILDS } from '../../src/game/data/guilds.js'
-import { SKILL_DEFS } from '../../src/game/data/skills.js'
+import { SKILL_DEFS, SKILL_CATEGORIES } from '../../src/game/data/skills.js'
 import { QUIRKS } from '../../src/game/data/tales_ext.js'
 import { deluxeSellable } from '../../src/game/data/gameShopPools.js'
 import { materialFoodItems } from '../../src/game/data/mijianDraws.js'
@@ -98,6 +98,19 @@ import { ENCOUNTERS, getEncounter } from '../../src/game/data/encounters.js'
 import { itemSources } from '../../src/game/data/itemSources.js'
 import { jumpForSource } from '../../src/game/data/sourceJump.js'
 import { itemUses } from '../../src/game/data/itemUses.js'
+// 副业·木工（v2.9.0）——SPIRITS / itemImage / SHANHAI_NODES 均已在下方或上方导入，勿重复
+import { skillCategoriesOfTab } from '../../src/game/data/skills.js'
+import { WOODWORKING_ITEMS, WOODWORKING_RECIPES, CRAFTED_DECOR, WOODWORK_CATEGORY, decorOfWoodwork } from '../../src/game/data/woodworking.js'
+import { RESTAURANT_DECOR, RESTAURANT_DECOR_BY_ID, DECOR_TOTAL } from '../../src/game/data/restaurantDecor.js'
+import { CARAVAN_CARGO_TYPES, CARAVAN_EXCLUDE_CATEGORIES } from '../../src/game/data/caravan.js'
+
+/** 木器图片是否存在（图鉴的 @error 会静默隐藏破图，只有查文件才能发现缺图） */
+const imgExists = (id) => {
+  const rel = itemImage(id)
+  return !!rel && fs.existsSync(fileURLToPath(new URL('../../public/' + rel, import.meta.url)))
+}
+/** 某档木材的等级（C32 校验「木器配方吃的是同档木材」用） */
+const timberLevelOf = (id) => TIMBERS.find((t) => t.id === id)?.level ?? null
 
 // 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
 const ACH = (id) => ALL_ACHIEVEMENTS.find((a) => a.id === id)
@@ -4563,8 +4576,8 @@ console.log('== C29. 新技能适配一致性 ==')
   const gatherSubs = ['foraging', 'fishing', 'hunting', 'excavation', 'mining', 'woodcutting', 'farming']
   check('适配', `轶事覆盖全部 7 条采集线（各 200 条，含采矿与伐木）`, gatherSubs.every((k) => (subs[k] ?? 0) === 200), gatherSubs.map((k) => `${k}:${subs[k] ?? 0}`).join(' '))
 
-  // ⑦ 技能总量与采集总等级口径
-  check('适配', '技能总数为 22、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 22 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
+  // ⑦ 技能总量与采集总等级口径（v2.9.0：+副业·木工 → 23 个技能 / 5 大类）
+  check('适配', '技能总数为 23、5 大类、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 23 && SKILL_CATEGORIES.length === 5 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
 }
 
 
@@ -4713,6 +4726,145 @@ console.log('== C31. 图鉴来源完整性 ==')
   // ⑦ 木材/矿石：至少要有「采集 + 一个下游系统」两类来源（防止将来又退回只剩一两种）
   const woodOk = ['pineWood', 'elmWood', 'glazeWood', 'primalWood'].every((id) => itemSources(id).some((x) => x.includes('伐木')) && itemSources(id).some((x) => x.includes('珍馐阁')))
   check('来源完整性', '木材既有「伐木获得」也有下游来源（珍馐阁）——不再是孤零零一两种', woodOk)
+}
+
+// ── C32. 副业·木工（v2.9.0：独立第三页签的技能，吃伐木木材 → 木器 → 手工装潢）──
+console.log('══ C32. 副业·木工 ══')
+{
+  // ① 技能本体：已注册实例、类型为 production、落在 sideline 大类、有图标
+  const inst = getSkillInstance('woodworking')
+  const def = SKILL_DEFS.woodworking
+  check('副业·木工', '技能已注册实例且类型为 production（复用 ProductionView 与制作队列/精通）',
+    inst?.type === 'production' && inst?.id === 'woodworking' && typeof inst?.craft === 'function')
+  check('副业·木工', '技能落在 sideline 大类、有中文名与图标',
+    def?.category === 'sideline' && !!def?.name && !!def?.icon && def.icon !== '•', `${def?.category}/${def?.icon}`)
+
+  // ② 页签分组：skill 页签 4 类 / side 页签只有 1 类（左栏第三页签）
+  const skillTabCats = skillCategoriesOfTab('skill')
+  const sideTabCats = skillCategoriesOfTab('side')
+  check('副业·木工', '左栏页签分组：技能 4 类 / 副业 1 类，且分类总数守恒（不重不漏）',
+    skillTabCats.length === 4 && sideTabCats.length === 1 && sideTabCats[0].id === 'sideline' && skillTabCats.length + sideTabCats.length === SKILL_CATEGORIES.length)
+
+  // ③ 木器物品：10 件、id 唯一、类别为 furniture（与材料 material 区分）
+  const badItems = []
+  for (const it of WOODWORKING_ITEMS) {
+    if (!ITEMS[it.id]) badItems.push(`${it.id}: 未合并进 ITEMS`)
+    else if (it.type !== 'ingredient' || it.category !== WOODWORK_CATEGORY) badItems.push(`${it.id}: type/category 非 ingredient/furniture`)
+  }
+  check('副业·木工', `木器共 ${WOODWORKING_ITEMS.length} 件、全部并入 ITEMS 且类别为木器（furniture）`,
+    WOODWORKING_ITEMS.length === 10 && new Set(WOODWORKING_ITEMS.map((i) => i.id)).size === 10 && badItems.length === 0, badItems.join('; '))
+  check('副业·木工', '每件木器都有图片文件（占位图也算，但文件必须真实存在）',
+    WOODWORKING_ITEMS.every((it) => imgExists(it.id)), WOODWORKING_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
+
+  // ④ 配方：每 10 级一件、材料是该档木材、数量 2~5、产物是自己
+  const bandTimbers = new Set(TIMBERS.map((t) => t.id))
+  const rBad = []
+  for (const r of WOODWORKING_RECIPES) {
+    const mats = Object.keys(r.ingredients ?? {})
+    if (mats.length !== 1 || !bandTimbers.has(mats[0])) rBad.push(`${r.id}: 材料不是单一档位木材（${mats.join('+')}）`)
+    else {
+      const lv = ITEMS[mats[0]] ? timberLevelOf(mats[0]) : null
+      if (lv != null && Math.abs(lv - r.reqLevel) > 4) rBad.push(`${r.id}: 木材 Lv${lv} 与配方 Lv${r.reqLevel} 不同档`)
+      const q = r.ingredients[mats[0]]
+      if (!(q >= 2 && q <= 5)) rBad.push(`${r.id}: 数量 ${q} 不在 2~5`)
+    }
+    if (!ITEMS[r.output?.itemId]) rBad.push(`${r.id}: 产物不存在`)
+  }
+  check('副业·木工', `配方 ${WOODWORKING_RECIPES.length} 条：材料均为同档木材、数量 2~5、产物存在`, rBad.length === 0, rBad.slice(0, 4).join('; '))
+  check('副业·木工', '配方等级严格每 10 级一件（Lv1,11,…,91）且严格递增',
+    WOODWORKING_RECIPES.map((r) => r.reqLevel).join(',') === '1,11,21,31,41,51,61,71,81,91')
+
+  // ⑤ 启动重算不改动这些配方（raiseRecipeLevels 必须对它们是恒等变换）
+  const liveRecipes = inst.recipes
+  const drift = []
+  for (const r of WOODWORKING_RECIPES) {
+    const live = liveRecipes.find((x) => x.id === r.id)
+    if (!live) { drift.push(`${r.id}: 实例里没有`); continue }
+    if (live.reqLevel !== r.reqLevel) drift.push(`${r.id}: reqLevel ${r.reqLevel}→${live.reqLevel}`)
+    if (JSON.stringify(live.ingredients) !== JSON.stringify(r.ingredients)) drift.push(`${r.id}: 材料被改写`)
+  }
+  check('副业·木工', '技能构造后配方零漂移（材料已同档，平衡函数对它是恒等变换）', drift.length === 0, drift.slice(0, 4).join('; '))
+
+  // ⑥ 独占品口径：木器不得出现在任何抽卡池 / 礼包池 / 交易所 / 商队货舱 / 自动出售
+  const woodIds = new Set(WOODWORKING_ITEMS.map((i) => i.id))
+  const poolLeak = []
+  for (const p of MIJIAN_POOLS) for (const it of poolItems(p.id)) if (woodIds.has(it.id)) poolLeak.push(`${p.id}:${it.name}`)
+  for (const it of materialFoodItems(Infinity)) if (woodIds.has(it.id)) poolLeak.push(`素材池:${it.name}`)
+  for (const id of INGREDIENT_POOL) if (woodIds.has(id)) poolLeak.push(`食材礼包:${id}`)
+  check('副业·木工', '木器不进任何抽卡池（觅珍 5 池 + 素材池）与食材礼包池（独占品不得有捷径）', poolLeak.length === 0, poolLeak.slice(0, 4).join(' '))
+  const traded = WOODWORKING_ITEMS.filter((it) => EXCHANGE_POOL_CATEGORIES.includes(it.category) || CARAVAN_CARGO_TYPES.includes(it.category) && !CARAVAN_EXCLUDE_CATEGORIES.includes(it.category))
+  check('副业·木工', '木器不进交易所货池、不能当商队货物、不被自动出售', traded.length === 0 && SELL_EXCLUDED_CATEGORIES.includes(WOODWORK_CATEGORY), `traded=${traded.length}`)
+
+  // ⑦ 木器不进山海食经、也不吃食灵经验加成（用户 2026-09-16 的两条设计决策）
+  const shanhaiSkills = new Set(SHANHAI_NODES.map((n) => n.req?.skill).filter(Boolean).concat(SHANHAI_NODES.map((n) => n.req?.skill2).filter(Boolean)))
+  check('副业·木工', '木工不进入山海食经（线↔技能白名单，加线会改写已定稿的节点布局）', !shanhaiSkills.has('woodworking'))
+  const spiritXp = SPIRITS.filter((s) => (s.effect?.xpPct ?? {})['woodworking'] != null)
+  check('副业·木工', `副业不吃食灵经验加成（${SPIRITS.length} 只食灵的经验域都不含木工）`, spiritXp.length === 0, spiritXp.map((s) => s.id).join(','))
+
+  // ⑧ 手工装潢：10 件、效果严格递增、来源指向真实木器、并入装潢索引
+  const cBad = []
+  for (const d of CRAFTED_DECOR) {
+    if (!RESTAURANT_DECOR_BY_ID[d.id]) cBad.push(`${d.id}: 未并入 RESTAURANT_DECOR_BY_ID`)
+    if (!d.craftedFrom || !woodIds.has(d.craftedFrom.itemId)) cBad.push(`${d.id}: craftedFrom 指向的不是木器`)
+    if (d.price != null) cBad.push(`${d.id}: 手工装潢不该有金币价`)
+    if (!(d.effect > 0)) cBad.push(`${d.id}: effect 非正`)
+  }
+  const effects = CRAFTED_DECOR.map((d) => d.effect)
+  check('副业·木工', `手工装潢 ${CRAFTED_DECOR.length} 件：并入装潢索引、来源为木器、无金币价、效果为正`, CRAFTED_DECOR.length === 10 && cBad.length === 0, cBad.slice(0, 4).join('; '))
+  check('副业·木工', '手工装潢效果严格递增（等级越高越强，无倒挂）', effects.every((v, i) => i === 0 || v > effects[i - 1]), effects.join(','))
+  check('副业·木工', `装潢总数 = 商店 ${RESTAURANT_DECOR.length} + 手工 ${CRAFTED_DECOR.length}（分母用 DECOR_TOTAL，避免做满后显示 305/300）`,
+    DECOR_TOTAL === RESTAURANT_DECOR.length + CRAFTED_DECOR.length && RESTAURANT_DECOR.length === 300)
+
+  // ⑨ player.craftDecor 的四种返回语义 + 真的加收入
+  const p = freshPlayer({ woodworking: 30 })
+  const p0 = freshPlayer({ woodworking: 30 }) // 新档无木器
+  check('副业·木工', '未持有木器时 craftDecor 返回 denied（不给装潢）',
+    p0.craftDecor(CRAFTED_DECOR[0].id) === 'denied' && !(p0.restaurant.decor ?? []).includes(CRAFTED_DECOR[0].id))
+  check('副业·木工', '非法目标（非手工装潢 id）返回 bad，不会白拿',
+    p.craftDecor('decor_1') === 'bad' && p.craftDecor('不存在的id') === 'bad')
+  const target = CRAFTED_DECOR[0]
+  // ⚠️ 新档菜单是空的 → 时收恒为 0，乘多少装饰都还是 0。要验证「装潢真的抬了收入」，
+  //    必须先挂一道菜（这也是既有装潢测试的做法）。
+  p.restaurant.menu = ['roastPotato']
+  const before = p.restaurantHourlyIncome
+  p.inventory[target.craftedFrom.itemId] = 2
+  const res = p.craftDecor(target.id)
+  const after = p.restaurantHourlyIncome
+  check('副业·木工', '持有木器时 craftDecor 成功：消耗 1 件木器、装潢入库、餐厅时收上升',
+    res === 'ok' && p.inventory[target.craftedFrom.itemId] === 1 && (p.restaurant.decor ?? []).includes(target.id) && after > before,
+    `${res} 木器余 ${p.inventory[target.craftedFrom.itemId]} 收入 ${before.toFixed(1)}→${after.toFixed(1)}`)
+  check('副业·木工', '重复制作返回 owned 且不再扣木器（幂等，不重复计数）',
+    p.craftDecor(target.id) === 'owned' && p.inventory[target.craftedFrom.itemId] === 1)
+
+  // ⑩ 存档往返：手工装潢随 restaurant.decor 一起存下来
+  const saved = p.serialize()
+  const p2 = freshPlayer()
+  p2.applySave(saved)
+  check('副业·木工', '存档往返后手工装潢仍在且仍计入收入（走既有 restaurant.decor 数组，无新存档字段）',
+    (p2.restaurant.decor ?? []).includes(target.id) && p2.restaurantHourlyIncome > 0,
+    `decor=${(p2.restaurant.decor ?? []).length} 收入=${p2.restaurantHourlyIncome.toFixed(1)}`)
+
+  // ⑪ 图鉴三查：详细作用 / 可用于制作 / 获取来源三条都要到位
+  const gBad = []
+  for (const it of WOODWORKING_ITEMS) {
+    const lines = itemDetailLines(it.id).map((l) => l.join('')).join('|')
+    if (!lines.includes('手工装潢')) gBad.push(`${it.id}: 详细作用缺「做成手工装潢」`)
+    if (!itemSources(it.id).some((s) => s.includes('木工'))) gBad.push(`${it.id}: 来源缺「木工制作」`)
+    const uses = itemUses(it.id)
+    if (!uses.some((u) => u.kind === 'decor' && u.outputId === decorOfWoodwork(it.id)?.id)) gBad.push(`${it.id}: 可用于制作缺装潢`)
+  }
+  check('副业·木工', '图鉴三查：木器的详细作用 / 可用于制作（装潢）/ 获取来源（木工制作）三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
+  check('副业·木工', '木器与手工装潢的来源串都能跳转（图鉴里不是死文本）',
+    jumpForSource('木工制作（松木×2，Lv1 可学）')?.skill === 'woodworking' && !!jumpForSource('餐厅装潢'))
+  check('副业·木工', '木材的「可用于制作」已含木工配方（下游真的接上了）',
+    itemUses('pineWood').some((u) => WOODWORKING_ITEMS.some((it) => it.id === u.outputId)))
+
+  // ⑫ 内容同步：公会 / 每日 / 周常任务都有一条木工，且 kind 有处理分支
+  const gTask = GUILDS.some((g) => (g.tasks ?? []).some((t) => t.kind === 'skill' && t.param === 'woodworking'))
+  const dTask = DAILY_POOL.some((t) => t.param === 'woodworking')
+  const wTask = WEEKLY_POOL.some((t) => t.param === 'woodworking')
+  check('副业·木工', '公会 / 每日 / 周常三处任务都有木工条目，且 param 是已注册技能',
+    gTask && dTask && wTask && !!SKILL_DEFS.woodworking)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

@@ -51,7 +51,7 @@ export const EFFECT_GROUPS = [
 export const SKILL_CN = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕',
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配',
-  craftsmithing: '厨具锻造', knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
+  craftsmithing: '厨具锻造', woodworking: '木工', knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
   plating: '摆盘技巧', tasteAcumen: '品鉴力', spiritSummoning: '食灵召唤', gastronomy: '美食知识',
   preservation: '食材保鲜', exploration: '美食探索',
 }
