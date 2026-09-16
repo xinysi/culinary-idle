@@ -41,10 +41,16 @@ export class GatheringSkill extends Skill {
     return 'gathering'
   }
 
-  /** 当前选择的采集目标（§3.1 每技能独立目标，多技能并行） */
+  /** 当前选择的采集目标（§3.1 每技能独立目标，多技能并行）
+   *  ⚠️ 兜底（v2.7.0）：若存档里的目标 id 已不在本技能的目标表里（例如「矿物从挖掘独立为采矿」这类
+   *  目标集合变更），**回退到本技能的第一个目标**而不是返回 null——返回 null 是静默停产：
+   *  `tick` 直接 return、`computeOffline` 返回 null、并行挂机列表也把它剔除，玩家只会看到「技能不干活了」。 */
   get currentTarget() {
     const targetId = this.player.getSkillTarget?.(this.id) ?? this.player.activeTarget
-    return this.targets.find((t) => t.itemId === targetId) ?? null
+    const hit = this.targets.find((t) => t.itemId === targetId)
+    if (hit) return hit
+    if (targetId != null && this.targets.length) return this.targets[0]
+    return null
   }
 
   /** 手动暂停（§3.1 停止/继续） */

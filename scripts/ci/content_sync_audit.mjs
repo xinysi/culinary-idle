@@ -343,7 +343,7 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
 //      ⚠️ 第二轮才补上这条：宴会/常客/餐厅/同业榜的 `tier ≥ N`、`最低 tier` 全是**模板静态文本**，
 //      只扫字符串字面量会漏（用户就是先在宴会上看到的）。
 {
-  const IDS = /\b(tier|minTier|tierReq|reqLevel|itemId|itemName|itemQty|qty|pct|skillId|defId|slotId|amount|exp|foraging|fishing|hunting|excavation|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|opp\(\))\b/
+  const IDS = /\b(tier|minTier|tierReq|reqLevel|itemId|itemName|itemQty|qty|pct|skillId|defId|slotId|amount|exp|foraging|fishing|hunting|excavation|woodcutting|mining|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|opp\(\))\b/
   /** 剔除模板串插值（花括号配对计数）与 Vue 插值 */
   function stripInterp(str) {
     let out = ''

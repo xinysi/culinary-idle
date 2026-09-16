@@ -15,7 +15,7 @@ export const HONOR_PER_LEVEL = 8
 /** 四条被动通道（只读既有聚合点，不碰对决数值曲线） */
 export const HONOR_STATS = {
   xpPct: { id: 'xpPct', name: '全技能经验', icon: '📖', desc: '所有技能获得的经验' },
-  gatherPct: { id: 'gatherPct', name: '采集产量', icon: '🌾', desc: '采摘/垂钓/狩猎/挖掘/农耕的额外产量概率' },
+  gatherPct: { id: 'gatherPct', name: '采集产量', icon: '🌾', desc: '采摘/垂钓/狩猎/挖掘/采矿/伐木/农耕的额外产量概率' },
   craftPct: { id: 'craftPct', name: '制作成功率', icon: '🍳', desc: '各制作技能的配方成功率' },
   goldPct: { id: 'goldPct', name: '经营收入', icon: '💰', desc: '餐厅与分店的每小时收入' },
 }

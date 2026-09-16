@@ -20,7 +20,7 @@ const NEEDS = {
   collection25: 25, collection50: 50, collection75: 75, collection100: 100,
   hardcoreDay1: 1, hardcoreDay7: 7, hardcoreDay30: 30, hardcoreDay100: 100,
   daoFirst: 1, daoPathAll: 20, // 四路各 5 个 = 20 个节点
-  shanhaiFirst: 1, shanhai30: 30, shanhai90: 90, shanhai180: 180, shanhaiAll: 400, // 山海食经点亮节点数（v2.1：全树 400）
+  shanhaiFirst: 1, shanhai30: 30, shanhai90: 90, shanhai180: 180, shanhaiAll: 552, // 山海食经点亮节点数（v2.7.0：12 线 → 全树 552）
   friendBondAll: FRIENDS.length, expeditionTier5: EXPEDITIONS.length, branch6: BRANCHES.length, mascot7: MASCOTS.length, setMeal3: 3, chefWin10: 10,
   // 挂机产线四套（2026-09-14）
   caravan1: 1, caravan30: 30, mushroom50: 50, spiritField10: 10, honey8: 8, honey100: 100, essence1: 1, essenceAll: 8, prime10: 10, prime200: 200,

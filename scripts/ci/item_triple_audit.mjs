@@ -13,7 +13,8 @@ import { getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { FORAGING_TARGETS } from '../../src/game/skills/ForagingSkill.js'
 import { FISHING_TARGETS } from '../../src/game/skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../../src/game/skills/HuntingSkill.js'
-import { EXCAVATION_TARGETS } from '../../src/game/skills/ExcavationSkill.js'
+import { EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../../src/game/skills/ExcavationSkill.js'
+import { WOODCUTTING_TARGETS } from '../../src/game/data/timbers.js'
 import { CROPS } from '../../src/game/skills/FarmingSkill.js'
 import { SHOP_ITEMS } from '../../src/game/data/shop.js'
 import { EXPLORATION_TARGETS_ALL } from '../../src/game/data/explorationTargets.js'
@@ -144,7 +145,8 @@ const items = Object.values(ITEMS)
     if (!ITEMS[r.output?.itemId]) bad.push(`配方${r.id}出${r.output?.itemId}`)
     for (const mid of Object.keys(r.ingredients ?? {})) if (!ITEMS[mid]) bad.push(`配方${r.id}料${mid}`)
   }
-  for (const t of [...FORAGING_TARGETS, ...FISHING_TARGETS, ...HUNTING_TARGETS, ...EXCAVATION_TARGETS]) if (!ITEMS[t.itemId]) bad.push(`采集${t.itemId}`)
+  // v2.7.0：把「挖掘地面 / 采矿 / 伐木」三份新清单也纳入交叉引用校验（id 打错会静默漏过）
+  for (const t of [...FORAGING_TARGETS, ...FISHING_TARGETS, ...HUNTING_TARGETS, ...EXCAVATION_TARGETS, ...EXCAVATION_GROUND_TARGETS, ...MINING_TARGETS, ...WOODCUTTING_TARGETS]) if (!ITEMS[t.itemId]) bad.push(`采集${t.itemId}`)
   for (const c of CROPS) if (!ITEMS[c.itemId] || !ITEMS[c.seedId]) bad.push(`作物${c.itemId}`)
   for (const s of SHOP_ITEMS) if (s.itemId && !ITEMS[s.itemId]) bad.push(`商店${s.itemId}`)
   // 说明：探索目标（explore_001…）本身**不是物品**，没有同 id 的物品，所以只校验它的战利品引用

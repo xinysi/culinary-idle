@@ -66,8 +66,9 @@ console.log('══ W3. 公会扩展 ══')
   p.gold = 5000
   check('公会：初始公会无需求可加入', p.joinGuild('flame') === true)
   p.leaveGuild()
-  for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'farming']) p.setSkillState(id, { level: 20, exp: totalXpForLevel(20) })
-  check('公会：采集总等级 100 满足丰收麦田（需 50）', p.gatherLevels >= 50 && p.joinGuild('harvestField') === true)
+  // v2.7.0：采集线 5 → 7（+伐木/采矿），公会门槛等比上调到 70/130/200/280
+  for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining']) p.setSkillState(id, { level: 20, exp: totalXpForLevel(20) })
+  check('公会：采集总等级 140 满足丰收麦田（需 70）', p.gatherLevels >= 70 && p.joinGuild('harvestField') === true)
   p.leaveGuild()
   // 制作成功率 buff
   const p2 = freshPlayer({ cooking: 30 })
@@ -232,11 +233,11 @@ console.log('══ W6. 新功能 ══')
   const r7 = p.signInToday()
   check('签到：第 7 天后循环回第 1 天', r7.ok && r7.day === 1)
 
-  // 装备强化
+  // 装备强化（v2.7.0：材料改为「同档木材 + 同档矿」——铜刀属 Lv1-5 档 → 松木 + 铜矿）
   const p2 = freshPlayer()
   p2.inventory.copperKnife = 1
-  p2.inventory.ironOre = 5
-  p2.inventory.saltOre = 5
+  p2.inventory.pineWood = 5
+  p2.inventory.copperOre = 5
   p2.gold = 100000
   p2.equip('copperKnife')
   const base = p2.equippedStats.attack

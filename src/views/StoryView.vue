@@ -112,6 +112,7 @@ const talesBySeries = computed(() => {
 // 子子类（技能）中文名映射；缺失时回退为 sub 本身
 const QUIRK_SUB_NAMES = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', farming: '农耕',
+  woodcutting: '伐木', mining: '采矿',
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒',
   spiceMixing: '调料调配', craftsmithing: '厨具锻造',
   battle: '战斗', spirit: '食灵召唤',

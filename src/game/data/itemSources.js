@@ -3,7 +3,8 @@
 import { FORAGING_TARGETS } from '../skills/ForagingSkill.js'
 import { FISHING_TARGETS } from '../skills/FishingSkill.js'
 import { HUNTING_TARGETS } from '../skills/HuntingSkill.js'
-import { EXCAVATION_TARGETS } from '../skills/ExcavationSkill.js'
+import { isMineralTarget, EXCAVATION_TARGETS, EXCAVATION_GROUND_TARGETS, MINING_TARGETS } from '../skills/ExcavationSkill.js'
+import { WOODCUTTING_TARGETS } from './timbers.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { COOKING_RECIPES } from '../skills/CookingSkill.js'
 import { BAKING_RECIPES } from '../skills/BakingSkill.js'
@@ -48,19 +49,30 @@ const add = (id, src) => {
 }
 
 // 采集（基础 + 扩充）
+// v2.7.0：矿物独立为「采矿」、新增「伐木」——挖掘改为只列**地面目标**（根茎/菌类），
+// 矿物走采矿、木材走伐木；新增来源串「采矿获得」「伐木获得」必须在 sourceJump.js 里有跳转规则（审计会查）。
 const GATHER = [
   [FORAGING_TARGETS, '采摘'],
   [FISHING_TARGETS, '垂钓'],
   [HUNTING_TARGETS, '狩猎'],
-  [EXCAVATION_TARGETS, '挖掘'],
+  [EXCAVATION_GROUND_TARGETS, '挖掘'],
+  [MINING_TARGETS, '采矿'],
+  [WOODCUTTING_TARGETS, '伐木'],
 ]
 for (const [arr, name] of GATHER) for (const t of arr) add(t.itemId, `${name}获得（Lv${t.reqLevel} 解锁）`)
-for (const [skill, name] of [['foraging', '采摘'], ['fishing', '垂钓'], ['hunting', '狩猎'], ['excavation', '挖掘']]) {
-  for (const t of GATHERING_EXT[skill] ?? []) add(t.itemId, `${name}获得（Lv${t.reqLevel} 解锁）`)
+// 扩充目标（ext/ext2）里：挖掘只登记**非矿物**，其余（矿物）归采矿
+for (const [skill, name, keep] of [['foraging', '采摘', null], ['fishing', '垂钓', null], ['hunting', '狩猎', null], ['excavation', '挖掘', (t) => !isMineralTarget(t)]]) {
+  for (const t of GATHERING_EXT[skill] ?? []) if (!keep || keep(t)) add(t.itemId, `${name}获得（Lv${t.reqLevel} 解锁）`)
 }
-for (const [skill, name] of [['foraging', '采摘'], ['fishing', '垂钓'], ['hunting', '狩猎'], ['excavation', '挖掘']]) {
-  for (const t of GATHERING_EXT2[skill] ?? []) add(t.itemId, `${name}获得（Lv${t.reqLevel} 解锁）`)
+for (const [skill, name, keep] of [['foraging', '采摘', null], ['fishing', '垂钓', null], ['hunting', '狩猎', null], ['excavation', '挖掘', (t) => !isMineralTarget(t)]]) {
+  for (const t of GATHERING_EXT2[skill] ?? []) if (!keep || keep(t)) add(t.itemId, `${name}获得（Lv${t.reqLevel} 解锁）`)
 }
+// 采矿：ext/ext2 里的矿物目标 + 13 座同名矿（后者原本没有「挖掘获得」来源串）
+for (const [skill] of [['excavation']]) {
+  for (const t of GATHERING_EXT[skill] ?? []) if (isMineralTarget(t)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
+  for (const t of GATHERING_EXT2[skill] ?? []) if (isMineralTarget(t)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
+}
+for (const t of MINING_TARGETS) if (t.itemId === 'steelOre' || /Ore$/.test(t.itemId)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
 
 // 农耕
 for (const c of CROPS) add(c.itemId, `农耕种植获得（Lv${c.reqLevel} 解锁）`)
@@ -121,6 +133,7 @@ for (const a of ALL_ACHIEVEMENTS) for (const id of Object.keys(a.reward?.items ?
 for (const q of QUESTS) for (const id of Object.keys(q.reward?.items ?? {})) add(id, `主线任务「${q.name}」奖励`)
 
 // 附产物（固定机制；百分比与技能内常量一致：采摘木材 50%、挖掘铜矿 50%/铁矿 30%/化石 2%、狩猎野鸡蛋 15%）
+// v2.7.0：铜矿/铁矿的附产**保留在挖掘**（用户确认），所以它们既有「采矿获得」也有「挖掘附产物」两条来源。
 add('wood', '采摘附产物（50%）')
 add('copperOre', '挖掘附产物（50%）')
 add('ironOre', '挖掘附产物（30%）')

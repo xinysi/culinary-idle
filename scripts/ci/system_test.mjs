@@ -4,6 +4,11 @@
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
+import { itemNavs } from '../../src/game/data/itemNav.js'
+import { EXCAVATION_ALL_TARGETS, isMineralTarget } from '../../src/game/skills/ExcavationSkill.js'
+import { oreOfLevel, equipmentLevelOf as equipLevelOf } from '../../src/game/data/timberRecipes.js'
+import { TIMBERS, timberOfLevel } from '../../src/game/data/timbers.js'
+import { SMITHING_SET_RECIPES } from '../../src/game/data/smithSetExt.js'
 import { fileURLToPath } from 'node:url'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
@@ -243,13 +248,13 @@ console.log('══ B. 联动链 ══')
   p.gainItem('chili', 2)
   withRandom([0.0], () => ck.craft(ck.recipes.find((r) => r.id === 'ironPlateRabbit')))
   check('联动', '椒盐入菜：铁板兔肉', p.inventory.ironPlateRabbit === 1, JSON.stringify(p.inventory.ironPlateRabbit))
-  // 锻造链：木材/铜矿→铜刀→对决属性
+  // 锻造链：同档木材/铜矿→铜刀→对决属性（v2.7.0：铜刀属 Lv1-5 档 → 松木 + 铜矿）
   const p2 = freshPlayer({ craftsmithing: 5, knife: 5, tasteAcumen: 1, heatControl: 1 })
-  p2.gainItem('wood', 3)
+  p2.gainItem('pineWood', 3)
   p2.gainItem('copperOre', 3)
   const cfs = getSkillInstance('craftsmithing')
   withRandom([0.0], () => cfs.craft(cfs.recipes.find((r) => r.output?.itemId === 'copperKnife')))
-  check('联动', '木材/铜矿→铜刀锻造', p2.inventory.copperKnife === 1)
+  check('联动', '松木/铜矿→铜刀锻造', p2.inventory.copperKnife === 1)
   p2.equip('copperKnife')
   const combat = new Combat(p2)
   const stats0 = combat.playerStats()
@@ -263,7 +268,7 @@ console.log('══ B2. 新系统（制作队列/装备词条/食客订单） �
 {
   // 1) 制作队列：入队/合并/推进/暂停/恢复/清空
   const p = freshPlayer({ craftsmithing: 5 })
-  p.gainItem('wood', 30)
+  p.gainItem('pineWood', 30) // v2.7.0：铜刀配方改用同档木材（Lv1-5 档 = 松木）
   p.gainItem('copperOre', 30)
   const cs = getSkillInstance('craftsmithing')
   const recipe = cs.recipes.find((r) => r.output?.itemId === 'copperKnife')
@@ -2286,9 +2291,9 @@ console.log('══ S. 内容扩充完整性 ══')
   const EXP = await import('../../src/game/data/expansion1.js')
   const insts = {}
   createSkillInstances(freshPlayer())
-  for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'exploration']) insts[id] = getSkillInstance(id)
-  // 各技能扩充后数量：与当前生成器产物一致（2026-09-06 实测量）
-  check('扩充', '采集四技能目标数（142/72/70/83）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 72 && insts.hunting.targets.length === 70 && insts.excavation.targets.length === 83, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length }))
+  for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'woodcutting', 'mining', 'cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'exploration']) insts[id] = getSkillInstance(id)
+  // 各技能扩充后数量：与当前生成器产物一致（2026-09-16 实测量；v2.7.0 矿物拆出后 挖掘 83→42，新增伐木 20 / 采矿 43）
+  check('扩充', '采集七技能目标数（142/72/70/42/20/43）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 72 && insts.hunting.targets.length === 70 && insts.excavation.targets.length === 42 && insts.woodcutting.targets.length === 20 && insts.mining.targets.length === 43, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
   check('扩充', '制作五技能食谱数（294/97/90/127/97）', insts.cooking.recipes.length === 294 && insts.baking.recipes.length === 97 && insts.preserving.recipes.length === 90 && insts.brewing.recipes.length === 127 && insts.spiceMixing.recipes.length === 97, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 365 配方（20 品质套 + 独立矿套）', insts.craftsmithing.recipes.length === 365, `n=${insts.craftsmithing.recipes.length}`)
   // 18 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
@@ -3163,12 +3168,12 @@ console.log('══ C21. 厨神之路图谱 ══')
   check('道途图谱', '节点状态字段齐备（供画布着色）', g.nodes.every((n) => n.id && n.name && n.icon && n.pathId && n.pathName && Number.isFinite(n.cost) && Number.isFinite(n.tierReq)))
 }
 
-// ── C22. 山海食经（v2.1：10 系 × 6 环 × 3 节点；**纯条件点亮 + 固定数值奖励**）──
+// ── C22. 山海食经（v2.1：12 系 × 10 环 × 3~5 节点；**纯条件点亮 + 固定数值奖励**）──
 console.log('══ C22. 山海食经 ══')
 {
   const N = SHANHAI_NODES
   const ids = new Set(N.map((n) => n.id))
-  check('山海食经', `节点总数 = 400 分支 + 50 汇金 + 10 珍券 = ${N.length}`, N.length === 460 && SHANHAI_PATHS.length === 10 && SHANHAI_RING_COUNT === 10 && SHANHAI_RINGS.length === 10 && SHANHAI_RING_SLOTS.join(',') === '3,3,3,3,3,5,5,5,5,5' && N.filter((n) => n.gap == null && !n.ticket).length === 400 && N.filter((n) => n.gap != null).length === 50 && N.filter((n) => n.ticket).length === 10)
+  check('山海食经', `节点总数 = 480 分支 + 60 汇金 + 12 珍券 = ${N.length}`, N.length === 552 && SHANHAI_PATHS.length === 12 && SHANHAI_RING_COUNT === 10 && SHANHAI_RINGS.length === 10 && SHANHAI_RING_SLOTS.join(',') === '3,3,3,3,3,5,5,5,5,5' && N.filter((n) => n.gap == null && !n.ticket).length === 480 && N.filter((n) => n.gap != null).length === 60 && N.filter((n) => n.ticket).length === 12)
   check('山海食经', 'id 唯一', ids.size === N.length)
   check('山海食经', '每系每环节点数 = 该环设计槽位数（3 或 5；第 6 环起 5 个）', SHANHAI_PATHS.every((p) => SHANHAI_RING_SLOTS.every((c, i) => N.filter((n) => n.path === p.id && n.ring === i + 1).length === c)))
   check('山海食经', '条件只用 codex（收集件数 + 技能等级 + 转生次数）且数值合法', N.every((n) => {
@@ -3198,48 +3203,48 @@ console.log('══ C22. 山海食经 ══')
     const need = Array.from({ length: SHANHAI_RING_COUNT }, (_, i) => N.find((n) => n.path === p.id && n.ring === i + 1).req.count)
     return need.slice(0, 6).every((v, i) => i === 0 || v > need[i - 1]) && need.slice(5).every((v) => v === need[5])
   }))
-  check('山海食经', '汇金链：10 个分支空隙 × 第 6~10 环 = 50 个金币节点，且落在**两分支之间**（不是环内）', (() => {
+  check('山海食经', '汇金链：12 个分支空隙 × 第 6~10 环 = 60 个金币节点，且落在**两分支之间**（不是环内）', (() => {
     const gaps = N.filter((n) => n.gap != null)
-    return SHANHAI_GAPS.length === 10 && gaps.length === 50
+    return SHANHAI_GAPS.length === 12 && gaps.length === 60
       && SHANHAI_GAPS.every((g) => [6, 7, 8, 9, 10].every((r) => {
         const n = N.find((x) => x.path === g.id && x.ring === r)
         return n && n.effect?.field === 'gold' && n.req?.skill === g.aSkill && n.req?.skill2 === g.bSkill
       }))
       && gaps.every((n) => n.effect?.field === 'gold')
   })())
-  check('山海食经', '汇金数额随环递增（6k/18k/48k/120k/300k，合计 4.92M）且在上限内', (() => {
+  check('山海食经', '汇金数额随环递增（6k/18k/48k/120k/300k，合计 5.904M）且在上限内', (() => {
     const gaps = N.filter((n) => n.gap != null)
     const perRing = {}
     for (const n of gaps) perRing[n.ring] = n.effect.amount
     const rings = Object.keys(perRing).map(Number).sort((a, b) => a - b)
     const inc = rings.every((r, i) => i === 0 || perRing[r] > perRing[rings[i - 1]])
     const total = gaps.reduce((a, n) => a + n.effect.amount, 0)
-    return inc && total === 4920000 && total <= SHANHAI_EFFECT_CAPS.gold
+    return inc && total === 5904000 && total <= SHANHAI_EFFECT_CAPS.gold
   })(), (() => `汇金 ${N.filter((n) => n.gap != null).reduce((a, n) => a + n.effect.amount, 0).toLocaleString('en-US')} 金币`)
   )
-  check('山海食经', '外圈「珍券环」：10 个环绕整圈（每 36°、在第 10 环之外、闭合成圈）、每个 100 张券', (() => {
+  check('山海食经', '外圈「珍券环」：12 个环绕整圈（每 30°、在第 10 环之外、闭合成圈）、每个 100 张券', (() => {
     const tk = N.filter((n) => n.ticket)
-    if (tk.length !== 10 || SHANHAI_TICKET_RING.nodes !== 10) return false
+    if (tk.length !== 12 || SHANHAI_TICKET_RING.nodes !== 12) return false
     if (!tk.every((n) => n.reward?.tickets === 100 && n.req?.kind === 'progress' && n.iconItem === null)) return false
     const g = shanhaiGraphLayout()
     const gn = g.nodes.filter((n) => n.ticket)
-    if (gn.length !== 10) return false
+    if (gn.length !== 12) return false
     if (!gn.every((n) => n.radius > g.rings[g.rings.length - 1].radius + 100)) return false // 在第 10 环之外
     const degs = gn.map((n) => ((n.deg % 360) + 360) % 360).sort((a, b) => a - b)
     const steps = degs.map((d, i) => (i === 0 ? 360 - degs[degs.length - 1] + d : d - degs[i - 1]))
-    if (!steps.every((x) => Math.abs(x - 36) < 6)) return false // 每 36°（含抖动容差）
-    return g.links.filter((l) => l.ringLink).length === 10 // 闭合圈
+    if (!steps.every((x) => Math.abs(x - 30) < 6)) return false // 每 30°（含抖动容差）
+    return g.links.filter((l) => l.ringLink).length === 12 // 闭合圈
   })())
-  check('山海食经', '珍券环门槛 = 已点亮节点数（45→450，排除珍券环自身，否则自引用）', (() => {
+  check('山海食经', '珍券环门槛 = 已点亮节点数（45→540，排除珍券环自身，否则自引用）', (() => {
     const tk = N.filter((n) => n.ticket)
-    if (!tk.every((n, i) => n.req.nodes === 45 * (i + 1)) || tk[9].req.nodes !== 450) return false
-    // 全点亮 450 个非珍券节点后，最后一个珍券节点才可点亮；点亮 449 个仍不可
+    if (!tk.every((n, i) => n.req.nodes === 45 * (i + 1)) || tk[11].req.nodes !== 540) return false
+    // 全点亮 540 个非珍券节点后，最后一个珍券节点才可点亮；点亮 539 个仍不可
     const p = freshPlayer()
     const rest = N.filter((n) => !n.ticket).map((n) => n.id)
-    p.shanhaiUnlocked = rest.slice(0, 449)
-    const st1 = shanhaiNodeState(tk[9], p)
+    p.shanhaiUnlocked = rest.slice(0, 539)
+    const st1 = shanhaiNodeState(tk[11], p)
     p.shanhaiUnlocked = rest
-    const st2 = shanhaiNodeState(tk[9], p)
+    const st2 = shanhaiNodeState(tk[11], p)
     const st3 = shanhaiNodeState(tk[0], p) // 门槛 45：此时早已满足
     return st1.can === false && st2.can === true && st3.can === true
   })())
@@ -3326,7 +3331,7 @@ console.log('══ C22. 山海食经 ══')
   check('山海食经', '新档：0 个可点亮 / 0 个已点亮', (() => {
     const p = freshPlayer()
     const list = p.shanhaiStates()
-    return list.length === 460 && list.filter((x) => x.can).length === 0 && list.filter((x) => x.unlocked).length === 0
+    return list.length === 552 && list.filter((x) => x.can).length === 0 && list.filter((x) => x.unlocked).length === 0
   })())
   check('山海食经', '收集够即可点亮（不消耗任何资源），且容量奖励即时到账', (() => {
     const p = freshPlayer()
@@ -3405,9 +3410,9 @@ console.log('══ C22. 山海食经 ══')
     }
     return true
   })())
-  check('山海食经', '画布布局：460 节点（含 50 汇金 + 10 珍券）/ 10 扇区 / 10 环，坐标有限且不重叠', (() => {
+  check('山海食经', '画布布局：552 节点（含 60 汇金 + 12 珍券）/ 12 扇区 / 10 环，坐标有限且不重叠', (() => {
     const g = shanhaiGraphLayout()
-    if (g.nodes.length !== 460 || g.nodes.filter((n) => n.gap).length !== 50 || g.nodes.filter((n) => n.ticket).length !== 10 || g.sectors.length !== 10 || g.rings.length !== 10) return false
+    if (g.nodes.length !== 552 || g.nodes.filter((n) => n.gap).length !== 60 || g.nodes.filter((n) => n.ticket).length !== 12 || g.sectors.length !== 12 || g.rings.length !== 10) return false
     if (!g.nodes.every((n) => Number.isFinite(n.cx) && Number.isFinite(n.cy))) return false
     for (let i = 0; i < g.nodes.length; i++) {
       for (let j = i + 1; j < g.nodes.length; j++) {
@@ -3423,7 +3428,7 @@ console.log('══ C22. 山海食经 ══')
 console.log('══ C23. 上限一致性 ══')
 {
   const P_SRC = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
-  check('上限', `容量上限单一来源（硬顶 背包${CAP_MAX.inventory}/仓库${CAP_MAX.bank}/冷库${CAP_MAX.cold}；金币上限 ${PAID_CAP_MAX.inventory}/${PAID_CAP_MAX.bank}/${PAID_CAP_MAX.cold}）`, CAP_MAX.inventory === 330 && CAP_MAX.bank === 890 && CAP_MAX.cold === 158 && PAID_CAP_MAX.inventory === 100 && PAID_CAP_MAX.bank === 500 && PAID_CAP_MAX.cold === 100 && CAP_BASE.inventory === 20 && CAP_BASE.bank === 100 && CAP_BASE.cold === 5 && DERIVED_MAX.farmPlots === 20 && DERIVED_MAX.restaurantSlots === 6)
+  check('上限', `容量上限单一来源（硬顶 背包${CAP_MAX.inventory}/仓库${CAP_MAX.bank}/冷库${CAP_MAX.cold}；金币上限 ${PAID_CAP_MAX.inventory}/${PAID_CAP_MAX.bank}/${PAID_CAP_MAX.cold}）`, CAP_MAX.inventory === 376 && CAP_MAX.bank === 956 && CAP_MAX.cold === 170 && PAID_CAP_MAX.inventory === 100 && PAID_CAP_MAX.bank === 500 && PAID_CAP_MAX.cold === 100 && CAP_BASE.inventory === 20 && CAP_BASE.bank === 100 && CAP_BASE.cold === 5 && DERIVED_MAX.farmPlots === 20 && DERIVED_MAX.restaurantSlots === 6)
   // ⚠️ 本轮的关键不变量：硬顶必须**装得下**「金币买满 + 山海食经全树」——否则节点文案写「背包 +1」却顺位进仓库（用户实测报的错位）
   check('上限', '山海食经把「离线上限 / 每技能每次 +1 件」用到恰好封顶（不多不少）', (() => {
     const off = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').reduce((a, n) => a + n.effect.amount, 0)
@@ -3491,16 +3496,18 @@ console.log('══ C23. 上限一致性 ══')
   check('上限', `离线上限走唯一出口：${OFFLINE_CAP.baseHours}h + 饼干(≤${OFFLINE_CAP.biscuitMaxHours}) + 厨神之路(≤${OFFLINE_CAP.daoMaxHours}) + 山海食经(≤${OFFLINE_CAP.shanhaiMaxHours})`, (() => {
     const p = freshPlayer()
     p.offlineBonusH = 99 // 越界 → 段内夹到饼干上限
-    p.shanhaiUnlocked = ['pick61', 'fish61', 'hunt61', 'dig61', 'farm61'] // 每节点 +1h，共 5h
+    // 山海段：把**全树所有 offlineH 节点**都点亮（12 线时共 8 个，7 条采集线第 6 环 + 采撷终点）
+    p.shanhaiUnlocked = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').map((n) => n.id)
     const shanhai = Math.min(OFFLINE_CAP.shanhaiMaxHours, p.shanhaiEffects().offlineH)
     const dao = Math.min(OFFLINE_CAP.daoMaxHours, Number(p.daoEffects?.().offlineHours) || 0)
     const wan = p.offlineMaxHours()
     const wan2 = p.offlineMaxHours()
-    return shanhai === 5 && dao === 0 && wan === OFFLINE_CAP.baseHours + OFFLINE_CAP.biscuitMaxHours + shanhai && wan2 === wan
+    // 段内必须**刚好用满**（多了会被夹掉＝发了读不到的奖励，少了＝浪费设计位）
+    return shanhai === OFFLINE_CAP.shanhaiMaxHours && dao === 0 && wan === OFFLINE_CAP.baseHours + OFFLINE_CAP.biscuitMaxHours + shanhai && wan2 === wan
   })(), (() => {
     const p = freshPlayer()
     p.offlineBonusH = 99
-    p.shanhaiUnlocked = ['pick61', 'fish61', 'hunt61', 'dig61', 'farm61']
+    p.shanhaiUnlocked = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').map((n) => n.id)
     return `实际 ${p.offlineMaxHours()}h / 山海 ${p.shanhaiEffects().offlineH}h`
   })())
   check('上限', '离线窗口只有一个算法（bootstrap 引 store 出口，不自己再算 12h）', (() => {
@@ -4387,6 +4394,95 @@ console.log('══ C27. 精通档位说明 ══')
     return p60.level === 60 && masteryYieldBonus(p60.level) === 1 && masteryDoubleChance(p60.level) === 0.4 && masteryXpMultiplier(p60.level) === 2.5
   })())
   void pc
+}
+
+
+// ── C28. 伐木 / 采矿与「20 档木材」（v2.7.0：矿物从挖掘拆出 + 木材按档贯通锻造与强化）──
+console.log('== C28. 伐木 / 采矿 / 20 档木材 ==')
+{
+  const M = getSkillInstance('mining')
+  const W = getSkillInstance('woodcutting')
+  const E = getSkillInstance('excavation')
+  check('伐木采矿', `目标数：伐木 ${W.targets.length} / 采矿 ${M.targets.length} / 挖掘 ${E.targets.length}`, W.targets.length === 20 && M.targets.length === 43 && E.targets.length === 42, `${W.targets.length}/${M.targets.length}/${E.targets.length}`)
+  // 拆分无损：两边的目标集合不相交，并集 == 拆分前的 83 条
+  const wIds = new Set(W.targets.map((t) => t.itemId))
+  const mIds = new Set(M.targets.map((t) => t.itemId))
+  const eIds = new Set(E.targets.map((t) => t.itemId))
+  const overlap = [...eIds].filter((id) => mIds.has(id))
+  const union = new Set([...eIds, ...mIds])
+  const allIds = new Set(EXCAVATION_ALL_TARGETS.map((t) => t.itemId))
+  check('伐木采矿', '拆分无损：挖掘与采矿目标不相交，且并集覆盖拆分前全部物品 + 铜矿/铁矿', overlap.length === 0 && union.size === allIds.size + 2 && !allIds.has('copperOre') && mIds.has('copperOre') && mIds.has('ironOre'), `overlap=${overlap.slice(0, 3).join(',')} union=${union.size} all=${allIds.size}`)
+  check('伐木采矿', '挖掘只剩根茎/菌类（无矿物），采矿全是矿物', E.targets.every((t) => !isMineralTarget(t)) && M.targets.every((t) => isMineralTarget(t)))
+  check('伐木采矿', '铜矿/铁矿成为可定向采集的目标（此前只作为挖掘附产）', M.targets.find((t) => t.itemId === 'copperOre')?.reqLevel === 1 && M.targets.find((t) => t.itemId === 'ironOre')?.reqLevel === 5)
+
+  // 20 档木材：每 5 级一档、与装备品质套对齐
+  check('伐木采矿', `木材 ${TIMBERS.length} 档、每档 5 级、等级从 1 到 96`, TIMBERS.length === 20 && TIMBERS.every((t, i) => t.level === i * 5 + 1))
+  check('伐木采矿', 'timberOfLevel 对齐：Lv1→松木 / Lv74→琉璃木 / Lv96→太初神木', timberOfLevel(1).name === '松木' && timberOfLevel(74).name === '琉璃木' && timberOfLevel(96).name === '太初神木' && timberOfLevel(100).name === '太初神木')
+  check('伐木采矿', '每档木材都是物品表里的 material（自动豁免自动出售/交易所）', TIMBERS.every((t) => ITEMS[t.id]?.category === 'material' && ITEMS[t.id]?.type === 'ingredient'))
+  check('伐木采矿', '伐木目标 = 20 档木材、等级与档位一致', W.targets.length === TIMBERS.length && W.targets.every((t, i) => t.itemId === TIMBERS[i].id && t.reqLevel === TIMBERS[i].level))
+
+  // 配方改档：20 套全覆盖、无 wood 残留、档位与配方等级一致、reqLevel 与其它材料未被改
+  const twenty = SMITHING_SET_RECIPES.filter((r) => !String(r.id).startsWith('ext-'))
+  const timberIds = new Set(TIMBERS.map((t) => t.id))
+  const withWood = twenty.filter((r) => r.ingredients?.wood)
+  const wrongBand = twenty.filter((r) => Object.keys(r.ingredients ?? {}).filter((k) => timberIds.has(k)).some((k) => k !== timberOfLevel(r.reqLevel).id))
+  const bandsCovered = TIMBERS.filter((t) => twenty.some((r) => r.ingredients?.[t.id])).length
+  check('伐木采矿', '365 条锻造配方数不变（改写只动材料、不动条目）', SMITHING_SET_RECIPES.length === 365, `${SMITHING_SET_RECIPES.length}`)
+  check('伐木采矿', '20 品质套里不再有任何基础木材（wood）残留', withWood.length === 0, `${withWood.length}`)
+  check('伐木采矿', '每条含木材的配方用的都是**该配方等级对应的档位木材**', wrongBand.length === 0, wrongBand.slice(0, 3).map((r) => r.id).join(','))
+  check('伐木采矿', '20 个档位全都有同档木材需求（含 8 槽高段套用锅做木柄）', bandsCovered === 20, `${bandsCovered}/20`)
+  check('伐木采矿', '改写范围只含 ingredients：21 独立矿套与赛季装备的配方未被碰', twenty.every((r) => r.ingredients && typeof r.ingredients === 'object') && SMITHING_SET_RECIPES.filter((r) => String(r.id).startsWith('ext-')).length === 189)
+  check('伐木采矿', '基础款「木材」保持原样：value 仍为 4、且不在任何 20 套配方里', ITEMS.wood.value === 4 && !twenty.some((r) => r.ingredients?.wood))
+
+  // 装备强化按档消耗
+  const pd = freshPlayer()
+  pd.gold = 100000
+  pd.inventory = { copperKnife: 1, pineWood: 9, copperOre: 9, excavation_ext2_30: 9, primalWood: 9, smith_ext2_30: 1 }
+  const c1 = pd.upgradeCost('copperKnife')
+  check('伐木采矿', '强化按档：铜刀（Lv1-5 档）要松木 + 铜矿', c1?.timberId === 'pineWood' && c1?.oreId === 'copperOre' && c1?.qty === 1, JSON.stringify(c1))
+  const hi = Object.values(ITEMS).find((x) => x.type === 'equipment' && equipLevelOf(x.id) >= 96 && equipLevelOf(x.id) <= 100)
+  const c2 = hi ? pd.upgradeCost(hi.id) : null
+  check('伐木采矿', '强化按档：96-100 档装备要「太初神木 + 萤石」', !!c2 && c2.timberId === 'primalWood' && c2.oreId === 'excavation_ext2_30', JSON.stringify(c2))
+  const up = pd.upgradeItem('copperKnife')
+  check('伐木采矿', '强化真的扣掉档位木材（松木 -1、铜矿 -1）', up.ok && pd.inventory.pineWood === 8 && pd.inventory.copperOre === 8, JSON.stringify(up))
+  check('伐木采矿', '同档矿从 20 套配方派生，且盐矿不会顶掉同名矿（钢矿/琉璃矿）', oreOfLevel(16) === 'steelOre' && oreOfLevel(72) === 'glassOre' && oreOfLevel(99) === 'excavation_ext2_30')
+
+  // 存档迁移：幂等 + 新档往返零差异（迁移账本不得被误翻）
+  const pn = freshPlayer()
+  const sn1 = JSON.stringify(pn.serialize())
+  const pn2 = freshPlayer()
+  pn2.applySave(JSON.parse(sn1))
+  check('伐木采矿', '新档「序列化→读档→再序列化」**零差异**（迁移账本没被误翻）', JSON.stringify(pn2.serialize()) === sn1)
+  const po = freshPlayer()
+  po.skills.excavation = { level: 70, exp: 123, prestiges: 1, mastery: { saltOre: 50, potato: 10 } }
+  delete po.skills.mining
+  po.skillTargets = { excavation: 'saltOre' }
+  const so = po.serialize()
+  so.stats.splitMiningMigrated = false
+  const pm = freshPlayer()
+  pm.applySave(JSON.parse(JSON.stringify(so)))
+  check('伐木采矿', '旧档迁移：采矿继承挖掘等级/经验，挖掘等级不变', pm.skills.mining.level === 70 && pm.skills.mining.exp === 123 && pm.skills.excavation.level === 70)
+  check('伐木采矿', '旧档迁移：矿物精通键迁到采矿、并从挖掘里删除', pm.skills.mining.mastery.saltOre === 50 && (pm.skills.excavation.mastery.saltOre ?? 0) === 0 && pm.skills.excavation.mastery.potato === 10)
+  check('伐木采矿', '旧档迁移：正在挖矿物时目标改挂到采矿', pm.skillTargets.mining === 'saltOre' && pm.skillTargets.excavation === undefined)
+  check('伐木采矿', '旧档迁移：账本写入且**二次读档不再迁移**（幂等）', pm.stats.splitMiningMigrated === true && (() => {
+    const p3 = freshPlayer()
+    p3.applySave(JSON.parse(JSON.stringify(pm.serialize())))
+    return p3.skills.mining.mastery.saltOre === 50 && p3.skills.mining.level === 70
+  })())
+
+  // currentTarget 兜底（修既有静默停产）
+  const pf = freshPlayer()
+  createSkillInstances(pf)
+  pf.skillTargets.excavation = 'doesNotExist'
+  const ef = getSkillInstance('excavation')
+  check('伐木采矿', '目标已不存在时 currentTarget 回退到首个目标（不再静默停产）', ef.currentTarget?.itemId === ef.targets[0].itemId, String(ef.currentTarget))
+
+  // 图鉴三查：新木材有来源串且可跳转
+  const missSrc = TIMBERS.filter((t) => !itemSources(t.id).length).map((t) => t.id)
+  const badJump = TIMBERS.flatMap((t) => itemSources(t.id)).filter((s) => !jumpForSource(s))
+  check('伐木采矿', '20 档木材都有「伐木获得」来源串且可跳转到伐木页', missSrc.length === 0 && badJump.length === 0 && itemSources('pineWood').some((x) => x.includes('伐木')), `${missSrc.length}/${badJump.length}`)
+  const missNav = TIMBERS.filter((t) => !itemNavs(t.id).some((n) => n.skillId === 'woodcutting'))
+  check('伐木采矿', '20 档木材在配方树里都有「去伐木」入口', missNav.length === 0, `${missNav.length}`)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

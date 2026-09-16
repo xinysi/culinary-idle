@@ -11,7 +11,8 @@ const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.m
 
 // ── 5 技能域（每阶级一个）──
 const TIERS = [
-  { n: 1, name: '采耕', lo: 1, hi: 19, skills: ['foraging', 'fishing', 'hunting', 'excavation', 'farming'] },
+  // v2.7.0：采集线从 5 条增到 7 条（+伐木/采矿），阶 1「采耕」的技能域随之扩到 7 个
+  { n: 1, name: '采耕', lo: 1, hi: 19, skills: ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'] },
   { n: 2, name: '烹制', lo: 20, hi: 39, skills: ['cooking', 'baking', 'heatControl', 'flavorArtistry', 'knife'] },
   { n: 3, name: '饮藏', lo: 40, hi: 59, skills: ['brewing', 'preserving', 'spiceMixing', 'preservation', 'gastronomy'] },
   { n: 4, name: '御对', lo: 60, hi: 79, skills: ['plating', 'tasteAcumen'] },

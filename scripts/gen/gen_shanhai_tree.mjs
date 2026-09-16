@@ -1,7 +1,8 @@
 // 生成「山海食经」收集科技树 → src/game/data/shanhaiTree.js（勿手改，改后重跑本脚本）
 //
-// 口径（用户 2026-09-13 拍板 + 同日追加）：
-//   · 10 条收集线 × 10 环 × 3 节点 = 300 节点；**纯条件点亮**（不消耗任何资源）
+// 口径（用户 2026-09-13 拍板 + 同日追加；2026-09-16 由 10 线扩到 12 线）：
+//   · 12 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= 480 分支 + 60 汇金 + 12 珍券 = 552 节点；
+//     **纯条件点亮**（不消耗任何资源）
 //   · 前 6 环：收集件数 + 技能等级；后 4 环（大后期轴）：**技能满 100 级 / 转生 1 / 5 / 10 次**
 //   · 条件只用**已持久化**的玩家状态：该线可收集物品的「已收集件数」+ 该技能等级 + 该技能转生次数
 //   · 奖励只用**固定数值**（背包/仓库/冷库格数、离线上限小时、采集每次 +1 件），无任何百分比
@@ -23,7 +24,11 @@ import { CROPS } from '../../src/game/skills/FarmingSkill.js' // 农耕的作物
 const __OUT_DIR = process.env.GEN_OUT_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '../../src/game/data')
 const OUT = join(__OUT_DIR, 'shanhaiTree.js')
 
-/** 10 条收集线：技能 id → 展示信息 + 最高环的额外奖励 */
+/**
+ * 收集线：技能 id → 展示信息 + 最高环的额外奖励。
+ * ⚠️ **只允许在末尾追加新线**：线序决定扇区角与空隙（汇金链）编号，插在中间会重排既有 `gap*` / `tk*` 的含义
+ * （节点 id 与玩家存档里的 `shanhaiUnlocked` 一一对应，重排等于静默改掉已点亮节点的门槛）。
+ */
 const PATHS = [
   { id: 'pick', skill: 'foraging', name: '采撷', icon: '🌾', pool: ['🌱', '🍃', '🌿', '🍀', '🌾', '🌳', '🍄', '🌰', '🪴', '🌲'], gather: true },
   { id: 'fish', skill: 'fishing', name: '渔获', icon: '🎣', pool: ['🐟', '🐠', '🦐', '🦀', '🐙', '🐋', '🦑', '🐚', '🦞', '🐳'], gather: true },
@@ -35,6 +40,10 @@ const PATHS = [
   { id: 'brew', skill: 'brewing', name: '酿造', icon: '🍶', pool: ['🍵', '🧃', '🍺', '🍷', '🥂', '🍾', '🍹', '🥤', '🧉', '🍸'], gather: false },
   { id: 'spice', skill: 'spiceMixing', name: '调味', icon: '🧂', pool: ['🧄', '🌶️', '🫚', '🥄', '🫙', '⚗️', '🧊', '🫒', '🥜', '🍋'], gather: false },
   { id: 'smith', skill: 'craftsmithing', name: '锻造', icon: '🔨', pool: ['🔧', '🔩', '⚒️', '🛠️', '⚙️', '🗡️', '🪛', '🔪', '🗜️', '🪚'], gather: false },
+  // ── v2.7.0（2026-09-16）：两条新采集线（伐木 / 采矿）。二者都是**采集类**（`gather: true`）：
+  //    第 6 环主槽拿「离线上限 +1h」、次槽拿「每次动作 +1 件」，与其它采集线同构。
+  { id: 'wood', skill: 'woodcutting', name: '伐薪', icon: '🪓', pool: ['🪵', '🌲', '🌳', '🎋', '🍃', '🎍', '🌴', '🍂', '🪓', '🌿'], gather: true },
+  { id: 'ore', skill: 'mining', name: '矿脉', icon: '⛏️', pool: ['⛏️', '🪨', '💎', '🔶', '🔷', '🧱', '⛰️', '🪙', '🗿', '💠'], gather: true },
 ]
 
 /** 环名与门槛比例（收集件数按该线物品总数取比例；技能等级为绝对值） */
@@ -58,7 +67,8 @@ const SUFFIX = ['录', '谱', '典', '章', '卷']
 /**
  * 每环的**节点个数**（用户 2026-09-13 二次反馈：第 6 圈起显得空 → 每环 5 个）。
  * 前 5 环保持 3（收集曲线，节点少而明确）；第 6~10 环（含大后期四档）各 5 个。
- * 角度预算够用：扇区 24° 内铺 5 个 → 步长 6°，第 6 环弦距 = 2·1100·sin3° ≈ 115px（节点直径 ~62px）。
+ * 角度预算够用：12 扇区下扇区跨度 20°（`shanhaiGraph.METRICS.spread`），环内铺 5 个 → 步长 5°，
+ * 第 6 环弦距 = 2·1100·sin2.5° ≈ 96px（节点直径 ~62px + 净距，still 够）。
  */
 const RING_SLOTS = [3, 3, 3, 3, 3, 5, 5, 5, 5, 5]
 
@@ -104,8 +114,8 @@ function iconItemOf(sorted, ring, slot, slots) {
  * ⚠️ `flatYield` 只有**采集类**（path.gather：采摘/垂钓/狩猎/挖掘/农耕）读得到——它由
  *    `GatheringSkill.yieldBatch()` 与 `FarmingSkill.harvest` 消费；制作类技能没有「每次动作产出件数」，
  *    给它们发 flatYield 就是**发了个读不到的奖励**（历史上第 6 环就是这么处理的 → 制作线改发大额仓库）。
- * ⚠️ `offlineH` 全树只有 6 个名额（`OFFLINE_CAP.shanhaiMaxHours`）：第 6 环 5 条采集线各 1 个（=5），
- *    最后 1 个放在**采撷线的终点**（`pick{10}3`），其余线该槽位发冷库。
+ * ⚠️ `offlineH` 全树名额 = `OFFLINE_CAP.shanhaiMaxHours`：12 条线里 7 条采集线在第 6 环各拿 1 个（=7），
+ *    最后 1 个放在**采撷线的终点**（`pick{10}3`）→ 合计 **8**，其余线该槽位发冷库。
  * 前 5 环：背包 +1（1~2 环）/ 仓库 +1（3~5 环）。
  * 第 6~10 环：5 个槽位 = 容量按深度递增 + 特殊奖励。
  */
@@ -119,8 +129,8 @@ const RING6_PLUS = {
 /**
  * 「汇金」链的数额（相邻两分支之间的金币节点，按环递进；用户授权由我定数值）。
  * 标定依据（均为既有数据）：分店 50k→6M（御街总铺 6M / 时收 90k）、名厨挑战单场 ≈12k、
- * 成就头部 10k~260k。故取「第 6 环 6k → 第 10 环 300k」，全树金币合计 ≈ 4.9M
- * ≈ 一座城南分店(400k)的量级×12，对「10 条线全部转生 10 次」这种毕业级投入是合理回报，也不会冲垮经济。
+ * 成就头部 10k~260k。故取「第 6 环 6k → 第 10 环 300k」，每空隙 492k、12 个空隙合计 ≈ 5.9M
+ * ≈ 一座城南分店(400k)的量级×15，对「12 条线全部转生 10 次」这种毕业级投入是合理回报，也不会冲垮经济。
  */
 const GOLD_BY_RING = { 6: 6000, 7: 18000, 8: 48000, 9: 120000, 10: 300000 }
 /** 汇金链所在环（第 6~10 环） */
@@ -159,9 +169,10 @@ function effectOf(path, ring, slot) {
 
 /**
  * 「汇金」链（2026-09-13 用户追加，第二版口径）：**相邻两条收集线之间的空隙**里，
- * 从第 6 环起每环一个金币节点 → 10 个空隙 × 5 环 = **50 个金币节点**。
- * 位置上：各分支的节点铺在扇区中心 ±12° 内，两条分支之间留出的 12° 空隙原先全空，
- * 这 50 个节点就沿**空隙射线**（= 两扇区中心角的中线）由内向外排成一条链（用户截图里圈的正是这条线）。
+ * 从第 6 环起每环一个金币节点 → **`PATHS.length` 个空隙** × 5 环（10 线 = 50、12 线 = 60 个）。
+ * 位置上：各分支的节点铺在扇区中心 ±`spread/2` 内，两条分支之间留出的空隙原先全空，
+ * 这些金币节点就沿**空隙射线**（= 两扇区中心角的中线）由内向外排成一条链（用户截图里圈的正是这条线）。
+ * 个数 = `PATHS.length` 个空隙 × 5 环（12 线 → 60 个）。
  * 条件上：一个空隙节点同时属于两条线，故取**成对门槛**——
  * `req.skill2` 存在时：`count` = 两条线各自门槛之和（= 两线合计收集件数），
  * 等级与转生取**两条线的较低者**（即「两条线都得到」）。
@@ -172,12 +183,13 @@ const GAPS = PATHS.map((p, i) => {
 })
 
 /**
- * 外圈「珍券环」（2026-09-13 用户追加，与厨神之路外环同款）：**环绕整棵树一整圈**的 10 个节点
- * （每 36°、对准 10 条线的射线、半径在第 10 环之外），**每个奖励觅珍抽卡券 ×100**。
- * 条件：**已点亮节点数**（不含珍券环自身）——45/90/…/450，最深一个要求把 450 个分支+汇金节点全点亮。
+ * 外圈「珍券环」（2026-09-13 用户追加，与厨神之路外环同款）：**环绕整棵树一整圈**的 `PATHS.length` 个节点
+ * （均分一圈、对准各线的射线、半径在第 10 环之外），**每个奖励觅珍抽卡券 ×100**。
+ * 条件：**已点亮节点数**（不含珍券环自身）——45/90/…/`45×线数`，最深一个要求把全部分支+汇金节点点亮。
+ * ⚠️ `nodes` **必须跟随线数**：它是「一圈几个节点」的契约，写死会与扇区数不一致（画布与守卫都会不一致）。
  */
-const TICKET_RING = { r: 1980, nodes: 10, name: '珍券环' }
-const TICKET_GATES = PATHS.map((_, i) => 45 * (i + 1)) // 45 → 450
+const TICKET_RING = { r: 1980, nodes: PATHS.length, name: '珍券环' }
+const TICKET_GATES = PATHS.map((_, i) => 45 * (i + 1)) // 45 → 45×线数（10 线 450 / 12 线 540）
 
 // ── 生成 ──
 setActivePinia(createPinia())
@@ -191,8 +203,16 @@ for (const path of PATHS) {
   const items = collectiblesOf(path.skill)
   if (items.length < 12) throw new Error(`收集线「${path.name}」的可收集物品只有 ${items.length} 个，不足以铺 10 环节点`)
   const sortedByLevel = [...items].sort((a, b) => a.level - b.level || cmpId(a, b))
+  let prevNeed = 0   // 上一环的收集门槛（只用于「前 6 环严格递增」的下限）
+  let need6 = 0      // 第 6 环的门槛（第 7~10 环与它持平）
   for (const R of RINGS) {
-    const need = Math.max(3, Math.ceil(items.length * R.pct))
+    const base = Math.max(3, Math.ceil(items.length * R.pct))
+    // ⚠️ 前 6 环的收集门槛必须**严格递增**（守卫 C22 有断言，语义是「越外环越难」）。
+    //    小清单按比例取整会撞到下限 3：伐薪只有 20 件 → 0.06/0.15 分别算出 1/3，都被 max(3) 抬成 3，
+    //    于是第 1、2 环同门槛。修法是把后一档**顺延抬 1 件**（3 → 4），而不是放宽守卫。
+    let need
+    if (R.ring <= 6) { need = Math.max(base, prevNeed + 1); need6 = need } else { need = need6 }
+    prevNeed = need
     const slots = RING_SLOTS[R.ring - 1]
     for (let slot = 0; slot < slots; slot++) {
       const eff = effectOf(path, R.ring, slot)
@@ -275,7 +295,7 @@ if (!nodes.length) {
 const stamp = new Date().toISOString().slice(0, 10)
 const out = `// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，${stamp}，勿手改）
 //
-// 口径：10 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= ${nodes.length} 节点；**纯条件点亮**（不消耗资源）。
+// 口径：${PATHS.length} 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= ${nodes.length} 节点；**纯条件点亮**（不消耗资源）。
 // 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能转生次数（req.kind 恒为 'codex'）。
 // 前 6 环＝收集/等级曲线；第 7~10 环＝大后期里程碑（技能 100 级 / 转生 1 / 5 / 10 次）。
 // 奖励只用固定数值：inventoryCap / bankCap / coldStorageCap / offlineH / flatYield / gold（无任何百分比）。
@@ -309,4 +329,4 @@ export const SHANHAI_MAIN_RING = ${RINGS.length}
 mkdirSync(__OUT_DIR, { recursive: true })
 writeFileSync(OUT, out)
 console.log(`✅ 已生成 ${nodes.length} 个节点 → ${OUT}`)
-console.log(`   10 条线：${pathMeta.map((p) => `${p.name}(${p.total})`).join(' · ')}`)
+console.log(`   ${PATHS.length} 条线：${pathMeta.map((p) => `${p.name}(${p.total})`).join(' · ')}`)

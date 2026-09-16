@@ -27,7 +27,9 @@ function gatherSkillFor(it) {
   const c = it.category
   if (c === 'seafood') return 'fishing'
   if (c === 'meat') return 'hunting'
-  if (['root', 'fungus', 'mineral', 'fossil'].includes(c)) return 'excavation'
+  if (['root', 'fungus', 'fossil'].includes(c)) return 'excavation'
+  if (c === 'mineral') return 'mining'
+  if (c === 'material') return 'woodcutting'
   if (c === 'crop') return 'farming'
   return 'foraging'
 }

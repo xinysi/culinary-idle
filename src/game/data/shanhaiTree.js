@@ -1,6 +1,6 @@
-// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-09-13，勿手改）
+// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-09-16，勿手改）
 //
-// 口径：10 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= 460 节点；**纯条件点亮**（不消耗资源）。
+// 口径：12 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= 552 节点；**纯条件点亮**（不消耗资源）。
 // 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能转生次数（req.kind 恒为 'codex'）。
 // 前 6 环＝收集/等级曲线；第 7~10 环＝大后期里程碑（技能 100 级 / 转生 1 / 5 / 10 次）。
 // 奖励只用固定数值：inventoryCap / bankCap / coldStorageCap / offlineH / flatYield / gold（无任何百分比）。
@@ -38,8 +38,8 @@ export const SHANHAI_PATHS = [
     "skill": "excavation",
     "name": "掘藏",
     "icon": "⛏️",
-    "desc": "83 件可收集",
-    "total": 83
+    "desc": "42 件可收集",
+    "total": 42
   },
   {
     "id": "farm",
@@ -88,6 +88,22 @@ export const SHANHAI_PATHS = [
     "icon": "🔨",
     "desc": "365 件可收集",
     "total": 365
+  },
+  {
+    "id": "wood",
+    "skill": "woodcutting",
+    "name": "伐薪",
+    "icon": "🪓",
+    "desc": "20 件可收集",
+    "total": 20
+  },
+  {
+    "id": "ore",
+    "skill": "mining",
+    "name": "矿脉",
+    "icon": "⛏️",
+    "desc": "43 件可收集",
+    "total": 43
   }
 ]
 
@@ -2487,18 +2503,18 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "掘藏·初识录",
     "icon": "🪨",
-    "iconItem": "potato",
+    "iconItem": "excavation_ext_01",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 5,
+      "count": 3,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 5 件 → 背包格数 +1"
+    "desc": "掘藏线收集 3 件 → 背包格数 +1"
   },
   {
     "id": "dig12",
@@ -2506,18 +2522,18 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "掘藏·初识谱",
     "icon": "🪨",
-    "iconItem": "excavation_ext2_02",
+    "iconItem": "potato",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 5,
+      "count": 3,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 5 件 → 背包格数 +1"
+    "desc": "掘藏线收集 3 件 → 背包格数 +1"
   },
   {
     "id": "dig13",
@@ -2525,18 +2541,18 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "掘藏·初识典",
     "icon": "🪨",
-    "iconItem": "sweetPotato",
+    "iconItem": "potato",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 5,
+      "count": 3,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 5 件 → 背包格数 +1"
+    "desc": "掘藏线收集 3 件 → 背包格数 +1"
   },
   {
     "id": "dig21",
@@ -2544,18 +2560,18 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟录",
     "icon": "🔶",
-    "iconItem": "excavation_ext2_04",
+    "iconItem": "excavation_ext_02",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 13,
+      "count": 7,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 13 件 → 背包格数 +1"
+    "desc": "掘藏线收集 7 件 → 背包格数 +1"
   },
   {
     "id": "dig22",
@@ -2563,6 +2579,44 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟谱",
     "icon": "🔶",
+    "iconItem": "sweetPotato",
+    "req": {
+      "kind": "codex",
+      "skill": "excavation",
+      "count": 7,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "掘藏线收集 7 件 → 背包格数 +1"
+  },
+  {
+    "id": "dig23",
+    "path": "dig",
+    "ring": 2,
+    "name": "掘藏·渐熟典",
+    "icon": "🔶",
+    "iconItem": "excavation_ext2_03",
+    "req": {
+      "kind": "codex",
+      "skill": "excavation",
+      "count": 7,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "掘藏线收集 7 件 → 背包格数 +1"
+  },
+  {
+    "id": "dig31",
+    "path": "dig",
+    "ring": 3,
+    "name": "掘藏·通晓录",
+    "icon": "💎",
     "iconItem": "excavation_ext_04",
     "req": {
       "kind": "codex",
@@ -2571,17 +2625,17 @@ export const SHANHAI_NODES = [
       "level": 0
     },
     "effect": {
-      "field": "inventoryCap",
+      "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 13 件 → 背包格数 +1"
+    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
   },
   {
-    "id": "dig23",
+    "id": "dig32",
     "path": "dig",
-    "ring": 2,
-    "name": "掘藏·渐熟典",
-    "icon": "🔶",
+    "ring": 3,
+    "name": "掘藏·通晓谱",
+    "icon": "💎",
     "iconItem": "excavation_ext2_05",
     "req": {
       "kind": "codex",
@@ -2590,48 +2644,10 @@ export const SHANHAI_NODES = [
       "level": 0
     },
     "effect": {
-      "field": "inventoryCap",
-      "amount": 1
-    },
-    "desc": "掘藏线收集 13 件 → 背包格数 +1"
-  },
-  {
-    "id": "dig31",
-    "path": "dig",
-    "ring": 3,
-    "name": "掘藏·通晓录",
-    "icon": "💎",
-    "iconItem": "excavation_ext_07",
-    "req": {
-      "kind": "codex",
-      "skill": "excavation",
-      "count": 25,
-      "level": 0
-    },
-    "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 25 件 → 仓库格数 +1"
-  },
-  {
-    "id": "dig32",
-    "path": "dig",
-    "ring": 3,
-    "name": "掘藏·通晓谱",
-    "icon": "💎",
-    "iconItem": "excavation_ext2_08",
-    "req": {
-      "kind": "codex",
-      "skill": "excavation",
-      "count": 25,
-      "level": 0
-    },
-    "effect": {
-      "field": "bankCap",
-      "amount": 1
-    },
-    "desc": "掘藏线收集 25 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
   },
   {
     "id": "dig33",
@@ -2639,18 +2655,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓典",
     "icon": "💎",
-    "iconItem": "excavation_ext_08",
+    "iconItem": "excavation_ext2_05",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 25,
+      "count": 13,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 25 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
   },
   {
     "id": "dig41",
@@ -2658,18 +2674,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研录",
     "icon": "🪙",
-    "iconItem": "goldOre",
+    "iconItem": "onion",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 42,
+      "count": 21,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 42 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig42",
@@ -2677,18 +2693,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研谱",
     "icon": "🪙",
-    "iconItem": "excavation_ext_11",
+    "iconItem": "excavation_ext2_07",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 42,
+      "count": 21,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 42 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig43",
@@ -2696,18 +2712,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研典",
     "icon": "🪙",
-    "iconItem": "adamantOre",
+    "iconItem": "excavation_ext2_07",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 42,
+      "count": 21,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 42 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig51",
@@ -2715,18 +2731,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成录",
     "icon": "🔷",
-    "iconItem": "excavation_ext2_14",
+    "iconItem": "excavation_ext2_09",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 59,
+      "count": 30,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 59 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig52",
@@ -2734,18 +2750,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成谱",
     "icon": "🔷",
-    "iconItem": "excavation_ext_14",
+    "iconItem": "excavation_ext_09",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 59,
+      "count": 30,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 59 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig53",
@@ -2753,18 +2769,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成典",
     "icon": "🔷",
-    "iconItem": "excavation_ext2_15",
+    "iconItem": "excavation_ext_09",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 59,
+      "count": 30,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 59 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig61",
@@ -2772,18 +2788,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境录",
     "icon": "🏆",
-    "iconItem": "excavation_ext2_17",
+    "iconItem": "excavation_ext_10",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 75
     },
     "effect": {
       "field": "offlineH",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 75 级 → 离线收益时长上限 +1 小时"
+    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 离线收益时长上限 +1 小时"
   },
   {
     "id": "dig62",
@@ -2791,18 +2807,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境谱",
     "icon": "🏆",
-    "iconItem": "excavation_ext_17",
+    "iconItem": "excavation_ext2_11",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 75
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 75 级 → 掘藏每次动作额外 +1 件"
+    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 掘藏每次动作额外 +1 件"
   },
   {
     "id": "dig63",
@@ -2810,18 +2826,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境典",
     "icon": "🏆",
-    "iconItem": "meteoriteOre",
+    "iconItem": "excavation_ext_11",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 75
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 75 级 → 冷库格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 冷库格数 +1"
   },
   {
     "id": "dig64",
@@ -2829,18 +2845,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境章",
     "icon": "🏆",
-    "iconItem": "excavation_ext2_18",
+    "iconItem": "excavation_ext_11",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 75
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 75 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 仓库格数 +2"
   },
   {
     "id": "dig65",
@@ -2848,18 +2864,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境卷",
     "icon": "🏆",
-    "iconItem": "lingzhi",
+    "iconItem": "excavation_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 75
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 75 级 → 背包格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 背包格数 +1"
   },
   {
     "id": "dig71",
@@ -2867,18 +2883,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满录",
     "icon": "🧱",
-    "iconItem": "starOre",
+    "iconItem": "excavation_ext_12",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 100 级 → 背包格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 背包格数 +2"
   },
   {
     "id": "dig72",
@@ -2886,18 +2902,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满谱",
     "icon": "🧱",
-    "iconItem": "excavation_ext2_20",
+    "iconItem": "ginger",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 100
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 100 级 → 掘藏每次动作额外 +1 件"
+    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 掘藏每次动作额外 +1 件"
   },
   {
     "id": "dig73",
@@ -2905,18 +2921,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满典",
     "icon": "🧱",
-    "iconItem": "excavation_ext_20",
+    "iconItem": "excavation_ext_13",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 100
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 100 级 → 冷库格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 冷库格数 +1"
   },
   {
     "id": "dig74",
@@ -2924,18 +2940,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满章",
     "icon": "🧱",
-    "iconItem": "excavation_ext2_21",
+    "iconItem": "excavation_ext_13",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 100
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 100 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 仓库格数 +2"
   },
   {
     "id": "dig75",
@@ -2943,18 +2959,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满卷",
     "icon": "🧱",
-    "iconItem": "excavation_ext_21",
+    "iconItem": "excavation_ext_14",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能达 100 级 → 背包格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 背包格数 +1"
   },
   {
     "id": "dig81",
@@ -2962,11 +2978,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回录",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_22",
+    "iconItem": "excavation_ext_15",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 1
     },
@@ -2974,7 +2990,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 1 次 → 背包格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 背包格数 +2"
   },
   {
     "id": "dig82",
@@ -2982,11 +2998,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回谱",
     "icon": "⛰️",
-    "iconItem": "excavation_ext2_23",
+    "iconItem": "yam",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 1
     },
@@ -2994,7 +3010,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 1 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 仓库格数 +3"
   },
   {
     "id": "dig83",
@@ -3002,11 +3018,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回典",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_23",
+    "iconItem": "yam",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 1
     },
@@ -3014,7 +3030,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 1 次 → 冷库格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 冷库格数 +1"
   },
   {
     "id": "dig84",
@@ -3022,11 +3038,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回章",
     "icon": "⛰️",
-    "iconItem": "ginseng",
+    "iconItem": "excavation_ext_16",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 1
     },
@@ -3034,7 +3050,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 1 次 → 仓库格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 仓库格数 +2"
   },
   {
     "id": "dig85",
@@ -3042,11 +3058,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回卷",
     "icon": "⛰️",
-    "iconItem": "giltOre",
+    "iconItem": "excavation_ext_17",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 1
     },
@@ -3054,7 +3070,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 1 次 → 背包格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 背包格数 +1"
   },
   {
     "id": "dig91",
@@ -3062,11 +3078,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫录",
     "icon": "🗿",
-    "iconItem": "excavation_ext2_25",
+    "iconItem": "excavation_ext_18",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 5
     },
@@ -3074,7 +3090,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 5 次 → 背包格数 +3"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 背包格数 +3"
   },
   {
     "id": "dig92",
@@ -3082,11 +3098,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫谱",
     "icon": "🗿",
-    "iconItem": "excavation_ext_25",
+    "iconItem": "excavation_ext_18",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 5
     },
@@ -3094,7 +3110,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 5 次 → 仓库格数 +4"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 仓库格数 +4"
   },
   {
     "id": "dig93",
@@ -3102,11 +3118,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫典",
     "icon": "🗿",
-    "iconItem": "excavation_ext2_26",
+    "iconItem": "lingzhi",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 5
     },
@@ -3114,7 +3130,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 5 次 → 冷库格数 +1"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 冷库格数 +1"
   },
   {
     "id": "dig94",
@@ -3122,11 +3138,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫章",
     "icon": "🗿",
-    "iconItem": "excavation_ext_26",
+    "iconItem": "excavation_ext_19",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 5
     },
@@ -3134,7 +3150,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 5 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 仓库格数 +3"
   },
   {
     "id": "dig95",
@@ -3142,11 +3158,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫卷",
     "icon": "🗿",
-    "iconItem": "excavation_ext_27",
+    "iconItem": "excavation_ext_19",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 5
     },
@@ -3154,7 +3170,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 5 次 → 背包格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 背包格数 +2"
   },
   {
     "id": "dig101",
@@ -3162,11 +3178,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道录",
     "icon": "👑",
-    "iconItem": "dragonRoot",
+    "iconItem": "excavation_ext_20",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 10
     },
@@ -3174,7 +3190,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 10 次 → 背包格数 +3"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 背包格数 +3"
   },
   {
     "id": "dig102",
@@ -3182,11 +3198,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道谱",
     "icon": "👑",
-    "iconItem": "excavation_ext2_28",
+    "iconItem": "excavation_ext_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 10
     },
@@ -3194,7 +3210,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 10 次 → 仓库格数 +5"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 仓库格数 +5"
   },
   {
     "id": "dig103",
@@ -3202,11 +3218,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道典",
     "icon": "👑",
-    "iconItem": "excavation_ext2_29",
+    "iconItem": "excavation_ext_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 10
     },
@@ -3214,7 +3230,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 10 次 → 冷库格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 冷库格数 +2"
   },
   {
     "id": "dig104",
@@ -3222,11 +3238,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道章",
     "icon": "👑",
-    "iconItem": "excavation_ext_29",
+    "iconItem": "ginseng",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 10
     },
@@ -3234,7 +3250,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 10 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 仓库格数 +3"
   },
   {
     "id": "dig105",
@@ -3242,11 +3258,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道卷",
     "icon": "👑",
-    "iconItem": "excavation_ext2_30",
+    "iconItem": "dragonRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 75,
+      "count": 38,
       "level": 0,
       "prestige": 10
     },
@@ -3254,7 +3270,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 75 件、掘藏技能转生 10 次 → 背包格数 +2"
+    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 背包格数 +2"
   },
   {
     "id": "farm11",
@@ -7907,6 +7923,1556 @@ export const SHANHAI_NODES = [
     "desc": "锻造线收集 329 件、锻造技能转生 10 次 → 背包格数 +2"
   },
   {
+    "id": "wood11",
+    "path": "wood",
+    "ring": 1,
+    "name": "伐薪·初识录",
+    "icon": "🪵",
+    "iconItem": "pineWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood12",
+    "path": "wood",
+    "ring": 1,
+    "name": "伐薪·初识谱",
+    "icon": "🪵",
+    "iconItem": "cedarWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood13",
+    "path": "wood",
+    "ring": 1,
+    "name": "伐薪·初识典",
+    "icon": "🪵",
+    "iconItem": "cedarWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood21",
+    "path": "wood",
+    "ring": 2,
+    "name": "伐薪·渐熟录",
+    "icon": "🌲",
+    "iconItem": "birchWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 4,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 4 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood22",
+    "path": "wood",
+    "ring": 2,
+    "name": "伐薪·渐熟谱",
+    "icon": "🌲",
+    "iconItem": "birchWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 4,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 4 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood23",
+    "path": "wood",
+    "ring": 2,
+    "name": "伐薪·渐熟典",
+    "icon": "🌲",
+    "iconItem": "elmWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 4,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 4 件 → 背包格数 +1"
+  },
+  {
+    "id": "wood31",
+    "path": "wood",
+    "ring": 3,
+    "name": "伐薪·通晓录",
+    "icon": "🌳",
+    "iconItem": "oakWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 6,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 6 件 → 仓库格数 +1"
+  },
+  {
+    "id": "wood32",
+    "path": "wood",
+    "ring": 3,
+    "name": "伐薪·通晓谱",
+    "icon": "🌳",
+    "iconItem": "camphorWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 6,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 6 件 → 仓库格数 +1"
+  },
+  {
+    "id": "wood33",
+    "path": "wood",
+    "ring": 3,
+    "name": "伐薪·通晓典",
+    "icon": "🌳",
+    "iconItem": "camphorWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 6,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 6 件 → 仓库格数 +1"
+  },
+  {
+    "id": "wood41",
+    "path": "wood",
+    "ring": 4,
+    "name": "伐薪·精研录",
+    "icon": "🎋",
+    "iconItem": "rosePearWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 10,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 10 件、伐薪技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood42",
+    "path": "wood",
+    "ring": 4,
+    "name": "伐薪·精研谱",
+    "icon": "🎋",
+    "iconItem": "rosePearWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 10,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 10 件、伐薪技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood43",
+    "path": "wood",
+    "ring": 4,
+    "name": "伐薪·精研典",
+    "icon": "🎋",
+    "iconItem": "rosePearWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 10,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 10 件、伐薪技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood51",
+    "path": "wood",
+    "ring": 5,
+    "name": "伐薪·大成录",
+    "icon": "🍃",
+    "iconItem": "ebonyWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 14,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 14 件、伐薪技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood52",
+    "path": "wood",
+    "ring": 5,
+    "name": "伐薪·大成谱",
+    "icon": "🍃",
+    "iconItem": "ebonyWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 14,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 14 件、伐薪技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood53",
+    "path": "wood",
+    "ring": 5,
+    "name": "伐薪·大成典",
+    "icon": "🍃",
+    "iconItem": "ebonyWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 14,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 14 件、伐薪技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "wood61",
+    "path": "wood",
+    "ring": 6,
+    "name": "伐薪·化境录",
+    "icon": "🎍",
+    "iconItem": "bogWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 75
+    },
+    "effect": {
+      "field": "offlineH",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 75 级 → 离线收益时长上限 +1 小时"
+  },
+  {
+    "id": "wood62",
+    "path": "wood",
+    "ring": 6,
+    "name": "伐薪·化境谱",
+    "icon": "🎍",
+    "iconItem": "bogWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 75
+    },
+    "effect": {
+      "field": "flatYield",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 75 级 → 伐薪每次动作额外 +1 件"
+  },
+  {
+    "id": "wood63",
+    "path": "wood",
+    "ring": 6,
+    "name": "伐薪·化境典",
+    "icon": "🎍",
+    "iconItem": "bogWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 75
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 75 级 → 冷库格数 +1"
+  },
+  {
+    "id": "wood64",
+    "path": "wood",
+    "ring": 6,
+    "name": "伐薪·化境章",
+    "icon": "🎍",
+    "iconItem": "fragrantRosewood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 75
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 75 级 → 仓库格数 +2"
+  },
+  {
+    "id": "wood65",
+    "path": "wood",
+    "ring": 6,
+    "name": "伐薪·化境卷",
+    "icon": "🎍",
+    "iconItem": "fragrantRosewood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 75
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 75 级 → 背包格数 +1"
+  },
+  {
+    "id": "wood71",
+    "path": "wood",
+    "ring": 7,
+    "name": "伐薪·圆满录",
+    "icon": "🌴",
+    "iconItem": "borneolWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 100
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 100 级 → 背包格数 +2"
+  },
+  {
+    "id": "wood72",
+    "path": "wood",
+    "ring": 7,
+    "name": "伐薪·圆满谱",
+    "icon": "🌴",
+    "iconItem": "borneolWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 100
+    },
+    "effect": {
+      "field": "flatYield",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 100 级 → 伐薪每次动作额外 +1 件"
+  },
+  {
+    "id": "wood73",
+    "path": "wood",
+    "ring": 7,
+    "name": "伐薪·圆满典",
+    "icon": "🌴",
+    "iconItem": "borneolWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 100
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 100 级 → 冷库格数 +1"
+  },
+  {
+    "id": "wood74",
+    "path": "wood",
+    "ring": 7,
+    "name": "伐薪·圆满章",
+    "icon": "🌴",
+    "iconItem": "glazeWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 100
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 100 级 → 仓库格数 +2"
+  },
+  {
+    "id": "wood75",
+    "path": "wood",
+    "ring": 7,
+    "name": "伐薪·圆满卷",
+    "icon": "🌴",
+    "iconItem": "glazeWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 100
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能达 100 级 → 背包格数 +1"
+  },
+  {
+    "id": "wood81",
+    "path": "wood",
+    "ring": 8,
+    "name": "伐薪·轮回录",
+    "icon": "🍂",
+    "iconItem": "glazeWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 1 次 → 背包格数 +2"
+  },
+  {
+    "id": "wood82",
+    "path": "wood",
+    "ring": 8,
+    "name": "伐薪·轮回谱",
+    "icon": "🍂",
+    "iconItem": "giltWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 1 次 → 仓库格数 +3"
+  },
+  {
+    "id": "wood83",
+    "path": "wood",
+    "ring": 8,
+    "name": "伐薪·轮回典",
+    "icon": "🍂",
+    "iconItem": "giltWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 1 次 → 冷库格数 +1"
+  },
+  {
+    "id": "wood84",
+    "path": "wood",
+    "ring": 8,
+    "name": "伐薪·轮回章",
+    "icon": "🍂",
+    "iconItem": "giltWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 1 次 → 仓库格数 +2"
+  },
+  {
+    "id": "wood85",
+    "path": "wood",
+    "ring": 8,
+    "name": "伐薪·轮回卷",
+    "icon": "🍂",
+    "iconItem": "starWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 1 次 → 背包格数 +1"
+  },
+  {
+    "id": "wood91",
+    "path": "wood",
+    "ring": 9,
+    "name": "伐薪·历劫录",
+    "icon": "🪓",
+    "iconItem": "starWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 3
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 5 次 → 背包格数 +3"
+  },
+  {
+    "id": "wood92",
+    "path": "wood",
+    "ring": 9,
+    "name": "伐薪·历劫谱",
+    "icon": "🪓",
+    "iconItem": "starWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 4
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 5 次 → 仓库格数 +4"
+  },
+  {
+    "id": "wood93",
+    "path": "wood",
+    "ring": 9,
+    "name": "伐薪·历劫典",
+    "icon": "🪓",
+    "iconItem": "moonWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 5 次 → 冷库格数 +1"
+  },
+  {
+    "id": "wood94",
+    "path": "wood",
+    "ring": 9,
+    "name": "伐薪·历劫章",
+    "icon": "🪓",
+    "iconItem": "moonWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 5 次 → 仓库格数 +3"
+  },
+  {
+    "id": "wood95",
+    "path": "wood",
+    "ring": 9,
+    "name": "伐薪·历劫卷",
+    "icon": "🪓",
+    "iconItem": "moonWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 5 次 → 背包格数 +2"
+  },
+  {
+    "id": "wood101",
+    "path": "wood",
+    "ring": 10,
+    "name": "伐薪·悟道录",
+    "icon": "🌿",
+    "iconItem": "voidWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 3
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 10 次 → 背包格数 +3"
+  },
+  {
+    "id": "wood102",
+    "path": "wood",
+    "ring": 10,
+    "name": "伐薪·悟道谱",
+    "icon": "🌿",
+    "iconItem": "voidWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 5
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 10 次 → 仓库格数 +5"
+  },
+  {
+    "id": "wood103",
+    "path": "wood",
+    "ring": 10,
+    "name": "伐薪·悟道典",
+    "icon": "🌿",
+    "iconItem": "voidWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 10 次 → 冷库格数 +2"
+  },
+  {
+    "id": "wood104",
+    "path": "wood",
+    "ring": 10,
+    "name": "伐薪·悟道章",
+    "icon": "🌿",
+    "iconItem": "primalWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 10 次 → 仓库格数 +3"
+  },
+  {
+    "id": "wood105",
+    "path": "wood",
+    "ring": 10,
+    "name": "伐薪·悟道卷",
+    "icon": "🌿",
+    "iconItem": "primalWood",
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "count": 18,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "伐薪线收集 18 件、伐薪技能转生 10 次 → 背包格数 +2"
+  },
+  {
+    "id": "ore11",
+    "path": "ore",
+    "ring": 1,
+    "name": "矿脉·初识录",
+    "icon": "⛏️",
+    "iconItem": "ironOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore12",
+    "path": "ore",
+    "ring": 1,
+    "name": "矿脉·初识谱",
+    "icon": "⛏️",
+    "iconItem": "saltOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore13",
+    "path": "ore",
+    "ring": 1,
+    "name": "矿脉·初识典",
+    "icon": "⛏️",
+    "iconItem": "saltOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 3,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 3 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore21",
+    "path": "ore",
+    "ring": 2,
+    "name": "矿脉·渐熟录",
+    "icon": "🪨",
+    "iconItem": "silverOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 7,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 7 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore22",
+    "path": "ore",
+    "ring": 2,
+    "name": "矿脉·渐熟谱",
+    "icon": "🪨",
+    "iconItem": "mithrilOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 7,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 7 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore23",
+    "path": "ore",
+    "ring": 2,
+    "name": "矿脉·渐熟典",
+    "icon": "🪨",
+    "iconItem": "goldOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 7,
+      "level": 0
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 7 件 → 背包格数 +1"
+  },
+  {
+    "id": "ore31",
+    "path": "ore",
+    "ring": 3,
+    "name": "矿脉·通晓录",
+    "icon": "💎",
+    "iconItem": "excavation_ext2_13",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 13,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 13 件 → 仓库格数 +1"
+  },
+  {
+    "id": "ore32",
+    "path": "ore",
+    "ring": 3,
+    "name": "矿脉·通晓谱",
+    "icon": "💎",
+    "iconItem": "excavation_ext2_14",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 13,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 13 件 → 仓库格数 +1"
+  },
+  {
+    "id": "ore33",
+    "path": "ore",
+    "ring": 3,
+    "name": "矿脉·通晓典",
+    "icon": "💎",
+    "iconItem": "darkIronOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 13,
+      "level": 0
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 13 件 → 仓库格数 +1"
+  },
+  {
+    "id": "ore41",
+    "path": "ore",
+    "ring": 4,
+    "name": "矿脉·精研录",
+    "icon": "🔶",
+    "iconItem": "excavation_ext2_16",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 22,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 22 件、矿脉技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore42",
+    "path": "ore",
+    "ring": 4,
+    "name": "矿脉·精研谱",
+    "icon": "🔶",
+    "iconItem": "excavation_ext2_17",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 22,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 22 件、矿脉技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore43",
+    "path": "ore",
+    "ring": 4,
+    "name": "矿脉·精研典",
+    "icon": "🔶",
+    "iconItem": "meteoriteOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 22,
+      "level": 20
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 22 件、矿脉技能达 20 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore51",
+    "path": "ore",
+    "ring": 5,
+    "name": "矿脉·大成录",
+    "icon": "🔷",
+    "iconItem": "excavation_ext2_20",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 31,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 31 件、矿脉技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore52",
+    "path": "ore",
+    "ring": 5,
+    "name": "矿脉·大成谱",
+    "icon": "🔷",
+    "iconItem": "excavation_ext2_20",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 31,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 31 件、矿脉技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore53",
+    "path": "ore",
+    "ring": 5,
+    "name": "矿脉·大成典",
+    "icon": "🔷",
+    "iconItem": "dragonScaleOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 31,
+      "level": 45
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 31 件、矿脉技能达 45 级 → 仓库格数 +1"
+  },
+  {
+    "id": "ore61",
+    "path": "ore",
+    "ring": 6,
+    "name": "矿脉·化境录",
+    "icon": "🧱",
+    "iconItem": "excavation_ext_22",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 75
+    },
+    "effect": {
+      "field": "offlineH",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 75 级 → 离线收益时长上限 +1 小时"
+  },
+  {
+    "id": "ore62",
+    "path": "ore",
+    "ring": 6,
+    "name": "矿脉·化境谱",
+    "icon": "🧱",
+    "iconItem": "glassOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 75
+    },
+    "effect": {
+      "field": "flatYield",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 75 级 → 矿脉每次动作额外 +1 件"
+  },
+  {
+    "id": "ore63",
+    "path": "ore",
+    "ring": 6,
+    "name": "矿脉·化境典",
+    "icon": "🧱",
+    "iconItem": "glassOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 75
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 75 级 → 冷库格数 +1"
+  },
+  {
+    "id": "ore64",
+    "path": "ore",
+    "ring": 6,
+    "name": "矿脉·化境章",
+    "icon": "🧱",
+    "iconItem": "excavation_ext2_23",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 75
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 75 级 → 仓库格数 +2"
+  },
+  {
+    "id": "ore65",
+    "path": "ore",
+    "ring": 6,
+    "name": "矿脉·化境卷",
+    "icon": "🧱",
+    "iconItem": "excavation_ext2_23",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 75
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 75 级 → 背包格数 +1"
+  },
+  {
+    "id": "ore71",
+    "path": "ore",
+    "ring": 7,
+    "name": "矿脉·圆满录",
+    "icon": "⛰️",
+    "iconItem": "giltOre",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 100
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 100 级 → 背包格数 +2"
+  },
+  {
+    "id": "ore72",
+    "path": "ore",
+    "ring": 7,
+    "name": "矿脉·圆满谱",
+    "icon": "⛰️",
+    "iconItem": "excavation_ext2_24",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 100
+    },
+    "effect": {
+      "field": "flatYield",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 100 级 → 矿脉每次动作额外 +1 件"
+  },
+  {
+    "id": "ore73",
+    "path": "ore",
+    "ring": 7,
+    "name": "矿脉·圆满典",
+    "icon": "⛰️",
+    "iconItem": "excavation_ext2_24",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 100
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 100 级 → 冷库格数 +1"
+  },
+  {
+    "id": "ore74",
+    "path": "ore",
+    "ring": 7,
+    "name": "矿脉·圆满章",
+    "icon": "⛰️",
+    "iconItem": "excavation_ext_24",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 100
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 100 级 → 仓库格数 +2"
+  },
+  {
+    "id": "ore75",
+    "path": "ore",
+    "ring": 7,
+    "name": "矿脉·圆满卷",
+    "icon": "⛰️",
+    "iconItem": "excavation_ext2_25",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 100
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能达 100 级 → 背包格数 +1"
+  },
+  {
+    "id": "ore81",
+    "path": "ore",
+    "ring": 8,
+    "name": "矿脉·轮回录",
+    "icon": "🪙",
+    "iconItem": "excavation_ext_25",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 1 次 → 背包格数 +2"
+  },
+  {
+    "id": "ore82",
+    "path": "ore",
+    "ring": 8,
+    "name": "矿脉·轮回谱",
+    "icon": "🪙",
+    "iconItem": "excavation_ext2_26",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 1 次 → 仓库格数 +3"
+  },
+  {
+    "id": "ore83",
+    "path": "ore",
+    "ring": 8,
+    "name": "矿脉·轮回典",
+    "icon": "🪙",
+    "iconItem": "excavation_ext2_26",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 1 次 → 冷库格数 +1"
+  },
+  {
+    "id": "ore84",
+    "path": "ore",
+    "ring": 8,
+    "name": "矿脉·轮回章",
+    "icon": "🪙",
+    "iconItem": "excavation_ext_26",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 1 次 → 仓库格数 +2"
+  },
+  {
+    "id": "ore85",
+    "path": "ore",
+    "ring": 8,
+    "name": "矿脉·轮回卷",
+    "icon": "🪙",
+    "iconItem": "excavation_ext_26",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 1 次 → 背包格数 +1"
+  },
+  {
+    "id": "ore91",
+    "path": "ore",
+    "ring": 9,
+    "name": "矿脉·历劫录",
+    "icon": "🗿",
+    "iconItem": "excavation_ext_27",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 3
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 5 次 → 背包格数 +3"
+  },
+  {
+    "id": "ore92",
+    "path": "ore",
+    "ring": 9,
+    "name": "矿脉·历劫谱",
+    "icon": "🗿",
+    "iconItem": "excavation_ext_27",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 4
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 5 次 → 仓库格数 +4"
+  },
+  {
+    "id": "ore93",
+    "path": "ore",
+    "ring": 9,
+    "name": "矿脉·历劫典",
+    "icon": "🗿",
+    "iconItem": "excavation_ext2_28",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 1
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 5 次 → 冷库格数 +1"
+  },
+  {
+    "id": "ore94",
+    "path": "ore",
+    "ring": 9,
+    "name": "矿脉·历劫章",
+    "icon": "🗿",
+    "iconItem": "excavation_ext_28",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 5 次 → 仓库格数 +3"
+  },
+  {
+    "id": "ore95",
+    "path": "ore",
+    "ring": 9,
+    "name": "矿脉·历劫卷",
+    "icon": "🗿",
+    "iconItem": "excavation_ext_28",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 5 次 → 背包格数 +2"
+  },
+  {
+    "id": "ore101",
+    "path": "ore",
+    "ring": 10,
+    "name": "矿脉·悟道录",
+    "icon": "💠",
+    "iconItem": "excavation_ext2_29",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 3
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 10 次 → 背包格数 +3"
+  },
+  {
+    "id": "ore102",
+    "path": "ore",
+    "ring": 10,
+    "name": "矿脉·悟道谱",
+    "icon": "💠",
+    "iconItem": "excavation_ext_29",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 5
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 10 次 → 仓库格数 +5"
+  },
+  {
+    "id": "ore103",
+    "path": "ore",
+    "ring": 10,
+    "name": "矿脉·悟道典",
+    "icon": "💠",
+    "iconItem": "excavation_ext_29",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "coldStorageCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 10 次 → 冷库格数 +2"
+  },
+  {
+    "id": "ore104",
+    "path": "ore",
+    "ring": 10,
+    "name": "矿脉·悟道章",
+    "icon": "💠",
+    "iconItem": "excavation_ext2_30",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "bankCap",
+      "amount": 3
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 10 次 → 仓库格数 +3"
+  },
+  {
+    "id": "ore105",
+    "path": "ore",
+    "ring": 10,
+    "name": "矿脉·悟道卷",
+    "icon": "💠",
+    "iconItem": "excavation_ext_30",
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "count": 39,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "inventoryCap",
+      "amount": 2
+    },
+    "desc": "矿脉线收集 39 件、矿脉技能转生 10 次 → 背包格数 +2"
+  },
+  {
     "id": "gap0_6",
     "path": "gap0",
     "ring": 6,
@@ -8134,14 +9700,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 138,
+      "count": 101,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "山猎线与掘藏线合计收集 138 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap2_7",
@@ -8155,14 +9721,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 138,
+      "count": 101,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "山猎线与掘藏线合计收集 138 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap2_8",
@@ -8176,7 +9742,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 138,
+      "count": 101,
       "level": 0,
       "prestige": 1
     },
@@ -8184,7 +9750,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "山猎线与掘藏线合计收集 138 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap2_9",
@@ -8198,7 +9764,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 138,
+      "count": 101,
       "level": 0,
       "prestige": 5
     },
@@ -8206,7 +9772,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "山猎线与掘藏线合计收集 138 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap2_10",
@@ -8220,7 +9786,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 138,
+      "count": 101,
       "level": 0,
       "prestige": 10
     },
@@ -8228,7 +9794,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "山猎线与掘藏线合计收集 138 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap3_6",
@@ -8242,14 +9808,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 255,
+      "count": 218,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "掘藏线与稼穑线合计收集 255 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap3_7",
@@ -8263,14 +9829,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 255,
+      "count": 218,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "掘藏线与稼穑线合计收集 255 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap3_8",
@@ -8284,7 +9850,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 255,
+      "count": 218,
       "level": 0,
       "prestige": 1
     },
@@ -8292,7 +9858,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "掘藏线与稼穑线合计收集 255 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap3_9",
@@ -8306,7 +9872,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 255,
+      "count": 218,
       "level": 0,
       "prestige": 5
     },
@@ -8314,7 +9880,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "掘藏线与稼穑线合计收集 255 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap3_10",
@@ -8328,7 +9894,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 255,
+      "count": 218,
       "level": 0,
       "prestige": 10
     },
@@ -8336,7 +9902,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "掘藏线与稼穑线合计收集 255 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap4_6",
@@ -8883,56 +10449,56 @@ export const SHANHAI_NODES = [
     "path": "gap9",
     "ring": 6,
     "gap": 9,
-    "name": "锻造·采撷·汇金化境",
+    "name": "锻造·伐薪·汇金化境",
     "icon": "🪙",
     "iconItem": null,
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
-      "skill2": "foraging",
-      "count": 457,
+      "skill2": "woodcutting",
+      "count": 347,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "锻造线与采撷线合计收集 457 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "锻造线与伐薪线合计收集 347 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap9_7",
     "path": "gap9",
     "ring": 7,
     "gap": 9,
-    "name": "锻造·采撷·汇金圆满",
+    "name": "锻造·伐薪·汇金圆满",
     "icon": "🪙",
     "iconItem": null,
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
-      "skill2": "foraging",
-      "count": 457,
+      "skill2": "woodcutting",
+      "count": 347,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "锻造线与采撷线合计收集 457 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "锻造线与伐薪线合计收集 347 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap9_8",
     "path": "gap9",
     "ring": 8,
     "gap": 9,
-    "name": "锻造·采撷·汇金轮回",
+    "name": "锻造·伐薪·汇金轮回",
     "icon": "🪙",
     "iconItem": null,
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
-      "skill2": "foraging",
-      "count": 457,
+      "skill2": "woodcutting",
+      "count": 347,
       "level": 0,
       "prestige": 1
     },
@@ -8940,21 +10506,21 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "锻造线与采撷线合计收集 457 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "锻造线与伐薪线合计收集 347 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap9_9",
     "path": "gap9",
     "ring": 9,
     "gap": 9,
-    "name": "锻造·采撷·汇金历劫",
+    "name": "锻造·伐薪·汇金历劫",
     "icon": "🪙",
     "iconItem": null,
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
-      "skill2": "foraging",
-      "count": 457,
+      "skill2": "woodcutting",
+      "count": 347,
       "level": 0,
       "prestige": 5
     },
@@ -8962,21 +10528,21 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "锻造线与采撷线合计收集 457 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "锻造线与伐薪线合计收集 347 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap9_10",
     "path": "gap9",
     "ring": 10,
     "gap": 9,
-    "name": "锻造·采撷·汇金悟道",
+    "name": "锻造·伐薪·汇金悟道",
     "icon": "🪙",
     "iconItem": null,
     "req": {
       "kind": "codex",
       "skill": "craftsmithing",
-      "skill2": "foraging",
-      "count": 457,
+      "skill2": "woodcutting",
+      "count": 347,
       "level": 0,
       "prestige": 10
     },
@@ -8984,7 +10550,223 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "锻造线与采撷线合计收集 457 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "锻造线与伐薪线合计收集 347 件、两条线技能均转生 10 次 → 金币 +300,000"
+  },
+  {
+    "id": "gap10_6",
+    "path": "gap10",
+    "ring": 6,
+    "gap": 10,
+    "name": "伐薪·矿脉·汇金化境",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "skill2": "mining",
+      "count": 57,
+      "level": 75
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 6000
+    },
+    "desc": "伐薪线与矿脉线合计收集 57 件、两条线技能均达 75 级 → 金币 +6,000"
+  },
+  {
+    "id": "gap10_7",
+    "path": "gap10",
+    "ring": 7,
+    "gap": 10,
+    "name": "伐薪·矿脉·汇金圆满",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "skill2": "mining",
+      "count": 57,
+      "level": 100
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 18000
+    },
+    "desc": "伐薪线与矿脉线合计收集 57 件、两条线技能均达 100 级 → 金币 +18,000"
+  },
+  {
+    "id": "gap10_8",
+    "path": "gap10",
+    "ring": 8,
+    "gap": 10,
+    "name": "伐薪·矿脉·汇金轮回",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "skill2": "mining",
+      "count": 57,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 48000
+    },
+    "desc": "伐薪线与矿脉线合计收集 57 件、两条线技能均转生 1 次 → 金币 +48,000"
+  },
+  {
+    "id": "gap10_9",
+    "path": "gap10",
+    "ring": 9,
+    "gap": 10,
+    "name": "伐薪·矿脉·汇金历劫",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "skill2": "mining",
+      "count": 57,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 120000
+    },
+    "desc": "伐薪线与矿脉线合计收集 57 件、两条线技能均转生 5 次 → 金币 +120,000"
+  },
+  {
+    "id": "gap10_10",
+    "path": "gap10",
+    "ring": 10,
+    "gap": 10,
+    "name": "伐薪·矿脉·汇金悟道",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "woodcutting",
+      "skill2": "mining",
+      "count": 57,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 300000
+    },
+    "desc": "伐薪线与矿脉线合计收集 57 件、两条线技能均转生 10 次 → 金币 +300,000"
+  },
+  {
+    "id": "gap11_6",
+    "path": "gap11",
+    "ring": 6,
+    "gap": 11,
+    "name": "矿脉·采撷·汇金化境",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "skill2": "foraging",
+      "count": 167,
+      "level": 75
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 6000
+    },
+    "desc": "矿脉线与采撷线合计收集 167 件、两条线技能均达 75 级 → 金币 +6,000"
+  },
+  {
+    "id": "gap11_7",
+    "path": "gap11",
+    "ring": 7,
+    "gap": 11,
+    "name": "矿脉·采撷·汇金圆满",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "skill2": "foraging",
+      "count": 167,
+      "level": 100
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 18000
+    },
+    "desc": "矿脉线与采撷线合计收集 167 件、两条线技能均达 100 级 → 金币 +18,000"
+  },
+  {
+    "id": "gap11_8",
+    "path": "gap11",
+    "ring": 8,
+    "gap": 11,
+    "name": "矿脉·采撷·汇金轮回",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "skill2": "foraging",
+      "count": 167,
+      "level": 0,
+      "prestige": 1
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 48000
+    },
+    "desc": "矿脉线与采撷线合计收集 167 件、两条线技能均转生 1 次 → 金币 +48,000"
+  },
+  {
+    "id": "gap11_9",
+    "path": "gap11",
+    "ring": 9,
+    "gap": 11,
+    "name": "矿脉·采撷·汇金历劫",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "skill2": "foraging",
+      "count": 167,
+      "level": 0,
+      "prestige": 5
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 120000
+    },
+    "desc": "矿脉线与采撷线合计收集 167 件、两条线技能均转生 5 次 → 金币 +120,000"
+  },
+  {
+    "id": "gap11_10",
+    "path": "gap11",
+    "ring": 10,
+    "gap": 11,
+    "name": "矿脉·采撷·汇金悟道",
+    "icon": "🪙",
+    "iconItem": null,
+    "req": {
+      "kind": "codex",
+      "skill": "mining",
+      "skill2": "foraging",
+      "count": 167,
+      "level": 0,
+      "prestige": 10
+    },
+    "effect": {
+      "field": "gold",
+      "amount": 300000
+    },
+    "desc": "矿脉线与采撷线合计收集 167 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "tk1",
@@ -9165,11 +10947,47 @@ export const SHANHAI_NODES = [
       "tickets": 100
     },
     "desc": "已点亮 450 个节点 → 觅珍抽卡券 ×100（抽卡时优先抵扣金币）"
+  },
+  {
+    "id": "tk11",
+    "path": "ticket",
+    "ring": 11,
+    "ticket": true,
+    "group": "珍券环",
+    "name": "伐薪·珍券",
+    "icon": "🎟️",
+    "iconItem": null,
+    "req": {
+      "kind": "progress",
+      "nodes": 495
+    },
+    "reward": {
+      "tickets": 100
+    },
+    "desc": "已点亮 495 个节点 → 觅珍抽卡券 ×100（抽卡时优先抵扣金币）"
+  },
+  {
+    "id": "tk12",
+    "path": "ticket",
+    "ring": 11,
+    "ticket": true,
+    "group": "珍券环",
+    "name": "矿脉·珍券",
+    "icon": "🎟️",
+    "iconItem": null,
+    "req": {
+      "kind": "progress",
+      "nodes": 540
+    },
+    "reward": {
+      "tickets": 100
+    },
+    "desc": "已点亮 540 个节点 → 觅珍抽卡券 ×100（抽卡时优先抵扣金币）"
   }
 ]
 
 /** 外圈「珍券环」的几何与门槛（画布布局与守卫用） */
-export const SHANHAI_TICKET_RING = {"r":1980,"nodes":10,"name":"珍券环","gates":[45,90,135,180,225,270,315,360,405,450]}
+export const SHANHAI_TICKET_RING = {"r":1980,"nodes":12,"name":"珍券环","gates":[45,90,135,180,225,270,315,360,405,450,495,540]}
 
 /** 汇金链（空隙里的金币节点分组）：{ id, a, b, aName, bName, aSkill, bSkill, name, index } */
 export const SHANHAI_GAPS = [
@@ -9275,13 +11093,35 @@ export const SHANHAI_GAPS = [
   {
     "id": "gap9",
     "a": "smith",
-    "b": "pick",
+    "b": "wood",
     "aName": "锻造",
-    "bName": "采撷",
+    "bName": "伐薪",
     "aSkill": "craftsmithing",
-    "bSkill": "foraging",
-    "name": "锻造·采撷",
+    "bSkill": "woodcutting",
+    "name": "锻造·伐薪",
     "index": 9
+  },
+  {
+    "id": "gap10",
+    "a": "wood",
+    "b": "ore",
+    "aName": "伐薪",
+    "bName": "矿脉",
+    "aSkill": "woodcutting",
+    "bSkill": "mining",
+    "name": "伐薪·矿脉",
+    "index": 10
+  },
+  {
+    "id": "gap11",
+    "a": "ore",
+    "b": "pick",
+    "aName": "矿脉",
+    "bName": "采撷",
+    "aSkill": "mining",
+    "bSkill": "foraging",
+    "name": "矿脉·采撷",
+    "index": 11
   }
 ]
 

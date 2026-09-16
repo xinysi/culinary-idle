@@ -8,8 +8,10 @@
  * ⚠️ 这三个数不是随手写的：**任何新增「加容量」的来源都必须回头把这里抬上去**，
  * 否则奖励会撞顶后顺位转投到另一档——玩家看到的是「节点写『背包 +1』，结果仓库涨了」（2026-09-13 用户实测报过）。
  * C23 有守卫断言：`CAP_MAX.x ≥ PAID_CAP_MAX.x + 山海食经全树总量`。
+ * 2026-09-16（山海食经 10 线 → 12 线，伐薪/矿脉上线）：全树容量涨到 背包 276 / 仓库 456 / 冷库 70，
+ * 故三档硬顶同步抬到 100+276=376 / 500+456=956 / 100+70=170（金币路径上限 `PAID_CAP_MAX` 一个都没动）。
  */
-export const CAP_MAX = { inventory: 330, bank: 890, cold: 158 }
+export const CAP_MAX = { inventory: 376, bank: 956, cold: 170 }
 /** 容量初始值 */
 export const CAP_BASE = { inventory: 20, bank: 100, cold: 5 }
 /**
@@ -26,7 +28,7 @@ export const OFFLINE_CAP = {
   baseHours: 12,        // DEFAULT_MAX_OFFLINE_MS 的小时数
   biscuitMaxHours: 12,  // 能量饼干叠加上限（+4/块）
   daoMaxHours: 6,       // 厨神之路·采撷之道
-  shanhaiMaxHours: 6,   // 山海食经（与 shanhaiProgress.SHANHAI_EFFECT_CAPS.offlineH 一致）
+  shanhaiMaxHours: 8,   // 山海食经（与 shanhaiProgress.SHANHAI_EFFECT_CAPS.offlineH 一致；12 线：7 条采集线第 6 环各 1h + 采撷终点 1h）
 }
 
 /**

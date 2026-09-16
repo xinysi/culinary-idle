@@ -166,15 +166,15 @@
 
 ## 📖 山海食经（v2.1 新增：整屏画布的收集科技树，2026-09-13）
 
-- **形态**：10 条收集线（采撷/渔获/山猎/掘藏/稼穑/烹煮/烘焙/酿造/调味/锻造）× 10 环 = **400 节点**（**前 5 环每环 3 个、第 6 环起每环 5 个**；槽位数由生成器的 `RING_SLOTS` 与产物里的 `SHANHAI_RING_SLOTS` 唯一定义，画布与守卫都读它），辐射式（中心「根」向外发散）。布局在 `game/data/shanhaiGraph.js`（纯函数，仿 `daoGraph.js`），画布复用 `components/DaoTreeGraph.vue`（**节点规模大时要给 `focusScale`**：山海食经给 0.55，默认 0.9 在 10 环下只能看见最内一两环）。
+- **形态**（v2.7.0：**12 条线**，+伐薪/矿脉）：12 条收集线（采撷/渔获/山猎/掘藏/矿脉/伐薪/稼穑/烹煮/烘焙/酿造/调味/锻造）× 10 环 = **480 个分支节点**（全树 **552** = 480 + 汇金 60 + 珍券 12）（**前 5 环每环 3 个、第 6 环起每环 5 个**；槽位数由生成器的 `RING_SLOTS` 与产物里的 `SHANHAI_RING_SLOTS` 唯一定义，画布与守卫都读它），辐射式（中心「根」向外发散）。布局在 `game/data/shanhaiGraph.js`（纯函数，仿 `daoGraph.js`），画布复用 `components/DaoTreeGraph.vue`（**节点规模大时要给 `focusScale`**：山海食经给 0.55，默认 0.9 在 10 环下只能看见最内一两环）。
   - ➕ **汇金链（2026-09-13 用户第二次追加：「各分支之间从第六圈开始加奖励金币的节点」）**：相邻两分支之间那 12° 的空隙里，第 6~10 环各一个金币节点 → **10 空隙 × 5 环 = 50 个汇金节点**（全树 **450**），沿**空隙射线**（两扇区中心角 +18° 的中线）由内向外串成一条链，`pathId: 'gold'`（画布 `lane-gold` = `var(--gold)`）。⚠️ **不是**「环内正中间那个节点」（第一版我按这个理解做错了，用户纠正过）。
-  - ➕ **外圈「珍券环」（2026-09-13 用户追加，与厨神之路外环同款）**：最外侧**环绕整棵树一整圈**的 **10 个节点**（每 36°、对准 10 条线的射线、半径 1980 = 第 10 环之外、互相连成**闭合圈**、`pathId:'ticket'` → `.lane-ticket` 主色），每个奖励 **觅珍抽卡券 ×100**（同一字段 `player.mijian.tickets`）。全树 450 → **460** 节点。
+  - ➕ **外圈「珍券环」（2026-09-13 用户追加，与厨神之路外环同款）**：最外侧**环绕整棵树一整圈**的 **`PATHS.length` 个节点**（每 360/线数 度、对准各线射线、半径 1980 = 第 10 环之外、互相连成**闭合圈**、`pathId:'ticket'` → `.lane-ticket` 主色），每个奖励 **觅珍抽卡券 ×100**（同一字段 `player.mijian.tickets`）。10 线 460 → 12 线 **552** 节点。
     条件用**新 kind**：`req: { kind:'progress', nodes: N }` = **已点亮节点数**（门槛 45/90/…/450；算的时候**排除珍券环自身**，否则自引用），派生在 `shanhaiProgress` 里单独分支（面板文案是「已点亮 x/N 个」而不是「已收集 x/N 件」）。
     发放与账本：`shanhaiUnlock` 即时到账 + `stats.shanhaiTicketPaid` 记账 + `settleShanhaiTickets()` 读档对账（幂等、兼作旧档迁移），与厨神之路外环同一套纪律（**两个账本各自独立**，别混用）。
   - 🚫 **顶部进度牌匾（进度条框）已全局删除**（2026-09-13 用户要求，两棵树各提了一次）：`daoGraph` / `shanhaiGraph` 都不再返回 `plaque`，组件里的渲染块与 `.dtg-plaque*` 样式也一并删掉（原先山海食经页上那块牌匾的标题还写死着「🛤️ 轮回天赋树」）。进度由各页面自己的 HUD / 页头承担。
   - ⚠️ **最小缩放必须低于「全览」所需比例**（`DaoTreeGraph` 的 `MIN_K`，现 **0.16**）：山海食经扩到 10 环 + 外圈珍券环后画布 ~4224×4276，在 ~980×830 视口里全览需要 ≈0.19 —— 原先 `MIN_K = 0.28` 时**第 10 环与珍券环根本进不了视野**（加环/加圈后务必复核；判据 `MIN_K ≤ min(视口宽/画布宽, 视口高/画布高)`）。实测全览 18% 时 10 个珍券节点可见 9 个（第 10 个被 HUD 挡住，可拖动查看）。
     条件为**成对门槛**：`req.skill` + `req.skill2` 都存在时 → 收集取**两线合计**（`count` = 两线各自门槛之和）、等级与转生取**两条线的较低者**（即「两条线都得到」）；派生在 `shanhaiProgress` 里按 `node.gap != null` 分支处理，`shANHAI_GAP(pathId)` 查 `SHANHAI_GAPS`。
-    数额（依据既有经济标定：分店 50k→6M、名厨单场 ≈12k、成就头部 10k~260k）：**6k / 18k / 48k / 120k / 300k**，全树合计 **4.92M**。
+    数额（依据既有经济标定：分店 50k→6M、名厨单场 ≈12k、成就头部 10k~260k）：**6k / 18k / 48k / 120k / 300k**，全树合计 **5.904M**（12 线 → 60 个汇金节点）。
 - **角度预算（别乱改）**：10 扇区 = 每系 36°；**环内 2 段 + 扇区间隙 1 段，三段等宽 12°**，环内弦距 = 2R·sin(6°) 要 ≥ 节点直径 + 净距（≈72px）→ **第 1 环半径不得小于 420**（实测 320 时 60 对节点重叠）。环半径 [420, 540, 668, 804, 948, 1100]，抖动 ±5px/±0.7°。
 - **条件口径**：**只用已持久化的状态** —— 该线可收集物品的「已收集件数」(`player.collected`) + 该技能等级 (`player.skills[id].level`) + **该技能转生次数** (`player.skills[id].prestiges`，第 8~10 环)。
   - **大后期四档（2026-09-13 用户追加）**：第 7 环「圆满」＝该线技能 **100 级**；第 8/9/10 环「轮回/历劫/悟道」＝**转生 1 / 5 / 10 次**。⚠️ **转生环不得同时要求「当前等级」**：`prestigeSkill` 会把等级重置为 `1 + 传承(≤20)`，写 `level: 100` 就永远点不亮（C22 有专项断言）。语义上「100 级环」在转生前点、转生后练回 100（上限 120）也能点，已点亮不会掉。⚠️ 禁用 `actionsDone`（实例态、刷新清零）与 `collectionPct`（2210 分母被装备/种子/食灵稀释）。清单与阈值由 `scripts/gen/gen_shanhai_tree.mjs` 从**真实技能实例**按比例生成（渔获 72 件 → 门槛 5/11/22/36/51/65；锻造 365 件 → 22/55/110/183/256/329），已登记 `gen_drift_audit`。
@@ -183,7 +183,7 @@
   - 💰 **金币奖励的账本**：汇金节点点亮时 `gainGold` 即时到账并累加 `stats.shanhaiGoldPaid`（**记「应发」总额**），读档时 `player.settleShanhaiGold()` 按差额补发 → 幂等；金币**没有上限**（不像容量会被顶上限吞掉），所以「记账」在这里同时充当**旧档迁移**（老档没有该字段 → 读档一次性补齐）。⚠️ `stats` 必须随存档往返（`applySave` 的 `stats: {...this.stats, ...saved.stats}`）——否则每次读档白拿一遍金币（C22 有专项断言）。
 - ⚠️ **容量奖励满上限必须顺位转投、不许静默蒸发**：原实现会「节点点亮但上限没变、无任何提示」。现 `shanhaiUnlock` 背包满→转仓库、仓库满→转冷库、都满才告知未生效，并返回 `landed` 文案供 UI 显示**实际到账**。
   ⚠️ 但**顺位转投只是兜底，不能当常规路径用**（2026-09-13 用户第二次实测报「科技树加背包格子加的是仓库的」=错位）：根因是**硬顶没跟着新来源抬**——背包硬顶 100、商店就能买到 100，于是「背包 +1」在买满的档上**永远**只能顺位进仓库，玩家看到的就是「写的背包、加的是仓库」。修法见下一条的**硬顶不变量**。
-- **奖励白名单（flat，绝无百分比）**：`inventoryCap` / `bankCap` / `coldStorageCap` / `offlineH` / `flatYield`（按技能）。容量类**点亮时一次性发放**，走 `player._grantShanhaiCaps()` 原语（背包→仓库→冷库逐级找位，返回各档**实际落地量**并记账；不用 `expandInventory/expandBank/expandColdStorage` 是因为它们只回布尔或「只回一句话」，拿不到「发了多少」）；离线上限走 `player.offlineMaxHours()`（**唯一出口**：基础 12h + 饼干 ≤12 + 厨神之路 ≤6 + 山海食经 ≤6）；采集 `+N 件/次` 加在 `GatheringSkill.yieldBatch()`（`yieldQuantity` 与 `expectedYield` 同源 → 在线/离线一致），农耕加在 `FarmingSkill.harvest`。全树总量（400 节点）：背包 +230 / 仓库 +390 / 冷库 +58 / **离线 +6h（恰好用满** `OFFLINE_CAP.shanhaiMaxHours`）/ **每条采集线「每次动作 +1 件」×2（恰好每技能封顶** `SHANHAI_EFFECT_CAPS.flatYieldPerSkill`）（守卫 C22 拦超额、C23 拦「没用到恰好封顶」）。⚠️ **flatYield 只有采集类读得到**（`GatheringSkill.yieldBatch` / `FarmingSkill.harvest`）→ 制作线（烹煮/烘焙/酿造/调味/锻造）该槽位一律改发大额仓库，否则等于发了个读不到的奖励。⚠️ **离线上限全树只有 6 个名额**（前 6 环用掉 5 个）→ 最后 1 小时只放在**采撷线的终点节点**（`pick103`），别的线该槽位发冷库。
+- **奖励白名单（flat，绝无百分比）**：`inventoryCap` / `bankCap` / `coldStorageCap` / `offlineH` / `flatYield`（按技能）。容量类**点亮时一次性发放**，走 `player._grantShanhaiCaps()` 原语（背包→仓库→冷库逐级找位，返回各档**实际落地量**并记账；不用 `expandInventory/expandBank/expandColdStorage` 是因为它们只回布尔或「只回一句话」，拿不到「发了多少」）；离线上限走 `player.offlineMaxHours()`（**唯一出口**：基础 12h + 饼干 ≤12 + 厨神之路 ≤6 + 山海食经 ≤8）；采集 `+N 件/次` 加在 `GatheringSkill.yieldBatch()`（`yieldQuantity` 与 `expectedYield` 同源 → 在线/离线一致），农耕加在 `FarmingSkill.harvest`。全树总量（552 节点，12 线）：背包 +276 / 仓库 +456 / 冷库 +70 / **离线 +8h（恰好用满** `OFFLINE_CAP.shanhaiMaxHours`）/ **每条采集线「每次动作 +1 件」×2（恰好每技能封顶** `SHANHAI_EFFECT_CAPS.flatYieldPerSkill`）（守卫 C22 拦超额、C23 拦「没用到恰好封顶」）。⚠️ **flatYield 只有采集类读得到**（`GatheringSkill.yieldBatch` / `FarmingSkill.harvest`）→ 制作线（烹煮/烘焙/酿造/调味/锻造）该槽位一律改发大额仓库，否则等于发了个读不到的奖励。⚠️ **离线上限全树只有「7 条采集线第 6 环各 1h + 采撷终点 1h」= 8 个名额**（`OFFLINE_CAP.shanhaiMaxHours` 必须 ≥ 它，否则多出来的会被夹掉）→ 采集线的 `special0` 槽发离线、制作线发仓库；最后 1 小时只放在**采撷线的终点节点**（`pick103`）。
 - 🔒 **所有「上限」的单一来源是 `game/data/caps.js`（2026-09-13 全面审计后立，改上限只改这里）**：`CAP_MAX`（**硬顶**）· `PAID_CAP_MAX`（**金币路径天花板**）· `CAP_BASE`（初始值）· `COLD_EXPAND_COST` · `OFFLINE_CAP`（基础 12 + 饼干 12 + 厨神之路 6 + 山海食经 6）· `DERIVED_MAX`（菜单格 6、农田 20，含起步值与每 N 级 +1 的步长）· `safeCap`/`safeList`。
   🔑 **硬顶不变量（新来源上线时必须满足，C23 有守卫）**：`CAP_MAX.x ≥ PAID_CAP_MAX.x + 山海食经全树该档总量`。当前 = 背包 `330 ≥ 100 + 230` · 仓库 `890 ≥ 500 + 390` · 冷库 `158 ≥ 100 + 58`。
   ⚠️ **硬顶与金币上限必须分开两个常量**：抬硬顶（好让新来源落得下）**不得**顺手把金币能买到的量也抬上去——杂货铺/冷库的价格与节奏是标定过的。故 `expandInventory/expandBank/expandColdStorage` 一律停在 `PAID_CAP_MAX`，只有山海食经的 `_grantShanhaiCaps` 用 `CAP_MAX`。C23 有两项断言钉住「金币扩容仍停在商店上限」。
@@ -208,7 +208,7 @@
   - 守卫：C22 新增「每个节点都有 `iconItem` 且图片文件真实存在（400/400）」；性能不进 CI（CI 无真实 GPU）。
 - **整屏画布**：`.main-scroll` 按 `ui.activeView === 'shanhai'` 加 `.main-scroll--bleed`（flex 列、padding 0、overflow hidden），视图根 `flex:1; min-height:0`。用 flex 而不是 `height:100%`：`<NewbieGuide/>` 是滚动区里的流式兄弟，`height:100%` 会被它顶出并裁掉。`DaoTreeGraph` 的 `fill` 模式（实测高度 + 浮动工具栏）也要求 **viewBox 与 SVG 的 CSS 高度同源**（老规矩）。浮层 `z-index ≥ 4`（`.app-main::after` 金色描边环是 3）。
 - ⚠️ **跨组件状态字段名必须对齐（实测踩坑）**：厨神之路的画布读 `owned`/`can`，而山海食经的派生状态里叫 `unlocked` → 首版**已点亮的节点被画成「未达标」**（页面不报错，只是全灰）。现两边都修：视图映射 `owned: st.unlocked === true`，组件 `nodeClass` 同时兼容 `owned === true || unlocked === true`。复用同一画布的其它树别再踩。
-- **守卫**：`system_test` **C22 二十项**（400 节点 / id 唯一 / **每系每环节点数 = `SHANHAI_RING_SLOTS`（3 或 5）** / 条件只用 codex 且数值合法 / **转生环不得写等级要求** / **里程碑严格递增 100→1→5→10** / 前 6 环门槛严格递增且第 6~10 环持平 / 奖励字段在白名单且为正整数 / **全树总量 ≤ 上限** / 各线清单非空且最高环门槛 ≤ 清单长度 / 新档 0 可点亮 / 收集够即点亮且**不扣金币**、容量即时到账 / **满上限顺位转投不蒸发** / **商店买满后背包节点仍落在背包** / 条件不足给原因 / **旧档对账补发** / **对账幂等** / 存档往返与旧档迁移 / 道途标题不重叠 / 画布 400 节点·10 扇区·10 环且零重叠）。
+- **守卫**：`system_test` **C22 二十余项**（552 节点 / 12 线 / id 唯一 / **每系每环节点数 = `SHANHAI_RING_SLOTS`（3 或 5）** / 条件只用 codex 且数值合法 / **转生环不得写等级要求** / **里程碑严格递增 100→1→5→10** / 前 6 环门槛严格递增且第 6~10 环持平 / 奖励字段在白名单且为正整数 / **全树总量 ≤ 上限** / 各线清单非空且最高环门槛 ≤ 清单长度 / 新档 0 可点亮 / 收集够即点亮且**不扣金币**、容量即时到账 / **满上限顺位转投不蒸发** / **商店买满后背包节点仍落在背包** / 条件不足给原因 / **旧档对账补发** / **对账幂等** / 存档往返与旧档迁移 / 道途标题不重叠 / 画布 552 节点·12 扇区·10 环且零重叠）。
 
 ## 🧯 「静默失效」三兄弟 + v2.1.3 用户实测 7 项（2026-09-14 立，最高优先阅读）
 
@@ -296,6 +296,34 @@
 - **宽表必须包 `.table-scroll`**：新页的 8 档表在 390px 下溢出 6px，被 `e2e-test` 的「手机 390px 无横向溢出」抓到——这是项目既有约定（`main.css` 的 `.table-scroll { overflow-x: auto }`）。
 
 **新增同类系统的登记清单**（缺一即 CI FAIL）：`ui.js VIEW_KEYS` → `App.vue`（async 组件 + 分支）→ `Sidebar.vue FEATURE_GROUPS` → `e2e-dark`/`e2e-text` 两个 `VIEWS` → 页面里必须有 `<RelatedPages>` → `guide.js` 的 `GUIDE_OVERVIEW`（条目名与瓦片名一致才能过派生检查）+ `GUIDE_STAGES` → `achievements.js` + `achievementProgress.js`（`NEEDS` 与 `cur` 链，id 前缀别撞现有分支）→ `StatsView` 行 → `story.js` 需求（须有对应 `storyCur` 的 `case`）→ `chronicle.js CHRONICLE_KINDS` → `itemSources.js` + `sourceJump.js`（**新来源串必须有跳转规则**）→ `system_test` 新组 → `action_sweep` 的 `ARGS`（带参动作）→ README/AGENTS/设计文档。
+
+## 🪓 技能 20 → 22：伐木 / 采矿与「20 档木材」（v2.7.0，2026-09-16 立）
+
+**用户原话**：「增加伐木技能，每个等级都有不同木头，用于其它适配（比如 75 级的装备材料需要 75 级的木材等等）；将矿物从挖掘独立出来为采矿技能。」
+
+- **现状**：22 技能 = 采集 7（采摘/垂钓/狩猎/**挖掘**/**采矿**/**伐木**/农耕）+ 制作 6 + 对决 6 + 辅助 3。
+- **20 档木材 = `src/game/data/timbers.js`**：`TIMBERS`（20 条：id/name/level/value）· `WOODCUTTING_TARGETS`（伐木的 20 条目标）· **`timberOfLevel(level)` 是「等级 → 档位木材」的唯一入口**。每档 5 级、与 20 个装备品质套严格对齐（铜 1-5 … 萤 96-100）——**别改成分档方式**（改了「N 级装备用 N 级木材」就不成立，C28 有断言）。
+- **矿物拆分在技能层完成，不动冻结产物**：`ExcavationSkill.js` 导出
+  `EXCAVATION_ALL_TARGETS`（拆分前 83 条）→ `EXCAVATION_GROUND_TARGETS`（42：根茎/菌类）与 `MINING_TARGETS`（43：41 矿物 + 铜矿@1/铁矿@5）。
+  ⚠️ `EXCAVATION_TARGETS`（历史手写 10 条，含 1 个矿物）**内容必须保持原样**——它是 `gen_tales`/`gen_quests`/`gen_combat_loot`/`gen_exploration_targets` 与三份平衡锚的输入，一改就产生**未登记的生成器漂移**。
+- 🔴 **最容易造成静默失衡的一处（务必记住）**：`recipeBalance.js` / `valueBalance.js` 里各自那份「读哪些技能的 targets 建等级锚」的**硬编码清单**必须同时含 `EXCAVATION_GROUND_TARGETS` 与 `MINING_TARGETS`（+`WOODCUTTING_TARGETS`）。**漏了不会报错**，但矿物的材料锚会整体消失 → 365 条锻造配方与 15 条保鲜配方的等级/材料会在**每次启动**被重算改写。
+- **新增/改动采集技能的登记清单**（缺一条就会出现「看不见 / 搜不到 / 失衡 / 审计 FAIL」）：
+  1. `data/skills.js` 的 `SKILL_DEFS` + `SKILL_ICONS`（图标唯一）；`skills/registry.js` 的工厂表；新建 `XxxSkill.js`（照 `ExcavationSkill.js` 模板，`super(id, player, TARGETS)` 三行即可——产出/双倍/精通/离线/并行挂机全在基类）
+  2. 三份「技能 → targets」硬编码清单：`recipeBalance.js`、`valueBalance.js`（**等级锚**）、`itemSources.js`（来源串）+ `itemNav.js`（配方树「去做」）
+  3. `sourceJump.js` 加 `{kw:['新来源串关键词'], target:{view:'skill', skill:'新技能 id'}}`（**不加则图鉴三查直接 FAIL**）
+  4. `scripts/ci/item_triple_audit.mjs` 的交叉引用行（把新 targets 数组加进去，否则 id 打错静默漏过）
+  5. `player.js` 的 `gatherLevels()`（公会门槛口径）与 `guilds.js` 的采集公会门槛（**按线数等比重标定**，别只改一个）
+  6. `spiritTiers`（食灵阶 1「采耕」的技能域，改生成器后重跑）· `gen_tales`（轶事子类）· `GatheringView`（id 分支/分组/文案）· `SkillView` 的 `PLAN_SKILLS` · `SeasonView` 的类别→技能映射 · `StoryView` 的 `QUIRK_SUB_NAMES` · `itemDetail` 的 `SKILL_LABEL`
+  7. **山海食经**：若给新技能加线，见下一节
+- 🔒 **「20 档木材」的配方改写是用户授权的一次例外**（AGENTS 数据铁律里「配方材料已固定」的唯一缺口，**不要扩大解释**）：
+  - 授权范围 = **只把 `ingredients` 里的木材那一项按档替换/补齐**；**不碰 reqLevel、不碰其它材料、不碰任何数值**；21 独立矿套与赛季装备**不动**；基础款 `木材`（id `wood`）及其既有用途（采摘 50% 附产/炼金/奇遇/公会任务/对决掉落）**一律不动**。
+  - 实现方式是 `src/game/data/timberRecipes.js` 的 `retargetTimberMaterials()`（在 `CraftsmithingSkill` 构造时、`balanceRecipeLevels()` **之前**调用；顺序反了平衡就看不到最终材料构成）。
+  - 结果：18 条既有配方换档 + 14 条逐档兜底补料 = **20/20 档全覆盖**，20 套里**不再有任何 `wood` 残留**（C28 断言）。
+- **装备强化按档消耗**：`upgradeCost()` 用 `equipmentLevelOf(itemId)`（**优先取产出它的锻造配方 reqLevel**——那才是解锁等级；`ITEM_LEVEL` 由掉落生成器推导、实测差 3 级）→ `timberOfLevel` + `oreOfLevel`（**矿从 20 套配方派生**，见 `BAND_MATERIALS`；盐矿刻意排最后——它的 id 也以 `Ore` 结尾，会顶掉钢矿/银矿，实测踩过）。玩家侧文案在 `EquipmentModal.vue`。
+- **存档迁移（幂等，账本 `stats.splitMiningMigrated`）**：`applySave` 里做——采矿继承挖掘等级/经验、矿物精通键迁到采矿、旧目标改挂到采矿。
+  ⚠️ **迁移里删除键必须用「patch 之后直接赋值」**：Pinia 的 `$patch` 是**深合并**，`delete` 掉的键不会消失（实测：矿物精通永远留在挖掘里）。
+- **`currentTarget` 兜底**（`GatheringSkill.js`）：目标 id 不在本技能目标表里时**回退到首个目标**而不是返回 null。返回 null 是彻底静默的停产（tick 直接 return、离线返回 null、并行挂机列表剔除），玩家只会觉得「技能不干活了」。
+- **轶事向上兼容**：矿物 param 的 200 条挖掘轶事（解锁键 `gather:excavation:<矿物>`）在拆分后永远解锁不了 → `addMastery` 里对**从挖掘移走的矿物**额外补记旧键（只写故事进度，不改数据）。
 
 ## 🧿 「效果总览」与效果注册表（v2.6.0，2026-09-16 立，最高优先阅读）
 
