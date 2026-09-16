@@ -27,6 +27,7 @@ export const CATEGORY_LABEL = {
   pottery: '陶器', textile: '织物', embroidery: '绣品', candle: '蜡烛',
   huntingGear: '猎具', fishingGear: '渔具', incense: '香品', gift: '节礼', jade: '玉器',
   goodsTag: '货签', miningGear: '器具',
+  stationery: '文房', instrument: '乐器', soap: '皂品', voucher: '账具',
   // 全物品图鉴审计（2026-09-06）补齐的类别标签（仅展示层映射）
   '主菜': '主菜', '甜点': '甜点', '汤品': '汤品', '主食': '主食',
   '木器': '木器', // 副业·木工配方的分类（`ProductionView` 用它做配方卡标签）
@@ -36,7 +37,8 @@ const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', ev
 const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速', duration: '持续' }
 const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
-  goodsTag: '货签', miningGear: '采掘器具', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
+  goodsTag: '货签', miningGear: '采掘器具',
+  papermaking: '造纸', instrument: '乐器', soapmaking: '制皂', exchequer: '钱庄', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
 const STYLE_LABEL = { knife: '刀工', plating: '摆盘', flavor: '调味' }
 
 // 属性数字统一保留两位小数（仅展示层格式化，不改底层数据/计算）

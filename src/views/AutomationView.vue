@@ -10,7 +10,7 @@ import { getAllSkillInstances } from '../game/skills/registry.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-const PROD_SKILLS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear', 'preservation', 'spiritSummoning']
+const PROD_SKILLS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear', 'papermaking', 'instrument', 'soapmaking', 'exchequer', 'preservation', 'spiritSummoning']
 
 const cards = computed(() =>
   AUTOMATIONS.map((def) => ({

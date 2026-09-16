@@ -249,6 +249,10 @@
 | 🔮 玉作（v2.12.0） | 玉器 | **宝石镶嵌效果**（`gemsBonus` 的合计上乘一层） | +1.5% | +33% |
 | 🪙 货签（v2.13.0） | 货签 | **交易所卖出价**（`sellPriceOf(item, cycle, bonusPct)`，**两个调用点都要传**） | +1.5% | +33% |
 | ⛏️ 采掘器具（v2.13.0） | 器具 | **采矿附产**（挂进 `GatheringSkill.yieldExtraChance`，用技能 id 限定只对采矿） | +2% | +38% |
+| 📜 造纸（v2.14.0） | 文房 | **徒弟离线效率上限**（`player.apprenticeOfflineBonus()` 上叠加） | +0.8pp | +14pp |
+| 🎼 乐器（v2.14.0） | 乐器 | **常客好感增速**（唯一出口 `player.favorGain()`，5 处好感来源全走它） | +1.5% | +27% |
+| 🧼 制皂（v2.14.0） | 皂品 | **订单赏金**（`makeOrder(player, goldBonusPct)`） | +1% | +19.6% |
+| 🏦 钱庄（v2.14.0） | 账具 | **金币获取**（`player.goldGainPct()` 唯一出口，gainGold 读它） | +0.8% | +15%（**夹 ≤15%**） |
 
 定义与口径全在 **`src/game/data/sidelineWorks.js`**（木工除外，它在 `woodworking.js`）：四支的 `rows` 每行 = `[等级, 物品名, 辅料 id, 木材数量, 辅料数量]`，
 木材由 `timberOfLevel()` 自动取该档、产物/配方/作品表全由它展开。**加一支新副业 = 往 `DEFS` 加一段 + 在 `SIDELINE_AXES` 加一条轴**，其余（物品/配方/作品/面板）自动生成。
@@ -321,6 +325,11 @@
 ⚠️ **附产/产量类新轴一律挂 `GatheringSkill.yieldExtraChance`**：在线 `yieldQuantity` 与离线 `expectedYield` 都读它 ⇒ **只改一处就自动在线/离线同源**（v2.13.0 的采矿附产就是这么做的）。
 ⚠️ **只想影响单一采集线时用 `this.id === '<skillId>'` 判定**，并写一条「其它采集线不受影响」断言。
 ⚠️ **价格/时间类新轴先看「函数有几个调用点」**：`sellPriceOf` 与 `nextOrderDelay` 各有 2 个（结算 + 展示），**两处必须传同一个值**，否则页面与到账不一致。
+
+
+⚠️ **「散在多处的同一个数值」必须先收敛成一个出口再挂新轴**：好感原本在 5 处各写一次 `favor.xp +=`，新轴一挂就会变成「订单一处生效、上菜另一处没生效」的静默不一致（v2.14.0）。现已新增 `player.favorGain(n)` 并把 5 处全改走它，C37 用**源码断言**钉住「只剩一处直写（即出口自身）」。**同类新轴上线前先数一数「这个数值在项目里被写了几次」。**
+⚠️ **夹取要放在唯一出口里**：钱庄的 ≤15% 放在 `goldGainPct()`，于是**效果总览显示的数字与实际到账一致**；若只在消费方夹取，页面会显示 15.2% 而实际给 15%。
+⚠️ **Pinia 的 `getters` 与 `actions` 不能放错**：把会被 `this.xxx()` 调用的函数写进 `getters`，会得到「is not a function」（v2.14.0 实测踩过，被 `system_test` 的金币词条用例抓到）。
 
 ### 作品机制（v2.10.0）
 - `player.craftWork(itemId)` → `'ok' | 'owned' | 'denied' | 'bad'`（消耗 **1 件产物**，不花金币）；登记进新存档字段 **`sidelineWorks: string[]`**（一件一次、幂等）。

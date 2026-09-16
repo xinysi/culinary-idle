@@ -74,3 +74,28 @@ export class MiningGearSkill extends ProductionSkill {
     super('miningGear', player, raiseRecipeLevels(SIDELINE_RECIPES.miningGear))
   }
 }
+
+// ── v2.14.0 四支 ──
+export class PapermakingSkill extends ProductionSkill {
+  constructor(player) {
+    super('papermaking', player, raiseRecipeLevels(SIDELINE_RECIPES.papermaking))
+  }
+}
+
+export class InstrumentSkill extends ProductionSkill {
+  constructor(player) {
+    super('instrument', player, raiseRecipeLevels(SIDELINE_RECIPES.instrument))
+  }
+}
+
+export class SoapmakingSkill extends ProductionSkill {
+  constructor(player) {
+    super('soapmaking', player, raiseRecipeLevels(SIDELINE_RECIPES.soapmaking))
+  }
+}
+
+export class ExchequerSkill extends ProductionSkill {
+  constructor(player) {
+    super('exchequer', player, raiseRecipeLevels(SIDELINE_RECIPES.exchequer))
+  }
+}

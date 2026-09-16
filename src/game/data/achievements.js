@@ -30,6 +30,8 @@ const PROD_SKILL_IDS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixi
   'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft',
   // v2.13.0 第二批
   'goodsTag', 'miningGear',
+  // v2.14.0 四支
+  'papermaking', 'instrument', 'soapmaking', 'exchequer',
   'preservation', 'spiritSummoning']
 
 /** 全部配方的精通等级列表（0~100） */
