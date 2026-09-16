@@ -23,27 +23,10 @@ export function isTwentySetRecipe(r) {
   return !String(r?.id ?? '').startsWith('ext-')
 }
 
-/** 砧板：木器部位（高段套装此前不含木材，正是我们要补的那批） */
-export function isBoardRecipe(r) {
-  return /砧板$/.test(getItem(r?.output?.itemId)?.name ?? '')
-}
-
-/** 锅：8 槽的高段套装（钨/锰/钒/萤）没有砧板，用锅作为该档的木器部位（木柄） */
-export function isPotRecipe(r) {
-  return /锅$/.test(getItem(r?.output?.itemId)?.name ?? '')
-}
-
-/** 每档补的木材数量：2/3/4/5（按档递增，与矿的数量阶梯同量级） */
+/** 每件装备补的木材数量：2/3/4/5（按档递增，与矿的数量阶梯同量级） */
 export function timberQtyForLevel(level) {
   const idx = Math.max(0, Math.min(19, Math.floor((Math.max(1, level) - 1) / 5)))
   return 2 + Math.floor(idx / 5)
-}
-
-/** 某档（0..19）的 20 套配方 */
-function bandRecipes(recipes, idx) {
-  const from = idx * 5 + 1
-  const to = from + 4
-  return recipes.filter((r) => isTwentySetRecipe(r) && r?.ingredients && r.reqLevel >= from && r.reqLevel <= to)
 }
 
 /** 档位序号（0..19）：Lv1-5→0 … Lv96-100→19 */
@@ -96,35 +79,34 @@ export const BAND_MATERIALS = TIMBERS.map((t, i) => ({
 }))
 
 /**
- * 就地改写 20 品质套配方的木材材料。返回改动统计（供日志与守卫断言）。
+ * 就地改写锻造配方的木材材料。返回改动统计（供日志与守卫断言）。
  * ⚠️ 必须在 `balanceRecipeLevels()` **之前**调用：先入档位木材，让平衡看到最终材料构成。
  *
- * 两步：① 已在用 `木材` 的配方 → 换成该档木材（数量不变）；
- *       ② **逐档兜底**：某档若还没有任何木材需求，就补它的木器部位（砧板；8 槽高段套没有砧板则用锅）——
- *          这样 20 档**每一档都有同档木材需求**（用户要求「N 级装备要 N 级木材」逐档成立）。
+ * 规则（用户 2026-09-16 追加要求：「**所有装备所需材料都要加上对应等级的木材**」）：
+ *   ① 已在用基础款 `木材`（wood）的配方 → 换成该档木材（数量不变）
+ *   ② 已有该档木材的配方 → 不动
+ *   ③ **其余每一条装备配方都补上同档木材**（数量 2~5 按档递增）——含 20 品质套的全部部位
+ *      （刀/锅/砧板/围裙/厨师帽/调味瓶/腿甲/靴子/戒指）与 **21 独立矿套**，
+ *      于是「N 级装备用 N 级木材」对**每一件装备**成立，而不只是每档挑了代表件。
+ *
+ * 只动 `ingredients` 里的木材那一项：不碰 reqLevel、不碰其它材料、不碰任何数值。
  */
 export function retargetTimberMaterials(recipes) {
   let swapped = 0
   let added = 0
-  // ① 换档
   for (const r of recipes) {
-    if (!r?.ingredients || !isTwentySetRecipe(r)) continue
+    if (!r?.ingredients) continue
     const t = timberOfLevel(r.reqLevel)
-    if (!t || !r.ingredients.wood) continue
-    r.ingredients[t.id] = (r.ingredients[t.id] ?? 0) + r.ingredients.wood
-    delete r.ingredients.wood
-    swapped++
-  }
-  // ② 逐档兜底补料
-  const timberIds = new Set(TIMBERS.map((t) => t.id))
-  for (let idx = 0; idx < 20; idx++) {
-    const rows = bandRecipes(recipes, idx)
-    if (!rows.length) continue
-    if (rows.some((r) => Object.keys(r.ingredients).some((k) => timberIds.has(k)))) continue
-    const slot = rows.find(isBoardRecipe) ?? rows.find(isPotRecipe)
-    if (!slot) continue
-    const t = timberOfLevel(slot.reqLevel)
-    slot.ingredients[t.id] = (slot.ingredients[t.id] ?? 0) + timberQtyForLevel(slot.reqLevel)
+    if (!t) continue
+    if (r.ingredients.wood) {
+      // ① 基础木材 → 同档木材（保留原数量）
+      r.ingredients[t.id] = (r.ingredients[t.id] ?? 0) + r.ingredients.wood
+      delete r.ingredients.wood
+      swapped++
+      continue
+    }
+    if (r.ingredients[t.id]) continue // ② 已入档
+    r.ingredients[t.id] = timberQtyForLevel(r.reqLevel) // ③ 每件装备都要吃同档木材
     added++
   }
   return { swapped, added }
