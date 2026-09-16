@@ -106,11 +106,13 @@ import { CARAVAN_CARGO_TYPES, CARAVAN_EXCLUDE_CATEGORIES } from '../../src/game/
 import {
   SIDELINE_ITEMS, SIDELINE_RECIPES, SIDELINE_WORKS, SIDELINE_SKILL_LIST, SIDELINE_SKILL_IDS,
   SIDELINE_ITEM_CATEGORIES, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
+  SIDELINE_PRODUCTS, SIDELINE_LADDERS, SIDELINE_LADDER_SKILL_IDS, LADDER_TIERS,
+  pointsOfLevel, ladderTierOf, ladderNextOf, ladderTotalOf, sidelineSkillOfItem, LADDER_AXIS_LABEL,
 } from '../../src/game/data/sidelineWorks.js'
 import { CELLAR_SLOT_VALUE_BASE, CELLAR_SLOT_VALUE_MAX } from '../../src/game/data/caps.js'
 import {
   MARKET_EVENTS, activeMarketEvents as activeMarketEventsPure, marketEventsWithNightExtension,
-  nightMarketEndHour, NIGHT_MARKET_MAX_EXTRA_HOURS,
+  nightMarketEndHour, NIGHT_MARKET_MAX_EXTRA_HOURS, NIGHT_MARKET_BASE_MULT, NIGHT_MARKET_MAX_EXTRA_MULT,
 } from '../../src/game/data/marketEvents.js'
 import { MICHELIN_FACTORS } from '../../src/game/data/michelin.js'
 import { SKILL_CN } from '../../src/game/data/activeEffects.js'
@@ -5030,17 +5032,24 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
   check('副业四支', '做成作品会消耗 1 件产物',
     res11 === 'ok' && (p.inventory['pottery_11'] ?? 0) === 0 && (p.sidelineWorks ?? []).includes('pottery_11'))
 
-  // ⑨ 满配：全部 38 件做完后的合计与硬顶
+  // ⑨ 满配：38 件作品做完 **且五支阶梯喂满** 后的合计与硬顶
+  //   （v2.11.0：硬顶 = 基础 16,000 + 陶艺作品 15,000 + 陶艺阶梯 9,000 = 40,000，三者缺一都到不了）
   const full = freshPlayer()
   full.restaurant.menu = ['roastPotato']
   for (const it of SIDELINE_ITEMS) { full.inventory[it.id] = 1; full.craftWork(it.id) }
-  const capOk = full.cellarSlotValueMax() <= CELLAR_SLOT_VALUE_MAX
-  check('副业四支', `满配合计：地窖上限 ${full.cellarSlotValueMax()}（硬顶 ${CELLAR_SLOT_VALUE_MAX}）· 小费 +${full.tipBonusPct()}% · 招牌 +${full.michelinSignScore()} 分 · 夜市 +${full.nightMarketExtraHours()}h`,
+  for (const l of SIDELINE_LADDERS) {
+    const list = SIDELINE_PRODUCTS[l.skill]
+    const top = list[list.length - 1]
+    full.inventory[top.itemId] = Math.ceil(LADDER_TIERS[LADDER_TIERS.length - 1] / top.points)
+    full.feedSideline(l.skill)
+  }
+  check('副业四支', `满配合计（作品+阶梯）：地窖上限 ${full.cellarSlotValueMax()}（硬顶 ${CELLAR_SLOT_VALUE_MAX}）· 小费 +${full.tipBonusPct()}% · 招牌 +${full.michelinSignScore()} 分 · 夜市 ×${full.nightMarketMult().toFixed(2)}+${full.nightMarketExtraHours()}h`,
     full.sidelineWorks.length === 38 && full.cellarSlotValueMax() === CELLAR_SLOT_VALUE_MAX
-    && full.tipBonusPct() === SIDELINE_AXIS_TOTALS.tipPct.total
-    && full.michelinSignScore() === SIDELINE_AXIS_TOTALS.michelinScore.total
-    && full.nightMarketExtraHours() === NIGHT_MARKET_MAX_EXTRA_HOURS && capOk,
-    `${full.sidelineWorks.length} 件`)
+    && full.tipBonusPct() === SIDELINE_AXIS_TOTALS.tipPct.total + full.sidelineLadderTotal('tipPct')
+    && full.michelinSignScore() === SIDELINE_AXIS_TOTALS.michelinScore.total + full.sidelineLadderTotal('michelinScore')
+    && full.nightMarketExtraHours() === NIGHT_MARKET_MAX_EXTRA_HOURS
+    && SIDELINE_LADDERS.every((l) => full.sidelineLadderTier(l.skill) === LADDER_TIERS.length),
+    `${full.sidelineWorks.length} 件 / 各支档位 ${SIDELINE_LADDERS.map((l) => full.sidelineLadderTier(l.skill)).join(',')}`)
 
   // ⑩ 蜡烛真的改变了命中判定（同一小时，延长前后结论不同），且不溢出上限
   const nightOn = (h, ev) => activeMarketEventsPure(h, 1, ev).some((e) => e.id === 'nightMarket')
@@ -5089,6 +5098,167 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
   }
   check('副业四支', '四支在公会与每日/周常任务里都有条目，且 param 是已注册技能',
     gBad2.length === 0 && SIDELINE_SKILL_IDS.every((id) => !!SKILL_DEFS[id]), gBad2.join('; '))
+}
+
+// ── C34. 副业量产阶梯（v2.11.0：产物按数量喂进深阶梯 —— 回答「练满级做出几十万件、绝大多数用不掉」）──
+console.log('══ C34. 副业量产阶梯 ══')
+{
+  // ① 阶梯表本身：12 档、严格递增、末档 = 设计值、五支各一条（含木工）
+  check('量产阶梯', `阶梯 ${LADDER_TIERS.length} 档、严格递增、末档 ${LADDER_TIERS.at(-1)}`,
+    LADDER_TIERS.length === 12 && LADDER_TIERS.every((v, i) => i === 0 || v > LADDER_TIERS[i - 1]) && LADDER_TIERS.at(-1) === 250000)
+  check('量产阶梯', '五支各一条阶梯（含木工），档位增量均为正且轴合法',
+    SIDELINE_LADDERS.length === 5 && SIDELINE_LADDERS.every((l) => l.perTier > 0 && !!LADDER_AXIS_LABEL[l.axis])
+    && SIDELINE_LADDER_SKILL_IDS.includes('woodworking') && SIDELINE_LADDERS.every((l) => !!SKILL_DEFS[l.skill]))
+
+  // ② 计点：按档位加权（Lv1 = 1、Lv91 = 10），五支（含木工）的产物都登记了点数与归属
+  check('量产阶梯', '计点按档位加权：Lv1 = 1 点、Lv11 = 2 点、Lv91 = 10 点',
+    pointsOfLevel(1) === 1 && pointsOfLevel(11) === 2 && pointsOfLevel(91) === 10)
+  const prodBad = []
+  for (const l of SIDELINE_LADDERS) {
+    const list = SIDELINE_PRODUCTS[l.skill]
+    if (!list || !list.length) { prodBad.push(`${l.skill}: 无产物表`); continue }
+    for (const p of list) {
+      if (!ITEMS[p.itemId]) prodBad.push(`${l.skill}:${p.itemId} 不存在`)
+      if (!(p.points >= 1)) prodBad.push(`${l.skill}:${p.itemId} 点数非法`)
+      if (sidelineSkillOfItem(p.itemId)?.skill !== l.skill) prodBad.push(`${p.itemId} 反查归属错`)
+    }
+  }
+  check('量产阶梯', `五支共 ${Object.values(SIDELINE_PRODUCTS).flat().length} 件产物都有点数与归属（含木工）`, prodBad.length === 0, prodBad.slice(0, 4).join('; '))
+
+  // ③ 档位函数：边界与封顶
+  check('量产阶梯', '档位函数：0 点 = 0 档、10 点 = 1 档、满档 = 12、超限值不越界',
+    ladderTierOf(0) === 0 && ladderTierOf(9) === 0 && ladderTierOf(10) === 1 && ladderTierOf(250000) === 12 && ladderTierOf(9e9) === 12)
+  check('量产阶梯', '下一档提示：未满给差值、已满返回 null',
+    ladderNextOf(0).need === 10 && ladderNextOf(0).left === 10 && ladderNextOf(250000) === null)
+  check('量产阶梯', '阶梯加成 = 档位 × 每档增量（末档合计与设计值一致）',
+    SIDELINE_LADDERS.every((l) => ladderTotalOf(l.skill, 250000) === Math.round(l.perTier * 12 * 1000) / 1000))
+
+  // ④ feedSideline：扣物品数 == 加点数、只增不减、空背包给原因、非法 id 不抛错
+  const q = freshPlayer()
+  q.inventory['pottery_1'] = 7
+  q.inventory['pottery_91'] = 3
+  const f1 = q.feedSideline('pottery')
+  check('量产阶梯', '投入会真的扣掉产物并按档位加点（7×1 + 3×10 = 37 点）',
+    f1.ok && f1.fed === 10 && f1.points === 37 && (q.inventory['pottery_1'] ?? 0) === 0 && (q.inventory['pottery_91'] ?? 0) === 0
+    && q.sidelinePointsOf('pottery') === 37, JSON.stringify({ fed: f1.fed, points: f1.points }))
+  check('量产阶梯', '投入只增不减（再投空背包不会减少点数）',
+    (() => { const r = q.feedSideline('pottery'); return r.ok === false && r.reason === 'empty' && q.sidelinePointsOf('pottery') === 37 })())
+  check('量产阶梯', '非法技能 id 返回 bad，不抛错',
+    q.feedSideline('foraging').ok === false && q.feedSideline('不存在的技能').reason === 'bad')
+
+  // ⑤ 🔑 **反「读当前技能等级」**（行为断言，比源码扫描稳）——
+  //    prestigeSkill 会把满 100 级打出 carry=⌊100×0.05⌋=5 ⇒ 回到 6 级；
+  //    若任何轴的派生读了「当前等级」，转生就会**自罚**（玩家会永远不敢转生这五支）。
+  //    断言方式：把五支的等级全改成 1，六条轴的派生值必须**一分不变**。
+  const rich = freshPlayer()
+  rich.restaurant.menu = ['roastPotato']
+  for (const l of SIDELINE_LADDERS) {
+    rich.inventory[SIDELINE_PRODUCTS[l.skill][0].itemId] = 40
+    rich.feedSideline(l.skill)
+    rich.inventory[SIDELINE_PRODUCTS[l.skill][0].itemId] = 1
+    rich.craftWork(SIDELINE_PRODUCTS[l.skill][0].itemId)
+  }
+  const axisSnapshot = (pl) => ['cellarValue', 'tipPct', 'michelinScore', 'nightHours', 'nightMult', 'decorPct']
+    .map((a) => pl.sidelineEffectTotal(a)).join(',')
+    + '|' + pl.cellarSlotValueMax() + '|' + pl.tipBonusPct() + '|' + pl.michelinSignScore() + '|'
+    + pl.nightMarketMult().toFixed(3) + '|' + pl.restaurantHourlyIncome.toFixed(4)
+  const beforeLevels = axisSnapshot(rich)
+  for (const l of SIDELINE_LADDERS) rich.setSkillState(l.skill, { level: 1, exp: 0 })
+  check('量产阶梯', '🔑 五支技能等级全改成 1 后，六条轴的派生值一分不变（**绝不读「当前技能等级」**——否则转生 = 自罚）',
+    axisSnapshot(rich) === beforeLevels, `改前 ${beforeLevels.slice(0, 50)}… / 改后 ${axisSnapshot(rich).slice(0, 50)}…`)
+  const prestige = freshPlayer()
+  prestige.setSkillState('pottery', { level: 100, exp: totalXpForLevel(100) })
+  const beforePrestige = prestige.cellarSlotValueMax()
+  prestige.prestigeSkill('pottery')
+  check('量产阶梯', '🔑 转生陶艺后（等级回落）地窖上限**不下降**，且还能继续投入阶梯',
+    prestige.skills.pottery.prestiges === 1 && prestige.cellarSlotValueMax() === beforePrestige
+    && (() => { prestige.inventory['pottery_1'] = 30; const r = prestige.feedSideline('pottery'); return r.ok && prestige.sidelinePointsOf('pottery') === 30 })(),
+    `转生前 ${beforePrestige} → 转生后 ${prestige.cellarSlotValueMax()}`)
+
+  // ⑥ 蜡烛：**时长**仍封顶 +8h（阶梯只加倍率、不加时长）
+  const candle = freshPlayer()
+  // 喂到**满档**（250,000 点）：用蜡烛最高档产物（Lv85 = 9 点/件）
+  const candleTop = SIDELINE_PRODUCTS.candles.slice(-1)[0]
+  candle.inventory[candleTop.itemId] = Math.ceil(LADDER_TIERS.at(-1) / candleTop.points)
+  candle.feedSideline('candles')
+  check('量产阶梯', `蜡烛阶梯只加**倍率**、不加时长（时长仍封顶 +${NIGHT_MARKET_MAX_EXTRA_HOURS}h；倍率 ×2 → ×${candle.nightMarketMult().toFixed(2)}）`,
+    candle.nightMarketExtraHours() === 0 && candle.sidelineLadderTier('candles') === LADDER_TIERS.length
+    && candle.nightMarketMult() === NIGHT_MARKET_BASE_MULT + NIGHT_MARKET_MAX_EXTRA_MULT)
+  check('量产阶梯', '蜡烛倍率真的进了聚合乘区，且只在该窗口生效（13:00 不命中夜市）', (() => {
+    const ev = candle.marketEventsNow()
+    return ev.find((e) => e.id === 'nightMarket').effect.restaurant === candle.nightMarketMult()
+      && activeMarketEventsPure(13, 1, ev).every((e) => e.id !== 'nightMarket')
+      && activeMarketEventsPure(17, 1, ev).some((e) => e.id === 'nightMarket')
+  })())
+  check('量产阶梯', '基础活动表（MARKET_EVENTS）未被就地改写（延长/加倍的都只是副本）',
+    MARKET_EVENTS.find((e) => e.id === 'nightMarket').effect.restaurant === 2
+    && JSON.stringify(MARKET_EVENTS.find((e) => e.id === 'nightMarket').hours) === '[[16,22]]')
+
+  // ⑦ 硬顶：陶艺满配（作品 15,000 + 阶梯 9,000）== CELLAR_SLOT_VALUE_MAX
+  const cap = freshPlayer()
+  for (const it of SIDELINE_ITEMS.filter((x) => x.category === 'pottery')) { cap.inventory[it.id] = 1; cap.craftWork(it.id) }
+  cap.inventory['pottery_91'] = 25000
+  cap.feedSideline('pottery')
+  check('量产阶梯', `陶艺满配（作品 + 阶梯）正好等于地窖硬顶 ${CELLAR_SLOT_VALUE_MAX.toLocaleString()}，不越界`,
+    cap.cellarSlotValueMax() === CELLAR_SLOT_VALUE_MAX)
+
+  // ⑧ 存档：随 stats 往返、旧档回退 0、脏值不炸
+  const save = JSON.stringify(q.serialize())
+  const back = freshPlayer()
+  back.applySave(JSON.parse(save))
+  check('量产阶梯', '累计点随存档往返无损（stats.sidelinePoints）', back.sidelinePointsOf('pottery') === 37 && JSON.stringify(back.serialize()) === save)
+  const old = freshPlayer()
+  old.applySave({ gold: 100 })
+  check('量产阶梯', '旧档缺 sidelinePoints → 五支全 0、不报错',
+    SIDELINE_LADDER_SKILL_IDS.every((s) => old.sidelinePointsOf(s) === 0) && old.sidelineLadderTier('pottery') === 0)
+  const junk = freshPlayer()
+  junk.applySave({ stats: { sidelinePoints: { pottery: '哈哈', weaving: -5, candles: null } } })
+  check('量产阶梯', '存档里是字符串/负数/null 时不炸且不产生 NaN',
+    Number.isFinite(junk.cellarSlotValueMax()) && Number.isFinite(junk.sidelineEffectTotal('tipPct')))
+
+  // ⑨ 效果总览登记（含木工那条）+ 图鉴三查（kind:'ladder'）
+  check('量产阶梯', '效果总览登记了五条副业效果行（四支 + 木工阶梯，一个都不能漏）',
+    SIDELINE_LADDER_SKILL_IDS.every((id) => EFFECT_ROWS.some((r) => (r.view ?? '').endsWith(id))))
+  const uBad = []
+  for (const l of SIDELINE_LADDERS) for (const p of SIDELINE_PRODUCTS[l.skill]) {
+    const lines = itemDetailLines(p.itemId).map((x) => x.join('')).join('|')
+    if (!lines.includes('量产阶梯')) uBad.push(`${p.itemId}: 详细作用缺量产阶梯`)
+    if (!itemUses(p.itemId).some((u) => u.kind === 'ladder')) uBad.push(`${p.itemId}: 可用于制作缺阶梯`)
+  }
+  check('量产阶梯', '图鉴三查：全部产物（含木工 10 件木器）都登记了「量产阶梯」用途', uBad.length === 0, uBad.slice(0, 4).join('; '))
+
+  // ⑩ 面板源码断言（防「数据加了页面没接」这类静默失效）
+  const panelSrc2 = fs.readFileSync(new URL('../../src/components/SidelineWorkPanel.vue', import.meta.url), 'utf8')
+  check('量产阶梯', '作品面板真的接了阶梯（含「投入」动作与档位展示）',
+    panelSrc2.includes('feedSideline(') && panelSrc2.includes('sidelineLadderTier(') && panelSrc2.includes('LADDER_TIERS'))
+
+  // ⑪ **比值守卫**（把「满加成后会不会平衡崩坏」变成可执行断言）：
+  //    对每条轴算「满配/空配」的放大，超阈值即 FAIL —— 以后谁想把某一支偷偷调高一档，CI 直接拦住。
+  const RICH = freshPlayer()
+  RICH.restaurant.menu = ['roastPotato']
+  for (const l of SIDELINE_LADDERS) {
+    for (const p of SIDELINE_PRODUCTS[l.skill]) { RICH.inventory[p.itemId] = 1; if (p.itemId in SIDELINE_WORKS) RICH.craftWork(p.itemId) }
+    const top = SIDELINE_PRODUCTS[l.skill].slice(-1)[0]
+    RICH.inventory[top.itemId] = Math.ceil(LADDER_TIERS.at(-1) / top.points)
+    RICH.feedSideline(l.skill)
+  }
+  const ratioRow = []
+  const ratioBad = []
+  const ratios = [
+    ['装潢加成%(木工)', RICH.sidelineLadderTotal('decorPct'), 24, 1.25],
+    ['小费%(编织)', RICH.sidelineLadderTotal('tipPct'), 18, 1.6],
+    ['夜市倍率倍数(蜡烛)', RICH.nightMarketMult() / NIGHT_MARKET_BASE_MULT, 1.18, 1.25],
+  ]
+  for (const [name, got, expect, capMul] of ratios) {
+    ratioRow.push(`${name} ${got.toFixed(2)}`)
+    if (!(got <= expect * capMul + 1e-9) || !(got >= expect * 0.9)) ratioBad.push(`${name}=${got}（设计≈${expect}，上限 ${capMul}×）`)
+  }
+  ratioRow.push(`地窖上限 ${RICH.cellarSlotValueMax()}`)
+  if (RICH.cellarSlotValueMax() !== CELLAR_SLOT_VALUE_MAX) ratioBad.push(`地窖上限 ${RICH.cellarSlotValueMax()} ≠ 硬顶 ${CELLAR_SLOT_VALUE_MAX}`)
+  const signPct = RICH.michelinSignScore() / 620 // 3★ 门槛
+  ratioRow.push(`招牌占3★ ${(signPct * 100).toFixed(0)}%`)
+  if (!(signPct <= 0.4)) ratioBad.push(`招牌分占 3★ 门槛 ${(signPct * 100).toFixed(0)}% > 40%`)
+  check('量产阶梯', `比值守卫：五条轴的满配放大都在阈值内（${ratioRow.join(' · ')}）`, ratioBad.length === 0, ratioBad.join('; '))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

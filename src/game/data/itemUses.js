@@ -3,7 +3,7 @@
 import { getAllSkillInstances } from '../skills/registry.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { CRAFTED_DECOR } from './woodworking.js'
-import { sidelineWorkOf, SIDELINE_AXES } from './sidelineWorks.js'
+import { sidelineWorkOf, SIDELINE_AXES, sidelineSkillOfItem, SIDELINE_LADDERS } from './sidelineWorks.js'
 import { getItem } from './items.js'
 
 /** 返回该物品可制作成的产物列表：[{ outputId, name, qty, kind? }]（按配方合并去重）
@@ -42,6 +42,12 @@ export function itemUses(itemId) {
   if (work) {
     const ax = SIDELINE_AXES[work.axis]
     add(`work:${itemId}`, `${work.skillName}作品（${ax.label} ${ax.amountLabel(work.amount)}）`, 1, 'work')
+  }
+  // 量产阶梯（v2.11.0）：产物真正的**大宗**去处——按档位计点、投入后消失。五支都适用（含木工）。
+  const sk = sidelineSkillOfItem(itemId)
+  if (sk) {
+    const lad = SIDELINE_LADDERS.find((l) => l.skill === sk.skill)
+    add(`ladder:${sk.skill}`, `${lad.name}量产阶梯（1 件 = ${sk.points} 点，每档 ${lad.unit(lad.perTier)}）`, 1, 'ladder')
   }
   return [...map.values()]
 }

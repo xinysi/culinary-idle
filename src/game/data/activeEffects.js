@@ -446,33 +446,46 @@ export const EFFECT_ROWS = [
     id: 'potteryCellar', group: 'income', icon: '🏺', name: '陶艺·地窖单槽上限', kind: 'buff', src: '副业·陶艺', view: 'skill:pottery',
     read: (p) => {
       const add = p.sidelineEffectTotal?.('cellarValue') ?? 0
-      if (!add) return off('还没把陶器做成作品——每做 1 件，地窖单槽价值上限 +1,500')
-      return { on: true, text: `单槽价值上限 ${(p.cellarSlotValueMax?.() ?? 0).toLocaleString()}（基础 16,000 + 陶器 ${add.toLocaleString()}）` }
+      if (!add) return off('还没把陶器做成作品、也没投入量产阶梯——每件作品 +1,500、每档阶梯 +750')
+      const w = (p.sidelineWorks ?? []).length ? p.sidelineEffectTotal('cellarValue') - p.sidelineLadderTotal('cellarValue') : 0
+      const lad = p.sidelineLadderTotal?.('cellarValue') ?? 0
+      return { on: true, text: `单槽价值上限 ${(p.cellarSlotValueMax?.() ?? 0).toLocaleString()}（基础 16,000 + 作品 ${w.toLocaleString()} + 阶梯 ${lad.toLocaleString()}）` }
     },
   },
   {
     id: 'weavingTip', group: 'income', icon: '🧶', name: '编织·餐厅小费', kind: 'buff', src: '副业·编织', view: 'skill:weaving',
     read: (p) => {
       const v = p.tipBonusPct?.() ?? 0
-      if (!v) return off('还没把织物做成作品——每做 1 件，餐厅小费 +2%')
-      return { on: true, text: `小费 ${pct(v)}（乘在顾客好感与常客小费之上）` }
+      if (!v) return off('还没把织物做成作品、也没投入量产阶梯——每件作品 +2%、每档阶梯 +1.5%')
+      const lad = p.sidelineLadderTotal?.('tipPct') ?? 0
+      return { on: true, text: `小费 ${pct(v)}（作品 ${pct(v - lad)} + 阶梯 ${pct(lad)}；乘在顾客好感与常客小费之上）` }
     },
   },
   {
     id: 'embroiderySign', group: 'income', icon: '🪡', name: '刺绣·招牌绣屏评分', kind: 'buff', src: '副业·刺绣', view: 'skill:embroidery',
     read: (p) => {
       const v = p.michelinSignScore?.() ?? 0
-      if (!v) return off('还没把绣品做成作品——每做 1 件，米其林评分 +12 分')
-      return { on: true, text: `米其林评分 +${v} 分（第七维「招牌绣屏」，帮你跨星级门槛）` }
+      if (!v) return off('还没把绣品做成作品、也没投入量产阶梯——每件作品 +12 分、每档阶梯 +10 分')
+      const lad = p.sidelineLadderTotal?.('michelinScore') ?? 0
+      return { on: true, text: `米其林评分 +${v} 分（作品 +${v - lad} + 阶梯 +${lad}；第七维「招牌绣屏」，帮你跨星级门槛）` }
     },
   },
   {
     id: 'candleNightWindow', group: 'income', icon: '🕯️', name: '蜡烛·夜市狂潮时长', kind: 'buff', src: '副业·蜡烛制作', view: 'skill:candles',
     read: (p) => {
       const h = p.nightMarketExtraHours?.() ?? 0
-      if (!h) return off('还没把蜡烛做成作品——每做 1 件，夜市狂潮延后 1 小时')
+      const mult = p.nightMarketMult?.() ?? 2
+      if (!h && mult <= 2) return off('还没把蜡烛做成作品、也没投入量产阶梯——作品每件 +1 小时、阶梯每档 +0.03 倍')
       const end = p.nightMarketEndHour?.() ?? 22
-      return { on: true, text: `夜市狂潮 16:00–次日 ${String(end % 24).padStart(2, '0')}:00（+${h} 小时，餐厅收入 ×2 的时段更长）` }
+      return { on: true, text: `夜市狂潮 16:00–次日 ${String(end % 24).padStart(2, '0')}:00 · 餐厅收入 ×${mult.toFixed(2)}（作品延长时间、阶梯提高倍率）` }
+    },
+  },
+  {
+    id: 'woodworkingDecor', group: 'income', icon: '🪚', name: '木工·手工装潢手艺', kind: 'buff', src: '副业·木工（量产阶梯）', view: 'skill:woodworking',
+    read: (p) => {
+      const v = p.sidelineLadderTotal?.('decorPct') ?? 0
+      if (!v) return off('还没把多余木器投入量产阶梯——每档装潢加成 +2%')
+      return { on: true, text: `装潢加成 ${pct(v)}（加在商店+手工装潢的合计上）` }
     },
   },
   {

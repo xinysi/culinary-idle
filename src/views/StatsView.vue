@@ -6,6 +6,7 @@ import { useUiStore } from '../stores/ui.js'
 import { OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
+import { SIDELINE_LADDERS } from '../game/data/sidelineWorks.js'
 import { ITEMS } from '../game/data/items.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { COLLECTABLE_SETS } from '../game/data/setBonuses.js'
@@ -149,6 +150,8 @@ const sections = computed(() => [
     rows: [
       { label: '图鉴完成度', value: `${player.collectionPct}%`, sub: `（${Object.keys(player.collected).length}/${Object.keys(ITEMS).length}）` },
       { label: '锻造套装集齐', value: player.setBonuses?.length ?? 0, sub: ` / ${COLLECTABLE_SETS.length} 套` },
+      // 副业量产阶梯（v2.11.0）：五支的累计投入点与档位
+      { label: '副业量产阶梯', value: SIDELINE_LADDERS.reduce((a, l) => a + player.sidelinePointsOf(l.skill), 0), sub: ` 点 / ${SIDELINE_LADDERS.map((l) => `${l.name} ${player.sidelineLadderTier(l.skill)}档`).join('·')}` },
       { label: '称号', value: player.title ? `「${player.title}」` : '无' },
       { label: '成就称号', value: ownedTitles.value.length, sub: ` / ${totalTitles.value}（另有商店 7 + 图鉴兑换 2）` },
       { label: '赛季套装收集', value: seasonClaimed.value, sub: ' 档' },

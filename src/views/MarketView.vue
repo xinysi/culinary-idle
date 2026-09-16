@@ -18,6 +18,7 @@ const player = usePlayerStore()
 // （`player.marketEventsNow()`），否则页面显示的时段与真实加成会不一致。
 const EVENTS = computed(() => player.marketEventsNow())
 const extraHours = computed(() => player.nightMarketExtraHours())
+const nightMult = computed(() => player.nightMarketMult())
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 // 每秒刷新「当前命中」，跨过整点/午夜时自动换档（切页即卸载，定时器随组件清理）
@@ -98,10 +99,10 @@ function remainText(ev) {
           每天 <b>{{ EVENTS.length }}</b> 个限时窗口按<b>本地时段</b>轮换（部分只在固定星期开放）。
           命中期间给的是<b>基础乘区</b>，多个窗口重叠时<b>相乘叠加</b>；与天气、节庆、奥义等其它乘区也相乘。
           <template v-if="extraHours > 0">
-            · 副业·蜡烛已把<b>夜市狂潮</b>延长 <b>+{{ extraHours }} 小时</b>（上限 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h，去左侧「副业 → 蜡烛制作」继续做）。
+            · 副业·蜡烛已把<b>夜市狂潮</b>延长 <b>+{{ extraHours }} 小时</b>、餐厅倍率提到 <b>×{{ nightMult.toFixed(2) }}</b>（时长上限 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h；倍率来自量产阶梯，去左侧「副业 → 蜡烛制作」继续做）。
           </template>
           <template v-else>
-            · 副业·蜡烛每做 1 件可把<b>夜市狂潮</b>延后 1 小时（最多 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h），去左侧「副业 → 蜡烛制作」。
+            · 副业·蜡烛每做 1 件可把<b>夜市狂潮</b>延后 1 小时（最多 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h），量产阶梯每档再 +0.03 倍；去左侧「副业 → 蜡烛制作」。
           </template>
         </p>
       </div>

@@ -12,6 +12,8 @@ const unlocked = computed(() => player.michelinUnlocked())
 const review = computed(() => player.michelinScore())
 // 副业·刺绣（v2.10.0）：招牌绣屏是第七维（权重 1，分数即加分值）；0 时不进 parts
 const signScore = computed(() => player.michelinSignScore())
+// 阶梯那一段（作品 + 阶梯 = signScore）——页头分开显示，玩家能看出两条来源
+const signLadder = computed(() => player.sidelineLadderTotal('michelinScore'))
 const state = computed(() => player.michelin ?? { score: 0, stars: 0, best: 0 })
 const current = computed(() => starFromScore(review.value.score))
 const next = computed(() => nextStar(current.value.star))
@@ -49,7 +51,7 @@ const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', l
       <div>
         <h2>⭐ 米其林评级</h2>
         <p class="dim">
-          评审综合菜单成色 / 店面装潢 / 出餐口碑 / 评论家好评 / 常客好感 / 连锁规模六项<template v-if="signScore > 0">，外加副业·刺绣的<b>招牌绣屏</b>加分（+{{ signScore }} 分）</template><template v-else>；副业·刺绣做成的绣品还能作为<b>第七维「招牌绣屏」</b>额外加分</template>；
+          评审综合菜单成色 / 店面装潢 / 出餐口碑 / 评论家好评 / 常客好感 / 连锁规模六项<template v-if="signScore > 0">，外加副业·刺绣的<b>招牌绣屏</b>加分（+{{ signScore }} 分：作品 +{{ signScore - signLadder }} + 阶梯 +{{ signLadder }}）</template><template v-else>；副业·刺绣做成的绣品还能作为<b>第七维「招牌绣屏」</b>额外加分</template>；
           <b>每个自然日自动评审一次</b>，分数达标升星、滑落掉星。
         </p>
       </div>

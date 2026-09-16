@@ -8,7 +8,7 @@ import { equipSetOf } from './equipSets.js'
 import { CELLAR_CATEGORIES } from './cellar.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { CRAFTED_DECOR } from './woodworking.js'
-import { sidelineWorkOf, SIDELINE_AXES } from './sidelineWorks.js'
+import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDERS } from './sidelineWorks.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -110,17 +110,21 @@ export function itemDetailLines(id) {
   // 木器（v2.9.0，副业·木工独占产物）：唯一出口是做成手工装潢
   const woodDecor = CRAFTED_DECOR.find((d) => d.craftedFrom?.itemId === id)
   if (woodDecor) {
-    lines.push(['类型', '木器（副业·木工制作，采集与商店都拿不到）'])
+    const wLad = SIDELINE_LADDERS.find((l) => l.skill === 'woodworking')
+    lines.push(['副业产物', '木器（副业·木工制作，采集与商店都拿不到）'])
     lines.push(['用途', `做成手工装潢「${woodDecor.name}」：餐厅收入 +${woodDecor.effect}%（在「餐厅装潢」页操作，不花金币）`])
-    lines.push(['多余收益', `价值等于所用木材的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）`])
+    lines.push(['量产阶梯', `多余的可投入「木工量产阶梯」换永久加成：按档位计点（Lv1 的 1 点、Lv91 的 10 点）、每档 ${wLad.unit(wLad.perTier)}`])
+    lines.push(['多余收益', '价值等于所用木材的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
   // 副业四支的产物（v2.10.0）：每件对应一条经营侧乘区，出口唯一（见 sidelineWorks.js）
   const work = sidelineWorkOf(id)
   if (work) {
     const ax = SIDELINE_AXES[work.axis]
-    lines.push(['类型', `${work.catLabel}（副业·${work.skillName}制作，采集与商店都拿不到）`])
+    const lad = SIDELINE_LADDERS.find((l) => l.skill === work.skill)
+    lines.push(['副业产物', `${work.catLabel}（副业·${work.skillName}，采集与商店都拿不到）`])
     lines.push(['用途', `做成${work.skillName}作品：${ax.label} ${ax.amountLabel(work.amount)}（在「${work.skillName}」技能页下方操作，不花金币）`])
+    lines.push(['量产阶梯', `多余的可投入「${work.skillName}量产阶梯」换永久加成：按档位计点（Lv1 的 1 点、Lv91 的 10 点）、每档 ${lad.unit(lad.perTier)}`])
     lines.push(['多余收益', '价值等于配方材料的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }

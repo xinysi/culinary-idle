@@ -113,7 +113,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
         <h2>🍶 地窖陈酿</h2>
         <p class="dim">
           把<b>酒类 / 腌制品</b>放入地窖，按档位成熟后出窖换金币（价值 × 倍率，离线照常计时）；
-          未成熟也可无损取回。单槽上限 {{ CELLAR_MAX_QTY }} 件、价值上限 {{ player.cellarSlotValueMax().toLocaleString() }}（副业·陶艺的陶器可把它从 16,000 抬到 31,000）。
+          未成熟也可无损取回。单槽上限 {{ CELLAR_MAX_QTY }} 件、价值上限 {{ player.cellarSlotValueMax().toLocaleString() }}（副业·陶艺的陶器可把它从 16,000 抬到 40,000：作品每件 +1,500、量产阶梯每档 +750）。
         </p>
       </div>
       <button v-if="unlocked && expandCost != null" class="btn btn-sm" @click="expand">
