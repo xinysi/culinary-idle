@@ -30,3 +30,34 @@ export class CandleMakingSkill extends ProductionSkill {
     super('candles', player, raiseRecipeLevels(SIDELINE_RECIPES.candles))
   }
 }
+
+// ── v2.12.0 第一批：五支「干净轴」副业（同样只是构造函数，配方来自 sidelineWorks.js）──
+export class FletchingSkill extends ProductionSkill {
+  constructor(player) {
+    super('fletching', player, raiseRecipeLevels(SIDELINE_RECIPES.fletching))
+  }
+}
+
+export class NetmakingSkill extends ProductionSkill {
+  constructor(player) {
+    super('netmaking', player, raiseRecipeLevels(SIDELINE_RECIPES.netmaking))
+  }
+}
+
+export class IncenseSkill extends ProductionSkill {
+  constructor(player) {
+    super('incense', player, raiseRecipeLevels(SIDELINE_RECIPES.incense))
+  }
+}
+
+export class FestivalGoodsSkill extends ProductionSkill {
+  constructor(player) {
+    super('festivalGoods', player, raiseRecipeLevels(SIDELINE_RECIPES.festivalGoods))
+  }
+}
+
+export class JadecraftSkill extends ProductionSkill {
+  constructor(player) {
+    super('jadecraft', player, raiseRecipeLevels(SIDELINE_RECIPES.jadecraft))
+  }
+}

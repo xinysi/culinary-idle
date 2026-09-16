@@ -388,6 +388,9 @@ export const usePlayerStore = defineStore('player', {
       for (const [slot, rec] of Object.entries(s.gemSockets ?? {})) {
         if (!rec?.gems?.length || s.equipment[slot] !== rec.itemId) continue
         const gb = gemsBonus(rec.gems)
+        // 副业·玉作（v2.12.0）：宝石镶嵌效果 ×(1 + pct/100)——**唯一出口**，只在这里乘
+        const gemMul = 1 + (this.sidelineEffectTotal?.('gemPct') ?? 0) / 100
+        if (gemMul !== 1) for (const k of Object.keys(gb)) gb[k] = gb[k] * gemMul
         for (const [k, v] of Object.entries(gb)) sum[k] = (sum[k] ?? 0) + v
       }
       return sum
@@ -1942,7 +1945,7 @@ export const usePlayerStore = defineStore('player', {
       if (this.orders.list.length >= MAX_ORDERS) return
       // 首次进入/旧档：设定下一个到访时刻（避免 nextAt=0 → 进游戏 1 秒内就来单）
       if (this.orders.nextAt <= 0) {
-        this.orders.nextAt = now + nextOrderDelay()
+        this.orders.nextAt = now + nextOrderDelay(this.sidelineEffectTotal?.('orderSpeedPct') ?? 0)
         return
       }
       this._orderAccum = (this._orderAccum ?? 0) + deltaMs
@@ -1954,7 +1957,7 @@ export const usePlayerStore = defineStore('player', {
         this.orders.list.push(order)
         try { useUiStore().pushLog(`📋 食客「${order.name}」到访：需要 ${getItem(order.itemId)?.name}×${order.qty}，赏金 ${order.reward} 金`, 'info') } catch (e) { /* ignore */ }
       }
-      this.orders.nextAt = now + nextOrderDelay()
+      this.orders.nextAt = now + nextOrderDelay(this.sidelineEffectTotal?.('orderSpeedPct') ?? 0)
     },
 
     /** 交付食客订单：消耗成品料理 → 金币 + 好感经验 */
@@ -5381,8 +5384,18 @@ export const usePlayerStore = defineStore('player', {
       }
     },
     /** 今日节庆聚合加成（2026-09-10）：纯日期计算，无存档状态 */
+    /** 今日节庆聚合加成（2026-09-10）：纯日期计算，无存档状态
+     *  副业·年货（v2.12.0）：放大 boost 中 **>1 的部分**（`1 + (v−1)×(1+pct/100)`）——
+   *  这样只放大节庆的增益，**绝不放大任何 <1 的减益**（将来若加减益节庆也不会被放大）。 */
     festivalBoost(now = new Date()) {
-      return festivalBoost(now)
+      const base = festivalBoost(now)
+      const total = (this.sidelineEffectTotal?.('festivalPct') ?? 0) / 100
+      if (!total) return base
+      const out = { ...base }
+      for (const [k, v] of Object.entries(out)) {
+        if (typeof v === 'number' && v > 1) out[k] = 1 + (v - 1) * (1 + total)
+      }
+      return out
     },
     /** 节庆预告（含今天，默认 10 天） */
     festivalUpcoming(days = 10) {

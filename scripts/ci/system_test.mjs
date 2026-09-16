@@ -115,6 +115,7 @@ import {
   nightMarketEndHour, NIGHT_MARKET_MAX_EXTRA_HOURS, NIGHT_MARKET_BASE_MULT, NIGHT_MARKET_MAX_EXTRA_MULT,
 } from '../../src/game/data/marketEvents.js'
 import { MICHELIN_FACTORS } from '../../src/game/data/michelin.js'
+import { nextOrderDelay } from '../../src/game/data/restaurantOrders.js'
 import { SKILL_CN } from '../../src/game/data/activeEffects.js'
 
 /** 木器图片是否存在（图鉴的 @error 会静默隐藏破图，只有查文件才能发现缺图） */
@@ -4595,7 +4596,7 @@ console.log('== C29. 新技能适配一致性 ==')
   check('适配', `轶事覆盖全部 7 条采集线（各 200 条，含采矿与伐木）`, gatherSubs.every((k) => (subs[k] ?? 0) === 200), gatherSubs.map((k) => `${k}:${subs[k] ?? 0}`).join(' '))
 
   // ⑦ 技能总量与采集总等级口径（v2.9.0：+副业·木工 → 23 个技能 / 5 大类）
-  check('适配', '技能总数为 27、5 大类、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 27 && SKILL_CATEGORIES.length === 5 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
+  check('适配', '技能总数为 32、5 大类、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 32 && SKILL_CATEGORIES.length === 5 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
 }
 
 
@@ -4918,8 +4919,8 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     if (!(inst?.recipes?.length > 0)) sBad.push(`${s.id}: 无配方`)
   }
   check('副业四支', `四个技能都已注册（production / sideline / 有图标 / 有配方）`, sBad.length === 0, sBad.join('; '))
-  check('副业四支', `副业共 5 支（木工 + 四支），SKILL_DEFS 里 sideline 计数一致`,
-    Object.values(SKILL_DEFS).filter((d) => d.category === 'sideline').length === 5 && SIDELINE_SKILL_IDS.length === 4)
+  check('副业四支', `副业共 10 支（木工 + 四支 + v2.12.0 五支），SKILL_DEFS 里 sideline 计数一致`,
+    Object.values(SKILL_DEFS).filter((d) => d.category === 'sideline').length === 10 && SIDELINE_SKILL_IDS.length === 9)
 
   // ② 物品与作品：38 件、id 唯一、类别在「副业独占清单」内、每件都并入 ITEMS、每件都有作品定义
   const iBad = []
@@ -4929,8 +4930,8 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     if (!sidelineWorkOf(it.id)) iBad.push(`${it.id}: 缺作品定义`)
   }
   check('副业四支', `产物共 ${SIDELINE_ITEMS.length} 件（陶艺10/编织10/刺绣10/蜡烛8）、id 唯一、类别合法、均有作品定义`,
-    SIDELINE_ITEMS.length === 38 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 38 && iBad.length === 0, iBad.slice(0, 4).join('; '))
-  check('副业四支', '38 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
+    SIDELINE_ITEMS.length === 88 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 88 && iBad.length === 0, iBad.slice(0, 4).join('; '))
+  check('副业四支', '88 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
     SIDELINE_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
   // ②b 产物价值 = 配方材料价值合计（v2.10.1：让「多做出来的」半价卖回时不亏）
   applyValueBalance()
@@ -4987,7 +4988,7 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     if (EXCHANGE_POOL_CATEGORIES.includes(it.category)) leak.push(`交易所:${it.name}`)
     if (CARAVAN_CARGO_TYPES.includes(it.category) && !CARAVAN_EXCLUDE_CATEGORIES.includes(it.category)) leak.push(`商队:${it.name}`)
   }
-  check('副业四支', '38 件产物不进抽卡池/礼包池/交易所/商队，也不被自动出售',
+  check('副业四支', '88 件产物不进抽卡池/礼包池/交易所/商队，也不被自动出售',
     leak.length === 0 && SIDELINE_ITEM_CATEGORIES.every((c) => SELL_EXCLUDED_CATEGORIES.includes(c)), leak.slice(0, 4).join(' '))
 
   // ⑥ 两条设计决策：不吃食灵经验、不进山海食经
@@ -5044,7 +5045,7 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     full.feedSideline(l.skill)
   }
   check('副业四支', `满配合计（作品+阶梯）：地窖上限 ${full.cellarSlotValueMax()}（硬顶 ${CELLAR_SLOT_VALUE_MAX}）· 小费 +${full.tipBonusPct()}% · 招牌 +${full.michelinSignScore()} 分 · 夜市 ×${full.nightMarketMult().toFixed(2)}+${full.nightMarketExtraHours()}h`,
-    full.sidelineWorks.length === 38 && full.cellarSlotValueMax() === CELLAR_SLOT_VALUE_MAX
+    full.sidelineWorks.length === 88 && full.cellarSlotValueMax() === CELLAR_SLOT_VALUE_MAX
     && full.tipBonusPct() === SIDELINE_AXIS_TOTALS.tipPct.total + full.sidelineLadderTotal('tipPct')
     && full.michelinSignScore() === SIDELINE_AXIS_TOTALS.michelinScore.total + full.sidelineLadderTotal('michelinScore')
     && full.nightMarketExtraHours() === NIGHT_MARKET_MAX_EXTRA_HOURS
@@ -5106,8 +5107,8 @@ console.log('══ C34. 副业量产阶梯 ══')
   // ① 阶梯表本身：12 档、严格递增、末档 = 设计值、五支各一条（含木工）
   check('量产阶梯', `阶梯 ${LADDER_TIERS.length} 档、严格递增、末档 ${LADDER_TIERS.at(-1)}`,
     LADDER_TIERS.length === 12 && LADDER_TIERS.every((v, i) => i === 0 || v > LADDER_TIERS[i - 1]) && LADDER_TIERS.at(-1) === 250000)
-  check('量产阶梯', '五支各一条阶梯（含木工），档位增量均为正且轴合法',
-    SIDELINE_LADDERS.length === 5 && SIDELINE_LADDERS.every((l) => l.perTier > 0 && !!LADDER_AXIS_LABEL[l.axis])
+  check('量产阶梯', '十支各一条阶梯（含木工），档位增量均为正且轴合法',
+    SIDELINE_LADDERS.length === 10 && SIDELINE_LADDERS.every((l) => l.perTier > 0 && !!LADDER_AXIS_LABEL[l.axis])
     && SIDELINE_LADDER_SKILL_IDS.includes('woodworking') && SIDELINE_LADDERS.every((l) => !!SKILL_DEFS[l.skill]))
 
   // ② 计点：按档位加权（Lv1 = 1、Lv91 = 10），五支（含木工）的产物都登记了点数与归属
@@ -5123,7 +5124,7 @@ console.log('══ C34. 副业量产阶梯 ══')
       if (sidelineSkillOfItem(p.itemId)?.skill !== l.skill) prodBad.push(`${p.itemId} 反查归属错`)
     }
   }
-  check('量产阶梯', `五支共 ${Object.values(SIDELINE_PRODUCTS).flat().length} 件产物都有点数与归属（含木工）`, prodBad.length === 0, prodBad.slice(0, 4).join('; '))
+  check('量产阶梯', `十支共 ${Object.values(SIDELINE_PRODUCTS).flat().length} 件产物都有点数与归属（含木工）`, prodBad.length === 0, prodBad.slice(0, 4).join('; '))
 
   // ③ 档位函数：边界与封顶
   check('量产阶梯', '档位函数：0 点 = 0 档、10 点 = 1 档、满档 = 12、超限值不越界',
@@ -5239,10 +5240,10 @@ console.log('══ C34. 副业量产阶梯 ══')
   // 副业页**平铺**（2026-09-17 用户要求「副业的卡片去掉等级段分类和折叠，因为物品不多」）：
   // 产物只有 8~10 件，按等级段切十段 + 默认全部折叠 = 每次进来都看不到东西。
   const prodSrc = fs.readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
-  check('量产阶梯', '副业制作页走平铺（不分等级段、不折叠、隐藏快速跳转），且五支都在平铺名单里',
+  check('量产阶梯', '副业制作页走平铺（不分等级段、不折叠、隐藏快速跳转），且十支都在平铺名单里',
     prodSrc.includes('flatMode') && prodSrc.includes('SIDELINE_LADDER_SKILL_IDS')
     && prodSrc.includes('v-if="!flatMode"') && prodSrc.includes('flatMode || isOpen(')
-    && SIDELINE_LADDER_SKILL_IDS.length === 5)
+    && SIDELINE_LADDER_SKILL_IDS.length === 10)
 
   // ⑪ **比值守卫**（把「满加成后会不会平衡崩坏」变成可执行断言）：
   //    对每条轴算「满配/空配」的放大，超阈值即 FAIL —— 以后谁想把某一支偷偷调高一档，CI 直接拦住。
@@ -5271,6 +5272,124 @@ console.log('══ C34. 副业量产阶梯 ══')
   ratioRow.push(`招牌占3★ ${(signPct * 100).toFixed(0)}%`)
   if (!(signPct <= 0.4)) ratioBad.push(`招牌分占 3★ 门槛 ${(signPct * 100).toFixed(0)}% > 40%`)
   check('量产阶梯', `比值守卫：五条轴的满配放大都在阈值内（${ratioRow.join(' · ')}）`, ratioBad.length === 0, ratioBad.join('; '))
+}
+
+// ── C35. 副业第二批「干净轴」五支（v2.12.0：制箭/制网/香道/年货/玉作）──
+console.log('══ C35. 副业干净轴五支 ══')
+{
+  const NEW5 = ['fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft']
+  const AXIS_OF = { fletching: 'huntSavePct', netmaking: 'rareFishPP', incense: 'orderSpeedPct', festivalGoods: 'festivalPct', jadecraft: 'gemPct' }
+
+  // ① 五支都已注册、各有 10 件产物与一条阶梯、类别在独占清单内
+  const bad = []
+  for (const id of NEW5) {
+    const inst = getSkillInstance(id)
+    const def = SKILL_DEFS[id]
+    if (inst?.type !== 'production') bad.push(`${id}: 实例非 production`)
+    if (!def || def.category !== 'sideline') bad.push(`${id}: 不在 sideline`)
+    if (!def?.icon || def.icon === '•') bad.push(`${id}: 缺图标`)
+    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 10) bad.push(`${id}: 产物数 ${SIDELINE_PRODUCTS[id]?.length}`)
+    if (!SIDELINE_LADDERS.some((l) => l.skill === id && l.axis === AXIS_OF[id])) bad.push(`${id}: 阶梯/轴不对`)
+    if (!SIDELINE_AXES[AXIS_OF[id]]) bad.push(`${id}: 轴 ${AXIS_OF[id]} 未定义`)
+  }
+  check('干净轴五支', '五支都已注册（production / sideline / 图标 / 10 件产物 / 各一条阶梯）', bad.length === 0, bad.join('; '))
+  check('干净轴五支', '五支的 50 件产物都有图片，且五个新类别都在「副业独占清单」里（否则会漏进抽卡/礼包池）',
+    NEW5.every((id) => SIDELINE_PRODUCTS[id].every((p) => imgExists(p.itemId)))
+    && ['huntingGear', 'fishingGear', 'incense', 'gift', 'jade'].every((c) => SIDELINE_ITEM_CATEGORIES.includes(c) && SELL_EXCLUDED_CATEGORIES.includes(c)))
+
+  // ② 🔑 每条轴都真的接上了：满配后**实际读取点**必须变化
+  const rich5 = freshPlayer()
+  rich5.restaurant.menu = ['roastPotato']
+  for (const id of NEW5) {
+    for (const p of SIDELINE_PRODUCTS[id]) { rich5.inventory[p.itemId] = 1; rich5.craftWork(p.itemId) }
+    const top = SIDELINE_PRODUCTS[id].slice(-1)[0]
+    rich5.inventory[top.itemId] = Math.ceil(LADDER_TIERS.at(-1) / top.points)
+    rich5.feedSideline(id)
+  }
+  const hunt = getSkillInstance('hunting')
+  const fish = getSkillInstance('fishing')
+  check('干净轴五支', `制箭已接上狩猎（省箭 ${(hunt.ammoSaveChance * 100).toFixed(0)}%，设计 ≈38%）`, hunt.ammoSaveChance > 0.36 && hunt.ammoSaveChance <= 0.9)
+  check('干净轴五支', `制网已接上垂钓（稀有率 ${(fish.rareChance * 100).toFixed(2)}%，设计 ≈0.94%）`, fish.rareChance > 0.009 && fish.rareChance <= 0.05)
+  check('干净轴五支', `香道已接上订单到访（提速 +${rich5.sidelineEffectTotal('orderSpeedPct')}%，设计 ≈27%）`, rich5.sidelineEffectTotal('orderSpeedPct') > 25)
+  check('干净轴五支', `年货已接上节庆（放大 +${rich5.sidelineEffectTotal('festivalPct')}%，设计 ≈19.6%）`, rich5.sidelineEffectTotal('festivalPct') > 19)
+  check('干净轴五支', `玉作已接上宝石（+${rich5.sidelineEffectTotal('gemPct')}%，设计 ≈33%）`, rich5.sidelineEffectTotal('gemPct') > 32)
+
+  // ③ 行为断言：不只是「数值存在」，要真的改变行为
+  check('干净轴五支', '省箭真的放宽了离线动作上限（同样 100 个陷阱 → 期望动作数更多，且扣箭不超过持有）', (() => {
+    // ⚠️ 狩猎首个目标要 Lv8 ⇒ 必须给足等级，否则 computeOffline 直接返回 null（新档 Lv1 测不出来）
+    // ⚠️ 新档没有选目标 ⇒ currentTarget 为 null ⇒ computeOffline 直接返回 null（设计如此：先选目标才有产出）
+    const a = freshPlayer({ hunting: 50 }); a.inventory.trap = 100; createSkillInstances(a)
+    a.setSkillTarget('hunting', getSkillInstance('hunting').targets[0].itemId)
+    const bare = getSkillInstance('hunting').computeOffline(3600_000, 0.8)
+    const b2 = freshPlayer({ hunting: 50 }); b2.inventory.trap = 100
+    for (const p of SIDELINE_PRODUCTS.fletching) { b2.inventory[p.itemId] = 1; b2.craftWork(p.itemId) }
+    createSkillInstances(b2)
+    b2.setSkillTarget('hunting', getSkillInstance('hunting').targets[0].itemId)
+    const withSave = getSkillInstance('hunting').computeOffline(3600_000, 0.8)
+    return !!bare && !!withSave && withSave.actions > bare.actions && withSave.consumed.trap <= 100
+  })())
+  check('干净轴五支', '年货只放大节庆的**增益**、对任何 ≤1 的值一分不动（不会被减益反向放大）', (() => {
+    // ⚠️ 不能用 freshPlayer()：它把 festivalBoost **打桩成「无节庆」**（返回全 1），会把本断言测成恒真/恒假
+    setActivePinia(createPinia())
+    const p2 = usePlayerStore()
+    p2.newGame()
+    p2.stats.sidelinePoints = { ...p2.stats.sidelinePoints, festivalGoods: LADDER_TIERS.at(-1) }
+    const d = new Date(2026, 0, 1) // 01-01 开市日 ×1.5
+    const raw = festivalBoost(d)
+    const boosted = p2.festivalBoost(d)
+    const gains = Object.keys(raw).filter((k) => typeof raw[k] === 'number' && raw[k] > 1)
+    return gains.length > 0 && gains.every((k) => boosted[k] > raw[k])
+      && Object.keys(raw).every((k) => !(typeof raw[k] === 'number' && raw[k] <= 1) || boosted[k] === raw[k])
+  })())
+  check('干净轴五支', '订单到访间隔真的缩短（提速 27% → 均值缩短 ≥20%；单次抽样是随机的，故比均值）', (() => {
+    let a = 0
+    let b = 0
+    for (let i = 0; i < 300; i++) { a += nextOrderDelay(0); b += nextOrderDelay(27) }
+    return b / a < 0.8
+  })())
+
+  // ④ 五支都不读「当前技能等级」（与 C34 同口径的行为断言）
+  const snap = (pl) => NEW5.map((id) => pl.sidelineEffectTotal(AXIS_OF[id])).join(',') + '|' + getSkillInstance('hunting').ammoSaveChance
+  const before5 = snap(rich5)
+  for (const id of NEW5) rich5.setSkillState(id, { level: 1, exp: 0 })
+  check('干净轴五支', '🔑 五支等级全改成 1 后，五条轴的派生值与省箭率一分不变（绝不读「当前技能等级」）',
+    snap(rich5) === before5, `${before5} → ${snap(rich5)}`)
+
+  // ⑤ 比值守卫（与 C34 同口径，五条新轴）
+  const rows = []
+  const badR = []
+  for (const [name, got, expect, cap, unit] of [
+    ['省箭%', rich5.sidelineEffectTotal('huntSavePct'), 38, 1.15, '%'],
+    ['稀有率倍数', fish.rareChance / 0.005, 1.88, 1.15, '×'],
+    ['订单提速%', rich5.sidelineEffectTotal('orderSpeedPct'), 27, 1.2, '%'],
+    ['节庆放大%', rich5.sidelineEffectTotal('festivalPct'), 19.6, 1.2, '%'],
+    ['宝石效果%', rich5.sidelineEffectTotal('gemPct'), 33, 1.3, '%'],
+  ]) {
+    rows.push(`${name} ${got.toFixed(2)}${unit}`)
+    if (!(got <= expect * cap + 1e-6) || !(got >= expect * 0.9)) badR.push(`${name}=${got}（设计≈${expect}，上限 ${cap}×）`)
+  }
+  check('干净轴五支', `比值守卫：五条新轴的满配放大都在阈值内（${rows.join(' · ')}）`, badR.length === 0, badR.join('; '))
+
+  // ⑥ 存档往返 + 旧档回退
+  const save5 = JSON.stringify(rich5.serialize())
+  const back5 = freshPlayer()
+  back5.applySave(JSON.parse(save5))
+  check('干净轴五支', '五支的累计点随存档往返无损，且旧档回退 0',
+    NEW5.every((id) => back5.sidelinePointsOf(id) === rich5.sidelinePointsOf(id))
+    && (() => { const o = freshPlayer(); o.applySave({ gold: 1 }); return NEW5.every((id) => o.sidelinePointsOf(id) === 0) })())
+
+  // ⑦ 内容同步：图鉴三查 + 效果总览 + 任务
+  const g5 = []
+  for (const id of NEW5) for (const p of SIDELINE_PRODUCTS[id]) {
+    if (!itemUses(p.itemId).some((u) => u.kind === 'ladder')) g5.push(`${p.itemId}: 缺阶梯用途`)
+    if (!itemSources(p.itemId).some((s) => s.includes(SKILL_DEFS[id].name))) g5.push(`${p.itemId}: 来源缺技能名`)
+  }
+  check('干净轴五支', '图鉴三查：50 件产物的「可用于制作（阶梯）」与「获取来源（技能名）」都齐备', g5.length === 0, g5.slice(0, 4).join('; '))
+  check('干净轴五支', '效果总览登记了五条新行（一个都不能漏）',
+    NEW5.every((id) => EFFECT_ROWS.some((r) => (r.view ?? '').endsWith(id))))
+  check('干净轴五支', '五支在公会与每日/周常任务里都有条目',
+    NEW5.every((id) => GUILDS.some((g) => (g.tasks ?? []).some((t) => t.param === id)))
+    && NEW5.every((id) => DAILY_POOL.some((t) => t.param === id) || WEEKLY_POOL.some((t) => t.param === id)))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

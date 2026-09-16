@@ -20,6 +20,9 @@ export const DAILY_POOL = [
   // v2.10.0：副业四支（同样是 craft + 技能 id）
   { name: '🏺 陶窑日', kind: 'craft', param: 'pottery', qty: 12, gold: 240 },
   { name: '🧶 织机日', kind: 'craft', param: 'weaving', qty: 12, gold: 240 },
+  // v2.12.0 第一批（每日池 +2，其余三支走公会/周常）
+  { name: '🏹 制箭房', kind: 'craft', param: 'fletching', qty: 12, gold: 240 },
+  { name: '🧴 制香日', kind: 'craft', param: 'incense', qty: 12, gold: 240 },
   { name: '🧪 炼金大师', kind: 'alchemy', param: 'any', qty: 6, gold: 280 },
   { name: '🕶️ 快手收成', kind: 'gather', param: 'foraging', qty: 40, gold: 200 },
   { name: '🍖 狩猎时刻', kind: 'gather', param: 'hunting', qty: 25, gold: 220 },
@@ -42,6 +45,9 @@ export const WEEKLY_POOL = [
   { name: '🏺 陶艺周', kind: 'craft', param: 'pottery', qty: 100, gold: 1600, items: { ironOre: 20 } },
   { name: '🪡 刺绣周', kind: 'craft', param: 'embroidery', qty: 100, gold: 1600, items: { banana: 20 } },
   { name: '🕯️ 蜡烛周', kind: 'craft', param: 'candles', qty: 80, gold: 1600, items: { pineWood: 20 } },
+  { name: '🧧 年货周', kind: 'craft', param: 'festivalGoods', qty: 100, gold: 1600, items: { salt: 30 } },
+  { name: '🔮 玉作周', kind: 'craft', param: 'jadecraft', qty: 100, gold: 1600, items: { carp: 20 } },
+  { name: '🎣 网绳周', kind: 'craft', param: 'netmaking', qty: 100, gold: 1600, items: { seaweed: 20 } },
 ]
 
 // 每日全部完成礼包（一次性）

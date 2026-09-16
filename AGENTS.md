@@ -242,6 +242,11 @@
 | 🧶 编织 | 织物 | `restaurantHourlyIncome` 里的**小费因子** | +2% | +20% |
 | 🪡 刺绣 | 绣品 | `michelinScore()` 的**第七维「招牌绣屏」**（权重 1） | +12 分 | +120 分 |
 | 🕯️ 蜡烛制作 | 蜡烛 | 夜市狂潮**窗口时长**（`marketEvents.js`） | +1h | 16:00→次日 06:00 |
+| 🏹 制箭（v2.12.0） | 猎具 | **狩猎省箭**（`HuntingSkill.ammoSaveChance`：在线概率不消耗陷阱 + **离线动作上限也要放宽**） | +2% | +38% |
+| 🎣 制网（v2.12.0） | 渔具 | **稀有鱼概率**（`FishingSkill.rareChance`，基础 0.5%；在线与离线同源） | +0.02pp | 0.94% |
+| 🧴 香道（v2.12.0） | 香品 | **订单到访提速**（`nextOrderDelay(speedPct)`，**两个调用点都要传**） | +1.5% | 间隔 −27% |
+| 🧧 年货（v2.12.0） | 节礼 | **节庆加成放大**（`player.festivalBoost` 包一层，**只放大 >1 的部分**） | +1% | +19.6% |
+| 🔮 玉作（v2.12.0） | 玉器 | **宝石镶嵌效果**（`gemsBonus` 的合计上乘一层） | +1.5% | +33% |
 
 定义与口径全在 **`src/game/data/sidelineWorks.js`**（木工除外，它在 `woodworking.js`）：四支的 `rows` 每行 = `[等级, 物品名, 辅料 id, 木材数量, 辅料数量]`，
 木材由 `timberOfLevel()` 自动取该档、产物/配方/作品表全由它展开。**加一支新副业 = 往 `DEFS` 加一段 + 在 `SIDELINE_AXES` 加一条轴**，其余（物品/配方/作品/面板）自动生成。
@@ -304,6 +309,11 @@
   1. **作品层对木工也要有**：木工的产品走 `restaurant.decor`（动作是 `craftDecor`，不是 `craftWork`），首版只给另外四支渲染作品层 → 面板上只剩一条**悬空的分隔虚线**。现 `SidelineWorkPanel` 用 `isWoodworking` 分支统一成同一套 rows，且虚线只在上面真有作品层时才画（`.sw-ladder--sep`）。
   2. **副业页走平铺、不分段不折叠**：制作页的默认行为是「按 5 级一段 + **全部折叠**」，而副业只有 8~10 件 ⇒ 切成 10 段且全折叠 = 每次进来看不到任何卡片。现 `ProductionView` 的 `flatMode`（由 `SIDELINE_LADDER_SKILL_IDS.includes(id)` 判定）走平铺；标题也按产物改称「陶器配方/木器配方/…」（原先一律「食谱」）。**制作类（烹饪 294 / 锻造 365）保持原样**。
   ⚠️ **同一组件在制作类技能间会被复用** ⇒ 折叠状态要在 `watch(instance.id)` 里重置，否则「从副业切回烹饪会所有段都展开」。新增同类「稀疏 vs 密集」差异时照这套走：**用数据量决定展示形态，而不是到处写 if**。
+
+
+⚠️ **新轴的接线位置（每条只能有一个写入点）**：狩猎省箭在 `HuntingSkill`（**在线扣箭 + 离线动作上限两处都要改**，否则在线/离线不一致）；稀有鱼在 `FishingSkill.rareChance`；订单提速必须把 `speedPct` 传给**两个** `nextOrderDelay()` 调用点；节庆在 `player.festivalBoost` 包一层（只放大 >1）；宝石在 `gemsBonus` 结果上乘。
+⚠️ 所有新轴都要**夹取上限**（省箭 ≤90%、稀有率 ≤5%、订单提速 ≤40%）——防极端存档值把某条轴拉到崩坏点。
+⚠️ **新类别必须加进 `SIDELINE_ITEM_CATEGORIES`**（v2.12.0 实测漏了 5 个 → 新产物漏进抽卡/礼包池，被 C35 抓出）。
 
 ### 作品机制（v2.10.0）
 - `player.craftWork(itemId)` → `'ok' | 'owned' | 'denied' | 'bad'`（消耗 **1 件产物**，不花金币）；登记进新存档字段 **`sidelineWorks: string[]`**（一件一次、幂等）。
