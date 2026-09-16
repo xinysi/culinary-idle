@@ -2,24 +2,30 @@
 #
 # 用途：把 AI 生成的 2048x2048「无背景」PNG 处理成游戏用的 64x64 RGBA 物品图。
 #
-# ⚠️ 源图四个坑（两批实测都一样，别再踩）：
+# ⚠️ 源图五个坑（三批实测都一样，别再踩）：
 #   1. 名字写着「无背景」，实际是 **mode=RGB（没有 alpha 通道）**，背景是四边连片的近白 ⇒ 必须自己去背。
-#   2. **右下角有一处浅灰水印**（min(R,G,B) 约 211~238），四个 ~50x50 的小字块。
-#   3. **物体下方有一片很淡的灰色投影**（min 约 200~240），会一直漫到物体之外很远。
-#      ⚠️ ②③ 都比「近白」暗，所以**不能被当成背景**；而「放宽近白阈值」是错的做法 ——
-#      浅色主体（木长桌、木餐盘的受光面）会跟着一起被吃掉。
-#      ⇒ 正解是**按亮度找主体核心，再取最大连通域**：主体核心的 min(R,G,B) 中位只有 17~62（实测 10 张），
-#        而水印与投影都在 200 以上，一刀切干净。阈值在 150~200 之间面积几乎不变（实测），故取 185 很稳。
-#   4. **物体外圈有 1~2px 抗锯齿白边**：若直接最近邻降采样（2048→64 是 32 倍），
-#      白边会被零星采成「白点」散在物体周围（用户实测报过「图鉴里还能看到白色的东西」）。
+#   2. **右下角有一处浅灰水印**（min(R,G,B) 约 211~238，四个 ~50x50 的小字块）。
+#   3. **物体下方有一片很淡的灰色投影**，会漫到物体之外很远（实测有一块 **44546px** 的游离残片）。
+#   4. **物体外圈有 1~2px 抗锯齿白边**：2048→64 是 **32 倍**降采样，用**最近邻**会把白边零星采成
+#      「白点」散在物体周围——**用户三批都报过这个**（「图鉴里还能看到白色的东西」）。
+#   5. ⚠️ **浅色主体**（浅蓝的叠布、粉白的香薰烛）本体比「近白阈值」之外的任何**亮度**判据都亮：
+#      早先用「亮度核心 min<=185 取最大连通域」时，这两张的主体被漏掉、只留下一条**残片**
+#      （v2.10.0 实测：棉麻叠布只剩 1.6%、香薰浮烛只剩 5.9%）。**亮度单独分不开「浅色物体」与「灰投影」。**
+#
+# ✅ 真正干净的分开方式 = **色度（chroma = max−min）**：
+#   实测主体（无论多浅）的色度中位 **43~171**，而背景/投影/水印只有 **2~5**（中性灰）。
+#   于是「要去掉的背景」= 近白 **或**（淡 **且** 中性灰）：
+#       bg_cand = (min >= 235) | (chroma <= 10 且 min >= 190)
+#   再从画布边缘做连通域洪水填充（只去与边缘相连的那部分），即可：
+#     · 灰投影/水印 → 落进候选域且连边 ⇒ 去掉 ✓
+#     · 浅蓝的布 / 粉白的烛 → 色度够高 ⇒ 不是候选 ⇒ 保住整只 ✓
+#     · 被物体包住的白色高光 → 不连边 ⇒ 保住 ✓
 #
 # 处理链：
-#   ① 核心 = min(R,G,B) <= CORE_T（185）→ 连通域标注 → **只留最大的一块**（水印/投影/游离白点全在这步丢掉）
-#   ② 补洞：填上主体内部的浅色区（碗内壁、桌面受光面这类被主体包住的亮区）
-#   ③ 膨胀 RIM px 把抗锯齿边缘收回来（2048 尺度下 4px ≈ 64 尺度下 0.13px，可忽略）
-#   ④ 裁到 bbox → 补成外接正方形 → 缩到 64x64
-#      默认用 **BOX（面积平均）**：二值 alpha 经面积平均后边缘自然得到 1px 抗锯齿，比最近邻干净；
-#      同源的 20 档木材用的是最近邻（边缘更硬），要完全对齐可用 --resample nearest。
+#   ① 色度感知的背景候选 → 从边缘洪水填充 → 得到**真实轮廓**（不需要补洞/膨胀，也不再依赖亮度核心）
+#   ② 丢掉面积过小的孤立块（残余噪点；正常图 0~30 个，坏图才会到几百）
+#   ③ 外缘 2px 带内按白度给软 alpha（把抗锯齿白边压成半透明）
+#   ④ 裁到 alpha 包围盒 → 补成外接正方形 → **预乘 alpha 的面积平均（BOX）**缩到 64x64
 #
 # 用法：
 #   python scripts/gen/process_item_images.py --src <目录> --stats     # 只看统计
@@ -42,43 +48,60 @@ DEFAULT_MAP = [
     '木屏风', '木长桌', '木雕挂屏', '木香案', '神木供案',
 ]
 
-WHITE_MIN = 235    # 仅用于 --stats 估算背景占比
-CORE_T = 185       # 主体核心：min(R,G,B) <= 此值算实心（水印与淡投影都在 200 以上）
-RIM = 4            # 主体外围膨胀量（px，原图尺度），用于收回抗锯齿边缘
+WHITE_MIN = 235      # 近白：直接算背景
+SHADOW_MIN = 190     # 「淡」的下限（配合低色度 → 投影/水印）
+CHROMA_MAX = 10      # 色度 ≤ 此值算中性灰
+EDGE_T0 = 200        # 软边基准：外缘带内 min<=200 视为全不透明，min>=255 视为全透明
+EDGE_BAND = 2        # 软边带宽（px，原图尺度）
+KEEP_RATIO = 0.01    # 丢掉面积小于「最大连通域 × 此比例」的孤立块
+MIN_KEEP_PX = 256
 OUT_SIZE = 64
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'public', 'images', 'items', 'food')
 
 
-def body_mask(mn, core_t=CORE_T, rim=RIM):
-    """主体掩码：最大连通域 → 补洞 → 膨胀收回抗锯齿边。返回 (mask, 连通域数, 丢弃块数)"""
-    core = mn <= core_t
-    lab, n = ndimage.label(core, structure=np.ones((3, 3)))
-    if n == 0:
-        return None, 0, 0
-    sizes = np.bincount(lab.ravel())[1:]
-    k = int(np.argmax(sizes)) + 1
-    body = lab == k
-    body = ndimage.binary_fill_holes(body)
-    if rim > 0:
-        body = ndimage.binary_dilation(body, iterations=rim)
-    return body, n, n - 1
+def body_mask(mn, chroma):
+    """主体掩码：色度感知的背景候选 → 边缘洪水填充 → 去掉小块。返回 (mask, 丢弃块数)"""
+    cand = (mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))
+    lab, _ = ndimage.label(cand, structure=np.ones((3, 3)))
+    border = set(lab[0, :].tolist()) | set(lab[-1, :].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
+    border.discard(0)
+    bg = np.isin(lab, list(border)) if border else np.zeros_like(cand)
+    content = ~bg
+    lab2, n2 = ndimage.label(content, structure=np.ones((3, 3)))
+    if n2 == 0:
+        return None, 0
+    sizes = np.bincount(lab2.ravel())[1:]
+    floor = max(MIN_KEEP_PX, sizes.max() * KEEP_RATIO)
+    keep = [i + 1 for i, s in enumerate(sizes) if s >= floor]
+    dropped = n2 - len(keep)
+    return np.isin(lab2, keep), dropped
+
+
+def _masks(path):
+    arr = np.asarray(Image.open(path).convert('RGB')).astype(np.int16)
+    mn = arr.min(axis=2)
+    chroma = arr.max(axis=2) - mn
+    return arr, mn, chroma
 
 
 def analyze(path):
-    arr = np.asarray(Image.open(path).convert('RGB')).astype(np.int16)
-    mn = arr.min(axis=2)
-    body, n, dropped = body_mask(mn)
-    bg_pct = float((mn >= WHITE_MIN).mean())
-    return arr, mn, body, n, dropped, bg_pct
+    arr, mn, chroma = _masks(path)
+    body, dropped = body_mask(mn, chroma)
+    bg_pct = float(((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))).mean())
+    return arr, mn, body, dropped, bg_pct
 
 
-def build(path, core_t=CORE_T, rim=RIM):
-    arr = np.asarray(Image.open(path).convert('RGB')).astype(np.int16)
-    mn = arr.min(axis=2)
-    body, _n, dropped = body_mask(mn, core_t, rim)
+def build(path):
+    arr, mn, body, dropped, _ = analyze(path)
     if body is None:
         return None, 0, 0
-    rgba = np.dstack([arr.astype(np.uint8), np.where(body, 255, 0).astype(np.uint8)])
+    alpha = np.where(body, 255.0, 0.0)
+    # 外缘带：主体里、但离背景 2px 以内的像素 → 按白度压成半透明（去掉抗锯齿白边）
+    band = body & ndimage.binary_dilation(~body, iterations=EDGE_BAND)
+    if band.any():
+        soft = np.clip((255.0 - mn) / float(255 - EDGE_T0), 0.0, 1.0) * 255.0
+        alpha = np.where(band, np.minimum(alpha, soft), alpha)
+    rgba = np.dstack([arr.astype(np.uint8), alpha.astype(np.uint8)])
     im = Image.fromarray(rgba, 'RGBA')
     bbox = im.getchannel('A').getbbox()
     if not bbox:
@@ -114,7 +137,6 @@ def main():
     ap.add_argument('--stats', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--sheet', default=None)
-    ap.add_argument('--core-t', type=int, default=CORE_T)
     ap.add_argument('--resample', choices=['box', 'nearest', 'lanczos', 'both'], default='box')
     args = ap.parse_args()
 
@@ -126,19 +148,19 @@ def main():
 
     if args.stats:
         for i, f in enumerate(files, 1):
-            arr, mn, body, n, dropped, bg_pct = analyze(os.path.join(args.src, f))
+            arr, mn, body, dropped, bg_pct = analyze(os.path.join(args.src, f))
             if body is None:
                 print('{:>2}  {:<34} 找不到主体'.format(i, f))
                 continue
             med = int(np.median(mn[body]))
-            print('{:>2}  {:<34} 近白{:.0f}%  连通域{}个(丢弃{})  主体占画布{:.1f}%  主体亮度中位{}'.format(
-                i, f, bg_pct * 100, n, dropped, body.mean() * 100, med))
+            print('{:>2}  {:<34} 背景候选{:.0f}%  丢弃小块{:<4} 主体占画布{:.1f}%  主体亮度中位{}'.format(
+                i, f, bg_pct * 100, dropped, body.mean() * 100, med))
         return 0
 
     os.makedirs(OUT_DIR, exist_ok=True)
     md5s, rows = {}, []
     for i, (f, name) in enumerate(zip(files, args.map), 1):
-        sq, side, dropped = build(os.path.join(args.src, f), args.core_t)
+        sq, side, dropped = build(os.path.join(args.src, f))
         if sq is None:
             print('❌ 第 %d 张找不到主体（阈值过激？）：%s' % (i, f))
             return 1

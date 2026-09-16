@@ -33,6 +33,11 @@ const TASKS = {
     ['锻造 ×10', 'skill', 'craftsmithing', 10, 20],
     // v2.9.0：副业·木工（见 player.craftLevels 的说明——木工不进「制作总等级」，只单列一条任务）
     ['木工 ×10', 'skill', 'woodworking', 10, 20],
+    // v2.10.0：副业四支
+    ['陶艺 ×10', 'skill', 'pottery', 10, 20],
+    ['编织 ×10', 'skill', 'weaving', 10, 20],
+    ['刺绣 ×10', 'skill', 'embroidery', 10, 20],
+    ['制烛 ×10', 'skill', 'candles', 10, 20],
     ['对决胜利 ×5', 'combatWin', 'any', 5, 25],
     ['击败首领 ×2', 'boss', 'any', 2, 30],
   ]),

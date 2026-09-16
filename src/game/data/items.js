@@ -748,6 +748,11 @@ for (const def of TIMBER_ITEMS) ITEMS[def.id] = def
 import { WOODWORKING_ITEMS } from './woodworking.js'
 for (const def of WOODWORKING_ITEMS) ITEMS[def.id] = def
 
+// 副业四支的产物（2026-09-16，v2.10.0）：陶器 / 织物 / 绣品 / 蜡烛——同样是独占品，
+// 去处是各接一条经营侧乘区出口（地窖单槽价值上限 / 小费 / 米其林招牌分 / 夜市窗口）。
+import { SIDELINE_ITEMS } from './sidelineWorks.js'
+for (const def of SIDELINE_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { CELLAR_TIERS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, nextCellarExpandCost } from '../game/data/cellar.js'
+import { CELLAR_TIERS, CELLAR_MAX_QTY, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, nextCellarExpandCost } from '../game/data/cellar.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -79,7 +79,7 @@ function expand() {
 function maxQtyFor(itemId) {
   const it = getItem(itemId)
   if (!it?.value) return 0
-  return Math.min(CELLAR_MAX_QTY, Math.floor(CELLAR_MAX_BASE_VALUE / it.value), player.inventory[itemId] ?? 0)
+  return Math.min(CELLAR_MAX_QTY, Math.floor(player.cellarSlotValueMax() / it.value), player.inventory[itemId] ?? 0)
 }
 // ── 档位对照表（2026-09-12 补）：把「时长 × 倍率」的三个档位换成可比口径 ──
 // 关键结论：**倍率/时长（折算时收）随档位变长而下降**——12h 档时收最高、48h 档最低，
@@ -88,7 +88,7 @@ const tierRows = computed(() =>
   CELLAR_TIERS.map((t) => ({
     ...t,
     perHour: t.mult / t.hours, // 每小时的倍率（越大越赚）
-    maxPayout: Math.round(CELLAR_MAX_BASE_VALUE * t.mult),
+    maxPayout: Math.round(player.cellarSlotValueMax() * t.mult),
   }))
 )
 const bestPerHour = computed(() => Math.max(...tierRows.value.map((r) => r.perHour)))
@@ -113,7 +113,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
         <h2>🍶 地窖陈酿</h2>
         <p class="dim">
           把<b>酒类 / 腌制品</b>放入地窖，按档位成熟后出窖换金币（价值 × 倍率，离线照常计时）；
-          未成熟也可无损取回。单槽上限 {{ CELLAR_MAX_QTY }} 件、价值上限 {{ CELLAR_MAX_BASE_VALUE.toLocaleString() }}。
+          未成熟也可无损取回。单槽上限 {{ CELLAR_MAX_QTY }} 件、价值上限 {{ player.cellarSlotValueMax().toLocaleString() }}（副业·陶艺的陶器可把它从 16,000 抬到 31,000）。
         </p>
       </div>
       <button v-if="unlocked && expandCost != null" class="btn btn-sm" @click="expand">
@@ -146,7 +146,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
         </div>
         <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
           折算时收 = 倍率 ÷ 时长，所以<b>越长的档位每小时收益越低</b>：12h 档是 48h 档的两倍时收，适合常上线的玩家；
-          48h 档总收益更高、只要每天照看一次，适合睡前挂。单槽满额出窖按「价值上限 {{ CELLAR_MAX_BASE_VALUE.toLocaleString() }}」× 倍率估算。
+          48h 档总收益更高、只要每天照看一次，适合睡前挂。单槽满额出窖按「价值上限 {{ player.cellarSlotValueMax().toLocaleString() }}」× 倍率估算。
         </p>
         <div class="dim" style="margin-top: 6px; font-size: 12px">
           扩建阶梯：<span v-for="(e, i) in expandLadder" :key="e.slots">

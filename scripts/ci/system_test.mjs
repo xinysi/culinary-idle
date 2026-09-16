@@ -98,11 +98,22 @@ import { ENCOUNTERS, getEncounter } from '../../src/game/data/encounters.js'
 import { itemSources } from '../../src/game/data/itemSources.js'
 import { jumpForSource } from '../../src/game/data/sourceJump.js'
 import { itemUses } from '../../src/game/data/itemUses.js'
-// 副业·木工（v2.9.0）——SPIRITS / itemImage / SHANHAI_NODES 均已在下方或上方导入，勿重复
+// 副业四支（v2.10.0）——SPIRITS / itemImage / SHANHAI_NODES / CARAVAN_* / SELL_* 均已在别处导入，勿重复
 import { skillCategoriesOfTab } from '../../src/game/data/skills.js'
 import { WOODWORKING_ITEMS, WOODWORKING_RECIPES, CRAFTED_DECOR, WOODWORK_CATEGORY, decorOfWoodwork } from '../../src/game/data/woodworking.js'
 import { RESTAURANT_DECOR, RESTAURANT_DECOR_BY_ID, DECOR_TOTAL } from '../../src/game/data/restaurantDecor.js'
 import { CARAVAN_CARGO_TYPES, CARAVAN_EXCLUDE_CATEGORIES } from '../../src/game/data/caravan.js'
+import {
+  SIDELINE_ITEMS, SIDELINE_RECIPES, SIDELINE_WORKS, SIDELINE_SKILL_LIST, SIDELINE_SKILL_IDS,
+  SIDELINE_ITEM_CATEGORIES, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
+} from '../../src/game/data/sidelineWorks.js'
+import { CELLAR_SLOT_VALUE_BASE, CELLAR_SLOT_VALUE_MAX } from '../../src/game/data/caps.js'
+import {
+  MARKET_EVENTS, activeMarketEvents as activeMarketEventsPure, marketEventsWithNightExtension,
+  nightMarketEndHour, NIGHT_MARKET_MAX_EXTRA_HOURS,
+} from '../../src/game/data/marketEvents.js'
+import { MICHELIN_FACTORS } from '../../src/game/data/michelin.js'
+import { SKILL_CN } from '../../src/game/data/activeEffects.js'
 
 /** 木器图片是否存在（图鉴的 @error 会静默隐藏破图，只有查文件才能发现缺图） */
 const imgExists = (id) => {
@@ -111,6 +122,11 @@ const imgExists = (id) => {
 }
 /** 某档木材的等级（C32 校验「木器配方吃的是同档木材」用） */
 const timberLevelOf = (id) => TIMBERS.find((t) => t.id === id)?.level ?? null
+/** 某物品的最低获取等级（C33 校验辅料不超纲用；解析「XX获得（LvN 解锁）」来源串，非数值断言） */
+const materialLevelOf = (id) => {
+  const ms = itemSources(id).map((s) => s.match(/Lv(\d+)/)).filter(Boolean).map((m) => parseInt(m[1], 10))
+  return ms.length ? Math.min(...ms) : null
+}
 
 // 内容同步（2026-09-11）：信箱/厨友新增成就的取用（ALL_ACHIEVEMENTS 已在上方导入过）
 const ACH = (id) => ALL_ACHIEVEMENTS.find((a) => a.id === id)
@@ -4577,7 +4593,7 @@ console.log('== C29. 新技能适配一致性 ==')
   check('适配', `轶事覆盖全部 7 条采集线（各 200 条，含采矿与伐木）`, gatherSubs.every((k) => (subs[k] ?? 0) === 200), gatherSubs.map((k) => `${k}:${subs[k] ?? 0}`).join(' '))
 
   // ⑦ 技能总量与采集总等级口径（v2.9.0：+副业·木工 → 23 个技能 / 5 大类）
-  check('适配', '技能总数为 23、5 大类、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 23 && SKILL_CATEGORIES.length === 5 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
+  check('适配', '技能总数为 27、5 大类、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 27 && SKILL_CATEGORIES.length === 5 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
 }
 
 
@@ -4865,6 +4881,186 @@ console.log('══ C32. 副业·木工 ══')
   const wTask = WEEKLY_POOL.some((t) => t.param === 'woodworking')
   check('副业·木工', '公会 / 每日 / 周常三处任务都有木工条目，且 param 是已注册技能',
     gTask && dTask && wTask && !!SKILL_DEFS.woodworking)
+}
+
+// ── C33. 副业四支（v2.10.0：陶艺/编织/刺绣/蜡烛 —— 各接一条经营侧乘区出口）──
+console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
+{
+  // ① 技能本体：四个都已注册实例、类型 production、落在 sideline 大类、有图标
+  const sBad = []
+  for (const s of SIDELINE_SKILL_LIST) {
+    const inst = getSkillInstance(s.id)
+    const def = SKILL_DEFS[s.id]
+    if (inst?.type !== 'production') sBad.push(`${s.id}: 实例类型非 production`)
+    if (!def || def.category !== 'sideline') sBad.push(`${s.id}: 不在 sideline 大类`)
+    if (!def?.icon || def.icon === '•') sBad.push(`${s.id}: 缺图标`)
+    if (!(inst?.recipes?.length > 0)) sBad.push(`${s.id}: 无配方`)
+  }
+  check('副业四支', `四个技能都已注册（production / sideline / 有图标 / 有配方）`, sBad.length === 0, sBad.join('; '))
+  check('副业四支', `副业共 5 支（木工 + 四支），SKILL_DEFS 里 sideline 计数一致`,
+    Object.values(SKILL_DEFS).filter((d) => d.category === 'sideline').length === 5 && SIDELINE_SKILL_IDS.length === 4)
+
+  // ② 物品与作品：38 件、id 唯一、类别在「副业独占清单」内、每件都并入 ITEMS、每件都有作品定义
+  const iBad = []
+  for (const it of SIDELINE_ITEMS) {
+    if (!ITEMS[it.id]) iBad.push(`${it.id}: 未并入 ITEMS`)
+    if (!SIDELINE_ITEM_CATEGORIES.includes(it.category)) iBad.push(`${it.id}: 类别不在独占清单`)
+    if (!sidelineWorkOf(it.id)) iBad.push(`${it.id}: 缺作品定义`)
+  }
+  check('副业四支', `产物共 ${SIDELINE_ITEMS.length} 件（陶艺10/编织10/刺绣10/蜡烛8）、id 唯一、类别合法、均有作品定义`,
+    SIDELINE_ITEMS.length === 38 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 38 && iBad.length === 0, iBad.slice(0, 4).join('; '))
+  check('副业四支', '38 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
+    SIDELINE_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
+
+  // ③ 配方：基材是该档木材、辅料等级 ≤ 配方+5、产物是自己、等级严格递增且落在阶梯上
+  const rBad = []
+  const bands = new Set(TIMBERS.map((t) => t.id))
+  for (const def of SIDELINE_SKILL_LIST) {
+    const recs = SIDELINE_RECIPES[def.id]
+    const lvls = recs.map((r) => r.reqLevel)
+    if (!lvls.every((v, i) => i === 0 || v > lvls[i - 1])) rBad.push(`${def.id}: 等级非严格递增`)
+    for (const r of recs) {
+      const mats = Object.keys(r.ingredients ?? {})
+      const wood = mats.find((m) => bands.has(m))
+      if (!wood) { rBad.push(`${r.id}: 基材不是档位木材（${mats.join('+')}）`); continue }
+      const wl = timberLevelOf(wood)
+      if (wl > r.reqLevel + 5) rBad.push(`${r.id}: 木材 Lv${wl} 超纲（配方 Lv${r.reqLevel}）`)
+      for (const m of mats) {
+        const ml = materialLevelOf(m)
+        if (ml != null && ml > r.reqLevel + 5) rBad.push(`${r.id}: 辅料 ${m} Lv${ml} 超纲`)
+      }
+      if (!ITEMS[r.output?.itemId]) rBad.push(`${r.id}: 产物不存在`)
+    }
+  }
+  check('副业四支', '38 条配方：基材为该档木材、全部材料等级 ≤ 配方+5、产物存在、等级严格递增', rBad.length === 0, rBad.slice(0, 4).join('; '))
+
+  // ④ 启动重算零漂移：raiseRecipeLevels 对它们是恒等变换（材料本已达标，不该被抬级/删料）
+  const drift = []
+  for (const def of SIDELINE_SKILL_LIST) {
+    const inst = getSkillInstance(def.id)
+    for (const r of SIDELINE_RECIPES[def.id]) {
+      const live = inst.recipes.find((x) => x.id === r.id)
+      if (!live) { drift.push(`${r.id}: 实例里没有`); continue }
+      if (live.reqLevel !== r.reqLevel) drift.push(`${r.id}: reqLevel ${r.reqLevel}→${live.reqLevel}`)
+      if (JSON.stringify(live.ingredients) !== JSON.stringify(r.ingredients)) drift.push(`${r.id}: 材料被改写`)
+    }
+  }
+  check('副业四支', '技能构造后 38 条配方零漂移（平衡函数对它们是恒等变换）', drift.length === 0, drift.slice(0, 4).join('; '))
+
+  // ⑤ 独占品口径：不进任何抽卡池 / 礼包池 / 交易所 / 商队 / 自动出售
+  const ids = new Set(SIDELINE_ITEMS.map((i) => i.id))
+  const leak = []
+  for (const p of MIJIAN_POOLS) for (const it of poolItems(p.id)) if (ids.has(it.id)) leak.push(`${p.id}:${it.name}`)
+  for (const it of materialFoodItems(Infinity)) if (ids.has(it.id)) leak.push(`素材池:${it.name}`)
+  for (const id of INGREDIENT_POOL) if (ids.has(id)) leak.push(`食材礼包:${id}`)
+  for (const it of SIDELINE_ITEMS) {
+    if (EXCHANGE_POOL_CATEGORIES.includes(it.category)) leak.push(`交易所:${it.name}`)
+    if (CARAVAN_CARGO_TYPES.includes(it.category) && !CARAVAN_EXCLUDE_CATEGORIES.includes(it.category)) leak.push(`商队:${it.name}`)
+  }
+  check('副业四支', '38 件产物不进抽卡池/礼包池/交易所/商队，也不被自动出售',
+    leak.length === 0 && SIDELINE_ITEM_CATEGORIES.every((c) => SELL_EXCLUDED_CATEGORIES.includes(c)), leak.slice(0, 4).join(' '))
+
+  // ⑥ 两条设计决策：不吃食灵经验、不进山海食经
+  check('副业四支', '四支都不吃食灵经验加成（160 只食灵的经验域都不含它们）',
+    SPIRITS.every((s) => SIDELINE_SKILL_IDS.every((id) => (s.effect?.xpPct ?? {})[id] == null)))
+  const shanhaiSkills2 = new Set(SHANHAI_NODES.flatMap((n) => [n.req?.skill, n.req?.skill2]).filter(Boolean))
+  check('副业四支', '四支都不进入山海食经（线↔技能白名单）', SIDELINE_SKILL_IDS.every((id) => !shanhaiSkills2.has(id)))
+
+  // ⑦ 四个出口真的接上了：各做一件，对应的那条数值必须变化
+  const p = freshPlayer()
+  p.restaurant.menu = ['roastPotato'] // 新档菜单为空 → 时收恒 0，乘多少小费都还是 0
+  const baseTip = p.restaurantHourlyIncome
+  const baseCellar = p.cellarSlotValueMax()
+  const baseSign = p.michelinScore().score
+  const baseNight = p.nightMarketExtraHours()
+  const axisBad = []
+  const probes = [
+    ['pottery_1', 'cellarValue', () => p.cellarSlotValueMax() > baseCellar, `地窖单槽上限 ${baseCellar}→${p.cellarSlotValueMax()}`],
+    ['weaving_1', 'tipPct', () => p.restaurantHourlyIncome > baseTip, `餐厅时收 ${baseTip.toFixed(1)}→${p.restaurantHourlyIncome.toFixed(1)}`],
+    ['embroidery_1', 'michelinScore', () => p.michelinScore().score > baseSign, `米其林评分 ${baseSign}→${p.michelinScore().score}`],
+    ['candles_1', 'nightHours', () => p.nightMarketExtraHours() > baseNight, `夜市延长 ${baseNight}→${p.nightMarketExtraHours()}`],
+  ]
+  for (const [itemId, axis, changed, detail] of probes) {
+    p.inventory[itemId] = 1
+    const res = p.craftWork(itemId)
+    if (res !== 'ok') axisBad.push(`${itemId}: craftWork=${res}`)
+    else if (!changed()) axisBad.push(`${itemId}: 做了但 ${axis} 没变（${detail}）`)
+  }
+  check('副业四支', '四条出口都真的接上了（做一件 → 对应数值立刻变化）', axisBad.length === 0, axisBad.join('; '))
+  check('副业四支', '米其林评分新增第七维「招牌绣屏」，且不改动既有六维权重',
+    p.michelinScore().parts.some((x) => x.id === 'sign' && x.points === SIDELINE_AXES.michelinScore.perItem) && MICHELIN_FACTORS.length === 6)
+
+  // ⑧ craftWork 的四种语义 + 幂等 + 消耗
+  p.inventory['pottery_1'] = 2
+  check('副业四支', '重复做同一件返回 owned 且不再扣物品（幂等）',
+    p.craftWork('pottery_1') === 'owned' && p.inventory['pottery_1'] === 2)
+  check('副业四支', '非法目标返回 bad、背包没有时返回 denied',
+    p.craftWork('apple') === 'bad' && p.craftWork('pottery_91') === 'denied')
+  p.inventory['pottery_11'] = 1
+  const res11 = p.craftWork('pottery_11')
+  // 消耗最后一件时 spendItem 会**删掉该键**（不是置 0），故用 ?? 0 判断
+  check('副业四支', '做成作品会消耗 1 件产物',
+    res11 === 'ok' && (p.inventory['pottery_11'] ?? 0) === 0 && (p.sidelineWorks ?? []).includes('pottery_11'))
+
+  // ⑨ 满配：全部 38 件做完后的合计与硬顶
+  const full = freshPlayer()
+  full.restaurant.menu = ['roastPotato']
+  for (const it of SIDELINE_ITEMS) { full.inventory[it.id] = 1; full.craftWork(it.id) }
+  const capOk = full.cellarSlotValueMax() <= CELLAR_SLOT_VALUE_MAX
+  check('副业四支', `满配合计：地窖上限 ${full.cellarSlotValueMax()}（硬顶 ${CELLAR_SLOT_VALUE_MAX}）· 小费 +${full.tipBonusPct()}% · 招牌 +${full.michelinSignScore()} 分 · 夜市 +${full.nightMarketExtraHours()}h`,
+    full.sidelineWorks.length === 38 && full.cellarSlotValueMax() === CELLAR_SLOT_VALUE_MAX
+    && full.tipBonusPct() === SIDELINE_AXIS_TOTALS.tipPct.total
+    && full.michelinSignScore() === SIDELINE_AXIS_TOTALS.michelinScore.total
+    && full.nightMarketExtraHours() === NIGHT_MARKET_MAX_EXTRA_HOURS && capOk,
+    `${full.sidelineWorks.length} 件`)
+
+  // ⑩ 蜡烛真的改变了命中判定（同一小时，延长前后结论不同），且不溢出上限
+  const nightOn = (h, ev) => activeMarketEventsPure(h, 1, ev).some((e) => e.id === 'nightMarket')
+  const fullEv = marketEventsWithNightExtension(NIGHT_MARKET_MAX_EXTRA_HOURS)
+  check('副业四支', '蜡烛延长真的改变命中判定：23:00 基础不命中 → 满配蜡烛后命中',
+    !nightOn(23, MARKET_EVENTS) && nightOn(23, fullEv))
+  // 结束小时 = 基础 22 + 延长量（=30 表示次日 06:00）；`nightMarketEndHour` 跨夜时返回 24+尾段
+  check('副业四支', '满配后夜市窗口 = 16:00~次日 06:00（03:00 命中、12:00 不命中，不是全天）',
+    nightOn(3, fullEv) && !nightOn(12, fullEv) && nightMarketEndHour(fullEv) === 22 + NIGHT_MARKET_MAX_EXTRA_HOURS)
+  check('副业四支', '延长量被夹在 0~上限（存档里出现超限值也不会把窗口拉成全天）',
+    nightMarketEndHour(marketEventsWithNightExtension(999)) === 22 + NIGHT_MARKET_MAX_EXTRA_HOURS
+    && marketEventsWithNightExtension(-5) === MARKET_EVENTS && marketEventsWithNightExtension(0) === MARKET_EVENTS)
+
+  // ⑪ 存档往返：作品进档、旧档回退空数组、非法 id 被过滤
+  const s1 = JSON.stringify(full.serialize())
+  const p2 = freshPlayer()
+  p2.applySave(JSON.parse(s1))
+  check('副业四支', '作品随存档往返无损（含各轴派生值一致）',
+    JSON.stringify(p2.serialize()) === s1 && p2.cellarSlotValueMax() === full.cellarSlotValueMax() && p2.sidelineEffectTotal('tipPct') === full.tipBonusPct())
+  const p3 = freshPlayer()
+  p3.applySave({ gold: 100 })
+  check('副业四支', '旧档缺 sidelineWorks 字段时回退为空数组', Array.isArray(p3.sidelineWorks) && p3.sidelineWorks.length === 0)
+  const p4 = freshPlayer()
+  p4.applySave({ sidelineWorks: ['pottery_1', '不存在的id', 123] })
+  check('副业四支', '读档时过滤掉非法/不存在 id（不污染加成合计）',
+    p4.sidelineWorks.length === 1 && p4.sidelineWorks[0] === 'pottery_1' && p4.cellarSlotValueMax() === CELLAR_SLOT_VALUE_BASE + 1500)
+
+  // ⑫ 图鉴三查 + 效果总览登记 + 内容同步
+  const gBad = []
+  for (const it of SIDELINE_ITEMS) {
+    const lines = itemDetailLines(it.id).map((l) => l.join('')).join('|')
+    if (!lines.includes('做成')) gBad.push(`${it.id}: 详细作用缺「做成…作品」`)
+    if (!itemSources(it.id).some((s) => s.includes('制作'))) gBad.push(`${it.id}: 来源缺「制作」`)
+    const uses = itemUses(it.id)
+    if (!uses.some((u) => u.kind === 'work')) gBad.push(`${it.id}: 可用于制作缺作品`)
+  }
+  check('副业四支', '图鉴三查：详细作用 / 可用于制作（作品）/ 获取来源 三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
+  check('副业四支', '四个技能的中文名都在效果总览的 SKILL_CN 里（文案不露内部 id）',
+    SIDELINE_SKILL_IDS.every((id) => !!SKILL_CN[id]))
+  check('副业四支', '效果总览登记了四条副业效果行（一个都不能漏）',
+    SIDELINE_SKILL_IDS.every((id) => EFFECT_ROWS.some((r) => (r.view ?? '').endsWith(id))))
+  const gBad2 = []
+  for (const s of SIDELINE_SKILL_LIST) {
+    if (!GUILDS.some((g) => (g.tasks ?? []).some((t) => t.kind === 'skill' && t.param === s.id))) gBad2.push(`${s.id}: 公会无任务`)
+    if (!DAILY_POOL.some((t) => t.param === s.id) && !WEEKLY_POOL.some((t) => t.param === s.id)) gBad2.push(`${s.id}: 每日/周常无任务`)
+  }
+  check('副业四支', '四支在公会与每日/周常任务里都有条目，且 param 是已注册技能',
+    gBad2.length === 0 && SIDELINE_SKILL_IDS.every((id) => !!SKILL_DEFS[id]), gBad2.join('; '))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

@@ -1,6 +1,8 @@
 // 自动化中心（2026-09-10 新增）— 把已有自动化集中展示 + 三项可解锁自动化（金币解锁）。
 // 设计约束：只读取/消耗既有物品与状态；自动出售按「价值阈值 + 采集食材」白名单，矿物/化石/材料/补给不参与。
 
+import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
+
 /** 可解锁的自动化（金币一次性解锁） */
 export const AUTOMATIONS = [
   {
@@ -44,5 +46,5 @@ export const FREE_AUTOMATIONS = [
 /** 自动出售：默认阈值与保留件数 */
 export const SELL_THRESHOLD_DEFAULT = 30
 export const SELL_KEEP = 1
-/** 不参与自动出售的类别（矿物/化石/材料/补给/木器——它们是锻造/宝石/肥料/装潢的原料） */
-export const SELL_EXCLUDED_CATEGORIES = ['mineral', 'fossil', 'material', 'supply', 'furniture']
+/** 不参与自动出售的类别（矿物/化石/材料/补给 + 全部副业独占品——它们是锻造/宝石/肥料/装潢/副业作品的原料） */
+export const SELL_EXCLUDED_CATEGORIES = ['mineral', 'fossil', 'material', 'supply', ...SIDELINE_ITEM_CATEGORIES]

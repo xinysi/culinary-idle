@@ -52,6 +52,8 @@ const ARGS = {
   spendGameCoins: [1], gainGameCoins: [1], gainGold: [1], spendGold: [1],
   // 副业·木工（v2.9.0）：木器 → 手工装潢
   craftDecor: ['decor_hand_bowlRack'],
+  // 副业四支（v2.10.0）：陶器/织物/绣品/蜡烛 → 作品
+  craftWork: ['pottery_1'],
 }
 
 function makePlayer(kind) {

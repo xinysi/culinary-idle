@@ -51,7 +51,8 @@ export const EFFECT_GROUPS = [
 export const SKILL_CN = {
   foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕',
   cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配',
-  craftsmithing: '厨具锻造', woodworking: '木工', knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
+  craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
+  knife: '刀工', heatControl: '火候掌控', flavorArtistry: '调味艺术',
   plating: '摆盘技巧', tasteAcumen: '品鉴力', spiritSummoning: '食灵召唤', gastronomy: '美食知识',
   preservation: '食材保鲜', exploration: '美食探索',
 }
@@ -436,6 +437,42 @@ export const EFFECT_ROWS = [
     read: (p) => {
       const lv = p.restaurant?.level ?? 1
       return { on: true, text: `餐厅 ${lv} 级：时收 ${mult(1 + 0.3 * (lv - 1))}` }
+    },
+  },
+
+  // ── 副业四支（v2.10.0）：每支**只接一条**乘区出口，四条全部登记在此 ──
+  // 「效果总览一个都不能漏」：这四行就是那四条的**唯一登记点**，改出口数值时同步这里。
+  {
+    id: 'potteryCellar', group: 'income', icon: '🏺', name: '陶艺·地窖单槽上限', kind: 'buff', src: '副业·陶艺', view: 'skill:pottery',
+    read: (p) => {
+      const add = p.sidelineEffectTotal?.('cellarValue') ?? 0
+      if (!add) return off('还没把陶器做成作品——每做 1 件，地窖单槽价值上限 +1,500')
+      return { on: true, text: `单槽价值上限 ${(p.cellarSlotValueMax?.() ?? 0).toLocaleString()}（基础 16,000 + 陶器 ${add.toLocaleString()}）` }
+    },
+  },
+  {
+    id: 'weavingTip', group: 'income', icon: '🧶', name: '编织·餐厅小费', kind: 'buff', src: '副业·编织', view: 'skill:weaving',
+    read: (p) => {
+      const v = p.tipBonusPct?.() ?? 0
+      if (!v) return off('还没把织物做成作品——每做 1 件，餐厅小费 +2%')
+      return { on: true, text: `小费 ${pct(v)}（乘在顾客好感与常客小费之上）` }
+    },
+  },
+  {
+    id: 'embroiderySign', group: 'income', icon: '🪡', name: '刺绣·招牌绣屏评分', kind: 'buff', src: '副业·刺绣', view: 'skill:embroidery',
+    read: (p) => {
+      const v = p.michelinSignScore?.() ?? 0
+      if (!v) return off('还没把绣品做成作品——每做 1 件，米其林评分 +12 分')
+      return { on: true, text: `米其林评分 +${v} 分（第七维「招牌绣屏」，帮你跨星级门槛）` }
+    },
+  },
+  {
+    id: 'candleNightWindow', group: 'income', icon: '🕯️', name: '蜡烛·夜市狂潮时长', kind: 'buff', src: '副业·蜡烛制作', view: 'skill:candles',
+    read: (p) => {
+      const h = p.nightMarketExtraHours?.() ?? 0
+      if (!h) return off('还没把蜡烛做成作品——每做 1 件，夜市狂潮延后 1 小时')
+      const end = p.nightMarketEndHour?.() ?? 22
+      return { on: true, text: `夜市狂潮 16:00–次日 ${String(end % 24).padStart(2, '0')}:00（+${h} 小时，餐厅收入 ×2 的时段更长）` }
     },
   },
   {

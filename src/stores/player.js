@@ -46,7 +46,7 @@ import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRI
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
 import { gemDef, socketCountOf, gemsBonus } from '../game/data/gems.js'
-import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost } from '../game/data/marketEvents.js'
+import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost, marketEventsWithNightExtension, nightMarketEndHour } from '../game/data/marketEvents.js'
 import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
 import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay, catLabel } from '../game/data/restaurantOrders.js'
@@ -88,7 +88,9 @@ import { priceMultiplier } from '../game/data/exchange.js'
 import { BRANCHES, getBranch, branchHourly, BRANCH_UNLOCK_LEVEL, MANAGER_BONUS } from '../game/data/branches.js'
 import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exchangeCycleIndex, pickGoods, sellPriceOf, buyPriceOf } from '../game/data/exchange.js'
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
-import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_MAX_BASE_VALUE, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
+import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
+import { CELLAR_SLOT_VALUE_BASE } from '../game/data/caps.js'
+import { SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf } from '../game/data/sidelineWorks.js'
 /**
  * 增益剂的乘区轴表（v2.3.0）：一件消耗品可同时带多条。
  * `better` 决定「重复使用取更强」的方向——采集间隔越小越快，其余越大越强。
@@ -246,6 +248,10 @@ const defaultState = () => ({
     insights: [], // 菜系图谱已解锁节点
     daoUnlocked: [], // 厨神之路 · 轮回天赋树已解锁节点（v2.0，懒建；印记由 stats.prestiges 派生，不另存货币）
     shanhaiUnlocked: [], // 山海食经 · 收集科技树已点亮节点（v2.1；**纯条件点亮、不消耗资源**，无新货币）
+    // 副业作品（v2.10.0）：陶器/织物/绣品/蜡烛 —— **一件物品只登记一次**（幂等），
+    // 各轴加成由 `sidelineEffectTotal(axis)` 从本数组求和派生（不另存派生数值，避免两处漂移）。
+    // 木工不在此列：它走既有 `restaurant.decor`（木器 = 手工装潢，v2.9.0）。
+    sidelineWorks: [],
     // 无尽挑战塔（对决 99 解锁）：floor=当前挑战层，best=已通最高层，rewarded=已发里程碑层
     tower: { floor: 1, best: 0, rewarded: [] },
     // 月度厨艺大赛：month=YYYYMM，score=当月累计分，entries=提交记录，rewarded=已领里程碑序号
@@ -552,7 +558,8 @@ export const usePlayerStore = defineStore('player', {
       }
       // 顾客好感小费（2026-09-06）：每级 +3%，封顶 20 级（+57%）
       const favorLv = favorLevelFromXp(s.restaurant?.favor?.xp ?? 0)
-      const tip = (1 + 0.03 * (favorLv - 1)) * (1 + (this.regularTipPct?.() ?? 0) / 100)
+      // 副业·编织（v2.10.0）：织物提升小费——乘在小费因子上（**唯一出口**，别再往别处加）
+      const tip = (1 + 0.03 * (favorLv - 1)) * (1 + (this.regularTipPct?.() ?? 0) / 100) * (1 + (this.tipBonusPct?.() ?? 0) / 100)
       const stars = 1 + (this.michelinIncomePct?.() ?? 0) / 100 // 米其林星级（2026-09-10）
       const staffMult = 1 + (this.staffIncomePct?.() ?? 0) / 100 // 雇工班底（2026-09-10）
       const daoIncomePct = this.daoEffects?.()?.incomePct ?? 0 // 厨神之路·经营之道（v2.0）
@@ -708,6 +715,7 @@ export const usePlayerStore = defineStore('player', {
         insights: Array.isArray(saved.insights) ? saved.insights : [],
         daoUnlocked: Array.isArray(saved.daoUnlocked) ? saved.daoUnlocked : [],
         shanhaiUnlocked: Array.isArray(saved.shanhaiUnlocked) ? saved.shanhaiUnlocked : [],
+        sidelineWorks: Array.isArray(saved.sidelineWorks) ? saved.sidelineWorks.filter((id) => !!SIDELINE_WORKS[id]) : [],
         tower: saved.tower ?? { floor: 1, best: 0, rewarded: [] },
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
@@ -856,6 +864,7 @@ export const usePlayerStore = defineStore('player', {
         insights: this.insights,
         daoUnlocked: this.daoUnlocked,
         shanhaiUnlocked: this.shanhaiUnlocked,
+        sidelineWorks: this.sidelineWorks,
         tower: this.tower,
         fest: this.fest,
         spiritBonds: this.spiritBonds,
@@ -1077,6 +1086,56 @@ export const usePlayerStore = defineStore('player', {
         useUiStore().pushLog(`🏮 手工装潢：${d.name}（收入 +${d.effect}%）`, 'gain')
       } catch { /* ui 未就绪 */ }
       return 'ok'
+    },
+
+    // ── 副业作品（v2.10.0）：陶器 / 织物 / 绣品 / 蜡烛，各接**一条**经营侧乘区出口 ──
+    // 定义与口径见 `data/sidelineWorks.js`；木工不走这里（它走 restaurant.decor，见 craftDecor）。
+    /**
+     * 把一件副业产物「做成作品」：消耗该物品 1 件、登记进 `sidelineWorks`（一件只能登记一次）。
+     * @returns {'ok'|'owned'|'denied'|'bad'}
+     */
+    craftWork(itemId) {
+      const w = sidelineWorkOf(itemId)
+      if (!w) return 'bad'
+      if ((this.sidelineWorks ?? []).includes(itemId)) return 'owned'
+      if ((this.inventory[itemId] ?? 0) < 1) return 'denied'
+      this.spendItem(itemId, 1)
+      this.sidelineWorks = [...(this.sidelineWorks ?? []), itemId]
+      try {
+        useUiStore().pushLog(`🧰 ${w.skillName}作品：${w.name}（${SIDELINE_AXES[w.axis].label} ${SIDELINE_AXES[w.axis].amountLabel(w.amount)}）`, 'gain')
+      } catch { /* ui 未就绪 */ }
+      return 'ok'
+    },
+    /** 某效果轴的已获得加成合计 —— **唯一派生出口**，消费方别再自己遍历 sidelineWorks */
+    sidelineEffectTotal(axis) {
+      const per = SIDELINE_AXES[axis]?.perItem ?? 0
+      let n = 0
+      for (const id of this.sidelineWorks ?? []) if (SIDELINE_WORKS[id]?.axis === axis) n++
+      return n * per
+    },
+    /** 地窖单槽基础价值上限（基础 + 陶艺）。⚠️ 地窖校验与 CellarView 一律走这里，别再引用固定值 */
+    cellarSlotValueMax() {
+      return CELLAR_SLOT_VALUE_BASE + this.sidelineEffectTotal('cellarValue')
+    },
+    /** 餐厅小费加成 %（编织）—— 出口在 `restaurantHourlyIncome` 的小费因子 */
+    tipBonusPct() {
+      return this.sidelineEffectTotal('tipPct')
+    },
+    /** 米其林「招牌绣屏」得分（刺绣）—— 出口在 `michelinScore()` 的分项 */
+    michelinSignScore() {
+      return this.sidelineEffectTotal('michelinScore')
+    },
+    /** 夜市狂潮延长的（整）小时数（蜡烛）—— 出口在限时活动窗口表 */
+    nightMarketExtraHours() {
+      return this.sidelineEffectTotal('nightHours')
+    },
+    /** 计入蜡烛延长后的限时活动表（命中判定与行情页**共用这一个来源**，避免页面与实际不一致） */
+    marketEventsNow() {
+      return marketEventsWithNightExtension(this.nightMarketExtraHours())
+    },
+    /** 夜市窗口结束小时（>24 表示跨夜）；UI 文案用 */
+    nightMarketEndHour() {
+      return nightMarketEndHour(this.marketEventsNow())
     },
 
     // ── 仓库（§5.4）──
@@ -2302,7 +2361,7 @@ export const usePlayerStore = defineStore('player', {
       if (n < 1 || n > CELLAR_MAX_QTY) return { ok: false, msg: `件数需在 1~${CELLAR_MAX_QTY} 之间` }
       if ((this.inventory[itemId] ?? 0) < n) return { ok: false, msg: '数量不足' }
       const baseValue = (it.value ?? 0) * n
-      if (baseValue > CELLAR_MAX_BASE_VALUE) return { ok: false, msg: `单槽价值上限 ${CELLAR_MAX_BASE_VALUE.toLocaleString()}（当前 ${baseValue.toLocaleString()}）` }
+      if (baseValue > CELLAR_SLOT_VALUE_BASE + this.sidelineEffectTotal('cellarValue')) return { ok: false, msg: `单槽价值上限 ${this.cellarSlotValueMax().toLocaleString()}（当前 ${baseValue.toLocaleString()}）` }
       const tier = cellarTier(hours)
       this.spendItem(itemId, n)
       const now = Date.now()
@@ -3532,6 +3591,13 @@ export const usePlayerStore = defineStore('player', {
         score += v
         return { ...f, raw: raw[f.id] ?? 0, points: v }
       })
+      // 副业·刺绣（v2.10.0）：招牌绣屏——第七维，**权重固定 1**（分数即加成值），
+      // 不改动既有六维的权重与星级门槛（那是标定过的），只作为额外加分项计入总分。
+      const sign = this.michelinSignScore?.() ?? 0
+      if (sign > 0) {
+        parts.push({ id: 'sign', label: '招牌绣屏', weight: 1, hint: '副业·刺绣的绣品件数加成', raw: sign, points: sign })
+        score += sign
+      }
       return { score, parts }
     },
     /** 星级收益：餐厅收入 +%，全技能经验 +% */
@@ -5230,17 +5296,17 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ── 限时窗口活动（2026-09-06 扩展）：夜市/晨集/茶歇/午夜/主厨日，倍率聚合可叠加 ──
-    /** 当前命中的活动列表（含跨夜窗口与周日主厨日） */
+    /** 当前命中的活动列表（含跨夜窗口与周日主厨日；含蜡烛对夜市窗口的延长） */
     activeMarketEvents(hour = null, weekday = null) {
-      return activeMarketEvents_(hour, weekday)
+      return activeMarketEvents_(hour, weekday, this.marketEventsNow?.() ?? undefined)
     },
     /** 处于活动窗口（兼容旧接口：任一事件命中即 true；专用断言仍可传参） */
     marketOn(hour = null, weekday = null) {
-      return activeMarketEvents_(hour, weekday).length > 0
+      return activeMarketEvents_(hour, weekday, this.marketEventsNow?.() ?? undefined).length > 0
     },
     /** 聚合倍率（命中事件相乘）：{ restaurant, combatXp, gatherXp, craftXp } */
     marketBoost(hour = null, weekday = null) {
-      const base = aggregateMarketBoost(hour, weekday)
+      const base = aggregateMarketBoost(hour, weekday, this.marketEventsNow?.() ?? undefined)
       if (hour !== null || weekday !== null) return base // 显式传参：纯函数路径（测试/预览）
       const fest = this.festivalBoost?.() ?? { restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1 }
       const wx = this.weatherEffects?.() ?? { restaurant: 1, gatherXp: 1, craftXp: 1, combatXp: 1 } // 天气（2026-09-10）
