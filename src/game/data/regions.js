@@ -10,7 +10,7 @@ export const REGIONS = [
   },
   {
     id: 'snow', name: '北境雪山', icon: '🏔️', cost: 60000, seasonMonths: [12, 1, 2],
-    box: ['truffle', 'mushroom', 'excavation_ext_01', 'mint', 'rosemary'],
+    box: ['truffle', 'mushroom', 'excavation_ext_01', 'mint', 'rosemary', 'elmWood', 'oakWood'],
     qtyPct: 15, rarePct: 8, desc: '寒地菌菇与香草，稀有物出产率高',
   },
   {
@@ -25,7 +25,8 @@ export const REGIONS = [
   },
   {
     id: 'volcano', name: '东岭火山', icon: '🌋', cost: 120000, seasonMonths: [9, 10, 11],
-    box: ['copperOre', 'ironOre', 'saltOre', 'silverOre', 'goldOre'],
+    // v2.8.0：火山按题材补「炭化型」深色木材与高阶矿脉
+    box: ['copperOre', 'ironOre', 'saltOre', 'silverOre', 'goldOre', 'ebonyWood', 'ironwoodTimber', 'excavation_ext2_17', 'excavation_ext2_25'],
     qtyPct: 12, rarePct: 10, desc: '矿脉与地热的熔岩之乡',
   },  {
     id: 'highland', name: '云顶高原', icon: '🐄', cost: 40000, seasonMonths: [4, 5, 6],
@@ -34,7 +35,8 @@ export const REGIONS = [
   },
   {
     id: 'bamboo', name: '竹海山乡', icon: '🎍', cost: 70000, seasonMonths: [7, 8, 9],
-    box: ['foraging_ext_24', 'teaLeaf', 'mushroom', 'ginger'],
+    // v2.8.0：竹海山乡按题材补低档木料（派驻此地的采集队会带回木材）
+    box: ['foraging_ext_24', 'teaLeaf', 'mushroom', 'ginger', 'pineWood', 'cedarWood', 'birchWood'],
     qtyPct: 19, rarePct: 6, desc: '漫山竹影，笋与山货按季冒头',
   },
 

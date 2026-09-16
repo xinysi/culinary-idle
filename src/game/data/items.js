@@ -80,7 +80,7 @@ export const ITEMS = {
   sage: it('sage', '鼠尾草', 'ingredient', 'herb', 6, 44),
   parsley: it('parsley', '欧芹', 'ingredient', 'herb', 6, 40),
   dill: it('dill', '莳萝', 'ingredient', 'herb', 6, 42),
-  wood: it('wood', '木材', 'ingredient', 'material', 1, 4), // 采摘 8% 附带产出（厨具锻造 §3.2.6）
+  wood: it('wood', '木材', 'ingredient', 'material', 1, 4), // 采摘 50% 附带产出（ForagingSkill.WOOD_CHANCE；厨具锻造 §3.2.6 的通用低级木料）
 
   // ── 垂钓 §3.1.2（12 种 + 稀有金龙鱼）──
   crucian: it('crucian', '鲫鱼', 'ingredient', 'seafood', 1, 6),
@@ -110,7 +110,7 @@ export const ITEMS = {
   dragonMeat: it('dragonMeat', '古龙肉', 'ingredient', 'meat', 9, 380),
   pheasantEgg: it('pheasantEgg', '野鸡蛋', 'ingredient', 'egg', 1, 15),
 
-  // ── 挖掘 §3.1.4（10 种 + 稀有化石 + 矿石）──
+  // ── 挖掘 §3.1.4（根茎/菌类；矿物已于 v2.7.0 独立为「采矿」）──
   potato: it('potato', '土豆', 'ingredient', 'root', 1, 6),
   sweetPotato: it('sweetPotato', '红薯', 'ingredient', 'root', 1, 10),
   saltOre: it('saltOre', '盐矿', 'ingredient', 'mineral', 2, 14),

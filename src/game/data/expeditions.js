@@ -74,6 +74,18 @@ export const EXPEDITIONS = [
       { reqLevel: 70, hours: 4, goldPerHour: 880, pool: ['giltOre', 'excavation_ext2_25', 'excavation_ext2_27'] },
     ],
   },  {
+    // v2.8.0 新增：伐木队（20 档木材的挂机来源；与矿脉勘探队同构，4 槽按等级分段）
+    id: 'timberYard', name: '伐木队', icon: '🪓',
+    skill: 'woodcutting', reqLevel: 25, desc: '进驻林场，成批运回各档木料',
+    rare: { itemId: 'primalWood', chance: 0.02 }, // 太初神木
+    slots: [
+      { reqLevel: 1, hours: 1, goldPerHour: 110, pool: ['pineWood', 'cedarWood', 'birchWood'] },
+      { reqLevel: 30, hours: 1, goldPerHour: 410, pool: ['nanmuWood', 'rosePearWood', 'redSandalWood'] },
+      { reqLevel: 50, hours: 2, goldPerHour: 610, pool: ['ironwoodTimber', 'bogWood', 'fragrantRosewood'] },
+      { reqLevel: 70, hours: 4, goldPerHour: 810, pool: ['glazeWood', 'giltWood', 'starWood'] },
+    ],
+  },
+  {
     id: 'exp_bakery', name: '面点采买队', icon: '🍞', skill: 'baking', reqLevel: 25,
     desc: '常年在麦香里打转的队伍，替你把烘焙原料一并带回。',
     rare: { itemId: 'saffron', chance: 0.012 },

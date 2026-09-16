@@ -19,6 +19,7 @@ import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '.
 import { SHOP_ITEMS } from './shop.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { getItem, ITEMS } from './items.js'
+import { MIJIAN_POOLS, poolItems, mijianPoolVersion } from './mijianDraws.js'
 import { ENCOUNTERS } from './encounters.js'
 import { COMBAT_BOSSES } from './combat.js'
 import { SEASONS } from './seasons.js'
@@ -72,7 +73,8 @@ for (const [skill] of [['excavation']]) {
   for (const t of GATHERING_EXT[skill] ?? []) if (isMineralTarget(t)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
   for (const t of GATHERING_EXT2[skill] ?? []) if (isMineralTarget(t)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
 }
-for (const t of MINING_TARGETS) if (t.itemId === 'steelOre' || /Ore$/.test(t.itemId)) add(t.itemId, `采矿获得（Lv${t.reqLevel} 解锁）`)
+// （13 座同名矿的「采矿获得」已由上面的 GATHER 表一次登记完：MINING_TARGETS 里就有它们。
+//  v2.8.0 删掉了这里原先「再补一遍」的循环——那会让同一条来源串在图鉴里出现两次。）
 
 // 农耕
 for (const c of CROPS) add(c.itemId, `农耕种植获得（Lv${c.reqLevel} 解锁）`)
@@ -141,17 +143,24 @@ add('fossilIngredient', '挖掘附产物（2%）')
 add('pheasantEgg', '狩猎野鸡附产物（15%）')
 
 // 觅珍抽卡（2026-09-06）：三池物品来源
-const MIJIAN_POOL_KINDS = {
-  material: ['ingredient', 'spice'],
-  food: ['food', 'drink'],
-  gear: ['equipment'],
-}
-for (const [pid, kinds] of Object.entries(MIJIAN_POOL_KINDS)) {
-  for (const [id, it] of Object.entries(ITEMS)) {
-    if (!kinds.includes(it.type)) continue
-    if (pid === 'material' && (it.category === 'mineral' || /矿$/.test(it.name))) continue
-    add(id, `觅珍·${pid === 'material' ? '材料池' : pid === 'food' ? '食物池' : '厨具池'}（抽卡）`)
+// ⚠️ v2.8.0 修：这里原先是**重抄一遍过滤条件**，且漏掉了池定义里的 `cap`（价值上限）——
+//    于是图鉴把 370 件「抽不到的高价值物品」标成可抽到（含 16 档高价值木材、化石食材、松露/灵果等）。
+//    现改为**直接复用池函数** `poolItems()`，登记侧与判定侧永远同源（`mijianDraws.js` 是唯一真身）。
+// 惰性登记（见下方 ensureMijianSources）：池子按 value 筛成员，而 value 会被 `applyValueBalance()` 改，
+// 所以这份登记**不能**在模块加载期算一次就算完——那会让结果取决于 import 顺序（实测踩过）。
+let _mijianRegisteredVersion = -1
+function ensureMijianSources() {
+  const v = mijianPoolVersion()
+  if (v === _mijianRegisteredVersion) return
+  for (const id of Object.keys(SOURCES)) {
+    const kept = SOURCES[id].filter((x) => !x.startsWith('觅珍·'))
+    if (kept.length !== SOURCES[id].length) SOURCES[id] = kept
   }
+  for (const p of MIJIAN_POOLS) {
+    if (p.id === 'mix' || p.id === 'limited') continue // 混池/限时池是「按权重混合」的组合池，不逐件登记
+    for (const it of poolItems(p.id)) add(it.id, `觅珍·${p.name}（抽卡）`)
+  }
+  _mijianRegisteredVersion = v
 }
 
 // 游戏商店（2026-09-09 小游戏游戏币商店）：礼包/盲盒/种子袋随机获取（池定义与商店发货共用 gameShopPools）
@@ -210,7 +219,10 @@ for (const it of Object.values(ITEMS)) {
 
 // 产地与风土（2026-09-12 补录）：把采集队线路派驻到产地后，该产地物资箱物品会混入产出。
 // 此前产地从未登记为来源——玩家在图鉴里看不到「这里也能产出它」，也点不进去（sourceJump 同步补了跳转）。
-for (const r of REGIONS) for (const id of r.box ?? []) add(id, `产地与风土·${r.name}（派驻产出）`)
+for (const r of REGIONS) for (const id of r.box ?? []) {
+  add(id, `产地与风土·${r.name}（派驻产出）`)
+  add(id, `商队线·${r.name}特产（归队带回）`) // 同一批 box 物品也是商队特产（player.caravanClaim 按 route.box 抽取）
+}
 
 // 吉祥物（2026-09-12 补录）：每日蹭一蹭有概率带礼物（同属补录，此前未登记）
 for (const m of MASCOTS) for (const id of Object.keys(m.items ?? {})) add(id, `吉祥物·${m.name}（每日互动礼物）`)
@@ -236,6 +248,7 @@ for (const enc of ENCOUNTERS) {
 
 /** 某物品的获取来源列表（无来源返回 []） */
 export function itemSources(id) {
+  ensureMijianSources() // 惰性登记：首次取来源时（必然已在价值平衡之后）才算一遍
   return SOURCES[id] ?? []
 }
 /** 有来源索引的物品数（图鉴覆盖率统计用） */

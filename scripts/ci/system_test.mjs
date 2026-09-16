@@ -4,13 +4,16 @@
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
+import { MIJIAN_POOLS, poolItems } from '../../src/game/data/mijianDraws.js'
+import { DAILY_POOL, WEEKLY_POOL } from '../../src/game/data/dailyTasks.js'
+import { GUILDS } from '../../src/game/data/guilds.js'
 import { SKILL_DEFS } from '../../src/game/data/skills.js'
 import { QUIRKS } from '../../src/game/data/tales_ext.js'
 import { SELL_EXCLUDED_CATEGORIES } from '../../src/game/data/automation.js'
 import { EXCHANGE_POOL_CATEGORIES } from '../../src/game/data/exchange.js'
 import { INGREDIENT_POOL } from '../../src/game/data/gameShopPools.js'
 import { itemNavs } from '../../src/game/data/itemNav.js'
-import { EXCAVATION_ALL_TARGETS, isMineralTarget } from '../../src/game/skills/ExcavationSkill.js'
+import { EXCAVATION_ALL_TARGETS, MINING_TARGETS, isMineralTarget } from '../../src/game/skills/ExcavationSkill.js'
 import { oreOfLevel, equipmentLevelOf as equipLevelOf } from '../../src/game/data/timberRecipes.js'
 import { TIMBERS, timberOfLevel } from '../../src/game/data/timbers.js'
 import { SMITHING_SET_RECIPES } from '../../src/game/data/smithSetExt.js'
@@ -1399,7 +1402,7 @@ console.log('══ E. 离线进度 ══')
     check('轶事', '大类定义齐备且顺序固定', st.defs.map((d) => d.id).join() === 'gather,craft,combatWins,support' && st.defs.every((d) => d.name && d.icon))
     check('轶事', '子类统计按 cat|sub 归并', st.subMap.get('gather|foraging')?.total === 1 && st.subMap.get('gather|foraging')?.unlocked === 1 && st.subMap.size === 4)
     check('轶事', '空列表不报错', quirkCategoryStats([]).defs.every((d) => d.total === 0))
-    // 全量数据（tales_ext 3588 条）：cat 必须全部落在已知大类，且总数不丢
+    // 全量数据（tales_ext 3988 条）：cat 必须全部落在已知大类，且总数不丢
     const { QUIRKS } = await import('../../src/game/data/tales_ext.js')
     const known = new Set(QUIRK_CAT_DEFS.map((c) => c.id))
     const unknown = [...new Set(QUIRKS.map((q) => q.cat))].filter((c) => !known.has(c))
@@ -4553,6 +4556,84 @@ console.log('== C29. 新技能适配一致性 ==')
 
   // ⑦ 技能总量与采集总等级口径
   check('适配', '技能总数为 22、采集总等级按 7 条线求和', Object.keys(SKILL_DEFS).length === 22 && ['foraging', 'fishing', 'hunting', 'excavation', 'farming', 'woodcutting', 'mining'].length === 7)
+}
+
+
+const WOOD_IDS = new Set(TIMBERS.map((t) => t.id))
+const MINING_IDS = new Set(MINING_TARGETS.map((t) => t.itemId))
+
+// ── C30. 新技能「内容适配」守卫（v2.8.0：任务 / 采集队 / 产地 / 炼金 / 觅珍 全链同步）──
+console.log('== C30. 新技能内容适配 ==')
+{
+  const D = (f) => fs.readFileSync(new URL(`../../src/game/data/${f}`, import.meta.url), 'utf8')
+
+  // ① 主线任务：两个新技能各有专属任务（q501+ 手工续写在生成器产物末尾，param 一律 itemId）
+  const newQuests = QUESTS.filter((q) => Number(String(q.id).slice(1)) >= 501)
+  const qSkills = { woodcutting: false, mining: false }
+  for (const q of newQuests) for (const o of q.objectives ?? []) {
+    if (WOOD_IDS.has(o.param)) qSkills.woodcutting = true
+    if (MINING_IDS.has(o.param)) qSkills.mining = true
+  }
+  check('内容适配', `主线任务新增 ${newQuests.length} 条且覆盖伐木/采矿两类目标`, newQuests.length >= 8 && qSkills.woodcutting && qSkills.mining, JSON.stringify(qSkills))
+  check('内容适配', '主线任务 id 全局唯一', (() => { const s2 = new Set(); return QUESTS.every((q) => (s2.has(q.id) ? false : (s2.add(q.id), true))) })())
+  check('内容适配', '主线任务的 param 都是真实物品（只查用物品 id 的 kind：gather/craft/harvest）', QUESTS.every((q) => (q.objectives ?? []).every((o) => !['gather', 'craft', 'harvest'].includes(o.kind) || ['any', undefined].includes(o.param) || !!ITEMS[o.param])))
+
+  // ② 每日 / 周常 / 公会任务
+  check('内容适配', '每日池与周常池都含伐木、采矿两条定向任务', DAILY_POOL.some((t) => t.param === 'woodcutting') && DAILY_POOL.some((t) => t.param === 'mining') && WEEKLY_POOL.some((t) => t.param === 'woodcutting') && WEEKLY_POOL.some((t) => t.param === 'mining'))
+  check('内容适配', '公会「采集」任务含伐木 ×N 与开采矿石 ×N（kind=skill, param=技能 id）', (() => {
+    const t = GUILDS.find((g) => g.id === 'harvestField')?.tasks ?? []
+    return t.some((x) => x.kind === 'skill' && x.param === 'woodcutting') && t.some((x) => x.kind === 'skill' && x.param === 'mining')
+  })())
+
+  // ③ 采集队：6 条线（新增伐木队），池/稀有物品真实、技能已注册
+  const ty = EXPEDITIONS.find((e) => e.id === 'timberYard')
+  check('内容适配', '采集队新增「伐木队」且绑定伐木技能与 4 个槽位', !!ty && ty.skill === 'woodcutting' && ty.slots.length === 4, JSON.stringify(ty?.skill))
+  check('内容适配', '伐木队的产出池按档覆盖木材（低/中/高三段各 ≥2 档）', (() => {
+    if (!ty) return false
+    const ids = new Set(ty.slots.flatMap((x) => x.pool))
+    return ['pineWood', 'birchWood'].every((i) => ids.has(i)) && ['nanmuWood', 'redSandalWood'].every((i) => ids.has(i)) && ['glazeWood', 'starWood'].every((i) => ids.has(i))
+  })())
+  check('内容适配', '采集队共 6 条线，且每条线的 pool/rare 都是真实物品、skill 已注册', EXPEDITIONS.length === 6 && EXPEDITIONS.every((e) => !!SKILL_DEFS[e.skill]) && EXPEDITIONS.every((e) => e.slots.every((x) => x.pool.every((id) => !!ITEMS[id]))))
+
+  // ④ 产地：至少两个产地的物资箱含木材（派驻采集队会带回），且 box 物品真实
+  const woodRegions = REGIONS.filter((r) => (r.box ?? []).some((id) => WOOD_IDS.has(id)))
+  check('内容适配', `产地物资箱含木材（${woodRegions.length} 个产地），且 box 物品全部真实`, woodRegions.length >= 2 && REGIONS.every((r) => (r.box ?? []).every((id) => !!ITEMS[id])), woodRegions.map((r) => r.name).join('/'))
+  check('内容适配', '产地 box 物品在图鉴里同时登记「派驻产出」与「商队特产」两条来源', (() => {
+    const r = REGIONS.find((x) => (x.box ?? []).includes('pineWood')) ?? REGIONS.find((x) => (x.box ?? []).length)
+    if (!r) return false
+    const id = r.box[0]
+    const src = itemSources(id)
+    return src.some((s) => s.includes('派驻产出')) && src.some((s) => s.includes('商队线'))
+  })())
+
+  // ⑤ 炼金：木材链存在、覆盖 20 档、且**每条满足投入价值 ≥ 产出价值**（否则 applyAlchemyRatioCap 会静默削值）
+  const woodAl = ALCHEMY_RECIPES.filter((r) => WOOD_IDS.has(r.out))
+  check('内容适配', `炼金新增木材链 ${woodAl.length} 条，覆盖 20 档木材`, woodAl.length >= 19 && new Set(woodAl.map((r) => r.out)).size >= 19)
+  check('内容适配', '木材链每条都满足「投入价值总和 ≥ 产出价值」（防静默削值）', woodAl.every((r) => {
+    const inV = Object.entries(r.in).reduce((a, [k, q]) => a + (ITEMS[k]?.value ?? 0) * q, 0)
+    return (ITEMS[r.out]?.value ?? 0) <= inV
+  }))
+  check('内容适配', '炼金配方 id 唯一（物品存在性由 item_triple_audit 的幽灵白名单管）', (() => { const s2 = new Set(); return ALCHEMY_RECIPES.every((r) => (s2.has(r.id) ? false : (s2.add(r.id), true))) })())
+
+  // ⑥ 觅珍：**图鉴登记的来源必须与池子成员完全一致**（本轮修的就是这里漏了 cap → 370 件假来源）
+  const poolMismatch = []
+  for (const pool of MIJIAN_POOLS) {
+    if (pool.id === 'mix' || pool.id === 'limited') continue
+    const members = new Set(poolItems(pool.id).map((i) => i.id))
+    const claimed = new Set(Object.keys(ITEMS).filter((id) => itemSources(id).some((s) => s.includes(`觅珍·${pool.name}`))))
+    for (const id of members) if (!claimed.has(id)) poolMismatch.push(`缺登记:${id}`)
+    for (const id of claimed) if (!members.has(id)) poolMismatch.push(`假来源:${id}`)
+  }
+  check('内容适配', '觅珍：图鉴登记的池成员与池子实际成员完全一致（无假来源/无漏登记）', poolMismatch.length === 0, poolMismatch.slice(0, 6).join(' '))
+  check('内容适配', '觅珍普通池不含超上限物品（cap 语义：value ≤ 50/100）', poolItems('material').every((i) => i.value <= 50) && poolItems('food').every((i) => i.value <= 100))
+  check('内容适配', '池缓存会在价值平衡后失效（否则「谁先 import」决定池子成员，实测踩过）', D('valueBalance.js').includes('resetMijianPoolCache()') && D('mijianDraws.js').includes('export function resetMijianPoolCache()'))
+
+  // ⑦ 轶事：挖掘子类不再含矿物，矿物归采矿（v2.8.0 把生成器源头改成地面目标）
+  const exTales = QUIRKS.filter((q) => q.unlock.sub === 'excavation')
+  const miTales = QUIRKS.filter((q) => q.unlock.sub === 'mining')
+  check('内容适配', `挖掘轶事 ${exTales.length} 条里不再有矿物 param`, exTales.length === 200 && exTales.every((q) => !MINING_IDS.has(q.unlock.param)))
+  check('内容适配', `采矿轶事 ${miTales.length} 条覆盖矿物（含盐矿/同名矿）`, miTales.length === 200 && miTales.some((q) => q.unlock.param === 'saltOre') && miTales.some((q) => q.unlock.param === 'steelOre'))
+  check('内容适配', '旧的「矿物轶事补记旧键」兼容补丁已删除（挖掘轶事不再含矿物 → 无需补记）', !fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8').includes('LEGACY_EXCAVATION_MINERALS'))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

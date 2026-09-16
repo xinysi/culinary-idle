@@ -12,6 +12,9 @@ export const DAILY_POOL = [
   { name: '🧭 环球探索', kind: 'explore', param: 'any', qty: 10, gold: 240 },
   { name: '🎣 深海垂钓', kind: 'gather', param: 'fishing', qty: 30, gold: 200 },
   { name: '⛏️ 秘境挖宝', kind: 'gather', param: 'excavation', qty: 30, gold: 220 },
+  // v2.8.0：新技能各一条（与既有 fishing/excavation 定向任务同构，param 用技能 id）
+  { name: '🪓 伐木场', kind: 'gather', param: 'woodcutting', qty: 30, gold: 220 },
+  { name: '⛰️ 矿井深处', kind: 'gather', param: 'mining', qty: 30, gold: 220 },
   { name: '🧪 炼金大师', kind: 'alchemy', param: 'any', qty: 6, gold: 280 },
   { name: '🕶️ 快手收成', kind: 'gather', param: 'foraging', qty: 40, gold: 200 },
   { name: '🍖 狩猎时刻', kind: 'gather', param: 'hunting', qty: 25, gold: 220 },
@@ -28,6 +31,8 @@ export const WEEKLY_POOL = [
   { name: '🌾 丰收周', kind: 'harvest', param: 'any', qty: 180, gold: 1500, items: { saltOre: 3 } },
   { name: '🧪 炼金工坊周', kind: 'alchemy', param: 'any', qty: 40, gold: 1700, items: { ironOre: 5 } },
   { name: '🎣 渔获季', kind: 'gather', param: 'fishing', qty: 300, gold: 1600, items: { mysterySpice: 1 } },
+  { name: '🪓 伐木周', kind: 'gather', param: 'woodcutting', qty: 300, gold: 1600, items: { pineWood: 20 } },
+  { name: '⛰️ 采矿周', kind: 'gather', param: 'mining', qty: 300, gold: 1600, items: { ironOre: 10 } },
 ]
 
 // 每日全部完成礼包（一次性）

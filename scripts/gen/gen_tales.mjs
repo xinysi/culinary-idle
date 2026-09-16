@@ -27,6 +27,11 @@ const itemName = itemsModule?.itemName ?? ((id) => id)
 const TARGETS = []
 // 按采集技能分组的真实目标（供采集子子类轶事，贴合每技能机制）
 const GATHER_BY_SKILL = {}
+/** 是否矿物（与 ExcavationSkill.isMineralTarget 同口径：只看物品类别） */
+function isMineral(itemId) {
+  return getItem(itemId)?.category === 'mineral'
+}
+
 async function addTargets(mod, arrayName, skillId) {
   const m = await load(mod)
   if (!m || !m[arrayName]) return
@@ -40,7 +45,8 @@ async function addTargets(mod, arrayName, skillId) {
 await addTargets('game/skills/ForagingSkill.js', 'FORAGING_TARGETS', 'foraging')
 await addTargets('game/skills/FishingSkill.js', 'FISHING_TARGETS', 'fishing')
 await addTargets('game/skills/HuntingSkill.js', 'HUNTING_TARGETS', 'hunting')
-await addTargets('game/skills/ExcavationSkill.js', 'EXCAVATION_TARGETS', 'excavation')
+// v2.8.0：挖掘只取「地面目标」（根茎/菌类，42 条）——矿物已归采矿，不再出现在挖掘轶事里
+await addTargets('game/skills/ExcavationSkill.js', 'EXCAVATION_GROUND_TARGETS', 'excavation')
 // v2.7.4：新技能也要有轶事（否则「故事·轶事」里伐木/采矿两个子类是空白）
 await addTargets('game/data/timbers.js', 'WOODCUTTING_TARGETS', 'woodcutting')
 await addTargets('game/skills/ExcavationSkill.js', 'MINING_TARGETS', 'mining')
@@ -52,6 +58,16 @@ for (const [mod, key, skillId] of [['game/data/expansion1.js', 'GATHERING_EXT', 
     const target = GATHER_BY_SKILL[sk] ?? (GATHER_BY_SKILL[sk] = [])
     for (const t of list) {
       const item = { id: t.itemId, name: itemName(t.itemId), lvl: t.reqLevel ?? 1 }
+      // ⚠️ v2.8.0：**矿物不再进挖掘轶事**。ext/ext2 的 GATHERING_EXT.excavation 里混着矿物
+      // （石膏/硝石/硫磺…以及紫石英/钻石等），而挖掘的技能实例目标已是「地面目标」——
+      // 这里若不过滤，矿物会绕过技能分流、重新混进挖掘轶事（v2.7.4 实测漏了这一步）。
+      if (sk === 'excavation' && isMineral(item.id)) {
+        if (!GATHER_BY_SKILL.mining?.some((x) => x.id === item.id)) {
+          const mTarget = GATHER_BY_SKILL.mining ?? (GATHER_BY_SKILL.mining = [])
+          mTarget.push(item); TARGETS.push(item)
+        }
+        continue
+      }
       target.push(item); TARGETS.push(item)
     }
   }

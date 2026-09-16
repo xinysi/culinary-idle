@@ -2712,4 +2712,17 @@ export const QUESTS_EXT = [
     objectives: [{ kind: 'craft', param: 'bloodClamSalad', qty: 5 }],
     reward: { gold: 862 },
   },
+
+  // ── v2.8.0 手工续写：伐木 / 采矿 的专属主线任务（生成器 gen_quests 属硬门禁冻结数据、不得重跑，
+  //    故新技能的任务按项目既有做法「只落到产物里」；param 一律用 itemId，kind 用既有 gather）──
+  { id: 'q501', name: '磨斧', desc: '伐取 8 份松木。', objectives: [{ kind: 'gather', param: 'pineWood', qty: 8 }], reward: { gold: 300 } },
+  { id: 'q502', name: '第一圈年轮', desc: '伐取 12 份杉木与 12 份桦木。', objectives: [{ kind: 'gather', param: 'cedarWood', qty: 12 }, { kind: 'gather', param: 'birchWood', qty: 12 }], reward: { gold: 620 } },
+  { id: 'q503', name: '阴干成料', desc: '伐取 15 份榆木与 10 份橡木。', objectives: [{ kind: 'gather', param: 'elmWood', qty: 15 }, { kind: 'gather', param: 'oakWood', qty: 10 }], reward: { gold: 1100 } },
+  { id: 'q504', name: '名木入炉', desc: '伐取 12 份花梨木与 8 份紫檀木（高阶厨具的木料）。', objectives: [{ kind: 'gather', param: 'rosePearWood', qty: 12 }, { kind: 'gather', param: 'redSandalWood', qty: 8 }], reward: { gold: 2200 } },
+  { id: 'q505', name: '神木', desc: '伐取 5 份太初神木（传说级厨具只用它）。', objectives: [{ kind: 'gather', param: 'primalWood', qty: 5 }], reward: { gold: 4200 } },
+  { id: 'q506', name: '第一锤', desc: '开采 10 份铜矿。', objectives: [{ kind: 'gather', param: 'copperOre', qty: 10 }], reward: { gold: 300 } },
+  { id: 'q507', name: '矿井深处', desc: '开采 15 份铁矿与 10 份盐矿。', objectives: [{ kind: 'gather', param: 'ironOre', qty: 15 }, { kind: 'gather', param: 'saltOre', qty: 10 }], reward: { gold: 700 } },
+  { id: 'q508', name: '同名矿', desc: '开采 12 份钢矿与 10 份银矿。', objectives: [{ kind: 'gather', param: 'steelOre', qty: 12 }, { kind: 'gather', param: 'silverOre', qty: 10 }], reward: { gold: 1500 } },
+  { id: 'q509', name: '宝石矿脉', desc: '开采 8 份红宝石矿与 6 份钻石矿。', objectives: [{ kind: 'gather', param: 'excavation_ext2_15', qty: 8 }, { kind: 'gather', param: 'excavation_ext2_17', qty: 6 }], reward: { gold: 3000 } },
+  { id: 'q510', name: '大地的馈赠', desc: '开采 5 份萤石与 5 份蓝晶矿。', objectives: [{ kind: 'gather', param: 'excavation_ext2_30', qty: 5 }, { kind: 'gather', param: 'excavation_ext_30', qty: 5 }], reward: { gold: 4800 } },
 ]
