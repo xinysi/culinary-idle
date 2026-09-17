@@ -4,6 +4,7 @@ import { SKILL_DEFS } from '../../game/data/skills.js'
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { assetUrl } from '../../game/data/itemImage.js'
 import { getItem, ITEMS } from '../../game/data/items.js'
 
 const player = usePlayerStore()
@@ -216,7 +217,7 @@ resetRound()
     <div class="tv-exchange">
       <span class="tv-exchange-title">🏅 徽章兑换</span>
       <button v-for="it in EXCHANGES" :key="it.id" class="tv-ex" :disabled="(mg.badges ?? 0) < it.cost" @click="exchange(it)">
-        <img class="coin-ico" src="/images/icon-coin.png" alt="">{{ it.label }}<span class="tv-ex-cost">{{ it.cost }} 徽章</span>
+        <img class="coin-ico" :src="assetUrl('/images/icon-coin.png')" alt="">{{ it.label }}<span class="tv-ex-cost">{{ it.cost }} 徽章</span>
       </button>
     </div>
 

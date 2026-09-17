@@ -373,7 +373,7 @@ bg_cand = (min >= 235) | (chroma <= 10 且 min >= 190)     # 近白 或（淡 �
 ### 守卫
 `system_test` **C32（27 项，木工）+ C33（28 项，四支）**（内容见上各节）；`e2e-dark` 与 `e2e-text` 都已纳入**左栏三页签**与**五个副业技能页**（`skill` 视图只渲染当时激活的那一个技能 ⇒ 只 `setView('skill') 是盲区；加新副业时把 id 加进那两处循环）。
 
-## 🧯 「静默失效」三兄弟 + v2.1.3 用户实测 7 项（2026-09-14 立，最高优先阅读）
+## 🧯 「静默失效」四兄弟 + v2.1.3 用户实测 7 项（2026-09-14 立；2026-09-17 补第 ⑤ 条「绝对路径在 exe 里全坏」）
 
 用户实测报的 7 项里，**有 4 项是「代码/数据都在，但没有任何东西读它」的静默失效**——不报错、不白屏、既有守卫全绿，只有玩家点进去才发现。这类缺陷是守卫的盲区，故单列一节：
 
@@ -400,6 +400,26 @@ bg_cand = (min >= 235) | (chroma <= 10 且 min >= 190)     # 近白 或（淡 �
 ### ④ 数值为 0 也常常要显示（觅珍券 0 张时入口消失）
 - 觅珍页右上角的券数原先「为 0 就不渲染」→ 玩家看不到自己有几张。改为**恒显示「🎟️ 券 0 张」**（0 是有效信息，不是空状态）。
 - **纪律**：判断「要不要隐藏」时看**语义**而非真值——`0`（有意义的零）、`false`（已关闭的开关）通常要显示；`null`/`undefined`（没有这一项）才隐藏。
+
+### ⑤ 🔴 图片/资源一律用「文档相对路径」——根绝对 `/images/…` 在**打包的 exe 里必然全坏**（2026-09-17 用户报「exe 打开后很多图片都不显示」）
+
+- **根因**：代码里有 6 处资源 URL 写成**根绝对**（`/images/…`）：拼图照片池 `ptPhotos.ptUrl`（30 张）、笨鸟先飞（`fb-bg`/`fb-pipe-*` + 8 张鸟）、游戏币图标 `icon-coin.png`（4 个页面）。
+  dev（vite server 在站点根）与 GitHub Pages 下**看不出问题**，但 Electron 打包后页面是
+  `file:///…/resources/app.asar/dist/index.html`，`/images/…` 会解析到**磁盘根**（`file:///D:/images/…`）→ 素材全部 404；
+  而 `ItemImg` 的 `@error` 会把破图 **`display:none` 静默隐藏**（页面不报错、控制台干净）——又是一例「静默失效」。
+  实测同一批 URL：**相对写法 OK、绝对写法 FAIL**。
+- **规矩**：应用内资源 URL 一律走**唯一出口 `assetUrl()`**（`src/game/data/itemImage.js` 导出，`itemImage()` 也走它）：
+  `assetUrl('/images/x.png')` → `'images/x.png'`。三端一致：dev → `/images/…`、Pages → `/culinary-idle/images/…`、exe → `dist/images/…`。
+  - ⚠️ **模板里的静态 `src="/images/x.png"` 还有第二个坑**：会被 Vite 当 import 解析而在构建期报错 → 必须写 `:src="assetUrl('/images/x.png')"`（**绑定表达式不参与 import 分析**，这也是 `itemImage()` 一直没出事的原因）。
+  - ⚠️ **CSS 里的背景图**用「相对 CSS 文件的路径」（`url('../../public/images/bg-start.jpg')`，Vite 会解析并产出到 `dist/assets/`），**不要**写 `/images/…`。
+- **守卫三道**（缺一即可能回潮）：
+  1. `scripts/ci/image_path_audit.mjs`（**进 CI**）：`src/**` 与 `index.html` 里**禁止出现根绝对资源 URL**（剥注释后扫描，只放行 `assetUrl(...)` 里的），并断言所有静态引用的图片文件在 `public/` 下真实存在。**已反例验证**（改回绝对路径立刻 FAIL）。
+  2. `scripts/ci/exe_image_audit.mjs`（**本地发布 exe 前必跑**，CI 无 Electron 运行时）：用 Electron 打开构建产物（`dev` 模式）或**已打包的 exe**（`packaged` 模式），遍历 65 个视图 + 16 个副业页 + 6 个弹窗 + 全部小游戏入口（实测 198 个页面/1790 处图片引用），**把每个 `<img>` 与 CSS 背景图真的 load 一次**再判定损坏。
+  3. `lmewexe/verify_asar.cjs`（**进 Release 流程**）：断言 `app.asar` 内 `dist/images` 文件数 == 源 `dist/images`（本次 = **2125**），并钉住 `items/food`、`items/tool`、`items/pt`、`birds` 四个目录非空。
+     ⚠️ 它用 Node 解析 asar 头部，**不调 `asar list` CLI**——release 目录名含中文，PowerShell 5.1 会把中文参数按 ANSI 读成乱码 → CLI 拿到错路径（实测踩过；同源坑还有「`.ps1` 里的中文会被 ANSI 读错」，发布脚本一律写 ASCII + 用 glob 定位）。
+- **教训（值得推广的两条）**：
+  1. **「本地/线上都好」不等于「打包后好」**：dev 与 Pages 的页面都在站点根，掩盖了根绝对路径的问题；凡是**路径解析依赖页面位置**的写法，都要在 `file://` 下过一遍。
+  2. **用户报「很多图不显示」时先分清「打包丢文件」还是「路径解析错」**：本次先用 `verify_asar.cjs` 证明 asar 内 2125 张**一张没少**，再用 Electron 实测定位到 42 个绝对路径 URL —— 两步分开做，才能避免瞎改打包脚本。
 
 ### 其余 3 项（非静默类，但同样入册）
 - **堆肥可重复施**（既消耗肥料又毫无效果）：改为**同种/降级拒绝、更好的可覆盖升级**（`FERTILIZER_RANK = { compost: 1, richCompost: 2 }`，`rank(new) <= rank(current)` 直接 `return false`）；已施同种肥的地块不再显示该按钮。⚠️ 首版我写成「施过就拒绝一切再施」→ 直接踩坏 `system_test2` 的「施沃肥覆盖堆肥」「沃肥后枯萎概率 0%」两项断言，**语义是「升级覆盖」不是「禁止再施」**。
@@ -594,6 +614,7 @@ bg_cand = (min >= 235) | (chroma <= 10 且 min >= 190)     # 近白 或（淡 �
   - 副作用记录：降磨砂（0.80→0.50）会让这类对比整体下滑（如橙色 3.3→2.05），**改磨砂/取景后必须复测**。
 - **全局毛玻璃质感**：框（`.card`/`.gather-card`/`.opp-row`/`.slot-card`/`.item-card`/`.plot-select`）、弹窗（`.modal`）、按钮（`.btn`/`.btn-primary`/`.btn-danger`）、左/中/右导航栏均采用「半透明玻璃底 + `backdrop-filter: blur` + 半透明白描边」。
 - **背景图资源**：中间主内容区 `.app-main` 与左右导航栏 `.app-sidebar`/`.app-status` 使用 `public/images/` 下背景图（**亮/暗各一张，见上一条主题切换表**）；启动页共用 `/images/bg-start.jpg`。左/右导航栏背景用 `background-image` + 半透明磨砂层，文字在磨砂层之上。
+  ⚠️ **写 CSS 时用「相对 CSS 文件的路径」**（如 `url('../../public/images/bg-start.jpg')`，Vite 会解析并产出到 `dist/assets/`），**不要写 `/images/…`**——见下面「exe 图片不显示」那条铁律。
 - **导航项（侧栏 `.skill-item` / 顶部 `.top-nav-btn`）**：未选中/选中均为透明毛玻璃（`rgba(255,252,246,0.30)` + `blur(12px)`）并用**虚线**边框分隔；选中用半透明主色（`rgba(217,90,56,0.25)`）+ 主色虚线 + 主色文字。
 - **文字可读性**：毛玻璃不透明度在复杂背景图上需保证文字对比（内容区 `.main-scroll` 加 `rgba(255,251,244,0.78)` 磨砂底，框背景 0.80、按钮 0.85）。
 - 新增物品/配方数据后，运行 `vite build` + `npx playwright test e2e-test.spec.mjs`（9/9）验证；UI 改动同样用回归脚本确认无未捕获控制台错误。

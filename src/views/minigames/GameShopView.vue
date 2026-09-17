@@ -5,6 +5,7 @@ import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 
 import { RARE_POOL, SEED_POOL, FOOD_POOL, SPICE_POOL, MINERAL_POOL, INGREDIENT_POOL } from '../../game/data/gameShopPools.js'
+import { assetUrl } from '../../game/data/itemImage.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -353,7 +354,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
 <template>
   <div class="gs-page">
     <div class="gs-topbar">
-      <span class="gs-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 余额 <b class="mono">{{ coins }}</b> 游戏币</span>
+      <span class="gs-chip"><img class="coin-ico" :src="assetUrl('/images/icon-coin.png')" alt=""> 余额 <b class="mono">{{ coins }}</b> 游戏币</span>
       <span class="gs-chip">🕹️ 27 款小游戏奖励均为游戏币</span>
       <span class="gs-chip" style="margin-left: auto">🛒 购买即生效 · 一次性外观购后可在已拥有间免费佩戴切换</span>
     </div>
@@ -365,7 +366,7 @@ const grouped = computed(() => GROUPS.map((cat) => ({ cat, items: Object.entries
           <div class="gs-card-head">
             <span class="gs-card-icon">{{ p.icon }}</span>
             <b class="gs-card-name">{{ p.name }}</b>
-            <span class="gs-card-price"><img class="coin-ico" src="/images/icon-coin.png" alt="">{{ p.price }}</span>
+            <span class="gs-card-price"><img class="coin-ico" :src="assetUrl('/images/icon-coin.png')" alt="">{{ p.price }}</span>
           </div>
           <div class="gs-card-desc">{{ p.desc }}</div>
           <button

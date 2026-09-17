@@ -4,7 +4,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
-import { itemImage } from '../../game/data/itemImage.js'
+import { itemImage, assetUrl } from '../../game/data/itemImage.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -245,7 +245,7 @@ function posStyle(t) {
       <button v-for="(m, id, idx) in MODES" :key="id" class="g2048-mode" :class="{ on: mode === id }" @click="switchMode(id)">模式{{ idx + 1 }}</button>
       <div class="g2048-stats">
         <span class="g2048-chip">⭐ <b class="mono">{{ score }}</b></span>
-        <span class="g2048-chip"><img class="coin-ico" src="/images/icon-coin.png" alt=""> 奖 <b class="mono">{{ earned }}</b> 游戏币</span>
+        <span class="g2048-chip"><img class="coin-ico" :src="assetUrl('/images/icon-coin.png')" alt=""> 奖 <b class="mono">{{ earned }}</b> 游戏币</span>
         <span class="g2048-chip">🏆 最佳 <b class="mono">{{ best }}</b></span>
       </div>
       <button class="g2048-info-btn" @click="showInfo = true">📖 模式说明</button>

@@ -38,6 +38,17 @@ jobs:
           python fix_paths.py
           npx electron-packager . "美食放置：食灵山海" --platform=win32 --arch=x64 --out=release --overwrite --asar
 
+      # 2.5 打包产物自检（2026-09-17 立）：asar 内的图片数必须与 dist 一致。
+      #     背景：用户报「exe 打开后很多图片不显示」——查明**不是打包丢文件**（asar 内图片齐全），
+      #     而是代码里写了根绝对路径 `/images/…`：打包后页面是 file:///…/dist/index.html，
+      #     `/images/…` 会解析到**磁盘根**（file:///D:/images/…）→ 素材全 404。
+      #     代码侧由 CI 的 `scripts/ci/image_path_audit.mjs` 守；这一步把「打包确实没漏文件」也钉死。
+      #     ⚠️ 校验走 Node 脚本而不是 `asar list` CLI：release 目录名含中文，PowerShell 5.1 会把
+      #        中文参数按 ANSI 读成乱码 → CLI 拿到错路径（实测踩过）。
+      - name: Verify packaged assets
+        working-directory: lmewexe
+        run: node verify_asar.cjs
+
       # 3. 压缩 exe 目录为 zip
       #    注意：GitHub 附件名会剥掉非 ASCII 字符（中文会被整段丢弃，曾出现 "-win32-x64.zip"），
       #    所以 zip 用 ASCII 文件名上传，中文名改放到 release 资产的 display label 里。

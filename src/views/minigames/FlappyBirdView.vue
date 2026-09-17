@@ -30,7 +30,7 @@ function selectBird(k) {
   if (!mf.flappy) mf.flappy = { best: 0 }
   mf.flappy.bird = k
 }
-const birdSrc = computed(() => '/images/birds/' + BIRDS[birdKey.value].file)
+const birdSrc = computed(() => 'images/birds/' + BIRDS[birdKey.value].file)
 
 const mode = ref('s2')
 const METAS = {
@@ -50,12 +50,14 @@ const showInfo = ref(false)
 const canvas = ref(null)
 const birdEl = ref(null)
 const BG = new Image()
-BG.src = '/images/fb-bg.png'
+// ⚠️ 相对路径（不带前导 /）：Electron 打包后页面是 file:///…/dist/index.html，
+// `/images/…` 会解析到磁盘根而 404（2026-09-17 用户报「exe 里图不显示」）
+BG.src = 'images/fb-bg.png'
 let bgX = 0
 const PIPE_TOP = new Image()
-PIPE_TOP.src = '/images/fb-pipe-top.png' // 青锈管（2026-09-08 用户素材）：上方管道
+PIPE_TOP.src = 'images/fb-pipe-top.png' // 青锈管（2026-09-08 用户素材）：上方管道
 const PIPE_BOT = new Image()
-PIPE_BOT.src = '/images/fb-pipe-bottom.png' // 铜管：下方管道
+PIPE_BOT.src = 'images/fb-pipe-bottom.png' // 铜管：下方管道
 // 裁剪图片四边透明留白（不透明内容边界），保证拉伸后管体上贴顶/下贴底
 function cropBounds(img) {
   const c = document.createElement('canvas')
@@ -235,7 +237,7 @@ reset()
     <!-- 选鸟：开局自由选择（8 只，持久化） -->
     <div class="fb-birds">
       <button v-for="(b, k) in BIRDS" :key="k" class="fb-bird-btn" :class="{ on: birdKey === k }" :title="b.label" @click="selectBird(k)">
-        <img :src="'/images/birds/' + b.file" alt="" />
+        <img :src="'images/birds/' + b.file" alt="" />
       </button>
     </div>
 
