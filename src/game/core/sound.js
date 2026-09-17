@@ -116,6 +116,8 @@ const audioUnavailable = new Set() // 加载失败/不存在的曲目 id
 const fadeTimers = new Map() // el -> 该元素自己的淡变定时器（**必须按元素分**，见下）
 let realTrack = null // 当前真实音频曲目 id（含"暂停中"的那首）
 let paused = false // 用户按了暂停（不停 bgmEnabled）
+let playMode = 'repeat' // 'repeat' 单曲循环（默认，与 el.loop 一致）| 'sequence' 顺序 | 'shuffle' 随机
+let endedCb = null // 顺序/随机模式下「这首放完」的回调（由 App.vue 注册：决定下一首，仍走 syncBgm 播放）
 
 /** 取（或创建）某曲目的 audio 元素；首次会设置 loop 与初始音量 */
 function audioFor(id) {
@@ -126,9 +128,14 @@ function audioFor(id) {
     const url = bgmUrl(id)
     if (!url) return null
     el = new Audio(url)
-    el.loop = true
+    el.loop = playMode === 'repeat' // 顺序/随机模式下不循环，靠 ended 事件换下一首
     el.preload = 'auto'
     el.volume = 0
+    el.addEventListener('ended', () => {
+      // 单曲循环由 el.loop 处理（不会触发 ended）；顺序/随机模式下曲子放完 → 交给上层换下一首
+      if (endedCb) endedCb(id)
+      else el.currentTime = 0
+    })
     el.addEventListener('error', () => {
       // 文件缺失/损坏：标记不可用 → 回落合成版（打包漏文件时游戏仍有声音）
       audioUnavailable.add(id)
@@ -345,9 +352,55 @@ export const bgm = {
     const el = realTrack ? audioEls.get(realTrack) : null
     return el ? el.currentTime : null
   },
+  /** 当前曲目总时长（秒；没在放真实音频时为 null） */
+  duration() {
+    const el = realTrack ? audioEls.get(realTrack) : null
+    return el && Number.isFinite(el.duration) ? el.duration : null
+  },
+  /** 跳转到指定秒（播放器 API；守卫也用它把曲子推到结尾来验证「放完接下一首」） */
+  seek(sec) {
+    const el = realTrack ? audioEls.get(realTrack) : null
+    if (!el || !Number.isFinite(el.duration)) return false
+    try {
+      el.currentTime = Math.max(0, Math.min(el.duration, Number(sec) || 0))
+      return true
+    } catch {
+      return false
+    }
+  },
+  /** 当前元素是否循环（repeat 模式为 true；顺序/随机为 false，靠 ended 换下一首） */
+  looped() {
+    const el = realTrack ? audioEls.get(realTrack) : null
+    return el ? el.loop : null
+  },
   /** 曲库（设置面板 / 右下角播放器展示用） */
   tracks() {
     return BGM_TRACKS.map((x) => x.id)
+  },
+  /**
+   * 播放模式：'repeat'（单曲循环，默认）/ 'sequence'（顺序）/ 'shuffle'（随机）。
+   * 只有 repeat 用 `el.loop`；另两种靠 `ended` 事件交回上层（见 `onEnded`）。
+   */
+  setMode(mode) {
+    playMode = mode === 'sequence' || mode === 'shuffle' ? mode : 'repeat'
+    for (const el of audioEls.values()) {
+      try {
+        el.loop = playMode === 'repeat'
+      } catch {
+        /* noop */
+      }
+    }
+    return playMode
+  },
+  mode() {
+    return playMode
+  },
+  /**
+   * 注册「这首放完」回调（顺序/随机模式用）。回调里由上层决定下一首并**通过 syncBgm 播放**
+   * —— 引擎不写存档，保持「bgm.play 的唯一调用点是 syncBgm」这条纪律。
+   */
+  onEnded(cb) {
+    endedCb = typeof cb === 'function' ? cb : null
   },
   /** 某曲目是否真的有音频文件可用（加载失败过的会被排除） */
   available(id) {

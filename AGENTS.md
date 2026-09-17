@@ -132,17 +132,28 @@
   （首版把「技能页」一律判成 day → 深色下没有夜曲，被 `e2e-audio-skin` 抓出。）
   ⚠️ **`watch` 依赖必须带上 `ui.activeView` / `player.activeSkill` / `settings.bgmTrack`**，否则切页不换曲、播放器点了没反应（与 v2.1「开关点了没反应」同源）。
 - **手动选曲**：`settings.bgmTrack`（null = 自动跟随场景）；**读档时校验 id 合法性**（脏 id 会静默变哑巴，照 `sidelineWorks` 的过滤写法）。
-- **右下角播放器**（`components/BgmPlayer.vue`）：玻璃胶囊贴右下角，点击**向上展开**（面板在胶囊之上）；列 14 行（自动 + 13 首）、点行即播、带音量滑块。
-  组件**只改 settings**（`bgmTrack`/`bgmEnabled`/`bgmVolume`），**不直接调 `bgm.play`**——`bgm.play/stop` 的唯一调用点仍然是 `App.vue` 的 `syncBgm()`（全局仅此一处）。
-  - **位置约定**：胶囊 `right:14px; bottom:14px`（`z-index:40`，高于内容/侧栏、低于弹窗 50）；右栏 `.app-status` 因此加了 `padding-bottom:52px`（否则事件日志被压在胶囊底下）；
-    平板/手机（≤940px）右栏收起，胶囊贴 `right:12px`，**回顶按钮上移到 `bottom:64px`**（否则两者叠在一起）。
+- **右下角播放器**（`components/BgmPlayer.vue`）：一条**玻璃胶囊 = 常驻迷你控制条**（2026-09-18 起）：
+  `[🔊 开关] [⏮ 上一首] [⏸/▶] [⏭ 下一首] [🔂/🔁/🔀 播放模式] [曲名 ▴]` —— **这些全部常驻在收起态**（用户要求「🔊 开 按钮应该常驻显示」；
+  原先的「只在展开时露出的 开/关」已删，别再恢复）。点**曲名那半**（`.bgm-open`）才向上展开面板：自动 / 13 首 / 模式行 / 音量。
+- **播放模式**（`settings.bgmMode`，默认 `repeat`）：`repeat` 单曲循环（唯一用 `el.loop = true` 的）· `sequence` 顺序（放完接列表下一首、末尾绕回）· `shuffle` 随机（放完随机换一首，**抽样不会等于当前这首**）。
+  纯函数在 `bgmTracks.js`：`BGM_MODES` / `nextBgmMode` / `nextTrackId(cur, mode, rand)` / `prevTrackId`（rand 可注入 → 守卫可确定性断言）。
+  ⚠️ **接线**：引擎只负责 `setMode`（改 el.loop）与在 `ended` 时回调；**「下一首是谁」由 `App.vue` 的 `onBgmEnded` 决定**（写 settings → 仍由 `syncBgm()` 播放）——
+  引擎不写存档，`bgm.play` 的唯一调用点这条纪律不破。`App.vue` 里 `bgm.setMode/onEnded` 在 `onMounted` 注册、`onUnmounted` 注销。
+- **上一首/下一首**：以 `settings.bgmTrack ?? bgm.current()` 为基准在曲库里走一格（随机模式下等于换一首），**并转为手动选曲**（面板里点「自动」可切回跟随场景）。
+- 引擎另暴露 `duration()` / `seek(sec)` / `looped()`（播放器 API；守卫也用 `seek(duration-0.3)` 来**驱动真实的 `ended` 事件**，从而端到端验证「放完接下一首」——比 mock 强）。
+- **位置约定**：胶囊 `right:14px; bottom:14px`（`z-index:40`，高于内容/侧栏、低于弹窗 50）；右栏 `.app-status` 因此加了 `padding-bottom:52px`（否则事件日志被压在胶囊底下）；
+  平板/手机（≤940px）右栏收起，胶囊贴 `right:12px`，**回顶按钮上移到 `bottom:64px`**（否则两者叠在一起）。
   - 滑块样式要跟设置面板同一套：`.bgm-vol input[type="range"]` 已并入 main.css 里那组统一控件的选择器（否则又是浏览器默认蓝滑块）。
+  - 胶囊控制多了以后**别再往里塞文字**：窄屏（≤720px）只留图标与箭头（`.bgm-name` 隐藏），e2e 会查 390px 无横向溢出。
 - ⚠️ **写「不许出现某某写法」的静态守卫时，剥注释要认字符串与行注释**（2026-09-17 踩过两次，第二次很隐蔽）：
   用 `src.replace(/\/\*[\s\S]*?\*\//g,'')` 这种朴素做法时，行注释里的 `// 播 public/audio/bgm/*.mp3` 里的 `/*` 会被当成块注释开头、
   **连带吃掉后面 10 行真正的代码** → 守卫对着一份残缺源码下判断（可能变成恒真假绿）。共用实现见 **`scripts/ci/lib/comments.mjs` 的 `stripComments()`**
   （三态扫描：字符串 / 行注释 / 块注释），`bgm_audit` 与 `image_path_audit` 都用它；改守卫或新增同类断言时**照用**，并且都要用反例复验仍能 FAIL。
 - **守卫**：`scripts/ci/bgm_audit.mjs`（**进 CI**）——清单字段唯一 · **文件都在且非空（>10KB）** · **目录里每个音频都被登记**（防「加了文件却没人能选到」）·
-  scene 有中文标签 · 场景映射自洽 · `trim`/`BGM_MASTER_TRIM` 非 0 · 组件从曲库取清单且不直接调 `bgm.play` · App.vue 覆盖全部场景。**已反例验证**（移走一个 mp3 → FAIL 点名）。
+  scene 有中文标签 · 场景映射自洽 · `trim`/`BGM_MASTER_TRIM` 非 0 · 组件从曲库取清单且不直接调 `bgm.play` · App.vue 覆盖全部场景 ·
+  H 组（引擎接口齐备：`pause/isPaused/playingCount/position` + **淡变定时器必须是按元素存的 Map** + 播放器有暂停钮）·
+  I 组（三种播放模式齐备、模式轮换绕回、`nextTrackId`/`prevTrackId` 的**绕回与随机不自抽**、App.vue 的 `setMode`/`onEnded` 接线、`settings.bgmMode` 默认值、**收起态就有全套常驻控件**）。
+  **已反例验证**（移走一个 mp3 → FAIL 点名；让 shuffle 可能抽回当前这首 → I 组 FAIL）。
   `lmewexe/verify_asar.cjs`（Release 流程）**同时断言音频数量**（原先只查图片）。
   `e2e-test.spec.mjs` 新增一条用例：胶囊在右下 → 展开后 14 行 → 选曲后**真实音频在播且音量 < 0.4** → 自动模式跟随场景（技能页=day）→ 手动选曲写进存档。
 - **体积代价（做之前先知道）**：13 首共 **45.4MB** ⇒ `dist` 46MB → **92MB**、桌面版 zip 153MB → **约 199MB**、Pages 部署同量级。

@@ -1,11 +1,13 @@
 <script setup>
-// 右下角背景音乐播放器（2026-09-17）— 玻璃质感胶囊，点击**向上展开**选曲面板。
-// 设计：默认收起（不挡视野）；展开后可从 13 首里任选（含 3 首变奏），或点「自动」跟随场景。
-// 曲目/响度/场景映射的单一来源是 `game/data/bgmTracks.js`；播放由 `App.vue` 的 `syncBgm()` 统一执行
-// （本组件只改 settings.bgmTrack / bgmEnabled / bgmVolume，不直接调 bgm.play——避免两个调用点打架）。
+// 右下角背景音乐播放器（2026-09-17 立；2026-09-18 扩成常驻迷你播放器）
+// 玻璃质感胶囊 = 一行常驻控制：[🔊 开关] [⏮ 上一首] [⏸/▶] [⏭ 下一首] [🔂/🔁/🔀 播放模式] [曲名 ▴]；
+// 点「曲名」那半向上展开选曲面板（自动 / 13 首 / 音量）。
+// 曲目·响度·场景·播放模式的单一来源是 `game/data/bgmTracks.js`；真正播放一律由 `App.vue` 的 `syncBgm()` 执行
+// （本组件只改 settings —— bgmTrack/bgmPaused/bgmEnabled/bgmVolume/bgmMode，不直接调 bgm.play）。
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { BGM_TRACKS, BGM_SCENE_LABEL, getBgmTrack } from '../game/data/bgmTracks.js'
+import { bgm } from '../game/core/sound.js' // 只读 `bgm.current()` 作上一首/下一首的基准（播放仍由 App.vue 的 syncBgm 执行）
+import { BGM_TRACKS, BGM_SCENE_LABEL, BGM_MODES, getBgmTrack, getBgmMode, nextBgmMode, nextTrackId, prevTrackId } from '../game/data/bgmTracks.js'
 
 const player = usePlayerStore()
 const open = ref(false)
@@ -15,6 +17,7 @@ const isAuto = computed(() => !manualId.value)
 const enabled = computed(() => !!player.settings?.bgmEnabled)
 const paused = computed(() => enabled.value && !!player.settings?.bgmPaused)
 const sounding = computed(() => enabled.value && !paused.value)
+const mode = computed(() => getBgmMode(player.settings?.bgmMode))
 
 /** 面板标题上显示「当前在放哪首」：手动选的就是它，否则按场景推一个名字 */
 const currentTrack = computed(() => {
@@ -54,6 +57,16 @@ function togglePause() {
 function toggleEnabled() {
   player.settings.bgmEnabled = !player.settings.bgmEnabled
   if (player.settings.bgmEnabled) player.settings.bgmPaused = false
+}
+/** 上一首 / 下一首：以「当前这首」为基准在曲库里走一格（随机模式下等于换一首）
+ *  自动模式（bgmTrack=null）下按引擎正在播的那首为准；点一下就转为手动选曲（面板里仍可切回「自动」）。 */
+const step = (dir) => {
+  const cur = manualId.value ?? bgm.current() ?? BGM_TRACKS[0].id
+  pick(dir > 0 ? nextTrackId(cur, mode.value.id) : prevTrackId(cur, mode.value.id))
+}
+/** 播放模式：点一下轮流切（单曲循环 → 顺序 → 随机） */
+function cycleMode() {
+  player.settings.bgmMode = nextBgmMode(mode.value.id)
 }
 </script>
 
@@ -95,6 +108,18 @@ function toggleEnabled() {
           </button>
         </div>
         <div class="bgm-foot">
+          <div class="bgm-mode-row">
+            <button
+              v-for="m in BGM_MODES"
+              :key="m.id"
+              class="bgm-mode"
+              :class="{ on: mode.id === m.id }"
+              :title="m.name + '：' + m.desc"
+              @click="player.settings.bgmMode = m.id"
+            >
+              {{ m.icon }} {{ m.name }}
+            </button>
+          </div>
           <div class="bgm-vol">
             <span class="dim">音量</span>
             <input
@@ -113,26 +138,34 @@ function toggleEnabled() {
       </div>
     </transition>
 
-    <!-- 收起态胶囊：左侧按钮暂停/继续，点其余部分展开/收起 -->
+    <!-- 收起态胶囊 = 常驻迷你播放器：[🔊 开关] [⏮] [⏸/▶] [⏭] [模式] [曲名 ▴] -->
     <div class="bgm-pill" :class="{ 'bgm-pill--off': !enabled }">
       <button
         class="bgm-pp"
-        :title="!enabled ? '开启背景音乐' : paused ? '继续播放' : '暂停'"
+        :title="enabled ? '关闭背景音乐' : '开启背景音乐'"
+        :aria-label="enabled ? '关闭背景音乐' : '开启背景音乐'"
+        @click="toggleEnabled()"
+      >
+        {{ enabled ? '🔊' : '🔇' }}
+      </button>
+      <button class="bgm-tbtn" title="上一首" aria-label="上一首" @click="step(-1)">⏮</button>
+      <button
+        class="bgm-tbtn bgm-tbtn--play"
+        :title="!enabled ? '播放' : paused ? '继续播放' : '暂停'"
+        :aria-label="paused || !enabled ? '播放' : '暂停'"
         @click="togglePause()"
       >
         {{ !enabled || paused ? '▶' : '⏸' }}
       </button>
-      <button class="bgm-open" :title="enabled ? '背景音乐：' + currentName + '（点击展开）' : '背景音乐已关闭（点击展开）'" @click="open = !open">
-        <span class="bgm-ico" :class="{ 'bgm-ico--play': sounding }">{{ sounding ? '🎵' : '🔇' }}</span>
+      <button class="bgm-tbtn" title="下一首" aria-label="下一首" @click="step(1)">⏭</button>
+      <button class="bgm-tbtn" :title="mode.name + '：' + mode.desc + '（点击切换）'" aria-label="播放模式" @click="cycleMode()">
+        {{ mode.icon }}
+      </button>
+      <button class="bgm-open" :title="(enabled ? currentName : '背景音乐已关闭') + '（点击展开选曲）'" @click="open = !open">
         <span class="bgm-name">{{ currentName }}</span>
         <span class="bgm-caret">{{ open ? '▾' : '▴' }}</span>
       </button>
     </div>
-
-    <!-- 静音快捷开关：只在展开时露出，避免收起态太挤 -->
-    <button v-if="open" class="bgm-mute" :title="enabled ? '关闭背景音乐' : '开启背景音乐'" @click="toggleEnabled()">
-      {{ enabled ? '🔊 开' : '🔇 关' }}
-    </button>
   </div>
 </template>
 
@@ -163,7 +196,17 @@ function toggleEnabled() {
 }
 .bgm-pill:hover { border-color: var(--primary); }
 .bgm-pill--off { opacity: 0.75; }
-.bgm-pp,
+.bgm-tbtn {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 7px 6px;
+}
+.bgm-tbtn:hover { background: rgba(var(--primary-rgb), 0.10); }
+.bgm-tbtn--play { color: var(--primary); font-size: 13px; }
+.bgm-pp, 
 .bgm-open {
   border: none;
   background: transparent;
@@ -178,7 +221,22 @@ function toggleEnabled() {
 }
 .bgm-open { display: flex; align-items: center; gap: 6px; padding: 7px 12px 7px 9px; }
 .bgm-pp:hover, .bgm-open:hover { background: rgba(var(--primary-rgb), 0.10); }
-.bgm-ico--play { animation: bgm-spin 3.6s linear infinite; display: inline-block; }
+.bgm-tbtn:first-of-type { border-left: 1px solid var(--border); }
+/* 模式按钮行（面板底部） */
+.bgm-mode-row { display: flex; gap: 5px; margin-bottom: 7px; }
+.bgm-mode {
+  flex: 1;
+  padding: 4px 6px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bgm-mode:hover { border-color: var(--primary); }
+.bgm-mode.on { background: rgba(var(--primary-rgb), 0.16); border-color: rgba(var(--primary-rgb), 0.45); color: var(--primary); }
 @keyframes bgm-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
 .bgm-name { max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bgm-caret { font-size: 10px; color: var(--muted); }
@@ -205,14 +263,6 @@ function toggleEnabled() {
 }
 .bgm-title { font-size: 12px; font-weight: 600; }
 .bgm-scene { font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bgm-x {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0 2px;
-}
 .bgm-hbtn {
   border: none;
   background: transparent;
@@ -250,18 +300,6 @@ function toggleEnabled() {
 .bgm-row-tag { font-size: 10px; flex-shrink: 0; max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bgm-foot { padding: 7px 10px 9px; border-top: 1px dashed var(--border); }
 .bgm-vol { display: flex; align-items: center; gap: 7px; font-size: 11px; }
-.bgm-mute {
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: rgba(var(--panel-rgb), 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 11px;
-  cursor: pointer;
-}
-.bgm-mute:hover { border-color: var(--primary); }
 
 /* 展开动画：从胶囊处向上"长出来" */
 .bgm-pop-enter-active, .bgm-pop-leave-active { transition: opacity 0.18s ease, transform 0.18s ease; }
