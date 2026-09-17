@@ -40,6 +40,12 @@ jobs:
       - name: Web build
         run: npm run build
 
+      # CSS 产物审计必须在 build 之后跑（读 dist/assets/*.css）：
+      # Vite 8 的 CSS 压缩器（lightningcss）会把「同时写了标准与前缀」的规则去重成只剩 `-webkit-` 版，
+      # 而新版 Chromium 不认 `-webkit-backdrop-filter` ⇒ 毛玻璃在构建产物里全失效（用户报过「线上与 exe 的窗口透明度跟本地不一样」）
+      - name: CSS output audit
+        run: node scripts/ci/css_output_audit.mjs
+
   e2e:
     runs-on: ubuntu-latest
     needs: test
