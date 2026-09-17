@@ -28,6 +28,17 @@ jobs:
           npm run build
 
       # 2. 桌面壳：安装 electron 依赖 + 复制构建产物 + 修正相对路径
+      #    ⚠️「缓存 electron」是这一步最省时间的地方：electron-packager 每次都要下 ~100MB 的 Electron 运行时；
+      #    命中缓存后打包从 ~40s 降到 ~10s（2026-09-18 加）
+      - name: Cache electron runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            lmewexe/node_modules
+            ~/.cache/electron
+            ~/AppData/Local/electron/Cache
+          key: lmewexe-${{ runner.os }}-${{ hashFiles('lmewexe/package-lock.json') }}
+
       - name: Package desktop app
         working-directory: lmewexe
         run: |
@@ -37,6 +48,22 @@ jobs:
           Copy-Item ..\dist\* dist -Recurse -Force
           python fix_paths.py
           npx electron-packager . "美食放置：食灵山海" --platform=win32 --arch=x64 --out=release --overwrite --asar
+
+      # 2.2 精简体积（2026-09-18）：Electron 自带 ~50 种语言的 locales/*.pak（约 39MB 未压缩），
+      #     本游戏只有中文界面 → 只留 en-US / zh-CN，其余删掉（Electron 缺语言包会回退 en-US，安全）。
+      #     这一步纯减重，不改任何游戏文件；删完由下面的「自检」继续把关产物完整性。
+      - name: Trim locales
+        working-directory: lmewexe
+        run: |
+          # ⚠️ 取**最新**目录：release/ 下可能残留历史版本（改名前的「食之契约」）→ 用 -First 1 会选错（本地实测踩过）
+          $dir = Get-ChildItem release -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          $loc = Join-Path $dir.FullName 'locales'
+          if (Test-Path $loc) {
+            $before = (Get-ChildItem $loc -File | Measure-Object -Property Length -Sum).Sum
+            Get-ChildItem $loc -File | Where-Object { $_.Name -notin @('en-US.pak', 'zh-CN.pak') } | Remove-Item -Force
+            $after = (Get-ChildItem $loc -File | Measure-Object -Property Length -Sum).Sum
+            Write-Host ("locales: {0:N1} MB -> {1:N1} MB" -f ($before/1MB), ($after/1MB))
+          }
 
       # 2.5 打包产物自检（2026-09-17 立）：asar 内的图片数必须与 dist 一致。
       #     背景：用户报「exe 打开后很多图片不显示」——查明**不是打包丢文件**（asar 内图片齐全），
@@ -60,14 +87,46 @@ jobs:
           Compress-Archive -Path "release\美食放置：食灵山海-win32-x64" -DestinationPath "release\$zip" -Force
 
       # 4. 创建 Release 并上传资产（zip 文件；v0.1.0 教训：只能传文件，不能传目录）
-      - name: Create release
+      #    ⚠️ 2026-09-18 拆成「建草稿 → 带重试地上传 → 发布」三步，并把上传单独限时：
+      #       原先一句 `gh release create <tag> <200MB zip>` 在上传环节**卡死 35 分钟无人察觉**
+      #       （同版本上一轮同一步只要 14 秒 —— 是 GitHub 侧偶发挂起，而不是慢）。
+      #       现在：上传有限时（10 分钟）+ 最多 3 次重试（--clobber 覆盖半截资产），失败也会**快速失败**并有明确报错。
+      - name: Create draft release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          zip_file=$(ls lmewexe/release/culinary-idle-*-win32-x64.zip | head -1)
-          echo "asset: $zip_file"
-          gh release create "${GITHUB_REF_NAME}" "${zip_file}#美食放置：食灵山海 ${GITHUB_REF_NAME} 桌面版" \
+          gh release create "${GITHUB_REF_NAME}" --draft \
             --title "${GITHUB_REF_NAME} — 美食放置：食灵山海" \
             --generate-notes \
-            --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食灵山海.exe 即可游玩。源码与开发说明见仓库根目录。"
+            --notes "自动构建（GitHub Actions）。解压后运行 美食放置：食灵山海.exe 即可游玩。源码与开发说明见仓库根目录。" \
+            || echo "（草稿已存在，继续上传）"
+
+      - name: Upload asset (retry ×3)
+        shell: bash
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          zip_file=$(ls lmewexe/release/culinary-idle-*-win32-x64.zip | head -1)
+          size=$(stat -c%s "$zip_file" 2>/dev/null || wc -c < "$zip_file")
+          echo "asset: $zip_file ($((size / 1048576)) MB)"
+          for i in 1 2 3; do
+            echo "── 上传尝试 $i/3 ──"
+            if timeout 480 gh release upload "${GITHUB_REF_NAME}" "${zip_file}#美食放置：食灵山海 ${GITHUB_REF_NAME} 桌面版" --clobber; then
+              echo "上传成功"
+              exit 0
+            fi
+            echo "第 $i 次失败/超时，10 秒后重试…"
+            sleep 10
+          done
+          echo "三次上传都失败：GitHub 资产服务异常，请重跑本 workflow"
+          exit 1
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+          gh release view "${GITHUB_REF_NAME}" --json assets -q '.assets[] | "\(.name)  \(.size) bytes"'
