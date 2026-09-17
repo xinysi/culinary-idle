@@ -35,13 +35,24 @@ export function setSfxVolume(v) {
   sfxVol = Math.max(0, Math.min(1, Number(v) || 0))
   if (master) master.gain.value = sfxVol
 }
-/** 音乐音量（0~1）：合成版走 musicGain，真实音频即时改元素音量（并取消正在进行的淡入淡出，避免互相拉锯） */
+/** 音乐音量（0~1）：合成版走 musicGain，真实音频即时改元素音量 */
 export function setBgmVolume(v) {
   bgmVol = Math.max(0, Math.min(1, Number(v) || 0))
   if (musicGain) musicGain.gain.value = bgmVol
-  if (realFadeTimer) {
-    clearInterval(realFadeTimer)
-    realFadeTimer = null
+  // 改音量要打断正在进行的淡变；而「切曲的淡出」被中途打断会留下一首**淡到一半的旧曲**继续出声
+  // → 这里顺手把「不是当前曲目」的元素一律停掉并复位（保证任意时刻只有一首在响）
+  for (const [id, el] of audioEls) {
+    cancelFade(el)
+    if (id === realTrack) continue
+    if (!el.paused) {
+      try {
+        el.pause()
+        el.currentTime = 0
+      } catch {
+        /* noop */
+      }
+    }
+    el.volume = 0
   }
   if (realTrack) setElVolume(realTrack)
 }
@@ -102,8 +113,9 @@ export const sfx = {
 const FADE_MS = 1200
 const audioEls = new Map() // id -> HTMLAudioElement
 const audioUnavailable = new Set() // 加载失败/不存在的曲目 id
-let realTrack = null // 当前真实音频曲目 id
-let realFadeTimer = null
+const fadeTimers = new Map() // el -> 该元素自己的淡变定时器（**必须按元素分**，见下）
+let realTrack = null // 当前真实音频曲目 id（含"暂停中"的那首）
+let paused = false // 用户按了暂停（不停 bgmEnabled）
 
 /** 取（或创建）某曲目的 audio 元素；首次会设置 loop 与初始音量 */
 function audioFor(id) {
@@ -145,15 +157,27 @@ function setElVolume(id) {
   if (el) el.volume = bgmTrackVolume(id, bgmVol)
 }
 
-function fadeTo(el, target, ms, done) {
-  if (realFadeTimer) {
-    clearInterval(realFadeTimer)
-    realFadeTimer = null
+/** 取消某元素正在进行的淡变（只取消它自己的） */
+function cancelFade(el) {
+  const t = fadeTimers.get(el)
+  if (t) {
+    clearInterval(t)
+    fadeTimers.delete(el)
   }
+}
+
+/**
+ * 淡变到目标音量。
+ * ⚠️ 定时器**必须按元素存**：2026-09-17 用户报「点其它音乐时原本的不中断、会重叠播放」——
+ * 根因就是这里原先只有一个全局 `realFadeTimer`：切曲时「旧曲淡出」与「新曲淡入」两次调用，
+ * 后者的 clearInterval 会把前者的淡出打断 → 旧曲的完成回调永不执行 → 它一直以原音量播下去。
+ */
+function fadeTo(el, target, ms, done) {
+  cancelFade(el)
   const steps = Math.max(1, Math.round(ms / 40))
   const from = el.volume
   let i = 0
-  realFadeTimer = setInterval(() => {
+  const timer = setInterval(() => {
     i++
     const k = Math.min(1, i / steps)
     try {
@@ -162,45 +186,54 @@ function fadeTo(el, target, ms, done) {
       /* 元素被回收 */
     }
     if (k >= 1) {
-      clearInterval(realFadeTimer)
-      realFadeTimer = null
+      cancelFade(el)
       if (done) done()
     }
   }, 40)
+  fadeTimers.set(el, timer)
 }
 
-function stopReal(fade = true) {
+/** 停掉真实音频；`keepPosition` = 暂停（保留播放进度，供继续播放），false = 复位 */
+function stopReal(fade = true, keepPosition = false) {
   const id = realTrack
-  realTrack = null
   if (!id) return
   const el = audioEls.get(id)
-  if (!el) return
-  if (!fade) {
-    try {
-      el.pause()
-      el.currentTime = 0
-    } catch {
-      /* noop */
-    }
+  if (!el) {
+    realTrack = null
     return
   }
-  fadeTo(el, 0, FADE_MS, () => {
+  const finish = () => {
     try {
       el.pause()
-      el.currentTime = 0
+      if (!keepPosition) el.currentTime = 0
     } catch {
       /* noop */
     }
-  })
+    if (!keepPosition) realTrack = null
+  }
+  if (!fade) {
+    finish()
+    return
+  }
+  fadeTo(el, 0, FADE_MS, finish)
 }
 
 function playReal(id) {
   const el = audioFor(id)
   if (!el) return false
-  if (realTrack === id && !el.paused) return true
+  if (realTrack === id) {
+    // 同一首：暂停中 → 继续（从原进度淡入）；已在播 → 什么都不做（别重头开始）
+    if (el.paused) {
+      el.volume = 0
+      const p = el.play()
+      if (p && typeof p.catch === 'function') p.catch(() => {})
+      fadeTo(el, bgmTrackVolume(id, bgmVol), FADE_MS)
+    }
+    return true
+  }
   const prev = realTrack ? audioEls.get(realTrack) : null
   if (prev && prev !== el) {
-    // 交叉淡出旧曲，同时淡入新曲
+    // 交叉淡出旧曲（它有自己的定时器，不会被下面的淡入打断），同时淡入新曲
     fadeTo(prev, 0, FADE_MS, () => {
       try {
         prev.pause()
@@ -254,12 +287,14 @@ const synthStop = () => {
 
 /**
  * 背景音乐统一出口（App.vue 的 syncBgm() 是唯一调用点）。
- *   play(id)  —— id 既可以是曲库里的真实曲目（bgmTracks.js），也可以是合成曲 day/night/battle
- *   stop()    —— 淡出停止
- * 同一 id 重复调用不重启；真实音频优先，不可用则回落到合成版。
+ *   play(id)   —— id 既可以是曲库里的真实曲目（bgmTracks.js），也可以是合成曲 day/night/battle
+ *   pause()    —— 淡出并暂停（**保留进度**，用户按暂停用它；再次 play(同一 id) 会从原进度继续）
+ *   stop()     —— 淡出停止并复位
+ * 同一 id 重复调用不重启（playing 中直接返回、暂停中则继续）；真实音频优先，不可用则回落到合成版。
  */
 export const bgm = {
   play(id) {
+    paused = false
     if (getBgmTrack(id)) {
       if (playReal(id)) {
         synthStop() // 真实音频接手，停掉可能还在跑的合成版
@@ -271,20 +306,44 @@ export const bgm = {
     stopReal()
     synthPlayer.play(id)
   },
+  /** 暂停（保留进度）：不改变 settings.bgmEnabled，也不清 settings.bgmTrack */
+  pause() {
+    if (paused) return
+    paused = true
+    if (realTrack) stopReal(true, true)
+    synthStop()
+  },
   stop() {
+    paused = false
     stopReal()
     synthStop()
+  },
+  /** 是否处于「用户按了暂停」状态 */
+  isPaused() {
+    return paused
   },
   /** 当前曲目 id（真实音频优先） */
   current() {
     return realTrack ?? bgmTrack
   },
   playing() {
+    if (paused) return false
     if (realTrack) {
       const el = audioEls.get(realTrack)
       return !!el && !el.paused
     }
     return !!bgmTimer
+  },
+  /** 正在出声的真实音频元素个数（守卫用：切曲后必须 ≤1，防「两首叠着放」回潮） */
+  playingCount() {
+    let n = 0
+    for (const el of audioEls.values()) if (!el.paused) n++
+    return n
+  },
+  /** 当前真实音频的播放进度（秒；暂停后仍可读——守卫用它验证「继续」不是从头开始） */
+  position() {
+    const el = realTrack ? audioEls.get(realTrack) : null
+    return el ? el.currentTime : null
   },
   /** 曲库（设置面板 / 右下角播放器展示用） */
   tracks() {

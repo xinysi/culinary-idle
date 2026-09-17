@@ -201,10 +201,14 @@ function bgmScene() {
   return ambient
 }
 
-/** BGM 曲目：手动选曲优先，否则跟随场景（未开启 BGM 就停） */
+/** BGM 曲目：手动选曲优先，否则跟随场景；用户按了暂停就只更新「该放哪首」不出声（未开启 BGM 直接停） */
 function syncBgm() {
   if (ui.phase !== 'game' || !player.settings?.bgmEnabled) {
     bgm.stop()
+    return
+  }
+  if (player.settings?.bgmPaused) {
+    bgm.pause() // 暂停保留进度；播放器里点「继续」会把 bgmPaused 置回 false
     return
   }
   const manual = player.settings?.bgmTrack
@@ -244,6 +248,7 @@ watch(
     player.settings?.sfxVolume,
     player.settings?.bgmVolume,
     player.settings?.bgmTrack,
+    player.settings?.bgmPaused,
     ui.phase,
     ui.activeView,
     player.activeSkill,

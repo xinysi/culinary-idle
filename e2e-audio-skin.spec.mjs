@@ -133,10 +133,11 @@ test('皮肤选择器 + 音频设置：交互 / 持久化 / BGM 接线', async (
     const wait = (ms) => new Promise((r) => setTimeout(r, ms))
     const initial = snap() // 读档时 bgmEnabled=true + 深色 → 应已在播夜曲
     p.settings.bgmEnabled = false
-    await wait(200)
+    // ⚠️ 2026-09-17 起真实音频的启停走 1.2s 淡入淡出（旧断言按合成版的「立即停」写，会误判）
+    await wait(1500)
     const off = snap()
     p.settings.bgmEnabled = true
-    await wait(400)
+    await wait(1500)
     const on = snap()
     return { tracks: mod.bgm.tracks(), initial, off, on }
   })

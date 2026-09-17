@@ -14,6 +14,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { stripComments } from './lib/comments.mjs'
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '../..')
 let fail = 0
@@ -89,6 +90,21 @@ check('F2. App.vue 挂载了播放器（游戏阶段）', /<BgmPlayer v-if="ui\.
 const need = ['title', 'day', 'night', 'kitchen', 'diner', 'duel', 'boss', 'meditate', 'market', 'memory']
 const cover = need.filter((s) => new RegExp(`'${s}'`).test(app) || s === 'title')
 check('G. App.vue 的场景判定覆盖全部场景（模块缺失某个分组会永远放兜底曲）', cover.length === need.length, `缺: ${need.filter((s) => !cover.includes(s)).join(', ')}`)
+
+
+/* H. 播放器/引擎的公开接口（e2e 的「不重叠 / 暂停继续」断言依赖它们，接口被删会静默失效） */
+const soundSrc = fs.readFileSync(path.join(ROOT, 'src/game/core/sound.js'), 'utf8')
+/** 剥掉注释后再做「不许出现某某写法」的断言——否则解释根因的注释本身会把守卫顶掉（本轮实测踩过两次：
+ *  ① 注释里写了旧变量名 `realFadeTimer`；② `bgm/*.mp3` 里的 `/*` 被简单正则当成块注释、吃掉 10 行代码） */
+const soundCode = stripComments(soundSrc)
+check('H. 引擎暴露 pause/isPaused/playingCount/position（暂停与「只许一首出声」的守卫依赖）', ['pause(', 'isPaused(', 'playingCount(', 'position('].every((k) => soundSrc.includes(k)))
+check(
+  'H2. 淡变定时器按元素存（别再退回单个全局定时器 —— 那会造成切曲重叠）',
+  /fadeTimers\s*=\s*new Map\(\)/.test(soundCode) && !/realFadeTimer/.test(soundCode)
+)
+const appSrc = fs.readFileSync(path.join(ROOT, 'src/App.vue'), 'utf8')
+check('H3. syncBgm 处理了暂停（settings.bgmPaused → bgm.pause）', /bgmPaused/.test(appSrc) && /bgm\.pause\(\)/.test(appSrc))
+check('H4. 播放器有暂停按钮（.bgm-pp / 面板头部 .bgm-hbtn）', /bgm-pp/.test(compSrc) && /togglePause/.test(compSrc))
 
 console.log(fail ? `\nBGM 审计：FAIL（${fail} 项）` : `\nBGM 审计：PASS（${BGM_TRACKS.length} 首，音频 ${onDisk.length} 个文件）`)
 process.exit(fail ? 1 : 0)

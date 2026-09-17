@@ -14,6 +14,7 @@
 // 运行：node scripts/ci/image_path_audit.mjs
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripComments } from './lib/comments.mjs'
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '../..')
 let fail = 0
@@ -37,10 +38,9 @@ function walk(dir, out = []) {
 }
 const files = [...walk(path.join(ROOT, 'src')), path.join(ROOT, 'index.html')]
 
-/** 剥掉注释后再匹配：整行 // 与 /* *​/ 块、HTML 注释（避免把文档里举例的 /images/… 当成真引用） */
-function stripComments(t, isHtml) {
-  let s = t.replace(/\/\*[\s\S]*?\*\//g, '')
-  s = s.split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n')
+/** 剥注释（共用实现，见 ./lib/comments.mjs：认字符串/行注释，不会把 `bgm/*.mp3` 这类当块注释开头）+ HTML 注释 */
+function stripForScan(t, isHtml) {
+  let s = stripComments(t)
   if (isHtml) s = s.replace(/<!--[\s\S]*?-->/g, '')
   return s
 }
@@ -50,7 +50,7 @@ const ABS = /['"`](\/(?:images|assets|favicon)[^'"`\n]*)['"`]/g
 const absHits = []
 for (const f of files) {
   const raw = fs.readFileSync(f, 'utf8')
-  const s = stripComments(raw, f.endsWith('.html'))
+  const s = stripForScan(raw, f.endsWith('.html'))
   const lines = s.split('\n')
   lines.forEach((l, i) => {
     // 允许出现在 http(s):// 之类绝对 URL 中（本仓库没有，保留以防误报）
@@ -80,7 +80,7 @@ check(
 const refs = new Set()
 const prefixes = new Set()
 for (const f of files) {
-  const s = stripComments(fs.readFileSync(f, 'utf8'), f.endsWith('.html'))
+  const s = stripForScan(fs.readFileSync(f, 'utf8'), f.endsWith('.html'))
   for (const m of s.matchAll(/['"`](\/?images\/[^'"`\n]*?\.(?:png|jpe?g|gif|webp|svg))['"`]/gi)) refs.add(m[1])
   for (const m of s.matchAll(/['"`](\/?images\/[^'"`\n]*?\/)['"`]/gi)) prefixes.add(m[1])
   for (const m of s.matchAll(/url\((['"]?)(\/?[^'")]+\.(?:png|jpe?g|gif|webp|svg))\1\)/gi)) refs.add(m[2])
