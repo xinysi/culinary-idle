@@ -112,11 +112,38 @@
 
 ## 🔊 音效 / BGM / 皮肤（v2.1，2026-09-13 立）
 
-**总则：零外部资源**——音频全部 Web Audio 合成、皮肤全部 CSS 变量，不加体积、不引版权。
+**总则：音效与皮肤仍是「零外部资源」**——音效全部 Web Audio 合成、皮肤全部 CSS 变量，不加体积、不引版权。
+**例外（2026-09-17 用户决定）**：**BGM 改成真实音频**（13 首 mp3，见下），因为合成音序器只能做「环境音」、当不了音乐。
+
+### 🎵 背景音乐（v2.15，2026-09-17：3 首合成曲 → 13 首真实音频 + 右下角播放器）
+- **曲库单一来源 = `src/game/data/bgmTracks.js`**（13 首：10 个场景正曲 + 3 首变奏），音频在 `public/audio/bgm/*.mp3`。
+  曲目条数/场景映射/响度系数**都在那一个文件里**，别在组件里手抄清单（守卫 `bgm_audit` 会拦）。
+- **播放引擎**（`game/core/sound.js`）：HTMLAudioElement 池 + `loop` + **1.2 秒交叉淡入淡出**；**文件缺失/解码失败会标记该曲不可用并回落到合成音序器**（`TRACKS` 的 day/night/battle 保留至今，专当兜底——打包漏文件时游戏仍有声音）。
+- 🔴 **响度必须两层衰减**（这条最容易漏）：用户给的成品曲是**母带级**（实测全曲 RMS −14 ~ −18.3 dBFS、峰值 −0.4 dBFS），
+  直接播会盖过游戏音效。⇒ ① 每首 `trim` 把 RMS 校到同一基准；② `BGM_MASTER_TRIM = 0.6` 整体再压。
+  最终音量 = `settings.bgmVolume × BGM_MASTER_TRIM × trim`（默认 0.35 时 ≈ 0.21，实测元素音量 0.206）。
+  **新增曲目时先量 RMS 再填 trim**（`bgm_audit` 断言 trim ∈ (0,2] 且默认音量下 ≤ 0.25）。
+- **场景 → 曲目**：`App.vue` 的 `bgmScene()` 单点判定（首领战 boss > 普通对决 duel > 按功能页分组 > **主题昼夜兜底**）。
+  ⚠️ **「昼/夜」是唯一一对主题相关的曲**：深色主题下**通用页面**放 night；而各功能页（餐厅 diner / 夜市 market / 修行 meditate / 图鉴 memory / 制作 kitchen）各有专属曲，**不随主题换**。
+  （首版把「技能页」一律判成 day → 深色下没有夜曲，被 `e2e-audio-skin` 抓出。）
+  ⚠️ **`watch` 依赖必须带上 `ui.activeView` / `player.activeSkill` / `settings.bgmTrack`**，否则切页不换曲、播放器点了没反应（与 v2.1「开关点了没反应」同源）。
+- **手动选曲**：`settings.bgmTrack`（null = 自动跟随场景）；**读档时校验 id 合法性**（脏 id 会静默变哑巴，照 `sidelineWorks` 的过滤写法）。
+- **右下角播放器**（`components/BgmPlayer.vue`）：玻璃胶囊贴右下角，点击**向上展开**（面板在胶囊之上）；列 14 行（自动 + 13 首）、点行即播、带音量滑块。
+  组件**只改 settings**（`bgmTrack`/`bgmEnabled`/`bgmVolume`），**不直接调 `bgm.play`**——`bgm.play/stop` 的唯一调用点仍然是 `App.vue` 的 `syncBgm()`（全局仅此一处）。
+  - **位置约定**：胶囊 `right:14px; bottom:14px`（`z-index:40`，高于内容/侧栏、低于弹窗 50）；右栏 `.app-status` 因此加了 `padding-bottom:52px`（否则事件日志被压在胶囊底下）；
+    平板/手机（≤940px）右栏收起，胶囊贴 `right:12px`，**回顶按钮上移到 `bottom:64px`**（否则两者叠在一起）。
+  - 滑块样式要跟设置面板同一套：`.bgm-vol input[type="range"]` 已并入 main.css 里那组统一控件的选择器（否则又是浏览器默认蓝滑块）。
+- **守卫**：`scripts/ci/bgm_audit.mjs`（**进 CI**）——清单字段唯一 · **文件都在且非空（>10KB）** · **目录里每个音频都被登记**（防「加了文件却没人能选到」）·
+  scene 有中文标签 · 场景映射自洽 · `trim`/`BGM_MASTER_TRIM` 非 0 · 组件从曲库取清单且不直接调 `bgm.play` · App.vue 覆盖全部场景。**已反例验证**（移走一个 mp3 → FAIL 点名）。
+  `lmewexe/verify_asar.cjs`（Release 流程）**同时断言音频数量**（原先只查图片）。
+  `e2e-test.spec.mjs` 新增一条用例：胶囊在右下 → 展开后 14 行 → 选曲后**真实音频在播且音量 < 0.4** → 自动模式跟随场景（技能页=day）→ 手动选曲写进存档。
+- **体积代价（做之前先知道）**：13 首共 **45.4MB** ⇒ `dist` 46MB → **92MB**、桌面版 zip 153MB → **约 199MB**、Pages 部署同量级。
+  要瘦身只能重编码（本机无 ffmpeg）或砍变奏曲（3 首 ≈ 9MB）；`bgm_audit` 的「目录里每个音频都要登记」会拦住「砍文件但忘改清单」。
 
 ### 音效与 BGM（`src/game/core/sound.js`）
 - **两条总线**：`master`（音效）/ `musicGain`（音乐）各一个 GainNode，`setSfxVolume` / `setBgmVolume` 即时改 `gain.value`，**互不干扰**；`tone(..., music=true)` 走音乐总线。
-- **BGM 三曲目**：`day` / `night` / `battle`，由 `App.vue` 的 `syncBgm()` 统一决定——`getCombat()?.inFight ? 'battle' : 深色 ? 'night' : 'day'`；**`bgm.play/stop` 的唯一调用点就是 `syncBgm`**（全局仅此一处，别在别处直接调）。
+- **BGM 三曲目（现为兜底）**：`day` / `night` / `battle` 合成音序器**保留**（2026-09-17 起只在真实音频不可用时启用）；调度逻辑见上一条。
+- **`bgm.play/stop` 的唯一调用点仍是 `App.vue` 的 `syncBgm()`**（全局仅此一处，别在别处直接调）。
 - **接线靠 `watch`**：依赖必须同时含 `bgmEnabled` 与 `ui.phase`（读档 / 进游戏 / 战斗始末都会重算）；漏掉任一项就会出现「开关没反应」或「进游戏了还静音」。
 - **调度必须用 lookahead**（现 200ms，排未来 0.6 秒的音符）：`setInterval` 抖动会断音，别改回「每次 tick 现弹一个音」。
 - **AudioContext 懒建 + 静默降级**：`ensureCtx()` 失败一律 `return null`（非浏览器 / 测试 / 被浏览器拒绝时游戏照常跑）；`primeAudio()` 只在用户手势里调，用于解锁。

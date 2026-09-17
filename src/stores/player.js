@@ -20,6 +20,7 @@ import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getCombat } from '../game/combat/Combat.js'
+import { getBgmTrack } from '../game/data/bgmTracks.js' // 手动选曲（settings.bgmTrack）读档时校验 id 合法性
 import { SPIRITS, SPIRIT_SLOTS, getSpirit } from '../game/data/spiritTiers.js'
 import { SPIRIT_STORY_STAGES, STAGE_INFO } from '../game/data/spiritStories.js'
 import { AOJIS } from '../game/data/aojis.js'
@@ -326,7 +327,7 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；
+    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
     // 奇遇图鉴（2026-09-11）：{ seen: { [id]: 触发次数 }, picks: { [id]: [各分支被选次数] }, total: 累计触发 }
@@ -703,6 +704,13 @@ export const usePlayerStore = defineStore('player', {
         // 空  是合法存档（玩家还没选目标），误判成「没有」会往存档里塞进默认目标（往返守卫实测抓过）
         skillTargets: splitMovedTarget ? splitTargets : saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
         settings: { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }, // 并行挂机只接受 0/1/2/3
+        // 手动选曲（settings.bgmTrack）是曲库 id 或 null（=自动跟随场景）：存档里塞了不存在的 id 会静默变哑巴 → 兜回自动
+        // （写法照 v2.7.0 的 sidelineWorks 过滤：读档过滤非法 id，别让脏值参与后续判定）
+        settings: (() => {
+          const st = { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }
+          if (st.bgmTrack && !getBgmTrack(st.bgmTrack)) st.bgmTrack = null
+          return st
+        })(), // 并行挂机只接受 0/1/2/3
         farming: {
           plots: safeList(saved.farming?.plots, DERIVED_MAX.farmPlots), // 农田块数上限由技能等级派生，这里只兜住绝对上限
           tool: safeCap(saved.farming?.tool, 0, TOOL_MAX_LEVEL), // 农具等级（v2.4.1）

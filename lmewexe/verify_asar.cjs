@@ -65,4 +65,13 @@ for (const must of ['/dist/images/items/food/', '/dist/images/items/tool/', '/di
     process.exit(1)
   }
 }
-console.log('PASS 打包产物图片齐全')
+// 背景音乐（2026-09-17 新增 13 首真实音频）：数量与源一致，且逐个非空
+const distAudio = path.join(__dirname, '..', 'dist', 'audio', 'bgm')
+const srcAudio = fs.existsSync(distAudio) ? fs.readdirSync(distAudio).filter((f) => /\.(mp3|ogg|m4a|wav)$/i.test(f)) : []
+const asarAudio = files.filter((f) => /^\/dist\/audio\/bgm\/.+\.(mp3|ogg|m4a|wav)$/i.test(f))
+console.log(`dist/audio/bgm = ${srcAudio.length} ｜ asar 内 = ${asarAudio.length}`)
+if (asarAudio.length !== srcAudio.length) {
+  console.error(`FAIL 打包漏音频：asar 内 ${asarAudio.length} 个，源 dist 有 ${srcAudio.length} 个`)
+  process.exit(1)
+}
+console.log('PASS 打包产物图片与音频齐全')
