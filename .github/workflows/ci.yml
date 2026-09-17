@@ -31,6 +31,9 @@ jobs:
           node scripts/ci/content_sync_audit.mjs
           node scripts/ci/item_triple_audit.mjs
           node scripts/ci/minigame_ui_audit.mjs
+          # 图片/静态资源路径审计（2026-09-17 立）：禁止根绝对 URL `/images/…` —— dev 与 Pages
+          # 下看不出问题，但 Electron 打包后页面是 file:///…/dist/index.html，会解析到磁盘根而全 404
+          node scripts/ci/image_path_audit.mjs
           # 生成器漂移审计：在临时目录里复现各生成器输出并与仓库产物比对（只读，不写仓库）
           node scripts/ci/gen_drift_audit.mjs
 

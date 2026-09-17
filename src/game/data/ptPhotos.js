@@ -31,4 +31,6 @@ export const PT_PHOTOS = [
   'foodiesfeed.com_shrimps-dinner.jpg',
   'foodiesfeed.com_vibrant-fruit-platter-for-healthy-snacking.jpg',
 ]
-export const ptUrl = (name) => '/images/items/pt/' + name
+// ⚠️ 必须返回**相对路径**（不带前导 /）：Electron 打包后页面是 file:///…/dist/index.html，
+// `/images/…` 会解析到磁盘根而 404（2026-09-17 用户报「exe 里拼图照片不显示」的根因）
+export const ptUrl = (name) => 'images/items/pt/' + name
