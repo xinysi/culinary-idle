@@ -5,6 +5,7 @@ import { onMounted, onUnmounted, computed, ref, defineAsyncComponent, watch, nex
 import SplashScreen from './components/SplashScreen.vue'
 import Sidebar from './components/Sidebar.vue'
 import StatusPanel from './components/StatusPanel.vue'
+import BgmPlayer from './components/BgmPlayer.vue'
 import SavePanel from './components/SavePanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import InventoryModal from './components/InventoryModal.vue'
@@ -21,6 +22,7 @@ import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
 import { EventBus } from './game/core/EventBus.js'
 import { sfx, bgm, primeAudio, setSfxVolume, setBgmVolume } from './game/core/sound.js'
+import { getBgmTrack, bgmTrackOfScene } from './game/data/bgmTracks.js'
 import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
@@ -173,14 +175,40 @@ function syncAudioSettings() {
   if (player.settings?.soundEnabled || player.settings?.bgmEnabled) primeAudio()
 }
 
-/** BGM 曲目：战斗中 → battle；否则按主题昼夜（未开启 BGM 就停） */
+/**
+ * 场景判定（2026-09-17 起 10 个场景各有一首真实 BGM，曲库见 `game/data/bgmTracks.js`）：
+ *   boss（首领战） > duel（普通对决） > 按当前功能页分类 > 主题昼夜兜底
+ * 手动选曲（settings.bgmTrack）优先于场景：玩家在右下角播放器里点过就听那首，点「自动」才跟随场景。
+ */
+const DINER_VIEWS = ['restaurant', 'staff', 'branches', 'michelin', 'regulars', 'setMeals', 'takeout', 'suppliers', 'banquet', 'decor', 'rivals', 'friends']
+const MARKET_VIEWS = ['fest', 'festival', 'season', 'seasonReview', 'minigames', 'today', 'weather', 'mascot', 'milestones', 'chronicle']
+const MEDITATE_VIEWS = ['shanhai', 'dao', 'legacy', 'honor']
+const MEMORY_VIEWS = ['log', 'story', 'cards', 'encounters', 'achievements', 'stats', 'logs', 'guide', 'mail', 'codexExchange']
+const KITCHEN_SKILLS = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'woodworking', 'pottery', 'weaving', 'embroidery', 'candles',
+  'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear', 'papermaking', 'instrument', 'soapmaking', 'exchequer']
+
+function bgmScene() {
+  const combat = getCombat()
+  if (combat?.inFight) return combat.opponent?.isBoss ? 'boss' : 'duel' // 首领（含塔/秘境）用「山海盛宴」，普通对决用「厨艺切磋」
+  const dark = document.documentElement.dataset.theme === 'dark'
+  const ambient = dark ? 'night' : 'day' // 「昼/夜」是唯一一对主题相关的曲，其余场景各有专属曲
+  const v = ui.activeView
+  if (v === 'skill') return KITCHEN_SKILLS.includes(player.activeSkill) ? 'kitchen' : ambient
+  if (DINER_VIEWS.includes(v)) return 'diner'
+  if (MARKET_VIEWS.includes(v)) return 'market'
+  if (MEDITATE_VIEWS.includes(v)) return 'meditate'
+  if (MEMORY_VIEWS.includes(v)) return 'memory'
+  return ambient
+}
+
+/** BGM 曲目：手动选曲优先，否则跟随场景（未开启 BGM 就停） */
 function syncBgm() {
   if (ui.phase !== 'game' || !player.settings?.bgmEnabled) {
     bgm.stop()
     return
   }
-  const track = getCombat()?.inFight ? 'battle' : (document.documentElement.dataset.theme === 'dark' ? 'night' : 'day')
-  bgm.play(track)
+  const manual = player.settings?.bgmTrack
+  bgm.play(getBgmTrack(manual) ? manual : bgmTrackOfScene(bgmScene()))
 }
 
 onMounted(() => {
@@ -207,8 +235,19 @@ watch(() => [player.settings?.skin, ui.phase], () => {
   applySkin()
 })
 // v2.1：音量与开关变化时即时生效（BGM 关掉就停、开了就按当前场景起）
+// v2.15：加入「手动选曲 / 当前功能页 / 当前技能」三个依赖——否则在播放器里点一首、或切到制作页，
+//        曲目不会跟着换（漏掉依赖是 v2.1 踩过的同类坑：开关点了没反应）
 watch(
-  () => [player.settings?.soundEnabled, player.settings?.bgmEnabled, player.settings?.sfxVolume, player.settings?.bgmVolume, ui.phase],
+  () => [
+    player.settings?.soundEnabled,
+    player.settings?.bgmEnabled,
+    player.settings?.sfxVolume,
+    player.settings?.bgmVolume,
+    player.settings?.bgmTrack,
+    ui.phase,
+    ui.activeView,
+    player.activeSkill,
+  ],
   () => { syncAudioSettings(); syncBgm() },
   { immediate: true }
 )
@@ -445,6 +484,9 @@ onMounted(() => {
 
     <!-- 一键回到顶部（中间页面右下角） -->
     <button v-if="showTopBtn" class="btn btn-primary back-top-btn" @click="scrollTop" title="回到顶部">⬆ 顶部</button>
+
+    <!-- 背景音乐播放器（右下角玻璃胶囊，点击向上展开选曲；2026-09-17） -->
+    <BgmPlayer v-if="ui.phase === 'game'" />
 
     <!-- 弹层：背包/仓库（§5.4）/ 存档（§8.2）/ 设置 / 签到 / 搜索 / 奇遇 -->
     <InventoryModal v-if="ui.showBagModal" />

@@ -1,7 +1,10 @@
-// 轻量音效 / 背景音乐系统 — 全部 Web Audio **合成**（无外部音频资源），受设置里的
-//   `soundEnabled`（音效）/ `bgmEnabled`（背景音乐）/ `sfxVolume` / `bgmVolume` 控制。
-// 用法：事件桥接在 App.vue 里注册一次（全局点击音 + 各 EventBus 事件）；BGM 由 App.vue 按
-//   主题（昼/夜）与是否在战斗中切换曲目；设置面板改音量时调用 setSfxVolume / setBgmVolume。
+// 轻量音效 / 背景音乐系统 — 音效全部 Web Audio **合成**；BGM 优先放**真实音频**（2026-09-17 起，
+//   `public/audio/bgm/*.mp3`，曲库见 `game/data/bgmTracks.js`），文件缺失/解码失败时回落到本文件里的合成曲。
+// 受设置里的 `soundEnabled`（音效）/ `bgmEnabled`（背景音乐）/ `sfxVolume` / `bgmVolume` 控制。
+// 用法：事件桥接在 App.vue 里注册一次（全局点击音 + 各 EventBus 事件）；BGM 由 App.vue 的 `syncBgm()`
+//   （**唯一调用点**）按「场景 / 手动选曲」切换；设置面板与右下角播放器改音量时调用 setSfxVolume / setBgmVolume。
+import { BGM_TRACKS, bgmUrl, bgmTrackVolume, getBgmTrack } from '../data/bgmTracks.js'
+
 let ctx = null
 let master = null // 音效总线（音量可调）
 let musicGain = null // 音乐总线
@@ -32,10 +35,15 @@ export function setSfxVolume(v) {
   sfxVol = Math.max(0, Math.min(1, Number(v) || 0))
   if (master) master.gain.value = sfxVol
 }
-/** 音乐音量（0~1） */
+/** 音乐音量（0~1）：合成版走 musicGain，真实音频即时改元素音量（并取消正在进行的淡入淡出，避免互相拉锯） */
 export function setBgmVolume(v) {
   bgmVol = Math.max(0, Math.min(1, Number(v) || 0))
   if (musicGain) musicGain.gain.value = bgmVol
+  if (realFadeTimer) {
+    clearInterval(realFadeTimer)
+    realFadeTimer = null
+  }
+  if (realTrack) setElVolume(realTrack)
 }
 
 /** 单音合成：freq 频率 / dur 时长 / type 波形 / gain 音量 / when 延迟秒 / music 走音乐总线 */
@@ -87,7 +95,130 @@ export const sfx = {
   offline: () => { tone(523, 0.14, 'sine', 0.09); tone(392, 0.2, 'sine', 0.08, 0.12) }, // 离线结算
 }
 
-// ── 背景音乐：极简音序器（前瞻调度，无音频资源）────────────────
+// ── 真实音频 BGM（2026-09-17）────────────────────────────────
+// 用 HTMLAudioElement 播 public/audio/bgm/*.mp3；循环、交叉淡入淡出（1.2s）。
+// 两层衰减见 bgmTracks.js（每首 trim + BGM_MASTER_TRIM）——这些是母带级响度的成品曲，
+// 不压就会盖过游戏音效。任一文件加载失败 ⇒ 该曲目标记为不可用并回落到合成音序器（见下）。
+const FADE_MS = 1200
+const audioEls = new Map() // id -> HTMLAudioElement
+const audioUnavailable = new Set() // 加载失败/不存在的曲目 id
+let realTrack = null // 当前真实音频曲目 id
+let realFadeTimer = null
+
+/** 取（或创建）某曲目的 audio 元素；首次会设置 loop 与初始音量 */
+function audioFor(id) {
+  if (typeof window === 'undefined' || typeof Audio === 'undefined') return null
+  if (audioUnavailable.has(id)) return null
+  let el = audioEls.get(id)
+  if (!el) {
+    const url = bgmUrl(id)
+    if (!url) return null
+    el = new Audio(url)
+    el.loop = true
+    el.preload = 'auto'
+    el.volume = 0
+    el.addEventListener('error', () => {
+      // 文件缺失/损坏：标记不可用 → 回落合成版（打包漏文件时游戏仍有声音）
+      audioUnavailable.add(id)
+      audioEls.delete(id)
+      if (realTrack === id) {
+        realTrack = null
+        synthFallbackFor(id)
+      }
+    })
+    audioEls.set(id, el)
+  }
+  return el
+}
+
+/** 合成版回落：把真实曲目 id 映射到最近的合成曲（day/night/battle） */
+function synthFallbackFor(id) {
+  const tr = getBgmTrack(id)
+  const scene = tr?.scene ?? 'day'
+  const synthId = scene === 'duel' || scene === 'boss' ? 'battle' : scene === 'night' ? 'night' : 'day'
+  if (synthActive === synthId && synthTimer) return
+  synthPlayer.play(synthId)
+}
+
+function setElVolume(id) {
+  const el = audioEls.get(id)
+  if (el) el.volume = bgmTrackVolume(id, bgmVol)
+}
+
+function fadeTo(el, target, ms, done) {
+  if (realFadeTimer) {
+    clearInterval(realFadeTimer)
+    realFadeTimer = null
+  }
+  const steps = Math.max(1, Math.round(ms / 40))
+  const from = el.volume
+  let i = 0
+  realFadeTimer = setInterval(() => {
+    i++
+    const k = Math.min(1, i / steps)
+    try {
+      el.volume = Math.max(0, Math.min(1, from + (target - from) * k))
+    } catch {
+      /* 元素被回收 */
+    }
+    if (k >= 1) {
+      clearInterval(realFadeTimer)
+      realFadeTimer = null
+      if (done) done()
+    }
+  }, 40)
+}
+
+function stopReal(fade = true) {
+  const id = realTrack
+  realTrack = null
+  if (!id) return
+  const el = audioEls.get(id)
+  if (!el) return
+  if (!fade) {
+    try {
+      el.pause()
+      el.currentTime = 0
+    } catch {
+      /* noop */
+    }
+    return
+  }
+  fadeTo(el, 0, FADE_MS, () => {
+    try {
+      el.pause()
+      el.currentTime = 0
+    } catch {
+      /* noop */
+    }
+  })
+}
+
+function playReal(id) {
+  const el = audioFor(id)
+  if (!el) return false
+  if (realTrack === id && !el.paused) return true
+  const prev = realTrack ? audioEls.get(realTrack) : null
+  if (prev && prev !== el) {
+    // 交叉淡出旧曲，同时淡入新曲
+    fadeTo(prev, 0, FADE_MS, () => {
+      try {
+        prev.pause()
+        prev.currentTime = 0
+      } catch {
+        /* noop */
+      }
+    })
+  }
+  realTrack = id
+  el.volume = 0
+  const p = el.play()
+  if (p && typeof p.catch === 'function') p.catch(() => {}) // 自动播放被拦：等用户手势后 syncBgm 会再试
+  fadeTo(el, bgmTrackVolume(id, bgmVol), FADE_MS)
+  return true
+}
+
+// ── 背景音乐（合成版）：极简音序器（真实音频不可用时的回落）────
 // 每首曲子 = 主旋律（五声音阶循环）+ 低音（每 N 拍一次）；音量压得很低，作为环境音。
 const TRACKS = {
   day: { bpm: 84, wave: 'triangle', notes: [523, 587, 659, 784, 659, 587, 523, 440], bass: [131, 175], bassEvery: 4 },
@@ -114,33 +245,65 @@ function scheduleBgm() {
   }
 }
 
+/** 合成版停止（内部用） */
+const synthStop = () => {
+  if (bgmTimer) clearInterval(bgmTimer)
+  bgmTimer = null
+  bgmTrack = null
+}
+
+/**
+ * 背景音乐统一出口（App.vue 的 syncBgm() 是唯一调用点）。
+ *   play(id)  —— id 既可以是曲库里的真实曲目（bgmTracks.js），也可以是合成曲 day/night/battle
+ *   stop()    —— 淡出停止
+ * 同一 id 重复调用不重启；真实音频优先，不可用则回落到合成版。
+ */
 export const bgm = {
-  /** 播放/切换曲目（day | night | battle）；同一曲目重复调用不重启 */
   play(id) {
-    const c = ensureCtx()
-    if (!c || !TRACKS[id]) return
-    if (bgmTrack === id && bgmTimer) return
-    this.stop()
-    bgmTrack = id
-    stepIndex = 0
-    nextNoteAt = c.currentTime + 0.1
-    scheduleBgm()
-    bgmTimer = setInterval(scheduleBgm, 200)
+    if (getBgmTrack(id)) {
+      if (playReal(id)) {
+        synthStop() // 真实音频接手，停掉可能还在跑的合成版
+        return
+      }
+      // 真实音频不可用（文件缺失/解码失败）→ 合成版回落
+    }
+    if (!TRACKS[id]) return
+    stopReal()
+    synthPlayer.play(id)
   },
   stop() {
-    if (bgmTimer) clearInterval(bgmTimer)
-    bgmTimer = null
-    bgmTrack = null
+    stopReal()
+    synthStop()
   },
+  /** 当前曲目 id（真实音频优先） */
   current() {
-    return bgmTrack
+    return realTrack ?? bgmTrack
   },
   playing() {
+    if (realTrack) {
+      const el = audioEls.get(realTrack)
+      return !!el && !el.paused
+    }
     return !!bgmTimer
   },
-  /** 曲目表（设置面板展示用） */
+  /** 曲库（设置面板 / 右下角播放器展示用） */
   tracks() {
-    return Object.keys(TRACKS)
+    return BGM_TRACKS.map((x) => x.id)
+  },
+  /** 某曲目是否真的有音频文件可用（加载失败过的会被排除） */
+  available(id) {
+    if (!getBgmTrack(id)) return TRACKS[id] !== undefined
+    return !audioUnavailable.has(id)
+  },
+  /** 当前是否在放真实音频（排查/测试用） */
+  usingRealAudio() {
+    return !!realTrack
+  },
+  /** 真实音频元素的实际音量（0~1；没在放真实音频时为 null）——播放器与守卫用它核对衰减是否生效 */
+  realVolume() {
+    if (!realTrack) return null
+    const el = audioEls.get(realTrack)
+    return el ? el.volume : null
   },
 }
 

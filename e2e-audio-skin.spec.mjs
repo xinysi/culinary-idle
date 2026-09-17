@@ -140,7 +140,10 @@ test('皮肤选择器 + 音频设置：交互 / 持久化 / BGM 接线', async (
     const on = snap()
     return { tracks: mod.bgm.tracks(), initial, off, on }
   })
-  expect(r5.tracks.length).toBe(3) // day / night / battle
+  // 2026-09-17：曲库从 3 首合成曲扩到 13 首真实音频（10 场景 + 3 变奏，见 game/data/bgmTracks.js）
+  expect(r5.tracks.length).toBeGreaterThanOrEqual(10)
+  expect(r5.tracks).toContain('day')
+  expect(r5.tracks).toContain('night')
   expect(r5.initial.playing).toBe(true)
   expect(r5.initial.track).toBe('night')
   expect(r5.off.playing).toBe(false) // 关掉 BGM → 调度停

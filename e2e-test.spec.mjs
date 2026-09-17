@@ -322,4 +322,81 @@ test.describe('游戏全流程', () => {
     expect(saved.player.name).toBe('测试英雄')
     expect(saved.player.gold).toBe(777)
   })
+
+  // 右下角背景音乐播放器（2026-09-17）：胶囊 → 向上展开选曲 → 真实音频真的在播 → 存档往返
+  test('背景音乐播放器：展开选曲 / 真实音频在播 / 响度衰减 / 选曲持久化', async ({ page }) => {
+    await page.goto(BASE)
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+    await page.waitForTimeout(1500)
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(500)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(1200)
+
+    // ① 胶囊在右下角、默认收起
+    const pill = page.locator('.bgm-pill')
+    await expect(pill).toBeVisible()
+    const vw = page.viewportSize()
+    const box = await pill.boundingBox()
+    expect(vw.width - (box.x + box.width)).toBeLessThan(40)
+    expect(vw.height - (box.y + box.height)).toBeLessThan(40)
+
+    // ② 点击向上展开：面板出现在胶囊上方，且列出全部曲目 + 1 行「自动」
+    await pill.click()
+    const panel = page.locator('.bgm-panel')
+    await expect(panel).toBeVisible()
+    const pbox = await panel.boundingBox()
+    expect(pbox.y).toBeLessThan(box.y) // 在胶囊之上 = 向上展开
+    await expect(page.locator('.bgm-row')).toHaveCount(14)
+
+    // ③ 选一首：真实音频开始播、音量被压成背景级（母带级音频必须衰减）
+    await page.locator('.bgm-row', { hasText: '夜市灯火 · 其二' }).click()
+    await page.waitForTimeout(1600)
+    const st = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      const pl = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
+      return { current: bgm.current(), playing: bgm.playing(), real: bgm.usingRealAudio(), vol: bgm.realVolume(), track: pl.settings.bgmTrack }
+    })
+    expect(st.track).toBe('market2')
+    expect(st.current).toBe('market2')
+    expect(st.real).toBe(true)
+    expect(st.playing).toBe(true)
+    expect(st.vol).toBeGreaterThan(0)
+    expect(st.vol).toBeLessThan(0.4) // 默认音量 0.35 × 0.6 × trim
+
+    // ④ 点「自动」→ 跟随场景（技能页·采摘 = 主界面白天曲）
+    await page.locator('.bgm-row', { hasText: '自动' }).click()
+    await page.waitForTimeout(1200)
+    const auto = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      return bgm.current()
+    })
+    expect(auto).toBe('day')
+    await expect(page.locator('.bgm-panel')).toBeVisible() // 选完不自动收起，方便连续试听
+
+    // ⑤ 手动选曲写进存档：显式存档 → 读档后仍是那首
+    await page.locator('.bgm-row', { hasText: '山海盛宴' }).click()
+    await page.waitForTimeout(900)
+    await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/bootstrap.js'))
+      const { saveNow } = await import(/* @vite-ignore */ url)
+      saveNow()
+    })
+    await page.waitForTimeout(300)
+    const savedTrack = await page.evaluate(() => {
+      for (const k of Object.keys(localStorage)) {
+        if (!k.startsWith('culinary-idle.save.')) continue
+        try {
+          const s = JSON.parse(localStorage.getItem(k))
+          return s?.player?.settings?.bgmTrack
+        } catch { /* 忽略坏档 */ }
+      }
+      return null
+    })
+    expect(savedTrack).toBe('boss')
+  })
 })

@@ -421,6 +421,8 @@ body {
   
   overflow-y: auto;
   padding: 12px;
+  /* 2026-09-17：右下角的 BGM 播放器胶囊浮在本栏下缘 → 预留出它的高度，事件日志不会被压在胶囊底下 */
+  padding-bottom: 52px;
 }
 
 /* ══ 面板金边：金色流光描边环（2026-09-11）══
@@ -530,6 +532,12 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
 @media (max-width: 940px) {
   .back-top-btn {
     right: 24px;
+    /* 2026-09-17：右下角加了 BGM 播放器胶囊（同样贴右下）→ 回顶按钮上移一格，两者不叠 */
+    bottom: 64px;
+  }
+  /* 平板/手机：右栏收起为抽屉，播放器胶囊贴真角落（见 BgmPlayer.vue 的媒体查询） */
+  .bgm-player {
+    right: 12px;
   }
 }
 
@@ -2565,8 +2573,10 @@ h2 {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary-soft);
 }
-/* 滑块：统一轨道与滑钮（原先是浏览器默认样式，与旁边的框差异很大） */
-.settings-body input[type="range"] {
+/* 滑块：统一轨道与滑钮（原先是浏览器默认样式，与旁边的框差异很大）
+   2026-09-17：选择器扩到右下角 BGM 播放器（`.bgm-vol`）——否则它又退化成浏览器默认的蓝滑块，与全站玻璃控件不是一套材质 */
+.settings-body input[type="range"],
+.bgm-vol input[type="range"] {
   flex: 1;
   appearance: none;
   -webkit-appearance: none;
@@ -2575,13 +2585,15 @@ h2 {
   cursor: pointer;
   accent-color: var(--primary);
 }
-.settings-body input[type="range"]::-webkit-slider-runnable-track {
+.settings-body input[type="range"]::-webkit-slider-runnable-track,
+.bgm-vol input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
   background: var(--lock-bg);
   border: 1px solid var(--border);
 }
-.settings-body input[type="range"]::-webkit-slider-thumb {
+.settings-body input[type="range"]::-webkit-slider-thumb,
+.bgm-vol input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
@@ -2591,10 +2603,12 @@ h2 {
   border: 2px solid var(--card);
   box-shadow: 0 1px 4px rgba(var(--scrim-rgb), 0.3);
 }
-.settings-body input[type="range"]:focus-visible {
+.settings-body input[type="range"]:focus-visible,
+.bgm-vol input[type="range"]:focus-visible {
   outline: none;
 }
-.settings-body input[type="range"]:focus-visible::-webkit-slider-thumb {
+.settings-body input[type="range"]:focus-visible::-webkit-slider-thumb,
+.bgm-vol input[type="range"]:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 /* 复选框：与其它控件同一套「玻璃框」（原来用 accent-color 保留系统原生方块，
