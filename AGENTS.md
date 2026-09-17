@@ -150,7 +150,30 @@
   - `e2e-dark` 的扫描器**已纳入 SVG 的 `fill`/`stroke`**（品牌橙判定 + 对比度；SVG `<text>` 前景取 `fill`），并**豁免纯 emoji 文本**（字形自带颜色，按 fill 判对比度恒误报）。
 - **可拖动画布别在 `pointerdown` 里立刻 `setPointerCapture`**：一旦捕获，后续 `click` 会被改派到捕获元素本身 → 「点节点」永远不触发（实测踩过）。正确做法：**拖动超过阈值（~4px）后再捕获**；触摸事件浏览器本就隐式捕获，移动端拖动不受影响。
 
-### 🗺 厨神之路图谱（v2.1，2026-09-13）
+### 🏗 构建不得改写 CSS：`cssMinify: false`（2026-09-17 用户报「线上版和 exe 版的样式跟本地完全不一样，比如窗口透明度」后立）
+
+**现象**：GitHub 在线版与打包的 exe 里**毛玻璃全没了**（`.card`/顶栏/侧栏/弹窗变成半透明硬色块），本地 dev 一切正常 —— 也就是说「构建产物 ≠ 源码」。
+
+**根因链**（逐条实测确认，别再重新踩）：
+1. Vite 8（rolldown 版）的 CSS 压缩器是 **lightningcss**（`esbuild` 已不再随 vite 提供，写 `cssMinify: 'esbuild'` 会直接报 `Cannot find package 'esbuild'`）；
+2. lightningcss 遇到**同时写了标准与前缀**的规则会去重，并且**留下 `-webkit-` 版、删掉标准版**（实测任何 targets 都一样：`{}` / `chrome110` / `safari18` / 只给 `safari16.4` 结果完全一致，所以 `cssTarget` 怎么调都没用）；
+3. 而**新版 Chromium 不认 `-webkit-backdrop-filter`**（实测 Chromium 151 下算出的 `backdrop-filter` 是 `none`）⇒ 那 28 处（`.card`/`.top-nav-btn`/`.skill-item`/`.modal`/…）在主样式表里**全部失去模糊**；`mask` 的标准写法同理被删（流光效果）。
+   ⚠️ 注意「只写标准写法」的规则不受影响（lightningcss 会保留）—— 坏掉的正是**同时写了两种**的那些。
+
+**处置**：`vite.config.js` 里 **`cssMinify: false`**（原样输出作者写的 CSS；需要 Safari 兼容处在源码里本来就手写了 `-webkit-` 版本）。
+代价（实测）：主样式表 gzip **22.6KB → 45.7KB**（全部 CSS 原始 388KB → 507KB），换成「写什么就上线什么」，值。
+
+**守卫**：`scripts/ci/css_output_audit.mjs`（**CI 里排在 `npm run build` 之后**）
+- A：一组前缀敏感的标准属性（`backdrop-filter`/`mask`/`mask-image`/`appearance`/`user-select`/`line-clamp`/`text-size-adjust`）在 `src/styles/main.css` 里的出现次数，**必须 ≤ 产物 `index-*.css` 里的次数**（少了=被压缩器删了）；
+- B/B2：产物里必须存在**标准写法**的 `backdrop-filter`，且**不允许出现「只剩 `-webkit-` 前缀版」**；
+- C：断言 `vite.config.js` 仍写着 `cssMinify: false`。
+  **已反例验证**（把该行删掉重新构建 → 4 项全 FAIL 并点名）。
+
+**排查这类「dev 好、线上/exe 坏」的通用手法**（本次就是这么定位的）：**用 `vite preview` 跑构建产物，与 dev 做「逐元素计算样式指纹比对」**——
+本次 65 视图 + 16 副业页（82 个页面、每页全元素 × 21 个属性）比对，修前差异集中在 `backdropFilter`，修后 **0 处差异**。
+比逐页看截图可靠得多（截图看不出 blur 有没有生效），也比重读构建配置快（我最初猜是 esbuild/target，查文件查错了方向，实测三轮才锁定 lightningcss）。
+
+
 - `src/game/data/daoGraph.js` 是**纯函数布局**（`nodes / links / sectors / rings / root / trunks / plaque / width / height / focusX / focusY`，只读 `daoTree.js`）；`src/components/DaoTreeGraph.vue` 只负责画与交互。
 - **形态 = 辐射式（用户指定「从中心点向四周发散」）**：中心「根」+ 四扇区（道途，中心角 −135/−45/45/135°、跨度 68°）+ 三圈同心环（层，半径 206/332/458）。**一屏看不完是设计意图**，靠拖动/滚轮探索：🔍 聚焦＝90% 居中到「中心与进度扇区之间」，⤢ 全览＝47%。术语是 `sectors` / `rings`（不是 lanes / bands）。
 - **三处已定稿的打磨（别丢）**：节点图标 `font-size: var(--dtg-icon)` **随半径缩放**（半径×0.78）；道途标题有**淡色底片胶囊**（`dtg-title-pill`，宽度按字数估、不做文本测量）；**可解锁节点有一圈细外环**（`dtg-outer`，半径+5、支线色 55%）。这三项都在 C21 的「画布节点是纯图标」契约里（组件里少了 `dtg-title-pill` / `--dtg-icon` 就 FAIL）。
