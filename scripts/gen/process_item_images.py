@@ -136,12 +136,25 @@ def main():
     ap.add_argument('--map', nargs='*', default=DEFAULT_MAP)
     ap.add_argument('--stats', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--sort', choices=['mtime', 'name'], default='mtime')
+    ap.add_argument('--filter', default=None, help='只处理文件名含该子串的图（跳过旧批次残留）')
     ap.add_argument('--sheet', default=None)
     ap.add_argument('--resample', choices=['box', 'nearest', 'lanczos', 'both'], default='box')
     args = ap.parse_args()
 
     files = [f for f in os.listdir(args.src) if f.lower().endswith('.png')]
-    files.sort(key=lambda f: os.path.getmtime(os.path.join(args.src, f)))
+    if args.filter:
+        files = [f for f in files if args.filter in f]
+    if args.sort == 'name':
+        # 按文件名里的**最大数字**排序（`(10)` 要排在 `(2)` 之后）——
+        # 用户按技能分文件夹给图时，文件名自带序号，比 mtime 更可靠
+        import re as _re
+        def _num(f):
+            ns = _re.findall(r'\d+', f)
+            return int(ns[-1]) if ns else 0
+        files.sort(key=_num)
+    else:
+        files.sort(key=lambda f: os.path.getmtime(os.path.join(args.src, f)))
     if len(files) != len(args.map):
         print('❌ 源图 %d 张，映射表 %d 个名称 —— 数量不匹配，中止（不写任何文件）' % (len(files), len(args.map)))
         return 1
