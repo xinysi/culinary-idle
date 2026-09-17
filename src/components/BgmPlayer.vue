@@ -13,13 +13,19 @@ const open = ref(false)
 const manualId = computed(() => player.settings?.bgmTrack ?? null)
 const isAuto = computed(() => !manualId.value)
 const enabled = computed(() => !!player.settings?.bgmEnabled)
+const paused = computed(() => enabled.value && !!player.settings?.bgmPaused)
+const sounding = computed(() => enabled.value && !paused.value)
 
 /** 面板标题上显示「当前在放哪首」：手动选的就是它，否则按场景推一个名字 */
 const currentTrack = computed(() => {
   const t = getBgmTrack(manualId.value)
   return t ?? null
 })
-const currentName = computed(() => (enabled.value ? currentTrack.value?.name ?? '自动' : '已关闭'))
+const currentName = computed(() => {
+  if (!enabled.value) return '已关闭'
+  if (paused.value) return `已暂停 · ${currentTrack.value?.name ?? '自动'}`
+  return currentTrack.value?.name ?? '自动'
+})
 const currentSceneLabel = computed(() => {
   const t = currentTrack.value
   if (!t) return '跟随场景'
@@ -28,14 +34,26 @@ const currentSceneLabel = computed(() => {
 
 function pick(id) {
   player.settings.bgmTrack = id
-  if (!player.settings.bgmEnabled) player.settings.bgmEnabled = true // 点了就放，别让玩家再去找开关
+  player.settings.bgmPaused = false // 点了就放，别让玩家再去找开关
+  if (!player.settings.bgmEnabled) player.settings.bgmEnabled = true
 }
 function setAuto() {
   player.settings.bgmTrack = null
+  player.settings.bgmPaused = false
   if (!player.settings.bgmEnabled) player.settings.bgmEnabled = true
+}
+/** 暂停 / 继续（保留进度：继续时从原位置接着放，不重头） */
+function togglePause() {
+  if (!player.settings.bgmEnabled) {
+    player.settings.bgmEnabled = true // 关着的时候点播放 = 打开并播当前场景
+    player.settings.bgmPaused = false
+    return
+  }
+  player.settings.bgmPaused = !player.settings.bgmPaused
 }
 function toggleEnabled() {
   player.settings.bgmEnabled = !player.settings.bgmEnabled
+  if (player.settings.bgmEnabled) player.settings.bgmPaused = false
 }
 </script>
 
@@ -47,11 +65,19 @@ function toggleEnabled() {
         <div class="bgm-head">
           <span class="bgm-title">🎵 背景音乐</span>
           <span class="bgm-scene dim">{{ currentSceneLabel }}</span>
-          <button class="bgm-x" title="收起" @click="open = false">✕</button>
+          <button
+            class="bgm-hbtn"
+            :title="paused ? '继续播放' : '暂停'"
+            :disabled="!enabled"
+            @click="togglePause()"
+          >
+            {{ paused ? '▶' : '⏸' }}
+          </button>
+          <button class="bgm-hbtn" title="收起" @click="open = false">✕</button>
         </div>
         <div class="bgm-list">
           <button class="bgm-row" :class="{ on: isAuto }" @click="setAuto()">
-            <span class="bgm-row-ico">🔀</span>
+            <span class="bgm-row-ico">{{ isAuto && sounding ? '▶' : isAuto && paused ? '⏸' : '🔀' }}</span>
             <span class="bgm-row-name">自动（跟随场景）</span>
             <span class="bgm-row-tag dim">推荐</span>
           </button>
@@ -63,7 +89,7 @@ function toggleEnabled() {
             :title="t.desc ?? ''"
             @click="pick(t.id)"
           >
-            <span class="bgm-row-ico">{{ manualId === t.id ? '▶' : '·' }}</span>
+            <span class="bgm-row-ico">{{ manualId === t.id ? (sounding ? '▶' : paused ? '⏸' : '·') : '·' }}</span>
             <span class="bgm-row-name">{{ t.name }}</span>
             <span class="bgm-row-tag dim">{{ t.desc ?? '' }}</span>
           </button>
@@ -87,12 +113,21 @@ function toggleEnabled() {
       </div>
     </transition>
 
-    <!-- 收起态胶囊（也是展开/收起按钮） -->
-    <button class="bgm-pill" :class="{ 'bgm-pill--off': !enabled }" :title="enabled ? '背景音乐：' + currentName + '（点击展开）' : '背景音乐已关闭（点击展开）'" @click="open = !open">
-      <span class="bgm-ico" :class="{ 'bgm-ico--play': enabled }">{{ enabled ? '🎵' : '🔇' }}</span>
-      <span class="bgm-name">{{ currentName }}</span>
-      <span class="bgm-caret">{{ open ? '▾' : '▴' }}</span>
-    </button>
+    <!-- 收起态胶囊：左侧按钮暂停/继续，点其余部分展开/收起 -->
+    <div class="bgm-pill" :class="{ 'bgm-pill--off': !enabled }">
+      <button
+        class="bgm-pp"
+        :title="!enabled ? '开启背景音乐' : paused ? '继续播放' : '暂停'"
+        @click="togglePause()"
+      >
+        {{ !enabled || paused ? '▶' : '⏸' }}
+      </button>
+      <button class="bgm-open" :title="enabled ? '背景音乐：' + currentName + '（点击展开）' : '背景音乐已关闭（点击展开）'" @click="open = !open">
+        <span class="bgm-ico" :class="{ 'bgm-ico--play': sounding }">{{ sounding ? '🎵' : '🔇' }}</span>
+        <span class="bgm-name">{{ currentName }}</span>
+        <span class="bgm-caret">{{ open ? '▾' : '▴' }}</span>
+      </button>
+    </div>
 
     <!-- 静音快捷开关：只在展开时露出，避免收起态太挤 -->
     <button v-if="open" class="bgm-mute" :title="enabled ? '关闭背景音乐' : '开启背景音乐'" @click="toggleEnabled()">
@@ -113,25 +148,36 @@ function toggleEnabled() {
   gap: 8px;
   max-width: calc(100vw - 28px);
 }
-/* 玻璃胶囊（与 .card 同材质：面板色 + blur + 描边） */
+/* 玻璃胶囊（与 .card 同材质：面板色 + blur + 描边）；左侧暂停钮 + 右侧展开钮 */
 .bgm-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
   max-width: 100%;
-  padding: 7px 12px;
   border-radius: 999px;
   background: rgba(var(--panel-rgb), 0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   box-shadow: 0 2px 10px rgba(var(--ink-rgb), 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+.bgm-pill:hover { border-color: var(--primary); }
+.bgm-pill--off { opacity: 0.75; }
+.bgm-pp,
+.bgm-open {
+  border: none;
+  background: transparent;
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
 }
-.bgm-pill:hover { border-color: var(--primary); }
-.bgm-pill--off { opacity: 0.75; }
+.bgm-pp {
+  padding: 7px 9px 7px 12px;
+  border-right: 1px solid var(--border);
+  color: var(--primary);
+}
+.bgm-open { display: flex; align-items: center; gap: 6px; padding: 7px 12px 7px 9px; }
+.bgm-pp:hover, .bgm-open:hover { background: rgba(var(--primary-rgb), 0.10); }
 .bgm-ico--play { animation: bgm-spin 3.6s linear infinite; display: inline-block; }
 @keyframes bgm-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
 .bgm-name { max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -167,6 +213,17 @@ function toggleEnabled() {
   font-size: 12px;
   padding: 0 2px;
 }
+.bgm-hbtn {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+.bgm-hbtn:hover { background: rgba(var(--primary-rgb), 0.12); }
+.bgm-hbtn:disabled { color: var(--muted); cursor: default; }
 .bgm-list { max-height: 246px; overflow-y: auto; padding: 4px; }
 .bgm-row {
   width: 100%;

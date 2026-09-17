@@ -358,7 +358,7 @@ test.describe('游戏全流程', () => {
       const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
       const { bgm } = await import(/* @vite-ignore */ url)
       const pl = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
-      return { current: bgm.current(), playing: bgm.playing(), real: bgm.usingRealAudio(), vol: bgm.realVolume(), track: pl.settings.bgmTrack }
+      return { current: bgm.current(), playing: bgm.playing(), real: bgm.usingRealAudio(), vol: bgm.realVolume(), track: pl.settings.bgmTrack, count: bgm.playingCount() }
     })
     expect(st.track).toBe('market2')
     expect(st.current).toBe('market2')
@@ -366,6 +366,42 @@ test.describe('游戏全流程', () => {
     expect(st.playing).toBe(true)
     expect(st.vol).toBeGreaterThan(0)
     expect(st.vol).toBeLessThan(0.4) // 默认音量 0.35 × 0.6 × trim
+    expect(st.count).toBe(1)
+
+    // ③b 连切三首：**任意时刻只能有一首在出声**（2026-09-17 用户报「点其它音乐会重叠播放」的回潮守卫）
+    for (const name of ['山海晨光', '堂前烟火', '山海盛宴']) {
+      await page.locator('.bgm-row', { hasText: name }).click()
+      await page.waitForTimeout(1500) // 等 1.2s 交叉淡变走完
+      const c = await page.evaluate(async () => {
+        const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+        const { bgm } = await import(/* @vite-ignore */ url)
+        return { count: bgm.playingCount(), cur: bgm.current() }
+      })
+      expect(c.count).toBe(1)
+    }
+
+    // ③c 暂停 / 继续：暂停要真静音、继续要**从原进度**接上（不是重头）
+    await page.locator('.bgm-pill .bgm-pp').click()
+    await page.waitForTimeout(1500)
+    const pausedSt = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      const pl = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
+      return { playing: bgm.playing(), count: bgm.playingCount(), pos: bgm.position(), flag: pl.settings.bgmPaused }
+    })
+    expect(pausedSt.playing).toBe(false)
+    expect(pausedSt.count).toBe(0)
+    expect(pausedSt.flag).toBe(true)
+    expect(pausedSt.pos).toBeGreaterThan(0)
+    await page.locator('.bgm-pill .bgm-pp').click()
+    await page.waitForTimeout(1600)
+    const resumed = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      return { playing: bgm.playing(), count: bgm.playingCount(), pos: bgm.position() }
+    })
+    expect(resumed.count).toBe(1)
+    expect(resumed.pos).toBeGreaterThanOrEqual(pausedSt.pos) // 没被重置回 0
 
     // ④ 点「自动」→ 跟随场景（技能页·采摘 = 主界面白天曲）
     await page.locator('.bgm-row', { hasText: '自动' }).click()
