@@ -859,6 +859,13 @@ bg_cand = (min >= 235) | (chroma <= 10 且 min >= 190)     # 近白 或（淡 �
 - 版本号三处之外，**附件名取自 tag**（`culinary-idle-$GITHUB_REF_NAME-win32-x64.zip`），所以 tag 名要与 `package.json` 一致。
 
 ### 🚀 发布流程与「发布后核验」（2026-09-11 立）
+- **上传资产必须有限时与重试**（2026-09-18 立）：`gh release create <tag> <200MB zip>` 那句曾在 GitHub 侧**静默挂起 35 分钟**（同版本上一轮同一步只 14 秒 → 偶发挂起，非代码问题）。
+  现拆成 **建草稿 → `Upload asset (retry ×3)`（步骤 `timeout-minutes: 10` + 命令级 `timeout 480` + `--clobber` 重试 3 次）→ `gh release edit --draft=false --latest`**。
+  **教训：任何"上传/下载大文件"的步骤都要有超时，宁可快速失败也别静默挂起。**
+- **打包减重**（2026-09-18）：Electron 自带的 `locales/*.pak`（未压缩 **38.3MB**）只留 `en-US` / `zh-CN` → **zip 191.4MB → 178.5MB**。
+  ⚠️ 选目录要用 `Sort-Object LastWriteTime -Descending | Select-Object -First 1`（`release/` 里残留改名前的旧目录，`-First 1` 会选错）。
+- **构建缓存**：`actions/cache` 缓存 `lmewexe/node_modules` 与 electron 下载缓存（每次省 ~100MB 下载、打包 40s→10s）。
+- **下载慢先看链路再怪包**：实测直连 GitHub 资产 257 KB/s、`gh-proxy.com` 镜像 1.5~1.7 MB/s（快 6 倍）；包体积再优化最多省 10~15%，**换镜像才是量级提速**。
 1. 全量回归：`vite build` → 11 套 `scripts/ci/*.mjs` → `npx playwright test e2e-test.spec.mjs e2e-dark.spec.mjs e2e-text.spec.mjs e2e-audio-skin.spec.mjs`（15 项）。
 2. 版本号三处同步：`package.json`、`lmewexe/package.json`、README 的「当前版本」行 + 版本历史行。
 3. `git add -A` → commit（信息里写清「玩法零改动 / 新存档字段」之类的口径）→ `git push origin main` → `git tag vX.Y.Z && git push origin vX.Y.Z`。
