@@ -327,7 +327,7 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null, bgmPaused: false }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）；bgmPaused：播放器上的暂停（保留进度，与 bgmEnabled 开关是两回事）
+    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null, bgmPaused: false, bgmMode: 'repeat' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）；bgmPaused：播放器上的暂停（保留进度，与 bgmEnabled 开关是两回事）；bgmMode：播放模式 repeat 单曲循环 / sequence 顺序 / shuffle 随机（2026-09-18）
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
     // 奇遇图鉴（2026-09-11）：{ seen: { [id]: 触发次数 }, picks: { [id]: [各分支被选次数] }, total: 累计触发 }
@@ -709,6 +709,7 @@ export const usePlayerStore = defineStore('player', {
         settings: (() => {
           const st = { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }
           if (st.bgmTrack && !getBgmTrack(st.bgmTrack)) st.bgmTrack = null
+          if (!['repeat', 'sequence', 'shuffle'].includes(st.bgmMode)) st.bgmMode = 'repeat'
           return st
         })(), // 并行挂机只接受 0/1/2/3
         farming: {

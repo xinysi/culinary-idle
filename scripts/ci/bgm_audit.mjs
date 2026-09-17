@@ -104,7 +104,30 @@ check(
 )
 const appSrc = fs.readFileSync(path.join(ROOT, 'src/App.vue'), 'utf8')
 check('H3. syncBgm 处理了暂停（settings.bgmPaused → bgm.pause）', /bgmPaused/.test(appSrc) && /bgm\.pause\(\)/.test(appSrc))
-check('H4. 播放器有暂停按钮（.bgm-pp / 面板头部 .bgm-hbtn）', /bgm-pp/.test(compSrc) && /togglePause/.test(compSrc))
+check('H4. 播放器有暂停按钮（.bgm-tbtn--play / 面板头部 .bgm-hbtn）', /bgm-tbtn--play/.test(compSrc) && /togglePause/.test(compSrc))
+
+/* I. 播放模式与「上一首 / 下一首」（2026-09-18）：纯函数行为 + 接线 + 常驻控制条 */
+const { BGM_MODES, nextBgmMode, nextTrackId, prevTrackId } = mod
+const idsAll = BGM_TRACKS.map((t) => t.id)
+const iFirst = idsAll[0]
+const iLast = idsAll[idsAll.length - 1]
+check('I. 三种播放模式齐备（单曲循环/顺序/随机）', BGM_MODES.map((m) => m.id).join(',') === 'repeat,sequence,shuffle', BGM_MODES.map((m) => m.id).join(','))
+check('I. 模式轮换会绕回第一项', nextBgmMode('repeat') === 'sequence' && nextBgmMode('sequence') === 'shuffle' && nextBgmMode('shuffle') === 'repeat')
+check('I. 顺序播放：next 走列表、末尾绕回第一首', nextTrackId(iFirst, 'sequence') === idsAll[1] && nextTrackId(iLast, 'sequence') === iFirst)
+check('I. 顺序播放：prev 到头绕回最后一首', prevTrackId(iFirst, 'sequence') === iLast && prevTrackId(idsAll[1], 'sequence') === iFirst)
+// 随机：抽样多次都不许等于当前这首（否则「下一首」看起来没反应）
+const rndSamples = Array.from({ length: 40 }, () => nextTrackId(iFirst, 'shuffle'))
+check('I. 随机播放：不会抽到当前这首，且结果都在曲库内', rndSamples.every((x) => x !== iFirst && idsAll.includes(x)))
+check('I. 随机播放的 prev 也走随机（不会「倒着走列表」）', idsAll.includes(prevTrackId(iFirst, 'shuffle')))
+check('I. App.vue 把模式同步给引擎（bgm.setMode）', /bgm\.setMode\(/.test(appSrc))
+check('I. App.vue 注册了「放完接下一首」回调（bgm.onEnded）', /bgm\.onEnded\(onBgmEnded\)/.test(appSrc) && /function onBgmEnded/.test(appSrc))
+check('I. 播放模式是持久化设置（settings.bgmMode 默认 repeat）', /bgmMode:\s*'repeat'/.test(fs.readFileSync(path.join(ROOT, 'src/stores/player.js'), 'utf8')))
+// 引擎侧：只有 repeat 用 el.loop
+check('I. 引擎按模式设置 el.loop（顺序/随机不循环）', /el\.loop = playMode === 'repeat'/.test(soundCode))
+const compCode = stripComments(compSrc)
+const controls = ['⏮', '⏭', '上一首', '下一首', '播放模式', '关闭背景音乐']
+check('I. 播放器收起态就有全套常驻控件（上一首/暂停/下一首/模式/开关）', controls.every((k) => compCode.includes(k)) && /bgm-tbtn/.test(compCode))
+check('I. 🔊 开关常驻（不在 v-if=open 里）', /class="bgm-pp"[\s\S]{0,240}toggleEnabled/.test(compCode))
 
 console.log(fail ? `\nBGM 审计：FAIL（${fail} 项）` : `\nBGM 审计：PASS（${BGM_TRACKS.length} 首，音频 ${onDisk.length} 个文件）`)
 process.exit(fail ? 1 : 0)

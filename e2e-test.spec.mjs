@@ -343,8 +343,9 @@ test.describe('游戏全流程', () => {
     expect(vw.width - (box.x + box.width)).toBeLessThan(40)
     expect(vw.height - (box.y + box.height)).toBeLessThan(40)
 
-    // ② 点击向上展开：面板出现在胶囊上方，且列出全部曲目 + 1 行「自动」
-    await pill.click()
+    // ② 点胶囊右半（曲名/箭头）向上展开：面板出现在胶囊上方，且列出全部曲目 + 1 行「自动」
+    //    2026-09-18 起胶囊是一整条常驻控制（🔊 / ⏮ / ⏸ / ⏭ / 模式 / 曲名），只有「曲名」那半负责展开
+    await pill.locator('.bgm-open').click()
     const panel = page.locator('.bgm-panel')
     await expect(panel).toBeVisible()
     const pbox = await panel.boundingBox()
@@ -381,7 +382,7 @@ test.describe('游戏全流程', () => {
     }
 
     // ③c 暂停 / 继续：暂停要真静音、继续要**从原进度**接上（不是重头）
-    await page.locator('.bgm-pill .bgm-pp').click()
+    await page.locator('.bgm-pill .bgm-tbtn--play').click()
     await page.waitForTimeout(1500)
     const pausedSt = await page.evaluate(async () => {
       const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
@@ -393,7 +394,7 @@ test.describe('游戏全流程', () => {
     expect(pausedSt.count).toBe(0)
     expect(pausedSt.flag).toBe(true)
     expect(pausedSt.pos).toBeGreaterThan(0)
-    await page.locator('.bgm-pill .bgm-pp').click()
+    await page.locator('.bgm-pill .bgm-tbtn--play').click()
     await page.waitForTimeout(1600)
     const resumed = await page.evaluate(async () => {
       const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
@@ -402,6 +403,62 @@ test.describe('游戏全流程', () => {
     })
     expect(resumed.count).toBe(1)
     expect(resumed.pos).toBeGreaterThanOrEqual(pausedSt.pos) // 没被重置回 0
+
+    // ③d 常驻控制条（2026-09-18）：收起态就有 🔊 开关 / 上一首 / 播放暂停 / 下一首 / 播放模式
+    await expect(page.locator('.bgm-pill button')).toHaveCount(6)
+    await expect(page.locator('.bgm-pill button[aria-label="下一首"]')).toBeVisible()
+    await expect(page.locator('.bgm-pill button[aria-label="上一首"]')).toBeVisible()
+    await expect(page.locator('.bgm-pill button[aria-label="播放模式"]')).toBeVisible()
+    await expect(page.locator('.bgm-pill button[aria-label="关闭背景音乐"]')).toBeVisible() // 🔊 常驻
+
+    // ③e ⏭ 走列表下一首、⏮ 回到上一首
+    const trackAt = () => page.evaluate(() => document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').settings.bgmTrack)
+    const before1 = await trackAt()
+    await page.locator('.bgm-pill button[aria-label="下一首"]').click()
+    await page.waitForTimeout(1500)
+    const after1 = await trackAt()
+    expect(after1).not.toBe(before1)
+    await page.locator('.bgm-pill button[aria-label="上一首"]').click()
+    await page.waitForTimeout(1500)
+    expect(await trackAt()).toBe(before1)
+
+    // ③f 播放模式轮换 + 引擎 loop 同步（单曲循环 loop=true；顺序/随机 loop=false）
+    const modeState = () =>
+      page.evaluate(async () => {
+        const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+        const { bgm } = await import(/* @vite-ignore */ url)
+        const pl = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
+        return { setting: pl.settings.bgmMode, engine: bgm.mode(), loop: bgm.looped() }
+      })
+    expect((await modeState()).setting).toBe('repeat')
+    await page.locator('.bgm-pill button[aria-label="播放模式"]').click()
+    await page.waitForTimeout(400)
+    const seqMode = await modeState()
+    expect(seqMode.setting).toBe('sequence')
+    expect(seqMode.engine).toBe('sequence')
+    expect(seqMode.loop).toBe(false) // 顺序模式不许循环，放完要接下一首
+
+    // ③g 顺序播放：把当前曲推到结尾 → 自动接列表下一首（用引擎的 seek 驱动真实的 ended 事件）
+    await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      bgm.seek(bgm.duration() - 0.3)
+    })
+    await page.waitForTimeout(3500)
+    const advanced = await page.evaluate(async () => {
+      const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/game/core/sound.js'))
+      const { bgm } = await import(/* @vite-ignore */ url)
+      return { cur: bgm.current(), playing: bgm.playing(), count: bgm.playingCount() }
+    })
+    expect(advanced.cur).not.toBe(seqMode.setting === 'sequence' ? null : advanced.cur)
+    expect(advanced.cur).not.toBe(before1) // 换了一首
+    expect(advanced.playing).toBe(true)
+    expect(advanced.count).toBe(1)
+    // 收拾现场：回到单曲循环，免得后面的「自动」断言受模式影响
+    await page.evaluate(() => {
+      document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').settings.bgmMode = 'repeat'
+    })
+    await page.waitForTimeout(300)
 
     // ④ 点「自动」→ 跟随场景（技能页·采摘 = 主界面白天曲）
     await page.locator('.bgm-row', { hasText: '自动' }).click()

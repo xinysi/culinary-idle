@@ -66,6 +66,41 @@ export const BGM_SCENE_LABEL = {
 const BY_ID = new Map(BGM_TRACKS.map((x) => [x.id, x]))
 export const BGM_BASE = 'audio/bgm/'
 
+/** 播放模式（2026-09-18）：单曲循环 / 顺序播放 / 随机播放 */
+export const BGM_MODES = [
+  { id: 'repeat', icon: '🔂', name: '单曲循环', desc: '这首放完从头再来' },
+  { id: 'sequence', icon: '🔁', name: '顺序播放', desc: '放完自动接列表下一首' },
+  { id: 'shuffle', icon: '🔀', name: '随机播放', desc: '放完随机换一首' },
+]
+export const BGM_MODE_IDS = BGM_MODES.map((m) => m.id)
+export function getBgmMode(id) {
+  return BGM_MODES.find((m) => m.id === id) ?? BGM_MODES[0]
+}
+/** 模式按钮的下一个模式（点一下轮流切） */
+export function nextBgmMode(id) {
+  const i = BGM_MODE_IDS.indexOf(getBgmMode(id).id)
+  return BGM_MODE_IDS[(i + 1) % BGM_MODE_IDS.length]
+}
+
+/** 列表下一首（到底了回到第 1 首）；shuffle 时随机换一首（不会重复当前这首） */
+export function nextTrackId(curId, mode = 'sequence', rand = Math.random) {
+  const i = BGM_TRACKS.findIndex((t) => t.id === curId)
+  if (mode === 'shuffle') {
+    if (BGM_TRACKS.length <= 1) return BGM_TRACKS[0].id
+    // 从「除当前这首以外」里随机抽，避免连点下一首还在原地
+    const pool = BGM_TRACKS.filter((t) => t.id !== curId)
+    return pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))].id
+  }
+  return BGM_TRACKS[(i + 1 + BGM_TRACKS.length) % BGM_TRACKS.length].id
+}
+
+/** 列表上一首（到头了回到最后一首）；shuffle 时同样走随机 */
+export function prevTrackId(curId, mode = 'sequence', rand = Math.random) {
+  if (mode === 'shuffle') return nextTrackId(curId, 'shuffle', rand)
+  const i = BGM_TRACKS.findIndex((t) => t.id === curId)
+  return BGM_TRACKS[(i - 1 + BGM_TRACKS.length) % BGM_TRACKS.length].id
+}
+
 export function getBgmTrack(id) {
   return BY_ID.get(id) ?? null
 }

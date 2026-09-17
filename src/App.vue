@@ -22,7 +22,7 @@ import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
 import { EventBus } from './game/core/EventBus.js'
 import { sfx, bgm, primeAudio, setSfxVolume, setBgmVolume } from './game/core/sound.js'
-import { getBgmTrack, bgmTrackOfScene } from './game/data/bgmTracks.js'
+import { getBgmTrack, bgmTrackOfScene, nextTrackId, getBgmMode } from './game/data/bgmTracks.js'
 import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
@@ -215,17 +215,34 @@ function syncBgm() {
   bgm.play(getBgmTrack(manual) ? manual : bgmTrackOfScene(bgmScene()))
 }
 
+/**
+ * 「这首放完了」→ 按播放模式决定下一首（顺序/随机；单曲循环走 el.loop，不会触发这里）。
+ * 引擎不写存档：这里改的是 settings，仍由 `syncBgm()`（唯一调用点）去真正播放。
+ */
+function onBgmEnded(finishedId) {
+  const mode = bgm.mode()
+  if (mode === 'repeat') return
+  const nextId = nextTrackId(finishedId ?? bgm.current(), mode)
+  player.settings.bgmTrack = nextId // 顺着列表播 ⇒ 视为玩家选了这首（播放器上会显示它）
+  player.settings.bgmPaused = false
+}
+
 onMounted(() => {
   applyUiScale()
   applyTheme()
   applySkin()
   applyCrisp()
   syncAudioSettings()
+  bgm.setMode(getBgmMode(player.settings?.bgmMode).id) // 播放模式（单曲循环/顺序/随机）
+  bgm.onEnded(onBgmEnded) // 顺序/随机模式下「放完了接下一首」
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
 })
-onUnmounted(() => { clearInterval(refreshTodayTimer) })
+onUnmounted(() => {
+  clearInterval(refreshTodayTimer)
+  bgm.onEnded(null)
+})
 // 主题切换实时生效（设置面板修改 settings.theme），并写入全局键供启动页复用
 watch(() => player.settings?.theme, (v) => {
   try { if (v) localStorage.setItem(THEME_KEY, v) } catch { /* 隐私模式下忽略 */ }
@@ -249,11 +266,12 @@ watch(
     player.settings?.bgmVolume,
     player.settings?.bgmTrack,
     player.settings?.bgmPaused,
+    player.settings?.bgmMode,
     ui.phase,
     ui.activeView,
     player.activeSkill,
   ],
-  () => { syncAudioSettings(); syncBgm() },
+  () => { syncAudioSettings(); syncBgm(); bgm.setMode(getBgmMode(player.settings?.bgmMode).id) },
   { immediate: true }
 )
 
