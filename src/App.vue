@@ -6,6 +6,7 @@ import SplashScreen from './components/SplashScreen.vue'
 import Sidebar from './components/Sidebar.vue'
 import BgmPlayer from './components/BgmPlayer.vue'
 import SkillGuideModal from './components/SkillGuideModal.vue'
+import FeatureGuideModal from './components/FeatureGuideModal.vue'
 import SavePanel from './components/SavePanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import SignInModal from './components/SignInModal.vue'
@@ -27,6 +28,7 @@ import { getBgmTrack, bgmTrackOfScene, nextTrackId, getBgmMode } from './game/da
 import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
+import { guideEntryForView } from './game/data/guide.js'
 import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
 import { initTelemetry } from './game/dev/telemetry.js'
 
@@ -109,6 +111,10 @@ const EffectsView = defineAsyncComponent(() => import('./views/EffectsView.vue')
 
 const ui = useUiStore()
 const player = usePlayerStore()
+
+// 功能页「指南」（2026-09-21）：只在「当前页在攻略总览里有条目」时显示按钮 ——
+// 技能页有自己的指南按钮（SkillView），顶栏主页（商店/厨藏/装备…）不在攻略条目里，自然都是 null。
+const featureGuideEntry = computed(() => guideEntryForView(ui.activeView, player))
 
 // 底部状态条：装备槽位名称（与右侧状态栏一致）
 const SLOT_NAMES = {
@@ -426,6 +432,13 @@ onMounted(() => {
             <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊<span class="nav-btn-text">统计</span></button>
             <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖<span class="nav-btn-text">图鉴</span></button>
             <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️<span class="nav-btn-text">攻略</span></button>
+            <!-- 功能页「指南」（2026-09-21）：只在当前页有攻略条目时出现，说明与攻略总览同一份数据 -->
+            <button
+              v-if="featureGuideEntry"
+              class="top-nav-btn top-nav-icon top-nav-guide"
+              :title="`本页指南：${featureGuideEntry.name}`"
+              @click="ui.toggleFeatureGuide(true)"
+            >📘<span class="nav-btn-text">指南</span></button>
             <span class="top-nav-sep"></span>
             <!-- 顶栏 ⚡（状态抽屉入口）已于 2026-09-20 删除：那六块整体移到底部胶囊弹出的面板里 -->
             <button class="top-nav-btn has-dot" :class="{ 'dot-on': signInDot }" @click="ui.toggleSignIn(true)">🎁签到</button>
@@ -546,6 +559,7 @@ onMounted(() => {
 
     <!-- 弹层：背包/仓库（§5.4）/ 存档（§8.2）/ 设置 / 签到 / 搜索 / 奇遇 -->
     <SkillGuideModal v-if="ui.skillGuide" />
+    <FeatureGuideModal v-if="ui.featureGuide" />
     <SavePanel v-if="ui.showSavePanel" />
     <SettingsPanel v-if="ui.showSettingsPanel" />
     <SignInModal v-if="ui.showSignIn" />

@@ -12,7 +12,8 @@ import { ALL_ACHIEVEMENTS } from '../../src/game/data/achievements.js'
 import { QUESTS } from '../../src/game/data/quests.js'
 import { DAILY_POOL, WEEKLY_POOL } from '../../src/game/data/dailyTasks.js'
 import { STORY } from '../../src/game/data/story.js'
-import { GUIDE_STAGES, GUIDE_OVERVIEW } from '../../src/game/data/guide.js'
+import { GUIDE_STAGES, GUIDE_OVERVIEW, guideEntryForView } from '../../src/game/data/guide.js'
+import { featureGroups, guideKeywordOf } from '../../src/game/data/featureGroups.js'
 import { allTitleNames } from '../../src/game/data/titles.js'
 
 let fail = 0
@@ -181,20 +182,28 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   // ── 2026-09-11 修「守卫自身有盲区」：上面这份白名单是**手抄**的，新系统忘了往里加时这条检查恒真，
   //    等于 PASS 而不设防（本轮就是这么漏掉信箱/厨友的）。因此再叠加一条**从侧栏派生**的检查：
   //    左栏「功能」页签里的每个页面，都必须在攻略总览里找到对应关键词。
-  //    关键词默认取磁贴名，个别叫法与攻略用语不同的在此显式映射。
-  const VIEW_GUIDE_KEYWORD = {
-    weather: '天气', quests: '任务', achievements: '成就',
-    flavorBook: '风味搭配', gear: '装备', setMeals: '套餐', rivals: '同业竞争',
-    decor: '装饰', gearContest: '厨具大赛', chefChallenge: '名厨挑战', realm: '秘境',
-    deluxe: '珍馐阁', michelin: '米其林', legacy: '师徒传承', patrons: '食神信仰',
-    codexExchange: '图鉴兑换', festival: '节庆', spiritStories: '食灵',
-  }
-  const derived = [...new Set([...sidebarSrc.matchAll(/\{ icon: '[^']*', name: '([^']+)', view: '([a-zA-Z]+)'/g)]
-    .map((m) => ({ name: m[1], view: m[2] })))]
+  //    关键词默认取磁贴名，个别叫法与攻略用语不同的在 `featureGroups.js` 的 VIEW_GUIDE_KEYWORD 里显式映射。
+  //    🔄 2026-09-21：磁贴清单从 Sidebar.vue 抽成 `src/game/data/featureGroups.js`（页面内「指南」按钮与
+  //    本检查共用同一份），这里改为**直接 import**，不再正则抽源码。
+  const derived = featureGroups(null).flatMap((g) => g.items.map((it) => ({ name: it.name, view: it.view })))
   const derivedMiss = derived
-    .filter((d) => !ovText.includes(VIEW_GUIDE_KEYWORD[d.view] ?? d.name))
-    .map((d) => `${d.view}(${d.name}→${VIEW_GUIDE_KEYWORD[d.view] ?? d.name})`)
+    .filter((d) => !ovText.includes(guideKeywordOf(d.view)))
+    .map((d) => `${d.view}(${d.name}→${guideKeywordOf(d.view)})`)
   check(`攻略：左栏全部功能页均有攻略关键词（派生检查 ${derived.length} 页）`, derivedMiss.length === 0, `缺: ${derivedMiss.join(', ')}`)
+  // 更强的同源检查（2026-09-21 加）：上面只看「关键词在总览文本里出现过」（可能命中别的条目），
+  // 这条要求**逐页真的能解析出条目对象** —— 页面内的「📖 指南」按钮就靠它，解析不到按钮不显示。
+  const noEntry = derived.filter((d) => !guideEntryForView(d.view)).map((d) => `${d.view}(${d.name})`)
+  check(`攻略：每个功能页都能解析出「指南」条目（页面内按钮的数据源，${derived.length} 页）`,
+    noEntry.length === 0, `无条目: ${noEntry.join(', ')}`)
+  // 接线：顶栏按钮 + 弹窗 + store 状态三处都要在（少一处就是「按钮点了没反应」的静默失效）
+  const appSrc2 = read('src/App.vue')
+  const uiSrc = read('src/stores/ui.js')
+  const wireMiss = []
+  if (!/featureGuideEntry/.test(appSrc2) || !/ui\.toggleFeatureGuide\(true\)/.test(appSrc2)) wireMiss.push('App.vue 顶栏按钮')
+  if (!/<FeatureGuideModal v-if="ui\.featureGuide"/.test(appSrc2)) wireMiss.push('App.vue 弹窗挂载')
+  if (!/featureGuide: false/.test(uiSrc) || !/toggleFeatureGuide\(/.test(uiSrc)) wireMiss.push('ui.js 状态/动作')
+  if (!/v-html="entry\.desc"/.test(read('src/components/FeatureGuideModal.vue'))) wireMiss.push('弹窗未用 v-html 渲染富文本 desc')
+  check('攻略：功能页「指南」按钮接线齐备（按钮 / 弹窗 / 状态 / v-html）', wireMiss.length === 0, `缺: ${wireMiss.join('、')}`)
 
   const miss = required.filter((k) => !ovText.includes(k))
   check(`攻略：总览覆盖全部功能关键词（${required.length} 个）`, miss.length === 0, `未覆盖: ${miss.join(',')}`)
@@ -204,9 +213,12 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const badStage = GUIDE_STAGES.filter((s) => !s.goals?.length || !s.actions?.length || !s.milestones?.length || !s.tips?.length).map((s) => s.id)
   check(`攻略：六阶段结构完整（${GUIDE_STAGES.length} 阶段）`, badStage.length === 0, badStage.join(','))
   // 导航视图 ↔ 视图注册一致（新页面漏注册会在此暴露）
+  // ⚠️ 左栏「功能」页的入口清单现在住在 featureGroups.js（2026-09-21 抽出去的），别只扫 Sidebar.vue。
+  const sideViewList = featureGroups(null).flatMap((g) => g.items.map((it) => it.view))
   const navViews = new Set([
     ...[...appSrc.matchAll(/view: '([a-zA-Z]+)'/g)].map((m) => m[1]),
     ...[...sidebarSrc.matchAll(/view: '([a-zA-Z]+)'/g)].map((m) => m[1]),
+    ...sideViewList,
   ])
   const registered = new Set([...appSrc.matchAll(/ui\.activeView === '([a-zA-Z]+)'/g)].map((m) => m[1]))
   const unregistered = [...navViews].filter((v) => !registered.has(v))
@@ -218,7 +230,7 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const viewTagToName = {}
   for (const m of appSrc.matchAll(/<([A-Za-z0-9]+View)\s+v-else-if="ui\.activeView === '([a-zA-Z]+)'"/g)) viewTagToName[m[2]] = m[1]
   // 只查左栏「功能」页签里的页面（顶栏 7 个高频入口是主功能区，不在此范围）
-  const sideViews = [...new Set([...sidebarSrc.matchAll(/view: '([a-zA-Z]+)'/g)].map((m) => m[1]))]
+  const sideViews = [...new Set([...sideViewList, ...[...sidebarSrc.matchAll(/view: '([a-zA-Z]+)'/g)].map((m) => m[1])])]
   const noRel = []
   for (const v of sideViews) {
     const comp = viewTagToName[v]

@@ -2,6 +2,8 @@
 // 覆盖：启动界面 → 开始游戏 → 选存档 → 进入主界面 → 各菜单/弹窗
 import { test, expect } from '@playwright/test'
 import fs from 'fs'
+// 「指南」按钮的数据源（Node 侧直接用同一份数据断言渲染结果，避免在测试里手抄文案）
+import { guideEntryForView as guideEntryForViewLocal } from './src/game/data/guide.js'
 
 const BASE = 'http://localhost:5173'
 
@@ -1495,6 +1497,77 @@ test.describe('游戏全流程', () => {
     expect(after.slot).toBeTruthy()
     expect(after.gems[0]).toBe('goldOre')
     expect(after.rowText).toContain('拆卸') // 已镶嵌 ⇒ 该行变成「拆卸」
+  })
+
+  // 功能页「指南」按钮（2026-09-21 用户报「我看技能都有指南按钮，怎么功能没有？」）
+  // 数据源 = 攻略总览里对应该页的那一条（`guide.js` 的 guideEntryForView + `featureGroups.js` 的视图→关键词）。
+  // 断言四件事：功能页有 / 技能页与顶栏主页没有 / 点开是**渲染好的富文本** / 关得掉。
+  test('功能页「指南」按钮：功能页有、技能页与顶栏主页没有，内容 = 攻略里那一条', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(BASE)
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+    await page.waitForTimeout(1200)
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+
+    const setView = (v) => page.evaluate((vv) => {
+      document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').setView(vv)
+    }, v)
+    const btn = page.locator('.top-nav-guide')
+
+    // ① 技能页：技能页标题旁自带 📖 指南 ⇒ 顶栏不重复出现
+    await setView('skill')
+    await page.waitForTimeout(250)
+    await expect(page.locator('.skill-guide-btn').first()).toBeVisible()
+    await expect(btn).toHaveCount(0)
+    // ② 顶栏主页（厨藏 / 装备）不在攻略条目里 ⇒ 没有指南按钮
+    for (const v of ['inventory', 'equipment']) {
+      await setView(v)
+      await page.waitForTimeout(250)
+      await expect(btn, `${v} 不该有指南按钮`).toHaveCount(0)
+    }
+
+    // ③ 功能页：按钮出现、title 与弹窗内容都指向**本页对应那一条**（期望值取自数据模块，不手抄）
+    const cases = ['ranch', 'michelin', 'legacy', 'codexExchange', 'spiritStories', 'weather', 'caravan', 'festival']
+    for (const view of cases) {
+      const entry = guideEntryForViewLocal(view)
+      expect(entry, `${view} 在攻略里没有条目（按钮由它决定是否显示）`).toBeTruthy()
+      await setView(view)
+      await page.waitForTimeout(250)
+      await expect(btn, `${view} 应有指南按钮`).toBeVisible()
+      await expect(btn).toHaveAttribute('title', `本页指南：${entry.name}`)
+      await btn.click()
+      const modal = page.locator('.feature-guide-modal')
+      await expect(modal).toBeVisible()
+      await expect(modal.locator('h3')).toContainText(entry.name)
+      // 元信息（阶段 / 解锁）也取自同一份攻略数据
+      await expect(modal.locator('.fg-pill').nth(0)).toContainText(`阶段：${entry.stage}`)
+      await expect(modal.locator('.fg-pill').nth(1)).toContainText(`解锁：${entry.unlock}`)
+      // 富文本 desc 必须真渲染：渲染出的 HTML 与**数据本身**对齐（带 `<b>` 的条目必须出现真标签、
+      // 不能是 `&lt;b&gt;`；纯文本里不能露出标记 —— 同一类坑 e2e-text 也在扫）
+      const html = await modal.locator('.fg-desc').innerHTML()
+      const text = await modal.locator('.fg-desc').innerText()
+      if (/<b>/.test(entry.desc)) expect(html, `${view} 的 desc 未渲染成 HTML`).toContain('<b>')
+      expect(html, `${view} 的 desc 转义了标记`).not.toContain('&lt;')
+      expect(text, `${view} 的 desc 把标记当字面量显示了`).not.toContain('<b>')
+      expect(text.replace(/\s+/g, '')).toContain(entry.desc.replace(/<[^>]+>/g, '').replace(/\s+/g, '').slice(0, 30))
+      await modal.locator('.modal-head button').click()
+      await expect(modal).toHaveCount(0)
+    }
+
+    // ④ 「去攻略总览」：点了切到攻略页并关闭弹窗
+    await setView('ranch')
+    await page.waitForTimeout(250)
+    await btn.click()
+    await page.locator('.fg-link').click()
+    await page.waitForTimeout(400)
+    await expect(page.locator('.feature-guide-modal')).toHaveCount(0)
+    const view = await page.evaluate(() => document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').activeView)
+    expect(view).toBe('guide')
   })
 
   // 装备弹窗布局固定（2026-09-18 第二轮用户报「点击装备前和点击后窗口会变化」）：

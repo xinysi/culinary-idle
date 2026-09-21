@@ -70,7 +70,7 @@ const VIEWS = [
   'caravan', 'mycoField', 'greenhouse',
 ]
 // 2026-09-19：厨藏/装备由弹窗升级为独立页面 ⇒ 移出弹窗清单（改由逐页扫描覆盖）
-const MODALS = ['settings', 'save', 'signin', 'guide'] // guide=技能页指南弹窗（2026-09-19 新增）
+const MODALS = ['settings', 'save', 'signin', 'guide', 'featureGuide'] // guide=技能页指南弹窗（2026-09-19）；featureGuide=功能页指南弹窗（2026-09-21）
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等
 const EXEMPT = ['.gacha-btn-top', '.gacha-btn-price', '.gacha-btn-tag', 'b.mono', '.hp-bar', '.mg-']
 
@@ -323,6 +323,25 @@ test.describe('深色模式配色体检', () => {
         }, [skin, skinTheme])
         // 700ms：等 CSS 过渡（0.18~0.25s）走完再扫，否则读到的是「上一套皮肤→本套」的中间色
         await page.waitForTimeout(700)
+        // 功能页「指南」弹窗（2026-09-21）：内容随页面变，配色里有两处**主色派生**（淡彩底药丸 + 主色粗体）
+        // ⇒ 必须跟着皮肤一起扫，否则「深色/某皮肤下淡彩底小字对比度不足」这类问题在新弹窗里没人管。
+        // （放在这里而不是弹窗循环里：那边只扫 classic，覆盖不到 15 套皮肤。）
+        await page.evaluate(() => {
+          const ui = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')
+          ui.setView('ranch')
+          ui.toggleFeatureGuide(true)
+        })
+        await page.waitForTimeout(300)
+        {
+          const rfg = skinTheme === 'light'
+            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          scannedTotal += rfg.scanned
+          for (const b of rfg.bad) bad.push({ page: `skin-${skinTheme}:${skin}/featureGuide`, ...b })
+        }
+        await page.evaluate(() => {
+          document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').toggleFeatureGuide(false)
+        })
         // 2026-09-19：状态面板改为**抽屉**（默认收起）⇒ 不打开它，`scanPage` 扫描根里的
         // `.dock-panel, .dock-panel *` 一个都匹配不到，那六块（挂机中/快捷状态/事件日志…）的
         // 深色对比度与「残留品牌橙」就**不再被检查**（保护面悄悄缩小，而且不会报错）。
@@ -393,6 +412,7 @@ test.describe('深色模式配色体检', () => {
         const ui = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')
         if (mm === 'settings') ui.toggleSettingsPanel(true)
         else if (mm === 'guide') ui.toggleSkillGuide('foraging')
+        else if (mm === 'featureGuide') { ui.setView('ranch'); ui.toggleFeatureGuide(true) } // 功能页指南（内容随页面变，取牧场为例）
         else if (mm === 'save') ui.toggleSavePanel(true)
         else if (mm === 'signin') ui.toggleSignIn(true)
       }, m)
@@ -424,6 +444,7 @@ test.describe('深色模式配色体检', () => {
       ui.toggleSettingsPanel(false)
       ui.toggleSavePanel(false)
       ui.toggleSignIn(false)
+      ui.toggleFeatureGuide(false)
       ui.setView('skill')
     })
     await page.waitForTimeout(400)

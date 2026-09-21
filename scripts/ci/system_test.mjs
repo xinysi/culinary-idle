@@ -4253,6 +4253,7 @@ console.log('══ C25. 挂机产线（商队/菌房/灵田/温室蜂场/网箱
     const ui = fs.readFileSync(new URL('../../src/stores/ui.js', import.meta.url), 'utf8')
     const app = fs.readFileSync(new URL('../../src/App.vue', import.meta.url), 'utf8')
     const side = fs.readFileSync(new URL('../../src/components/Sidebar.vue', import.meta.url), 'utf8')
+      + fs.readFileSync(new URL('../../src/game/data/featureGroups.js', import.meta.url), 'utf8') // 磁贴清单在这
     return /'mycoField'/.test(ui) && !/'mushroom'/.test(ui) && !/'spiritField'/.test(ui)
       && /mycoField/.test(app) && /mycoField/.test(side)
       && !/views\/MushroomView/.test(app) && !/views\/SpiritFieldView/.test(app)
@@ -6150,9 +6151,12 @@ console.log('══ C40. 新手目标链 ══')
 console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 {
   const SIDEBAR = fs.readFileSync(new URL('../../src/components/Sidebar.vue', import.meta.url), 'utf8')
+  // 磁贴清单（含 unlock 门槛）2026-09-21 起住在 featureGroups.js —— 凡按 `view: '…'` 扫磁贴的断言都读它，
+  // 只扫 Sidebar.vue 会变成空集（gates.length >= 10 会先炸，但一开始就改对更好）。
+  const FG = fs.readFileSync(new URL('../../src/game/data/featureGroups.js', import.meta.url), 'utf8')
 
   // ① ⑤ 分级：磁贴的 unlock 必须**复用 store 的既有访问器**（不发明新阈值），且开关存在
-  const gates = [...SIDEBAR.matchAll(/view: '(\w+)'[^}]*unlock: \(p\) => p\.(\w+)\(\)/g)].map((m) => ({ view: m[1], acc: m[2] }))
+  const gates = [...FG.matchAll(/view: '(\w+)'[^}]*unlock: \(p\) => p\.(\w+)\(\)/g)].map((m) => ({ view: m[1], acc: m[2] }))
   const missing = gates.filter((g) => !new RegExp(`${g.acc}\\(\\)\\s*\\{`).test(fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')))
   check('功能页分级', `带解锁门槛的磁贴都复用了 store 的既有访问器（实测 ${gates.length} 个：${gates.map((g) => g.view).join('/')}）`,
     gates.length >= 10 && missing.length === 0, missing.map((m) => `${m.view}→${m.acc}`).join('; '))
@@ -6163,7 +6167,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // 无门槛的核心页永远可见（否则老玩家/测试会找不到入口）
   const always = ['shop', 'quests', 'mail', 'achievements', 'log', 'milestones']
   check('功能页分级', `无门槛的核心页（${always.join('/')}）没有被误加 unlock`,
-    always.every((v) => !new RegExp(`view: '${v}'[^}]*unlock`).test(SIDEBAR)))
+    always.every((v) => !new RegExp(`view: '${v}'[^}]*unlock`).test(FG)))
 
   // ② ⑥ 大反馈：两个账本存在、且**各只演一次**（行为断言：监听 → 触发两次 → 只收到一次）
   const pC = freshPlayer()

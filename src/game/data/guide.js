@@ -7,6 +7,8 @@
 // 数据对齐（2026-09-09）：新增 8 项玩法已写入对应阶段——远行采集队（小时级挂机线）/装备套装（2/4/6 件）/宝石镶嵌、
 //   美食评论家（2~4h 到访）、挂机计划（队列化挂机）、每周挑战赛（6 选 1 轮换）、食神秘境（roguelike 逐层）、菜系图谱（12 节点永久天赋）
 
+import { guideKeywordOf } from './featureGroups.js'
+
 export const GUIDE_STAGES = [
   {
     id: 'beginner',
@@ -425,4 +427,17 @@ export function currentGuideStageId(combatLevel) {
   ]
   for (const t of thresholds) if (combatLevel <= t.max) return t.id
   return 'endgame'
+}
+
+/** 某个功能页（视图 id）在「攻略总览」里对应的条目 —— 页面内「📖 指南」按钮用它。
+ *  关键词映射的唯一来源是 `featureGroups.js` 的 `guideKeywordOf`（与内容同步审计共用）。
+ *  返回 `null` 表示该页在总览里没有对应条目（按钮自行隐藏）。 */
+export function guideEntryForView(view, player = null) {
+  const kw = guideKeywordOf(view, player)
+  if (!kw) return null
+  for (const cat of GUIDE_OVERVIEW) {
+    const hit = cat.items.find((it) => it.name.includes(kw))
+    if (hit) return { ...hit, category: cat.name, categoryIcon: cat.icon }
+  }
+  return null
 }

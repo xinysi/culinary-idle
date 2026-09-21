@@ -37,6 +37,7 @@ export const useUiStore = defineStore('ui', {
     showSettingsPanel: false, // 设置面板
     showMobileSkills: false, // 移动端技能抽屉
     skillGuide: null, // 技能页「指南」弹窗：null = 关闭，否则为技能 id（2026-09-19）
+    featureGuide: false, // 功能页「指南」弹窗（2026-09-21）：说明取自攻略总览里对应该页的条目
     showSignIn: false, // 每日签到弹窗
     showSearch: false, // 全局搜索弹窗
     showShareCard: false, // 战报分享卡弹窗（2026-09-06）
@@ -116,6 +117,10 @@ export const useUiStore = defineStore('ui', {
     /** 技能页指南弹窗（2026-09-19）：传 null 关闭，传技能 id 打开 */
     toggleSkillGuide(id) {
       this.skillGuide = id ?? null
+    },
+    /** 功能页指南弹窗（2026-09-21）：只对「攻略总览里有条目」的页显示按钮 */
+    toggleFeatureGuide(open) {
+      this.featureGuide = open ?? !this.featureGuide
     },
 
     openEncounter(encounter) {
