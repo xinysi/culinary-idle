@@ -14,6 +14,7 @@ import MasteryHelp from '../components/MasteryHelp.vue'
 import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { effIngredients } from '../game/data/materialCost.js' // 材料用量唯一出口（与实际扣料同源）
 import { levelEras, eraProgress, eraLabelOf, currentEraLabel } from '../game/data/levelEras.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
@@ -27,6 +28,11 @@ const props = defineProps({
 })
 const player = usePlayerStore()
 const ui = useUiStore()
+
+/** 卡片「经验/次」的 tooltip：显示的是**实际进经验条的数**（作者基数 × 全局卡片系数），
+ *  ⚠️ 2026-09-21 用户实测问「新档采苹果怎么一次 900 经验」——卡片原先前显示作者基数（15），
+ *     而经验条进的是 15×60=900。显示与结算必须同源，故直接给生效值。 */
+const XP_HINT = `一次动作实际获得的技能经验（已计入全局卡片经验系数 ×${CARD_XP_SCALE}，与经验条同一口径）`
 
 // 用 computed 而非常量：组件在制作类技能间复用时（烹饪→烘焙→锻造）需响应式跟随 props.instance
 const isBaking = computed(() => props.instance.id === 'baking')
@@ -556,8 +562,8 @@ function selectEra(label) {
               </div>
             </div>
             <div class="gather-card-row">
-              <span>经验</span>
-              <span class="mono">{{ r.xp }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
+              <span :title="XP_HINT">经验/次</span>
+              <span class="mono" :title="XP_HINT">{{ r.xp * CARD_XP_SCALE }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
             </div>
             <div class="gather-card-row">
               <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>

@@ -31,7 +31,9 @@ const advPct = computed(() => Math.round(((combat?.advantageMultiplier?.() ?? 1.
 const offense = computed(() => [
   { k: '攻击伤害', v: Math.round(pStats.value.attack ?? 0), hint: '每回合的基础伤害（未计克制/暴击）' },
   { k: '暴击率', v: `${((pStats.value.critChance ?? 0) * 100).toFixed(1)}%`, hint: '命中后按此概率触发暴击' },
-  { k: '暴击伤害', v: `${Math.round(critMult.value * 100)}%`, hint: '暴击时伤害倍率' },
+  // 「暴击伤害」的显示口径（2026-09-21 用户问「初始就 200% 合理吗」）：引擎里暴击是**伤害 ×2**（常规设计，
+  //  配合 5% 暴击率只等于期望 +5% 伤害），但写成「200%」会被读成「额外 +200%」⇒ 改成倍率式「×2（+100%）」。
+  { k: '暴击伤害', v: `${Math.round(critMult.value * 10) / 10}×（+${Math.round((critMult.value - 1) * 100)}%）`, hint: '暴击时的伤害倍率：×2 = 打出两倍伤害（不是额外 +200%）' },
   { k: '准确率', v: Math.round(pStats.value.accuracy ?? 0), hint: '与对手闪避对抗，决定命中' },
   { k: '调味能量', v: pStats.value.flavorEnergy ?? 0, hint: '调味流每次冲击消耗 10 点' },
 ])

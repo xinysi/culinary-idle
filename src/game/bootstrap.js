@@ -706,11 +706,12 @@ export async function importSaveToSlot(file, slot) {
   }
 }
 
-/** 导出当前存档位为 存档文件 文件 */
-export function exportSave() {
-  const data = saveManager.load()
+/** 导出存档为 存档文件（§8.2）。不传 slot 时导出当前存档位；**传了就导出那一位** ——
+ *  存档面板里「导出」按钮长在某一档那一行，必须导出那一位，否则玩家会把别的档导走（2026-09-21 修）。 */
+export function exportSave(slot = currentSlot()) {
+  const data = saveManager.load(slot)
   if (!data) {
-    useUiStore().pushLog('当前存档位是空的，无可导出', 'warn')
+    useUiStore().pushLog(`存档位 ${slot + 1} 是空的，无可导出`, 'warn')
     return false
   }
   saveManager.exportToFile(data)

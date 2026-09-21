@@ -9,6 +9,7 @@ import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { levelEras, eraProgress, currentEraLabel } from '../game/data/levelEras.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import MasteryHelp from '../components/MasteryHelp.vue'
@@ -47,6 +48,12 @@ function successRate(itemId) {
 function masteryLevelOf(t) { return props.instance.masteryLevel(t) }
 // 当前精通档位经验倍数（≥5 级才有 >1）
 function masteryMult(t) { return masteryXpMultiplier(props.instance.masteryLevel(t)) }
+/** 卡片上「经验/次」= **实际进经验条的数**（作者基数 × 全局卡片系数 CARD_XP_SCALE）。
+ *  ⚠️ 2026-09-21 用户实测问「新档采苹果怎么一次 900 经验」——因为卡片原先显示的是作者基数 15，
+ *     而经验条进的是 15×60=900（`CARD_XP_SCALE`，让 1~99 级曲线对得上）。显示与结算必须同源，
+ *     所以这里直接给生效值；作者基数与全局系数的说明放进 tooltip。 */
+function xpPerAction(t) { return t.xpPerAction * CARD_XP_SCALE }
+const XP_HINT = `一次动作实际获得的技能经验（已计入全局卡片经验系数 ×${CARD_XP_SCALE}，与经验条同一口径）`
 // 当前精通档位的保底产量加成（50 级 +1、100 级 +2；0 表示无）
 function masteryBatch(t) { return masteryYieldBonus(props.instance.masteryLevel(t)) }
 // 卡片显示间隔：精通≥5 级用精通后的实际间隔（秒）；否则用基础间隔
@@ -208,8 +215,8 @@ function selectEra(label) {
               </div>
             </div>
             <div class="gather-card-row">
-              <span>基础经验</span>
-              <span class="mono">{{ t.xpPerAction }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryMult(t) }}</span></span>
+              <span :title="XP_HINT">经验/次</span>
+              <span class="mono" :title="XP_HINT">{{ xpPerAction(t) }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryMult(t) }}</span></span>
             </div>
             <div class="gather-card-row">
               <span>间隔</span>

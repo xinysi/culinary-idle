@@ -33,7 +33,16 @@ function totalLevelsOf(data) {
   return Object.values(data.player.skills).reduce((a, s) => a + (s.level ?? 1), 0)
 }
 function saveInto(slot) {
-  // 已有存档位：覆盖保存当前进度
+  // 🔴 覆盖保护（2026-09-21 用户实测报出）：点**别的**存档位的「保存」会把那份存档静默覆盖掉。
+  //    当前位的「保存」是本分（不拦），往别的位置写一律先确认，并把将被覆盖的那份存档内容摊给玩家看。
+  const cur = currentSlot()
+  if (slot !== cur) {
+    const target = slots.value.find((x) => x.slot === slot)
+    const willLose = target?.exists
+      ? `\n\n存档位 ${slot + 1} 现有：${target.data?.player?.name ?? '美食学徒'} · 总等级 ${totalLevelsOf(target.data)} · 存于 ${fmtTime(target.data.savedAt)}`
+      : `\n\n存档位 ${slot + 1} 目前是空的。`
+    if (!confirm(`⚠️ 你要把「当前进度」（存档位 ${cur + 1}）另存到存档位 ${slot + 1}。${willLose}\n\n覆盖后原来的存档无法恢复，确定吗？`)) return
+  }
   saveToSlot(slot)
   ui.pushLog(`已保存到存档位 ${slot + 1}${player.hardcore ? '（硬核模式）' : ''}`, 'info')
   refresh()
@@ -65,8 +74,9 @@ function onImportFile(slot, event) {
   importSaveToSlot(file, slot).then(() => refresh())
   event.target.value = ''
 }
-function exportCurrent() {
-  exportSave()
+function exportCurrent(slot) {
+  // 「导出」按钮长在某个存档位那一行 ⇒ 就导出**那一位**（此前固定导出当前位，容易导出错的那份）
+  exportSave(slot)
 }
 function fmtTime(ts) {
   if (!ts) return '—'
@@ -98,9 +108,11 @@ function fmtTime(ts) {
               <div class="dim mono">存档时间 {{ fmtTime(s.data.savedAt) }}</div>
             </div>
             <div class="slot-actions">
-              <button class="btn btn-sm" @click="saveInto(s.slot)">保存</button>
+              <button class="btn btn-sm" @click="saveInto(s.slot)">
+                {{ s.slot === currentSlot() ? '保存' : '覆盖保存' }}
+              </button>
               <button class="btn btn-sm btn-primary" @click="loadFrom(s.slot)">读取</button>
-              <button class="btn btn-sm" @click="exportCurrent">导出</button>
+              <button class="btn btn-sm" @click="exportCurrent(s.slot)">导出</button>
               <button class="btn btn-sm btn-danger" @click="removeSlot(s.slot)">删除</button>
             </div>
             <button class="btn btn-sm import-btn" @click="fileInputs[s.slot]?.click()">

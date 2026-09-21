@@ -10,6 +10,9 @@ import FoldCard from '../components/FoldCard.vue'
 
 const player = usePlayerStore()
 
+/** 里程碑奖励里的物品 id → 中文名（奖励串只列**真的发**的东西） */
+const REWARD_NAME = { mysterySpice: '神秘调料', energyBiscuit: '能量饼干' }
+
 const theme = computed(() => player.festTheme())
 
 // ── 主题日历（2026-09-12 补）──
@@ -104,7 +107,8 @@ const candidates = computed(() =>
       <div class="fest-milestones">
         <div v-for="(m, i) in FEST_MILESTONES" :key="i" class="fest-ms" :class="{ got: state.rewarded.includes(i) }">
           <strong class="mono">{{ m.score }} 分</strong>
-          <span class="dim">+{{ m.gold }} 金 · 神秘调料 ×{{ m.items?.mysterySpice ?? 0 }}<template v-if="m.items?.energyBiscuit"> · 能量饼干 ×1</template></span>
+          <!-- 奖励串只列**真的发**的东西：此前写 `m.items?.mysterySpice ?? 0`，于是不含调料的档位显示「神秘调料 ×0」（用户实测报出） -->
+          <span class="dim">+{{ m.gold }} 金<template v-for="(q, id) in (m.items ?? {})" :key="id"><template v-if="q > 0"> · {{ REWARD_NAME[id] ?? id }} ×{{ q }}</template></template></span>
           <span v-if="state.rewarded.includes(i)" class="badge badge-on">已领</span>
         </div>
       </div>
