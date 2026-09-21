@@ -2608,13 +2608,15 @@ console.log('══ X. 觅珍抽卡 ══')
   const p = freshPlayer()
   p.gold = 100000
   const r1 = p.drawMijian('material', 3)
-  check('觅珍', '材料池抽卡返回 3 件有效物品', r1.ok && r1.results.length === 3 && r1.results.every((it) => it && it.type && it.value > 0), JSON.stringify((r1.results ?? []).map((it) => it?.id)))
+  check('觅珍', '材料池抽卡返回 3 个结果，且其中物品都是有效材料（金币档见下）', r1.ok && r1.results.length === 3 && r1.results.every((it) => (it?.gold > 0) || (it?.type && it.value > 0)), JSON.stringify((r1.results ?? []).map((it) => it?.id ?? ('gold' + it?.gold))))
   const r2 = p.drawMijian('food', 1)
-  check('觅珍', '食物池产出食物/饮品', r2.ok && r2.results.every((it) => ['food', 'drink'].includes(it?.type)), JSON.stringify((r2.results ?? []).map((it) => it?.id)))
+  check('觅珍', '食物池产出的物品都是食物/饮品', r2.ok && r2.results.filter((it) => !it?.gold).every((it) => ['food', 'drink'].includes(it?.type)), JSON.stringify((r2.results ?? []).map((it) => it?.id ?? ('gold' + it?.gold))))
   const r3 = p.drawMijian('gear', 1)
   const gearOk = r3.ok && r3.results.length === 1 && r3.results[0]?.type === 'equipment'
   check('觅珍', '厨具池产出装备', gearOk, JSON.stringify((r3.results ?? []).map((it) => it?.id)))
-  check('觅珍', '金币扣费（新价：材料60*3+食物110+厨具500=790）', p.gold === 100000 - 790, `gold=${p.gold}`)
+  // 垫底档会返还金币（材料/食物池）⇒ 扣费口径 = 花费 − 返还
+  const refund1 = (r1.gold ?? 0) + (r2.gold ?? 0)
+  check('觅珍', '金币扣费（材料60*3+食物110+厨具500=790，扣掉垫底档返还）', p.gold === 100000 - 790 + refund1, `gold=${p.gold} refund=${refund1}`)
   // 保底计数：连续抽 10 次厨具必出现稀有及以上（前置计数模拟）
   p.mijian.pity = 9
   const r4 = p.drawMijian('gear', 1)
@@ -2623,14 +2625,15 @@ console.log('══ X. 觅珍抽卡 ══')
   check('觅珍', '保底后计数清零（gear）', p.mijian.pity.gear === 0 || p.mijian.pity === 0)
   // 混池 / 限时池 / 百连
   const r5 = p.drawMijian('mix', 5)
-  const mixOk = r5.ok && r5.results.length === 5 && r5.results.every((it) => it && it.value > 0)
+  const mixOk = r5.ok && r5.results.length === 5 && r5.results.filter((it) => !it?.gold).every((it) => it && it.value > 0)
   check('觅珍', '混池抽卡（80 金/抽，全品类）', mixOk, JSON.stringify((r5.results ?? []).map((it) => it?.id)))
   const r6 = p.drawMijian('limited', 1)
   check('觅珍', '限时池抽卡（1200 金/抽）', r6.ok && r6.results.length === 1 && r6.results[0]?.id, JSON.stringify((r6.results ?? []).map((it) => it?.id)))
   const r100 = p.drawMijian('material', 100)
   check('觅珍', '百连（100 张结果）', r100.ok && r100.results.length === 100, JSON.stringify(r100.results.length))
   const afterSpent = p.gold
-  check('觅珍', '金币扣费与累计花费一致（stats.spent = 100000 - gold）', p.mijian.stats.spent === 100000 - afterSpent, `spent=${p.mijian.stats.spent} gold=${afterSpent}`)
+  const refundAll = (r1.gold ?? 0) + (r2.gold ?? 0) + (r5.gold ?? 0) + (r100.gold ?? 0)
+  check('觅珍', '金币扣费与累计花费一致（stats.spent = 花费 − 返还 − 剩余）', p.mijian.stats.spent === 100000 + refundAll - afterSpent, `spent=${p.mijian.stats.spent} gold=${afterSpent} refund=${refundAll}`)
   // 限时池保底：5 抽短保底（pity.limited = 4 → 下一抽必稀有+）
   p.mijian.pity = p.mijian.pity ?? { gear: 0, limited: 0 }
   p.mijian.pity.limited = 4
@@ -2650,16 +2653,59 @@ console.log('══ X. 觅珍抽卡 ══')
     }
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
     check('觅珍', '厨具池稀有+ 爆率 8-14%（当前 10-11% 档）', g >= 0.08 && g <= 0.14, `g=${(g * 100).toFixed(2)}%`)
-    check('觅珍', '混池稀有+ 爆率 ≤2%', m >= 0.002 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
+    check('觅珍', '混池稀有+ 爆率 ≤2%（0.2% 档：垫底档上线后装备被压到 23%×8%）', m >= 0.0005 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
     check('觅珍', '限时池稀有+ 爆率 ≤4%（5 抽保底兜底）', l >= 0.005 && l <= 0.04, `l=${(l * 100).toFixed(2)}%`)
-    // 普通池确定性：绝不产出超过价值上限的珍品
+    // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
-      const mat = pk('material', Math.random, 0).item
-      const foo = pk('food', Math.random, 0).item
-      if (mat.value > 50 || foo.value > 100) capped = false
+      const mat = pk('material', Math.random, 0)
+      const foo = pk('food', Math.random, 0)
+      const matV = mat.gold ? 0 : (mat.item?.value ?? 0)
+      const fooV = foo.gold ? 0 : (foo.item?.value ?? 0)
+      if (matV > 50 || fooV > 100) capped = false
     }
     check('觅珍', '材料/食物池无珍品（价值上限 50/100）', capped)
+  }
+  // ── 垫底档（2026-09-21 用户：「池子不够严谨，应该有超高概率的金币、中概率的 1 档东西占用概率」）──
+  {
+    const MJ = await import('../../src/game/data/mijianDraws.js')
+    const { FILLER, FILLER_POOLS, FILLER_GOLD_PCT, fillerGoldAmount, cheapTier, poolItems, pickItem } = MJ
+    check('觅珍', '垫底档只挂「纯价值加权」的三个池（厨具/限时池本就有品质垫底 96%/97% + 保底）',
+      FILLER_POOLS.join(',') === 'material,food,mix', FILLER_POOLS.join(','))
+    check('觅珍', '垫底档权重：金币 55% + 一档 22%（余 23% 走原路径）', FILLER.gold === 0.55 && FILLER.cheap === 0.22, JSON.stringify(FILLER))
+    check('觅珍', '金币档返还 ∈ 池价的 25%~55%（定这两个数是为了总回收仍落在 30~40% 带内）',
+      FILLER_GOLD_PCT[0] === 0.25 && FILLER_GOLD_PCT[1] === 0.55 &&
+      fillerGoldAmount(100, () => 0) === 25 && fillerGoldAmount(100, () => 0.999) === 55,
+      `${fillerGoldAmount(100, () => 0)}~${fillerGoldAmount(100, () => 0.999)}`)
+    check('觅珍', '一档 = 池内价值最低的 20% 成员（按件取整，至少 1 件）', (() => {
+      const t = cheapTier('material')
+      const all = poolItems('material')
+      const tIds = new Set(t.map((x) => x.id))
+      const maxT = Math.max(...t.map((x) => x.value ?? 0))
+      // ⚠️ 判据要「并列安全」：边界同价值可能有一批 ⇒ 不能数「大于最大值」的个数
+      return t.length === Math.max(1, Math.floor(all.length * 0.2)) && all.filter((x) => !tIds.has(x.id)).every((x) => (x.value ?? 0) >= maxT)
+    })())
+    // 行为断言：抽 4000 次，三档占比与设计一致（金币 ±6%），且金币档确实**不进背包**
+    const p2 = freshPlayer()
+    p2.gold = 1e9
+    let gold = 0
+    let cheap = 0
+    let item = 0
+    for (let i = 0; i < 4000; i++) {
+      const r = pickItem('material', Math.random, 0)
+      if (r.gold) gold++
+      else if (r.cheap) cheap++
+      else item++
+    }
+    const pct = (n) => n / 4000
+    check('觅珍', '行为：材料池 4000 抽里金币档 ≈55%、一档 ≈22%、物品 ≈23%（各 ±6%）',
+      Math.abs(pct(gold) - 0.55) < 0.06 && Math.abs(pct(cheap) - 0.22) < 0.06 && Math.abs(pct(item) - 0.23) < 0.06,
+      `金币 ${(pct(gold) * 100).toFixed(1)}% / 一档 ${(pct(cheap) * 100).toFixed(1)}% / 物品 ${(pct(item) * 100).toFixed(1)}%`)
+    const before = p2.gold
+    const rd = p2.drawMijian('material', 200)
+    const refunded = rd.gold ?? 0
+    check('觅珍', '行为：金币档直接返还金币、不占背包（200 抽：金币净变化 == 返还 − 花费）',
+      p2.gold === before + refunded - 200 * 60 && refunded > 0, `refund=${refunded} gold=${p2.gold - before}`)
   }
   // 图鉴三查：抽卡来源
   const { itemSources: src } = await import('../../src/game/data/itemSources.js')

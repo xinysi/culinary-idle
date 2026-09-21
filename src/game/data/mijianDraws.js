@@ -8,10 +8,10 @@ import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
 const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
 
 export const MIJIAN_POOLS = [
-  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（低价值材料，无珍品）', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
-  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（低价值成品，无珍品）', price: 110, kinds: ['food', 'drink'], cap: 100 },
+  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（无珍品）。55% 返还金币 · 22% 一档低阶材料 · 23% 抽物品', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
+  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（无珍品）。55% 返还金币 · 22% 一档料理 · 23% 抽物品', price: 110, kinds: ['food', 'drink'], cap: 100 },
   { id: 'gear', name: '厨具池', icon: '⚔️', desc: '装备（八槽位，稀有度加权，10 抽保底稀有+）', price: 500, kinds: ['equipment'] },
-  { id: 'mix', name: '混池', icon: '🎲', desc: '88% 普通素材 + 8% 装备（出货温和）', price: 80, kinds: ['mix'], cap: 60 },
+  { id: 'mix', name: '混池', icon: '🎲', desc: '55% 返还金币 · 22% 一档素材 · 23% 抽物品（其中含少量装备）', price: 80, kinds: ['mix'], cap: 60 },
   { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: '80% 限时装备（极品率极低）+ 20% 美食，5 抽保底稀有+', price: 600, kinds: ['limited'], cap: 150 },
 ]
 
@@ -32,6 +32,35 @@ const QUALITY_WEIGHT = { 普通: 74, 精良: 22, 稀有: 7, 史诗: 3.2, 传说:
 const LIMITED_QUALITY_WEIGHT = { 普通: 86, 精良: 12, 稀有: 2, 史诗: 0.75, 传说: 0.2, 神话: 0.08 }
 // 素材/食物池加权幂次（0.85→0.55：拉平价值差，珍品率下降）
 const NORMAL_EXP = 0.85
+
+/**
+ * 垫底档（2026-09-21 用户：「觅珍池子不够严谨，应该有高概率的东西来占用概率，比如超高概率的金币、
+ * 中概率的 1 档东西」）——**只给「纯价值加权」的三个池**（材料 / 食物 / 混池）用。
+ *
+ * 它们原本每次抽都返回一个按 value 加权的随机物品（159 个成员里最高频只有 1.4%），
+ * 于是「抽到什么都是差不多的东西」、好货也不稀有。现改为三档：
+ *   55% 金币（返还池价的 25%~55%，均值 ≈40%）· 22% 一档（池内价值最低的 20%）· 余 23% 走原路径。
+ * ⚠️ 厨具池与限时池**不叠这一层**：它们本来就有垫底结构（品质权重里 普通+精良 = **96% / 97%**）
+ *    且带保底，再叠一层会把「5/10 抽保底稀有」的节奏也一起改掉。
+ */
+export const FILLER = { gold: 0.55, cheap: 0.22 }
+/** 金币档的返还区间（占池价比例，下限/上限）—— 定这两个数是为了让总回收率仍落在本系统标定的 30~40% 带内 */
+export const FILLER_GOLD_PCT = [0.25, 0.55]
+/** 哪些池有垫底档（其余池走各自原有路径） */
+export const FILLER_POOLS = ['material', 'food', 'mix']
+
+/** 金币档返还额：池价 × 12%~30%，至少 1 */
+export function fillerGoldAmount(price, rng = Math.random) {
+  const [a, b] = FILLER_GOLD_PCT
+  return Math.max(1, Math.round((price ?? 0) * (a + rng() * (b - a))))
+}
+
+/** 「一档」= 池内价值最低的 20% 成员（按件取整，至少 1 件） */
+export function cheapTier(poolId) {
+  const items = poolItems(poolId)
+  const n = Math.max(1, Math.floor(items.length * 0.2))
+  return [...items].sort((x, y) => (x.value ?? 0) - (y.value ?? 0)).slice(0, n)
+}
 
 /** 池内候选（模块级缓存）
  *  mix：全品类混合（材料/香料/料理/饮品/装备，排除矿物）
@@ -109,6 +138,16 @@ function pickGear(rng, pity, weightTable = QUALITY_WEIGHT) {
 }
 
 export function pickItem(poolId, rng = Math.random, pity = 0) {
+  // 垫底档（材料/食物/混池）：金币 或 一档物品 —— 见 FILLER 的说明
+  if (FILLER_POOLS.includes(poolId)) {
+    const def = MIJIAN_POOLS.find((p) => p.id === poolId)
+    const roll = rng()
+    if (roll < FILLER.gold) return { gold: fillerGoldAmount(def?.price, rng), boosted: false }
+    if (roll < FILLER.gold + FILLER.cheap) {
+      const tier = cheapTier(poolId)
+      return { item: tier[Math.min(tier.length - 1, Math.floor(rng() * tier.length))], boosted: false, cheap: true }
+    }
+  }
   if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
   if (poolId === 'mix') {
     // 混池：8% 概率出装备（低权重表），其余素材（拉平；候选不含装备）

@@ -32,18 +32,20 @@ function draw(count) {
   const r = player.drawMijian(activePool.value, count)
   if (!r) return
   if (!r.ok) { ui.pushLog(`🎴 觅珍：${r.msg}`, 'warn'); return }
-  // 构建翻牌列表（卡背朝上，逐张揭示）
+  // 构建翻牌列表（卡背朝上，逐张揭示）；金币档（垫底档）没有物品，单独标出来
   results.value = { list: r.results
     .filter(Boolean)
     .map((it, i) => ({
-      id: it.id,
+      id: it.id ?? null,
+      gold: it.gold ?? 0,
       rare: it.type === 'equipment' && ['稀有', '史诗', '传说', '神话'].includes(it.quality),
       revealed: false,
       delay: i * 0.13,
     })), sim: false }
   // 揭示序列（真实与模拟共用）
   startReveal(results.value.list, count > 20)
-  ui.pushLog(`🎴 觅珍：${pool.value.name} ×${count}，获得 ${r.got.length} 件${r.boosted ? '（保底命中 ⭐）' : ''}`, 'gain')
+  const goldTxt = r.gold > 0 ? `、返还金币 ${r.gold.toLocaleString()}` : ''
+  ui.pushLog(`🎴 觅珍：${pool.value.name} ×${count}，获得 ${r.got.length} 件${goldTxt}${r.boosted ? '（保底命中 ⭐）' : ''}`, 'gain')
 }
 function startReveal(list, bulk = false) {
   drawing.value = true
@@ -215,9 +217,17 @@ function typeLabel(id) {
             </div>
             <!-- 卡面 -->
             <div class="gacha-face gacha-front">
-              <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="gacha-img" @error="$event.target.style.display = 'none'" alt="" />
-              <div class="gacha-front-name">{{ getItem(r.id)?.name }}</div>
-              <div class="gacha-front-sub mono">{{ typeLabel(r.id) }}</div>
+              <!-- 金币档（垫底档）：没有物品，显示返还的金币 -->
+              <template v-if="r.gold">
+                <div class="gacha-img" style="display: flex; align-items: center; justify-content: center; font-size: 30px">💰</div>
+                <div class="gacha-front-name">金币</div>
+                <div class="gacha-front-sub mono">+{{ r.gold.toLocaleString() }}</div>
+              </template>
+              <template v-else>
+                <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="gacha-img" @error="$event.target.style.display = 'none'" alt="" />
+                <div class="gacha-front-name">{{ getItem(r.id)?.name }}</div>
+                <div class="gacha-front-sub mono">{{ typeLabel(r.id) }}</div>
+              </template>
             </div>
           </div>
         </div>

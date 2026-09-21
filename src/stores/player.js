@@ -5851,28 +5851,31 @@ export const usePlayerStore = defineStore('player', {
       const pityNeed = isLimited ? LIMITED_PITY : GEAR_PITY
       const results = []
       let boosted = false
+      let goldBack = 0 // 垫底档返还的金币（材料/食物/混池，见 mijianDraws 的 FILLER）
       const isRare = (it) => !!it?.quality && ['稀有', '史诗', '传说', '神话'].includes(it.quality)
       for (let i = 0; i < count; i++) {
         const pv = pityKey ? mj.pity[pityKey] : 0
-        const { item, boosted: b } = pickItem(poolId, Math.random, pv)
+        const { item, gold, boosted: b } = pickItem(poolId, Math.random, pv)
         if (pityKey) {
           if (isRare(item)) { mj.pity[pityKey] = 0; if (isGear) mj.stats.gearRare++ }
           else mj.pity[pityKey] = Math.min(pv + 1, pityNeed)
         }
-        results.push(item)
+        if (gold > 0) { goldBack += gold; results.push({ gold }) } // 金币档：直接返还，不进背包
+        else results.push(item)
         if (b) boosted = true
       }
       const got = []
       for (const it of results) {
-        if (it && this.gainItem(it.id, 1)) got.push(it.id)
+        if (it?.id && this.gainItem(it.id, 1)) got.push(it.id)
       }
+      if (goldBack > 0) this.gainGold(goldBack)
       mj.stats.pulls += count
       mj.stats.spent += cost
       const rareHit = results.some(isRare)
       mj.history = [...(mj.history ?? []), rareHit ? 'rare' : 'common'].slice(-10)
       this.mijian = mj
       EventBus.emit('mijian:draw', { poolId, count, boosted })
-      return { ok: true, results, got, boosted }
+      return { ok: true, results, got, boosted, gold: goldBack }
     },
     /** 保底进度（厨具 N/10 · 限时 N/5） */
     mijianPity() {
