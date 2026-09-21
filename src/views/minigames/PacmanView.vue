@@ -188,7 +188,12 @@ function onKey(e) {
   nextDir = d
 }
 window.addEventListener('keydown', onKey)
-onUnmounted(() => { window.removeEventListener('keydown', onKey) })
+// 卸载时必须一并停掉 rAF：无鬼练习（g0）没有任何判负条件，离开页面时循环不会自己结束，
+// 会以 60fps 永久跑在一个已卸载的组件上（握住实例与全部 ref）。
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+  stopLoop()
+})
 
 function draw() {
   const cv = canvas.value
@@ -278,7 +283,7 @@ reset()
           <div class="pm-info-row pm-info-rule">通用规则：吃完所有豆子通关得金币 · 角落能量豆让幽灵减速 5 秒（撞到即回巢）· 被幽灵抓住即失败无奖励</div>
           <div v-for="(m, key) in METAS" :key="key" class="pm-info-row">
             <b class="pm-info-name">{{ m.label }}</b>
-            <span class="pm-info-desc">{{ m.desc }}</span>
+            <span class="pm-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

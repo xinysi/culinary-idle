@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { itemImage } from '../../game/data/itemImage.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -30,13 +31,13 @@ const MODES = {
   m1: { label: '模式1', n: 3, goal: 'single', stars: [1], cells: [4], moves: 10, gold: 30, desc: '3×3 · 主菜归位（1 个目标格）· 10 步内 · +30 币' },
   m2: { label: '模式2', n: 3, goal: 'single', stars: [1], cells: [4], moves: 7, gold: 35, desc: '3×3 · 主菜归位 · 7 步内 · +35 币' },
   m3: { label: '模式3', n: 3, goal: 'order', moves: 28, gold: 75, desc: '3×3 · 整盘还原（按编号 1、2、3…）· 28 步内 · +75 币' },
-  m4: { label: '模式4', n: 3, goal: 'order', moves: 26, hideNums: true, gold: 95, desc: '3×3 · 整盘还原 · **隐藏编号**（照预览图靠图案认位）· 26 步内 · +95 币' },
+  m4: { label: '模式4', n: 3, goal: 'order', moves: 26, hideNums: true, gold: 95, desc: '3×3 · 整盘还原 · <b>隐藏编号</b>（照预览图靠图案认位）· 26 步内 · +95 币' },
   m5: { label: '模式5', n: 4, goal: 'multi', stars: [1, 2], cells: [0, 15], moves: 20, gold: 55, desc: '4×4 · 双菜归位（2 个 ⭐ 各滑到金框格）· 20 步内 · +55 币' },
   m6: { label: '模式6', n: 4, goal: 'order', moves: 80, gold: 165, desc: '4×4 · 整盘还原 · 80 步内 · +165 币' },
   m7: { label: '模式7', n: 4, goal: 'order', moves: 60, gold: 150, desc: '4×4 · 整盘还原 · 60 步内 · +150 币' },
   m8: { label: '模式8', n: 5, goal: 'multi', stars: [1, 2, 3], cells: [0, 12, 24], moves: 30, gold: 85, desc: '5×5 · 三菜归位（3 个 ⭐ 各就各位）· 30 步内 · +85 币' },
-  m9: { label: '模式9', n: 5, goal: 'multi', stars: [1, 2, 3], cells: [0, 12, 24], moves: 24, timeLimit: 120, gold: 105, desc: '5×5 · 三菜归位 · **限时 120 秒** + 24 步 · +105 币' },
-  m10: { label: '模式10', n: 4, goal: 'order', moves: 60, timeLimit: 180, gold: 180, desc: '4×4 · 整盘还原 · **限时 180 秒** + 60 步 · +180 币' },
+  m9: { label: '模式9', n: 5, goal: 'multi', stars: [1, 2, 3], cells: [0, 12, 24], moves: 24, timeLimit: 120, gold: 105, desc: '5×5 · 三菜归位 · <b>限时 120 秒</b> + 24 步 · +105 币' },
+  m10: { label: '模式10', n: 4, goal: 'order', moves: 60, timeLimit: 180, gold: 180, desc: '4×4 · 整盘还原 · <b>限时 180 秒</b> + 60 步 · +180 币' },
 }
 const showInfo = ref(false)
 
@@ -161,23 +162,11 @@ function stopTimer() {
   timerId = null
 }
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 开局 / 结算 ──
@@ -322,7 +311,7 @@ onUnmounted(() => { stopTimer() })
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="sl-info-row">
             <b class="sl-info-name">{{ m.label }}</b>
-            <span class="sl-info-desc">{{ m.desc }}</span>
+            <span class="sl-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

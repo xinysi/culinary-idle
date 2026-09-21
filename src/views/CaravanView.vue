@@ -217,6 +217,7 @@ function expand() {
       <div class="card" style="margin-top: 14px">
         <h3>🗺️ 商路一览（考察产地后开放）</h3>
         <p class="dim cv-sub">行情 = 交易所的确定性价格（每期 [0.60, 1.60]×）——**归队时刻**落在哪一期，就按那一期结算。</p>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr>
@@ -232,6 +233,7 @@ function expand() {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </template>
     <RelatedPages :links="RELATED" />

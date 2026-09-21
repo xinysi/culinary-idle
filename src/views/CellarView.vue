@@ -124,7 +124,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
 
       <FoldCard
         title="📋 陈酿档位对照表"
-        hint="折算时收 12h 0.125/时 > 24h 0.083 > 48h 0.063 —— 越长的档位每小时越低"
+        hint="折算时收 12h 0.13/时 > 24h 0.08 > 48h 0.06 —— 越长的档位每小时越低"
       >
         <div class="table-scroll">
         <table class="target-table">
@@ -137,7 +137,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
               <td class="mono">{{ t.hours }} 小时</td>
               <td class="mono">×{{ t.mult }}</td>
               <td class="mono" :class="{ 'mastery-hl': t.perHour === bestPerHour }">
-                {{ t.perHour.toFixed(3) }}/时<template v-if="t.perHour === bestPerHour"> ← 时收最高</template>
+                {{ t.perHour.toFixed(2) }}/时<template v-if="t.perHour === bestPerHour"> ← 时收最高</template>
               </td>
               <td class="mono">{{ t.maxPayout.toLocaleString() }} 金币</td>
             </tr>
@@ -145,7 +145,7 @@ const RELATED = [{ view: 'exchange', label: '💹 交易所' }, { view: 'restaur
         </table>
         </div>
         <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
-          折算时收 = 倍率 ÷ 时长，所以<b>越长的档位每小时收益越低</b>：12h 档是 48h 档的两倍时收，适合常上线的玩家；
+          折算时收 = 倍率 ÷ 时长（保留两位小数），所以<b>越长的档位每小时收益越低</b>：12h 档是 48h 档的两倍时收，适合常上线的玩家；
           48h 档总收益更高、只要每天照看一次，适合睡前挂。单槽满额出窖按「价值上限 {{ player.cellarSlotValueMax().toLocaleString() }}」× 倍率估算。
         </p>
         <div class="dim" style="margin-top: 6px; font-size: 12px">

@@ -11,6 +11,7 @@ import { getSkillDef } from '../game/data/skills.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ItemImg from '../components/ItemImg.vue'
 import FoldCard from '../components/FoldCard.vue'
+import { otherChance } from '../game/data/difficulty.js' // 稀有货显示的唯一缩放出口（与结算同源）
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -84,7 +85,7 @@ const lineArchive = computed(() =>
   EXPEDITIONS.map((def) => ({
     def,
     skillName: getSkillDef(def.skill)?.name ?? def.skill,
-    rareName: def.rare ? `${getItem(def.rare.itemId)?.name ?? def.rare.itemId}（${(def.rare.chance * 100).toFixed(1)}%）` : '—',
+    rareName: def.rare ? `${getItem(def.rare.itemId)?.name ?? def.rare.itemId}（${(otherChance(def.rare.chance) * 100).toFixed(1)}%）` : '—',
     slots: (def.slots ?? []).map((s, i) => ({
       index: i + 1,
       reqLevel: s.reqLevel,
@@ -176,7 +177,7 @@ const RELATED = [{ view: 'regions', label: '🗺️ 产地' }, { view: 'automati
         <span class="exp-tier">
           熟练度 {{ line.tier }} / {{ EXPEDITION_TIER_STEPS.length }} 档 · 已完成 {{ line.completions }} 轮<template v-if="line.nextTier"> · 再 {{ line.nextTier - line.completions }} 轮升档</template>
         </span>
-        <span v-if="line.def.rare" class="dim exp-rare">稀有掉落：{{ getItem(line.def.rare.itemId)?.name }}（{{ (line.def.rare.chance * 100).toFixed(1) }}% + 档位）</span>
+        <span v-if="line.def.rare" class="dim exp-rare">稀有掉落：{{ getItem(line.def.rare.itemId)?.name }}（{{ (otherChance(line.def.rare.chance) * 100).toFixed(1) }}% + 档位）</span>
       </div>
 
       <div v-if="!line.unlocked" class="dim exp-locked">

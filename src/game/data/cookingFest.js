@@ -4,6 +4,7 @@
 // 纯新增层：不动料理数值（value/heal/tier 均读取现有 ITEMS），奖励用现有物品。
 
 import { getItem } from './items.js'
+import { effIngredients } from './materialCost.js'
 import { getAllSkillInstances } from '../skills/registry.js'
 
 export const FEST_THEMES = [
@@ -40,7 +41,7 @@ function dishIngredientCats() {
       if (!out) continue
       let set = map.get(out)
       if (!set) { set = new Set(); map.set(out, set) }
-      for (const mid of Object.keys(r.ingredients ?? {})) {
+      for (const mid of Object.keys(effIngredients(r))) {
         const c = getItem(mid)?.category
         if (c) set.add(c)
       }

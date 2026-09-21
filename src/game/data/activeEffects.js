@@ -22,7 +22,7 @@ import { OFFLINE_CAP, DERIVED_MAX } from './caps.js'
 import { RANCH_ANIMALS, POND_FISH } from './ranch.js'
 import { MUSHROOM_MEDIA } from './mushroomHouse.js'
 import { SPIRIT_PLANTS } from './spiritField.js'
-import { HIVE_MEDIA, GREENHOUSE_HONEY_CHANCE } from './greenhouse.js'
+import { HIVE_MEDIA, greenhouseHoneyChance } from './greenhouse.js'
 import { SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { CARAVAN_LOSS_FLOOR } from './caravan.js'
 import { PRIME_CATALYST_TIME, PRIME_MIN_LEVEL, PRIME_BASE_CHANCE, PRIME_MAX_CHANCE } from './primeCrop.js'
@@ -35,6 +35,8 @@ import { BRANCHES } from './branches.js'
 import { RESTAURANT_DECOR_BY_ID } from './restaurantDecor.js'
 import { TAKEOUT_PRICE_MULT } from './takeout.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryYieldBonus } from '../core/mastery.js'
+import { XP_STACK_DAMPING, dampXpStack } from '../core/growthRate.js'
+import { PRESTIGE_XP_BONUS } from '../skills/Skill.js'
 
 /** 分组（页面按此顺序分节） */
 export const EFFECT_GROUPS = [
@@ -300,6 +302,34 @@ export const EFFECT_ROWS = [
     },
   },
   {
+    // 精通池（2026-09-19）：**技能级**共享，与上面按卡的「精通档位」是两套东西，必须单独登记
+    id: 'masteryPool', group: 'gather', icon: '🏊', name: '精通池里程碑', kind: 'rule', src: '精通池（每 25% 的精通次数入池，10/25/50/95% 四档）', view: 'skill',
+    read: (p, c) => {
+      if (typeof p.masteryPoolState !== 'function') return off('当前版本没有精通池')
+      const rows = []
+      for (const inst of Object.values(c?.allSkills?.() ?? {})) {
+        const sid = inst?.id
+        if (!sid) continue
+        const st = p.masteryPoolState(sid)
+        if (st.tierIdx >= 0) rows.push({ sid, st })
+      }
+      if (!rows.length) return off('还没有任何技能的精通池达到 10% 里程碑（重复采集或制作会把精通次数按 25% 记进池）')
+      // ⚠️ 用单引号拼接、**不要嵌套模板字面量**：`content_sync_audit` 的「括号配平」检查按行提取
+      //    字符串字面量，嵌套反引号会把字面量切成碎片、把 （ ） 判成不配平（本轮踩过）。
+      const text = rows
+        .map(({ sid, st }) => {
+          const b = p.masteryPoolBonus(sid)
+          const parts = ['双倍产出 +' + b.doublePP + 'pp']
+          if (b.successPP) parts.push('成功率 +' + b.successPP + 'pp')
+          if (b.xpPct) parts.push('经验 +' + b.xpPct + '%')
+          const label = SKILL_CN[sid] ?? sid
+          return label + '「' + st.tier.name + '」：池 ' + pct(st.pct * 100) + '（' + parts.join('、') + '）'
+        })
+        .join('；')
+      return { on: true, text }
+    },
+  },
+  {
     id: 'expedition', group: 'gather', icon: '🚢', name: '采集队加成', kind: 'buff', src: '采集队（已完成轮次 / 产地派驻）', view: 'expedition',
     read: (p) => {
       const parts = []
@@ -412,7 +442,7 @@ export const EFFECT_ROWS = [
   {
     id: 'prestige', group: 'craft', icon: '♻', name: '转生加成', kind: 'rule', src: '传承（技能转生层数）', view: 'legacy',
     read: (p) => {
-      const rows = Object.entries(p.skills ?? {}).filter(([, st]) => (st?.prestiges ?? 0) > 0).map(([sid, st]) => `${SKILL_CN[sid] ?? sid} ×${n1(1 + 0.2 * st.prestiges)}`)
+      const rows = Object.entries(p.skills ?? {}).filter(([, st]) => (st?.prestiges ?? 0) > 0).map(([sid, st]) => `${SKILL_CN[sid] ?? sid} ×${n1(1 + PRESTIGE_XP_BONUS * st.prestiges)}`)
       if (!rows.length) return off('还没有转生过任何技能（每次转生给该技能 +20% 经验）')
       return { on: true, text: `转生技能经验：${rows.join('、')}` }
     },
@@ -423,6 +453,24 @@ export const EFFECT_ROWS = [
       const v = p.settings?.xpMultiplier ?? 1
       if (v === 1) return off('当前经验倍率为 ×1（可在设置里调高；设置倍率与卡片精通取较高者）')
       return { on: true, text: `技能经验 ×${v}` }
+    },
+  },
+  {
+    id: 'xpStackDamping', group: 'craft', icon: '🧮', name: '成长阻尼（乘法叠区折减）', kind: 'rule', src: '平衡（2026-09-21 立）', view: '',
+    read: (p) => {
+      // ⚠️ 登记理由：乘法层**先相乘、再统一阻尼**（`Skill.addXp` 的唯一出口 `dampXpStack`），
+      //    所以玩家把「转生 × 增益剂 × 设置倍率」自己乘出来的数会比实际到账高 —— 这行就是那个差额的说明。
+      //    这里只合并非卡片层的最大值（卡片精通按每张卡自己的等级算，取较大者后并入，不在这里重复计）。
+      const pre = Math.max(1, ...Object.values(p.skills ?? {}).map((st) => 1 + PRESTIGE_XP_BONUS * (st?.prestiges ?? 0)))
+      const tonic = p.getXpMultiplier?.() ?? 1
+      const set = p.settings?.xpMultiplier ?? 1
+      const mk = p.marketBoost?.() ?? {}
+      const win = Math.max(1, mk.gatherXp ?? 1, mk.craftXp ?? 1, mk.combatXp ?? 1)
+      const stack = pre * tonic * set * win
+      if (stack <= 1.001) return off('乘法叠区还没超过 ×1，没有需要折减的部分（转生 / 增益剂 / 限时窗口 / 设置倍率都是 ×1）')
+      // 两位小数：这一行的「前后」差值常常只有零点几（×1.5 → ×1.375），一位小数会看成「没变」
+      const n2 = (v) => Math.round(v * 100) / 100
+      return { on: true, text: `乘法叠区超出 ×1 的部分统一按 ×${XP_STACK_DAMPING} 折减：当前最大叠区 ×${n2(stack)} → ×${n2(dampXpStack(stack))}` }
     },
   },
   {
@@ -828,7 +876,7 @@ export const EFFECT_ROWS = [
   },
   {
     id: 'greenhouseHoney', group: 'farm', icon: '🍯', name: '温室伴生蜂蜜', kind: 'buff', src: '温室蜂场', view: 'greenhouse',
-    read: () => ({ on: true, text: `温室收获作物时有 ${Math.round(GREENHOUSE_HONEY_CHANCE * 100)}% 概率伴生蜂蜜，品级随作物等级（蜂蜜只能在这里得到）` }),
+    read: () => ({ on: true, text: `温室收获作物时有 ${Math.round(greenhouseHoneyChance() * 100)}% 概率伴生蜂蜜，品级随作物等级（蜂蜜只能在这里得到）` }),
   },
   {
     id: 'hiveProduce', group: 'farm', icon: '🌼', name: '蜂箱产蜜', kind: 'buff', src: '温室蜂场·蜂箱', view: 'greenhouse',

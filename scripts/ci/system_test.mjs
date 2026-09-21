@@ -4,6 +4,10 @@
 //       离线（80%效率/12h上限/跨天）、存档（往返/迁移/导入导出）、背包、经济、
 //       成就图鉴、数值安全（除零/NaN/越界）
 import fs from 'node:fs'
+// 「不许出现某某写法」的静态断言必须先剥注释：本项目踩过两次（`bgm_audit` 被「已删 🔊」那句注释
+// 弄成恒 FAIL）——注释里写「不要手写 3750」本身就会让 `/3750/` 命中，属于同一个坑。
+import { stripComments } from './lib/comments.mjs'
+import { otherChance } from '../../src/game/data/difficulty.js' // 轴比值守卫的分母也要走难度系数出口
 import { MIJIAN_POOLS, poolItems } from '../../src/game/data/mijianDraws.js'
 import { DAILY_POOL, WEEKLY_POOL, DAILY_BONUS } from '../../src/game/data/dailyTasks.js'
 import { GUILDS } from '../../src/game/data/guilds.js'
@@ -33,9 +37,12 @@ import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { Combat } from '../../src/game/combat/Combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
-import { countForMasteryLevel, masteryXpMultiplier, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
+import { countForMasteryLevel, masteryXpMultiplier, masteryXpMultiplierRaw, MASTERY_XP_BONUS_SCALE, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
+import { XP_STACK_DAMPING, dampXpStack } from '../../src/game/core/growthRate.js'
+import { PRESTIGE_XP_BONUS } from '../../src/game/skills/Skill.js'
+import { MATERIAL_COST_MULT, materialQty, effIngredients, materialTotal } from '../../src/game/data/materialCost.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
-import { EQUIPMENT_SETS, equipSetBonuses } from '../../src/game/data/equipSets.js'
+import { EQUIPMENT_SETS, equipSetBonuses, equipSetOf } from '../../src/game/data/equipSets.js'
 import { regularLevelFromServes, REGULARS } from '../../src/game/data/regulars.js'
 import { starFromScore } from '../../src/game/data/michelin.js'
 import { FLAVOR_PAIRS } from '../../src/game/data/flavorPairs.js'
@@ -53,7 +60,7 @@ import { recipesForPair, easiestRecipeForPair } from '../../src/game/data/flavor
 import { SKINS, SKIN_REQUIRED_KEYS, skinVars, rgbOf } from '../../src/game/data/skins.js'
 import { daoGraphLayout, GRAPH_METRICS } from '../../src/game/data/daoGraph.js'
 import { SHANHAI_PATHS, SHANHAI_NODES, SHANHAI_RING_COUNT, SHANHAI_RINGS, SHANHAI_RING_SLOTS, SHANHAI_GAPS, SHANHAI_TICKET_RING } from '../../src/game/data/shanhaiTree.js'
-import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, DERIVED_MAX, OFFLINE_CAP, safeCap } from '../../src/game/data/caps.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, DERIVED_MAX, OFFLINE_CAP, safeCap, XP_MULTIPLIER_OPTIONS, safeXpMultiplier } from '../../src/game/data/caps.js'
 import { SHANHAI_EFFECT_FIELDS, SHANHAI_EFFECT_CAPS, shanhaiIndex, shanhaiNodeState, shanhaiEffectSum } from '../../src/game/data/shanhaiProgress.js'
 import { shanhaiGraphLayout } from '../../src/game/data/shanhaiGraph.js'
 import { DAO_PATHS, DAO_NODES, DAO_OUTER, daoNodesOf, daoPathCost, daoUnlockedTotal } from '../../src/game/data/daoTree.js'
@@ -150,6 +157,9 @@ import { SpiritSummoningSkill } from '../../src/game/skills/SpiritSummoningSkill
 import { ExplorationSkill } from '../../src/game/skills/ExplorationSkill.js'
 import { computeOfflineProgress } from '../../src/game/core/OfflineProgress.js'
 import { totalXpForLevel, xpProgress } from '../../src/game/core/Experience.js'
+import { migrateGearMods, GEAR_MODS_MAX } from '../../src/game/data/gearMods.js' // C39 词条按装备 id 存
+import { NEWBIE_STEPS, NEWBIE_TOTAL, rewardText } from '../../src/game/data/newbieChain.js' // C40 新手目标链
+import { initCelebrations } from '../../src/game/core/celebrations.js' // C41 大反馈演出
 import { SaveManager } from '../../src/game/core/SaveManager.js'
 import { EventBus } from '../../src/game/core/EventBus.js'
 import { settleOffline } from '../../src/game/bootstrap.js'
@@ -289,23 +299,26 @@ console.log('══ B. 联动链 ══')
   // 调料链：盐矿→食盐→椒盐→铁板兔肉
   p.setSkillState('spiceMixing', { level: 20, exp: totalXpForLevel(20) })
   const sm = getSkillInstance('spiceMixing')
-  p.gainItem('saltOre', 6)
-  withRandom([0.0], () => sm.craft(sm.recipes.find((r) => r.id === 'salt')))
-  p.gainItem('peppercorn_young', 2) // 嫩花椒（2026-09 recipeBalance 嫩化：低阶配方用嫩替代）
-  withRandom([0.0], () => sm.craft(sm.recipes.find((r) => r.id === 'pepperSalt')))
+  // ⚠️ 材料一律按**生效用量**发放（`effIngredients`，含全局材料系数）：手写原始数量会在调系数时集体失效
+  const grantMats = (pl, rec) => { for (const [mid, q] of Object.entries(effIngredients(rec))) pl.gainItem(mid, q) }
+  const rSalt = sm.recipes.find((r) => r.id === 'salt')
+  grantMats(p, rSalt)
+  withRandom([0.0], () => sm.craft(rSalt))
+  const rPepperSalt = sm.recipes.find((r) => r.id === 'pepperSalt') // 嫩花椒（2026-09 recipeBalance 嫩化：低阶配方用嫩替代）
+  grantMats(p, rPepperSalt)
+  withRandom([0.0], () => sm.craft(rPepperSalt))
   check('联动', '盐矿→食盐→椒盐', p.inventory.pepperSalt === 1, JSON.stringify(p.inventory.pepperSalt))
   p.setSkillState('cooking', { level: 18, exp: totalXpForLevel(18) })
-  p.gainItem('rabbitMeat', 3)
-  p.gainItem('onion', 2)
-  p.gainItem('chili', 2)
-  withRandom([0.0], () => ck.craft(ck.recipes.find((r) => r.id === 'ironPlateRabbit')))
+  const rRabbit = ck.recipes.find((r) => r.id === 'ironPlateRabbit')
+  grantMats(p, rRabbit)
+  withRandom([0.0], () => ck.craft(rRabbit))
   check('联动', '椒盐入菜：铁板兔肉', p.inventory.ironPlateRabbit === 1, JSON.stringify(p.inventory.ironPlateRabbit))
   // 锻造链：同档木材/铜矿→铜刀→对决属性（v2.7.0：铜刀属 Lv1-5 档 → 松木 + 铜矿）
   const p2 = freshPlayer({ craftsmithing: 5, knife: 5, tasteAcumen: 1, heatControl: 1 })
-  p2.gainItem('pineWood', 3)
-  p2.gainItem('copperOre', 3)
   const cfs = getSkillInstance('craftsmithing')
-  withRandom([0.0], () => cfs.craft(cfs.recipes.find((r) => r.output?.itemId === 'copperKnife')))
+  const rKnife = cfs.recipes.find((r) => r.output?.itemId === 'copperKnife')
+  grantMats(p2, rKnife)
+  withRandom([0.0], () => cfs.craft(rKnife))
   check('联动', '松木/铜矿→铜刀锻造', p2.inventory.copperKnife === 1)
   p2.equip('copperKnife')
   const combat = new Combat(p2)
@@ -344,16 +357,18 @@ console.log('══ B2. 新系统（制作队列/装备词条/食客订单） �
   check('队列', '相同配方重复入队仅合并', cs.craftQueue.length === 1 && cs.craftQueue[0].qty === 9)
 
   // 2) 装备词条：穿戴生成、洗练扣费、面板乘区、金币词条
+  //    ⚠️ 2026-09-18 起词条**按装备 id 存**（`{ [itemId]: { mods, at } }`），不再是 `gearMods[slot]`；
+  //    旧写法 `p2.gearMods?.weapon?.mods ?? []` 会恒为空数组、断言变成空断言（本轮据此改口径）。
   const p2 = freshPlayer({ craftsmithing: 5 })
   p2.gainItem('copperKnife', 1)
   p2.equip('copperKnife')
-  const mods = p2.gearMods?.weapon?.mods ?? []
+  const mods = p2.gearModsOf('copperKnife')
   check('词条', '穿戴生成词条（普通 0-1 条）', Array.isArray(mods) && mods.length <= 1)
   p2.gold = 100000
   const rr = p2.rerollGearMod('weapon')
   check('词条', '洗练成功扣费（普通 400 金）', rr.ok === true && p2.gold === 100000 - 400)
   check('词条', '词条并入装备面板', p2.equippedStats.attack >= getItem('copperKnife').stats.attack)
-  p2.gearMods.weapon = { itemId: 'copperKnife', mods: [{ stat: 'goldPct', label: '金币', value: 100 }] }
+  p2.gearMods.copperKnife = { mods: [{ stat: 'goldPct', label: '金币', value: 100 }], at: Date.now() }
   const g0 = p2.gold
   p2.gainGold(100)
   check('词条', '金币词条生效（+100%）', p2.gold === g0 + 200)
@@ -459,6 +474,40 @@ console.log('══ C. 对决系统 ══')
   p.settings.autoEatThreshold = 100
   combat.maybeAutoEat()
   check('对决', 'HP1 + 阈值100% 自动进食', p.combat.hp > 1, `hp=${p.combat.hp}`)
+  // 🍲 指定自动进食的料理（2026-09-21 用户要求「点击选择食物为当前自动进食的食物」）
+  //    ⚠️ 这里用**行为断言**而不是源码扫描：扫 `picked?.type === 'food'` 这类字样的断言是假绿的
+  //    ——实测把判定改成 `null && s.autoEatItem`（永远不生效）照样 PASS（反例验证抓到的）。
+  {
+    const foods = Object.values(ITEMS).filter((i) => i.type === 'food' && i.heal).sort((a, b) => a.heal - b.heal)
+    const weak = foods[0]
+    const strong = foods[foods.length - 1]
+    const qtyOf = (id) => p.inventory[id] ?? 0
+    p.inventory[weak.id] = 3
+    p.inventory[strong.id] = 3
+    p.settings.autoEatItem = weak.id
+    p.setCombat({ hp: 1 })
+    combat.foodCooldown = 0
+    const w0 = qtyOf(weak.id)
+    const s0 = qtyOf(strong.id)
+    combat.maybeAutoEat()
+    check('对决', '指定的料理优先被自动吃掉（不再永远挑回血最高的那味）',
+      qtyOf(weak.id) === w0 - 1 && qtyOf(strong.id) === s0, `弱 ${qtyOf(weak.id)}/${w0} · 强 ${qtyOf(strong.id)}/${s0}`)
+    // 指定品吃光 → 必须回落「回血最高」，而不是从此不开饭（静默停摆）
+    p.inventory[weak.id] = 0
+    p.setCombat({ hp: 1 })
+    combat.foodCooldown = 0
+    const s1 = qtyOf(strong.id)
+    combat.maybeAutoEat()
+    check('对决', '指定料理吃光后回落「回血最高」（自动进食不会静默停摆）', qtyOf(strong.id) === s1 - 1, `强 ${qtyOf(strong.id)}/${s1}`)
+    // 脏 id（存档里塞了不存在的物品/非料理）同样只回落，不抛错
+    p.settings.autoEatItem = '__nope__'
+    p.setCombat({ hp: 1 })
+    combat.foodCooldown = 0
+    const s2 = qtyOf(strong.id)
+    combat.maybeAutoEat()
+    check('对决', 'autoEatItem 是脏 id 时回落而不是报错', qtyOf(strong.id) === s2 - 1, `强 ${qtyOf(strong.id)}/${s2}`)
+    p.settings.autoEatItem = null
+  }
   // 攻击速度下限
   p.setSkillState('knife', { level: 99, exp: totalXpForLevel(99), prestiges: 1 })
   check('对决', '攻速下限 1.2s（高等级+加速装备钳制）', combat.playerStats().speedMs >= 1200, `speed=${combat.playerStats().speedMs}`)
@@ -532,7 +581,7 @@ console.log('══ E. 离线进度 ══')
   }
   // 远行采集队（2026-09-09 长线挂机线，参照 Rocky Idle 的 Runs）
   {
-    check('采集队', '线路解锁按技能等级（垂钓 25）', freshPlayer({ fishing: 40 }).expeditionUnlocked('fishery') === true && freshPlayer({ fishing: 1 }).expeditionUnlocked('fishery') === false)
+    check('采集队', '线路解锁按技能等级（垂钓 12，2026-09-18 由 25 下调）', freshPlayer({ fishing: 40 }).expeditionUnlocked('fishery') === true && freshPlayer({ fishing: 11 }).expeditionUnlocked('fishery') === false)
     check('采集队', '槽位 2 需垂钓 30', freshPlayer({ fishing: 30 }).expeditionSlotUnlocked('fishery', 1) === true && freshPlayer({ fishing: 25 }).expeditionSlotUnlocked('fishery', 1) === false)
     const pe = freshPlayer({ fishing: 40 })
     const r0 = pe.expeditionStart('fishery', 0)
@@ -844,7 +893,7 @@ console.log('══ E. 离线进度 ══')
     pg2.upgrades.copperKnife = 3
     const s2 = pg2.gearScore().score
     check('厨具赛', '强化会加分', s2 > s1, `${s1} → ${s2}`)
-    pg2.gearMods.weapon = { itemId: 'copperKnife', mods: [{ stat: 'attack', value: 5 }, { stat: 'defense', value: 5 }] }
+    pg2.gearMods.copperKnife = { mods: [{ stat: 'attack', value: 5 }, { stat: 'defense', value: 5 }], at: Date.now() } // 词条按装备 id 存（2026-09-18）
     const s3 = pg2.gearScore().score
     check('厨具赛', '词条会加分', s3 > s2, `${s2} → ${s3}`)
     check('厨具赛', '评分可映射档位', rankFromScore(s3).id.length === 1)
@@ -1623,6 +1672,50 @@ console.log('══ E. 离线进度 ══')
       const st = pw.equippedStats
       return st.attack >= b6.attack && st.hpBonus >= b6.hpBonus
     })())
+    // 🔴 2026-09-21 用户报「我图里现在穿了石墨两件，右边好像没检测到」——
+    //    根因：矿套其实每套 **9 件**（8 件 `inip{矿}_*` + 1 件单独定义的 `graphiteAmulet` 这类同族饰品），
+    //    而登记用的正则只认 `inip` 前缀 ⇒ **21 个矿套每套都漏了一件**，穿两件只算一件、2 件套不触发。
+    //    ① 每套矿套必须收全同族单件；② 全库不许再有「名字属于某套、却不属于任何套」的孤儿装备。
+    const inipSets = EQUIPMENT_SETS.filter((x) => x.key.startsWith('inip'))
+    const missingSingle = inipSets.filter((x) => {
+      const mineral = x.key.replace(/^inip/, '')
+      const single = ['Ring', 'Amulet', 'Necklace', 'Bracelet', 'Earring'].map((suf) => mineral + suf).find((id) => ITEMS[id]?.type === 'equipment')
+      return single && !x.ids.includes(single)
+    })
+    check('套装', `每个矿套都收全同族单件（${inipSets.length} 套）`, missingSingle.length === 0,
+      missingSingle.map((x) => x.name).join('、') + ' 漏了同族饰品')
+    check('套装', '矿套的每套件数 == 8 件 inip + 同族单件（不许多不许少）', (() => {
+      const bad = inipSets.filter((x) => {
+        const mineral = x.key.replace(/^inip/, '')
+        const single = ['Ring', 'Amulet', 'Necklace', 'Bracelet', 'Earring'].map((suf) => mineral + suf).filter((id) => ITEMS[id]?.type === 'equipment').length
+        return x.ids.length !== 8 + single
+      })
+      return bad.map((x) => `${x.name}(${x.ids.length})`)
+    })().length === 0, '件数不对的矿套见上')
+    check('套装', '没有「名字属于某套却不在套里」的孤儿装备', (() => {
+      const registered = new Set(EQUIPMENT_SETS.flatMap((x) => x.ids))
+      const orphan = []
+      for (const [id, it] of Object.entries(ITEMS)) {
+        if (it.type !== 'equipment' || !it.name || registered.has(id)) continue
+        const hit = EQUIPMENT_SETS.find((x) => {
+          const pre = x.name.replace(/套装$/, '')
+          return pre.length >= 2 && it.name.startsWith(pre) && x.ids.some((y) => ITEMS[y]?.name?.startsWith(pre))
+        })
+        if (hit) orphan.push(`${it.name}→${hit.name}`)
+      }
+      return orphan
+    })().length === 0, '孤儿装备（前几个）：见上')
+    // 用户的**原始场景**（行为断言）：只穿石墨护符 + 石墨戒指 → 必须触发 1 个 2 件套
+    check('套装', '只穿「石墨护符 + 石墨戒指」就会触发石墨套装 2 件（用户实测场景）', (() => {
+      const pb = freshPlayer()
+      pb.equipment = { weapon: null, helmet: null, body: null, legs: null, boots: null, offhand: null, amulet: 'graphiteAmulet', ring: 'inipgraphite_Ring' }
+      const b = equipSetBonuses(pb.equipment)
+      return b.active.length === 1 && b.active[0].name.includes('石墨') && b.active[0].count === 2
+    })(), '穿两件石墨没触发套装')
+    // 相邻矿名不许串套（`^tin` 会误吞 `titaniumAmulet` —— 所以补件用的是精确拼 id 而不是前缀正则）
+    check('套装', '相邻矿名不串套（锡护符只在锡套、钛护符只在钛套）',
+      equipSetOf('tinAmulet')?.key === 'iniptin' && equipSetOf('titaniumAmulet')?.key === 'iniptitanium',
+      `${equipSetOf('tinAmulet')?.key} / ${equipSetOf('titaniumAmulet')?.key}`)
   }
   // 宝石镶嵌（2026-09-09）：插槽按品质、镶嵌消耗、拆卸/换装返还、加成进入属性
   {
@@ -1935,6 +2028,27 @@ console.log('══ F. 存档系统 ══')
   p4.applySave(JSON.parse(s1))
   const s2 = JSON.stringify(p4.serialize())
   check('存档', '全量序列化往返无丢失', s1 === s2, s1 === s2 ? '' : 'MISMATCH')
+  // settings.autoEatItem（2026-09-21「战备」里点选自动进食的料理）：脏 id 必须在**读档时**被过滤，
+  // 合法料理原样保留。⚠️ 行为断言 —— 「源码里有 getItem(st.autoEatItem) 这行」会被
+  // 「那行还在、只是不再生效」蒙过去（反例验证抓到的：把过滤那行删掉，字样检查照样 PASS）。
+  {
+    const foodId = Object.values(ITEMS).find((i) => i.type === 'food' && i.heal).id
+    const save = JSON.parse(s1)
+    save.settings.autoEatItem = foodId
+    const pk = freshPlayer()
+    pk.applySave(save)
+    check('存档', 'autoEatItem 是合法料理时读档保留', pk.settings.autoEatItem === foodId, `→ ${pk.settings.autoEatItem}`)
+    save.settings.autoEatItem = '__nope__'
+    const pk2 = freshPlayer()
+    pk2.applySave(save)
+    check('存档', 'autoEatItem 是脏 id 时读档被过滤（回落到「回血最高」）', pk2.settings.autoEatItem === null, `→ ${pk2.settings.autoEatItem}`)
+    // 非料理（有物品但 type 不是 food）同样不算数：指定了也不会被自动吃
+    const nonFood = Object.values(ITEMS).find((i) => i.type !== 'food' && !i.heal).id
+    save.settings.autoEatItem = nonFood
+    const pk3 = freshPlayer()
+    pk3.applySave(save)
+    check('存档', 'autoEatItem 指向非料理物品时也被过滤', pk3.settings.autoEatItem === null, `→ ${pk3.settings.autoEatItem}（${nonFood}）`)
+  }
 }
 
 // ── G. 背包（§5.4）─────────────────────────────────
@@ -2115,39 +2229,39 @@ console.log('══ N. 补齐功能验证 ══')
   // ── 背包容量（§5.4：初始 20 格）──
   const p = freshPlayer()
   const itemIds = Object.keys(ITEMS)
-  check('容量', '初始背包 20 格', p.inventoryCap === 20)
-  for (let i = 0; i < 20; i++) p.gainItem(itemIds[i], 1)
-  check('容量', '20 种物品全部放入', p.inventorySlotsUsed === 20)
-  const ok21 = p.gainItem(itemIds[20], 1)
-  check('容量', '第 21 种被拒绝', ok21 === false && p.inventorySlotsUsed === 20)
+  // 存储合一（2026-09-20）：厨藏基线 = 原背包 20 + 原仓库 100 = 120
+  check('容量', `初始厨藏 ${STORAGE_BASE} 格（= 原背包 20 + 原仓库 100）`, p.inventoryCap === STORAGE_BASE)
+  for (let i = 0; i < STORAGE_BASE; i++) p.gainItem(itemIds[i], 1)
+  check('容量', `${STORAGE_BASE} 种物品全部放入`, p.inventorySlotsUsed === STORAGE_BASE)
+  const okNext = p.gainItem(itemIds[STORAGE_BASE], 1)
+  check('容量', '再多一种被拒绝（转信箱）', okNext === false && p.inventorySlotsUsed === STORAGE_BASE)
   // 已有种类堆叠不受限
   p.gainItem(itemIds[0], 50)
   check('容量', '已有种类继续堆叠', p.inventory[itemIds[0]] === 51)
   // 扩展 10 格
   p.expandInventory(10)
-  check('容量', '扩展 +10 → 30 格', p.inventoryCap === 30 && p.gainItem(itemIds[20], 1) === true)
-  // 扩展上限 100
-  for (let i = 0; i < 20; i++) p.expandInventory(10)
-  check('容量', '扩展上限 100', p.inventoryCap === 100 && p.expandInventory(10) === false)
+  check('容量', `扩展 +10 → ${STORAGE_BASE + 10} 格`, p.inventoryCap === STORAGE_BASE + 10 && p.gainItem(itemIds[STORAGE_BASE], 1) === true)
+  // 存储合一（2026-09-20）：金币路径天花板 = 独立标定的 STORAGE_PAID_MAX（2026-09-20 用户要求 600 → 2500）
+  for (let i = 0; i < 400; i++) p.expandInventory(10)
+  check('容量', `扩展上限 ${STORAGE_PAID_MAX}（商店厨藏扩容上限，用户 2026-09-20 要求提到 2500）`,
+    p.inventoryCap === STORAGE_PAID_MAX && p.expandInventory(10) === false, `实得 ${p.inventoryCap}`)
 
-  // ── 仓库（§5.4：100 格，转移）──
+  // ── 存储合一（2026-09-20：用户要求「只有一个厨藏」）──
   const p2 = freshPlayer()
   p2.gainItem('apple', 10)
-  p2.gainItem('carrot', 5)
-  check('仓库', '背包→仓库转移', p2.moveToBank('apple') === true && p2.bank.apple === 10 && p2.inventory.apple === undefined)
-  check('仓库', '仓库不占背包格', p2.inventorySlotsUsed === 1 && p2.bankSlotsUsed === 1)
-  p2.moveToInventory('apple', 3)
-  check('仓库', '仓库→背包取出', p2.inventory.apple === 3 && p2.bank.apple === 7)
-  check('仓库', '仓库初始 100 格', p2.bankCap === 100)
-  for (let i = 0; i < 20; i++) p2.expandBank(20)
-  check('仓库', '仓库扩展上限 500', p2.bankCap === 500 && p2.expandBank(20) === false)
-  // 仓库满拒绝
+  check('存储', '转移类动作已退化为 no-op（没有第二个池子）',
+    p2.moveToBank('apple') === false && p2.moveToInventory('apple') === false && p2.bankSlotsUsed === 0)
+  check('存储', `只有一套容量：厨藏 ${STORAGE_BASE} 格起步（= 原背包 20 + 原仓库 100），仓库字段恒空`,
+    p2.inventoryCap === STORAGE_BASE && Object.keys(p2.bank).length === 0)
+  for (let i = 0; i < 400; i++) p2.expandBank(20) // 「仓库扩容」这件商品现在也加厨藏容量
+  check('存储', `两件扩容商品加同一个池：可达 ${STORAGE_PAID_MAX}`,
+    p2.inventoryCap === STORAGE_PAID_MAX && p2.expandBank(20) === false, `实得 ${p2.inventoryCap}`)
+  // 存储合一后「满」只发生在厨藏：满格时新种类拒绝（并转信箱，见信箱那组）
   const p3 = freshPlayer()
-  p3.bankCap = 1
+  p3.inventoryCap = 1
   p3.gainItem('apple', 1)
-  p3.gainItem('carrot', 1)
-  p3.moveToBank('apple')
-  check('仓库', '仓库满拒绝新种类', p3.moveToBank('carrot') === false)
+  check('存储', '厨藏满时新种类不再进背包（转信箱由信箱那组覆盖）',
+    p3.gainItem('carrot', 1) === false && !(('carrot') in p3.inventory))
 
   // ── 出售（§11.3：价值×0.5）──
   const p4 = freshPlayer()
@@ -2248,6 +2362,10 @@ console.log('══ O. 挂机暂停/进度 ══')
   check('暂停', '暂停状态随存档保存', p5.isSkillPaused('hunting') === true)
 }
 
+// ⚠️ 下面 5 处 `withRandom([0.02, …])` 的取值**不能改回 0.5**：它是在桩掉随机数做「强制命中」，
+//    而**垂钓是采集类里唯一的概率闸门**（55% 基础，经全局难度系数后 ≈27.5%）——
+//    0.5 已经**高于**这个成功率，会判定成失败 ⇒ 一条鱼都没有（2026-09-21 引入难度系数时踩到）。
+//    0.02 同时也高于稀有鱼概率（≈0.25%），保证掉的是普通鱼而不是金龙鱼。
 // ── P. 多技能并行挂机（§3.1：切技能页不中断）────────
 console.log('══ P. 多技能并行 ══')
 {
@@ -2259,19 +2377,19 @@ console.log('══ P. 多技能并行 ══')
   p.setSkillTarget('fishing', 'crucian')
   check('并行', '每技能独立目标', p.skillTargets.fishing === 'crucian' && p.getSkillTarget('foraging') === 'apple')
   // 双技能同时 tick（成功判定强制命中）
-  withRandom([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], () => p.tick(10_000))
+  withRandom([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02], () => p.tick(10_000))
   check('并行', '采摘+垂钓同时产出', forInst.actionsDone >= 1 && fishInst.actionsDone >= 1, `f=${forInst.actionsDone} g=${fishInst.actionsDone}`)
   check('并行', '产出入账', (p.inventory.apple ?? 0) >= 1 && (p.inventory.crucian ?? 0) >= 1, JSON.stringify({ a: p.inventory.apple, c: p.inventory.crucian }))
   // 切换技能页（activeSkill 变化）不中断并行任务
   p.setActiveSkill('cooking')
   const aBefore = p.inventory.apple ?? 0
-  withRandom([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], () => p.tick(10_000))
+  withRandom([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02], () => p.tick(10_000))
   check('并行', '切到制作页后采摘仍在产出', (p.inventory.apple ?? 0) > aBefore, `${aBefore} → ${p.inventory.apple}`)
   // 单独暂停垂钓：采摘继续
   p.setSkillPaused('fishing', true)
   const cBefore = p.inventory.crucian ?? 0
   const fBefore = p.inventory.apple ?? 0
-  withRandom([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], () => p.tick(10_000))
+  withRandom([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02], () => p.tick(10_000))
   check('并行', '垂钓暂停、采摘继续', (p.inventory.crucian ?? 0) === cBefore && (p.inventory.apple ?? 0) > fBefore, `c ${cBefore}→${p.inventory.crucian} a ${fBefore}→${p.inventory.apple}`)
   // 旧档迁移：activeTarget → skillTargets
   const old = { name: 'x', gold: 1, activeSkill: 'fishing', activeTarget: 'tuna', skills: {} }
@@ -2296,11 +2414,11 @@ console.log('══ Q. 并行上限 ══')
   running = p.getRunningIdleSkills().map((i) => i.id)
   check('上限', '切到垂钓后优先运行垂钓', running[0] === 'fishing', JSON.stringify(running))
   // 实际 tick：上限 1 时只有 fishing 产出
-  withRandom([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], () => p.tick(10_000))
+  withRandom([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02], () => p.tick(10_000))
   check('上限', '上限 1 时只有垂钓产出', (p.inventory.crucian ?? 0) >= 1 && (p.inventory.apple ?? 0) === 0, JSON.stringify({ c: p.inventory.crucian, a: p.inventory.apple }))
   // 上限 2：双技能都运行
   p.settings.maxParallelIdle = 2
-  withRandom([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], () => p.tick(10_000))
+  withRandom([0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02], () => p.tick(10_000))
   check('上限', '上限 2 时双技能都产出', (p.inventory.apple ?? 0) >= 1 && (p.inventory.crucian ?? 0) >= 1)
   // 离线受限：只结算活动技能
   const p2 = freshPlayer()
@@ -2345,7 +2463,7 @@ console.log('══ S. 内容扩充完整性 ══')
   createSkillInstances(freshPlayer())
   for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'woodcutting', 'mining', 'cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'exploration']) insts[id] = getSkillInstance(id)
   // 各技能扩充后数量：与当前生成器产物一致（2026-09-16 实测量；v2.7.0 矿物拆出后 挖掘 83→42，新增伐木 20 / 采矿 43）
-  check('扩充', '采集七技能目标数（142/72/70/42/20/43）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 72 && insts.hunting.targets.length === 70 && insts.excavation.targets.length === 42 && insts.woodcutting.targets.length === 20 && insts.mining.targets.length === 43, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
+  check('扩充', '采集七技能目标数（142/76/73/49/20/43）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 76 && insts.hunting.targets.length === 73 && insts.excavation.targets.length === 49 && insts.woodcutting.targets.length === 20 && insts.mining.targets.length === 43, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
   check('扩充', '制作五技能食谱数（294/97/90/127/97）', insts.cooking.recipes.length === 294 && insts.baking.recipes.length === 97 && insts.preserving.recipes.length === 90 && insts.brewing.recipes.length === 127 && insts.spiceMixing.recipes.length === 97, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 365 配方（20 品质套 + 独立矿套）', insts.craftsmithing.recipes.length === 365, `n=${insts.craftsmithing.recipes.length}`)
   // 18 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
@@ -2479,7 +2597,8 @@ console.log('══ W. 限时窗口活动 ══')
   const orig = pg.marketBoost
   pg.marketBoost = (h, w) => (h ?? 6) >= 6 && (h ?? 6) < 9 ? { restaurant: 1, combatXp: 1, gatherXp: 1.5, craftXp: 1 } : { restaurant: 1, combatXp: 1, gatherXp: 1, craftXp: 1 }
   fg.addXp(1000)
-  check('活动', '晨集采集经验 ×1.5 生效', pg.skills.foraging.exp - beforeG === 1500, `got ${pg.skills.foraging.exp - beforeG}`)
+  // 期望值走阻尼出口：窗口 ×1.5 是先相乘、再按 `dampXpStack` 折减（2026-09-21 成长阻尼）⇒ 实际 ×1.375
+  check('活动', `晨集采集经验 ×1.5 生效（经成长阻尼后 ×${dampXpStack(1.5)}）`, pg.skills.foraging.exp - beforeG === dampXpStack(1.5) * 1000, `got ${pg.skills.foraging.exp - beforeG}`)
   pg.marketBoost = orig
 }
 
@@ -2555,9 +2674,8 @@ console.log('══ C10. 一键入包 ══')
   p.gainItem('apple', 5)
   p.gainItem('ironKnife', 1)
   const moved = p.moveAllToBank()
-  check('存取', '一键入仓（背包→仓库，装备跳过）', moved === 1 && (p.bank.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1)
-  const back = p.moveAllToInventory()
-  check('存取', '一键入包（仓库→背包，含装备）', back === 1 && (p.inventory.apple ?? 0) === 5 && (p.inventory.ironKnife ?? 0) === 1 && !(p.bank.apple ?? 0))
+  check('存取', '一键入仓/入包已退化为 no-op（存储合一后无意义）',
+    p.moveAllToBank() === 0 && p.moveAllToInventory() === 0 && (p.inventory.apple ?? 0) === 5)
 }
 
 
@@ -2576,7 +2694,7 @@ console.log('══ C11. 食灵阁 ══')
     const pm = freshPlayer({ spiritSummoning: 99 })
     const ss = getSkillInstance('spiritSummoning')
     const first = ss.recipes[0]
-    for (const [mid, n] of Object.entries(first.ingredients)) pm.gainItem(mid, n)
+    for (const [mid, n] of Object.entries(effIngredients(first))) pm.gainItem(mid, n)
     check('食灵', '契约材料在背包即可制作（canCraft）', ss.canCraft(first) === true)
     const matId = Object.keys(first.ingredients)[0]
     pm.inventory[matId] = 0
@@ -2600,23 +2718,23 @@ console.log('══ C11. 信箱 ══')
 
   // ② 背包满 → 物品不再静默丢失，而是转存邮箱（返回值语义保持 false）
   const ids = Object.keys(ITEMS)
-  for (let i = 0; i < 20; i++) p.gainItem(ids[i], 1)
+  for (let i = 0; i < STORAGE_BASE; i++) p.gainItem(ids[i], 1)
   const before = p.mail.list.length
-  const ok = p.gainItem(ids[20], 1)
-  check('信箱', '背包满时 gainItem 仍返回 false', ok === false && p.inventorySlotsUsed === 20)
+  const ok = p.gainItem(ids[STORAGE_BASE], 1)
+  check('信箱', '厨藏满时 gainItem 仍返回 false', ok === false && p.inventorySlotsUsed === STORAGE_BASE)
   check('信箱', '背包满时物品被转存邮箱（不再丢失）', p.mail.list.length === before + 1 && p.mail.list.at(-1).kind === 'overflow')
   const om = p.mail.list.at(-1)
-  check('信箱', '溢出邮件带正确附件', om.reward?.items?.[ids[20]] === 1 && om.claimed === false)
+  check('信箱', '溢出邮件带正确附件', om.reward?.items?.[ids[STORAGE_BASE]] === 1 && om.claimed === false)
   check('信箱', '溢出邮件计入待领红点', p.mailUnclaimedCount() === 1)
 
   // ③ 连续同一物品的溢出 → 合并成一封（不刷屏）
-  p.gainItem(ids[20], 4)
-  check('信箱', '同物品溢出合并累加', p.mail.list.length === before + 1 && p.mail.list.at(-1).reward.items[ids[20]] === 5)
+  p.gainItem(ids[STORAGE_BASE], 4)
+  check('信箱', '同物品溢出合并累加', p.mail.list.length === before + 1 && p.mail.list.at(-1).reward.items[ids[STORAGE_BASE]] === 5)
 
   // ④ 领取：背包腾出空间后成功入包
   delete p.inventory[ids[0]]
   const c1 = p.claimMail(om.id)
-  check('信箱', '领取后物品入包', c1.ok === true && p.inventory[ids[20]] === 5)
+  check('信箱', '领取后物品入包', c1.ok === true && p.inventory[ids[STORAGE_BASE]] === 5)
   check('信箱', '领取后标记已领且计入统计', om.claimed === true && p.mailUnclaimedCount() === 0)
   // 内容同步（2026-09-11）：新增成就必须真的会被这套行为点亮
   check('信箱', '领取计数递增（信箱成就依据）', p.stats.mailClaimed === 1)
@@ -2625,13 +2743,13 @@ console.log('══ C11. 信箱 ══')
 
   // ⑤ 领取时背包满 → 拒绝且邮件保持未领（不能领出来又转投成新邮件）
   const p5 = freshPlayer()
-  for (let i = 0; i < 20; i++) p5.gainItem(ids[i], 1)
-  p5.gainItem(ids[20], 3)
+  for (let i = 0; i < STORAGE_BASE; i++) p5.gainItem(ids[i], 1)
+  p5.gainItem(ids[STORAGE_BASE], 3)
   const m5 = p5.mail.list.at(-1)
   check('信箱', '背包满时领取被拒', p5.claimMail(m5.id).ok === false, p5.claimMail(m5.id).msg)
   check('信箱', '被拒后邮件仍未领', m5.claimed === false && p5.mailUnclaimedCount() === 1)
   check('信箱', '被拒不会复制出第二封邮件', p5.mail.list.filter((m) => m.kind === 'overflow').length === 1)
-  check('信箱', 'canGainItem 与实发一致', p5.canGainItem(ids[20], 3) === false && p5.canGainItem(ids[0], 1) === true)
+  check('信箱', 'canGainItem 与实发一致', p5.canGainItem(ids[STORAGE_BASE], 3) === false && p5.canGainItem(ids[0], 1) === true)
 
   // ⑥ 堆积上限截断的部分同样转存
   const p6 = freshPlayer()
@@ -2658,8 +2776,8 @@ console.log('══ C11. 信箱 ══')
 
   // ⑨ 删除与清理：有未领附件的不能删
   const p9 = freshPlayer()
-  for (let i = 0; i < 20; i++) p9.gainItem(ids[i], 1)
-  p9.gainItem(ids[20], 1)
+  for (let i = 0; i < STORAGE_BASE; i++) p9.gainItem(ids[i], 1)
+  p9.gainItem(ids[STORAGE_BASE], 1)
   const m9 = p9.mail.list.at(-1)
   check('信箱', '有未领附件的邮件不可删', p9.deleteMail(m9.id) === false && p9.mail.list.includes(m9))
   delete p9.inventory[ids[0]]
@@ -2669,10 +2787,10 @@ console.log('══ C11. 信箱 ══')
 
   // ⑩ 容量语义（2026-09-11 放宽）：软上限只淘汰「已领/无附件」，全未领也照收，硬上限才拒收
   const p10 = freshPlayer()
-  for (let i = 0; i < 20; i++) p10.gainItem(ids[i], 1) // 背包塞满
+  for (let i = 0; i < STORAGE_BASE; i++) p10.gainItem(ids[i], 1) // 背包塞满
   let refused = 0
   // 造 > 软上限数量的**不同物品**溢出（同物品会合并成一封，所以种类数必须够多才能越过软上限）
-  for (let i = 20; i < 20 + MAIL_CAP + 60; i++) {
+  for (let i = STORAGE_BASE; i < STORAGE_BASE + MAIL_CAP + 60; i++) {
     const before = p10.mail.list.length
     p10.gainItem(ids[i], 1) // 溢出 → 造远超软上限的未领附件邮件
     if (p10.mail.list.length === before) refused++
@@ -2682,7 +2800,7 @@ console.log('══ C11. 信箱 ══')
   const mailIds = new Set()
   for (const m of p10.mail.list) for (const k of Object.keys(m.reward?.items ?? {})) mailIds.add(k)
   const lost = []
-  for (let i = 20; i < 20 + MAIL_CAP + 60; i++) {
+  for (let i = STORAGE_BASE; i < STORAGE_BASE + MAIL_CAP + 60; i++) {
     const inBag = (p10.inventory[ids[i]] ?? 0) > 0
     if (!inBag && !mailIds.has(ids[i])) lost.push(ITEMS[ids[i]]?.name ?? ids[i])
   }
@@ -2724,12 +2842,12 @@ console.log('══ C11. 信箱 ══')
 
   // ⑪ 一键领取
   const p11 = freshPlayer()
-  for (let i = 0; i < 20; i++) p11.gainItem(ids[i], 1)
-  p11.gainItem(ids[20], 2)
-  p11.gainItem(ids[21], 3)
+  for (let i = 0; i < STORAGE_BASE; i++) p11.gainItem(ids[i], 1)
+  p11.gainItem(ids[STORAGE_BASE], 2)
+  p11.gainItem(ids[STORAGE_BASE + 1], 3)
   for (let i = 0; i < 5; i++) delete p11.inventory[ids[i]] // 腾 5 格
   const all = p11.claimAllMail()
-  check('信箱', '一键领取汇总入包', all.ok === true && all.count === 2 && p11.inventory[ids[20]] === 2 && p11.inventory[ids[21]] === 3)
+  check('信箱', '一键领取汇总入包', all.ok === true && all.count === 2 && p11.inventory[ids[STORAGE_BASE]] === 2 && p11.inventory[ids[STORAGE_BASE + 1]] === 3)
   check('信箱', '一键领取后无待领', p11.mailUnclaimedCount() === 0)
 
   // ⑫ 存档往返：mail 必须完整进档（含 nextId，避免重开档 id 撞车）
@@ -3399,21 +3517,21 @@ console.log('══ C22. 山海食经 ══')
     const p = freshPlayer()
     const node = N.find((n) => n.id === 'pick11') // 背包 +1
     for (const id of (shanhaiIndex().pick ?? []).slice(0, node.req.count)) p.collected[id] = true
-    p.inventoryCap = CAP_MAX.inventory // 真买满（硬顶；100 只是商店能买到的上限）
-    const bank0 = p.bankCap
+    // 存储合一（2026-09-20）：原「仓库」这一档容量奖励现在也落在同一个厨藏容量上
+    p.inventoryCap = STORAGE_MAX // 真买满（硬顶）
+    const cap0 = p.inventoryCap
     const r = p.shanhaiUnlock('pick11')
-    // 断言**行为**（背包不动 + 仓库 +1 + 回执里说明转投），不写死文案
-    return r.ok && p.inventoryCap === CAP_MAX.inventory && p.bankCap === bank0 + 1 && typeof r.landed === 'string' && r.landed.includes('仓库')
+    // 断言**行为**（容量不变 + 顺位落到厨藏那一档 + 回执给文案），不写死文案
+    return r.ok && p.inventoryCap === cap0 && typeof r.landed === 'string' && !r.landed.includes('背包')
   })())
   check('山海食经', '商店买满后背包节点**仍落在背包**（不再错位进仓库；用户实测报过）', (() => {
     const p = freshPlayer()
     const node = N.find((n) => n.id === 'pick11') // 背包 +1
     for (const id of (shanhaiIndex().pick ?? []).slice(0, node.req.count)) p.collected[id] = true
-    p.inventoryCap = PAID_CAP_MAX.inventory // 金币路径已买满（100）
-    const bank0 = p.bankCap
+    p.inventoryCap = STORAGE_PAID_MAX // 金币路径已买满（2500）
     const r = p.shanhaiUnlock('pick11')
-    return r.ok && p.inventoryCap === PAID_CAP_MAX.inventory + 1 && p.bankCap === bank0 && r.landed.includes('背包')
-  })(), `硬顶 ${CAP_MAX.inventory} / 商店上限 ${PAID_CAP_MAX.inventory}`)
+    return r.ok && p.inventoryCap === STORAGE_PAID_MAX + 1 && r.landed.includes('厨藏')
+  })(), `硬顶 ${STORAGE_MAX} / 商店上限 ${STORAGE_PAID_MAX}`)
   check('山海食经', '条件不足时点亮失败且给出原因', (() => {
     const p = freshPlayer()
     const r = p.shanhaiUnlock('pick11')
@@ -3430,18 +3548,19 @@ console.log('══ C22. 山海食经 ══')
     p.applySave(saved)
     return p.inventoryCap === 22 && p.stats.shanhaiCapGranted?.inventory === 2
   })())
-  check('山海食经', '对账幂等：重复读档不重复补发；满上限时顺位转投仓库', (() => {
+  check('山海食经', '对账幂等：重复读档不重复补发（存储合一后顺位都落在同一厨藏容量）', (() => {
     const p = freshPlayer()
     const idx = shanhaiIndex()
     for (const id of (idx.pick ?? []).slice(0, 60)) p.collected[id] = true
     const saved = JSON.parse(JSON.stringify(p.serialize()))
     saved.shanhaiUnlocked = ['pick11', 'pick12', 'pick13']
-    saved.inventoryCap = CAP_MAX.inventory // 真买满 → 三个 +1 都该顺位到仓库
+    // 存储合一（2026-09-20）：满上限后三个 +1 顺位落进**同一个厨藏容量**（不再有「转投仓库」）
+    saved.inventoryCap = STORAGE_MAX + 300 // 故意超硬顶：容量本身也会被 safeCap 夹回
     saved.stats.shanhaiCapGranted = { inventory: 0, bank: 0, cold: 0 }
     p.applySave(saved)
-    const bankAfterFirst = p.bankCap
+    const capAfterFirst = p.inventoryCap
     p.applySave(JSON.parse(JSON.stringify(p.serialize()))) // 再读一次
-    return p.inventoryCap === CAP_MAX.inventory && bankAfterFirst === 103 && p.bankCap === 103
+    return p.inventoryCap === capAfterFirst && p.inventoryCap === STORAGE_MAX
   })())
   check('山海食经', '存档往返与旧档迁移（缺字段回退空数组）', (() => {
     const p = freshPlayer()
@@ -3496,6 +3615,13 @@ console.log('══ C23. 上限一致性 ══')
     const off = SHANHAI_NODES.filter((n) => n.effect?.field === 'offlineH').reduce((a, n) => a + n.effect.amount, 0)
     return `离线 ${off}h / 封顶 ${OFFLINE_CAP.shanhaiMaxHours}h`
   })())
+  check('上限', '合并后硬顶 ≥ 商店厨藏上限 + 山海食经全树容量（抬金币上限必须同步抬硬顶）', (() => {
+    let tree = 0
+    for (const n of SHANHAI_NODES) {
+      if (n.effect?.field === 'inventoryCap' || n.effect?.field === 'bankCap') tree += n.effect.amount
+    }
+    return STORAGE_MAX >= STORAGE_PAID_MAX + tree && STORAGE_PAID_MAX > 600
+  })(), `厨藏硬顶 ${STORAGE_MAX} / 商店上限 ${STORAGE_PAID_MAX}`)
   check('上限', '硬顶 ≥ 金币路径上限 + 山海食经全树容量（三档都不许「装不下」）', (() => {
     const tree = { inventory: 0, bank: 0, cold: 0 }
     for (const n of SHANHAI_NODES) {
@@ -3516,23 +3642,23 @@ console.log('══ C23. 上限一致性 ══')
   })())
   check('上限', '容量动作在满上限时拒绝而不越界', (() => {
     const p = freshPlayer()
-    p.inventoryCap = CAP_MAX.inventory
-    p.bankCap = CAP_MAX.bank
+    p.inventoryCap = STORAGE_MAX
+    p.bankCap = 0
     p.coldStorageCap = CAP_MAX.cold
     const r = p.expandColdStorage()
     return p.expandInventory(10) === false && p.expandBank(20) === false && r.ok === false
-      && p.inventoryCap === CAP_MAX.inventory && p.bankCap === CAP_MAX.bank && p.coldStorageCap === CAP_MAX.cold
+      && p.inventoryCap === STORAGE_MAX && p.bankCap === 0 && p.coldStorageCap === CAP_MAX.cold
   })())
   check('上限', '读档非法值不会把上限变成 NaN（字符串 / 超限 / 负数）', (() => {
     const p = freshPlayer()
     const saved = JSON.parse(JSON.stringify(p.serialize()))
     saved.inventoryCap = 'abc'
-    saved.bankCap = 9999
+    saved.storageMerged = false // 走旧档迁移路径：bankCap 会被并入厨藏容量
     saved.coldStorageCap = -3
     saved.offlineBonusH = 'x'
     p.applySave(saved)
-    return Number.isFinite(p.inventoryCap) && p.inventoryCap === CAP_BASE.inventory
-      && p.bankCap === CAP_MAX.bank && p.coldStorageCap === 0 && p.offlineBonusH === 0
+    return Number.isFinite(p.inventoryCap) && p.inventoryCap === STORAGE_BASE
+      && p.bankCap === 0 && p.coldStorageCap === 0 && p.offlineBonusH === 0
   })())
   check('上限', '派生上限数组读档被截断（出战位 / 菜单格 / 农田）且并行数合法化', (() => {
     const p = freshPlayer()
@@ -3591,12 +3717,11 @@ console.log('══ C23. 上限一致性 ══')
     && PAID_CAP_MAX.inventory > CAP_BASE.inventory && PAID_CAP_MAX.bank > CAP_BASE.bank && PAID_CAP_MAX.cold > CAP_BASE.cold)
   check('上限', '金币扩容仍停在商店上限（抬硬顶没有放宽金币可买量）', (() => {
     const p = freshPlayer()
-    p.inventoryCap = PAID_CAP_MAX.inventory - 5
-    p.bankCap = PAID_CAP_MAX.bank - 10
-    const inv = p.expandInventory(10) // 95 → 100（不是 105）
-    const bank = p.expandBank(20)     // 490 → 500（不是 510）
+    p.inventoryCap = STORAGE_PAID_MAX - 5
+    const inv = p.expandInventory(10) // 595 → 600（不是 605）
+    const bank = p.expandBank(20)     // 同一池：600 已满 → false，不越界
     const again = p.expandInventory(10) && p.expandBank(20)
-    return inv && bank && again === false && p.inventoryCap === PAID_CAP_MAX.inventory && p.bankCap === PAID_CAP_MAX.bank
+    return inv === true && bank === false && again === false && p.inventoryCap === STORAGE_PAID_MAX
   })())
   check('上限', '冷库付费扩容也停在金币上限（不借硬顶多买）', (() => {
     const p = freshPlayer()
@@ -3609,6 +3734,34 @@ console.log('══ C23. 上限一致性 ══')
     const prod = fs.readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
     return /COLD_EXPAND_COST/.test(P_SRC) && /COLD_EXPAND_COST/.test(prod)
   })())
+}
+
+// ── C23b. 经验倍率档位封顶（2026-09-21）──────────────────────────────
+// 起因：这一项原先是 1/10/…/**1000×** 的玩家可随时切换的下拉，实测（scripts/sim/xp_multiplier_breakdown.mjs）
+// 它是**单层贡献最大的一项**（×10 档单独就 ×11），与增益剂/转生相乘后总乘区达 ×312，
+// 于是「采摘 1→99 = 44.2h」这种标定过的时长会被一个下拉框一键抹平。
+// 现收成有界加速档；本组钉住「档位唯一来源 + 读档夹取 + 旧档不会带着 ×1000 继续跑」。
+console.log('══ C23b. 经验倍率档位封顶 ══')
+{
+  const pXM = freshPlayer() // 默认档必须是 ×1
+  check('倍率档位', `档位由 caps.js 单一来源导出且最高 ≤ 5（当前 ${JSON.stringify(XP_MULTIPLIER_OPTIONS)}）`,
+    Array.isArray(XP_MULTIPLIER_OPTIONS) && XP_MULTIPLIER_OPTIONS[0] === 1
+      && XP_MULTIPLIER_OPTIONS.every((v, i) => i === 0 || v > XP_MULTIPLIER_OPTIONS[i - 1])
+      && Math.max(...XP_MULTIPLIER_OPTIONS) <= 5)
+  check('倍率档位', '默认档是 ×1（新档/缺字段都不能默默加速）',
+    pXM.settings.xpMultiplier === 1 && safeXpMultiplier(undefined) === 1 && safeXpMultiplier(null) === 1 && safeXpMultiplier(NaN) === 1)
+  check('倍率档位', '读档夹取：旧档的 10/50/100/250/500/1000 一律夹到最高合法档（不会带着 ×1000 继续跑）',
+    [10, 50, 100, 250, 500, 1000, 99999].every((v) => safeXpMultiplier(v) === Math.max(...XP_MULTIPLIER_OPTIONS)))
+  check('倍率档位', '读档夹取：非法档夹到「不超过它的最大合法档」，负数/字符串回退 1',
+    safeXpMultiplier(4) === 3 && safeXpMultiplier(2.5) === 2 && safeXpMultiplier(0) === 1
+      && safeXpMultiplier(-5) === 1 && safeXpMultiplier('abc') === 1 && safeXpMultiplier('3') === 3)
+  check('倍率档位', '设置面板的下拉**不手写档位**（引用 XP_MULTIPLIER_OPTIONS，否则改档位会漏改面板）', (() => {
+    const panel = fs.readFileSync(new URL('../../src/components/SettingsPanel.vue', import.meta.url), 'utf8')
+    return /XP_MULTIPLIER_OPTIONS/.test(panel) && /v-for="m in XP_MULTIPLIER_OPTIONS"/.test(panel)
+      && !/<option :value="1000"/.test(panel)
+  })())
+  check('倍率档位', 'applySave 真的调用了夹取（否则旧档的 ×1000 会原样进来）',
+    /safeXpMultiplier\(/.test(fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')))
 }
 
 // ── C24. 外环「觅珍环」抽卡券（v2.1：12 节点 × 100 张）──
@@ -4399,11 +4552,35 @@ console.log('══ C27. 精通档位说明 ══')
   check('精通档位', '档位单调：经验/双倍/保底不减，间隔不变慢（升级永远不会变差）', mono)
 
   // 3) 关键边界值（改动平衡时这几条会第一时间报出来）
-  check('精通档位', '边界：5 级 ×1.1 / 50 级 双倍 30% 保底 +1 / 100 级 ×4 双倍 80% 保底 +2', (() => {
+  //    ⚠️ 这几个数是**故意硬编码**的「绊线」：改精通曲线/强度时会立刻 FAIL，逼你确认是有意为之。
+  //       别改成「从函数派生」——那会变成恒真断言，等于不设防。
+  //       2026-09-21 更新：经验列引入 MASTERY_XP_BONUS_SCALE(0.5) 后，5 级 ×1.1→×1.05、100 级 ×4→×2.5。
+  check('精通档位', '边界：5 级 ×1.05 / 50 级 双倍 30% 保底 +1 / 100 级 ×2.5 双倍 80% 保底 +2', (() => {
     const t5 = MASTERY_TIERS.find((t) => t.level === 5)
     const t50 = MASTERY_TIERS.find((t) => t.level === 50)
     const t100 = MASTERY_TIERS.find((t) => t.level === 100)
-    return t5.xpMult === 1.1 && t50.double === 0.3 && t50.batch === 1 && t100.xpMult === 4 && t100.double === 0.8 && t100.batch === 2
+    return t5.xpMult === 1.05 && t50.double === 0.3 && t50.batch === 1 && t100.xpMult === 2.5 && t100.double === 0.8 && t100.batch === 2
+  })())
+  // 3b) 精通经验收益的**缩放机制**（2026-09-21 立）：钉住系数、来源关系与两条不变量
+  check('精通档位', `经验收益缩放：MASTERY_XP_BONUS_SCALE === ${MASTERY_XP_BONUS_SCALE}（改它=改整体成长速度，必须有意为之）`,
+    Math.abs(MASTERY_XP_BONUS_SCALE - 0.5) < 1e-9)
+  check('精通档位', '缩放关系：实际 = 1 + (原始 − 1) × 系数（逐格核对）', (() => {
+    const bad = []
+    for (const lv of [0, 4, 5, 9, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]) {
+      const expect = 1 + (masteryXpMultiplierRaw(lv) - 1) * MASTERY_XP_BONUS_SCALE
+      if (Math.abs(masteryXpMultiplier(lv) - expect) > 1e-9) bad.push(`Lv${lv}`)
+    }
+    return bad.length === 0
+  })())
+  check('精通档位', '缩放不破坏两条不变量：精通 0 仍是 ×1（不会「越精通越差」）+ 整条曲线仍单调不减', (() => {
+    if (masteryXpMultiplier(0) !== 1) return false
+    let prev = 0
+    for (let lv = 0; lv <= 100; lv++) {
+      const v = masteryXpMultiplier(lv)
+      if (v < prev - 1e-9 || v < 1 - 1e-9) return false
+      prev = v
+    }
+    return true
   })())
   check('精通档位', '边界：固定档 20 级起 3.6s（19 级为 null，避免「整段替换」回归）', masteryFixedInterval(20) === 3.6 && masteryFixedInterval(19) === null && masteryFixedInterval(100) === 2)
   check('精通档位', '展示格式：间隔列「减 1/3 / 减半 / ≤ 3.6s / ≤ 3.0s / ≤ 2.0s」（一位小数不能丢）', (() => {
@@ -4443,7 +4620,7 @@ console.log('══ C27. 精通档位说明 ══')
   check('精通档位', '制作类也能吃到保底与双倍（与采集同一组函数）', (() => {
     cinst.mastery[rec.id] = countForMasteryLevel(60)
     const p60 = cinst.masteryProgress(rec)
-    return p60.level === 60 && masteryYieldBonus(p60.level) === 1 && masteryDoubleChance(p60.level) === 0.4 && masteryXpMultiplier(p60.level) === 2.5
+    return p60.level === 60 && masteryYieldBonus(p60.level) === 1 && masteryDoubleChance(p60.level) === 0.4 && masteryXpMultiplier(p60.level) === 1.75
   })())
   void pc
 }
@@ -4455,7 +4632,7 @@ console.log('== C28. 伐木 / 采矿 / 20 档木材 ==')
   const M = getSkillInstance('mining')
   const W = getSkillInstance('woodcutting')
   const E = getSkillInstance('excavation')
-  check('伐木采矿', `目标数：伐木 ${W.targets.length} / 采矿 ${M.targets.length} / 挖掘 ${E.targets.length}`, W.targets.length === 20 && M.targets.length === 43 && E.targets.length === 42, `${W.targets.length}/${M.targets.length}/${E.targets.length}`)
+  check('伐木采矿', `目标数：伐木 ${W.targets.length} / 采矿 ${M.targets.length} / 挖掘 ${E.targets.length}`, W.targets.length === 20 && M.targets.length === 43 && E.targets.length === 49, `${W.targets.length}/${M.targets.length}/${E.targets.length}`)
   // 拆分无损：两边的目标集合不相交，并集 == 拆分前的 83 条
   const wIds = new Set(W.targets.map((t) => t.itemId))
   const mIds = new Set(M.targets.map((t) => t.itemId))
@@ -4571,14 +4748,18 @@ console.log('== C29. 新技能适配一致性 ==')
   pc.inventory = { copperKnife: 1, pineWood: 9, copperOre: 9 }
   const cost = pc.upgradeCost('copperKnife')
   check('适配', 'upgradeCost 只返回 timber*/ore* 字段（旧 ironOre/saltOre 已不存在）', !!cost && 'timberId' in cost && 'oreId' in cost && !('ironOre' in cost) && !('saltOre' in cost), JSON.stringify(cost))
-  check('适配', '强化费用 UI（右侧面板 + 装备弹窗）都不再读 ironOre/saltOre', !/\.ironOre|\.saltOre/.test(C('StatusPanel.vue')) && !/\.ironOre|\.saltOre/.test(C('EquipmentModal.vue')))
+  check('适配', '强化费用 UI（右侧面板 + 装备页）都不再读 ironOre/saltOre', !/\.ironOre|\.saltOre/.test(C('StatusPanel.vue')) && !/\.ironOre|\.saltOre/.test(V('EquipmentView.vue')))
 
   // ④ 装备页/弹窗的来源技能指向采矿与伐木（而不是跳错到挖掘）
-  check('适配', '装备页与装备弹窗都提供「去采矿 + 去伐木」入口且指向正确技能', V('GearView.vue').includes("id: 'mining'") && V('GearView.vue').includes("id: 'woodcutting'") && C('EquipmentModal.vue').includes("goToSkill('mining')") && C('EquipmentModal.vue').includes("goToSkill('woodcutting')"))
+  check('适配', '图鉴装备页与装备页都提供「去采矿 + 去伐木」入口且指向正确技能', V('GearView.vue').includes("id: 'mining'") && V('GearView.vue').includes("id: 'woodcutting'") && V('EquipmentView.vue').includes("goToSkill('mining')") && V('EquipmentView.vue').includes("goToSkill('woodcutting')"))
 
   // ⑤ 派生清单全部含两个新技能（逐处静态校验，防回退成手抄清单）
   check('适配', '挂机计划（SkillView.PLAN_SKILLS）含采矿与伐木', V('SkillView.vue').includes("'mining'") && V('SkillView.vue').includes("'woodcutting'"))
-  check('适配', '采集页类别分组与 id 分支含采矿/伐木（含「木料」分组标签）', V('GatheringView.vue').includes('isMining') && V('GatheringView.vue').includes('isWoodcutting') && V('GatheringView.vue').includes('material: '))
+  // 2026-09-19：分段口径由「挖掘/采矿/伐木按类别、其余每 5 级」统一成 10 级「时代」（见 C48）。
+  // 这条原先是「类别分组含木料标签」，现在改成查**同一意图**的两件事：每技能文案分支仍在、分组走单一实现。
+  check('适配', '采集页含采矿/伐木的 id 分支，且分段走统一的 levelEras（不再是类别分组）',
+    V('GatheringView.vue').includes('isMining') && V('GatheringView.vue').includes('isWoodcutting') &&
+    V('GatheringView.vue').includes('levelEras(') && !V('GatheringView.vue').includes('CAT_SECTION_LABEL'))
   check('适配', '赛季页类别→技能映射含 mineral→mining / material→woodcutting', V('SeasonView.vue').includes("c === 'mineral') return 'mining'") && V('SeasonView.vue').includes("c === 'material') return 'woodcutting'"))
   check('适配', '故事页轶事子类中文名含采矿/伐木', V('StoryView.vue').includes("mining: '采矿'") && V('StoryView.vue').includes("woodcutting: '伐木'"))
   check('适配', '图鉴导航表（itemNav.GATHER_TABLES）含采矿/伐木两条新表', (() => {
@@ -4791,7 +4972,8 @@ console.log('══ C32. 副业·木工 ══')
   // 木器价值 == 木材投入合计（v2.10.1：多余木器半价卖回即等于把木材整包卖掉）
   applyValueBalance()
   const wvBad = WOODWORKING_RECIPES.filter((r) => {
-    const want = Math.max(1, Math.round(Object.entries(r.ingredients).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
+    // 价值不变量必须与**生效材料**同源（材料系数改的是用量 ⇒ 这里读原始数量会让不变量名存实亡）
+    const want = Math.max(1, Math.round(Object.entries(effIngredients(r)).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
     return ITEMS[r.output.itemId]?.value !== want
   })
   check('副业·木工', '10 件木器的价值 == 其木材投入合计（半价卖出即等于把木材整包卖掉）',
@@ -4937,10 +5119,12 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
   check('副业四支', '148 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
     SIDELINE_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
   // ②b 产物价值 = 配方材料价值合计（v2.10.1：让「多做出来的」半价卖回时不亏）
+  // 2026-09-21：材料用量改走全局系数 ⇒ 这里也必须用 `effIngredients`（同源），
+  // 否则「材料翻倍但产物价值没跟上」会让这条不变量名存实亡（守卫反而助长静默失效）。
   applyValueBalance()
   const vBad = []
   for (const def of SIDELINE_SKILL_LIST) for (const r of SIDELINE_RECIPES[def.id]) {
-    const want = Math.max(1, Math.round(Object.entries(r.ingredients).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
+    const want = Math.max(1, Math.round(Object.entries(effIngredients(r)).reduce((a, [id, q]) => a + (ITEMS[id]?.value ?? 0) * q, 0)))
     const got = ITEMS[r.output.itemId]?.value
     if (got !== want) vBad.push(`${r.id}: ${got}≠${want}`)
   }
@@ -5243,9 +5427,13 @@ console.log('══ C34. 副业量产阶梯 ══')
   // 副业页**平铺**（2026-09-17 用户要求「副业的卡片去掉等级段分类和折叠，因为物品不多」）：
   // 产物只有 8~10 件，按等级段切十段 + 默认全部折叠 = 每次进来都看不到东西。
   const prodSrc = fs.readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
-  check('量产阶梯', '副业制作页走平铺（不分等级段、不折叠、隐藏快速跳转），且十六支都在平铺名单里',
+  // ⚠️ 2026-09-19：等级段体系由「折叠手风琴」改成「顶部标签页」(
+  //    `v-if="!flatMode && sections.length > 1"` 的 .era-tabs + 只渲染 activeSec) ⇒ 这里跟着改判据；
+  //    副业要保证的仍是「不切段、不折叠、一次全平铺」。
+  check('量产阶梯', '副业制作页走平铺（不分等级段、不折叠、隐藏等级段标签栏），且十六支都在平铺名单里',
     prodSrc.includes('flatMode') && prodSrc.includes('SIDELINE_LADDER_SKILL_IDS')
-    && prodSrc.includes('v-if="!flatMode"') && prodSrc.includes('flatMode || isOpen(')
+    && prodSrc.includes('v-if="!flatMode && sections.length > 1"')
+    && !prodSrc.includes('toggleSection') && !prodSrc.includes('isOpen(')
     && SIDELINE_LADDER_SKILL_IDS.length === 16)
 
   // ⑪ **比值守卫**（把「满加成后会不会平衡崩坏」变成可执行断言）：
@@ -5312,7 +5500,7 @@ console.log('══ C35. 副业干净轴五支 ══')
   const hunt = getSkillInstance('hunting')
   const fish = getSkillInstance('fishing')
   check('干净轴五支', `制箭已接上狩猎（省箭 ${(hunt.ammoSaveChance * 100).toFixed(0)}%，设计 ≈38%）`, hunt.ammoSaveChance > 0.36 && hunt.ammoSaveChance <= 0.9)
-  check('干净轴五支', `制网已接上垂钓（稀有率 ${(fish.rareChance * 100).toFixed(2)}%，设计 ≈0.94%）`, fish.rareChance > 0.009 && fish.rareChance <= 0.05)
+  check('干净轴五支', `制网已接上垂钓（稀有率 ${(fish.rareChance * 100).toFixed(2)}%，设计 ≈0.47%）`, fish.rareChance > 0.004 && fish.rareChance <= 0.05)
   check('干净轴五支', `香道已接上订单到访（提速 +${rich5.sidelineEffectTotal('orderSpeedPct')}%，设计 ≈27%）`, rich5.sidelineEffectTotal('orderSpeedPct') > 25)
   check('干净轴五支', `年货已接上节庆（放大 +${rich5.sidelineEffectTotal('festivalPct')}%，设计 ≈19.6%）`, rich5.sidelineEffectTotal('festivalPct') > 19)
   check('干净轴五支', `玉作已接上宝石（+${rich5.sidelineEffectTotal('gemPct')}%，设计 ≈33%）`, rich5.sidelineEffectTotal('gemPct') > 32)
@@ -5344,10 +5532,15 @@ console.log('══ C35. 副业干净轴五支 ══')
     return gains.length > 0 && gains.every((k) => boosted[k] > raw[k])
       && Object.keys(raw).every((k) => !(typeof raw[k] === 'number' && raw[k] <= 1) || boosted[k] === raw[k])
   })())
+  // ⚠️ 采样量必须够大：理论比值 1/1.27 = 0.7874，与阈值 0.8 只差 1.6%。
+  //    原先取 300 时均值相对标准误 ≈ 2.4% ⇒ **约 13% 的概率误报 FAIL**（2026-09-18 实测 400 次试验
+  //    不达标的占 13%，而中位数 0.7875 完全正确）——CI 会因此随机变红。
+  //    20000 次把标准误压到 ~0.3%，阈值外还有 ~4σ，误报率降到万分之一量级。
   check('干净轴五支', '订单到访间隔真的缩短（提速 27% → 均值缩短 ≥20%；单次抽样是随机的，故比均值）', (() => {
+    const N = 20000
     let a = 0
     let b = 0
-    for (let i = 0; i < 300; i++) { a += nextOrderDelay(0); b += nextOrderDelay(27) }
+    for (let i = 0; i < N; i++) { a += nextOrderDelay(0); b += nextOrderDelay(27) }
     return b / a < 0.8
   })())
 
@@ -5363,7 +5556,9 @@ console.log('══ C35. 副业干净轴五支 ══')
   const badR = []
   for (const [name, got, expect, cap, unit] of [
     ['省箭%', rich5.sidelineEffectTotal('huntSavePct'), 38, 1.15, '%'],
-    ['稀有率倍数', fish.rareChance / 0.005, 1.88, 1.15, '×'],
+    // ⚠️ 分母必须走**同一个难度系数出口**：写死的 0.005 是难度系数引入前的基准值，
+    //    不改会算出 0.0047/0.005 = 0.94× 这种假倍数（同 system_test2 的公会 buff 那条坑）
+    ['稀有率倍数', fish.rareChance / otherChance(0.005), 1.88, 1.15, '×'],
     ['订单提速%', rich5.sidelineEffectTotal('orderSpeedPct'), 27, 1.2, '%'],
     ['节庆放大%', rich5.sidelineEffectTotal('festivalPct'), 19.6, 1.2, '%'],
     ['宝石效果%', rich5.sidelineEffectTotal('gemPct'), 33, 1.3, '%'],
@@ -5609,6 +5804,1481 @@ console.log('══ C37. 副业第三批四支 ══')
   check('第三批四支', '四支在公会与每日/周常任务里都有条目',
     NEW4.every((id) => GUILDS.some((g) => (g.tasks ?? []).some((t) => t.param === id)))
     && NEW4.every((id) => DAILY_POOL.some((t) => t.param === id) || WEEKLY_POOL.some((t) => t.param === id)))
+}
+
+// ── C38. 经验条「转生后为负」（2026-09-18 用户实测报出）──
+// 转生「师徒传承」把等级抬到 1+carry 而 exp 归零 ⇒ exp 低于本级的累计基线，
+// 原先 xpProgress 算 current = exp - base 直接是负数（实测 level=6/exp=0 → -113,528、progress -3.74），
+// 侧栏文案变成「-113,528 / 30,372」。修法见 Experience.js 的 xpProgress。
+console.log('══ C38. 经验条负值守卫 ══')
+{
+  const total = (lv) => totalXpForLevel(lv)
+  const bad = []
+  // ① 全量不变量：任何 (等级, 经验) 组合都不许返回负 current / 越界 progress
+  for (const lv of [1, 2, 6, 21, 50, 99, 100, 120]) {
+    for (const exp of [0, 1, total(lv) - 1, total(lv), total(lv) + 1, total(lv + 1), total(lv + 1) * 2]) {
+      if (!Number.isFinite(exp) || exp < 0) continue
+      const r = xpProgress(exp, 120, lv)
+      if (r.current < 0) bad.push(`lv${lv}/exp${exp}: current=${r.current}`)
+      if (!(r.progress >= 0 && r.progress <= 1)) bad.push(`lv${lv}/exp${exp}: progress=${r.progress}`)
+      if (r.needed < 0) bad.push(`lv${lv}/exp${exp}: needed=${r.needed}`)
+    }
+  }
+  check('经验条负值', '任意等级/经验组合下 current ≥ 0、progress ∈ [0,1]、needed ≥ 0（含转生态 exp=0）', bad.length === 0, bad.slice(0, 4).join('; '))
+
+  // ② 转生态（转生产物：level = 1+carry、exp = 0）的真实口径
+  const zero = xpProgress(0, 120, 6)
+  check('经验条负值', `转生态（等级 6 / 经验 0）显示「0 / ${total(7).toLocaleString()}」而不是负数`,
+    zero.current === 0 && zero.needed === total(7) && zero.progress === 0,
+    `current=${zero.current} needed=${zero.needed} progress=${zero.progress}`)
+
+  // ③ 进度条必须在「升级判定那一刻」刚好满格（与 Skill.addXp 的 exp >= xpTotalForLevel(level+1) 同源）
+  check('经验条负值', '进度条在 exp 达到下一级基线时恰好 100%（与 Skill.addXp 的升级条件同源）',
+    xpProgress(total(7), 120, 6).progress === 1)
+
+  // ④ 正常态零回归：exp 正好等于本级基线时，与旧公式逐值一致
+  const norm = xpProgress(total(6), 120, 6)
+  check('经验条负值', '正常态（exp = 本级基线）口径不变：current=0、needed = 本级区间',
+    norm.current === 0 && norm.needed === total(7) - total(6), `current=${norm.current} needed=${norm.needed}`)
+
+  // ⑤ 调用点必须把「等级」传进去：不传 level 时 xpProgress 会用 levelFromXp(exp) 反推，
+  //    而转生技能是「等级 6 / exp 0」⇒ 反推得 1 级，条子按 1 级口径算、exp 一过 1→2 门槛就顶到 100%
+  const badCall = []
+  for (const [name, rel] of [['Sidebar.vue', '../../src/components/Sidebar.vue'], ['SkillView.vue', '../../src/views/SkillView.vue']]) {
+    const src = fs.readFileSync(new URL(rel, import.meta.url), 'utf8')
+    // ⚠️ 参数里有嵌套括号（skillState(...)），不能用 /xpProgress\(([^)]*)\)/ 那样截到第一个 ')' —— 必须按括号配平取整段
+    for (const m of src.matchAll(/xpProgress\(/g)) {
+      let i = m.index + m[0].length, depth = 1
+      while (i < src.length && depth > 0) { if (src[i] === '(') depth++; else if (src[i] === ')') depth--; i++ }
+      const args = src.slice(m.index + m[0].length, i - 1).trim()
+      if (!/\.level\s*$/.test(args)) badCall.push(`${name}: xpProgress(${args.replace(/\s+/g, ' ')}) 没把等级传进去`)
+    }
+  }
+  check('经验条负值', '两个调用点都把等级（权威值）传进 xpProgress', badCall.length === 0, badCall.join('; '))
+
+  // ⑥ 真跑一次转生（满 100 级 → 转生）：等级落到 1+传承，且**经验 = 该等级的累计基线**
+  //    （2026-09-18 用户确认：传承保留的等级连基线经验一起给，于是到下一级只需本级区间）
+  const pl = freshPlayer()
+  pl.setSkillState('knife', { level: 100, exp: total(100), prestiges: 0 })
+  const ok = pl.prestigeSkill('knife')
+  const st = pl.skillState('knife')
+  const after = xpProgress(st.exp, pl.getMaxLevel('knife'), st.level)
+  check('经验条负值', '转生后：等级 = 1+传承、经验 = 该等级基线、经验条从 0 起步',
+    ok === true && st.level === 1 + pl.legacyCarryOf('knife') && st.exp === total(st.level)
+    && after.current === 0 && after.needed === total(st.level + 1) - total(st.level) && after.progress === 0,
+    `level=${st.level} exp=${st.exp} current=${after.current} needed=${after.needed}`)
+
+  // ⑦ 老档迁移：2026-09-18 之前转生过的档是「等级 6 / 经验 0」，读档时要抬到基线（否则首屏还是负数）
+  const pLegacy = freshPlayer()
+  const saveLegacy = JSON.parse(JSON.stringify(pLegacy.serialize()))
+  saveLegacy.skills.knife = { level: 6, exp: 0, mastery: {}, prestiges: 1 }
+  saveLegacy.skills.foraging = { level: 12, exp: total(12), mastery: {}, prestiges: 0 } // 正常档：不许被动到
+  const pMig = freshPlayer()
+  pMig.applySave(saveLegacy)
+  const migKnife = pMig.skillState('knife')
+  const migFor = pMig.skillState('foraging')
+  check('经验条负值', '老档（转生后 exp 被清零）读档即补到该等级基线；正常档的经验一动不动',
+    migKnife.exp === total(6) && migFor.exp === total(12) && xpProgress(migKnife.exp, 120, 6).progress === 0,
+    `knife: ${migKnife.exp}（应 ${total(6)}）· foraging: ${migFor.exp}（应 ${total(12)}）`)
+}
+
+// ── C39. 装备词条改为「按装备 id 存」（2026-09-18 用户选择：换穿不重掷、洗练永久）──
+// 旧口径是 `gearMods[槽位] = { itemId, mods }`：换穿同槽位的另一件再换回来会**重掷**，
+// 于是花金币洗练出的结果会被换装抹掉（用户实测报出）。新口径 `gearMods[itemId] = { mods, at }`。
+console.log('══ C39. 装备词条按装备 id 存 ══')
+{
+  const W = Object.values(ITEMS).filter((i) => i.type === 'equipment' && i.slot === 'weapon')
+  const p = freshPlayer()
+  const A = W.find((i) => i.id === 'copperKnife') ?? W[0]
+  const B = W.find((i) => i.id !== A.id && i.id === 'ironKnife') ?? W.find((i) => i.id !== A.id)
+  p.gainItem(A.id, 3)
+  p.gainItem(B.id, 1)
+
+  // ① 换穿 A → B → A：A 的词条必须原样还在（旧口径这里会重掷）
+  p.equip(A.id)
+  const aMods = JSON.stringify(p.gearModsOf(A.id))
+  p.unequip(A.slot)
+  p.equip(A.id)
+  const afterReWear = JSON.stringify(p.gearModsOf(A.id))
+  p.unequip(A.slot)
+  p.equip(B.id)
+  const bMods = JSON.stringify(p.gearModsOf(B.id))
+  p.equip(A.id)
+  check('词条按装备存', '卸下再穿 / 换穿别的再换回：同一件装备的词条一字不变',
+    afterReWear === aMods && JSON.stringify(p.gearModsOf(A.id)) === aMods && p.gearModsOf(B.id).length === JSON.parse(bMods).length,
+    `A: ${aMods} → ${afterReWear} → ${JSON.stringify(p.gearModsOf(A.id))}`)
+
+  // ② 洗练结果必须经得起换装（旧口径会被抹掉）
+  p.gold = 1e6
+  const rr = p.rerollGearMod(A.slot)
+  const rolled = JSON.stringify(p.gearModsOf(A.id))
+  p.unequip(A.slot)
+  p.equip(B.id)
+  p.equip(A.id)
+  check('词条按装备存', '洗练出的词条在「换成别的再换回来」之后仍在（花金币的结果不会被换装抹掉）',
+    rr.ok === true && JSON.stringify(p.gearModsOf(A.id)) === rolled, `${rolled} → ${JSON.stringify(p.gearModsOf(A.id))}`)
+
+  // ③ 装备**不可堆叠**（同类上限 1 件）⇒「按装备 id 存」与「按件存」语义等价：
+  //    不存在「背包里两件同款各掷一套词条」的场景 —— 这正是选「按 id 存」的依据
+  const pDup = freshPlayer()
+  pDup.gainItem(A.id, 5)
+  const dupQty = pDup.inventory[A.id] ?? 0
+  check('词条按装备存', '装备不可堆叠（一次发 5 件 → 背包只留 1 件），故按 id 存不会丢「同款两件各不相同」',
+    getItem(A.id).stackable === false && dupQty === 1 && Object.keys(pDup.gearMods).filter((k) => k === A.id).length <= 1,
+    `stackable=${getItem(A.id).stackable} qty=${dupQty}`)
+
+  // ④ 只有「穿戴中」的词条才进属性合计
+  const pOff = freshPlayer()
+  pOff.gainItem('goldKnife', 1)
+  pOff.gainItem('ironKnife', 1)
+  pOff.gearMods.goldKnife = { mods: [{ stat: 'attack', label: '攻击', value: 999 }], at: 0 }
+  pOff.gearMods.ironKnife = { mods: [{ stat: 'attack', label: '攻击', value: 777 }], at: 0 }
+  pOff.equip('goldKnife')
+  const withGold = pOff.equippedStats.attack
+  pOff.equip('ironKnife') // 换穿：goldKnife 脱下，它的词条不该再计入
+  const withIron = pOff.equippedStats.attack
+  check('词条按装备存', '未穿戴装备的词条不生效（换下后不再计入、换上的计入）',
+    withGold >= 999 && withIron < 999 && withIron >= 777, `goldKnife=${withGold} → ironKnife=${withIron}`)
+
+  // ⑤ 旧档迁移（按槽位 → 按装备）且幂等
+  const legacy = { weapon: { itemId: 'copperKnife', mods: [{ stat: 'attack', label: '攻击', value: 7 }] }, helmet: { itemId: 'ironHat', mods: [] } }
+  const mig = migrateGearMods(legacy)
+  const mig2 = migrateGearMods(mig)
+  check('词条按装备存', '旧档（gearMods[槽位]）迁移到按装备 id，且再迁一次不变（幂等）',
+    mig.copperKnife?.mods?.[0]?.value === 7 && mig.ironHat !== undefined && !mig.weapon && JSON.stringify(mig2) === JSON.stringify(mig),
+    JSON.stringify(mig))
+
+  // ⑥ 读档链路：旧档走 applySave 后词条仍然生效（不只是迁移函数单测）
+  //    ⚠️ serialize()/applySave() 吃的是「玩家对象本身」，没有外层 player 包裹（bootstrap 传的是 data.player）
+  const pOld = freshPlayer()
+  const saveOld = JSON.parse(JSON.stringify(pOld.serialize()))
+  saveOld.equipment.weapon = 'copperKnife'
+  saveOld.inventory.copperKnife = 1
+  saveOld.gearMods = { weapon: { itemId: 'copperKnife', mods: [{ stat: 'attack', label: '攻击', value: 33 }] } }
+  const pBack = freshPlayer()
+  pBack.applySave(saveOld)
+  check('词条按装备存', '旧档经 applySave 后词条已迁移并生效（读档链路，不只看迁移函数）',
+    pBack.gearModsOf('copperKnife').some((m) => m.value === 33) && !pBack.gearMods.weapon,
+    JSON.stringify(pBack.gearMods))
+
+  // ⑦ 记录条数有上限（防存档无限膨胀），且当前穿戴的永远保留
+  const ALL_EQ = Object.values(ITEMS).filter((i) => i.type === 'equipment')
+  const pCap = freshPlayer()
+  pCap.gainItem('copperKnife', 1)
+  for (const it of ALL_EQ) pCap.ensureGearMods(it.id) // 先塞满（远超上限）
+  pCap.equip('copperKnife')
+  for (const it of ALL_EQ) pCap.ensureGearMods(it.id) // 再走一轮，触发剪枝
+  const capped = Object.keys(pCap.gearMods).length
+  check('词条按装备存', `词条记录被剪枝到 ≤ ${GEAR_MODS_MAX} 条（实测 ${capped} / 装备共 ${ALL_EQ.length} 件），且当前穿戴的保留`,
+    capped <= GEAR_MODS_MAX && !!pCap.gearMods.copperKnife && ALL_EQ.length > GEAR_MODS_MAX,
+    `capped=${capped} equippedKept=${!!pCap.gearMods.copperKnife}`)
+
+  // ⑧ 存档往返无损
+  const pRt = freshPlayer()
+  pRt.gainItem('goldKnife', 1)
+  pRt.equip('goldKnife')
+  pRt.gearMods.goldKnife = { mods: [{ stat: 'critChance', label: '暴击', value: 0.05 }], at: 123 }
+  const back = freshPlayer()
+  back.applySave(JSON.parse(JSON.stringify(pRt.serialize())))
+  check('词条按装备存', '词条随存档往返无损（含值精度与 stat）',
+    JSON.stringify(back.gearModsOf('goldKnife')) === JSON.stringify(pRt.gearModsOf('goldKnife')), JSON.stringify(back.gearMods))
+
+  // ⑨ 源码纪律：掷词条只允许发生在「补记录」与「洗练」两处（别再冒出第三个调用点偷偷重掷）
+  const PS = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+  const rollCalls = [...PS.matchAll(/rollGearMods\(/g)].length
+  check('词条按装备存', 'player.js 里 rollGearMods 只在 ensureGearMods 与 rerollGearMod 两处调用（唯一重掷入口）',
+    rollCalls === 2, `实际 ${rollCalls} 处`)
+
+  // ⑩ 玩家可读文案与新口径一致（旧文案「换装会重掷」会误导）
+  const GV = fs.readFileSync(new URL('../../src/views/GearView.vue', import.meta.url), 'utf8')
+  const GD = fs.readFileSync(new URL('../../src/game/data/guide.js', import.meta.url), 'utf8')
+  check('词条按装备存', '装备总览与攻略总览都不再写「换装（会）重掷」',
+    !/换装会重掷|换装重掷/.test(GV) && !/换装会重掷|换装重掷/.test(GD))
+}
+
+// ── C40. 新手目标链（2026-09-18，留存改进 ①：把开局 30 分钟塞满小高潮）──
+// 20 步 · 每步即时奖励 · 幂等账本（guide.claimed）· 无死路 · 轨迹供「首 30 分钟漏斗」统计
+console.log('══ C40. 新手目标链 ══')
+{
+  // ① 结构：20 步、id 唯一、字段齐备
+  const ids = NEWBIE_STEPS.map((s) => s.id)
+  const bad = []
+  if (NEWBIE_TOTAL !== 20) bad.push(`步数为 ${NEWBIE_TOTAL}（应为 20）`)
+  if (new Set(ids).size !== ids.length) bad.push('id 有重复')
+  for (const s of NEWBIE_STEPS) {
+    if (!s.id || !s.label || !s.where || !s.view) bad.push(`${s.id}: 缺 id/label/where/view`)
+    if (typeof s.check !== 'function') bad.push(`${s.id}: check 不是函数`)
+  }
+  check('新手链', '20 步 · id 唯一 · 每步都有 label/where/view/check', bad.length === 0, bad.join('; '))
+
+  // ② 奖励：物品必须存在、数量为正整数、金额有上限（防有人把奖励调成天文数字破坏经济）
+  const badR = []
+  let totalGold = 0
+  for (const s of NEWBIE_STEPS) {
+    const g = s.reward?.gold ?? 0
+    totalGold += g
+    if (g < 0 || !Number.isFinite(g)) badR.push(`${s.id}: 金币非法 ${g}`)
+    for (const [id, q] of Object.entries(s.reward?.items ?? {})) {
+      if (!getItem(id)) badR.push(`${s.id}: 物品 ${id} 不存在`)
+      if (!(q > 0) || !Number.isInteger(q)) badR.push(`${s.id}: ${id} 数量非法 ${q}`)
+    }
+    if (rewardText(s.reward) === '') badR.push(`${s.id}: 奖励文案为空`)
+  }
+  check('新手链', '奖励只用既有物品、数量为正整数、文案非空', badR.length === 0, badR.slice(0, 4).join('; '))
+
+  // ②b 长线步只能在链尾（2026-09-18 用户实测报出：⑬「采集队」要技能 25 级，链子在中段被卡死、后面十几步永不显示）
+  const longIdx = NEWBIE_STEPS.map((s, i) => (s.long ? i : -1)).filter((i) => i >= 0)
+  check('新手链', `长线目标（long: true）只允许出现在链尾两步内（实测位置 ${longIdx.join('/')}）`,
+    longIdx.every((i) => i >= NEWBIE_TOTAL - 2),
+    longIdx.filter((i) => i < NEWBIE_TOTAL - 2).map((i) => `${NEWBIE_STEPS[i].id} 在第 ${i + 1} 步`).join('; '))
+  // 每个长线步的 label 必须写明是长线（免得玩家以为「马上就差这一步」）
+  check('新手链', '长线步的文案里带「长线」标注',
+    longIdx.every((i) => NEWBIE_STEPS[i].label.includes('长线')))
+  check('新手链', `奖励总额有上限（实测 ${totalGold.toLocaleString()} 金币 ≤ 20,000）`, totalGold <= 20000, `totalGold=${totalGold}`)
+
+  // ③ 判定不许抛错（含极端空状态）
+  const empty = freshPlayer()
+  const throwAt = []
+  for (const s of NEWBIE_STEPS) {
+    try { s.check(empty) } catch (e) { throwAt.push(`${s.id}: ${e.message}`) }
+  }
+  check('新手链', '全部判定在空档上可执行且不抛错', throwAt.length === 0, throwAt.join('; '))
+
+  // ④ 新档：一步都不该完成（横幅要显示第 1 步，否则「开局即通关」）
+  const p0 = freshPlayer()
+  check('新手链', '新档 syncNewbieChain() = 0 且停在第 1 步', p0.syncNewbieChain() === 0 && p0.guide.step === 0 && !!p0.newbieCurrent())
+
+  // ⑤ 无死路：把全部条件造到满足，迭代推进后必须 20 步全完成（逐步测量会误报，必须迭代到不动点）
+  const pA = freshPlayer()
+  const { ITEMS: ALL_ITEMS } = await import('../../src/game/data/items.js')
+  const rare = Object.keys(ALL_ITEMS).find((k) => ALL_ITEMS[k].type === 'equipment' && ['稀有', '史诗', '传说', '神话'].includes(ALL_ITEMS[k].quality))
+  pA.gainItem('copperKnife', 1); pA.equip('copperKnife')
+  pA.skillTargets.foraging = { itemId: 'apple', startedAt: Date.now() }
+  pA.skillTargets.mining = { itemId: 'saltOre', startedAt: Date.now() }
+  for (let i = 0; i < 45; i++) pA.collected['probe' + i] = true
+  pA.storyProgress['craft:x'] = 1
+  pA.stats.combatWins = 1
+  pA.restaurant.menu = ['roastPotato']
+  pA.stats.arena.wins = 1
+  pA.guild.id = 'cook'
+  pA.seasons[1] = { points: 20, claimed: [20] }
+  pA.regulars.r1 = { serves: 1, lastDay: null, giftClaimed: false }
+  pA.expeditions.line1 = { completions: 1, slots: [] }
+  pA.stats.totalGoldEarned = 12000
+  pA.stats.explorations = 1
+  pA.upgrades.copperKnife = 1
+  pA.gearMods.ironKnife = { mods: [], at: 1 }
+  pA.gainItem(rare, 1); pA.equip(rare)
+  let rounds = 0, moved = true
+  while (moved && rounds < 40) { moved = pA.syncNewbieChain() > 0; rounds++ }
+  check('新手链', `条件齐备后 20 步全部可达且 done=true（迭代 ${rounds} 轮，无死路）`,
+    pA.guide.done === true && pA.guide.claimed.length === NEWBIE_TOTAL && pA.guide.step === NEWBIE_TOTAL,
+    `done=${pA.guide.done} claimed=${pA.guide.claimed.length} step=${pA.guide.step}`)
+
+  // ⑥ 幂等：反复调用不再发奖
+  const goldAfter = pA.gold
+  for (let i = 0; i < 30; i++) pA.syncNewbieChain()
+  check('新手链', '连调 30 次不再重复发奖（金币不变、claimed 不增）',
+    pA.gold === goldAfter && pA.guide.claimed.length === NEWBIE_TOTAL, `gold ${goldAfter} → ${pA.gold}`)
+
+  // ⑦ 轨迹：每步一条、有相对时刻（漏斗统计的原料）
+  check('新手链', 'guide.trace 每步一条且带相对时刻（漏斗原料）',
+    pA.guide.trace.length === NEWBIE_TOTAL && pA.guide.trace.every((t) => typeof t.id === 'string' && Number.isFinite(t.at) && t.at >= 0),
+    JSON.stringify(pA.guide.trace.slice(0, 2)))
+
+  // ⑧ 存档往返 + 旧档兼容（旧档只有 { step, done }）
+  const back = freshPlayer()
+  back.applySave(JSON.parse(JSON.stringify(pA.serialize())))
+  check('新手链', '链子进度随存档往返无损（claimed/step/trace）',
+    back.guide.claimed.length === NEWBIE_TOTAL && back.guide.step === NEWBIE_TOTAL && back.guide.trace.length === NEWBIE_TOTAL)
+  const oldSave = JSON.parse(JSON.stringify(pA.serialize()))
+  oldSave.guide = { step: 0, done: false }
+  const pOld = freshPlayer()
+  pOld.applySave(oldSave)
+  check('新手链', '旧档（guide 只有 step/done）读档后子字段补齐、且已满足的步会补推进（不会永久卡在第 1 步）',
+    Array.isArray(pOld.guide.claimed) && Array.isArray(pOld.guide.trace) && pOld.syncNewbieChain() > 0,
+    JSON.stringify(pOld.guide))
+}
+
+// ── C41. 左上两条提示的分级与「一次性大反馈」（2026-09-18，留存改进 ⑤⑥）──
+console.log('══ C41. 功能页分级 + 大反馈演出 ══')
+{
+  const SIDEBAR = fs.readFileSync(new URL('../../src/components/Sidebar.vue', import.meta.url), 'utf8')
+
+  // ① ⑤ 分级：磁贴的 unlock 必须**复用 store 的既有访问器**（不发明新阈值），且开关存在
+  const gates = [...SIDEBAR.matchAll(/view: '(\w+)'[^}]*unlock: \(p\) => p\.(\w+)\(\)/g)].map((m) => ({ view: m[1], acc: m[2] }))
+  const missing = gates.filter((g) => !new RegExp(`${g.acc}\\(\\)\\s*\\{`).test(fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')))
+  check('功能页分级', `带解锁门槛的磁贴都复用了 store 的既有访问器（实测 ${gates.length} 个：${gates.map((g) => g.view).join('/')}）`,
+    gates.length >= 10 && missing.length === 0, missing.map((m) => `${m.view}→${m.acc}`).join('; '))
+  check('功能页分级', '有「显示全部」开关（settings.showAllFeatures 进存档，随时能放出来）',
+    /settings\.showAllFeatures/.test(SIDEBAR) || /showAllFeatures: false/.test(fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')))
+  // 未解锁的磁贴必须是**收起**而不是置灰不可点（置灰会让新玩家反复点）
+  check('功能页分级', '模板按 tileVisible 过滤磁贴（收起而不是置灰）', /v-for="it in g\.items\.filter\(\(it\) => tileVisible\(it\)\)"/.test(SIDEBAR))
+  // 无门槛的核心页永远可见（否则老玩家/测试会找不到入口）
+  const always = ['shop', 'quests', 'mail', 'achievements', 'log', 'milestones']
+  check('功能页分级', `无门槛的核心页（${always.join('/')}）没有被误加 unlock`,
+    always.every((v) => !new RegExp(`view: '${v}'[^}]*unlock`).test(SIDEBAR)))
+
+  // ② ⑥ 大反馈：两个账本存在、且**各只演一次**（行为断言：监听 → 触发两次 → 只收到一次）
+  const pC = freshPlayer()
+  const seen = []
+  const fakeUi = { celebrate: (x) => seen.push(x) }
+  const off = initCelebrations(pC, fakeUi)
+  EventBus.emit('player:prestige', { skillId: 'knife', prestiges: 1, carry: 5 })
+  EventBus.emit('player:prestige', { skillId: 'knife', prestiges: 2, carry: 5 })
+  EventBus.emit('season:claim', { name: '第一季', seasonName: '第一季', tier: '奖励 10', full: false })
+  EventBus.emit('season:claim', { name: '第一季', seasonName: '第一季', tier: '奖励 10', full: true })
+  EventBus.emit('season:claim', { name: '第二季', seasonName: '第二季', tier: '奖励 10', full: true })
+  off()
+  check('大反馈', '首次转生只演一次（连发两次事件只收到一个；演出内容对得起这个时刻）',
+    seen.filter((x) => x.icon === '♻️').length === 1 && /转生/.test(seen.find((x) => x.icon === '♻️')?.title ?? ''))
+  check('大反馈', '首次赛季满档只演一次（半满不演；两个赛季都满也只演第一次）',
+    seen.filter((x) => x.icon === '🎪').length === 1,
+    JSON.stringify(seen.map((x) => x.icon)))
+  check('大反馈', '账本已写进 stats（随存档往返，不会每次开局重演）',
+    pC.stats.prestigeCelebrated === true && pC.stats.seasonFullCelebrated === true)
+  const backC = freshPlayer()
+  backC.applySave(JSON.parse(JSON.stringify(pC.serialize())))
+  check('大反馈', '两个账本随存档往返保留（旧档缺失时回退 false → 该演的那次仍会演）',
+    backC.stats.prestigeCelebrated === true && backC.stats.seasonFullCelebrated === true
+    && freshPlayer().stats.prestigeCelebrated === false)
+  // 注销后不再接收（App 卸载时的清理）
+  EventBus.emit('player:prestige', { skillId: 'knife', prestiges: 3, carry: 5 })
+  check('大反馈', '注销后不再接收事件（onUnmounted 会调用返回的注销函数）', seen.length === 2)
+}
+// ══════════ C42：战败惩罚按「可重复性」分级（2026-09-19 立）══════════
+// 起因：塔/秘境是**可无限重复**的 PvE，而战败会**永久销毁一件随机装备** ⇒ 与强化/词条/宝石（按装备 id 记）
+// 叠加成**死亡螺旋**：输一场掉一件 → 属性阶梯下滑 → 更容易输。实测同一层因此给出 100%/76%/38%/0% 四种结果。
+// 现规则：可重复的 PvE（isTower / isRealm）战败只清品鉴点，不夺装备；**区域对决/首领/竞技场保留重罚**。
+{
+  const { Combat } = await import('../../src/game/combat/Combat.js')
+  const { towerFloor } = await import('../../src/game/data/battleTower.js')
+  const gearCount = (p) => Object.values(p.equipment).filter(Boolean).length
+  const mk = () => {
+    const p = freshPlayer(); p.gold = 1e6
+    for (const [slot, id] of Object.entries({ weapon: 'copperKnife', helmet: 'copperHat', body: 'copperApron' })) { p.gainItem(id, 1); p.equip(id) }
+    return p
+  }
+  /** 让玩家必输：不强化、不开自动进食、每回合压到 1 点 HP */
+  const forceLose = (p, opp) => {
+    for (const id of Object.values(p.equipment).filter(Boolean)) p.upgrades[id] = 0
+    p.settings.autoEat = false
+    const c = new Combat(p)
+    for (let i = 0; i < 3000; i++) {
+      p.setCombat({ hp: 1 })
+      c.start(opp)
+      let g = 0
+      while (c.inFight && g++ < 4000) c.tick(200)
+      if (c.result === 'lose') return true
+    }
+    return false
+  }
+  {
+    const p = mk(); p.tastePoints = 500
+    const before = gearCount(p)
+    const lost = forceLose(p, towerFloor(50, 60))
+    check('战败惩罚', '塔里战败**不夺装备**（避免死亡螺旋）', lost && gearCount(p) === before, `${before} → ${gearCount(p)}`)
+    check('战败惩罚', '塔里战败清空品鉴点（奥义随之熄灭，张力仍在）', p.tastePoints === 0, `tastePoints=${p.tastePoints}`)
+  }
+  {
+    const p = mk()
+    const before = gearCount(p)
+    const opp = { name: '秘境守关', level: 120, hp: 99999, atk: 9999, def: 400, eva: 200, acc: 400, critChance: 0.5, speed: 1, style: 'knife', isRealm: true, drops: [] }
+    const lost = forceLose(p, opp)
+    check('战败惩罚', '秘境战败**不夺装备**（同上）', lost && gearCount(p) === before, `${before} → ${gearCount(p)}`)
+  }
+  {
+    const p = mk()
+    const before = gearCount(p)
+    const opp = { name: '区域强者', level: 120, hp: 99999, atk: 9999, def: 400, eva: 200, acc: 400, critChance: 0.5, speed: 1, style: 'knife', drops: [] }
+    const lost = forceLose(p, opp)
+    check('战败惩罚', '区域对决战败**仍夺走一件装备**（一次性挑战保留重罚）', lost && gearCount(p) === before - 1, `${before} → ${gearCount(p)}`)
+  }
+}
+
+// ══════════ C43：日历硬门与挑战时点（2026-09-19 参照 Rocky Idle 立）══════════
+// 起因：实测参考作 Rocky Idle 的构建产物里**完全没有赛季/日历机制**（只有离线上限），长线 100% 是努力门；
+// 而本作曾把「主线毕业」锁在 8 个不同赛季（=112 天，努力无法缩短），且把唯一的可重复挑战（塔）锁在对决 99。
+// ⚠️ 本组用**行为断言**（造存档 → 读判定），不用源码扫描：第一版只比较「需求数字 ≤ 单季档位数」，
+//    结果把计数语义改回「不同赛季」时**守卫仍然绿**（反例验证抓到的），等于没设防。
+{
+  const { STORY, storyReqCur } = await import('../../src/game/data/story.js')
+  const { SEASONS } = await import('../../src/game/data/seasons.js')
+  const { TOWER_UNLOCK_LEVEL } = await import('../../src/game/data/battleTower.js')
+  const tiersPerSeason = Math.max(...SEASONS.map((x) => x.tiers?.length ?? 0))
+  // ① 行为：只在**一个赛季**里领满档位，故事里的赛季需求就该被满足（⇒ 不存在日历硬门）
+  const p1 = freshPlayer()
+  p1.seasons = { summer: { claimed: [1, 2, 3, 4, 5, 6, 7, 8] } }
+  const needMax = Math.max(...STORY.flatMap((ch) => (ch.requirements ?? []).filter((r) => r.kind === 'seasons').map((r) => r.need)))
+  const cur = storyReqCur(p1, 'seasons')
+  check('日历门', `单季领满档位即满足故事的最高赛季需求（需 ${needMax}，实得 ${cur}）——无日历硬门`,
+    cur >= needMax, `单季 8 档只得 ${cur}（说明仍在按「不同赛季数」计数 ⇒ 112 天硬门回来了）`)
+  // ② 数字侧兜底：需求本身不能超过单季档位数
+  check('日历门', `故事赛季需求 ≤ 单季档位数（${tiersPerSeason}）`, needMax <= tiersPerSeason, `最高需求 ${needMax}`)
+  // ③ 塔必须在中后期解锁（≤ 对决 60），不能退回大后期
+  check('挑战时点', `挑战塔在中后期就解锁（对决 ${TOWER_UNLOCK_LEVEL} ≤ 60）`, TOWER_UNLOCK_LEVEL <= 60, `当前 ${TOWER_UNLOCK_LEVEL}`)
+  // ④ 任务侧的赛季语义必须与文案同义（文案写「达到 N 季」⇒ 必须按**不同赛季**计数）
+  const { QUESTS } = await import('../../src/game/data/quests.js')
+  const qSeason = QUESTS.filter((q) => (q.objectives ?? []).some((o) => o.kind === 'seasons'))
+  const saysJi = qSeason.every((q) => /季/.test(q.desc ?? ''))
+  const p2 = freshPlayer()
+  p2.seasons = { summer: { claimed: [1, 2, 3, 4, 5, 6, 7, 8] } } // 只在**一个**赛季里领满 8 档
+  p2.quests.index = QUESTS.findIndex((q) => q.id === qSeason[0].id) // currentQuest 是 getter，要改 index
+  p2.syncQuestProgress()
+  const qCur = p2.quests.progress['seasons:total']
+  check('日历门', `任务侧赛季文案与实现同义（文案说「N 季」⇒ 单季领满只算 1 季）`,
+    saysJi && qCur === 1, `任务进度 ${qCur}（应为 1；为 8 说明改成了累计次数、与文案「达到 N 季」不符）`)
+}
+// ══════════ C44：挑战塔深层的「命名 / 奖励」随深度增长（2026-09-19 参照 Rocky Idle 加深）══════════
+// 背景：实测真满配可推到 F1000+，而原本的命名只到 130 层、里程碑金币是**线性**（F1000 仅 2 万，
+// 对后期时收 138 万/小时毫无意义）⇒ 「推得更深」没有回报。加深后：金币随深度**平方**增长、
+// 每 25 层给觅珍券（货币）、每 100 层给「深潜礼包」、命名延伸到 1000 层。
+// ⚠️ 本组第一条断言（奖励物品 id 必须存在）**当场抓住了我自己的错**：第一版把券写成 `items.mijianTicket`，
+//    而券是货币（`player.mijian.tickets`）不是物品 → 会给玩家一个幽灵物品。**这类「发了个不存在的物品」
+//    必须由守卫拦**（与图鉴三查的幽灵引用同类）。
+{
+  const { towerMilestone, towerFloorName, towerFloor } = await import('../../src/game/data/battleTower.js')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const probe = [10, 50, 60, 100, 250, 500, 1000] // ⚠️ 只能放 10 的倍数（其余返回 null，第一版塞了 25 就崩了）
+  const ms = probe.map((f) => towerMilestone(f))
+  // ① 奖励里的物品 id 全部存在（幽灵物品拦截）
+  const ghost = []
+  for (const m of ms) for (const id of Object.keys(m.items ?? {})) if (!ITEMS[id]) ghost.push(`F${m.floor}:${id}`)
+  check('塔深层', '里程碑奖励的物品 id 全部存在（无幽灵物品）', ghost.length === 0, ghost.join(', '))
+  // ② 金币随深度单调不减，且深层显著高于浅层（线性的老口径 F1000 只有 2 万）
+  const golds = ms.map((m) => m.gold)
+  const mono = golds.every((g, i) => i === 0 || g >= golds[i - 1])
+  check('塔深层', '里程碑金币随深度单调不减', mono, JSON.stringify(golds))
+  check('塔深层', `深层里程碑回报有意义（F500 ≥ 10 万、F1000 ≥ 50 万；实测后期时收约 138 万/小时）`,
+    towerMilestone(500).gold >= 100000 && towerMilestone(1000).gold >= 500000,
+    `F500=${towerMilestone(500).gold} F1000=${towerMilestone(1000).gold}`)
+  // ③ 深层给非金币奖励：觅珍券（货币字段，不是物品）+ 深潜礼包
+  check('塔深层', '每 25 层给觅珍券、每 100 层给深潜礼包（券走 tickets 字段）',
+    ms.every((m) => (m.floor % 25 === 0 ? m.tickets > 0 : true)) && towerMilestone(1000).tickets > towerMilestone(100).tickets,
+    `F100=${towerMilestone(100).tickets} F1000=${towerMilestone(1000).tickets}`)
+  check('塔深层', '非 10 的倍数没有里程碑', towerMilestone(123) === null)
+  // ④ 命名延伸到 1000 层：不同百层段名字互不相同，且能覆盖到 1000+
+  const names = [200, 300, 500, 800, 1000].map((f) => towerFloorName(f))
+  check('塔深层', '楼层名覆盖到 1000 层且各段不重名', new Set(names).size === names.length && !!towerFloorName(1200),
+    names.join(' / '))
+  // ⑤ 深层对手确实更强（否则「深度」是假的）
+  const lo = towerFloor(100, 100), hi = towerFloor(1000, 100)
+  check('塔深层', '对手属性随层数增长（hp/atk 线性、def 封顶后仍不降）',
+    hi.hp > lo.hp && hi.atk > lo.atk && hi.def >= lo.def, `F100 hp${Math.round(lo.hp)} → F1000 hp${Math.round(hi.hp)}`)
+}
+
+// ══════════ C45：食神秘境的「档位」（2026-09-19 参照 Rocky Idle 的 Runs 立）══════════
+// 参考作的 Runs 是**分档**的（`runs_tiers` + 每档倍率 `this_tier: Nx`），通关推进档位 ⇒ 挑战与回报同步抬升。
+// 本作秘境原口径只有「逐层 3 选 1 + 按层结算」、对手等级**封顶 99**、奖励线性小额、无跨局进度 ⇒ 打久了没目标。
+// 现已补：档位（1..10，倍率 ×1..×3.25，同时乘对手属性与本局奖励）、升档目标（通过 6/10/…/38 层）、深层券。
+{
+  const { REALM_TIER_MAX, realmTierMult, realmTierGoal, realmReward, realmOpponent, realmOpponentLevel } =
+    await import('../../src/game/data/mysticRealm.js')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const { totalXpForLevel } = await import('../../src/game/core/Experience.js')
+  // ① 倍率单调递增、以 1 为起点、封顶可算
+  const mults = Array.from({ length: REALM_TIER_MAX }, (_, i) => realmTierMult(i + 1))
+  check('秘境档位', `倍率随档位单调递增且从 ×1 起（${mults[0]} → ×${mults[mults.length - 1]}）`,
+    mults[0] === 1 && mults.every((m, i) => i === 0 || m > mults[i - 1]))
+  check('秘境档位', `升档目标随档位递增（${realmTierGoal(1)} → ${realmTierGoal(REALM_TIER_MAX)} 层）`,
+    realmTierGoal(REALM_TIER_MAX) > realmTierGoal(1))
+  // ② 奖励随档位与层数增长；深层给券（货币字段 tickets，不是物品）；无幽灵物品
+  const r1 = realmReward(20, 1), r10 = realmReward(20, 10)
+  check('秘境档位', '同一层数下奖励随档位放大', r10.gold > r1.gold && r10.tickets > r1.tickets, `${r1.gold}/${r1.tickets} → ${r10.gold}/${r10.tickets}`)
+  const ghost = []
+  for (const f of [5, 20, 40]) for (const t of [1, 5, 10]) for (const id of Object.keys(realmReward(f, t).items ?? {})) if (!ITEMS[id]) ghost.push(`${f}/${t}:${id}`)
+  check('秘境档位', '结算奖励的物品 id 全部存在（无幽灵物品）', ghost.length === 0, ghost.join(', '))
+  // ③ 对手随档位变强（只抬血会让高层变成「磨」，故攻防同抬）；等级不再封顶 99
+  const o1 = realmOpponent(20, 99, 1, () => 0.1), o10 = realmOpponent(20, 99, 10, () => 0.1)
+  check('秘境档位', '同层对手属性随档位提升（hp 与 atk 都涨）', o10.hp > o1.hp && o10.atk > o1.atk, `hp ${Math.round(o1.hp)}→${Math.round(o10.hp)} atk ${Math.round(o1.atk)}→${Math.round(o10.atk)}`)
+  check('秘境档位', '对手等级上限由 99 抬到 140（与挑战塔同口径）', realmOpponentLevel(40, 120, 10) > 99, `实得 ${realmOpponentLevel(40, 120, 10)}`)
+  // ④ 行为：结算达标即升档、封顶不再升、旧档归一化、脏值夹取、存档往返
+  const p1 = freshPlayer()
+  check('秘境档位', '新档从第 1 档开始', p1.realmTier() === 1)
+  p1.realmStart(); for (let i = 0; i < realmTierGoal(1); i++) p1.realmAdvance()
+  const end1 = p1.realmEnd()
+  check('秘境档位', `通过 ${realmTierGoal(1)} 层即升到第 2 档`, p1.realmTier() === 2 && end1.tierUp?.to === 2, JSON.stringify(end1.tierUp))
+  const p2 = freshPlayer(); p2.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null }
+  check('秘境档位', '旧档没有 tier 字段时回退第 1 档（不炸）', p2.realmTier() === 1)
+  const p3 = freshPlayer(); p3.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: 99 }
+  check('秘境档位', '脏值 tier 被夹到上限（不产生越界倍率）', p3.realmTier() === REALM_TIER_MAX, `实得 ${p3.realmTier()}`)
+  const p4 = freshPlayer(); p4.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: 4 }
+  const back4 = freshPlayer(); back4.applySave(JSON.parse(JSON.stringify(p4.serialize())))
+  check('秘境档位', '档位随存档往返保留（含 serialize/applySave 三处）', back4.realmTier() === 4, `实得 ${back4.realmTier()}`)
+  const p5 = freshPlayer(); p5.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: REALM_TIER_MAX }
+  p5.realmStart(); for (let i = 0; i < 60; i++) p5.realmAdvance()
+  p5.realmEnd()
+  check('秘境档位', '满档后不再继续升（封顶）', p5.realmTier() === REALM_TIER_MAX)
+  void totalXpForLevel
+}
+
+// ══════════ C46：采集目标「效率」的可见性与正确性（2026-09-19）══════════
+// 起因：`scripts/sim/target_choice.mjs` 实测出本作「换更高级资源」**已经是最强的成长杠杆**
+// —— 同精通下最高级目标是最低卡的 ×8.5~×26.9；从 Lv1 起 12h「跟等级换」比「全程蹲最低级卡片」
+// 多拿 ×4.0 经验（Lv50 起 24h 是 ×9.2）。也就是说：这条**不需要改数值**，缺的是「玩家看不出来」。
+// 采集卡片上原本只有「基础经验」与「间隔」两列 ⇒ 玩家要自己心算「经验 ÷ 间隔 × 精通倍率」，
+// 而精通倍率只在 ≥5 级才显示、间隔还有「固定档取更快者」分支 —— 心算极易得出反的结论。
+// 故新增 `GatheringSkill.xpPerHour()`（唯一出口）与 `bestUnlockedTarget()`，卡片上显示「效率 / ⚡ 最优」。
+{
+  const { CARD_XP_SCALE } = await import('../../src/game/skills/Skill.js')
+  const { masteryXpMultiplier, countForMasteryLevel } = await import('../../src/game/core/mastery.js')
+  const { readFileSync } = await import('node:fs')
+
+  const p = freshPlayer({ foraging: 40 })
+  const inst = getSkillInstance('foraging')
+  const t = inst.targets.find((x) => x.itemId === 'grape') // reqLevel 30，Lv40 时已解锁
+  check('目标效率', '用于测的样本目标存在且已解锁', !!t && t.reqLevel <= 40, t?.itemId)
+
+  // ① 公式：经验 × 精通倍率 × CARD_XP_SCALE × 3600 ÷ 实际间隔（独立重算对照）
+  const recompute = () =>
+    (t.xpPerAction * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
+  check('目标效率', '效率 == 卡片经验×精通倍率×3600÷实际间隔', Math.abs(inst.xpPerHour(t) - recompute()) < 1e-6,
+    `${inst.xpPerHour(t)} vs ${recompute()}`)
+  // 与经验条同口径：必须乘 CARD_XP_SCALE，否则页面数字与玩家在经验条上看到的对不上（又是一个「页面骗人」）
+  const withoutScale = (t.xpPerAction * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
+  check('目标效率', '效率按 CARD_XP_SCALE 与技能经验条同口径',
+    Math.abs(inst.xpPerHour(t) / withoutScale - CARD_XP_SCALE) < 1e-6, `倍数 ${inst.xpPerHour(t) / withoutScale}`)
+
+  // ② 精通越高效率越高（用真实精通次数，不写死倍率）
+  inst.mastery[t.itemId] = 0
+  const rateLow = inst.xpPerHour(t)
+  inst.mastery[t.itemId] = countForMasteryLevel(100)
+  const rateHigh = inst.xpPerHour(t)
+  inst.mastery[t.itemId] = 0
+  check('目标效率', '同目标精通 100 的效率严格高于精通 0', rateHigh > rateLow, `${Math.round(rateLow)} → ${Math.round(rateHigh)}`)
+
+  // ③ bestUnlockedTarget()：穷举对照 + **未解锁的不参与**
+  const best = inst.bestUnlockedTarget()
+  const unlocked = inst.targets.filter((x) => x.reqLevel <= inst.level)
+  const maxRate = Math.max(...unlocked.map((x) => inst.xpPerHour(x)))
+  check('目标效率', '「当前最优」确实是已解锁目标里效率最高的（穷举对照）',
+    !!best && inst.xpPerHour(best) >= maxRate - 1e-6, `${best?.itemId} ${Math.round(inst.xpPerHour(best))} vs ${Math.round(maxRate)}`)
+  p.setSkillState('foraging', { level: 1, exp: 0 })
+  const bestAt1 = inst.bestUnlockedTarget()
+  const lockedTop = [...inst.targets].sort((a, b) => inst.xpPerHour(b) - inst.xpPerHour(a))[0]
+  check('目标效率', '未解锁的目标不参与评选（否则会引导玩家「换过去」，而其实换不过去）',
+    !!bestAt1 && bestAt1.reqLevel <= 1 && lockedTop.reqLevel > 1,
+    `Lv1 选出 ${bestAt1?.itemId}(需 ${bestAt1?.reqLevel})，全局最高是 ${lockedTop.itemId}(需 ${lockedTop.reqLevel})`)
+
+  // ④ 🔴 行为断言：**实测一小时拿到的经验 == 页面显示的效率**（这才是「数字没骗人」的证明）
+  //    冻结 addMastery 让精通倍率在一小时里恒定，从而可以精确对照（否则精通会在过程中涨，实测值天然偏高）。
+  //    ⚠️ 经验必须读 `skill.exp` **自身**：它是**绝对累计值**（`addXp` 用 `exp >= xpTotalForLevel(level+1)` 判升级、
+  //      升级时不重置），再叠加一次 `xpTotalForLevel(level)` 就重复计了一遍（本守卫第一版就是这么错的，
+  //      实测值虚高 1.94 倍、差点被当成「公式写错」）。
+  const p2 = freshPlayer({ foraging: 40 })
+  const inst2 = getSkillInstance('foraging')
+  const t2 = inst2.targets.find((x) => x.itemId === 'grape')
+  inst2.mastery[t2.itemId] = 0
+  p2.setSkillTarget('foraging', t2.itemId)
+  p2.addMastery = () => {} // 冻结精通，隔离公式
+  const before = p2.skills.foraging.exp
+  for (let i = 0; i < 360; i++) inst2.tick(10000) // 360 × 10s = 1 小时
+  const gained = p2.skills.foraging.exp - before
+  const shown = inst2.xpPerHour(t2)
+  check('目标效率', '实测挂机 1 小时拿到的经验 == 卡片显示的效率（±3%，页面数字与引擎同源）',
+    shown > 0 && Math.abs(gained / shown - 1) < 0.03, `实测 ${Math.round(gained)} vs 显示 ${Math.round(shown)}（比 ${(gained / shown).toFixed(4)}）`)
+
+  // ⑤ 接线：视图必须真的用了这一对方法，且标记有自己的样式（塞进两列行里会被挤成竖排）
+  const view = readFileSync(new URL('../../src/views/GatheringView.vue', import.meta.url), 'utf8')
+  const css = readFileSync(new URL('../../src/styles/main.css', import.meta.url), 'utf8')
+  check('目标效率', '采集页卡片调用了 xpPerHour 与 bestUnlockedTarget（否则算出来也没人显示）',
+    /instance\.xpPerHour\(/.test(view) && /bestUnlockedTarget/.test(view), '视图里缺其中之一')
+  check('目标效率', '「⚡ 最优」标记有独立样式且 nowrap（两列卡片里会竖排）',
+    /\.best-flag\s*{/.test(css) && /\.best-flag\s*{[^}]*white-space:\s*nowrap/.test(css))
+}
+
+// ══════════ C47：配方「效率」的可见性与正确性（2026-09-19，C46 的制作侧对照）══════════
+// `scripts/sim/recipe_choice.mjs` 实测：制作侧梯级**比采集更陡**（同精通最高/最低是 ×19~×48，采集是 ×8.5~×27），
+// 「择优换配方」比「蹲最低级配方」多拿 ×14.6~×20.7。而**「跟着解锁无脑换」只拿到择优的一半到四分之三**
+// （锻造差 4 倍）—— 因为刚解锁的配方成功率最低（失败只得半额经验），玩家却**看不出来**：
+// 配方卡片上原本只有「经验」一列，要自己乘精通倍率**还要乘成功率**，而成功率随等级差每级 +2%、
+// 各配方基础值又不同（0.6~0.9）⇒ 心算必错。
+// ⚠️ 制作侧与采集侧还有一处结构差异必须钉住：**队列节奏与配方等级无关**（固定 3 秒），
+//   而采集的间隔随目标等级变长 —— 所以这里的效率读 `CRAFT_QUEUE_INTERVAL_MS`，不能写死 3000。
+{
+  const { CARD_XP_SCALE } = await import('../../src/game/skills/Skill.js')
+  const { CRAFT_QUEUE_INTERVAL_MS } = await import('../../src/game/skills/ProductionSkill.js')
+  const { masteryXpMultiplier, countForMasteryLevel } = await import('../../src/game/core/mastery.js')
+  const { readFileSync } = await import('node:fs')
+
+  const p = freshPlayer({ cooking: 99 })
+  const inst = getSkillInstance('cooking')
+  const r = inst.recipes[0] // 烤土豆：reqLevel 1，Lv99 时成功率封顶 98%
+
+  // ① 公式：期望经验 × 学派加成 × CARD_XP_SCALE × 精通倍率 × 3600 ÷ 队列节奏（独立重算）
+  const succ = inst.successChance(r)
+  const expXp = r.xp * (succ + (1 - succ) * 0.5)
+  const recompute = () => (expXp * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  check('配方效率', '效率 == 期望经验×精通倍率×3600÷队列节奏', Math.abs(inst.xpPerHour(r) - recompute()) < 1e-6,
+    `${inst.xpPerHour(r)} vs ${recompute()}`)
+  // ② 🔴 成功率必须算进去：效率必须**严格小于**「零失败假设」的效率（这是「有没有乘成功率」的判据）
+  const noFail = (r.xp * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  check('配方效率', '效率已折算成功率（失败只得半额经验）——必须严格小于「零失败」的效率',
+    succ < 1 && inst.xpPerHour(r) < noFail, `成功率 ${(succ * 100).toFixed(0)}%：显示 ${Math.round(inst.xpPerHour(r))} < 零失败 ${Math.round(noFail)}`)
+  check('配方效率', '未解锁（等级不够）时成功率不参与显示成负数', !(inst.xpPerHour(r) < 0))
+
+  // ③ 精通越高效率越高
+  inst.mastery[r.id] = 0
+  const rateLow = inst.xpPerHour(r)
+  inst.mastery[r.id] = countForMasteryLevel(100)
+  const rateHigh = inst.xpPerHour(r)
+  inst.mastery[r.id] = 0
+  check('配方效率', '同配方精通 100 的效率严格高于精通 0', rateHigh > rateLow, `${Math.round(rateLow)} → ${Math.round(rateHigh)}`)
+
+  // ④ bestUnlockedRecipe()：穷举对照 + **未解锁的不参与**
+  const best = inst.bestUnlockedRecipe()
+  const unlocked = inst.recipes.filter((x) => x.reqLevel <= inst.level)
+  const maxRate = Math.max(...unlocked.map((x) => inst.xpPerHour(x)))
+  check('配方效率', '「当前最优」确实是已解锁配方里效率最高的（穷举对照）',
+    !!best && inst.xpPerHour(best) >= maxRate - 1e-6, `${best?.id} ${Math.round(inst.xpPerHour(best))} vs ${Math.round(maxRate)}`)
+  p.setSkillState('cooking', { level: 1, exp: 0 })
+  const bestAt1 = inst.bestUnlockedRecipe()
+  const lockedTop = [...inst.recipes].sort((a, b) => inst.xpPerHour(b) - inst.xpPerHour(a))[0]
+  check('配方效率', '未解锁的配方不参与评选（否则会引导玩家「做这个」，而其实做不了）',
+    !!bestAt1 && bestAt1.reqLevel <= 1 && lockedTop.reqLevel > 1,
+    `Lv1 选出 ${bestAt1?.id}(需 ${bestAt1?.reqLevel})，全局最高是 ${lockedTop.id}(需 ${lockedTop.reqLevel})`)
+
+  // ⑤ 🔴 行为断言：**按真实 3 秒节奏做一小时，拿到的经验 == 卡片显示的效率**。
+  //    取 Lv99 + 最低级配方（等级差加成拉满），冻结 addMastery 让精通倍率恒定。
+  //    ⚠️ **容差按实际成功率动态算**（2026-09-21 改）：这条是统计对照，噪声来自二项分布——
+  //      σ = 0.5·√(p(1−p)/n) / (p + (1−p)·0.5)（成功得满额、失败得半额，故分子带 0.5 系数），取 max(1.5%, 4σ)。
+  //      原先写死 ±1.5%，是因为当时取的配方「成功率被 MAX_SUCCESS 钉在 98%」、3σ 只有 0.6%；
+  //      引入全局难度系数后该配方成功率变成 49%、3σ ≈ 2.9%，写死的 1.5% 会被纯噪声打穿（实测差 1.6%）。
+  //      动态容差的好处：以后调难度系数不用回来改这个数字。
+  //    分工不变：这条查「**量级/节奏/缩放/缓存**」这类结构性错误（错就错 ≥30%）；
+  //      「成功率有没有折算进去」的**精确判据是上面第 ② 条**（严格小于零失败口径）。别把这一条当成成功率的守卫。
+  const p2 = freshPlayer({ cooking: 99 })
+  const inst2 = getSkillInstance('cooking')
+  const r2 = inst2.recipes[0]
+  inst2.mastery[r2.id] = 0
+  for (const id of Object.keys(r2.ingredients ?? {})) p2.inventory[id] = 1e9
+  p2.addMastery = () => {}
+  const before = p2.skills.cooking.exp
+  const CRAFTS = Math.round(3600000 / CRAFT_QUEUE_INTERVAL_MS) // 一小时能做多少次
+  for (let i = 0; i < CRAFTS; i++) inst2.craft(r2)
+  const gained = p2.skills.cooking.exp - before
+  const shown = inst2.xpPerHour(r2)
+  const succNow = inst2.successChance(r2)
+  const sigma = (0.5 * Math.sqrt((succNow * (1 - succNow)) / CRAFTS)) / (succNow + (1 - succNow) * 0.5)
+  const tol = Math.max(0.015, 4 * sigma)
+  check('配方效率', `按真实节奏做满 1 小时拿到的经验 == 卡片显示的效率（±${(tol * 100).toFixed(1)}% = max(1.5%, 4σ)，页面数字与引擎同源）`,
+    shown > 0 && Math.abs(gained / shown - 1) < tol,
+    `实测 ${Math.round(gained)} vs 显示 ${Math.round(shown)}（比 ${(gained / shown).toFixed(4)}，成功率 ${(succNow * 100).toFixed(1)}%、σ=${(sigma * 100).toFixed(2)}%、共 ${CRAFTS} 次）`)
+
+  // ⑥ 队列节奏是唯一来源 + **等级变化后效率要跟着变**（不是把首次算的结果缓存住）
+  //    ⚠️ 必须按**当前**状态重算：断言 ④ 把等级改回了 1，若这里还跟开头的旧值比，FAIL 的是守卫不是代码
+  //      （本守卫第一版就是这么错的）。
+  p.setSkillState('cooking', { level: 99, exp: 0 })
+  const s2 = inst.successChance(r)
+  const fresh = (r.xp * (s2 + (1 - s2) * 0.5) * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  check('配方效率', '等级变化后效率跟着变（读的是当前成功率，不是缓存值）；队列节奏走唯一常量',
+    Math.abs(inst.xpPerHour(r) - fresh) < 1e-6 && CRAFT_QUEUE_INTERVAL_MS === 3000,
+    `实得 ${Math.round(inst.xpPerHour(r))} vs 重算 ${Math.round(fresh)}，常量 ${CRAFT_QUEUE_INTERVAL_MS}ms`)
+
+  // ⑦ 接线：制作页必须真的显示了效率，且复用采集页那套 nowrap 标记样式
+  const view = readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
+  const css = readFileSync(new URL('../../src/styles/main.css', import.meta.url), 'utf8')
+  check('配方效率', '制作页卡片调用了 xpPerHour 与 bestUnlockedRecipe（否则算出来也没人显示）',
+    /instance\.xpPerHour\(/.test(view) && /bestUnlockedRecipe/.test(view), '视图里缺其中之一')
+  check('配方效率', '「⚡ 最优」在制作页复用同一套 nowrap 样式（两列卡片里会竖排）',
+    /best-flag/.test(view) && /\.best-flag\s*{[^}]*white-space:\s*nowrap/.test(css))
+}
+
+
+// ══════════ C48：等级「时代」分段（2026-09-19）══════════
+// 起因：用户观察参照作「每个技能从 1 级到满级物品很少，但能撑起整段」，问本作能不能也这样、要不要加上限。
+// 实测（Rocky 的 `index-*.js` 逐条抠 `skillReq`）：它采集类每技能 **9~11 件资源跨 Lv1→105~115**（每件扛 11~14 级）；
+// 本作反过来：采摘 142 个目标却只有 59 个不同等级（同档最多 15 件）⇒ 列表**同时承担了纵向梯级与横向原料库**两个职责。
+// 结论：**不改数值、不改上限**（本作「内容↔上限」的尾巴比例 20/120=17% 已与 Rocky 的 11~21/126=9~17% 一致，
+// 抬上限只会把尾巴变成 26/126=21% 且零新内容），改为把列表按竖向读：10 级一档「时代」+ 该档最高级产出命名。
+{
+  const { ERA_SPAN, levelEras, eraLabel, eraLabelOf, eraProgress } = await import('../../src/game/data/levelEras.js')
+  const { readFileSync } = await import('node:fs')
+
+  check('等级时代', `档位跨度对齐 Rocky 的「每件资源扛 11~14 级」（ERA_SPAN = ${ERA_SPAN}）`, ERA_SPAN === 10)
+
+  // ① 纯函数：守恒 / 段内等级合法 / 段升序不重叠 / 有限输入不抛
+  const GATHER = ['foraging', 'woodcutting', 'mining', 'fishing', 'hunting', 'excavation']
+  const PROD = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'spiritSummoning']
+  const problems = []
+  const eraCounts = []
+  for (const id of [...GATHER, ...PROD]) {
+    const inst = getSkillInstance(id)
+    const list = inst?.targets ?? inst?.recipes ?? []
+    if (!list.length) { problems.push(`${id}: 无症状列表`); continue }
+    const lv = (x) => x.reqLevel
+    const idOf = (x) => x.itemId ?? x.id
+    const eras = levelEras(list, lv, idOf)
+    eraCounts.push({ id, n: eras.length, kind: inst?.targets ? '采集' : '制作' })
+    const sum = eras.reduce((s, e) => s + e.list.length, 0)
+    if (sum !== list.length) problems.push(`${id}: 守恒 ${sum}≠${list.length}`)
+    for (const e of eras) {
+      for (const it of e.list) if (lv(it) < e.from || lv(it) > e.to) problems.push(`${id}: ${idOf(it)} 等级 ${lv(it)} 落在 ${e.label} 之外`)
+      if (e.label !== eraLabel(e.from, e.to)) problems.push(`${id}: 标签 ${e.label} 与 from/to 不一致`)
+      // topId 必须是该段**最高等级**的那件（穷举对照）
+      const max = Math.max(...e.list.map(lv))
+      if (lv(e.list.find((x) => String(idOf(x)) === e.topId)) !== max) problems.push(`${id}: ${e.label} 的 topId 不是该段最高级`)
+    }
+    for (let i = 1; i < eras.length; i++) {
+      if (eras[i].from - eras[i - 1].from !== ERA_SPAN) problems.push(`${id}: 第 ${i} 段与上一段不相邻`)
+    }
+  }
+  check('等级时代', '分段守恒（不丢不重）· 段内等级合法 · topId = 该段最高级', problems.length === 0, problems.slice(0, 4).join(' | '))
+  check('等级时代', '空输入返回空数组（视图可安全遍历，不抛错）', levelEras([], (x) => x, (x) => x).length === 0)
+
+  // ② 🔴 核心设计断言：**每个技能的时代数 ≈ Rocky 的 9~11 档**（这就是「列表按纵向读」的量化判据）
+  const bad = eraCounts.filter((e) => e.n < 8 || e.n > 11)
+  check('等级时代', `每个技能的时代数落在 8~11 档（对照 Rocky 的 9~11 件资源）`,
+    bad.length === 0, bad.map((e) => `${e.id}=${e.n}`).join(', '))
+  // 旧口径（5 级一段、或类别分组）会切出远多于 11 段 ⇒ 这条能抓住「回退到细粒度分组」
+  const fine = eraCounts.filter((e) => e.n > 15)
+  check('等级时代', '没有技能退化成细粒度分段（>15 段 = 又变回 5 级一档/平铺）', fine.length === 0, fine.map((e) => `${e.id}=${e.n}`).join(', '))
+
+  // ③ 进度口径：满精通计数（eraProgress）要对得上
+  const p = freshPlayer({ cooking: 60 })
+  const inst = getSkillInstance('cooking')
+  const sec = levelEras(inst.recipes, (r) => r.reqLevel, (r) => r.id)[0]
+  for (const r of sec.list) inst.mastery[r.id] = 0
+  const zero = eraProgress(sec.list, (r) => inst.masteryLevel(r)).done
+  for (const r of sec.list) inst.mastery[r.id] = 999999 // 远超满级所需次数
+  const full = eraProgress(sec.list, (r) => inst.masteryLevel(r)).done
+  check('等级时代', '时代进度：全 0 精通记 0，全满精通记满（口径同 mastery 满级 100）',
+    zero === 0 && full === sec.list.length, `零精通 ${zero} / 满精通 ${full} / 共 ${sec.list.length}`)
+
+  // ④ 接线：两个页面都走**同一个**实现（各写一份的话改粒度会只改一处）
+  const gv = readFileSync(new URL('../../src/views/GatheringView.vue', import.meta.url), 'utf8')
+  const pv = readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
+  const css = readFileSync(new URL('../../src/styles/main.css', import.meta.url), 'utf8')
+  check('等级时代', '采集页与制作页都调用 levelEras（共用单一实现）',
+    /levelEras\(/.test(gv) && /levelEras\(/.test(pv), '有一个页面没用')
+  check('等级时代', '旧口径已清除：两个视图里不再有「按 5 级一段」的 / 5 * 5 写法',
+    !/\/\s*5\)\s*\*\s*5/.test(gv) && !/\/\s*5\)\s*\*\s*5/.test(pv))
+  check('等级时代', '时代名有独立样式且 nowrap（段标题是 flex 行，换行会挤掉右侧计数）',
+    /\.era-name\s*{/.test(css) && /\.era-name\s*{[^}]*white-space:\s*nowrap/.test(css))
+
+  // ⑤ 🔴 反向查标签必须与正向分段一致（配方树「去做」靠它展开目标段）
+  //    回归现场：`sectionLabelOf()` 原先自己按 5 级算标签，粒度改成 10 级后它算出旧标签，
+  //    `toggleSection(旧标签)` 打不开任何一段 ⇒ 跳转静默失效（不报错、不白屏）。
+  const revProblems = []
+  for (const id of [...GATHER, ...PROD]) {
+    const inst = getSkillInstance(id)
+    const list = inst?.targets ?? inst?.recipes ?? []
+    if (!list.length) continue
+    const labels = new Set(levelEras(list, (x) => x.reqLevel, (x) => x.itemId ?? x.id).map((e) => e.label))
+    for (const it of list) {
+      const lab = eraLabelOf(it.reqLevel)
+      if (!labels.has(lab)) revProblems.push(`${id}: Lv${it.reqLevel} → ${lab} 不是真实存在的段`)
+    }
+  }
+  check('等级时代', '按单个等级反查出的段标签真实存在（配方树「去做」跳转不会打不开段）',
+    revProblems.length === 0, revProblems.slice(0, 3).join(' | '))
+  check('等级时代', '制作页的反查走 eraLabelOf（不再自己按 5 级算标签）',
+    /eraLabelOf\(/.test(readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')))
+}
+
+// ══════════ C49：精通池（2026-09-19，参照 Melvor Idle 的 Mastery Pool）══════════
+// 起因：真实量测（`scripts/sim/target_choice.mjs`）显示本作精通**严格按卡**、没有任何技能级共享
+// ⇒ 「择优换目标」只比「蹲最低级卡片」快 ×1.07（12h）/×1.25（24h），**玩家没有横向铺开的理由**；
+// 而参照作 Melvor 的精通经验公式含「该技能精通总等级」项 + 25% 入池 ⇒ 结构上奖励铺开。
+// 本作按计数式精通改写：25% 入池、上限按卡片数派生、10/25/50/95% 四档给整技能加成、
+// **且只在池 ≥ 阈值时生效**（花掉就掉档 = 持续参与压力，不是一次性解锁）、池点数可 1:1 补给任意卡片。
+{
+  const M = await import('../../src/game/core/mastery.js')
+  const { readFileSync } = await import('node:fs')
+
+  // ① 派生：上限必须是「卡片数 × 常量」，不是任何地方写死的数字
+  check('精通池', `池上限 = 卡片数 × MASTERY_POOL_PER_CARD(${M.MASTERY_POOL_PER_CARD})，且对 0/非法输入返回 0`,
+    M.masteryPoolCap(10) === 10 * M.MASTERY_POOL_PER_CARD && M.masteryPoolCap(0) === 0 && M.masteryPoolCap(undefined) === 0,
+    `实得 ${M.masteryPoolCap(10)} / ${M.masteryPoolCap(0)}`)
+
+  const p = freshPlayer({ foraging: 30 })
+  const inst = getSkillInstance('foraging')
+  const t = inst.targets.find((x) => x.itemId === 'grape')
+  const cap = p.masteryPoolCapOf('foraging')
+  check('精通池', '店内的池上限与卡片数一致（142 个目标 ⇒ 上限为 142×常量）',
+    cap === p.masteryCardCount('foraging') * M.MASTERY_POOL_PER_CARD && cap > 0, `卡片数 ${p.masteryCardCount('foraging')} 上限 ${cap}`)
+
+  // ② 入池率（行为断言：真的跑一次 addMastery，看池涨了多少）
+  p.skills.foraging.masteryPool = 0
+  p.addMastery('foraging', 'apple', 1)
+  // 🔴 断言里**钉字面量 0.25，不读常量**：第一版写成「观测值 == 常量」是**恒真**的
+  //   （改常量时两边一起变），反例验证把入池率改成 100% 它照样绿 —— 假绿守卫。
+  //   设计常量就该像 `ERA_SPAN === 10` / `CRAFT_QUEUE_INTERVAL_MS === 3000` 那样被钉住。
+  check('精通池', '每次动作的精通次数按 25% 入池（行为断言，钉字面量）',
+    p.skills.foraging.masteryPool === 0.25 && M.MASTERY_POOL_GAIN_RATE === 0.25,
+    `实得池 +${p.skills.foraging.masteryPool}，常量 ${M.MASTERY_POOL_GAIN_RATE}`)
+  // 上限夹取
+  p.addMastery('foraging', 'apple', cap * 10)
+  check('精通池', '灌爆后池被夹在上限（不越界）', p.skills.foraging.masteryPool === cap, `实得 ${p.skills.foraging.masteryPool} / 上限 ${cap}`)
+
+  // ③ 里程碑：四档单调不减；**池掉到阈值以下加成必须随之消失**（这是 Melvor 这套的精髓，不是 bug）
+  const bonusAt = (f) => { p.skills.foraging.masteryPool = cap * f; return p.masteryPoolBonus('foraging') }
+  const b6 = bonusAt(0.06), b10 = bonusAt(0.10), b25 = bonusAt(0.25), b50 = bonusAt(0.50), b95 = bonusAt(0.95)
+  check('精通池', '低于首个里程碑（10%）时没有任何加成',
+    b6.tierIdx === -1 && b6.doublePP === 0 && b6.xpPct === 0, `6% 档位 ${b6.tierIdx}`)
+  check('精通池', '四档加成单调不减且档位依次递进',
+    b10.tierIdx === 0 && b25.tierIdx === 1 && b50.tierIdx === 2 && b95.tierIdx === 3 &&
+    b10.doublePP <= b25.doublePP && b25.doublePP <= b50.doublePP && b50.doublePP <= b95.doublePP &&
+    b10.xpPct <= b25.xpPct && b25.xpPct <= b50.xpPct && b50.xpPct <= b95.xpPct,
+    `${b10.doublePP}/${b25.doublePP}/${b50.doublePP}/${b95.doublePP}pp`)
+  const b30 = bonusAt(0.30), b20 = bonusAt(0.20)
+  check('精通池', '🔴 池跌破阈值后加成消失（花掉 > 攒着 的取舍成立，不是永久解锁）',
+    b30.successPP > b20.successPP || b30.doublePP > b20.doublePP,
+    `30% → ${b30.successPP}/${b30.doublePP} vs 20% → ${b20.successPP}/${b20.doublePP}`)
+  check('精通池', `经验加成封顶 ≤ 5%（不得把标定过的升级时长整体位移）`, b95.xpPct <= 5, `实得 ${b95.xpPct}%`)
+
+  // ④ 补给：1:1、双向夹取（不超过池余额 / 不超过该卡距满级所需）
+  p.skills.foraging.masteryPool = 500
+  p.skills.foraging.mastery = {}
+  const moved = p.spendMasteryPool('foraging', 'apple', 300)
+  check('精通池', '补给是 1:1（花 300 点 = 卡片精通 +300 次，池 −300）',
+    moved === 300 && p.skills.foraging.mastery.apple === 300 && p.skills.foraging.masteryPool === 200,
+    `实得 moved=${moved} 卡=${p.skills.foraging.mastery.apple} 池=${p.skills.foraging.masteryPool}`)
+  const bigMoved = p.spendMasteryPool('foraging', 'apple', 1e9)
+  check('精通池', '补给不超过池余额（不会凭空造点）',
+    bigMoved === 200 && p.skills.foraging.masteryPool === 0, `实得 ${bigMoved} / 余 ${p.skills.foraging.masteryPool}`)
+  p.skills.foraging.masteryPool = 1e6
+  const toMax = p.spendMasteryPool('foraging', 'apple', 1e9)
+  const maxCount = M.countForMasteryLevel(M.MASTERY_LEVEL_CAP)
+  check('精通池', '补给不超过该卡距满精通所需（把池倒进已练满的卡里会蒸发）',
+    p.skills.foraging.mastery.apple === maxCount && toMax === maxCount - 500, `卡=${p.skills.foraging.mastery.apple} 需=${maxCount}`)
+  check('精通池', '已满精通的卡片再补给无效（返回 0）', p.spendMasteryPool('foraging', 'apple', 100) === 0)
+
+  // ⑤ 🔴 在线/离线同源：加成必须走「唯一出口」——双倍挂在 doubleChance（expectedYield 也读它）、
+  //    经验挂在 addCardXp（离线 bootstrap 也走它）⇒ 离线不会吃不到池加成。
+  const inst2 = getSkillInstance('foraging')
+  p.skills.foraging.masteryPool = 0
+  inst2.mastery[t.itemId] = 0
+  const yield0 = inst2.expectedYield(t)
+  const xp0 = inst2.addCardXp(10, 1)
+  p.skills.foraging.masteryPool = cap * 0.95
+  const yield95 = inst2.expectedYield(t)
+  const xp95 = inst2.addCardXp(10, 1)
+  check('精通池', '池 95% 时「期望产量」上升（离线走 expectedYield，与在线同源）',
+    yield95 > yield0, `${yield0.toFixed(3)} → ${yield95.toFixed(3)}`)
+  check('精通池', '池 95% 时 addCardXp 的经验 +5%（离线也走这个出口）',
+    Math.abs(xp95 / xp0 - 1.05) < 0.02, `比 ${(xp95 / xp0).toFixed(4)}`)
+  // 跨技能隔离：foraging 的池不能影响 fishing
+  const fish = getSkillInstance('fishing')
+  const fishT = fish.targets[0]
+  const fishBefore = fish.doubleChance(fishT)
+  p.skills.foraging.masteryPool = cap * 0.95
+  check('精通池', '池是**技能级**的，不影响其它技能（foraging 的池不改 fishing 的双倍）',
+    fish.doubleChance(fishT) === fishBefore, `${fishBefore} → ${fish.doubleChance(fishT)}`)
+
+  // ⑥ 存档：池嵌在 skills 里 ⇒ 必须随 serialize/applySave 往返；旧档缺字段回退 0
+  p.skills.foraging.masteryPool = 12345
+  const q = freshPlayer({ foraging: 30 })
+  q.applySave(JSON.parse(JSON.stringify(p.serialize())))
+  check('精通池', '池随存档往返保留（嵌在 skills 内，与 storyProgress 那类坑同源）',
+    q.skills.foraging.masteryPool === 12345, `实得 ${q.skills.foraging.masteryPool}`)
+  const legacy = JSON.parse(JSON.stringify(p.serialize()))
+  delete legacy.skills.foraging.masteryPool
+  const q2 = freshPlayer({ foraging: 30 })
+  q2.applySave(legacy)
+  check('精通池', '旧档没有 masteryPool 字段时回退 0（不炸、不 NaN）', q2.skills.foraging.masteryPool === 0, `实得 ${q2.skills.foraging.masteryPool}`)
+
+  // ⑧ 精通「横向铺开」奖励（Melvor 让铺开划算的**真正机制**——只移植池是不够的）
+  check('精通池', `广度倍率：0 广度 = ×1、满广度 = ×${1 + M.MASTERY_BREADTH_MAX}（上界钉死）、越界被夹取`,
+    M.masteryBreadthMultiplier(0, 20) === 1 &&
+    Math.abs(M.masteryBreadthMultiplier(2000, 20) - (1 + M.MASTERY_BREADTH_MAX)) < 1e-9 &&
+    M.masteryBreadthMultiplier(9e9, 20) === 1 + M.MASTERY_BREADTH_MAX &&
+    M.masteryBreadthMultiplier(500, 0) === 1,
+    `实得 ${M.masteryBreadthMultiplier(9e9, 20)} / 卡片数为 0 时 ${M.masteryBreadthMultiplier(500, 0)}`)
+
+  // 行为断言：同一张新卡，在高广度档下每次动作拿到的精通必须更多（倍数 ≈ 广度倍率之比）
+  const mk = (fill) => {
+    const z = freshPlayer({ foraging: 30 })
+    z.skills.foraging.mastery = {}
+    z.skills.foraging.masteryPool = 0
+    if (fill > 0) for (const t of inst.targets.slice(0, fill)) z.skills.foraging.mastery[t.itemId] = maxCount
+    const zz = freshPlayer({ foraging: 30 })
+    zz.applySave(JSON.parse(JSON.stringify(z.serialize()))) // 走一遍读档 ⇒ 广度缓存重算，贴近真实
+    zz.skills.foraging.mastery.apple = 0
+    zz.skills.foraging.masteryPool = 0
+    const b = zz.masteryBreadthOf('foraging')
+    zz.addMastery('foraging', 'apple', 100)
+    return { mult: b.multiplier, total: b.total, gain: zz.skills.foraging.mastery.apple }
+  }
+  const lowB = mk(0), highB = mk(120)
+  check('精通池', '🔴 练得越广、精通涨得越快（同一张新卡 100 次动作，高广度档拿到的精通更多）',
+    highB.gain > lowB.gain && Math.abs(highB.gain / lowB.gain - highB.mult / lowB.mult) < 0.02,
+    `低广度 total=${lowB.total} 倍率=${lowB.mult.toFixed(3)} 得 ${lowB.gain.toFixed(1)}；高广度 total=${highB.total} 倍率=${highB.mult.toFixed(3)} 得 ${highB.gain.toFixed(1)}`)
+
+  // 广度是**派生值**：不得进存档（进了就会「存档里的派生值过期后悄悄骗人」）
+  const ser = JSON.stringify(p.serialize())
+  check('精通池', '广度是派生值、不进存档（只存 raw 精通次数与池）',
+    !/breadth/i.test(ser) && /masteryPool/.test(ser), '存档里出现了派生键')
+  // 换档必须清缓存：新档的广度不能沿用上一档
+  const freshSlot = freshPlayer({ foraging: 30 })
+  check('精通池', '广度缓存随 newGame 清空（换档后不沿用上一档的广度）',
+    freshSlot.masteryBreadthOf('foraging').total === 0, `实得 ${freshSlot.masteryBreadthOf('foraging').total}`)
+
+  // ⑨ 🔴 精通次数必须是整数（2026-09-19 用户实测报「次数怎么有小数点」）
+  //    广度倍率（×1.03~1.5）直接乘进次数会让卡片显示 `7.000246478873233 / 8 次`。
+  //    现在用「整数计数 + 小数进位」：进位存 skills[id].masteryCarry，只把整数部分记进卡片。
+  const pInt = freshPlayer({ foraging: 30 })
+  for (const t of inst.targets.slice(0, 120)) pInt.skills.foraging.mastery[t.itemId] = maxCount
+  const zInt = freshPlayer({ foraging: 30 })
+  zInt.applySave(JSON.parse(JSON.stringify(pInt.serialize())))
+  zInt.skills.foraging.mastery.apple = 0
+  zInt.skills.foraging.masteryCarry = 0
+  const multInt = zInt.masteryBreadthOf('foraging').multiplier
+  let badInt = 0
+  for (let i = 0; i < 300; i++) {
+    zInt.addMastery('foraging', 'apple', 1)
+    if (!Number.isInteger(zInt.skills.foraging.mastery.apple)) badInt++
+  }
+  check('精通池', '🔴 精通次数始终是整数（广度倍率用「小数进位」吸收，不写进卡片计数）',
+    badInt === 0 && multInt > 1.3 && Number.isInteger(zInt.skills.foraging.mastery.apple),
+    `倍率 ${multInt.toFixed(3)} 下出现小数 ${badInt} 次，最终值 ${zInt.skills.foraging.mastery.apple}`)
+  check('精通池', '进位被保留且随存档往返（不是丢弃，也不是累到卡片上）',
+    zInt.skills.foraging.masteryCarry >= 0 && zInt.skills.foraging.masteryCarry < 1 &&
+    (() => { const w = freshPlayer({ foraging: 30 }); w.applySave(JSON.parse(JSON.stringify(zInt.serialize()))); return Math.abs(w.skills.foraging.masteryCarry - zInt.skills.foraging.masteryCarry) < 1e-9 })(),
+    `进位 ${zInt.skills.foraging.masteryCarry}`)
+  // 旧档里已经被写成小数的次数，读档时必须修回整数（幂等）
+  const legacyFrac = JSON.parse(JSON.stringify(zInt.serialize()))
+  legacyFrac.skills.foraging.mastery.apple = 7.000246478873233
+  const w2 = freshPlayer({ foraging: 30 })
+  w2.applySave(legacyFrac)
+  check('精通池', '旧档里的小数次数读档自动修成整数（幂等，不留小数）',
+    w2.skills.foraging.mastery.apple === 7 && Number.isInteger(w2.skills.foraging.mastery.apple),
+    `实得 ${w2.skills.foraging.mastery.apple}`)
+
+  // ⑩ 技能页上方的堆叠（用户 2026-09-19 反馈「目标列表被压到很下面」）
+  //    池卡默认**一行**：档位表与规则收进「详情」，不常驻占三行。（断言放在 ⑦ 之后，那里才读到组件源码）
+  // ⑦ 接线与「不手抄数字」
+  const bar = readFileSync(new URL('../../src/components/MasteryPoolBar.vue', import.meta.url), 'utf8')
+  const gv = readFileSync(new URL('../../src/views/GatheringView.vue', import.meta.url), 'utf8')
+  const pv = readFileSync(new URL('../../src/views/ProductionView.vue', import.meta.url), 'utf8')
+  const help = readFileSync(new URL('../../src/components/MasteryHelp.vue', import.meta.url), 'utf8')
+  check('精通池', '采集页与制作页都挂了精通池状态条',
+    /MasteryPoolBar/.test(gv) && /MasteryPoolBar/.test(pv))
+  check('精通池', '说明弹窗（MasteryHelp）已写进精通池口径',
+    /MASTERY_POOL_TIERS/.test(help) && /精通池/.test(help))
+  check('精通池', '状态条里的「满精通所需次数」是从函数派生的，没有手写数字',
+    /countForMasteryLevel\(/.test(stripComments(bar)) && !/3750/.test(stripComments(bar)),
+    '手写数字会让页面与函数各自演化')
+
+  // ⑩ 技能页上方的堆叠（用户 2026-09-19 反馈「目标列表被压到很下面」）
+  //    池卡默认**一行**：档位表与规则收进「详情」，不常驻占三行。
+  check('精通池', '池卡默认收起成一行（档位表与规则由「详情」展开，不再常驻堆叠）',
+    /expanded = ref\(false\)/.test(bar) && /v-if="expanded"/.test(bar) && /详情/.test(bar))
+  check('精通池', '空态「挂机计划」的提示已并入标题行（不再多占一行）',
+    !/还没有步骤[\s\S]{0,300}?<p v-else/.test(readFileSync(new URL('../../src/views/SkillView.vue', import.meta.url), 'utf8')))
+}
+
+// ══════════ C50：后期等级带补档（2026-09-19，第 1 批「挖掘」7 件）══════════
+// 起因：实测「每档等级带的相邻间距」后期变疏，与参照作 Melvor Idle（收官 2.6 级/件）形状相反；
+//   最严重的是挖掘：`…68, 75, 90` ⇒ 75→90 有 15 级空档、91-99 一件都没有。
+// 本批 7 件（岩髓根/玉髓根/云芝/血芝/太岁/朱草/玄玉参）把 61-99 段平均间距 7.3→3.5、最大空档 15→7、最深 90→99。
+// 本组断言把「修好的形状」钉住，防回退；同时校验新物品在 ITEMS / ITEM_LEVEL / 图鉴来源 / 图片 四处都齐备。
+{
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const { ITEM_LEVEL } = await import('../../src/game/data/combatLoot.js')
+  const { itemSources } = await import('../../src/game/data/itemSources.js')
+  const { existsSync } = await import('node:fs')
+  const NEW = [
+    ['rockCoreRoot', '岩髓根', 78], ['jadePithRoot', '玉髓根', 81], ['cloudFungus', '云芝', 84],
+    ['bloodFungus', '血芝', 87], ['taiSui', '太岁', 93], ['vermilionGrass', '朱草', 96], ['mysticRoot', '玄玉参', 99],
+  ]
+  const ex = getSkillInstance('excavation')
+  const lvs = [...new Set(ex.targets.map((t) => t.reqLevel))].sort((a, b) => a - b)
+  const late = lvs.filter((l) => l >= 61)
+  const gap = (late.at(-1) - late[0]) / (late.length - 1)
+  const maxGap = Math.max(...late.slice(1).map((x, i) => x - late[i]))
+  check('后期补档', `挖掘 61-99 段的平均间距 ≤ 3.5（实测 ${gap.toFixed(2)}，补档前是 7.3）`, gap <= 3.5, `实得 ${gap.toFixed(2)}`)
+  check('后期补档', `挖掘最大空档 ≤ 7 级（实测 ${maxGap}，补档前是 15）`, maxGap <= 7, `实得 ${maxGap}`)
+  check('后期补档', `挖掘最深目标 ≥ Lv99（补档前止步 Lv90，91-99 全空）`, lvs.at(-1) >= 99, `实得 Lv${lvs.at(-1)}`)
+
+  const missing = []
+  for (const [id, name, lv] of NEW) {
+    const it = ITEMS[id]
+    if (!it) { missing.push(`${id} 不在 ITEMS`); continue }
+    if (it.name !== name) missing.push(`${id} 名称 ${it.name}≠${name}`)
+    if (it.type !== 'ingredient' || !['root', 'fungus'].includes(it.category)) missing.push(`${id} 类目 ${it.category} 不是 root/fungus`)
+    if (ITEM_LEVEL[id] !== lv) missing.push(`${id} ITEM_LEVEL ${ITEM_LEVEL[id]}≠${lv}`)
+    if (!existsSync(new URL(`../../public/images/items/food/${name}.png`, import.meta.url))) missing.push(`${id} 缺图片 ${name}.png`)
+    const src = itemSources(id)
+    if (!src.some((s) => s.includes('挖掘获得') && s.includes(`Lv${lv}`))) missing.push(`${id} 图鉴来源缺「挖掘获得（Lv${lv} 解锁）」`)
+  }
+  check('后期补档', '7 件新物品在 ITEMS / ITEM_LEVEL / 图片 / 图鉴来源 四处齐备', missing.length === 0, missing.slice(0, 4).join(' | '))
+  // 名称与 id 唯一（本批的名称是逐个查重后定的，回退或重名会在这里被抓住）
+  const all = Object.values(ITEMS)
+  check('后期补档', '新增的 7 个名称与 id 全局唯一', new Set(all.map((i) => i.name)).size === all.length && new Set(all.map((i) => i.id)).size === all.length)
+  // 山海食经掘藏线：件数与门槛必须跟着件数走（否则「N 件可收集」的文案与难度都会说谎）
+  const { SHANHAI_NODES } = await import('../../src/game/data/shanhaiTree.js')
+  const dig = SHANHAI_NODES.filter((n) => n.pathId === 'excavation' || String(n.id).startsWith('dig'))
+  const lastDig = dig.length ? Math.max(...dig.map((n) => (n.req?.count ?? 0))) : 0
+  check('后期补档', `山海食经掘藏线的件数已按 49 件重新标定（最高门槛 ${lastDig} ≤ 49 且 > 42）`, lastDig > 42 && lastDig <= 49, `实得 ${lastDig}`)
+
+  // ── 第 2 批：垂钓 +4 / 狩猎 +3（2026-09-19）──
+  const NEW2 = [
+    ['kaluga', '鳇鱼', 63, 'fishing'], ['lionfish', '狮鱼', 73, 'fishing'],
+    ['blackMarlin', '黑枪鱼', 80, 'fishing'], ['humpheadWrasse', '苏眉鱼', 90, 'fishing'],
+    ['cougarMeat', '美洲狮肉', 69, 'hunting'], ['rhinoMeat', '犀牛肉', 84, 'hunting'], ['yetiMeat', '雪怪肉', 97, 'hunting'],
+  ]
+  const miss2 = []
+  for (const [id, name, lv, skill] of NEW2) {
+    const it = ITEMS[id]
+    if (!it) { miss2.push(`${id} 不在 ITEMS`); continue }
+    if (it.name !== name) miss2.push(`${id} 名称 ${it.name}≠${name}`)
+    if (ITEM_LEVEL[id] !== lv) miss2.push(`${id} ITEM_LEVEL ${ITEM_LEVEL[id]}≠${lv}`)
+    if (!existsSync(new URL(`../../public/images/items/food/${name}.png`, import.meta.url))) miss2.push(`${id} 缺图片`)
+    const label = skill === 'fishing' ? '垂钓获得' : '狩猎获得'
+    if (!itemSources(id).some((s) => s.includes(label) && s.includes(`Lv${lv}`))) miss2.push(`${id} 图鉴来源缺「${label}（Lv${lv} 解锁）」`)
+  }
+  check('后期补档', '第 2 批（垂钓 4 + 狩猎 3）在 ITEMS / ITEM_LEVEL / 图片 / 图鉴来源 四处齐备', miss2.length === 0, miss2.slice(0, 4).join(' | '))
+  // 间距成果：垂钓 61-99 由 3.5 → **2.53**、狩猎 3.2 → **2.53**（实测值；先前我预估的 ~2.4 偏乐观，以实测为准）
+  for (const [skill, limit, before] of [['fishing', 2.6, 3.5], ['hunting', 2.6, 3.2]]) {
+    const lvs2 = [...new Set(getSkillInstance(skill).targets.map((t) => t.reqLevel))].filter((l) => l >= 61).sort((a, b) => a - b)
+    const g = (lvs2.at(-1) - lvs2[0]) / (lvs2.length - 1)
+    check('后期补档', `${skill} 61-99 段平均间距 ≤ ${limit}（实测 ${g.toFixed(2)}，补档前是 ${before}）`, g <= limit, `实得 ${g.toFixed(2)}`)
+  }
+  // 🔴 伐木那 4 张「可选」已取消：20 档木材是**刚性 5 级网格**（`timberIndexForLevel(lv) = ⌊(lv−1)/5⌋`，
+  //    且 `timberOfLevel` 是配方改档与强化消耗的**唯一入口**）⇒ 在 59/69/79/89 插档会让 Lv56-100 全档错位，
+  //    那是改锻造与强化的平衡（冻结层），不是加内容。这条断言把「网格未被破坏」钉住。
+  const { TIMBERS, TIMBER_BAND, timberIndexForLevel } = await import('../../src/game/data/timbers.js')
+  check('后期补档', '伐木仍是 20 档刚性 5 级网格（未插档，保住「N 级装备用 N 级木材」的对齐）',
+    TIMBERS.length === 20 && TIMBER_BAND === 5 && TIMBERS.every((t, i) => t.level === 1 + i * TIMBER_BAND) &&
+    timberIndexForLevel(59) === Math.floor(58 / 5),
+    `档数 ${TIMBERS.length} / 跨度 ${TIMBER_BAND} / 第 12 档 level=${TIMBERS[11]?.level}`)
+}
+
+// ══════════ C51：对决页重做（2026-09-19，参照 Melvor Idle 的战斗界面）══════════
+// 四项：① 属性面板拆「进攻/防御」两栏，并把**界面上原先看不到但公式里真实存在**的
+//   「伤害减免」(def/(def+100)) 与「暴击伤害」(×2) 显示出来；② 掉落由弹窗改**页内常驻列表**
+//   （`DropList.vue`，对决页与竞技场共用，删掉两份重复的 `Teleport` 弹窗）；
+//   ③ 页内加装备槽概览 + 常驻战备（料理/酱料/饮品 + 自动进食开关）；
+//   ④ 风格做成整列按钮并标注「克制 X」。
+// ⚠️ 关键的**非恒真**断言是第 3 条：`critMultiplier()` 返回的数字必须等于 `playerAttack` 里
+//    `dmg *= N` 里的 N —— 否则界面显示的「暴击伤害」会与真实伤害不符（改公式忘改界面 = 静默不一致）。
+{
+  const { readFileSync } = await import('node:fs')
+  const { stripComments } = await import('./lib/comments.mjs')
+  const rd = (p) => stripComments(readFileSync(new URL(`../../src/${p}`, import.meta.url), 'utf8'))
+  const panel = rd('components/CombatPanel.vue')
+  const view = rd('views/CombatView.vue')
+  const arena = rd('views/ArenaView.vue')
+  const engine = rd('game/combat/Combat.js')
+  const drop = rd('components/DropList.vue')
+
+  // ① 两栏 + 两个此前缺失的数值
+  const need = ['进攻', '防御', '伤害减免', '暴击伤害']
+  check('对决页', '属性面板含「进攻/防御」两栏与「伤害减免」「暴击伤害」两个中文标签',
+    need.every((k) => panel.includes(k)), need.filter((k) => !panel.includes(k)).join('、') + ' 缺失')
+  check('对决页', '「伤害减免」「暴击伤害」的数值取自引擎只读 getter（不在组件里重算公式）',
+    panel.includes('reductionPct') && panel.includes('critMultiplier') && engine.includes('reductionPct(def)') && engine.includes('critMultiplier()'),
+    '组件或引擎缺 getter')
+
+  // ② 掉落常驻列表：两处共用同一组件，页面里不再有掉落弹窗
+  check('对决页', '掉落改用共用组件 DropList，且对决页/竞技场两处都引它',
+    drop.includes('drop-list') && view.includes("from '../components/DropList.vue'") && arena.includes("from '../components/DropList.vue'"),
+    '组件未建或未两处共用')
+  check('对决页', '对决页与竞技场都不再保留掉落弹窗（无 dropModal / 无 Teleport 弹窗）',
+    !view.includes('dropModal') && !arena.includes('dropModal') && !view.includes('<Teleport') && !arena.includes('<Teleport'),
+    '仍有残留弹窗')
+  check('对决页', 'DropList 显示的掉落概率与数量与数据字段一致（chance/qty）',
+    drop.includes('d.chance') && drop.includes('d.qty'), 'chance/qty 未展示')
+
+  // ③ 装备槽 + 常驻战备（自动进食开关必须真有消费方，否则就是「静默失效」那一家）
+  // ⚠️ 2026-09-19：这块已抽成共用组件 `CombatLoadout.vue`，断言要跟着改文件 —— 否则会变成
+  //    「组件搬走了、断言还在旧文件里找」的恒 FAIL（或者更糟：断言放宽成什么都不查）。
+  const loadout = rd('components/CombatLoadout.vue')
+  // ⚠️ 2026-09-19：装备槽按用户要求搬到「怪物详情」下面 ⇒ 独立成 `EquipmentSlots.vue`，
+  //    这条断言跟着指到新文件（组件搬走而断言留在旧文件里 = 恒 FAIL 或变空转）。
+  const eqSlots = rd('components/EquipmentSlots.vue')
+  check('对决页', '装备槽概览的槽位取自 player.equipment（不另抄一份槽位清单）',
+    eqSlots.includes('player.equipment') && eqSlots.includes('SLOT_LABEL'), '槽位来源不对')
+  check('对决页', '自动进食开关写回 settings.autoEat，且引擎里确有消费方（非死开关）',
+    loadout.includes('player.settings.autoEat =') && engine.includes('s.autoEat'), '开关无消费方')
+  // 2026-09-21 用户要求「点击选择食物为当前自动进食的食物」：指定的料理 id 必须
+  // 写进 settings.autoEatItem、引擎真的读它、读档过滤脏 id、默认值是 null。
+  // ⚠️ 「优先吃指定的那味 / 吃光回落」由下面的**行为断言**（对决节）把关，这里只查接线与存档口径。
+  check('对决页', '战备里点选料理会写进 settings.autoEatItem，且引擎按 id 取用',
+    loadout.includes('player.settings.autoEatItem =') && engine.includes('s.autoEatItem'),
+    '指定的料理没有消费方（点选等于白点）')
+  const pstore = rd('stores/player.js')
+  check('对决页', 'settings.autoEatItem 三处齐备（默认值 + 存档往返 + 读档过滤脏 id）',
+    // ⚠️ 要求**赋值式过滤**（`st.autoEatItem = null`）而不是「出现过 getItem(st.autoEatItem)」：
+    //    后者在「过滤那行被删、只剩取水那行」时照样 PASS（反例验证抓到的假绿）。
+    //    「过滤真的生效」由上面「存档」节的 pb 行为断言把关。
+    /autoEatItem: null/.test(pstore) && /if \(st\.autoEatItem[\s\S]{0,90}st\.autoEatItem = null/.test(pstore),
+    '默认值/读档校验缺失')
+  check('对决页', '战备面板常驻料理/酱料/饮品与自动进食开关（不再只在战斗中显示）',
+    loadout.includes('combat-loadout') && loadout.includes('availableFoods') && loadout.includes('availableSauces') && loadout.includes('availableDrinks'),
+    '战备未常驻')
+
+  // ③c 敌人立绘（2026-09-21）：248 张图必须**在磁盘上真实存在**且是 RGBA、尺寸对。
+  //     起因：`<img>` 的 @error 会静默隐藏破图（图鉴/卡片都不会报错），只有查文件才发现缺图/坏图。
+  //     与「山海食经 400/400 节点图标」同一条纪律：数据里的 imgKey ↔ 磁盘文件必须一一对应。
+  check('对决页', '248 个敌人立绘都在磁盘上且是 512×512 RGBA', (() => {
+    const enemies = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
+    const noKey = enemies.filter((o) => !o.imgKey)
+    if (noKey.length) return { ok: false, why: `${noKey.length} 个敌人没有 imgKey` }
+    const bad = []
+    for (const o of enemies) {
+      const rel = `images/enemies/${o.imgKey}.png`
+      const abs = new URL(`../../public/${rel}`, import.meta.url)
+      if (!fs.existsSync(fileURLToPath(abs))) { bad.push(`${o.name} 缺 ${rel}`); continue }
+      const buf = fs.readFileSync(abs)
+      // PNG 头里直接读宽高与色彩类型（0=灰度 2=RGB 3=调色板 4=灰度+alpha 6=RGBA）
+      const sig = buf.slice(0, 8).toString('hex')
+      if (sig !== '89504e470d0a1a0a') { bad.push(`${o.name} 不是 PNG`); continue }
+      const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), colorType = buf[25]
+      const want = 512 // 2026-09-21 第三轮定稿 512：卡片立绘 140~168、战斗屏 176 在 DPR 2 下也原生清晰
+      // ⚠️ 别退回 256：256 源图在 DPR≥1.5 的屏幕上不够用，就是用户报的「主角/敌人/卡片都糊糊的」
+      if (colorType !== 6) bad.push(`${o.name} 不是 RGBA(colorType=${colorType})`)
+      else if (w !== want || h !== want) bad.push(`${o.name} 尺寸 ${w}×${h}（应为 ${want}）`)
+    }
+    return { ok: bad.length === 0, why: bad.slice(0, 6).join('；') + (bad.length > 6 ? ` …共 ${bad.length} 处` : '') }
+  })().ok, (() => {
+    const enemies = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
+    const bad = []
+    for (const o of enemies) {
+      const abs = new URL(`../../public/images/enemies/${o.imgKey}.png`, import.meta.url)
+      if (o.imgKey && !fs.existsSync(fileURLToPath(abs))) bad.push(o.name)
+    }
+    return bad.slice(0, 6).join('、')
+  })())
+  // 🔍 「降采样不许用最近邻」（2026-09-21 用户报「形象都糊糊的」后立）：
+  //    立绘源图 512 显示 140~176 ⇒ 降采样，`image-rendering: pixelated` 会掉像素出锯齿。
+  //    pixelated 只留给 1:1 / 整数倍放大的小图标（物品图、游戏币）——这里只钉立绘这三处。
+  check('对决页', '立绘样式不许用 image-rendering: pixelated（降采样会出锯齿）', (() => {
+    const files = ['components/CombatArena.vue', 'views/CombatView.vue', 'components/CombatLoadout.vue']
+    // 剥掉注释再查：这几处都写着「不要加 pixelated」的说明文字，直接搜全文会恒 FAIL（注释顶掉断言的坑）
+    const bad = files.filter((f) => /image-rendering:\s*pixelated/.test(rd(f)))
+    return bad
+  })().length === 0, '立绘样式仍用最近邻缩放')
+  check('对决页', '立绘源图是 512（三处 CSS 都按 176/140 显示，源图必须更大）', (() => {
+    const fs2 = rd('components/CombatArena.vue')
+    return /width:\s*176px/.test(fs2)
+  })(), '战斗屏立绘尺寸变了，记得同步守卫')
+
+  check('对决页', '立绘路径只在 enemyImage() 里拼、且组件用它（不许手写 /images/enemies/）', (() => {
+    const helper = rd('game/data/enemyImage.js')
+    const used = ['views/CombatView.vue', 'components/CombatArena.vue'].every((f) => /enemyImage\(/.test(rd(f)))
+    const noHardcode = !/['"`]\/images\/enemies\//.test(rd('views/CombatView.vue')) && !/['"`]\/images\/enemies\//.test(rd('components/CombatArena.vue'))
+    return helper.includes('images/enemies/') && used && noHardcode
+  })(), '组件里手写了立绘路径，或没走 enemyImage()')
+
+  // ③b 「其它要战斗的也同步」（2026-09-19 用户要求，2026-09-20 换成 CombatPanel 口径）：
+  //     `CombatPanel` 已经把「战斗屏（CombatArena）+ 日志/战备（CombatLog/CombatLoadout）+ 风格/属性」
+  //     打成一包，所以**战斗页只要用 CombatPanel 就等于复用了那一套**；直接引 CombatArena+CombatLoadout
+  //     也算合规（旧写法）。页面里一律不许再有自己的血条/日志副本。
+  //     ⚠️ 必须同时查「import 了」**和「真的用了」**：只查 `includes('CombatArena')` 会被 import 行蒙过去
+  //     （反例验证时抓到的：把 `<CombatArena />` 换回自建战斗框后，import 还在 ⇒ 该断言照样 PASS）。
+  const battlePages = [
+    'components/CombatPanel.vue', 'views/CombatView.vue', 'views/ArenaView.vue', 'views/TowerView.vue',
+    'views/TrialsView.vue', 'views/ChefChallengeView.vue', 'views/MysticRealmView.vue',
+  ]
+  const notShared = battlePages.filter((f) => {
+    const src2 = rd(f)
+    if (/<CombatPanel\s*\/>/.test(src2)) return false // ✅ 用共用面板（内含战斗屏 + 日志/战备）
+    // ⚠️ 战斗屏现在带 #corner 插槽（战备摆左上角，2026-09-21）⇒ 不能只认自闭合的 `<CombatArena />`
+    return !/<CombatArena[\s>]/.test(src2) || !/<CombatLoadout\s*\/>/.test(src2)
+  })
+  check('对决页', `七个战斗页面都复用共用的战斗 UI（CombatPanel 或 CombatArena + CombatLoadout）`,
+    notShared.length === 0, notShared.join('、') + ' 未同步')
+  const dupBattle = battlePages.filter((f) => /battle-split|class="card combat-battle"/.test(rd(f)))
+  check('对决页', '各战斗页不再自建血条/日志副本（无 battle-split / combat-battle）',
+    dupBattle.length === 0, dupBattle.join('、') + ' 仍自建战斗框')
+  // 日志已拆成 `CombatLog.vue`（用户要求它只占半行、与战备并排）⇒ 骨架断言跟着拆
+  const logCmp = rd('components/CombatLog.vue')
+  const arenaCmp = rd('components/CombatArena.vue') // 上面那段重构时被顺手删掉的引用，补回来
+  check('对决页', '战斗屏组件含「进度条 + 双方对峙」（梅尔沃式骨架）',
+    arenaCmp.includes('arena-bar') && arenaCmp.includes('arena-stage'), '战斗屏骨架缺件')
+  // 用户 2026-09-21：未选对手时右侧那一格改成「主角形象的镜像翻转」
+  check('对决页', '未选对手时对手位显示主角立绘的镜像（不是空 emoji 格）',
+    /enemyImage\(combat\?\.opponent\) \?\? chefImage/.test(arenaCmp)
+    && /arena-portrait--mirror/.test(arenaCmp) && /scale: -1 1/.test(arenaCmp),
+    '镜像回落缺失（或用了 transform 会被呼吸动画覆盖）')
+  check('对决页', '战斗日志已独立成 CombatLog，不再塞在战斗屏里',
+    logCmp.includes('battle-log') && !arenaCmp.includes('arena-log'), '日志仍在战斗屏内')
+  // 🔀 2026-09-21 用户要求「战备移到（战斗屏）左上角红框位置、战斗日志移到装备位置、装备移到战斗日志位置」：
+  //    ① 战备进战斗屏顶行左侧（CombatArena 必须开 #corner 插槽，且 CombatPanel 真的塞了 CombatLoadout）
+  check('对决页', '战备摆在战斗屏左上角（CombatArena 的 #corner 插槽 + CombatPanel 传 CombatLoadout）',
+    /<slot name="corner"/.test(arenaCmp) && /class="arena-corner"/.test(arenaCmp)
+    && /<template #corner>[\s\S]{0,120}<CombatLoadout \/>/.test(panel),
+    '战备不在战斗屏左上角')
+  //    ② 战斗日志在右栏（原装备槽位置）；左栏（CombatPanel）里不许再留日志，否则就是两份
+  check('对决页', '战斗日志搬到右栏（六个战斗页的 .combat-page-side 内都是 CombatLog）', (() => {
+    const pages = ['views/CombatView.vue', 'views/ArenaView.vue', 'views/TowerView.vue', 'views/TrialsView.vue', 'views/ChefChallengeView.vue', 'views/MysticRealmView.vue']
+    const bad = pages.filter((f) => !/<CombatLog \/>/.test(rd(f)) || !/class="combat-page-side"/.test(rd(f)))
+    return bad
+  })().length === 0, (() => {
+    const pages = ['views/CombatView.vue', 'views/ArenaView.vue', 'views/TowerView.vue', 'views/TrialsView.vue', 'views/ChefChallengeView.vue', 'views/MysticRealmView.vue']
+    return pages.filter((f) => !/<CombatLog \/>/.test(rd(f))).join('、') + ' 右栏没有战斗日志'
+  })())
+  check('对决页', '战斗日志不再留在左栏（CombatPanel 里没有 CombatLog，日志只有一份）',
+    !panel.includes('CombatLog') && !/class="combat-bottom"/.test(panel), '左栏仍有日志副本')
+  //    ③ 装备槽回到左栏（CombatPanel 里），且**八个槽位排成一排**（写死 8 列，不用 auto-fill —— 它会折行）
+  check('对决页', '装备槽摆在左栏（CombatPanel 内，与战斗屏同屏）',
+    /<EquipmentSlots \/>/.test(panel), '装备槽不在左栏')
+  check('对决页', '装备槽一排 8 格（写死 8 列、窄屏降 4 列）',
+    /repeat\(8, minmax\(0, 1fr\)\)/.test(eqSlots) && /repeat\(4, minmax\(0, 1fr\)\)/.test(eqSlots), '等于 8 格的列数没写死')
+  check('对决页', '装备槽已从战备卡里移出（加载项里不再含 .eq-slot）',
+    !loadout.includes('eq-slot') && eqSlots.includes('eq-slot'), '装备仍在战备卡')
+
+  // ③c 对决页只留战斗相关：不出现「挂机计划」与「食神秘境」两块（2026-09-19 用户要求）
+  check('对决页', '对决页不再显示「食神秘境」入口卡',
+    !view.includes('realm-card') && !view.includes('食神秘境'), '仍有秘境卡')
+  const skillView = rd('views/SkillView.vue')
+  check('对决页', '战斗类技能下不显示「挂机计划」卡（v-if 判 category !== combat）',
+    skillView.includes("activeDef?.category !== 'combat'") && skillView.includes('plan-card'),
+    '挂机计划仍在战斗技能下显示')
+
+  // ③e App.vue（2026-09-19 用户要求）：「两条常驻提示」从内容顶部移到中间列底栏；
+  //     「中间底部状态条」直接去掉（它右侧那排装备槽已由 EquipmentSlots 承担）。
+  const appSrc = rd('App.vue')
+  // 判据用**位置**而不是切片：`head-strips` 现在在 `</main>` 之前（是底栏），切到 `</main>` 会把它也框进去。
+  // 真正的契约是「它不在滚动区开头、不在第一个视图组件之前」。
+  const iScroll = appSrc.indexOf('class="main-scroll"')
+  const iFirstView = appSrc.indexOf('<ShopView')
+  const iStrips = appSrc.indexOf('class="head-strips"')
+  check('对决页', '两条常驻提示已移出内容滚动区顶部（每页正文从最顶端开始）',
+    iStrips > iScroll && iStrips > iFirstView && iFirstView > 0, `strips@${iStrips} scroll@${iScroll} view@${iFirstView}`)
+  check('对决页', '中间底部状态条已删除（无 .bottom-nav）',
+    !appSrc.includes('bottom-nav') && !rd('styles/main.css').includes('bottom-nav'), '底栏残留')
+  check('对决页', '底栏位置给 BGM 胶囊留了让位宽度（padding-right）',
+    /\.head-strips \{[\s\S]{0,400}padding-right/.test(rd('styles/main.css')), '未给胶囊让位')
+
+  // ③d 属性说明改悬浮（2026-09-19 用户「描述太多了」）：常显行必须消失，换成 follow-tooltip
+  check('对决页', '属性说明改为悬浮显示（不再常显 .attr-hint 行）',
+    !panel.includes('attr-hint') && panel.includes('follow-tooltip') && panel.includes('bindTip'),
+    '说明仍是常显')
+
+  // ④ 风格整列 + 克制标注（标注里带「伤害 +N%」，N 取自引擎 getter，见下方非恒真断言）
+  check('对决页', '风格按钮标注「克制 X」且取自 STYLE_ADVANTAGE，并标出克制伤害加成',
+    panel.includes('克制') && panel.includes('STYLE_ADVANTAGE[s]') && panel.includes('advPct'), '缺克制标注')
+
+  // ⑤ 非恒真：界面显示的暴击倍率 == 伤害公式里的字面量（**两处**：玩家暴击、对手暴击）
+  const crits = [...engine.matchAll(/dmg \*=\s*(\d+)/g)].map((m) => m[1])
+  const mGetter = engine.match(/critMultiplier\(\)\s*\{\s*return (\d+)/)
+  check('对决页', `暴击倍率：getter(${mGetter?.[1] ?? '?'}) == 伤害公式 dmg *= [${crits.join(', ')}]（改公式必须同步 getter）`,
+    crits.length >= 2 && !!mGetter && crits.every((c) => c === mGetter[1]),
+    `公式 [${crits.join(', ')}] vs getter ${mGetter?.[1]}`)
+  // 减伤口径：公式两处（看对手 def / 看玩家 defense）+ getter 一处，共 3 处「/(x+100)」形态
+  // ⚠️ 正则要容 `o.def` 这种带点号的属性名（写成 `\w+` 会只匹配到 getter 里的 `d`，恒 FAIL）
+  const redForms = (engine.match(/\(\s*[\w.]+\s*\+\s*100\s*\)/g) ?? []).length
+  check('对决页', `减伤口径 def/(def+100) 在引擎里保持同源（含 getter 共 ${redForms} 处）`, redForms >= 3, `只找到 ${redForms} 处`)
+  // 同样非恒真：风格按钮上标的「伤害 +N%」== 两处 `advantage ? 1.15 : 1` 里的 1.15
+  const advs = [...engine.matchAll(/advantage \?\s*([\d.]+)\s*:\s*1/g)].map((m) => m[1])
+  const mAdv = engine.match(/advantageMultiplier\(\)\s*\{\s*return ([\d.]+)/)
+  check('对决页', `克制倍率：getter(${mAdv?.[1] ?? '?'}) == 伤害公式 advantage ? [${advs.join(', ')}]（改公式必须同步 getter）`,
+    advs.length >= 2 && !!mAdv && advs.every((a) => a === mAdv[1]),
+    `公式 [${advs.join(', ')}] vs getter ${mAdv?.[1]}`)
+}
+
+// ══════════ C52：采集/制作「默认只展开当前等级段」（2026-09-19 用户要求）══════════
+// 起因：默认全部折叠时，玩家每次进页只看到一排时代标题、得先点开才知道自己能采/能做什么。
+// 本组把「默认展开当前段」钉住，重点是**别静默回退到最后一段**（这个 bug 真发生过：
+// `ProductionView` 的 sections 映射只留了 label/era/list、把 from/to 丢了 ⇒ 1 级玩家默认展开 Lv91-100）。
+{
+  const { readFileSync } = await import('node:fs')
+  const { stripComments } = await import('./lib/comments.mjs')
+  const { levelEras, currentEraLabel, eraLabel: eraLab } = await import('../../src/game/data/levelEras.js')
+  const items = [1, 5, 11, 12, 25, 95, 100, 111, 120].map((lv) => ({ reqLevel: lv, id: `i${lv}` }))
+  const secs = levelEras(items, (t) => t.reqLevel, (t) => t.id)
+  const pick = (lv) => currentEraLabel(secs, lv)
+  check('等级段', `currentEraLabel 按等级命中正确的段（1→${pick(1)} / 12→${pick(12)} / 120→${pick(120)}）`,
+    pick(1) === eraLab(1, 10) && pick(12) === eraLab(11, 20) && pick(120) === secs[secs.length - 1].label,
+    `1→${pick(1)} 12→${pick(12)} 120→${pick(120)}`)
+  check('等级段', 'currentEraLabel 的兜底是「低于第一段→第一段」「空表→null」，不是无脑最后一段',
+    currentEraLabel(secs, 0) === secs[0].label && currentEraLabel([], 5) === null,
+    `0→${currentEraLabel(secs, 0)} 空表→${currentEraLabel([], 5)}`)
+  const rd2 = (p2) => stripComments(readFileSync(new URL(`../../src/${p2}`, import.meta.url), 'utf8'))
+  const gv = rd2('views/GatheringView.vue')
+  const pv = rd2('views/ProductionView.vue')
+  check('等级段', '采集页与制作页都按「当前等级段」算默认展开（都引 currentEraLabel）',
+    gv.includes('currentEraLabel') && pv.includes('currentEraLabel'), '有页面没接')
+  // 🔴 反向验证过的：把 `from: sec.from` 删掉 → 该断言 FAIL（它就是那个 bug 的成因）
+  check('等级段', '制作页的 sections 保留了 from/to（丢了会静默回退到最后一段）',
+    /from:\s*sec\.from/.test(pv) && /to:\s*sec\.to/.test(pv), '边界字段被丢弃')
+  // 用户 2026-09-19 第二次澄清后的**最终形态**：等级段 = 顶部标签页，**只显示当前段的卡片**、
+  // 没有折叠、点标签切换。（第一版做成「十个段标题 + 只展开当前段」被用户否掉：那样还得滚。）
+  const tabsOk = (src2) => src2.includes('era-tabs') && src2.includes('selectEra') && src2.includes('activeSec')
+  const noAccordion = (src2) => !src2.includes('toggleSection') && !src2.includes('isOpen(')
+  check('等级段', '采集页与制作页都改成「顶部标签页 + 只渲染当前段」',
+    tabsOk(gv) && tabsOk(pv), '有页面还留在旧形态')
+  check('等级段', '两页都已无折叠手风琴（toggleSection / isOpen 全清）',
+    noAccordion(gv) && noAccordion(pv), '仍有折叠残留')
+  check('等级段', '默认段 = 当前等级所在段（selectedEra 初始值取 currentEraLabel）',
+    /selectedEra\s*=\s*ref\(eraDefault\(\)\)|selectedEra\s*=\s*ref\(currentEraLabel/.test(gv) &&
+    /selectedEra\s*=\s*ref\([\s\S]{0,60}?eraDefault\(\)/.test(pv), '默认段不是当前段')
+  // 「去做」跳转必须改成**切标签页**（旧实现是 toggleSection(标签)，现在没有折叠可开）
+  check('等级段', '制作页「去做」跳转 = 切到目标配方所在段（selectEra + sectionLabelOf）',
+    /selectEra\(sectionLabelOf\(/.test(pv), '跳转没改成切段')
+}
+
+// ══════════ C53：成长阻尼 + 材料成本系数（2026-09-21，用户「砍一点，然后增加所需材料数量」）══════════
+{
+  const { readdirSync, readFileSync } = await import('node:fs')
+  const CAL_TOTAL = 7449 // 全部制作配方的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
+  const CAL_COUNT = 1246 // 同上：配方条数
+  const c53 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
+
+  // ── A. 成长阻尼：乘法叠区（转生 × 增益剂 × 精通或设置 × 对决补正 × 限时窗口）先相乘、再统一折减 ──
+  check('成长阻尼', '常数 XP_STACK_DAMPING = 0.75（改它=全局成长速度变化，必须同步 sim 基准与 AGENTS §成长速度）',
+    XP_STACK_DAMPING === 0.75, `实际 ${XP_STACK_DAMPING}`)
+  check('成长阻尼', '公式 damp(p) = 1 + (p − 1) × 系数：×1.2→×1.15 / ×3→×2.5 / ×13.5→×10.375',
+    Math.abs(dampXpStack(1.2) - 1.15) < 1e-9 && Math.abs(dampXpStack(3) - 2.5) < 1e-9 && Math.abs(dampXpStack(13.5) - 10.375) < 1e-9,
+    `${dampXpStack(1.2)} / ${dampXpStack(3)} / ${dampXpStack(13.5)}`)
+  check('成长阻尼', '不产生惩罚：p ≥ 1 ⇒ 1 ≤ damp(p) ≤ p（永远只是「少拿」而不是「倒扣」）',
+    [1, 1.2, 3, 13.5, 300].every((v) => dampXpStack(v) >= 1 && dampXpStack(v) <= v))
+  check('成长阻尼', '严格单调递增（堆更多乘区绝不会更慢，防「转生反而变慢」类倒退）',
+    [1, 1.2, 2, 3, 5, 13.5, 101, 300, 1e4].every((v, i, arr) => i === 0 || dampXpStack(v) > dampXpStack(arr[i - 1])))
+  check('成长阻尼', '渐进：低乘区几乎不动（×1.2 只降 4.2%）／高乘区才明显（×101 → ×76，降 24.8%）',
+    Math.abs(1 - dampXpStack(1.2) / 1.2) < 0.05 && Math.abs(1 - dampXpStack(101) / 101) > 0.2,
+    `×1.2 降 ${(1 - dampXpStack(1.2) / 1.2).toFixed(3)}｜×101 降 ${(1 - dampXpStack(101) / 101).toFixed(3)}`)
+  check('成长阻尼', '非法输入回退 ×1（NaN / 0 / 负数都不会污染经验计算）',
+    dampXpStack(NaN) === 1 && dampXpStack(0) === 1 && dampXpStack(-5) === 1 && dampXpStack(undefined) === 1)
+
+  // 行为断言（真实引擎）：授予经验之比必须等于**阻尼后**的比值 —— 而不是各层原值之比
+  {
+    const grantXp = (prestiges, tonicMult) => {
+      const pp = freshPlayer()
+      pp.setSkillState('cooking', { level: 50, exp: 0, prestiges })
+      if (tonicMult) pp.buffs.xpMult = { mult: tonicMult, expiresAt: Date.now() + 60_000 }
+      const inst = getSkillInstance('cooking')
+      pp.setSkillState('cooking', { level: 50, exp: 0 })
+      return inst.addXp(10000, 1)
+    }
+    const base = grantXp(0)
+    const pre10 = grantXp(10)
+    const tonic = grantXp(0, 4.5)
+    const both = grantXp(10, 4.5)
+    check('成长阻尼', '行为：转生 10 层的实际经验 = 阻尼后的 ×2.5（不是 ×3.0）',
+      Math.abs(pre10 / base - dampXpStack(1 + 10 * PRESTIGE_XP_BONUS)) < 1e-6,
+      `实际 ×${(pre10 / base).toFixed(3)} ≠ ×${dampXpStack(1 + 10 * PRESTIGE_XP_BONUS)}`)
+    check('成长阻尼', '行为：增益剂 ×4.5 的实际经验 = 阻尼后的 ×3.625（不是 ×4.5）',
+      Math.abs(tonic / base - dampXpStack(4.5)) < 1e-6, `实际 ×${(tonic / base).toFixed(3)} ≠ ×${dampXpStack(4.5)}`)
+    check('成长阻尼', '🔴 行为：两处乘区叠加（3.0 × 4.5 = 13.5）按**乘积**折减（×10.375），不是逐层折减（2.5 × 3.625 = 9.06）',
+      Math.abs(both / base - dampXpStack(13.5)) < 1e-6 && Math.abs(both / base - dampXpStack(3) * dampXpStack(4.5)) > 0.5,
+      `实际 ×${(both / base).toFixed(3)}`)
+  }
+  check('成长阻尼', '各层原值一分未动（PRESTIGE_XP_BONUS 仍是 0.2：转生 +20%/层 的承诺没被砍，砍的是叠区）',
+    PRESTIGE_XP_BONUS === 0.2)
+  {
+    const sk = c53('game/skills/Skill.js')
+    check('成长阻尼', 'Skill.addXp 里是「先相乘再阻尼」（dampXpStack(a * b * …)）',
+      /dampXpStack\(\s*prestigeMult\s*\*\s*tonicMult\s*\*\s*growthMult\s*\*\s*catchup\s*\*\s*marketMult\s*\)/.test(sk))
+    check('成长阻尼', '🔴 反向：不得逐层乘阻尼（那是「把每层系数都调低」，会让高阶档位白做）',
+      !/dampXpStack\(prestigeMult\)\s*\*/.test(sk) && !/\*\s*dampXpStack\(tonicMult\)/.test(sk))
+  }
+  check('成长阻尼', '效果总览已登记（否则玩家自己乘出来的数与实际到账对不上）',
+    c53('game/data/activeEffects.js').includes("id: 'xpStackDamping'"))
+  check('成长阻尼', '转生那条展示不再硬写 0.2（改用 Skill.js 导出的 PRESTIGE_XP_BONUS，消掉第二真相）',
+    /PRESTIGE_XP_BONUS \* st\.prestiges/.test(c53('game/data/activeEffects.js')))
+
+  // ── B. 材料成本系数：原始数据 + 单一缩放出口（数据层一个字节都不动）──
+  check('材料成本', '常数 MATERIAL_COST_MULT = 2（改它=全局材料需求变化，必须同步 AGENTS §材料成本）',
+    MATERIAL_COST_MULT === 2, `实际 ${MATERIAL_COST_MULT}`)
+  check('材料成本', 'materialQty：至少 1、四舍五入；非法/非正输入 → 0（0 表示跳过该材料）',
+    materialQty(1) === 2 && materialQty(3) === 6 && materialQty(0) === 0 && materialQty(-1) === 0 && materialQty(NaN) === 0 && materialQty('x') === 0)
+  {
+    const rc = getSkillInstance('cooking')?.recipes?.[0] ?? SIDELINE_RECIPES.pottery[0]
+    const before = JSON.stringify(rc.ingredients)
+    const a = effIngredients(rc)
+    const b = effIngredients(rc)
+    check('材料成本', 'effIngredients 是纯函数：不改动传入的配方对象、两次调用结果一致',
+      JSON.stringify(rc.ingredients) === before && JSON.stringify(a) === JSON.stringify(b))
+    check('材料成本', 'effIngredients：件数 = 原始 × 系数、key 与原始完全一致（缩放不改变材料种类）',
+      JSON.stringify(Object.keys(a).sort()) === JSON.stringify(Object.keys(rc.ingredients).sort()) &&
+      Object.entries(rc.ingredients).every(([id, q]) => a[id] === materialQty(q)) &&
+      materialTotal(rc) === Object.values(a).reduce((x, y) => x + y, 0))
+  }
+  {
+    // 冻结基线：全部制作配方（技能实例口径，已含 recipeBalance/timberRecipes 的变换）的原始材料件数合计。
+    // 这是「没人在数据层偷偷加材料」的绊线：改了 ingredients 的数量 → 立刻 FAIL。
+    const pTot = freshPlayer()
+    let tot = 0
+    let n = 0
+    for (const inst of getAllSkillInstances()) {
+      if (inst.type !== 'production') continue
+      for (const r of inst.recipes ?? []) {
+        n++
+        for (const q of Object.values(r.ingredients ?? {})) tot += q
+      }
+    }
+    check('材料成本', '原始数据未被改写（冻结数据铁律）：全部制作配方的材料件数合计 == 基线 CAL_TOTAL',
+      tot === CAL_TOTAL, `实际 ${tot}（配方 ${n} 条）`)
+    check('材料成本', `配方条数基线未变（CAL_COUNT 条：材料系数只放大数量，不增删配方）`, n === CAL_COUNT, `实际 ${n}`)
+  }
+  {
+    // 🔴 唯一出口静态断言：全 src 里「按数量读/遍历 .ingredients」只允许这 3 个文件
+    //    （materialCost.js = 出口自身；recipeBalance/timberRecipes = 模块加载期的等级/木材改写层，与数量无关）
+    // ⚠️ 三种写法都要抓（第一版只抓 Object.entries/keys，反例验证时 `v-for="… in r.ingredients"` 漏掉了：
+    //    把制作页显示改回原始数量，守卫依然全绿 —— 假绿）：
+    //    ① Object.entries/keys(x.ingredients)  ② v-for="… in x.ingredients"  ③ x.ingredients[mid] 取数量
+    const RAW_PATTERNS = [
+      /Object\.(entries|keys)\([^)]*\.ingredients/,
+      /v-for="[^"]*\bin\s+[\w.$?[\]()]*\.ingredients\b/,
+      /\.ingredients\s*\??\.?\s*\[/,
+    ]
+    const ALLOW = ['materialCost.js', 'recipeBalance.js', 'timberRecipes.js']
+    const offenders = []
+    const walk = (dir) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = new URL(`${e.name}${e.isDirectory() ? '/' : ''}`, dir)
+        if (e.isDirectory()) { walk(p); continue }
+        if (!/\.(js|vue)$/.test(e.name)) continue
+        const src = stripComments(readFileSync(p, 'utf8'))
+        if (RAW_PATTERNS.some((re) => re.test(src)) && !ALLOW.includes(e.name)) offenders.push(e.name)
+      }
+    }
+    walk(new URL('../../src/', import.meta.url))
+    check('材料成本', '🔴 唯一出口：不许再按数量读/遍历 recipe.ingredients（只能用 effIngredients/materialText）',
+      offenders.length === 0, offenders.join('、'))
+    const need = {
+      'game/skills/ProductionSkill.js': 'effIngredients',
+      'views/ProductionView.vue': 'effIngredients',
+      'views/LogView.vue': 'effIngredients',
+      'components/RecipeTreeModal.vue': 'effIngredients',
+      'game/data/itemSources.js': 'materialText',
+      'game/data/itemUses.js': 'effIngredients',
+      'game/data/valueBalance.js': 'effIngredients',
+      'game/data/flavorRecipes.js': 'effIngredients',
+      'game/data/cookingFest.js': 'effIngredients',
+    }
+    const missing = Object.entries(need).filter(([f, sym]) => !c53(f).includes(sym)).map(([f]) => f)
+    check('材料成本', '9 处消费/显示/派生点都已接线到唯一出口（漏一处=显示与实际不一致）',
+      missing.length === 0, missing.join('、'))
+  }
+  {
+    // 行为：只够「原始用量」的材料做不了；补到 ×2 才能做；一次制作恰好扣掉生效用量
+    const pm = freshPlayer()
+    const inst = getSkillInstance('cooking')
+    const rc = inst.recipes[0]
+    const eff = effIngredients(rc)
+    pm.setSkillState('cooking', { level: rc.reqLevel, exp: 0 })
+    for (const [id, q] of Object.entries(rc.ingredients)) pm.inventory[id] = q
+    const rawEnough = inst.canCraft(rc)
+    for (const [id, q] of Object.entries(eff)) pm.inventory[id] = q
+    const effEnough = inst.canCraft(rc)
+    const beforeSnapshot = Object.fromEntries(Object.keys(eff).map((id) => [id, pm.inventory[id] ?? 0]))
+    inst.craft(rc)
+    const spent = Object.entries(eff).every(([id, q]) => (pm.inventory[id] ?? 0) === Math.max(0, beforeSnapshot[id] - q))
+    check('材料成本', '行为：只够原始用量的材料**做不了**（canCraft=false）——这条在改前是「能做」',
+      rawEnough === false && Object.keys(rc.ingredients).length > 0, `rawEnough=${rawEnough}`)
+    check('材料成本', '行为：补到生效用量后可以做，且一次制作恰好扣掉生效用量',
+      effEnough === true && spent, `effEnough=${effEnough} spent=${spent}`)
+  }
+  {
+    // 图鉴三查侧：来源串与「可用于制作」的用量都必须是生效用量
+    const r0 = SIDELINE_RECIPES.pottery[0]
+    const outId = r0.output.itemId
+    const [mid, mq] = Object.entries(r0.ingredients)[0]
+    const nm = getItem(mid)?.name ?? mid
+    const srcs = itemSources(outId).join('｜')
+    check('材料成本', `图鉴来源串用生效用量（${nm}×${mq} → ×${mq * MATERIAL_COST_MULT}）`,
+      srcs.includes(`${nm}×${mq * MATERIAL_COST_MULT}`), srcs.slice(0, 90))
+    const uses = itemUses(mid).filter((u) => u.outputId === outId)
+    check('材料成本', '图鉴「可用于制作」的用量 == effIngredients（不再显示原始数量）',
+      uses.length > 0 && uses.every((u) => u.qty === effIngredients(r0)[mid]), JSON.stringify(uses.map((u) => u.qty)))
+    check('材料成本', '炼金刻意未纳入（AlchemyView 不引用材料系数：产物价值由投入价值反推，放大投入会静默重新定价）',
+      !c53('views/AlchemyView.vue').includes('materialCost'))
+  }
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

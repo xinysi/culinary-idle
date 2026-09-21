@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -11,13 +12,13 @@ const ui = useUiStore()
 const MODES = {
   m1: { label: '模式1', dur: 40, len: 2, hint: 1, lives: 5, decoy: 6, target: 1000, gold: 45, desc: '40 秒 · 目标 1000 分 · 2 字菜名 + 1 个提示字，5 条命 · +45 币' },
   m2: { label: '模式2', dur: 45, len: 2, hint: 1, lives: 4, decoy: 8, target: 975, gold: 55, desc: '45 秒 · 目标 975 分 · 干扰字变多 · +55 币' },
-  m3: { label: '模式3', dur: 50, len: 3, hint: 1, lives: 4, decoy: 8, target: 950, gold: 60, desc: '50 秒 · 目标 950 分 · **3 字菜名** · +60 币' },
+  m3: { label: '模式3', dur: 50, len: 3, hint: 1, lives: 4, decoy: 8, target: 950, gold: 60, desc: '50 秒 · 目标 950 分 · <b>3 字菜名</b> · +60 币' },
   m4: { label: '模式4', dur: 55, len: 3, hint: 0, lives: 4, decoy: 10, target: 875, gold: 70, desc: '55 秒 · 目标 875 分 · 没有提示字了 · +70 币' },
-  m5: { label: '模式5', dur: 60, len: 4, hint: 1, lives: 4, decoy: 10, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · **4 字菜名** · +80 币' },
+  m5: { label: '模式5', dur: 60, len: 4, hint: 1, lives: 4, decoy: 10, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · <b>4 字菜名</b> · +80 币' },
   m6: { label: '模式6', dur: 65, len: 4, hint: 0, lives: 3, decoy: 12, target: 650, gold: 90, desc: '65 秒 · 目标 650 分 · 只剩 3 条命 · +90 币' },
-  m7: { label: '模式7', dur: 70, len: 5, hint: 1, lives: 3, decoy: 12, target: 650, gold: 100, desc: '70 秒 · 目标 650 分 · **5 字菜名** · +100 币' },
+  m7: { label: '模式7', dur: 70, len: 5, hint: 1, lives: 3, decoy: 12, target: 650, gold: 100, desc: '70 秒 · 目标 650 分 · <b>5 字菜名</b> · +100 币' },
   m8: { label: '模式8', dur: 80, len: 5, hint: 0, lives: 3, decoy: 14, target: 725, gold: 120, desc: '80 秒 · 目标 725 分 · 无提示 + 满干扰 · +120 币' },
-  m9: { label: '模式9', dur: 90, len: 6, hint: 0, lives: 3, decoy: 16, target: 775, gold: 140, desc: '90 秒 · 目标 775 分 · **6 字菜名** · +140 币' },
+  m9: { label: '模式9', dur: 90, len: 6, hint: 0, lives: 3, decoy: 16, target: 775, gold: 140, desc: '90 秒 · 目标 775 分 · <b>6 字菜名</b> · +140 币' },
   m10: { label: '模式10', dur: 100, len: 7, hint: 0, lives: 2, decoy: 18, target: 800, gold: 160, desc: '100 秒 · 目标 800 分 · 7 字长名 + 2 条命，硬核猜字 · +160 币' },
 }
 const DISHES = [
@@ -57,23 +58,11 @@ let timeAccum = 0
 let overFlag = false
 let transitionAt = 0
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 function newWord() {
@@ -254,7 +243,7 @@ onUnmounted(() => stopLoop())
           <div class="gd-info-row gd-info-rule">通用规则：屏幕上方是<b>藏起来的菜名</b>（？为未猜出的字），下方是候选字池 · <b>点候选字</b>：该字在菜名里就亮出来并 +30 分，不在就扣 1 条命 · 猜出整道菜名额外 +100 分（并按剩余命数加成）· 命耗尽或时间到就结算，达标发游戏币（超出目标最多 +50%）</div>
           <div v-for="(m, key) in MODES" :key="key" class="gd-info-row">
             <b class="gd-info-name">{{ m.label }}</b>
-            <span class="gd-info-desc">{{ m.desc }}</span>
+            <span class="gd-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

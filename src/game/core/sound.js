@@ -155,8 +155,7 @@ function synthFallbackFor(id) {
   const tr = getBgmTrack(id)
   const scene = tr?.scene ?? 'day'
   const synthId = scene === 'duel' || scene === 'boss' ? 'battle' : scene === 'night' ? 'night' : 'day'
-  if (synthActive === synthId && synthTimer) return
-  synthPlayer.play(synthId)
+  startSynth(synthId)
 }
 
 function setElVolume(id) {
@@ -293,6 +292,30 @@ const synthStop = () => {
 }
 
 /**
+ * 合成版播放（内部用）：切到某首合成曲并启动前瞻调度。
+ * 同一首已在放时直接返回（不重启、不从头发声）。没有 Web Audio 时静默失败。
+ *
+ * 2026-09-21 修：此前这里写的是 `synthPlayer.play(id)` / `synthActive` / `synthTimer` 三个
+ * **从未声明的标识符** —— 真实音频缺失时本应回落到合成曲，实际抛 `ReferenceError`（实测
+ * `bgm.play('battle')` → `synthPlayer is not defined`），也就是「打包漏了 mp3 就全程没有 BGM」。
+ * 现在改为复用本模块已有的音序器状态（bgmTrack / bgmTimer / scheduleBgm）。
+ */
+function startSynth(id) {
+  if (!TRACKS[id]) return false
+  const c = ensureCtx()
+  if (!c) return false
+  if (bgmTrack === id && bgmTimer) return true // 已在放这首，别重启
+  synthStop()
+  bgmTrack = id
+  stepIndex = 0
+  // 起点要落在当前时间**之后**：若停在 0，下面的 while 会把「从 0 到现在」的音符一次性补发出来
+  nextNoteAt = c.currentTime + 0.08
+  scheduleBgm()
+  bgmTimer = setInterval(scheduleBgm, 200) // lookahead：每 200ms 排未来 0.6 秒的音符，避免 setInterval 抖动断音
+  return true
+}
+
+/**
  * 背景音乐统一出口（App.vue 的 syncBgm() 是唯一调用点）。
  *   play(id)   —— id 既可以是曲库里的真实曲目（bgmTracks.js），也可以是合成曲 day/night/battle
  *   pause()    —— 淡出并暂停（**保留进度**，用户按暂停用它；再次 play(同一 id) 会从原进度继续）
@@ -307,11 +330,15 @@ export const bgm = {
         synthStop() // 真实音频接手，停掉可能还在跑的合成版
         return
       }
-      // 真实音频不可用（文件缺失/解码失败）→ 合成版回落
+      // 真实音频不可用（文件缺失/解码失败）→ 按该曲的场景回落到合成版。
+      // 注意：这里**不能直接 return** —— 真实曲目 id（diner/market/…）不在 TRACKS 里，
+      // 直接 return 会变成「静音」而不是回落（2026-09-21 修）。
+      synthFallbackFor(id)
+      return
     }
     if (!TRACKS[id]) return
     stopReal()
-    synthPlayer.play(id)
+    startSynth(id)
   },
   /** 暂停（保留进度）：不改变 settings.bgmEnabled，也不清 settings.bgmTrack */
   pause() {

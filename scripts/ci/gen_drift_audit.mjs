@@ -39,12 +39,18 @@ const GENS = [
 // 已登记漂移（自证用）：列在这里的产物「应当」被检出为漂移——若报了「一致」，说明审计瞎了，直接 FAIL。
 // 这些产物的仓库版本都是**冻结数据**（AGENTS.md 数据铁律）且比生成器输出更正确，一律不得重跑覆盖。
 const KNOWN_DRIFT = {
-  'combatLoot.js': '只从 LEGENDARY 移出 27 条低阶锻造件（528→501）；ITEM_LEVEL/EQUIP_POOL 不变，零玩法变化（唯一可安全重跑的）',
+  // 2026-09-19 从本表**移除** combatLoot.js：为「后期补档」重跑过一次生成器后，
+  // 它已与生成器输出**一致**（自证断言会因此 FAIL，正好证明该断言是活的）——条目随之不再需要。
   'explorationTargets.js': '会改 79 个目标名称 + 32 个目标战利品（例 explore_001「家常小馆」→「菜摊」）',
   'expansion1.js': 'PRESERVE_EXT 会被从「空」补回 10 条保鲜配方；PRODUCTION_EXT 有 163 种行仅仓库有；EXPANSION_ITEMS 各有独有字段',
   'expansion2.js': 'PRESERVE_EXT2 同样会被补回 10 条；20 个赛季的 missions 全被改写；SMITHING_EXT2 有 6 条配方的材料会被换成 ironOre/saltOre（仓库用的是专用 ext2 矿）',
   'quests_extra.js': '452 个任务里 365 个的目标物品会被换（例 q136「踏青采小麦」→「踏青采苹果」）',
   'expansion_gear.js': '40 季的 tiers 奖励里有一件物品被换（yieldTonic3 → pres_ext2_06）',
+  // ── 2026-09-19 新增：加了 7 件挖掘材料（岩髓根…玄玉参）后，这 3 个生成器的**输入**（采集目标表）
+  //    变了 ⇒ 产出与仓库版本分叉。三者一律**不重跑**，各自原因如下（都写清了「为什么不重跑」）： ──
+  'farmSeeds.js': '会为新增的根茎目标生成种子（rockCoreRootSeed…）。不重跑：该脚本属 SELF_REF（产物会被 items.js 合并回输入，重跑须先清空导出），且「新根茎暂不可种植」是已知且无害的收尾项（菌类本来也没有种子）',
+  'spiritTiers.js': '食灵契约材料的候选池含新物品 ⇒ 重跑会改写部分契约的 ingredients。不重跑：AGENTS 数据铁律把「食灵契约配方（reqLevel/ingredients/xp/successChance）」列为**已固定**，不许改动 ⇒ 必须保留仓库版本',
+  'tales_ext.js': '轶事的解锁条件会改写（新物品成为某些轶事的解锁键）。不重跑：仓库版本含人工补写的标题/正文（生成器只产骨架），重跑会丢内容',
 }
 
 // 无法无损重跑的产物：产物会被 items.js 合并回输入 → 不先清空产物就会「全部跳过」并触发自引用防呆

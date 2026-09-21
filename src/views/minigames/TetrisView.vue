@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { itemImage } from '../../game/data/itemImage.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -52,14 +53,14 @@ for (const t of TYPES) {
 const MODES = {
   m1: { label: '模式1', dur: 60, drop: 1.0, garbage: 0, cols: 10, target: 200, gold: 70, desc: '60 秒 · 目标 200 分 · 标准 10 列 · +70 币' },
   m2: { label: '模式2', dur: 60, drop: 0.75, garbage: 0, cols: 10, target: 260, gold: 70, desc: '60 秒 · 目标 260 分 · 下落更快 · +70 币' },
-  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, cols: 8, target: 340, gold: 85, desc: '70 秒 · 目标 340 分 · **窄井 8 列**（更挤）· +85 币' },
-  m4: { label: '模式4', dur: 70, drop: 0.8, garbage: 0, cols: 6, target: 420, gold: 90, desc: '70 秒 · 目标 420 分 · **极窄井 6 列** · +90 币' },
-  m5: { label: '模式5', dur: 80, drop: 0.7, garbage: 0, cols: 10, noPreview: true, target: 520, gold: 105, desc: '80 秒 · 目标 520 分 · **无预览**（看不到下一个方块）· +105 币' },
-  m6: { label: '模式6', dur: 80, drop: 0.7, garbage: 0, cols: 10, blind: true, target: 640, gold: 110, desc: '80 秒 · 目标 640 分 · **盲盒**（当前方块闪烁难辨）· +110 币' },
+  m3: { label: '模式3', dur: 70, drop: 0.8, garbage: 0, cols: 8, target: 340, gold: 85, desc: '70 秒 · 目标 340 分 · <b>窄井 8 列</b>（更挤）· +85 币' },
+  m4: { label: '模式4', dur: 70, drop: 0.8, garbage: 0, cols: 6, target: 420, gold: 90, desc: '70 秒 · 目标 420 分 · <b>极窄井 6 列</b> · +90 币' },
+  m5: { label: '模式5', dur: 80, drop: 0.7, garbage: 0, cols: 10, noPreview: true, target: 520, gold: 105, desc: '80 秒 · 目标 520 分 · <b>无预览</b>（看不到下一个方块）· +105 币' },
+  m6: { label: '模式6', dur: 80, drop: 0.7, garbage: 0, cols: 10, blind: true, target: 640, gold: 110, desc: '80 秒 · 目标 640 分 · <b>盲盒</b>（当前方块闪烁难辨）· +110 币' },
   m7: { label: '模式7', dur: 90, drop: 0.6, garbage: 3, cols: 10, target: 780, gold: 130, desc: '90 秒 · 目标 780 分 · 开局 3 行垃圾 · +130 币' },
-  m8: { label: '模式8', dur: 90, drop: 0.6, garbage: 0, cols: 10, riseSec: 12, target: 920, gold: 135, desc: '90 秒 · 目标 920 分 · **上升垃圾**（每 12 秒底部升一行）· +135 币' },
-  m9: { label: '模式9', dur: 100, drop: 0.5, garbage: 0, cols: 10, pool: ['S', 'Z', 'J', 'L', 'T'], target: 1100, gold: 155, desc: '100 秒 · 目标 1100 分 · **窄池**（只有 S/Z/J/L/T 五种难方块）· +155 币' },
-  m10: { label: '模式10', dur: 120, drop: 0.4, garbage: 0, cols: 8, riseSec: 10, target: 1400, gold: 190, desc: '120 秒 · 目标 1400 分 · **地狱**：窄井 + 每 10 秒上升垃圾 · +190 币' },
+  m8: { label: '模式8', dur: 90, drop: 0.6, garbage: 0, cols: 10, riseSec: 12, target: 920, gold: 135, desc: '90 秒 · 目标 920 分 · <b>上升垃圾</b>（每 12 秒底部升一行）· +135 币' },
+  m9: { label: '模式9', dur: 100, drop: 0.5, garbage: 0, cols: 10, pool: ['S', 'Z', 'J', 'L', 'T'], target: 1100, gold: 155, desc: '100 秒 · 目标 1100 分 · <b>窄池</b>（只有 S/Z/J/L/T 五种难方块）· +155 币' },
+  m10: { label: '模式10', dur: 120, drop: 0.4, garbage: 0, cols: 8, riseSec: 10, target: 1400, gold: 190, desc: '120 秒 · 目标 1400 分 · <b>地狱</b>：窄井 + 每 10 秒上升垃圾 · +190 币' },
 }
 const showInfo = ref(false)
 
@@ -97,23 +98,11 @@ let loopId = null
 let softDrop = false
 let riseAccum = 0
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 方块逻辑 ──
@@ -559,7 +548,7 @@ onUnmounted(() => {
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="tt-info-row">
             <b class="tt-info-name">{{ m.label }}</b>
-            <span class="tt-info-desc">{{ m.desc }}</span>
+            <span class="tt-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

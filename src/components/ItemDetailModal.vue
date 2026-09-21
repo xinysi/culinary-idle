@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
-import { itemDetailLines, itemSourcesOf } from '../game/data/itemDetail.js'
+import { itemDetailLines, itemSourcesOf, spoilCountdown } from '../game/data/itemDetail.js'
 import { jumpForSource } from '../game/data/sourceJump.js'
 import { itemUses } from '../game/data/itemUses.js'
 import { itemImage } from '../game/data/itemImage.js'
@@ -62,6 +62,17 @@ function show(id) {
 }
 
 const it = computed(() => getItem(innerId.value))
+// 腐坏倒计时（2026-09-21 用户：「会腐坏的食材应该显示腐坏倒计时」）——
+// 依赖 `ui.loopTick` 每秒重算，弹窗开着就能看到秒在跳；不在背包里（没开始计时）就不显示。
+const spoilTick = computed(() => {
+  ui.loopTick
+  return Date.now()
+})
+const spoilLeft = computed(() => {
+  const until = player.spoilage?.[innerId.value]
+  if (!until || !it.value?.spoilMs) return null
+  return spoilCountdown(until, spoilTick.value)
+})
 const lines = computed(() => itemDetailLines(innerId.value))
 const sources = computed(() => itemSourcesOf(innerId.value))
 const uses = computed(() => itemUses(innerId.value))
@@ -85,6 +96,7 @@ const shownUses = computed(() => (showAllUses.value ? uses.value : uses.value.sl
           <span v-if="it?.quality" class="badge" :style="{ background: 'var(--sidebar-bg)', color: 'var(--text)' }">{{ it.quality }}</span>
           <span v-if="!collected" class="badge" style="background: var(--lock-bg); color: var(--muted)">未获得</span>
           <span v-else class="badge badge-on">已获得 ×{{ owned }}</span>
+          <span v-if="spoilLeft" class="badge warn-text" :title="`保鲜时长 ${it.spoilMs / 3600000} 小时；冷库可续时`">⏳ {{ spoilLeft }}后腐坏</span>
         </h3>
         <button class="btn btn-sm" @click="emit('close')">✕</button>
       </header>

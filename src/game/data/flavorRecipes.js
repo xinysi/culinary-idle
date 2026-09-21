@@ -4,6 +4,7 @@ import { getAllSkillInstances } from '../skills/registry.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { SKILL_DEFS } from './skills.js'
 import { getItem } from './items.js'
+import { effIngredients } from './materialCost.js'
 
 const cache = new Map()
 
@@ -24,7 +25,8 @@ export function recipesForPair(itemIds) {
   const out = []
   for (const inst of getAllSkillInstances()) {
     for (const r of inst.recipes ?? []) {
-      if (!usesAll(r.ingredients, itemIds)) continue
+      const mats = effIngredients(r)
+      if (!usesAll(mats, itemIds)) continue
       const outputId = r.output?.itemId ?? r.itemId
       out.push({
         skillId: inst.id,
@@ -33,7 +35,7 @@ export function recipesForPair(itemIds) {
         reqLevel: r.reqLevel ?? 1,
         outputId,
         outputName: getItem(outputId)?.name ?? r.name,
-        qty: r.ingredients?.[itemIds[0]] ?? 1,
+        qty: mats[itemIds[0]] ?? 1,
       })
     }
   }

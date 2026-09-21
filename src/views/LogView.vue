@@ -19,6 +19,8 @@ import ItemDetailModal from '../components/ItemDetailModal.vue'
 import ItemImg from '../components/ItemImg.vue'
 import { CATEGORY_LABEL, SLOT_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { dropChance } from '../game/data/difficulty.js' // 首领掉落显示的唯一缩放出口（与引擎掷骰同源）
+import { effIngredients } from '../game/data/materialCost.js' // 配方材料显示的唯一缩放出口（与引擎扣料同源）
 import Pagination from '../components/Pagination.vue'
 
 // 分页状态（每个列表独立页码；行数不同 → 每页数量不同）
@@ -249,7 +251,7 @@ const seasonGearIds = (s) => [s.limitedItem, ...(s.limitedItems ?? [])].filter(B
 const prestigeItems = [
   { t: '转生条件——任一技能满 100 级', d: '只要求单个技能等级达到 <b class="hl">100 级</b>即可对该技能转生；转生前上限仍是 100。条件只看该技能，与其它技能、物品、金币、图鉴无关。', tags: ['转生门槛：100 级', '只看单个技能'] },
   { t: '转生按钮——技能页右上角', d: '技能满 <b class="hl">100 级</b>且尚未转生时，技能页右上角出现「✨ 转生（突破 120 级）」主色按钮，点击弹出确认弹窗。', tags: ['技能页', '✨ 转生按钮'] },
-  { t: '等级重置——归 1、经验清零', d: '确认转生后该技能<b class="hl">等级重置为 1</b>、<b class="hl">经验清零</b>，重新开始练级。', tags: ['等级 = 1', '经验 = 0'] },
+  { t: '等级重置——归 1 + 传承、经验回到起点', d: '确认转生后该技能<b class="hl">等级回到 1 + 师徒传承保留的级数</b>（满 100 级转生保留 <b class="hl">5 级</b>，传承上限 20 级，见「师徒传承」页），<b class="hl">经验回到该等级起点</b>（进度条从 0 开始，不必重攒之前那些等级的累计经验），重新开始练级。', tags: ['等级 = 1 + 传承', '经验 = 该等级起点'] },
   { t: '转生层数——每技能独立 +1', d: '该技能<b class="hl">转生层数 +1</b>，各技能独立记录；同时<b class="hl">全局转生次数 +1</b>（用于成就/任务/故事/轶事）。', tags: ['转生层数 +1', '全局计数'] },
   { t: '永久经验加成——每层 +20%', d: '每转一层<b class="hl">永久 +20%</b>该技能经验，可叠加（1 转 +20%、2 转 +40%、3 转 +60%…）；与食灵、奥义、公会被动、增益剂、设置全局倍率<b class="hl">乘法叠加</b>。', tags: ['每层 +20%', '乘法叠加'] },
   { t: '等级上限——突破至 120', d: '转生后该技能等级上限由 100 提升到 <b class="hl">120</b>，可继续练到 120 级。', tags: ['转生上限：120 级'] },
@@ -382,6 +384,7 @@ const seasonPaged = computed(() => {
         <!-- 首领 图鉴 -->
         <template v-else-if="sub === 'boss'">
           <p class="dim" style="margin: 8px 0">击败全部首领 点亮图鉴；首次掉落独有装备（点击行查看详情与掉落）</p>
+          <div class="table-scroll">
           <table class="target-table">
             <thead>
               <tr>
@@ -413,6 +416,7 @@ const seasonPaged = computed(() => {
               </tr>
             </tbody>
           </table>
+          </div>
         </template>
 
         <!-- 赛季图鉴 -->
@@ -490,7 +494,6 @@ const seasonPaged = computed(() => {
               <div
                 v-for="r in sec.list"
                 :key="r.id"
-                v-tilt
                 class="gather-card"
                 :class="{ locked: player.skillState(inst.id).level < r.reqLevel }"
               >
@@ -503,11 +506,13 @@ const seasonPaged = computed(() => {
               </div>
               <div class="gather-card-row">
                 <span>成功率</span>
-                <span class="mono">{{ (r.successChance * 100).toFixed(0) }}%</span>
+                <!-- 走实例的有效成功率（含等级差/公会/精通池 + 全局难度系数），与制作页同源；
+                     原先直接读 r.successChance 是**原始基准值**，会写出 72% 而实际按 36% 结算 -->
+                <span class="mono">{{ (inst.successChance(r) * 100).toFixed(0) }}%</span>
               </div>
               <div class="ing-cell gather-card-ing">
                 <span
-                  v-for="(qty, itemId) in r.ingredients"
+                  v-for="(qty, itemId) in effIngredients(r)"
                   :key="itemId"
                   class="ing"
                   style="cursor: pointer"
@@ -545,6 +550,7 @@ const seasonPaged = computed(() => {
           <button class="btn btn-sm" @click="bossDetail = null">✕</button>
         </header>
         <div class="item-detail-body">
+          <div class="table-scroll">
           <table class="target-table item-detail-table">
             <tbody>
               <tr><td class="dim" style="width: 90px">等级</td><td>{{ bossDetail.level }}</td></tr>
@@ -557,11 +563,12 @@ const seasonPaged = computed(() => {
               <tr><td class="dim">状态</td><td>{{ bossStatus(bossDetail.name) ? '已击败' : '未击败' }}</td></tr>
             </tbody>
           </table>
+          </div>
           <div style="margin-top: 8px">
             <span class="dim">独有掉落：</span>
             <div v-for="(d, di) in bossDetail.drops ?? []" :key="di" class="tooltip-line">
               <span v-if="qualityBadge(d.itemId)" :style="{ color: qualityBadge(d.itemId).color }">{{ qualityBadge(d.itemId).text }}</span>
-              {{ getItem(d.itemId)?.name }} <span class="dim">（{{ Math.round(d.chance * 100) }}%）</span>
+              {{ getItem(d.itemId)?.name }} <span class="dim">（{{ Math.round(dropChance(d.chance) * 100) }}%）</span>
               <span v-if="player.collected[d.itemId]" class="badge badge-on">已获得</span>
             </div>
           </div>
@@ -580,10 +587,10 @@ const seasonPaged = computed(() => {
 .daily-item {
   display: flex; align-items: center; gap: 10px;
   padding: 6px 10px; border-radius: 8px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(var(--glass-rgb), 0.6);
   border: 1px dashed rgba(var(--primary-tint-rgb), 0.25);
 }
-.daily-item.done { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
+.daily-item.done { border-color: var(--good); background: rgba(var(--good-rgb), 0.08); }
 .daily-name { flex: 1; min-width: 0; }
 .daily-gold { white-space: nowrap; }
 .daily-bonus { margin-top: 8px; font-size: 12px; color: var(--good-strong); }
@@ -593,7 +600,7 @@ const seasonPaged = computed(() => {
   background: rgba(var(--primary-tint-rgb), 0.06);
   border: 1px solid rgba(var(--primary-tint-rgb), 0.3);
 }
-.weekly-row.done { border-color: var(--good); background: rgba(92, 184, 92, 0.08); }
+.weekly-row.done { border-color: var(--good); background: rgba(var(--good-rgb), 0.08); }
 .weekly-row strong { flex: 1; min-width: 0; font-size: 13px; }
 /* ── 转生（轮回）详解：条目卡片列表（左圆圈 + 标题 + 正文 + 蓝色小标签） ── */
 .prestige-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
@@ -603,14 +610,14 @@ const seasonPaged = computed(() => {
   align-items: flex-start;
   gap: 10px;
   background: rgba(var(--panel-rgb), 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 10px;
   padding: 10px 12px;
 }
 .prestige-dot {
   width: 12px;
   height: 12px;
-  border: 2px solid #9bb7ff;
+  border: 2px solid var(--quest-soft);
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 3px;
@@ -622,11 +629,11 @@ const seasonPaged = computed(() => {
 .prestige-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
 .prestige-tag {
   font-size: 12px;
-  color: #2e6bd6;
-  border: 1px solid #b7cdf3;
+  color: var(--quest);
+  border: 1px solid var(--quest-line);
   border-radius: 999px;
   padding: 1px 8px;
-  background: rgba(46, 107, 214, 0.06);
+  background: rgba(var(--quest-rgb), 0.06);
 }
 .season-grid {
   display: grid;
@@ -637,7 +644,7 @@ const seasonPaged = computed(() => {
 .season-card {
   background: rgba(var(--panel-rgb), 0.8);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 12px;
   padding: 10px 12px;
 }

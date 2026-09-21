@@ -14,7 +14,7 @@
 //    与各产线 `*Expand` 都**内部扣费**，混着用一定会重复扣费或白拿。
 //
 // 约束：本表只做「登记 + 调用既有动作」，不复制价格/上限——**数值一律从各自数据模块取**（单一来源）。
-import { PAID_CAP_MAX, COLD_EXPAND_COST } from './caps.js'
+import { PAID_CAP_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST } from './caps.js'
 import { RANCH_MAX_PENS, POND_MAX, nextRanchExpandCost, nextPondExpandCost } from './ranch.js'
 import { nextCellarExpandCost } from './cellar.js'
 import { MUSHROOM_MAX_BEDS, nextMushroomExpandCost } from './mushroomHouse.js'
@@ -41,29 +41,31 @@ export const EXPANSION_GROUPS = [
 export const EXPANSIONS = [
   // ── 存储容量（原有三项，价格与上限取自 caps.js）──
   {
-    id: 'inventorySlot', group: 'storage', name: '背包扩容', icon: '🎒', view: 'shop', unit: '格',
-    desc: `背包 +10 格（金币可买到 ${PAID_CAP_MAX.inventory} 格；山海食经还能再往上加）`,
-    current: (p) => p.inventoryCap, max: PAID_CAP_MAX.inventory,
+    // 2026-09-20 存储合一：两件扩容现在都加**同一个厨藏容量**（价格与增量原样不动 ⇒
+    // 把容量买到上限所需的总金币与合并前一致，无需重新标定经济）。
+    id: 'inventorySlot', group: 'storage', name: '厨藏扩容（小）', icon: '🎒', view: 'shop', unit: '格',
+    desc: `厨藏 +10 格（金币可买到 ${STORAGE_PAID_MAX} 格；山海食经还能再往上加）`,
+    current: (p) => p.inventoryCap, max: STORAGE_PAID_MAX,
     price: () => 200,
     apply: (p) => {
-      if (p.inventoryCap >= PAID_CAP_MAX.inventory) return { ok: false, msg: `背包已达商店上限 ${PAID_CAP_MAX.inventory} 格（可用山海食经继续扩容）` }
+      if (p.inventoryCap >= STORAGE_PAID_MAX) return { ok: false, msg: `厨藏已达商店上限 ${STORAGE_PAID_MAX} 格（可用山海食经继续扩容）` }
       if (p.gold < 200) return { ok: false, msg: '金币不足（需 200）' }
       p.spendGold(200)
       p.expandInventory(10)
-      return { ok: true, msg: `背包容量 +10（当前 ${p.inventoryCap} 格）` }
+      return { ok: true, msg: `厨藏容量 +10（当前 ${p.inventoryCap} 格）` }
     },
   },
   {
-    id: 'bankSlot', group: 'storage', name: '仓库扩容', icon: '📦', view: 'shop', unit: '格',
-    desc: `仓库 +20 格（金币可买到 ${PAID_CAP_MAX.bank} 格；山海食经还能再往上加）`,
-    current: (p) => p.bankCap, max: PAID_CAP_MAX.bank,
+    id: 'bankSlot', group: 'storage', name: '厨藏扩容（大）', icon: '🧺', view: 'shop', unit: '格',
+    desc: `厨藏 +20 格（金币可买到 ${STORAGE_PAID_MAX} 格；山海食经还能再往上加）`,
+    current: (p) => p.inventoryCap, max: STORAGE_PAID_MAX,
     price: () => 150,
     apply: (p) => {
-      if (p.bankCap >= PAID_CAP_MAX.bank) return { ok: false, msg: `仓库已达商店上限 ${PAID_CAP_MAX.bank} 格（可用山海食经继续扩容）` }
+      if (p.inventoryCap >= STORAGE_PAID_MAX) return { ok: false, msg: `厨藏已达商店上限 ${STORAGE_PAID_MAX} 格（可用山海食经继续扩容）` }
       if (p.gold < 150) return { ok: false, msg: '金币不足（需 150）' }
       p.spendGold(150)
       p.expandBank(20)
-      return { ok: true, msg: `仓库容量 +20（当前 ${p.bankCap} 格）` }
+      return { ok: true, msg: `厨藏容量 +20（当前 ${p.inventoryCap} 格）` }
     },
   },
   {
@@ -118,7 +120,7 @@ export const EXPANSIONS = [
   },
   {
     id: 'greenhouseBeds', group: 'idle', name: '温室格', icon: '🏡', view: 'greenhouse', unit: '格',
-    desc: '种作物提速 25% 且**不受天气影响**，每次收获 10% 概率伴生蜂蜜',
+    desc: '种作物提速 25% 且<b>不受天气影响</b>，每次收获 10% 概率伴生蜂蜜',
     current: (p) => p.greenhouseBeds(), max: GREENHOUSE_MAX_BEDS,
     price: (p) => nextGreenhouseExpandCost(p.greenhouseBeds()), apply: (p) => p.greenhouseExpand(),
   },

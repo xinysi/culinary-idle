@@ -5,18 +5,20 @@
 // 腐坏计时（§5.4）、成就/图鉴/称号（§6）、主线任务进度（§7.2）、统计
 
 import { defineStore } from 'pinia'
-import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList } from '../game/data/caps.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList, safeXpMultiplier } from '../game/data/caps.js'
+import { BANK_TAB_COUNT, DEFAULT_BANK_TABS, sanitizeBankTabs, sanitizeItemTabs, sanitizeTabIndex } from '../game/data/bankTabs.js'
 import { TOOL_MAX_LEVEL, nextToolCost, toolTimeFactor } from '../game/data/farmTools.js'
 import { PRIME_CATALYST_TIME, PRIME_CROP_ID, farmMasteryGatherChance } from '../game/data/primeCrop.js'
 import { shanhaiNodeState, shanhaiEffectSum, shanhaiNode, shanhaiPathProgress, shanhaiCapGrant } from '../game/data/shanhaiProgress.js'
 import { SHANHAI_NODES } from '../game/data/shanhaiTree.js'
 import { SKILL_DEFS } from '../game/data/skills.js'
 import { totalXpForLevel } from '../game/core/Experience.js'
+import { NEWBIE_STEPS, NEWBIE_TOTAL, rewardText } from '../game/data/newbieChain.js'
 import { getItem, ITEMS } from '../game/data/items.js'
 import { MINING_TARGETS } from '../game/skills/ExcavationSkill.js'
 import { timberOfLevel } from '../game/data/timbers.js'
 import { equipmentLevelOf, oreOfLevel } from '../game/data/timberRecipes.js'
-import { rollGearMods, REROLL_COST } from '../game/data/gearMods.js'
+import { rollGearMods, REROLL_COST, migrateGearMods, GEAR_MODS_MAX } from '../game/data/gearMods.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getCombat } from '../game/combat/Combat.js'
@@ -33,13 +35,14 @@ import { ENCOUNTERS, getEncounter } from '../game/data/encounters.js'
 import { FRIENDS, getFriend, friendBondLevel, friendBondProgress, friendVisitReward, makeFriendOrder } from '../game/data/friends.js'
 import { masteryLevelFromCount } from '../game/core/mastery.js'
 import { countForMasteryLevel } from '../game/core/mastery.js'
+import { MASTERY_LEVEL_CAP, MASTERY_POOL_GAIN_RATE, masteryPoolCap, masteryPoolPct, masteryPoolBonus, nextMasteryPoolTier, poolSpendAmount, masteryBreadthMultiplier } from '../game/core/mastery.js'
 import { MAX_LEVEL, PRESTIGE_MAX_LEVEL } from '../game/skills/Skill.js'
 import { getGuild, GUILD_SHOP } from '../game/data/guilds.js'
 import { getSeason, activeSeasonId } from '../game/data/seasons.js'
 import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
 import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyChallenge.js'
-import { REALM_BUFFS, rollRealmChoices, realmReward } from '../game/data/mysticRealm.js'
+import { REALM_BUFFS, rollRealmChoices, realmReward, realmTierGoal, realmTierMult, REALM_TIER_MAX } from '../game/data/mysticRealm.js'
 import { DAO_NODES, DAO_PATHS, daoNode, daoEffectSum, daoSpent, daoCanUnlock, daoPathCost } from '../game/data/daoTree.js'
 import { INSIGHT_NODES, insightEffectSum, canUnlockInsight } from '../game/data/insightTree.js'
 import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
@@ -82,8 +85,9 @@ import { RANCH_UNLOCK_SKILL, RANCH_UNLOCK_LEVEL, RANCH_BASE_PENS, RANCH_MAX_PENS
 import { CARAVAN_UNLOCK_SKILL, CARAVAN_UNLOCK_LEVEL, CARAVAN_BASE_SLOTS, CARAVAN_MAX_SLOTS, CARAVAN_EXPAND_COSTS, CARAVAN_CARGO_LIMIT, CARAVAN_LOSS_FLOOR, CARAVAN_CARGO_TYPES, CARAVAN_EXCLUDE_CATEGORIES, caravanRoute, allCaravanRoutes, nextCaravanExpandCost } from '../game/data/caravan.js'
 import { MUSHROOM_UNLOCK_SKILL, MUSHROOM_UNLOCK_LEVEL, MUSHROOM_BASE_BEDS, MUSHROOM_MAX_BEDS, MUSHROOM_EXPAND_COSTS, MUSHROOM_MEDIA, getMushroomMedia, nextMushroomExpandCost } from '../game/data/mushroomHouse.js'
 import { SPIRIT_UNLOCK_SKILL, SPIRIT_UNLOCK_LEVEL, SPIRIT_BASE_PLOTS, SPIRIT_MAX_PLOTS, SPIRIT_EXPAND_COSTS, SPIRIT_PLANTS, getSpiritPlant, getSpiritPlantBySeed, spiritSeedAvailable, nextSpiritExpandCost } from '../game/data/spiritField.js'
-import { GREENHOUSE_UNLOCK_SKILL, GREENHOUSE_UNLOCK_LEVEL, GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, GREENHOUSE_HONEY_CHANCE, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
+import { GREENHOUSE_UNLOCK_SKILL, GREENHOUSE_UNLOCK_LEVEL, GREENHOUSE_BASE_BEDS, GREENHOUSE_MAX_BEDS, GREENHOUSE_EXPAND_COSTS, greenhouseHoneyChance, HIVE_BASE_COUNT, HIVE_MAX_COUNT, HIVE_EXPAND_COSTS, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
 import { honeyItemForLevel } from '../game/data/honey.js'
+import { otherChance } from '../game/data/difficulty.js' // 全局难度系数（远行队稀有货 / 商队特产）
 import { ESSENCE_BASE_VATS, ESSENCE_MAX_VATS, ESSENCE_EXPAND_COSTS, getEssence, nextEssenceExpandCost } from '../game/data/essences.js'
 import { priceMultiplier } from '../game/data/exchange.js'
 import { BRANCHES, getBranch, branchHourly, BRANCH_UNLOCK_LEVEL, MANAGER_BONUS } from '../game/data/branches.js'
@@ -108,6 +112,12 @@ const BUFF_AXES = [
 
 // 餐厅 1 分钟结算窗口计时（模块级，不序列化进存档）
 let _restaurantAccumMs = 0
+
+// 精通「广度」的等级总和缓存（模块级，**不进存档**）：skillId → 该技能各卡精通等级之和。
+// 派生值不落档是为了避免「存档里的派生值过期后悄悄骗人」（本项目的老坑）；
+// 首次访问整技能扫一遍，之后在升级时增量 ±1；`newGame()` 与 `applySave()` 必须清空它，
+// 否则换档后仍用上一档的广度（C49 有断言）。
+let _breadthLevelSum = new Map()
 
 // 日期辅助（用 setDate 精确减 1 天，自动处理跨月/闰年/夏令时，避免 Date.now()-86400000 的跨日隐患）
 function _dateStr(d) { return d.toLocaleDateString('en-CA') } // YYYY-MM-DD
@@ -185,9 +195,22 @@ const MINING_TARGET_IDS = new Set(MINING_TARGETS.map((t) => t.itemId))
 function defaultSkills() {
   const skills = {}
   for (const id of Object.keys(SKILL_DEFS)) {
-    skills[id] = { level: 1, exp: 0, mastery: {}, prestiges: 0 }
+    // ⚠️ `masteryPool`（精通池）与 `masteryCarry`（广度倍率的小数进位）同为**技能级**字段，默认值写在这里。
+    //    它们在 applySave 里由 `{ ...skills[id], ...s }` 自动带上 ⇒ 不必进 `$patch` 的顶层键
+    //    （`skills` 本就是局部合成后整体 patch，见 applySave 的注释）。旧档没有 → 回退 0。
+    skills[id] = { level: 1, exp: 0, mastery: {}, masteryPool: 0, masteryCarry: 0, prestiges: 0 }
   }
   return skills
+}
+
+/** 存储合一（2026-09-20）：把旧档仓库里的物品并入厨藏（同 id 相加）。
+ *  ⚠️ 必须是**幂等**的：迁移后 `bank` 恒空，再读档相加结果不变（C23 有「旧档迁移 + 幂等」断言）。 */
+function mergeBankIntoInventory(inv, bank) {
+  const out = { ...(inv ?? {}) }
+  for (const [id, q] of Object.entries(bank ?? {})) {
+    if (Number(q) > 0) out[id] = (out[id] ?? 0) + Number(q)
+  }
+  return out
 }
 
 function defaultEquipment() {
@@ -207,9 +230,12 @@ const defaultState = () => ({
     nameColor: null, // 名字特效（2026-09-09 商店外观）：gold/silver/null
     skills: defaultSkills(),
     inventory: {}, // { itemId: qty }
-    bank: {}, // { itemId: qty }
-    inventoryCap: CAP_BASE.inventory, // 背包容量（§5.4：初始 20 格；金币买到 100，山海食经再 +60 → 硬顶 160）
-    bankCap: CAP_BASE.bank, // 仓库容量（§5.4：初始 100 格；金币买到 500，山海食经再 +130 → 硬顶 630）
+    bank: {}, // **旧档遗留字段**：存储合一后恒空（2026-09-20）；保留是为了存档兼容与「三处字段一致」检查
+    storageMerged: true, // 存储合一迁移标记：新档已合并；旧档（缺此标记）读档时迁移一次
+    // 容量口径**只以 caps.js 为准**（2026-09-18 校正：下面三行注释原先写的 160/630/110 早已过期，
+    // 与常量对不上）。当前：初始 20 / 金币可买到 100 / 山海食经全树 +276 ⇒ 硬顶 376。
+    inventoryCap: STORAGE_BASE, // 存储合一后的厨藏基线（见 caps.js 的 STORAGE_BASE）
+    bankCap: 0, // **旧档遗留字段**：存储合一后恒 0（原仓库容量已并入 inventoryCap）
     hardcore: false, // 硬核模式（§4.1/§8.2：死亡即删档）
     pausedSkills: {}, // 手动暂停的挂机技能（§3.1 停止/继续）
     closedIdleTasks: {}, // 挂机框中关闭的任务（停止并隐藏，§3.1）
@@ -229,11 +255,11 @@ const defaultState = () => ({
     essence: { vats: [], expands: 0 }, // 萃露炉（v2.3.0 灵圃菌房页）：每格 { tierId, startedAt, readyAt } | null
     spoilage: {}, // { itemId: spoilAt }（§5.4 腐坏计时）
     coldStorage: {}, // 冷库（§5.4 冻结腐坏）：{ itemId: { qty, remainMs } }，remainMs 为存入时剩余的腐坏毫秒（冻结期间不消耗）
-    coldStorageCap: CAP_BASE.cold, // 冷库容量（§5.4：初始 5 格，每次扩充 +1 花 1000 金币，金币买到 100，山海食经再 +10 → 硬顶 110）
+    coldStorageCap: CAP_BASE.cold, // 冷库容量（§5.4：初始 5 / 每次扩充 +1 花 1000 金币 / 金币买到 100 / 山海食经 +70 ⇒ 硬顶 170）
     achievements: [], // 已解锁成就 id（§6.1）
     collected: {}, // 图鉴（§6.2）：{ itemId: true }
     quests: { index: 0, completed: [], progress: {} }, // 主线任务（§7.2）
-    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0, splitMiningMigrated: false, sidelinePoints: { woodworking: 0, pottery: 0, weaving: 0, embroidery: 0, candles: 0 } }, // 副业量产阶梯的累计投入点（v2.11.0；**只增不减、转生不碰**） // 效果总览峰值（v2.6.0）+ 采矿拆分迁移账本（v2.7.0；必须进 schema，否则存档往返会「多出一个字段」）
+    stats: { combatWins: 0, combatLosses: 0, bosses: [], explorations: 0, totalGoldEarned: 0, prestiges: 0, restaurantTotal: 0, arena: { wins: 0, currentStreak: 0, bestStreak: 0, records: [] }, cardBattle: { wins: 0, losses: 0 }, shanhaiCapGranted: { inventory: 0, bank: 0, cold: 0 }, shanhaiGoldPaid: 0, shanhaiTicketPaid: 0, daoTicketPaid: 0, effectsSeenMax: 0, splitMiningMigrated: false, offlineTaught: false, prestigeCelebrated: false, seasonFullCelebrated: false, sidelinePoints: { woodworking: 0, pottery: 0, weaving: 0, embroidery: 0, candles: 0 } }, // offlineTaught：离线报告「教学首秀」只弹一次（2026-09-18）；prestigeCelebrated / seasonFullCelebrated：首次转生 / 首次赛季满档的大反馈只演一次（2026-09-18） // 副业量产阶梯的累计投入点（v2.11.0；**只增不减、转生不碰**） // 效果总览峰值（v2.6.0）+ 采矿拆分迁移账本（v2.7.0；必须进 schema，否则存档往返会「多出一个字段」）
     // §13 扩展：餐厅 / 公会 / 赛季 / 竞技场
     restaurant: { level: 1, menu: [], incomeAccum: 0, decor: [] }, // 餐厅经营：菜单为料理 itemId 列表；decor 装饰（§13）
     guild: { id: null, points: 0, day: null, taskProgress: {} }, // 公会：被动+任务+商店
@@ -264,15 +290,21 @@ const defaultState = () => ({
     spiritBonds: {},
     // 硬核生存统计：当前生存天数（best 为历史最高；死亡即删档清空）
     hardcoreStats: { days: 0, best: 0, lastDayKey: null },
-    // 新手引导（2026-09-06）：step=当前步骤（0-4），done=true 后不再显示
-    guide: { step: 0, done: false },
+    // 新手引导（2026-09-06；2026-09-18 扩成 20 步目标链）：
+    //   step    = 当前步骤（0-based）
+    //   done    = 走完全部步骤
+    //   claimed = 已发过奖的步骤 id（**幂等账本**，绝不允许重复发）
+    //   startedAt = 链子开始的时刻（漏斗统计「首个 30 分钟」的基准）
+    //   trace   = [{ id, at }] 每步完成的时间戳（相对 startedAt 毫秒），供留存实验统计
+    guide: { step: 0, done: false, claimed: [], startedAt: 0, trace: [] },
     // 锻造套装集齐奖励（2026-09-06）：已发奖套名列表
     setBonuses: [],
     // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）；history=最近 10 次结果标志
     mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
     // 制作队列（2026-09-06）：{ skillId: [{recipeId, qty, paused}] }，3 秒自动制作 1 次
     craftQueues: {},
-    // 装备词条（2026-09-06）：{ slot: { itemId, mods: [{stat,label,value}] } }
+    // 装备词条（2026-09-06；2026-09-18 起**按装备 id 存**）：{ [itemId]: { mods: [{stat,label,value}], at } }
+    // `at` 只用于「超出 GEAR_MODS_MAX 时剪掉最久没掷的」，不参与任何数值计算
     gearMods: {},
     // 宝石镶嵌（2026-09-09）：{ slot: { itemId, gems: [gemId|null, ...] } }
     gemSockets: {},
@@ -327,8 +359,13 @@ const defaultState = () => ({
       matchfood: { day: '', buffed: 0 },
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
-    settings: { autoEat: true, autoEatThreshold: 50, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null, bgmPaused: false, bgmMode: 'repeat' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）；bgmPaused：播放器上的暂停（保留进度，与 bgmEnabled 开关是两回事）；bgmMode：播放模式 repeat 单曲循环 / sequence 顺序 / shuffle 随机（2026-09-18）
+    settings: { autoEat: true, autoEatThreshold: 50, autoEatItem: null, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null, bgmPaused: false, bgmMode: 'repeat', showAllFeatures: false, sidebarOpen: [], invDblClick: true, invShortQty: true, invStickyDetail: true, chefAvatar: 'male' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）；bgmPaused：播放器上的暂停（保留进度，与 bgmEnabled 开关是两回事）；bgmMode：播放模式 repeat 单曲循环 / sequence 顺序 / shuffle 随机（2026-09-18）；showAllFeatures：左栏是否显示未解锁的功能页（2026-09-18 留存改进 ⑤，默认只显示已解锁）；sidebarOpen：左栏已展开的功能分组 id（2026-09-18 分组默认折叠，空数组 = 全折叠；当前页所属分组自动展开）；invDblClick/invShortQty/invStickyDetail：厨藏设置的三个开关（2026-09-20，默认全开，见 InventoryView 的「设置」页签）；chefAvatar：玩家标准形象 male/female（2026-09-21，图在 public/images/chef/，见 game/data/chefImage.js）；autoEatItem：指定自动进食的料理 id（2026-09-21，null = 自动挑回血最高的，见战斗屏左上角「战备」）
     // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
+    // 厨藏面板分类（2026-09-20）：10 块面板 + 物品归属 + 默认分类，见 game/data/bankTabs.js。
+    // ⚠️ 存档字段必须三处齐备（defaultState / serialize / applySave），读档一律走 sanitize*
+    bankTabs: DEFAULT_BANK_TABS.map((t) => ({ ...t })),
+    itemTabs: {},
+    invDefaultTab: 0,
     storyProgress: {}, // 轶事/故事进度：{ `${kind}:${param}`: 次数 }，按具体物品/动作累计（§13）
     // 奇遇图鉴（2026-09-11）：{ seen: { [id]: 触发次数 }, picks: { [id]: [各分支被选次数] }, total: 累计触发 }
     // 纯记录层：不改变奇遇的触发率与奖励，只让「一次性内容」可回看（见 game/data/encounters.js）
@@ -373,10 +410,10 @@ export const usePlayerStore = defineStore('player', {
           sum[k] = (sum[k] ?? 0) + (Number.isFinite(nv) ? nv : 0) * mult
         }
       }
-      // 词条：仅对「仍穿戴同一件」的槽位生效
-      for (const [slot, m] of Object.entries(s.gearMods ?? {})) {
-        if (!m?.mods?.length || s.equipment[slot] !== m.itemId) continue
-        for (const mod of m.mods) {
+      // 词条：按装备 id 取（同一件装备无论穿在哪个槽位，词条都是它自己那套）
+      for (const itemId of Object.values(s.equipment)) {
+        if (!itemId) continue
+        for (const mod of s.gearMods?.[itemId]?.mods ?? []) {
           sum[mod.stat] = (sum[mod.stat] ?? 0) + (Number(mod.value) || 0)
         }
       }
@@ -624,15 +661,39 @@ export const usePlayerStore = defineStore('player', {
     newGame() {
       // 全新档：整体重置为默认状态（单一来源 defaultState，防止嵌套字段残留/漂移，2026-09-06）
       this.$state = defaultState()
+      _breadthLevelSum.clear() // 精通的广度缓存是模块级的，换档必须清（否则沿用上一档的广度）
       // 新档欢迎信（2026-09-11 信箱）：纯说明、**不带附件**，不触碰任何既有数值曲线
       this.sendMail(WELCOME_MAIL)
     },
 
     applySave(saved) {
       if (!saved) return
+      _breadthLevelSum.clear() // 读档：精通的广度缓存必须重算（见模块级声明处）
       const skills = defaultSkills()
       for (const [id, s] of Object.entries(saved.skills ?? {})) {
         if (skills[id]) skills[id] = { ...skills[id], ...s, mastery: s.mastery ?? {}, prestiges: s.prestiges ?? 0 }
+      }
+      // ── 修小数：精通次数必须是整数（幂等）──────────────────────────────
+      // 2026-09-19 引入「精通广度倍率」时，倍率直接乘进了次数 ⇒ 卡片上出现 `7.000246478873233 / 8 次`。
+      // 已改为「整数计数 + 小数进位（masteryCarry）」，但那之前的档里已经存进了小数 ⇒ 读档时向下取整修掉。
+      // 幂等（整数的 floor 还是它自己），因此不需要账本。
+      for (const st of Object.values(skills)) {
+        for (const [k, v] of Object.entries(st.mastery)) {
+          if (typeof v === 'number' && !Number.isInteger(v)) st.mastery[k] = Math.floor(v)
+        }
+        if (typeof st.masteryPool === 'number' && !Number.isFinite(st.masteryPool)) st.masteryPool = 0
+        if (typeof st.masteryCarry !== 'number' || !Number.isFinite(st.masteryCarry)) st.masteryCarry = 0
+      }
+      // ── 一次性迁移（2026-09-18，幂等）：把「等级高于经验基线」的技能经验抬到基线 ──
+      // 转生「师徒传承」在 2026-09-18 之前会把等级置为 1+carry 而经验清零，于是 exp < totalXpForLevel(level)：
+      // 经验条算出负数（首屏「-113,528 / 30,372」），且玩家要重攒到下一级的**整条累计线**。
+      // 现在口径改为「传承的等级连基线经验一起给」，这里补齐老档；对正常档（exp ≥ 基线）无影响。
+      // 等级夹到上限：脏档把等级写成天文数字时，`totalXpForLevel` 会做几千次幂运算。
+      // ⚠️ 后面的「矿物拆分」迁移成对搬运 (level, exp)，所以不会破坏这里建立的不变量。
+      for (const st of Object.values(skills)) {
+        const lv = Math.max(1, Math.min(st.level ?? 1, PRESTIGE_MAX_LEVEL))
+        const base = totalXpForLevel(lv)
+        if ((st.exp ?? 0) < base) st.exp = base
       }
       // ── v2.7.0 一次性迁移：矿物从「挖掘」独立为「采矿」（幂等；账本写在 stats.splitMiningMigrated）──
       // 规则：旧档（没有采矿存档）由采矿**继承挖掘的等级与经验**（矿物占原挖掘 41/83 的大头），
@@ -690,10 +751,20 @@ export const usePlayerStore = defineStore('player', {
         shopOwned: saved.shopOwned ?? {},
         nameColor: saved.nameColor ?? null,
         skills,
-        inventory: saved.inventory ?? {},
-        bank: saved.bank ?? {},
-        inventoryCap: safeCap(saved.inventoryCap, CAP_BASE.inventory, CAP_MAX.inventory),
-        bankCap: safeCap(saved.bankCap, CAP_BASE.bank, CAP_MAX.bank),
+        // 2026-09-20 存储合一：**旧档**（没有 storageMerged 标记）的仓库内容与容量并入厨藏，
+        // 只迁移一次（迁移后写回标记）——这样「序列化→读档→再序列化」的往返是零差异的，
+        // 否则每次读档都会再加一次容量（往返断言与幂等断言都会炸）。
+        inventory: saved.storageMerged === true ? (saved.inventory ?? {}) : mergeBankIntoInventory(saved.inventory, saved.bank),
+        bank: {},
+        inventoryCap: safeCap(
+          saved.storageMerged === true
+            ? (saved.inventoryCap ?? STORAGE_BASE)
+            : (saved.inventoryCap ?? CAP_BASE.inventory) + (saved.bankCap ?? CAP_BASE.bank),
+          STORAGE_BASE,
+          STORAGE_MAX,
+        ),
+        bankCap: 0,
+        storageMerged: true,
         hardcore: !!saved.hardcore,
         pausedSkills: saved.pausedSkills ?? {},
         closedIdleTasks: saved.closedIdleTasks ?? {},
@@ -703,13 +774,22 @@ export const usePlayerStore = defineStore('player', {
         // ⚠️ 只有迁移改过目标表时才用 splitTargets：否则沿用既有语义（ 而非「空对象即默认」）——
         // 空  是合法存档（玩家还没选目标），误判成「没有」会往存档里塞进默认目标（往返守卫实测抓过）
         skillTargets: splitMovedTarget ? splitTargets : saved.skillTargets ?? { [saved.activeSkill ?? 'foraging']: saved.activeTarget ?? 'apple' },
-        settings: { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }, // 并行挂机只接受 0/1/2/3
         // 手动选曲（settings.bgmTrack）是曲库 id 或 null（=自动跟随场景）：存档里塞了不存在的 id 会静默变哑巴 → 兜回自动
         // （写法照 v2.7.0 的 sidelineWorks 过滤：读档过滤非法 id，别让脏值参与后续判定）
+        // 厨藏面板（2026-09-20）：块数恒 10、名字截断、图标必须是存在的物品；脏 id / 越界下标一律丢掉
+        bankTabs: sanitizeBankTabs(saved.bankTabs),
+        itemTabs: sanitizeItemTabs(saved.itemTabs),
+        invDefaultTab: sanitizeTabIndex(saved.invDefaultTab),
         settings: (() => {
           const st = { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }
+          // 经验倍率只接受合法档位（唯一口径见 caps.js）：旧档里存过 10/50/…/1000，面板上已无那些选项，
+          // 不夹的话老玩家会带着 ×1000 跑、而界面显示与实际不一致（2026-09-21）
+          st.xpMultiplier = safeXpMultiplier(st.xpMultiplier)
           if (st.bgmTrack && !getBgmTrack(st.bgmTrack)) st.bgmTrack = null
           if (!['repeat', 'sequence', 'shuffle'].includes(st.bgmMode)) st.bgmMode = 'repeat'
+          // 指定的自动进食料理（2026-09-21）必须是「存在的、带回血值的食物」：脏 id 会让自动进食静默变哑巴
+          const food = st.autoEatItem ? getItem(st.autoEatItem) : null
+          if (st.autoEatItem && !(food?.type === 'food' && food.heal)) st.autoEatItem = null
           return st
         })(), // 并行挂机只接受 0/1/2/3
         farming: {
@@ -753,11 +833,18 @@ export const usePlayerStore = defineStore('player', {
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
-        guide: saved.guide ?? { step: 0, done: false },
+        // guide 子字段补齐：旧档只有 { step, done }，缺 claimed/startedAt/trace（2026-09-18 扩成 20 步链）
+        guide: {
+          step: saved.guide?.step ?? 0,
+          done: saved.guide?.done ?? false,
+          claimed: Array.isArray(saved.guide?.claimed) ? saved.guide.claimed.filter((x) => typeof x === 'string') : [],
+          startedAt: saved.guide?.startedAt ?? 0,
+          trace: Array.isArray(saved.guide?.trace) ? saved.guide.trace.filter((x) => x && typeof x.id === 'string').slice(-NEWBIE_TOTAL) : [],
+        },
         setBonuses: saved.setBonuses ?? [],
         mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
-        gearMods: saved.gearMods ?? {}, // 装备词条：{ slot: { itemId, mods } }
+        gearMods: migrateGearMods(saved.gearMods), // 装备词条：新档 { itemId: { mods, at } }；旧档（按槽位）在此迁移
         gemSockets: saved.gemSockets ?? {}, // 宝石镶嵌：{ slot: { itemId, gems } }
         orders: saved.orders ?? { list: [], nextAt: 0 }, // 食客订单
         expeditions: saved.expeditions ?? {}, // 远行采集队
@@ -804,6 +891,9 @@ export const usePlayerStore = defineStore('player', {
         mail: saved.mail && Array.isArray(saved.mail.list)
           ? { list: safeList(saved.mail.list, MAIL_HARD_CAP), nextId: saved.mail.nextId ?? (saved.mail.list.reduce((a, m) => Math.max(a, m?.id ?? 0), 0) + 1) }
           : { list: [], nextId: 1 },
+        // 轶事/故事进度（2026-09-18 修）：此前**只在 defaultState 里声明、serialize/applySave 都漏了**，
+        // 于是 3988 条「传闻轶事」的进度每次刷新归零（永远解锁不了）。旧档无此字段 → 空表（进度从 0 开始）。
+        storyProgress: saved.storyProgress && typeof saved.storyProgress === 'object' ? { ...saved.storyProgress } : {},
         // 奇遇图鉴（2026-09-11）：旧档无此字段 → 空的已遇/已选记录（页面显示为「还没遇到过」）
         encounters: {
           seen: saved.encounters?.seen ?? {},
@@ -859,6 +949,7 @@ export const usePlayerStore = defineStore('player', {
         skills: this.skills,
         inventory: this.inventory,
         bank: this.bank,
+        storageMerged: true,
         inventoryCap: this.inventoryCap,
         bankCap: this.bankCap,
         hardcore: this.hardcore,
@@ -869,6 +960,9 @@ export const usePlayerStore = defineStore('player', {
         activeTarget: this.activeTarget,
         skillTargets: this.skillTargets,
         settings: this.settings,
+        bankTabs: this.bankTabs,
+        itemTabs: this.itemTabs,
+        invDefaultTab: this.invDefaultTab,
         farming: this.farming,
         offlineBonusH: this.offlineBonusH,
         combat: this.combat,
@@ -906,7 +1000,7 @@ export const usePlayerStore = defineStore('player', {
         setBonuses: this.setBonuses,
         mijian: this.mijian,
         craftQueues: this.craftQueues,
-        gearMods: this.gearMods,
+        gearMods: this.gearMods, // { [itemId]: { mods, at } }
         gemSockets: this.gemSockets,
         orders: this.orders,
         expeditions: this.expeditions,
@@ -945,6 +1039,7 @@ export const usePlayerStore = defineStore('player', {
         minigames: this.minigames,
         mail: this.mail,
         friends: this.friends,
+        storyProgress: this.storyProgress, // 轶事进度：必须在存档里（否则刷新即归零，3988 条传闻永远解锁不了）
         encounters: this.encounters,
         lastOnlineAt: this.lastOnlineAt,
       }
@@ -1230,33 +1325,16 @@ export const usePlayerStore = defineStore('player', {
       return nightMarketEndHour(this.marketEventsNow())
     },
 
-    // ── 仓库（§5.4）──
-    /** 背包 → 仓库（qty 为 null 时全部） */
-    moveToBank(itemId, qty = null) {
-      const have = this.inventory[itemId] ?? 0
-      const amount = qty === null ? have : Math.min(qty, have)
-      if (amount <= 0) return false
-      if (!(itemId in this.bank) && this.bankSlotsUsed >= this.bankCap) {
-        EventBus.emit('bank:full', { itemId })
-        return false
-      }
-      this.bank[itemId] = (this.bank[itemId] ?? 0) + amount
-      this.spendItem(itemId, amount)
-      return true
+    // ── 存储合一（2026-09-20）──
+    // 用户要求「把厨藏 / 仓库合并，只有一个厨藏的功能」⇒ 两个池子并成一个，
+    // 「存入仓库 / 取出」这套动作**不复存在**（界面也已在同一轮删掉入口）。
+    // 这四个函数**保留为 no-op**：`scripts/ci/action_sweep.mjs` 与少数外部调用点仍在调它们，
+    // 直接删函数会让那些调用抛错（宁可留一个会说"没有第二个池子"的空实现）。
+    moveToBank() {
+      return false // 只有一个存储，没有「移到仓库」这回事
     },
-    /** 仓库 → 背包 */
-    moveToInventory(itemId, qty = null) {
-      const have = this.bank[itemId] ?? 0
-      const amount = qty === null ? have : Math.min(qty, have)
-      if (amount <= 0) return false
-      if (!(itemId in this.inventory) && this.inventorySlotsUsed >= this.inventoryCap) {
-        EventBus.emit('inventory:full', { itemId })
-        return false
-      }
-      this.gainItem(itemId, amount)
-      if (have === amount) delete this.bank[itemId]
-      else this.bank[itemId] = have - amount
-      return true
+    moveToInventory() {
+      return false // 同上
     },
 
     // ── 冷库（§5.4 冻结腐坏）──
@@ -1310,23 +1388,12 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ── 出售（§11.3：出售价 = 价值 × 0.5）──
-    /** 一键入仓：背包内全部可转移物品（非装备/非食灵）存入仓库；返回转移种类数 */
+    /** 一键入仓 / 入包：存储合一后无意义（保留空实现给旧调用点） */
     moveAllToBank() {
-      let moved = 0
-      for (const id of Object.keys(this.inventory)) {
-        const it = getItem(id)
-        if (it?.type === 'equipment' || it?.type === 'spirit') continue
-        if ((this.inventory[id] ?? 0) > 0 && this.moveToBank(id, null)) moved++
-      }
-      return moved
+      return 0
     },
-    /** 一键入包：仓库全部物品（含装备/食灵）尽可能移回背包；返回移入种类数 */
     moveAllToInventory() {
-      let moved = 0
-      for (const id of Object.keys(this.bank)) {
-        if ((this.bank[id] ?? 0) > 0 && this.moveToInventory(id, null)) moved++
-      }
-      return moved
+      return 0
     },
     /** 一键出售全部「普通/精良」品质装备（低品质淘汰）；返回出售件数 */
     sellCommonEquipment() {
@@ -1339,15 +1406,81 @@ export const usePlayerStore = defineStore('player', {
       }
       return sold
     },
+    /**
+     * 厨藏「出售」的**单价**（半价回收）。
+     * ⚠️ 单独出口而不是直接写在 `sellItem` 里：厨藏详情面板要显示「💰 合计 N 金币」，
+     * 重抄一遍公式迟早与到账金额对不上（2026-09-20 面板改版时收口）。
+     */
+    // ── 厨藏面板分类（2026-09-20）────────────────────────────────────────────────
+    /** 物品属于哪块面板（0 = 全部 / 未分类；1~9 = 自定义面板）。未分类时走 `invDefaultTab` */
+    bankTabOf(itemId) {
+      const t = Number(this.itemTabs?.[itemId])
+      return Number.isFinite(t) && t > 0 && t < BANK_TAB_COUNT ? t : sanitizeTabIndex(this.invDefaultTab)
+    },
+    /** 把物品移进某块面板；`tab <= 0` = 移回「未分类」（只从面板里移出，物品仍在全部里） */
+    setItemTab(itemId, tab) {
+      if (!getItem(itemId)) return false
+      const t = Math.floor(Number(tab))
+      if (!(t > 0) || t >= BANK_TAB_COUNT) {
+        if (this.itemTabs?.[itemId] === undefined) return false
+        const next = { ...this.itemTabs }
+        delete next[itemId]
+        this.itemTabs = next
+        return true
+      }
+      if (this.itemTabs?.[itemId] === t) return false
+      this.itemTabs = { ...this.itemTabs, [itemId]: t }
+      return true
+    },
+    /** 改面板名字（「全部」不让改）；空名字/非字符串忽略，最长 12 字（与 bankTabs.js 的读档夹取同一口径） */
+    renameBankTab(i, name) {
+      const idx = sanitizeTabIndex(i)
+      if (idx === 0 || typeof name !== 'string' || !name.trim()) return false
+      const next = this.bankTabs.map((t) => ({ ...t }))
+      next[idx].name = name.trim().slice(0, 12)
+      this.bankTabs = next
+      return true
+    },
+    /** 用某件物品当面板图标（梅尔沃的「将物品设置为仓库面板图标」）；`itemId = null` = 重置 */
+    setBankTabIcon(i, itemId) {
+      const idx = sanitizeTabIndex(i)
+      if (idx === 0) return false
+      if (itemId != null && !getItem(itemId)) return false
+      const next = this.bankTabs.map((t) => ({ ...t }))
+      next[idx].icon = itemId ? itemId : null
+      this.bankTabs = next
+      return true
+    },
+    /** 清空面板（把里面的物品全移回未分类，图标与名字保留）；返回移出件数 */
+    clearBankTab(i) {
+      const idx = sanitizeTabIndex(i)
+      if (idx === 0) return 0
+      let n = 0
+      const next = { ...this.itemTabs }
+      for (const [id, t] of Object.entries(this.itemTabs ?? {})) {
+        if (Number(t) === idx) { delete next[id]; n++ }
+      }
+      if (n) this.itemTabs = next
+      return n
+    },
+    /** 设置默认分类（新物品 / 未分类物品算作哪一块） */
+    setInvDefaultTab(i) {
+      this.invDefaultTab = sanitizeTabIndex(i)
+      return this.invDefaultTab
+    },
+    sellUnitPrice(itemId) {
+      const item = getItem(itemId)
+      if (!item) return 0
+      return Math.max(1, Math.floor(item.value * 0.5))
+    },
     sellItem(itemId, qty = 1) {
       if (!(qty > 0)) return false
       const have = this.inventory[itemId] ?? 0
       if (have < qty) return false
-      const item = getItem(itemId)
-      if (!item) return false
-      const price = Math.max(1, Math.floor(item.value * 0.5)) * qty
+      const unit = this.sellUnitPrice(itemId)
+      if (!unit) return false
       this.spendItem(itemId, qty)
-      this.gainGold(price)
+      this.gainGold(unit * qty)
       return true
     },
 
@@ -1411,14 +1544,16 @@ export const usePlayerStore = defineStore('player', {
 
     // ── 容量扩展（§5.4）——**金币路径**，天花板是 PAID_CAP_MAX（杂货铺/冷库的可购买上限），
     //   比硬顶 CAP_MAX 低：山海食经的固定奖励要落进那截余量里（用户实测报过「背包 +1 却加到了仓库」）。
+    // ⚠️ 存储合一后**两件扩容商品都加同一个容量池**（背包 +10 / 仓库 +20 的**价格与增量原样不动**，
+    //    所以玩家把容量买到上限所需的总金币与合并前完全一致 —— 不需要重新标定经济）。
     expandInventory(n = 10) {
-      if (this.inventoryCap >= PAID_CAP_MAX.inventory) return false
-      this.inventoryCap = Math.min(PAID_CAP_MAX.inventory, this.inventoryCap + n)
+      if (this.inventoryCap >= STORAGE_PAID_MAX) return false
+      this.inventoryCap = Math.min(STORAGE_PAID_MAX, this.inventoryCap + n)
       return true
     },
     expandBank(n = 20) {
-      if (this.bankCap >= PAID_CAP_MAX.bank) return false
-      this.bankCap = Math.min(PAID_CAP_MAX.bank, this.bankCap + n)
+      if (this.inventoryCap >= STORAGE_PAID_MAX) return false
+      this.inventoryCap = Math.min(STORAGE_PAID_MAX, this.inventoryCap + n)
       return true
     },
     /** 冷库容量扩充（§5.4）：每次 +1 格花 1000 金币，金币可买到的上限 100 格 */
@@ -1443,12 +1578,105 @@ export const usePlayerStore = defineStore('player', {
       //   矿物轶事统一归采矿，该补丁已删除——故事进度不在存档里，无需回填。）
       if (SKILL_DEFS[skillId]?.category === 'gathering' && itemId) this.bumpStory('gather', skillId + ':' + itemId)
       const m = this.skills[skillId].mastery
+      // 精通「横向铺开」倍率（2026-09-19）：先把该技能的广度缓存种好，再按倍率发放。
+      // ⚠️ 必须先种缓存再算倍率：`masteryBreadthOf` 会在缓存缺失时**整技能扫一遍**（含当前这次改动之前的值）。
+      const breadth = this.masteryBreadthOf(skillId)
+      // 🔴 广度倍率会产生小数（1 × 1.032），而**精通次数必须是整数**：
+      //    卡片上写着「x / N 次」、`masteryLevelProgress` 按次数比阈值、存档与玩家认知都以「次」为单位。
+      //    直接乘就会显示成 `7.000246478873233 / 8 次`（玩家实测报出）。
+      //    ⇒ 采用「整数计数 + 小数进位」：进位存在 skills[id].masteryCarry，只把整数部分记进卡片。
+      const raw = (this.skills[skillId].masteryCarry ?? 0) + amount * breadth.multiplier
+      const gain = Math.floor(raw)
+      this.skills[skillId].masteryCarry = raw - gain
       const before = masteryLevelFromCount(m[itemId] ?? 0)
-      m[itemId] = (m[itemId] ?? 0) + amount
-      const after = masteryLevelFromCount(m[itemId])
+      // gain 为 0（倍率略大于 1 时的多数动作）时不动卡片，也不该触发升级判定
+      if (gain > 0) m[itemId] = (m[itemId] ?? 0) + gain
+      const after = masteryLevelFromCount(m[itemId] ?? 0)
+      // 增量维护广度缓存（只在升级时 +1，不必每次动作重扫整个技能）
+      if (after > before) _breadthLevelSum.set(skillId, breadth.total + (after - before))
+      // 精通池（2026-09-19）：同一笔精通次数按比例也记进**技能级**池。
+      // ⚠️ 上限夹取**只在能算出台数（cap > 0）时做**：技能实例尚未创建时 cap 为 0，
+      //    若此时把池截断成 0 会**直接吃掉玩家的存档进度**（这类「派生值缺失就丢数据」是本项目的老坑）。
+      const st = this.skills[skillId]
+      const poolAdd = gain * MASTERY_POOL_GAIN_RATE
+      const cap = this.masteryPoolCapOf(skillId)
+      const nextPool = (st.masteryPool ?? 0) + poolAdd
+      st.masteryPool = cap > 0 ? Math.min(cap, nextPool) : nextPool
       if (after > before) {
         EventBus.emit('mastery:levelup', { skillId, itemId, level: after })
       }
+    },
+
+    // ── 精通池 / 广度（2026-09-19，见 core/mastery.js 顶部说明）──────────────
+
+    /** 该技能的卡片数（采集=目标数、制作=配方数）——池上限与广度分母的唯一来源 */
+    masteryCardCount(skillId) {
+      const inst = getSkillInstance(skillId)
+      return inst?.targets?.length ?? inst?.recipes?.length ?? 0
+    },
+
+    /**
+     * 该技能的精通广度状态：{ total（各卡精通等级之和）, cardCount, multiplier }。
+     * 🔴 广度是**派生值**，不进存档（避免又一处「存档里的派生值过期后悄悄骗人」）。
+     *    维护方式：模块级缓存 `_breadthLevelSum`，首次访问整技能扫一遍，之后在升级时增量 +1；
+     *    `newGame()` 与 `applySave()` 都会清空它（否则换档后还用着上一档的广度）。
+     */
+    masteryBreadthOf(skillId) {
+      const cardCount = this.masteryCardCount(skillId)
+      if (!_breadthLevelSum.has(skillId)) {
+        let sum = 0
+        for (const cnt of Object.values(this.skills[skillId]?.mastery ?? {})) sum += masteryLevelFromCount(cnt)
+        _breadthLevelSum.set(skillId, sum)
+      }
+      const total = _breadthLevelSum.get(skillId) ?? 0
+      return { total, cardCount, multiplier: masteryBreadthMultiplier(total, cardCount) }
+    },
+
+    /** 该技能的池上限（卡片数 × 常量） */
+    masteryPoolCapOf(skillId) {
+      return masteryPoolCap(this.masteryCardCount(skillId))
+    },
+
+    /** 池状态（UI 与守卫共用）：{ pool, cap, pct, tierIdx, tier, next, cardCount } */
+    masteryPoolState(skillId) {
+      const cardCount = this.masteryCardCount(skillId)
+      const pool = this.skills[skillId]?.masteryPool ?? 0
+      const b = masteryPoolBonus(pool, cardCount)
+      return {
+        pool,
+        cap: masteryPoolCap(cardCount),
+        pct: masteryPoolPct(pool, cardCount),
+        tierIdx: b.tierIdx,
+        tier: b.tier,
+        next: nextMasteryPoolTier(pool, cardCount),
+        cardCount,
+      }
+    },
+
+    /** 该技能当前的池加成（整技能口径）。**只在这一处读池状态**，消费方别再各算一遍。 */
+    masteryPoolBonus(skillId) {
+      const cardCount = this.masteryCardCount(skillId)
+      return masteryPoolBonus(this.skills[skillId]?.masteryPool ?? 0, cardCount)
+    },
+
+    /**
+     * 把池点数补给一张卡（1:1）。`cardKey` 采集类传 itemId、制作类传 recipe.id。
+     * 夹取口径：不超过池余额，也不超过「该卡距满精通还差多少次」（避免把池倒进已经练满的卡里蒸发）。
+     * @returns {number} 实际补给量（0 = 没补，调用方据此给反馈）
+     */
+    spendMasteryPool(skillId, cardKey, amount = Number.MAX_SAFE_INTEGER) {
+      const st = this.skills[skillId]
+      if (!st || !cardKey) return 0
+      const cur = st.mastery?.[cardKey] ?? 0
+      const need = Math.max(0, countForMasteryLevel(MASTERY_LEVEL_CAP) - cur)
+      const moved = poolSpendAmount(st.masteryPool ?? 0, this.masteryCardCount(skillId), Math.min(amount, need))
+      if (moved <= 0) return 0
+      st.masteryPool = (st.masteryPool ?? 0) - moved
+      const before = masteryLevelFromCount(cur)
+      st.mastery[cardKey] = cur + moved
+      const after = masteryLevelFromCount(st.mastery[cardKey])
+      if (after > before) EventBus.emit('mastery:levelup', { skillId, itemId: cardKey, level: after })
+      return moved
     },
 
     /** 记录轶事/故事的具体进度（按物品/对手/动作累计，不随任务重置） */
@@ -1493,12 +1721,9 @@ export const usePlayerStore = defineStore('player', {
       const old = this.equipment[slot]
       if (old) this.gainItem(old, 1)
       this.equipment[slot] = itemId
-      // 词条：换穿不同装备 → 重新掷词条；同件保留原词条（含洗练结果）
-      if (!this.gearMods) this.gearMods = {}
-      const cur = this.gearMods[slot]
-      if (!cur || cur.itemId !== itemId) {
-        this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
-      }
+      // 词条（2026-09-18 起按装备 id 存）：第一次穿这件装备才掷；已有记录原样沿用 ——
+      // 「卸下再穿」「换穿别的再换回来」都不重掷，洗练结果永久有效（旧形态见 migrateGearMods）
+      this.ensureGearMods(itemId)
       // 宝石插槽（2026-09-09）：同件保留；换件先退回旧宝石，再按新装备品质初始化
       if (!this.gemSockets) this.gemSockets = {}
       const prevSock = this.gemSockets[slot]
@@ -1506,6 +1731,34 @@ export const usePlayerStore = defineStore('player', {
       const sockN = socketCountOf(item)
       if (sockN > 0 && !this.gemSockets[slot]) this.gemSockets[slot] = { itemId, gems: new Array(sockN).fill(null) }
       return true
+    },
+
+    /** 读某件装备的词条（**纯读**，没有就返回空数组；供 getter/UI 用，绝不产生副作用） */
+    gearModsOf(itemId) {
+      return this.gearMods?.[itemId]?.mods ?? []
+    },
+    /** 确保某件装备有词条记录（没有就掷一次记下）；穿戴与读档补全时调用 */
+    ensureGearMods(itemId) {
+      const item = getItem(itemId)
+      if (!item || item.type !== 'equipment') return []
+      if (!this.gearMods) this.gearMods = {}
+      const rec = this.gearMods[itemId]
+      if (rec?.mods) return rec.mods
+      this.gearMods[itemId] = { mods: rollGearMods(item), at: Date.now() }
+      this._pruneGearMods()
+      return this.gearMods[itemId].mods
+    },
+    /** 词条记录剪枝：只保留最近掷出的 GEAR_MODS_MAX 件（当前穿戴的永远保留，总数不超上限） */
+    _pruneGearMods() {
+      const keys = Object.keys(this.gearMods ?? {})
+      if (keys.length <= GEAR_MODS_MAX) return
+      const keep = new Set(Object.values(this.equipment ?? {}).filter(Boolean)) // 穿戴中的优先留下
+      const rest = keys.filter((k) => !keep.has(k)).sort((a, b) => (this.gearMods[b]?.at ?? 0) - (this.gearMods[a]?.at ?? 0))
+      for (const k of rest) {
+        if (keep.size >= GEAR_MODS_MAX) break
+        keep.add(k)
+      }
+      for (const k of keys) if (!keep.has(k)) delete this.gearMods[k]
     },
 
     /**
@@ -1532,7 +1785,7 @@ export const usePlayerStore = defineStore('player', {
       delete this.gemSockets[slot]
     },
 
-    /** 补全穿戴物状态（读档/旧档后调用）：缺失的词条记录重掷、按品质初始化宝石插槽、槽数不符时截断/补齐 */
+    /** 补全穿戴物状态（读档/旧档后调用）：缺词条记录的装备补掷一次、按品质初始化宝石插槽、槽数不符时截断/补齐 */
     syncGemSockets() {
       if (!this.gemSockets) this.gemSockets = {}
       if (!this.gearMods) this.gearMods = {}
@@ -1542,10 +1795,8 @@ export const usePlayerStore = defineStore('player', {
           continue
         }
         const item = getItem(itemId)
-        // 词条：存档里已穿戴但没有词条记录（旧档/直存）→ 补掷（与 equip() 同口径）
-        if (!this.gearMods[slot] || this.gearMods[slot].itemId !== itemId) {
-          this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
-        }
+        // 词条：存档里已穿戴但没有该装备的词条记录（旧档/直存）→ 补掷（与 equip() 同口径）
+        this.ensureGearMods(itemId)
         const n = socketCountOf(item)
         const rec = this.gemSockets[slot]
         if (n <= 0) {
@@ -1591,7 +1842,7 @@ export const usePlayerStore = defineStore('player', {
       return { ok: true, itemId: id }
     },
 
-    /** 装备词条洗练（重随词条数量/类型/数值） */
+    /** 装备词条洗练（重随词条数量/类型/数值）——**唯一**会重掷词条的入口 */
     rerollGearMod(slot) {
       const itemId = this.equipment[slot]
       const item = itemId ? getItem(itemId) : null
@@ -1600,8 +1851,8 @@ export const usePlayerStore = defineStore('player', {
       if (this.gold < cost) return { ok: false, msg: `洗练需要 ${cost} 金币` }
       this.gold -= cost
       if (!this.gearMods) this.gearMods = {}
-      this.gearMods[slot] = { itemId, mods: rollGearMods(item) }
-      return { ok: true, cost, mods: this.gearMods[slot].mods }
+      this.gearMods[itemId] = { mods: rollGearMods(item), at: Date.now() }
+      return { ok: true, cost, mods: this.gearMods[itemId].mods }
     },
 
     consumeEnergyBiscuit() {
@@ -1810,6 +2061,9 @@ export const usePlayerStore = defineStore('player', {
           }
           case 'gold': this.quests.progress[key] = this.stats?.totalGoldEarned ?? 0; break
           case 'collection': this.quests.progress[key] = this.collectionPct; break
+          // ⚠️ 这里是**任务**（quests）的进度：语义 =「**不同赛季**中领过奖的季数」，
+          // 必须与 `quests.js` 的文案「赛季领奖达到 2 季 / 5 季」同义（文案与实现同义是项目铁律）。
+          // （2026-09-19 参照 Rocky Idle 去掉的「日历硬门」在**故事**侧：`story.js` 的 `storyReqCur('seasons')` 已改为累计次数。）
           case 'seasons': this.quests.progress[key] = Object.values(this.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length; break
           case 'card': this.quests.progress[key] = this.stats?.cardBattle?.wins ?? 0; break
           case 'arena': this.quests.progress[key] = this.stats?.arena?.bestStreak ?? 0; break
@@ -1834,6 +2088,52 @@ export const usePlayerStore = defineStore('player', {
       EventBus.emit('quest:complete', { id: q.id, name: q.name, reward: q.reward })
     },
 
+    // ── 新手目标链（2026-09-18，留存改进 ①）───────────────────────────────
+    /**
+     * 推进新手链：从当前步往后逐条检查，完成一步就**发一次即时奖励**并记进度。
+     * 幂等：发奖按 `guide.claimed` 账本（同一 id 只发一次），所以每帧调用都安全。
+     * 轨迹：`guide.trace` 记每步完成时刻（相对 startedAt），供「首 30 分钟漏斗」实验统计。
+     * 返回本次新完成的步数（0 = 没变化）。
+     */
+    syncNewbieChain() {
+      if (this.guide?.done) return 0
+      if (!this.guide) this.guide = { step: 0, done: false, claimed: [], startedAt: 0, trace: [] }
+      const g = this.guide
+      if (!Array.isArray(g.claimed)) g.claimed = []
+      if (!Array.isArray(g.trace)) g.trace = []
+      if (!g.startedAt) g.startedAt = Date.now()
+      let i = Math.min(g.step ?? 0, NEWBIE_STEPS.length)
+      let completed = 0
+      while (i < NEWBIE_STEPS.length && NEWBIE_STEPS[i]?.check?.(this)) {
+        const st = NEWBIE_STEPS[i]
+        // 发奖（幂等）+ 记账 + 留痕
+        if (!g.claimed.includes(st.id)) {
+          g.claimed.push(st.id)
+          if (st.reward?.gold) this.gainGold(st.reward.gold)
+          if (st.reward?.items) this.gainItems(st.reward.items)
+          g.trace.push({ id: st.id, at: Date.now() - g.startedAt })
+          if (g.trace.length > NEWBIE_TOTAL) g.trace = g.trace.slice(-NEWBIE_TOTAL)
+          try {
+            useUiStore().pushLog(`🎯 新手目标达成：${st.label}　奖励 ${rewardText(st.reward)}`, 'gain')
+          } catch { /* ui 未就绪（离线结算/测试） */ }
+          EventBus.emit('guide:step', { id: st.id, index: i, reward: st.reward ?? null, at: g.trace[g.trace.length - 1].at })
+        }
+        completed++
+        i++
+      }
+      if (i !== g.step) g.step = i
+      if (i >= NEWBIE_STEPS.length && !g.done) {
+        g.done = true
+        try { useUiStore().pushLog('🏅 新手目标全部达成！接下来去「里程碑之路」挑一个长期目标吧', 'levelup') } catch { /* 同上 */ }
+      }
+      return completed
+    },
+    /** 当前新手步骤（没走完时返回步骤对象，否则 null） */
+    newbieCurrent() {
+      if (this.guide?.done) return null
+      return NEWBIE_STEPS[this.guide?.step ?? 0] ?? null
+    },
+
     // ── 转生（§3：99 级 → 突破 120）──
     prestigeSkill(id) {
       const skill = this.skills[id]
@@ -1844,7 +2144,10 @@ export const usePlayerStore = defineStore('player', {
       if (!this.legacy) this.legacy = { carry: {}, apprentice: { level: 0, lastDay: null } }
       if (!this.legacy.carry) this.legacy.carry = {}
       this.legacy.carry[id] = Math.max(this.legacy.carry[id] ?? 0, carry)
-      this.setSkillState(id, { level: 1 + carry, exp: 0, prestiges })
+      // 经验 = **该等级的累计基线**（2026-09-18 用户确认）：`exp` 是累计值，等级既然是白给的，
+      // 基线就得跟着给 —— 否则「等级 6 / 经验 0」是不自洽状态（经验条首屏显示负数、且要重攒到 7 级的整条累计线）。
+      // 现在：传承保留 5 级 ⇒ 经验起于 113,528（Lv6 基线），到 7 级只差本级区间 30,372，进度条从 0% 平滑涨到 100%。
+      this.setSkillState(id, { level: 1 + carry, exp: totalXpForLevel(1 + carry), prestiges })
       this.stats.prestiges++
       EventBus.emit('player:prestige', { skillId: id, prestiges, carry })
       return true
@@ -2146,9 +2449,11 @@ export const usePlayerStore = defineStore('player', {
         if (reward.gold) this.gainGold(reward.gold)
         if (reward.items) this.gainItems(reward.items)
       }
-      EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `奖励 ${index + 1}` })
+      // full：本季十档是否**刚刚**领满（供「首次赛季满档」的大反馈判定，2026-09-18）
+      const seasonFull = st.claimed.length >= season.tiers.length
+      EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `奖励 ${index + 1}`, full: seasonFull, seasonName: season.name })
       // 赛季年鉴（2026-09-10）：领满全部档位记一条
-      if (st.claimed.length >= season.tiers.length) {
+      if (seasonFull) {
         this.recordChronicle(`season-tier:${season.id}`, 'seasonal', `赛季「${season.name}」全部档位领取完毕`)
       }
       return true
@@ -2382,7 +2687,8 @@ export const usePlayerStore = defineStore('player', {
       }
       const gold = Math.round(slotDef.goldPerHour * slotDef.hours)
       let rare = null
-      if (def.rare && Math.random() < def.rare.chance + expeditionRareBonus(tier) + (post.bonus?.rarePct ?? 0) / 100) {
+      // 稀有货：只缩放**系统给的基准概率**，`expeditionRareBonus`（熟练度升档）与产地 rarePct 是玩家练出来的，不动
+      if (def.rare && Math.random() < otherChance(def.rare.chance) + expeditionRareBonus(tier) + (post.bonus?.rarePct ?? 0) / 100) {
         rare = def.rare.itemId
         gained[rare] = (gained[rare] ?? 0) + 1
       }
@@ -3033,7 +3339,7 @@ export const usePlayerStore = defineStore('player', {
       this.gainGold(gold)
       // 特产：按产地池带回（当季概率更高）
       const specialty = {}
-      if (route && Math.random() < (route.specialtyChance ?? 0)) {
+      if (route && Math.random() < otherChance(route.specialtyChance ?? 0)) {
         const box = route.box ?? []
         const n = 1 + (Math.random() < 0.35 ? 1 : 0)
         for (let i = 0; i < n && box.length; i++) {
@@ -3387,7 +3693,7 @@ export const usePlayerStore = defineStore('player', {
           this.gainItem(crop.itemId, 1)
           this.addMastery?.(GREENHOUSE_UNLOCK_SKILL, crop.itemId, 1)
           let honey = null
-          if (Math.random() < GREENHOUSE_HONEY_CHANCE) {
+          if (Math.random() < greenhouseHoneyChance()) {
             const hid = honeyItemForLevel(crop.reqLevel)
             this.gainItem(hid, 1)
             honey = hid
@@ -3776,7 +4082,7 @@ export const usePlayerStore = defineStore('player', {
         for (const k of ['attack', 'defense', 'accuracy', 'evasion', 'hpBonus']) fStats += (stats[k] ?? 0) * W.stats
         const fCrit = (stats.critChance ?? 0) * 100 * W.crit
         const fSpeed = (stats.speedBonus ?? 0) * 100 * W.speed
-        const mods = this.gearMods?.[slot]?.itemId === itemId ? (this.gearMods[slot].mods?.length ?? 0) : 0
+        const mods = this.gearMods?.[itemId]?.mods?.length ?? 0 // 词条按装备 id 存（2026-09-18）
         const fMods = mods * W.mods
         const gems = this.gemSockets?.[slot]?.itemId === itemId ? (this.gemSockets[slot].gems ?? []).filter(Boolean).length : 0
         const fGems = gems * W.gems
@@ -5094,12 +5400,14 @@ export const usePlayerStore = defineStore('player', {
      */
     _grantShanhaiCaps({ inventory = 0, bank = 0, cold = 0 } = {}) {
       const out = { inventory: 0, bank: 0, cold: 0 }
-      out.inventory = Math.min(inventory, Math.max(0, CAP_MAX.inventory - this.inventoryCap))
+      out.inventory = Math.min(inventory, Math.max(0, STORAGE_MAX - this.inventoryCap))
       this.inventoryCap += out.inventory
-      const wantBank = bank + (inventory - out.inventory) // 背包落不下的顺位到仓库
-      out.bank = Math.min(wantBank, Math.max(0, CAP_MAX.bank - this.bankCap))
-      this.bankCap += out.bank
-      const wantCold = cold + (wantBank - out.bank) // 仓库落不下的顺位到冷库
+      // 存储合一（2026-09-20）：数据里的「bank」这一档容量奖励现在也落在**同一个厨藏容量**上
+      // （`shanhaiTree.js` 的 220 条 `bankCap` 是固定数据，不能改；改的是它落到哪里）
+      const wantBank = bank + (inventory - out.inventory)
+      out.bank = Math.min(wantBank, Math.max(0, STORAGE_MAX - this.inventoryCap))
+      this.inventoryCap += out.bank
+      const wantCold = cold + (wantBank - out.bank)
       out.cold = Math.min(wantCold, Math.max(0, CAP_MAX.cold - this.coldStorageCap))
       this.coldStorageCap += out.cold
       return out
@@ -5131,8 +5439,8 @@ export const usePlayerStore = defineStore('player', {
       const landed = this._grantShanhaiCaps(delta)
       this._syncShanhaiCapLedger()
       const parts = []
-      if (landed.inventory) parts.push(`背包 +${landed.inventory}`)
-      if (landed.bank) parts.push(`仓库 +${landed.bank}`)
+      if (landed.inventory) parts.push(`厨藏 +${landed.inventory}`)
+      if (landed.bank) parts.push(`厨藏 +${landed.bank}（原仓库容量并入）`)
       if (landed.cold) parts.push(`冷库 +${landed.cold}`)
       // 三档都满（理论上到不了：硬顶按「金币满 + 全树满」留了余量）→ landed 全 0：
       // 账本上面已记为「已发」（保证幂等、不重复顺位），这里只是不刷一条无意义的日志
@@ -5212,8 +5520,8 @@ export const usePlayerStore = defineStore('player', {
         else grant.cold = n
         const got = this._grantShanhaiCaps(grant)
         const parts = []
-        if (got.inventory) parts.push(`背包 +${got.inventory} 格`)
-        if (got.bank) parts.push(`仓库 +${got.bank} 格${f === 'inventoryCap' ? '（背包已满，顺位转投）' : ''}`)
+        if (got.inventory) parts.push(`厨藏 +${got.inventory} 格`)
+        if (got.bank) parts.push(`厨藏 +${got.bank} 格（原仓库容量并入）`)
         if (got.cold) parts.push(`冷库 +${got.cold} 格${f !== 'coldStorageCap' ? '（前两档已满，顺位转投）' : ''}`)
         landed = parts.length ? parts.join(' · ') : '背包/仓库/冷库都已满，本次奖励未生效'
         this._syncShanhaiCapLedger()
@@ -5261,9 +5569,14 @@ export const usePlayerStore = defineStore('player', {
 
     // ── 食神秘境（2026-09-09 roguelike 局内模式）──
     realmState() {
-      if (!this.realm || !Array.isArray(this.realm.buffs)) this.realm = { active: false, floor: 0, buffs: [], best: 0, pending: null }
+      if (!this.realm || !Array.isArray(this.realm.buffs)) this.realm = { active: false, floor: 0, buffs: [], best: 0, pending: null, tier: 1 }
+      // 旧档没有 `tier`（2026-09-19 参照 Rocky Idle 的 Runs 新增档位）→ 归一化回退第 1 档
+      if (!Number.isFinite(this.realm.tier)) this.realm.tier = 1
+      this.realm.tier = Math.max(1, Math.min(REALM_TIER_MAX, Math.floor(this.realm.tier)))
       return this.realm
     },
+    /** 本局档位（1..10） */
+    realmTier() { return this.realmState().tier ?? 1 },
     /** 本局增益聚合（未进入秘境返回 null，避免影响普通对决） */
     realmModifiers() {
       const st = this.realm
@@ -5312,18 +5625,35 @@ export const usePlayerStore = defineStore('player', {
       if (!st.active) return null
       const floor = st.floor
       const mult = 1 + (this.realmModifiers()?.goldPct ?? 0) / 100
-      const r = realmReward(floor)
+      const tierAtRun = this.realmTier() // ⚠️ 先按**本局开打时的档位**结算，再判定升档（否则一局的奖励会被下一档倍率虚抬）
+      const r = realmReward(floor, tierAtRun)
       const gold = Math.round(r.gold * mult)
       st.active = false
       st.pending = null
       st.floor = 0
       st.buffs = []
+      let tierUp = null
       if (floor > 0) {
         this.gainGold(gold)
         for (const [id, q] of Object.entries(r.items ?? {})) if (q > 0) this.gainItem(id, q)
-        EventBus.emit('realm:end', { floor, gold, items: r.items })
+        if (r.tickets > 0) {
+          this.mijian.tickets = (this.mijian.tickets ?? 0) + r.tickets
+          this.stats.realmTicketPaid = (this.stats.realmTicketPaid ?? 0) + r.tickets
+        }
+        // 升档：本局通过层数达到目标 ⇒ 下一档（对手更难、奖励更高）——参考作 Runs 的 tiers 推进
+        if (st.tier < REALM_TIER_MAX && floor >= realmTierGoal(st.tier)) {
+          const from = st.tier
+          st.tier += 1
+          tierUp = { from, to: st.tier, mult: realmTierMult(st.tier) }
+          // 升档礼：按档位给券（一次性，货币字段；同一局面不会重复，因为 tier 已推进）
+          const bonus = 5 + st.tier * 5
+          this.mijian.tickets = (this.mijian.tickets ?? 0) + bonus
+          this.stats.realmTicketPaid = (this.stats.realmTicketPaid ?? 0) + bonus
+          EventBus.emit('realm:tierup', tierUp)
+        }
+        EventBus.emit('realm:end', { floor, gold, items: r.items, tickets: r.tickets, tierUp })
       }
-      return { floor, gold }
+      return { floor, gold, tierUp, tickets: r.tickets }
     },
 
     // ── 每周挑战赛（2026-09-09）：难度型周目标（与产量型周常任务互补）──
@@ -5384,6 +5714,11 @@ export const usePlayerStore = defineStore('player', {
         t.rewarded.push(m.floor)
         this.gainGold(m.gold)
         for (const [id, qty] of Object.entries(m.items ?? {})) this.gainItem(id, qty)
+        // 深层里程碑另给觅珍抽卡券（货币，不是物品；2026-09-19 加深塔长尾时加）
+        if (m.tickets > 0) {
+          this.mijian.tickets = (this.mijian.tickets ?? 0) + m.tickets
+          this.stats.towerTicketPaid = (this.stats.towerTicketPaid ?? 0) + m.tickets
+        }
         EventBus.emit('tower:milestone', m)
       }
       this.tower = t

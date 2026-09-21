@@ -292,7 +292,7 @@ reset()
           <div class="m3-info-row m3-info-rule">通用规则：点击交换相邻两块 · 三连及以上消除（4/5 连加成）· 连锁 1.5 倍递增 · 步数/时间耗尽未达标即失败</div>
           <div v-for="(m, key) in MODES" :key="key" class="m3-info-row">
             <b class="m3-info-name">{{ m.label }}</b>
-            <span class="m3-info-desc">{{ m.desc }}</span>
+            <span class="m3-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

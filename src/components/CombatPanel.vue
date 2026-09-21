@@ -1,17 +1,17 @@
 <script setup>
-// 对决面板（2026-09-10 从 CombatView 抽出）— 「风格+属性组合框」+「对决框（血量/回合/道具/日志）」。
-// 供对决页与厨神试炼页共用：两处都直接读 player/ui store 与 getCombat() 单例，样式沿用 main.css 全局类。
-import { computed, watch } from 'vue'
+// 对决面板（2026-09-10 从 CombatView 抽出；2026-09-19 拆分）— 「风格 + 属性两栏」，
+// 战斗屏抽成 `CombatArena`（左上角放「战备」`CombatLoadout`）供所有战斗页共用；
+// 战斗日志 `CombatLog` 自 2026-09-21 起由各战斗页摆在右栏（与装备槽互换位置）。
+import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
-import { STYLE_INFO } from '../game/data/combat.js'
-import { getItem } from '../game/data/items.js'
-import { sfx } from '../game/core/sound.js'
-import ProgressBar from './ProgressBar.vue'
+import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
+import { bindTip } from '../composables/useFixedTooltip.js'
+import CombatArena from './CombatArena.vue'
+import CombatLoadout from './CombatLoadout.vue'
+import EquipmentSlots from './EquipmentSlots.vue'
 
 const player = usePlayerStore()
-const ui = useUiStore()
 const combat = getCombat()
 
 const STYLES = ['knife', 'plating', 'flavor']
@@ -20,6 +20,28 @@ const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasi
 const combatLevel = computed(() => player.combatLevel)
 const pStats = computed(() => combat?.playerStats() ?? {})
 const inFight = computed(() => combat?.inFight ?? false)
+
+// ── 属性面板（2026-09-19 参照 Melvor 拆「进攻 / 防御」两栏）──────────────
+// 「伤害减免」与「暴击伤害」此前界面上没有、但伤害公式里真实存在（def/(def+100)、暴击 ×2），
+// 玩家看不出防御到底减了多少伤。数值一律从引擎的只读 getter 取，不在组件里重算。
+const reductionPct = computed(() => combat?.reductionPct?.(pStats.value.defense ?? 0) ?? 0)
+const critMult = computed(() => combat?.critMultiplier?.() ?? 2)
+// 克制加成（+15%）：数值取自引擎 getter，避免界面与伤害公式两套真相
+const advPct = computed(() => Math.round(((combat?.advantageMultiplier?.() ?? 1.15) - 1) * 100))
+const offense = computed(() => [
+  { k: '攻击伤害', v: Math.round(pStats.value.attack ?? 0), hint: '每回合的基础伤害（未计克制/暴击）' },
+  { k: '暴击率', v: `${((pStats.value.critChance ?? 0) * 100).toFixed(1)}%`, hint: '命中后按此概率触发暴击' },
+  { k: '暴击伤害', v: `${Math.round(critMult.value * 100)}%`, hint: '暴击时伤害倍率' },
+  { k: '准确率', v: Math.round(pStats.value.accuracy ?? 0), hint: '与对手闪避对抗，决定命中' },
+  { k: '调味能量', v: pStats.value.flavorEnergy ?? 0, hint: '调味流每次冲击消耗 10 点' },
+])
+const defense = computed(() => [
+  { k: '最大品鉴值', v: Math.round(pStats.value.maxHp ?? 0), hint: '生命上限，归零即战败' },
+  { k: '防御力', v: Math.round(pStats.value.defense ?? 0), hint: '决定下方的伤害减免' },
+  { k: '伤害减免', v: `${(reductionPct.value * 100).toFixed(1)}%`, hint: '每次受击按此比例减伤' },
+  { k: '闪避率', v: Math.round(pStats.value.evasion ?? 0), hint: '与对手准确率对抗，决定是否被打中' },
+  { k: '回合间隔', v: `${(pStats.value.speedMs / 1000).toFixed(1)}s`, hint: '每隔这么久自动打出一回合' },
+])
 
 // 当前出站食灵的对决加成（§3.3.6）：在对决属性区明显展示
 const spiritCombat = computed(() => {
@@ -35,67 +57,8 @@ const spiritCombat = computed(() => {
   }
 })
 
-// 战斗帧：依赖全局引擎循环计数（ui.loopTick），每 tick 重算 → 对战框逐帧刷新
-const battleFrame = computed(() => {
-  ui.loopTick
-  return {
-    inFight: combat?.inFight ?? false,
-    result: combat?.result ?? null,
-    opponentName: combat?.opponent?.name ?? '',
-    opponentHp: combat?.opponentHp ?? 0,
-    opponentHpMax: combat?.opponent?.hp ?? 1,
-    playerHp: player.combat.hp,
-    playerHpMax: player.maxHp,
-    turn: combat?.turnCount ?? 0,
-    turnPct: combat?.inFight ? Math.min(1, (combat.turnTimer ?? 0) / Math.max(1, combat.playerStats().speedMs)) : 0,
-    turnStartAt: combat?.inFight ? (combat.turnStartAt ?? performance.now()) : 0,
-    turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
-    turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(1) : '0.0',
-    log: combat?.log ?? [],
-  }
-})
-
-const availableFoods = computed(() =>
-  Object.entries(player.inventory)
-    .filter(([id, q]) => q > 0 && getItem(id)?.type === 'food' && getItem(id).heal)
-    .map(([id, q]) => ({ id, qty: q, item: getItem(id) }))
-    .sort((a, b) => b.item.heal - a.item.heal)
-)
-const availableSauces = computed(() =>
-  Object.entries(player.inventory)
-    .filter(([id, q]) => q > 0 && getItem(id)?.buff)
-    .map(([id, q]) => ({ id, qty: q, item: getItem(id) }))
-)
-const availableDrinks = computed(() =>
-  Object.entries(player.inventory)
-    .filter(([id, q]) => q > 0 && getItem(id)?.type === 'drink')
-    .map(([id, q]) => ({ id, qty: q, item: getItem(id) }))
-)
-
-// 回合命中音效（节流 400ms）
-let lastHitAt = 0
-watch(
-  () => battleFrame.value?.turn ?? 0,
-  (t, old) => {
-    if (t > old && player.settings.soundEnabled && Date.now() - lastHitAt > 400) {
-      lastHitAt = Date.now()
-      sfx.hit()
-    }
-  },
-)
-
-function useItem(kind, id) {
-  if (kind === 'food') combat.useFood(id)
-  else if (kind === 'sauce') combat.useSauce(id)
-  else if (kind === 'drink') combat.useDrink(id)
-  else if (kind === 'spice') combat.useMysterySpice()
-  else if (kind === 'biscuit') combat.useEnergyBiscuit()
-}
 function setStyle(style) {
   player.setCombatStyle(style)
-}
-function stopFight() {
-  combat.stop()
 }
 function buffText() {
   const b = combat.buffs ?? {}
@@ -105,8 +68,21 @@ function buffText() {
 
 <template>
   <div>
-    <!-- 组合框：左「对决风格」+ 中间虚线 + 右「属性面板」 -->
+    <!-- 战斗屏（与竞技场/通天塔/秘境/试炼共用 CombatArena）；
+         「战备」按用户要求摆进战斗屏**左上角**（点开选自动进食的料理） -->
+    <CombatArena>
+      <template #corner>
+        <CombatLoadout />
+      </template>
+    </CombatArena>
+
+    <!-- 装备槽（2026-09-21 用户要求：与「战斗日志」互换位置 —— 日志去右栏，装备留在左栏）
+         八个槽位排成一排（见 EquipmentSlots 的定宽网格） -->
+    <EquipmentSlots />
+
+    <!-- 组合框：左「对决风格」（整列按钮）+ 中间虚线 + 右「属性面板」（进攻/防御两栏） -->
     <div class="card combat-combo">
+
       <div class="combo-left">
         <h3>对决风格</h3>
         <div class="style-row">
@@ -119,24 +95,47 @@ function buffText() {
           >
             <strong>{{ STYLE_INFO[s].name }}</strong>
             <span class="dim">{{ STYLE_INFO[s].desc }}</span>
+            <span class="style-adv" :class="{ 'style-adv--cur': player.combat.style === s }">
+              克制 {{ STYLE_INFO[STYLE_ADVANTAGE[s]]?.name ?? STYLE_ADVANTAGE[s] }} · 伤害 +{{ advPct }}%
+            </span>
           </button>
         </div>
+        <!-- 2026-09-20 用户要求：这条说明从右侧「属性面板」挪到**三个风格按钮下方** -->
+        <p class="dim style-note">调味冲击每次消耗 10 调味能量；每回合自动回复 +5，战斗中喝果茶/香草茶可大幅恢复（调酒制作）。</p>
       </div>
       <div class="combo-divider"></div>
       <div class="combo-right">
-        <h3>属性面板</h3>
-        <div class="stat-row">
-          <div class="stat"><div class="stat-num mono">{{ combatLevel }}</div><div class="stat-label">对决等级</div></div>
-          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.maxHp) }}</div><div class="stat-label">最大品鉴值</div></div>
-          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.attack) }}</div><div class="stat-label">攻击伤害</div></div>
-          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.accuracy) }}</div><div class="stat-label">准确率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.defense) }}</div><div class="stat-label">防御力</div></div>
-          <div class="stat"><div class="stat-num mono">{{ Math.round(pStats.evasion) }}</div><div class="stat-label">闪避率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.critChance * 100).toFixed(1) }}%</div><div class="stat-label">暴击率</div></div>
-          <div class="stat"><div class="stat-num mono">{{ (pStats.speedMs / 1000).toFixed(1) }}s</div><div class="stat-label">回合间隔</div></div>
-          <div class="stat"><div class="stat-num mono">{{ pStats.flavorEnergy }}</div><div class="stat-label">调味能量</div></div>
+        <h3>属性面板 <span class="dim" style="font-size: 12px">对决等级 {{ combatLevel }}</span></h3>
+        <div class="attr-cols">
+          <div class="attr-col">
+            <h4 class="attr-col-head">进攻</h4>
+            <div
+              v-for="a in offense"
+              :key="a.k"
+              class="stat"
+              @mouseenter="bindTip($event)"
+              @mousemove="bindTip($event)"
+            >
+              <div class="stat-num mono">{{ a.v }}</div>
+              <div class="stat-label">{{ a.k }}</div>
+              <div class="tooltip follow-tooltip">{{ a.hint }}</div>
+            </div>
+          </div>
+          <div class="attr-col">
+            <h4 class="attr-col-head">防御</h4>
+            <div
+              v-for="a in defense"
+              :key="a.k"
+              class="stat"
+              @mouseenter="bindTip($event)"
+              @mousemove="bindTip($event)"
+            >
+              <div class="stat-num mono">{{ a.v }}</div>
+              <div class="stat-label">{{ a.k }}</div>
+              <div class="tooltip follow-tooltip">{{ a.hint }}</div>
+            </div>
+          </div>
         </div>
-        <p class="dim" style="margin-top: 4px">调味冲击每次消耗 10 调味能量；每回合自动回复 +5，战斗中喝果茶/香草茶可大幅恢复（调酒制作）。</p>
         <p v-if="spiritCombat.any" class="dim spirit-combat-bonus">
           <span class="badge badge-on">食灵对决加成</span>
           <span v-if="spiritCombat.dmgPct">伤害 +{{ spiritCombat.dmgPct }}%</span>
@@ -148,86 +147,60 @@ function buffText() {
         <p v-if="player.combat.style === 'plating'" class="dim">🎨 装饰食材：<span class="mono">{{ player.inventory.garnish ?? 0 }}</span>（每次攻击消耗 1 个，杂货铺有售）</p>
       </div>
     </div>
-
-    <!-- 战斗框（常驻：战斗中显示战斗；否则待机提示） -->
-    <div class="card combat-battle">
-      <template v-if="battleFrame.inFight || battleFrame.result">
-        <div class="battle-split">
-          <!-- 左半边：战斗 -->
-          <div class="battle-left">
-            <h3>对决中（第 {{ battleFrame.turn }} 回合）</h3>
-            <div class="hp-row">
-              <div class="hp-col">
-                <div class="hp-label"><strong>你</strong> <span class="mono">{{ Math.round(battleFrame.playerHp) }} / {{ Math.round(battleFrame.playerHpMax) }}</span></div>
-                <div class="hp-bar"><div class="hp-fill" :class="{ low: battleFrame.playerHp / battleFrame.playerHpMax < 0.3 }" :style="{ width: Math.max(0, battleFrame.playerHp / battleFrame.playerHpMax * 100) + '%' }"></div></div>
-              </div>
-              <div class="hp-col">
-                <div class="hp-label"><strong>{{ battleFrame.opponentName }}</strong> <span class="mono">{{ Math.round(battleFrame.opponentHp) }} / {{ Math.round(battleFrame.opponentHpMax) }}</span></div>
-                <div class="hp-bar opp"><div class="hp-fill opp" :style="{ width: Math.max(0, battleFrame.opponentHp / battleFrame.opponentHpMax * 100) + '%' }"></div></div>
-              </div>
-            </div>
-
-            <!-- 回合间隔进度条（距下一回合） -->
-            <div class="turn-progress">
-              <span class="dim">回合间隔 {{ battleFrame.turnSpeedSec }}s</span>
-              <ProgressBar :start-at="battleFrame.inFight ? battleFrame.turnStartAt : null" :duration-ms="battleFrame.turnSpeedMs" :active="battleFrame.inFight" />
-            </div>
-
-            <!-- 结果 -->
-            <div v-if="battleFrame.result === 'win'" class="combat-result win">🏆 胜利！</div>
-            <div v-else-if="battleFrame.result === 'lose'" class="combat-result lose">💀 战败</div>
-
-            <!-- 道具使用（§4.5） -->
-            <div class="item-actions">
-              <div v-if="availableFoods.length" class="item-group">
-                <span class="dim">料理（回血）</span>
-                <button v-for="f in availableFoods" :key="f.id" class="btn btn-sm" @click="useItem('food', f.id)">
-                  {{ f.item.name }} +{{ f.item.heal }} <span class="mono">×{{ f.qty }}</span>
-                </button>
-              </div>
-              <div v-if="availableSauces.length" class="item-group">
-                <span class="dim">酱料（增益10回合）</span>
-                <button v-for="s in availableSauces" :key="s.id" class="btn btn-sm" @click="useItem('sauce', s.id)">
-                  {{ s.item.name }} <span class="mono">×{{ s.qty }}</span>
-                </button>
-              </div>
-              <div v-if="availableDrinks.length" class="item-group">
-                <span class="dim">饮品</span>
-                <button v-for="d in availableDrinks" :key="d.id" class="btn btn-sm" @click="useItem('drink', d.id)">
-                  {{ d.item.name }} <span class="mono">×{{ d.qty }}</span>
-                </button>
-              </div>
-              <div v-if="(player.inventory.mysterySpice ?? 0) > 0" class="item-group">
-                <button class="btn btn-sm" @click="useItem('spice')">🪄 神秘调料 ×{{ player.inventory.mysterySpice }}</button>
-              </div>
-              <div v-if="(player.inventory.energyBiscuit ?? 0) > 0" class="item-group">
-                <button class="btn btn-sm" :disabled="combat.biscuitCooldown > 0" @click="useItem('biscuit')">
-                  🍪 能量补给 ×{{ player.inventory.energyBiscuit }}
-                  <span v-if="combat.biscuitCooldown > 0" class="dim">（冷却 {{ combat.biscuitCooldown }} 回合）</span>
-                  <span v-else class="dim">（回血 {{ Math.floor(player.maxHp * 0.25) }} · 命中+8 · 攻速+10%）</span>
-                </button>
-              </div>
-            </div>
-            <button class="btn btn-sm" @click="stopFight()" style="margin-top: auto">停止对决</button>
-          </div>
-
-          <div class="battle-divider"></div>
-
-          <!-- 右半边：战斗情况（日志） -->
-          <div class="battle-right">
-            <h4>战斗情况</h4>
-            <div class="battle-log">
-              <div v-for="(l, i) in [...battleFrame.log].reverse()" :key="i" :class="`log-${l.kind}`">{{ l.text }}</div>
-            </div>
-          </div>
-        </div>
-      </template>
-      <template v-else>
-        <div class="combat-idle">
-          <span class="badge">待机</span>
-          <span class="dim">选择对手开始料理对决（自动回合制，2.4s/回合）</span>
-        </div>
-      </template>
-    </div>
   </div>
 </template>
+
+<style scoped>
+/* 属性面板：进攻 / 防御两栏（2026-09-19，参照 Melvor 的属性分区） */
+.attr-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+.attr-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.attr-col-head {
+  margin: 0;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed rgba(var(--ink-rgb), 0.35);
+  color: var(--primary);
+}
+.attr-cols .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+/* 数值说明改**悬浮显示**（2026-09-19 用户反馈「属性面板的描述太多了」）：
+   常显两行小字把面板撑得很长，光标碰到数值/名称才显示。 */
+.attr-cols .stat {
+  cursor: help;
+}
+.attr-cols .stat:hover .tooltip {
+  display: block;
+}
+/* 风格按钮：整列 + 「克制 X」标注 */
+.style-adv {
+  font-size: 12px;
+  color: var(--good-strong);
+}
+.style-adv--cur {
+  color: #fff;
+  opacity: 0.95;
+}
+/* 调味能量说明（2026-09-20 从右侧属性面板挪到风格按钮下方） */
+.style-note {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 900px) {
+  .attr-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

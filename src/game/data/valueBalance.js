@@ -22,6 +22,7 @@ import { ALCHEMY_RECIPES } from './alchemy.js'
 import { resetMijianPoolCache } from './mijianDraws.js'
 import { WOODWORKING_RECIPES } from './woodworking.js'
 import { SIDELINE_RECIPES } from './sidelineWorks.js'
+import { effIngredients } from './materialCost.js'
 
 const isMineral = (id) => { const it = ITEMS[id]; return it?.category === 'mineral' || /Ore|fossil|salt|矿/.test(id) }
 const round = (v) => Math.round(v)
@@ -106,7 +107,9 @@ export function applySidelineProductValues() {
   }
   for (const r of [...WOODWORKING_RECIPES, ...Object.values(SIDELINE_RECIPES).flat()]) {
     const it = ITEMS[r?.output?.itemId]
-    if (it) it.value = sumOf(r.ingredients)
+    // ⚠️ 材料用量走 `effIngredients`（含全局材料系数）：**本函数的不变量是「产物价值 == 材料价值合计」**，
+    //    若这里读原始数量，材料翻倍后这条不变量就悄悄失效（「卖一件 = 把这份材料整包卖掉」变成只有一半）。
+    if (it) it.value = sumOf(effIngredients(r))
   }
 }
 

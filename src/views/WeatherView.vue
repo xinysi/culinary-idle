@@ -44,9 +44,9 @@ const RELATED = [{ view: 'festival', label: '🌗 节庆' }, { view: 'mascot', l
       <div>
         <h2>🌤 天气与运势</h2>
         <p class="dim">
-          每天 0 点刷新：<b>天气</b>给一条全局修正（与节庆、限时活动三层叠加）——<b>恶劣天气会带来真实减益</b>（台风 / 酷暑 / 寒潮），
+          每天 0 点刷新：<b>天气</b>给一条全局修正（与节庆、限时活动叠加生效）——<b>恶劣天气会带来真实减益</b>（台风 / 酷暑 / 寒潮），
           但每条都留了一个「换个玩法」的补偿；<b>运势</b>指定今日幸运食材（采集它产量 +20%）与宜做建议，<b>运势等级还会缓和恶劣天气的减益</b>（大吉减半）。
-          今天是 {{ key }}。
+          今天是 {{ key.slice(5).replace('-', ' 月 ') }} 日。
         </p>
       </div>
     </header>
@@ -98,6 +98,7 @@ const RELATED = [{ view: 'festival', label: '🌗 节庆' }, { view: 'mascot', l
 
     <h3 style="margin-top: 16px">全部天气</h3>
     <div class="card">
+      <div class="table-scroll">
       <table class="target-table">
         <tbody>
           <tr v-for="w in WEATHERS" :key="w.id" :class="{ 'wx-row-harsh': w.harsh }">
@@ -106,6 +107,7 @@ const RELATED = [{ view: 'festival', label: '🌗 节庆' }, { view: 'mascot', l
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
     <RelatedPages :links="RELATED" />
 </div>

@@ -10,6 +10,7 @@ import { getItem } from '../game/data/items.js'
 import { CROPS } from '../game/skills/FarmingSkill.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { MAX_LEVEL } from '../game/skills/Skill.js'
+import { carryFromLevel } from '../game/data/legacy.js'
 import { SPIRIT_SLOTS } from '../game/data/spiritTiers.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import GatheringView from './GatheringView.vue'
@@ -46,7 +47,13 @@ const spiritNonXp = computed(() => {
 const spiritActiveCount = computed(() => player.spirits?.active?.length ?? 0)
 
 function doPrestige() {
-  if (!confirm(`转生「${activeDef.value?.name}」？\n等级重置为 1，永久 +20% 该技能经验，等级上限突破至 120。`)) return
+  // 文案必须与实现同口径：师徒传承把等级置为「1 + 传承级」（满 100 级转生保留 5 级），
+  // 原先写「等级重置为 1」是错的（2026-09-18 用户报「文案与实现不符」）。
+  const lv = player.skillState(player.activeSkill)?.level ?? MAX_LEVEL
+  const carry = carryFromLevel(lv)
+  const where = carry > 0 ? `Lv${1 + carry}（1 级 + 师徒传承保留的 ${carry} 级）` : `Lv1`
+  // 「经验清零」已改成「经验回到该等级起点」：传承保留的等级**连累计经验基线一起给**（2026-09-18 用户确认）
+  if (!confirm(`转生「${activeDef.value?.name}」？\n等级回到 ${where}，经验回到该等级起点（进度从 0 开始），永久 +20% 该技能经验，等级上限突破至 120。`)) return
   if (player.prestigeSkill(player.activeSkill)) {
     ui.pushLog(`已转生「${activeDef.value?.name}」`, 'levelup')
   }
@@ -86,6 +93,12 @@ function planToggle() {
         <h2>
           {{ activeDef?.name }}
           <span v-if="prestiges > 0" class="badge badge-on">{{ prestiges }} 转</span>
+          <!-- 指南按钮（2026-09-19）：页顶那框说明文字已收进这个弹窗 -->
+          <button
+            class="btn btn-sm skill-guide-btn"
+            title="这一页是干什么的 / 有哪些机制"
+            @click="ui.toggleSkillGuide(activeDef?.id)"
+          >📖 指南</button>
         </h2>
         <p class="dim">{{ activeDef?.desc }}</p>
       </div>
@@ -109,10 +122,17 @@ function planToggle() {
       </div>
     </header>
 
-    <div class="card plan-card">
+    <!-- 战斗类技能不显示挂机计划（2026-09-19 用户要求：对决页别出现挂机计划的框）——
+         对决是打一场就结束的动作，没有「按顺序挂机换目标」这回事 -->
+    <div v-if="activeDef?.category !== 'combat'" class="card plan-card">
       <div class="plan-head">
         <h3>🗓 挂机计划</h3>
-        <span class="dim">按顺序挂机：条件满足自动换目标，全部完成自动暂停</span>
+        <!-- 空态把说明与提示并到同一行（用户 2026-09-19 反馈技能页上方堆得过多）；
+             有步骤时才另起一行显示步骤列表 -->
+        <span class="dim">
+          <template v-if="player.planState().steps.length">按顺序挂机：条件满足自动换目标，全部完成自动暂停</template>
+          <template v-else>还没有步骤——点「编辑」添加（支持采集 / 探索 / 农耕目标）</template>
+        </span>
         <div class="plan-head-btns">
           <button class="btn btn-sm" @click="planOpen = !planOpen">{{ planOpen ? '收起' : '编辑' }}</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': player.planState().active }" @click="planToggle()">
@@ -132,7 +152,7 @@ function planToggle() {
           <button class="btn btn-sm" @click="player.planRemoveStep(i)">✕</button>
         </div>
       </div>
-      <p v-else class="dim" style="font-size: 12px">还没有步骤——点「编辑」添加（支持采集/探索/农耕目标）。</p>
+      <!-- 空态提示已并入上面的 plan-head（省一行），这里不再重复 -->
       <div v-if="planOpen" class="plan-add">
         <select v-model="planSkill" @change="planTarget = null">
           <option v-for="id in PLAN_SKILLS" :key="id" :value="id">{{ getSkillDef(id)?.name }}</option>
@@ -169,11 +189,13 @@ function planToggle() {
 
 <style scoped>
 /* 挂机计划（2026-09-09） */
-.plan-card { margin-bottom: 12px; }
-.plan-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
-.plan-head h3 { margin: 0; }
+/* 挂机计划卡：用户反馈「上下长度还是太长」⇒ 收薄内外边距、标题降一档、
+   步骤列表限高滚动（计划长了不再把下面的目标列表顶下去）。 */
+.plan-card { margin-bottom: 8px; padding: 6px 10px; }
+.plan-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.plan-head h3 { margin: 0; font-size: 14px; }
 .plan-head-btns { margin-left: auto; display: flex; gap: 6px; }
-.plan-steps { display: flex; flex-direction: column; gap: 4px; }
+.plan-steps { display: flex; flex-direction: column; gap: 4px; max-height: 128px; overflow-y: auto; }
 .plan-step.plan-cur { border: 1px dashed var(--primary); border-radius: 8px; padding: 2px 8px; background: var(--primary-soft); }
 .plan-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .plan-add select,

@@ -8,6 +8,7 @@ import { GATHERING_EXT2 } from '../data/expansion2.js'
 import { FRESH_TARGETS } from '../data/freshMats.js'
 import { SEED_MAP } from '../data/farmSeeds.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
+import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率）
 
 export const FORAGING_TARGETS = [
   { itemId: 'apple', reqLevel: 1, xpPerAction: 10, intervalSec: 3.0 },
@@ -85,13 +86,13 @@ export class ForagingSkill extends GatheringSkill {
     const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)))
 
     const extras = []
-    if (Math.random() < WOOD_CHANCE) {
+    if (Math.random() < gatherExtraChance(WOOD_CHANCE)) {
       this.player.gainItem('wood', 1)
       extras.push('wood')
     }
     // 10% 掉落本作物种子（仅对可种作物）
     const seedId = SEED_MAP[target.itemId]
-    if (seedId && Math.random() < SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100) {
+    if (seedId && Math.random() < gatherExtraChance(SEED_CHANCE) + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100) {
       this.player.gainItem(seedId, 1)
       extras.push(seedId)
     }
@@ -109,15 +110,15 @@ export class ForagingSkill extends GatheringSkill {
     })
   }
 
-  /** 离线结算：产出含期望木材/种子 */
+  /** 离线结算：产出含期望木材/种子。⚠️ 概率一律走 gatherExtraChance，否则在线/离线不同口径 */
   computeOffline(durationMs, efficiency) {
     const result = super.computeOffline(durationMs, efficiency)
     if (!result) return null
-    const woods = Math.round(result.actions * WOOD_CHANCE)
+    const woods = Math.round(result.actions * gatherExtraChance(WOOD_CHANCE))
     if (woods > 0) result.items.wood = woods
     const seedId = SEED_MAP[this.currentTarget?.itemId]
     if (seedId) {
-      const seeds = Math.round(result.actions * (SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100))
+      const seeds = Math.round(result.actions * (gatherExtraChance(SEED_CHANCE) + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100))
       if (seeds > 0) result.items[seedId] = seeds
     }
     return result

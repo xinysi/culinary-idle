@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -12,13 +13,13 @@ const MODES = {
   m1: { label: '模式1', dur: 40, n: 4, keep: 10, lives: 3, target: 850, gold: 45, desc: '40 秒 · 目标 850 分 · 4×4 小盘，留 10 个提示数 · +45 币' },
   m2: { label: '模式2', dur: 45, n: 4, keep: 8, lives: 3, target: 850, gold: 55, desc: '45 秒 · 目标 850 分 · 4×4，提示更少 · +55 币' },
   m3: { label: '模式3', dur: 50, n: 4, keep: 6, lives: 2, target: 875, gold: 60, desc: '50 秒 · 目标 875 分 · 4×4 高难 + 2 条命 · +60 币' },
-  m4: { label: '模式4', dur: 55, n: 6, keep: 16, lives: 3, target: 825, gold: 70, desc: '55 秒 · 目标 825 分 · **6×6 中盘** · +70 币' },
+  m4: { label: '模式4', dur: 55, n: 6, keep: 16, lives: 3, target: 825, gold: 70, desc: '55 秒 · 目标 825 分 · <b>6×6 中盘</b> · +70 币' },
   m5: { label: '模式5', dur: 60, n: 6, keep: 14, lives: 3, target: 800, gold: 80, desc: '60 秒 · 目标 800 分 · 6×6，提示更少 · +80 币' },
   m6: { label: '模式6', dur: 65, n: 6, keep: 12, lives: 2, target: 825, gold: 90, desc: '65 秒 · 目标 825 分 · 6×6 高难 + 2 条命 · +90 币' },
-  m7: { label: '模式7', dur: 70, n: 9, keep: 34, lives: 3, target: 875, gold: 100, desc: '70 秒 · 目标 875 分 · **9×9 大盘**，留 34 个提示数 · +100 币' },
+  m7: { label: '模式7', dur: 70, n: 9, keep: 34, lives: 3, target: 875, gold: 100, desc: '70 秒 · 目标 875 分 · <b>9×9 大盘</b>，留 34 个提示数 · +100 币' },
   m8: { label: '模式8', dur: 80, n: 9, keep: 30, lives: 3, target: 950, gold: 120, desc: '80 秒 · 目标 950 分 · 9×9，提示减少 · +120 币' },
   m9: { label: '模式9', dur: 90, n: 9, keep: 26, lives: 2, target: 1100, gold: 140, desc: '90 秒 · 目标 1100 分 · 9×9 高难 + 2 条命 · +140 币' },
-  m10: { label: '模式10', dur: 100, n: 9, keep: 22, lives: 1, target: 1340, gold: 160, desc: '100 秒 · 目标 1340 分 · 9×9 极难 + **只有 1 条命** · +160 币' },
+  m10: { label: '模式10', dur: 100, n: 9, keep: 22, lives: 1, target: 1340, gold: 160, desc: '100 秒 · 目标 1340 分 · 9×9 极难 + <b>只有 1 条命</b> · +160 币' },
 }
 const showInfo = ref(false)
 const mode = ref('m1')
@@ -48,23 +49,11 @@ let lastTs = 0
 let timeAccum = 0
 let overFlag = false
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 数独生成（回溯 + 随机）──
@@ -297,7 +286,7 @@ onUnmounted(() => stopLoop())
           <div class="su-info-row su-info-rule">通用规则：经典数独——每行、每列、每个粗线宫内的数字都不能重复 · <b>点空格子选中</b>，再点下方数字填入（✕ 清空）· 填错扣 1 条命（格子标红），命耗尽立即结束 · 每填对一格 +50 分，填满整盘额外 +200 分（按剩余命数加成）并自动换下一盘 · 限时结束按得分结算，达标发游戏币（超出目标最多 +50%）</div>
           <div v-for="(m, key) in MODES" :key="key" class="su-info-row">
             <b class="su-info-name">{{ m.label }}</b>
-            <span class="su-info-desc">{{ m.desc }}</span>
+            <span class="su-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

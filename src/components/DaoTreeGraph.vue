@@ -491,6 +491,14 @@ onBeforeUnmount(() => ro?.disconnect?.())
   padding: 6px 8px;
   max-width: calc(100% - 16px);
 }
+/* 窄屏：收起「拖动/滚轮/点击/悬停」操作提示，让工具栏只占一行。
+   页面自己还有一行同样的提示（如山海食经的「点节点查看条件与奖励（工具栏有操作提示）」），
+   而整屏画布的工具栏是 `max-width: calc(100% - 16px)` 的浮层 —— 两行时它会横穿整幅，
+   与右上角的进度 HUD（z-index 同为 4）叠在一起（实测 390px 下 HUD 压住「聚焦/全览」按钮）。 */
+@media (max-width: 720px) {
+  .dtg-wrap--fill .dtg-toolbar .dtg-keys { display: none; }
+}
+
 .dtg-svg {
   display: block;
   width: 100%;

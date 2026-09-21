@@ -139,7 +139,11 @@ export function itemDetailLines(id) {
   if (it.use?.buffYield) lines.push(['产量增益', `×${it.use.buffYield.mult}（${it.use.buffYield.minutes} 分钟）`])
   if (it.use?.buffGather) lines.push(['采集间隔', `−${Math.round((1 - it.use.buffGather.mult) * 100)}%（${it.use.buffGather.minutes} 分钟）`])
   if (it.use?.buffRestaurant) lines.push(['餐厅收入', `+${Math.round((it.use.buffRestaurant.mult - 1) * 100)}%（${it.use.buffRestaurant.minutes} 分钟）`])
-  if (it.spoilMs) lines.push(['腐坏时间', `${it.spoilMs / 3600000} 小时`])
+  if (it.spoilMs) {
+    // 「腐坏时间」= 该物品的基础保鲜时长（固定值）；**剩余多少**由界面按 `player.spoilage[id]` 实时倒计时展示
+    // （2026-09-21 用户要求「会腐坏的食材应该显示腐坏倒计时」）
+    lines.push(['腐坏时间', `${it.spoilMs / 3600000} 小时`, '超过这个时间没吃掉 / 没放冷库就会腐坏（冷库可续时）'])
+  }
   // 离线时长加成（2026-09-10 补）：能量饼干的固有效果此前在图鉴里从未描述过
   if (it.offlineBonusH) {
     lines.push(['离线时长', `上限 +${it.offlineBonusH} 小时（最多累计 +12 小时，3 块即饱和）`])
@@ -157,4 +161,22 @@ export function itemDetailLines(id) {
 /** 获取来源列表 */
 export function itemSourcesOf(id) {
   return itemSources(id)
+}
+
+/** 腐坏倒计时文案（2026-09-21）：厨藏页与「物品详情」弹窗共用，避免两处各写一套格式。
+ *  `spoilage[id]` 是腐坏时刻的时间戳；≥1 天用「N 天 N 小时」、≥1 小时用「N 小时 N 分」、再短用「N 分 N 秒」。
+ *  ⚠️ 界面要**依赖 tick**（`ui.loopTick` 或每秒一次的 rAF）才会真的在走秒，否则只是打开那一刻的静态值。 */
+export function spoilCountdown(spoilAt, now = Date.now()) {
+  if (!Number.isFinite(spoilAt)) return null
+  const ms = spoilAt - now
+  if (ms <= 0) return '已腐坏'
+  const total = Math.floor(ms / 1000)
+  const d = Math.floor(total / 86400)
+  const h = Math.floor((total % 86400) / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const sec = total % 60
+  if (d > 0) return `${d} 天 ${h} 小时`
+  if (h > 0) return `${h} 小时 ${m} 分`
+  if (m > 0) return `${m} 分 ${sec} 秒`
+  return `${sec} 秒`
 }

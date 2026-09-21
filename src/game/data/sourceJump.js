@@ -4,8 +4,31 @@
 // 「可跳转来源白名单」——两份镜像逐渐漂移，导致 17 种来源（约 408 条来源串，含「交易所（行情买入）」346 件）
 // 在图鉴里根本没有跳转链接，而审计却以为它们都能跳。
 // 现在两边共用本模块：新增来源串若没有对应规则，审计会直接 FAIL。
+//
+// 🔴 两级判定（2026-09-21 修）：下面 `SOURCE_JUMP_RULES` 是**首次命中的子串扫描**，
+// 谁先命中谁赢。于是「赛季「香料远征季」奖励」里的『香料』会先撞上调料规则、
+// 「游戏商店·精酿调料礼包」里的『调料』会先撞上调料规则、「远行采集队·伐木队」里的『伐木』
+// 会先撞上伐木规则……实测 **211 个 (物品,来源) 对跳到了错误的页面**。
+// ⇒ 凡是「来源串以某个系统名开头」的，一律先用 `SOURCE_PREFIX_RULES`（前缀锚定）判定，
+//   再退回关键词扫描。**新增来源串时先想清楚它开头是不是一个系统名。**
+//
+// 判定顺序敏感：越具体的规则要越靠前（如「游戏商店」须先于「商店」）
 
-/** 判定顺序敏感：越具体的规则要越靠前（如「游戏商店」须先于「商店」） */
+/** 一级判定：来源串**以此开头** → 直接定目标（前缀锚定，不受下面通用关键词遮蔽）
+ *  ⚠️ 前缀一律**不带左书名号**：带上它会写成括号不配平的字面量，会被
+ *     content_sync_audit 的「面向玩家的中文串无括号不配平」检查判为 FAIL
+ *     （该检查会扫到注释，所以这里连举例都不能写）。
+ *     实测这些前缀**等价**：以「赛季」开头的来源串 100% 是赛季奖励形式，其余同理。 */
+export const SOURCE_PREFIX_RULES = [
+  ['炼金合成', { view: 'alchemy' }], // 「炼金合成（神秘调料×4）」曾被『调料』抢走
+  ['赛季', { view: 'season' }], // 赛季奖励串曾被『香料』/『腌制』抢走
+  ['游戏商店', { view: 'minigames' }], // 「游戏商店·…礼包」曾被『调料』/『锻造』抢走
+  ['远行采集队', { view: 'expedition' }], // 「远行采集队·伐木队」曾被『伐木』抢走
+  ['供应商合约', { view: 'suppliers' }], // 「供应商合约·香料铺」曾被『香料』抢走
+  ['探索', { view: 'skill', skill: 'exploration' }], // 探索串曾被『美食评论家』/『调料』抢走
+  ['成就', { view: 'achievements' }], // 成就串曾被『常客』/『赛季』抢走
+]
+
 export const SOURCE_JUMP_RULES = [
   // v2.8.1：新登记系统（越具体越靠前；顺序敏感）
   { kw: ['珍馐阁'], target: { view: 'deluxe' } },
@@ -70,8 +93,11 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['赛季'], target: { view: 'season' } },
   { kw: ['BOSS', '首领', '击败'], target: { view: 'skill', skill: 'knife' } },
   { kw: ['炼金'], target: { view: 'alchemy' } },
-  { kw: ['成就'], target: { view: 'log', logTab: 'log' } },
-  { kw: ['主线任务', '任务'], target: { view: 'log', logTab: 'quest' } },
+  // 成就与称号 2026-09-11 已从 LogView 独立成页 ⇒ 目标要写独立页，
+  // 不能再写 { view:'log', logTab:'log' }（那会落到图鉴的**物品**页，实测 103 条来源串都跳错）
+  { kw: ['成就'], target: { view: 'achievements' } },
+  // 任务中心同样已独立成页；直接写 quests，不再绕 LogView 的 MIGRATED_TABS 迁移
+  { kw: ['主线任务', '任务'], target: { view: 'quests' } },
   { kw: ['契约', '食灵'], target: { view: 'skill', skill: 'spiritSummoning' } },
   { kw: ['觅珍', '抽卡'], target: { view: 'mijian' } },
   { kw: ['竞技场'], target: { view: 'arena' } },
@@ -94,9 +120,10 @@ export const SOURCE_JUMP_RULES = [
   { kw: ['随机奇遇', '奇遇'], target: { view: 'encounters' } },
 ]
 
-/** 来源串 → 跳转目标（无匹配返回 null） */
+/** 来源串 → 跳转目标（无匹配返回 null）。先前缀锚定，再退回关键词扫描。 */
 export function jumpForSource(s) {
   const t = String(s ?? '')
+  for (const [prefix, target] of SOURCE_PREFIX_RULES) if (t.startsWith(prefix)) return target
   for (const r of SOURCE_JUMP_RULES) if (r.kw.some((k) => t.includes(k))) return r.target
   return null
 }

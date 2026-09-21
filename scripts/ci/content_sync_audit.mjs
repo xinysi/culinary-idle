@@ -99,10 +99,15 @@ const sidebarSrc = read('src/components/Sidebar.vue')
 // ── 3. 故事：结构完整 + 需求 kind 有 storyCur 分支 ──
 {
   // 2026-09-12：storyCur 从 LogView 抽到独立页 StoryView 后，写死文件名会让本检查「找不到分支」而误报。
-  // 改为**自己定位**定义 storyCur 的那个视图文件——以后再搬家也不会失效（找不到就明确 FAIL）。
-  const storyFile = fs.readdirSync('src/views').filter((f) => f.endsWith('.vue'))
-    .map((f) => `src/views/${f}`).find((p) => read(p).includes('function storyCur'))
-  check('故事：能定位定义 storyCur 的视图文件', !!storyFile, storyFile ? storyFile : '未找到（检查是否改名/删除）')
+  // 改为**自己定位**定义它的那个文件——以后再搬家也不会失效（找不到就明确 FAIL）。
+  // 2026-09-19：它又从视图搬到了数据层（`src/game/data/story.js` 的 `storyReqCur`，为的是能被守卫做**行为断言**），
+  // 故搜索范围从「只搜 src/views」扩到「视图 + 数据层」，并同时接受 storyCur / storyReqCur 两个名字。
+  const cands = [
+    ...fs.readdirSync('src/views').filter((f) => f.endsWith('.vue')).map((f) => `src/views/${f}`),
+    ...fs.readdirSync('src/game/data').filter((f) => f.endsWith('.js')).map((f) => `src/game/data/${f}`),
+  ]
+  const storyFile = cands.find((p) => /function story(Req)?Cur\b/.test(read(p)))
+  check('故事：能定位定义 storyCur/storyReqCur 的文件', !!storyFile, storyFile ? storyFile : '未找到（检查是否改名/删除）')
   const storySrc = storyFile ? read(storyFile) : ''
   const storyKinds = new Set([...storySrc.matchAll(/case '([a-zA-Z]+)':/g)].map((m) => m[1]))
   const badReq = []
@@ -337,6 +342,33 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     })
   }
   check(`文本：数据模块里面向玩家的中文串无「括号不配平/乱码/占位符/空串」（扫描 ${files.length} 个模块）`, bad.length === 0, bad.slice(0, 6).join('; '))
+}
+
+// ── markdown 粗体裸露守卫（2026-09-21 立）────────────────────
+// 起因：项目**没有通用 markdown 渲染器**（唯一的 `segs()` 只在 SkillGuideModal 里服务 skillGuides.js），
+// 所以数据里写 `**粗体**`、渲染点用 `{{ }}` 或 v-html 都会把星号**原样显示给玩家**。
+// 实测攻略 / 副业 materialNote / 扩建说明 / 10 个小游戏模式说明共 **66 处**（13 个文件）。
+// 正确写法：数据里写 `<b>x</b>` + 渲染点 `v-html`。
+// 排除：skillGuides.js（它是唯一走 markdown 解析器的，**故意**保留 `**`）。
+// ⚠️ 只认「带中文的字符串字面量」⇒ 注释里的 `**`（代码注释不带引号）天然不会误报；
+//    反例验证：把任意一处 `<b>` 改回 `**` → 本项 FAIL 并点名。
+{
+  const bad = []
+  const targets = [
+    ...fs.readdirSync('src/game/data').filter((f) => f.endsWith('.js') && f !== 'skillGuides.js').map((f) => `src/game/data/${f}`),
+    ...walkSrc('src/views/minigames').filter((f) => f.endsWith('.vue')),
+  ]
+  for (const p of targets) {
+    read(p).split('\n').forEach((line, i) => {
+      for (const m of line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}\1)/g)) {
+        const body = m[2].slice(0, -1)
+        if (!/[\u4e00-\u9fa5]/.test(body)) continue
+        if (/\*\*[^*\n]+\*\*/.test(body)) bad.push(`${p}:${i + 1} 「${body.slice(0, 34)}」`)
+      }
+    })
+  }
+  check(`文本：面向玩家的中文串里没有 markdown 的 **（会原样显示；改用 <b> + v-html）（扫描 ${targets.length} 个文件）`,
+    bad.length === 0, bad.slice(0, 6).join('; '))
 }
 
 // ── 英文标识符裸露（2026-09-13 用户报「很多页面出现 tier」后立；同日补：**模板文本**也要扫）──

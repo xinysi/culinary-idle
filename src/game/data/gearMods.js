@@ -1,5 +1,11 @@
 // 装备词条（2026-09-06）— 玩家侧随机乘区/附加，不改动装备固定数值（数据铁律）
-// 词条绑定到「穿戴槽位 + 装备 id」：换装重掷、脱下再穿同件保留，未穿戴不生效。
+// 词条**绑定到装备本身（item id）**：同一件装备的词条一旦掷出就固定下来，
+// 「卸下再穿」「换穿别的再换回来」都不重掷，**花金币洗练出的结果永久生效**；
+// 只有洗练（rerollGearMod）会重掷。同 id 的多件共享同一套词条 ——
+// 与强化（upgrades[itemId]）、宝石插槽（gemSockets[slot]）的现有口径一致。
+// ⚠️ 2026-09-18 之前是按「槽位 + 装备 id」存的（`{ [slot]: { itemId, mods } }`），
+// 那个形态下换穿同槽位另一件会毁掉洗练结果；旧档由 migrateGearMods 迁移。
+// 未穿戴的词条不生效（equippedStats 只累加「仍穿戴同一件」的记录）。
 
 import { getItem } from './items.js'
 
@@ -86,6 +92,31 @@ export const REROLL_COST = {
   史诗: 5000,
   传说: 12000,
   神话: 30000,
+}
+
+/** 词条记录最多保留多少件装备（超出按「最近掷出」剪掉；当前穿戴的永远保留）。
+ *  取值只影响存档体积（每条约 75 字节 ⇒ 上限约 9KB）与「很久没碰过的装备会不会被遗忘」，不影响平衡。 */
+export const GEAR_MODS_MAX = 120
+
+/**
+ * 词条存档迁移：把**旧形态**（按槽位存：`{ [slot]: { itemId, mods } }`）转成**新形态**
+ * （按装备存：`{ [itemId]: { mods, at } }`）。
+ * 为什么换成按装备存：旧形态下「换穿同槽位的另一件 → 再换回」会重掷词条，
+ * 于是**花金币洗练出的结果会被换装抹掉**（2026-09-18 用户实测报出）。
+ * 迁移是**幂等**的：新形态的值没有 `itemId` 字段，原样保留。
+ * @param {object} raw 存档里的 gearMods（新旧形态混合也吃得下）
+ * @returns {object} 新形态
+ */
+export function migrateGearMods(raw) {
+  const out = {}
+  if (!raw || typeof raw !== 'object') return out
+  for (const [k, v] of Object.entries(raw)) {
+    if (!v) continue
+    if (Array.isArray(v)) { out[k] = { mods: v, at: 0 }; continue } // 裸数组形态（防御，历史版本未用过）
+    if (v.itemId) { out[v.itemId] = { mods: v.mods ?? [], at: 0 }; continue } // 旧形态：键是槽位，值带 itemId
+    out[k] = { mods: v.mods ?? [], at: v.at ?? 0 }
+  }
+  return out
 }
 
 /** 词条展示文案（暴击/金币显示为 %） */

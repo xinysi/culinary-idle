@@ -9,6 +9,7 @@ import { CHEFS, chefForWeek, chefOpponent, chefReward } from '../game/data/chefC
 import { STYLE_INFO } from '../game/data/combat.js'
 import { getItem } from '../game/data/items.js'
 import CombatPanel from '../components/CombatPanel.vue'
+import CombatLog from '../components/CombatLog.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -92,8 +93,10 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', labe
     </p>
     </FoldCard>
 
-    <!-- 对决面板（风格+属性组合框 / 对决框）：与对决页共用 CombatPanel -->
-    <CombatPanel />
+    <!-- 两栏外壳（2026-09-20 与对决页同步）：左＝战斗区 + 名厨挑战，右＝装备槽 -->
+    <div class="combat-page">
+      <div class="combat-page-main">
+        <CombatPanel />
 
     <div class="card status-line">
       <span class="badge" :class="cleared ? 'badge-on' : ''">{{ cleared ? '✅ 本周已战胜' : '⏳ 本周未战胜' }}</span>
@@ -141,6 +144,13 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'arena', labe
         </button>
         <button v-if="active" class="btn btn-sm" @click="abort">退出挑战</button>
       </template>
+    </div>
+      </div>
+
+      <!-- 右栏：战斗日志（2026-09-21 与「装备」互换位置：日志搬到右栏，装备回左栏与战备同屏） -->
+      <aside class="combat-page-side">
+        <CombatLog />
+      </aside>
     </div>
 
     <RelatedPages :links="RELATED" />

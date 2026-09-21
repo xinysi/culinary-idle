@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -18,11 +19,11 @@ const MODES = {
   m3: { label: '模式3', n: 6, targets: 2, rocks: 4, moves: 16, timeLimit: 0, gold: 40, desc: '6×6 · 2 个目标 · 16 步 · +40 币' },
   m4: { label: '模式4', n: 6, targets: 3, rocks: 5, moves: 18, timeLimit: 0, gold: 45, desc: '6×6 · 3 个目标 · 18 步 · +45 币' },
   m5: { label: '模式5', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 0, gold: 50, desc: '7×7 · 3 个目标 · 20 步 · +50 币' },
-  m6: { label: '模式6', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 90, gold: 50, desc: '7×7 · 3 个目标 · **限时 90 秒** · +50 币' },
-  m7: { label: '模式7', n: 7, targets: 3, rocks: 7, moves: 22, timeLimit: 0, ordered: true, gold: 80, desc: '7×7 · **顺序收集**（必须按 ①②③ 编号依次收）· 22 步 · +80 币' },
+  m6: { label: '模式6', n: 7, targets: 3, rocks: 7, moves: 20, timeLimit: 90, gold: 50, desc: '7×7 · 3 个目标 · <b>限时 90 秒</b> · +50 币' },
+  m7: { label: '模式7', n: 7, targets: 3, rocks: 7, moves: 22, timeLimit: 0, ordered: true, gold: 80, desc: '7×7 · <b>顺序收集</b>（必须按 ①②③ 编号依次收）· 22 步 · +80 币' },
   m8: { label: '模式8', n: 8, targets: 4, rocks: 11, moves: 24, timeLimit: 0, gold: 80, desc: '8×8 · 4 个目标 · 24 步 · +80 币' },
-  m9: { label: '模式9', n: 8, targets: 4, rocks: 11, moves: 26, timeLimit: 0, crumble: true, gold: 85, desc: '8×8 · 4 个目标 · **碎冰**（滑过的格子会碎，不能回头）· 26 步 · +85 币' },
-  m10: { label: '模式10', n: 9, targets: 5, rocks: 15, moves: 30, timeLimit: 150, crumble: true, ordered: true, gold: 130, desc: '9×9 · **碎冰 + 顺序收集 + 限时 150 秒** · 30 步 · +130 币' },
+  m9: { label: '模式9', n: 8, targets: 4, rocks: 11, moves: 26, timeLimit: 0, crumble: true, gold: 85, desc: '8×8 · 4 个目标 · <b>碎冰</b>（滑过的格子会碎，不能回头）· 26 步 · +85 币' },
+  m10: { label: '模式10', n: 9, targets: 5, rocks: 15, moves: 30, timeLimit: 150, crumble: true, ordered: true, gold: 130, desc: '9×9 · <b>碎冰 + 顺序收集 + 限时 150 秒</b> · 30 步 · +130 币' },
 }
 const showInfo = ref(false)
 
@@ -53,23 +54,11 @@ let timerId = null
 let elapsedAccum = 0
 let lastTs = 0
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 滑行 ──
@@ -378,7 +367,7 @@ onUnmounted(() => {
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="ic-info-row">
             <b class="ic-info-name">{{ m.label }}</b>
-            <span class="ic-info-desc">{{ m.desc }}</span>
+            <span class="ic-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

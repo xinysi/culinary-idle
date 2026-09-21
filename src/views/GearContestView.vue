@@ -92,6 +92,7 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'chefChalleng
 
       <h3 style="margin-top: 14px">本期评分构成</h3>
       <div class="card">
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="p in live.parts" :key="p.slot">
@@ -108,6 +109,7 @@ const RELATED = [{ view: 'trials', label: '🏅 试炼' }, { view: 'chefChalleng
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <!-- 评分因子明细（2026-09-10 补）：分数从哪来、该强化哪一项 -->

@@ -84,6 +84,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
     <!-- 等级阶梯（2026-09-10 补）：升到下一级值不值，一眼看清 -->
     <h3 style="margin-top: 14px">等级阶梯</h3>
     <div class="card">
+      <div class="table-scroll">
       <table class="target-table">
         <thead>
           <tr>
@@ -111,6 +112,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
           </tr>
         </tbody>
       </table>
+      </div>
       <p class="dim to-est-sub" style="margin-top: 8px">
         升级有新单量加成，但主要靠<b>自然成长</b>：每累计完成 50 单自动升 1 级，花钱只是提前跳级。
       </p>
@@ -149,6 +151,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
 
     <h3 style="margin-top: 14px">菜单备货（外卖只会卖菜单里的料理）</h3>
     <div class="card">
+      <div class="table-scroll">
       <table class="target-table">
         <tbody>
           <tr v-for="m in menuStock" :key="m.id">
@@ -162,6 +165,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
           <tr v-if="!menuStock.length"><td colspan="4" class="dim">菜单还是空的——去「餐厅」把料理挂上菜单，外卖才有得卖。</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <p class="dim" style="margin-top: 10px">

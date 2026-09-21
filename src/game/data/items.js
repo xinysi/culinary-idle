@@ -688,6 +688,52 @@ export const ITEMS = {
 const SPOILABLE = ['lobster', 'crab', 'abalone', 'seaCucumber', 'bluefin', 'grouper', 'goldenDragonFish', 'bisonMeat', 'crocodileMeat', 'bearMeat', 'mammothMeat', 'dragonMeat', 'pheasantEgg']
 for (const id of SPOILABLE) ITEMS[id].spoilMs = 24 * 3600 * 1000
 
+// ── 后期等级带补内容：第 1 批「挖掘」7 件（2026-09-19，用户提供美术）────────────
+// 起因：实测本作「每档等级带内的相邻间距」在后期变疏，与参照作 Melvor Idle（收官 2.6 级/件）形状相反。
+//   最严重的是**挖掘**：现状 `…68, 75, 90`，75→90 有 **15 级空档**、且 91-99 **一件都没有**。
+//   本批 7 件把挖掘 61-99 段的平均间距从 **7.3 → 3.5**、最大空档 **15 → 7**，并把最深等级从 90 提到 99。
+// ⚠️ tier 与 value **都不是拍脑袋**：按现有同类原材料（root/fungus）在「该等级附近」的实测中位值取的
+//   （tier 网格 ≈ 55-60→6 / 61-70→7 / 71-80→8 / 82-90→9 / 92-99→10；value 取同档同级的邻域中位）。
+// ⚠️ 腐坏**不在这里写**：`applySpoilBalance()` 按「物品最低获取等级」派生荤食的 spoilMs，
+//   root/fungus 不在腐坏类目里，本来就不腐坏。
+// 名称与 id 已逐个与现有 2413 件物品查重（零冲突）。
+// 📌 本批会扰动 3 个生成器（farmSeeds / spiritTiers / tales_ext）：三者的仓库版本都**不重跑**
+//    （原因写在 gen_drift_audit 的白名单条目里）；`shanhaiTree` 则重跑，以保持山海食经的门槛比例。
+// 📌 后续批次（垂钓 +4 / 狩猎 +3 / 伐木 +4）待本批链路验通后再补；伐木那 4 件应加在 `timbers.js` 的
+//    `TIMBERS` 曲线里（它的 tier=⌈等级/10⌉、value≈2+2.5×等级 是自动派生的），而不是手写进这里。
+const LATE_ITEMS = [
+  it('rockCoreRoot', '岩髓根', 'ingredient', 'root', 8, 255),
+  it('jadePithRoot', '玉髓根', 'ingredient', 'root', 8, 267),
+  it('cloudFungus', '云芝', 'ingredient', 'fungus', 9, 277),
+  it('bloodFungus', '血芝', 'ingredient', 'fungus', 9, 280),
+  it('taiSui', '太岁', 'ingredient', 'fungus', 10, 309),
+  it('vermilionGrass', '朱草', 'ingredient', 'root', 10, 309),
+  it('mysticRoot', '玄玉参', 'ingredient', 'root', 10, 322),
+]
+for (const def of LATE_ITEMS) ITEMS[def.id] = def
+
+// ── 后期等级带补内容：第 2 批「垂钓 +4 / 狩猎 +3」（2026-09-19，用户提供美术）────
+// 目的：把垂钓 61-99 段的间距 3.5 → ~2.5、狩猎 3.2 → ~2.4（对齐参照作 Melvor Idle 的收官密度 2.6）。
+// ⚠️ 与第 1 批同样的口径：tier 按等级网格取（61-70→7 / 71-80→8 / 82-90→9 / 92-99→10），
+//   value 取同档同级的**邻域中位**；`xpPerAction` = `10 + 5×reqLevel`（与所有后期目标一致）。
+// ⚠️ 腐坏**不写**：`applySpoilBalance()` 会按「最低获取等级」自动派生 seafood/meat 的 spoilMs。
+// ⚠️ **伐木那 4 张已取消**（清单里的「可选」项）：`timbers.js` 的 20 档是**刚性 5 级网格**
+//   （`timberIndexForLevel(lv) = ⌊(lv−1)/5⌋`，且 `timberOfLevel` 是「配方改档与强化消耗的唯一入口」），
+//   在 59/69/79/89 插档会让 Lv56-100 全档错位 ⇒ 那是改锻造与强化的平衡（冻结层），不是加内容。
+//   这也解释了伐木为何是平的 5.0 间距——设计上就锁在网格上。
+const LATE_ITEMS2 = [
+  // 垂钓
+  it('kaluga', '鳇鱼', 'ingredient', 'seafood', 7, 200),
+  it('lionfish', '狮鱼', 'ingredient', 'seafood', 8, 232),
+  it('blackMarlin', '黑枪鱼', 'ingredient', 'seafood', 8, 255),
+  it('humpheadWrasse', '苏眉鱼', 'ingredient', 'seafood', 9, 299),
+  // 狩猎
+  it('cougarMeat', '美洲狮肉', 'ingredient', 'meat', 7, 223),
+  it('rhinoMeat', '犀牛肉', 'ingredient', 'meat', 9, 277),
+  it('yetiMeat', '雪怪肉', 'ingredient', 'meat', 10, 322),
+]
+for (const def of LATE_ITEMS2) ITEMS[def.id] = def
+
 // 内容扩充合并（生成器 expansion1.js 产出，勿手改）
 import { EXPANSION_ITEMS } from './expansion1.js'
 for (const [id, def] of Object.entries(EXPANSION_ITEMS)) ITEMS[id] = def

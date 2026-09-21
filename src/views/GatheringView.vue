@@ -9,8 +9,10 @@ import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { levelEras, eraProgress, currentEraLabel } from '../game/data/levelEras.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import MasteryHelp from '../components/MasteryHelp.vue'
+import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -24,8 +26,6 @@ const isHunting = computed(() => props.instance.id === 'hunting')
 const isExcavation = computed(() => props.instance.id === 'excavation')
 const isMining = computed(() => props.instance.id === 'mining')
 const isWoodcutting = computed(() => props.instance.id === 'woodcutting')
-// v2.7.0：按类别分组现在适用于挖掘（根茎/菌类）、采矿（矿物）、伐木（木料）
-const byCategory = computed(() => isExcavation.value || isMining.value || isWoodcutting.value)
 // 只有**采摘与挖掘**的目标里含可种作物（采矿/伐木没有种子），别把种子提示错加到新技能上
 const isForagingLike = computed(() => !isFishing.value && !isHunting.value && !isMining.value && !isWoodcutting.value)
 
@@ -59,9 +59,37 @@ function cardIntervalSec(t) {
 function intervalByFixedTier(t) {
   return props.instance.intervalSource?.(t) === 'fixed'
 }
+// ── 效率（经验/小时）与「当前最优」标记 ────────────────────────────────
+// 卡片上原本只有「基础经验」和「间隔」两列，横向比较目标要玩家自己心算「经验÷间隔×精通倍率」，
+// 而出结论恰恰是最容易算反的那种（精通倍率只在 ≥5 级显示、间隔还有「固定档取更快者」分支）。
+// 实测「跟等级换目标」比「全程蹲最低级卡片」24h 多拿 ×9.2 经验 ⇒ 这个数字必须直接给出来。
+const bestTargetId = computed(() => props.instance?.bestUnlockedTarget?.()?.itemId ?? null)
+/** 非当前目标相对当前目标的效率提升（0.02 = 快 2%）；≤2% 不提示，免得满屏抖动数字 */
+function gainVsCurrent(t) {
+  if (!props.instance?.xpPerHour) return null
+  const cur = props.instance.currentTarget
+  if (!cur || cur.itemId === t.itemId) return null
+  const a = props.instance.xpPerHour(t)
+  const b = props.instance.xpPerHour(cur)
+  if (!(b > 0) || !(a > 0)) return null
+  const g = a / b - 1
+  return g > 0.02 ? g : null
+}
+/** 经验/小时的中文紧凑写法（亿/万） */
+function fmtRate(n) {
+  if (!(n > 0)) return '—'
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)} 亿/时`
+  if (n >= 1e4) return `${(n / 1e4).toFixed(1)} 万/时`
+  return `${Math.round(n)}/时`
+}
 function isSelected(itemId) {
   return (player.getSkillTarget(props.instance.id) ?? player.activeTarget) === itemId
 }
+/** 当前挂机目标（精通池的补给目标）——与「当前」徽标同口径 */
+const currentTargetId = computed(() => {
+  const id = player.getSkillTarget(props.instance.id) ?? player.activeTarget
+  return props.instance.targets.some((t) => t.itemId === id) ? id : (props.instance.currentTarget?.itemId ?? null)
+})
 // 技能是否已被关闭（对应状态框不显示，该目标未在挂机）
 const skillClosed = computed(() => !!player.closedIdleTasks?.[props.instance.id])
 const ammoWarn = ref(false) // 弹药不足提示弹窗
@@ -84,104 +112,91 @@ function goShop() {
   ui.setView('shop')
 }
 
-// ── 分段（挖掘/采矿/伐木按产出类别分组；其余按 reqLevel 每 5 级一段）──
-const CAT_SECTION_LABEL = { root: '🥔 根茎食材', mineral: '⛏️ 矿物', fungus: '🍄 菌类', material: '🪵 木料' }
-const sections = computed(() => {
-  const map = new Map()
-  for (const t of props.instance?.targets ?? []) {
-    let label, kind
-    if (byCategory.value) {
-      // 挖掘/采矿/伐木：按产出类别归类（根茎/菌类 · 矿物 · 木料）
-      const it = getItem(t.itemId)
-      kind = 'category'
-      label = it ? (CAT_SECTION_LABEL[it.category] ?? it.category) : '其他'
-    } else {
-      const start = Math.floor((t.reqLevel - 1) / 5) * 5 + 1
-      kind = 'level'
-      label = `${start}-${start + 4}`
-    }
-    if (!map.has(label)) map.set(label, { kind, list: [] })
-    map.get(label).list.push(t)
-  }
-  // 类别组：固定顺序（根茎→矿物→菌类→木料→其他）；其余按等级升序
-  const order = Object.keys(CAT_SECTION_LABEL)
-  return [...map.entries()]
-    .map(([label, v]) => ({ label, kind: v.kind, list: v.list }))
-    .sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === 'category' ? -1 : 1
-      if (a.kind === 'category') {
-        const ia = order.indexOf(a.label), ib = order.indexOf(b.label)
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
-      }
-      return parseInt(a.label) - parseInt(b.label)
-    })
-})
-const collapsed = ref(new Set(sections.value.map((s) => s.label))) // 默认全部折叠(等级段)
-// 技能页(采集/狩猎/垂钓/挖掘)来回切换时 targets/sections 会变化：每次段变化都重置为全折叠，避免漏段带出未折叠
-watch(sections, (secs) => { collapsed.value = new Set(secs.map((s) => s.label)) })
-function toggleSection(label) {
-  const s = new Set(collapsed.value)
-  if (s.has(label)) s.delete(label)
-  else s.add(label)
-  collapsed.value = s
+// ── 分段：按「时代」每 10 级一档（2026-09-19 起，六条采集线统一）────────────
+// 改前是「挖掘/采矿/伐木按产出类别分组、其余每 5 级一段」——实测那样有三个问题：
+//   ① 采矿 43 件全是 `mineral`、伐木 20 件全是 `material` ⇒ 类别分组退化成「一个巨型段」，
+//      默认全折叠时玩家只看到一个「⛏️ 矿物 43 个目标」的标题；
+//   ② 采摘 142 个目标只有 59 个不同等级（同档最多 15 件）⇒ 5 级一段会切出 20 个段，
+//      把「纵向 59 级台阶」读成了「20 段平铺」，看不到梯级；
+//   ③ 与参照作 Rocky Idle 的观感差得远——它是「~10 件资源、每件扛 11~14 级」共约 10 档。
+// 现统一按 `ERA_SPAN` 级一档、用**该档最高级产出**当时代名（就是 Rocky 那 ~10 档资源的结构）。
+// ⚠️ 纯展示层：不改任何目标数据，不参与计算。分段实现见 `game/data/levelEras.js`（与制作页共用）。
+const sections = computed(() => levelEras(props.instance?.targets ?? [], (t) => t.reqLevel, (t) => t.itemId))
+/** 时代名（该档最高级产出的物品名）——采不到名字就退回空串，不显示「undefined」 */
+function eraName(sec) {
+  return getItem(sec.topId)?.name ?? ''
 }
-function isOpen(label) {
-  return !collapsed.value.has(label)
+/** 该时代的横向完成度：已精通满 100 的卡片 / 该档卡片数（把「同档多件」变成收集目标） */
+function eraDone(sec) {
+  return eraProgress(sec.list, (t) => props.instance.masteryLevel(t)).done
+}
+// 等级段 = 顶部**标签页**（2026-09-19 用户第二次澄清后定型）：
+//   默认**只显示「当前等级所在的段」的卡片**，没有折叠、上面点标签切换。
+//   （前一版做成了「十个段标题 + 只展开当前段」，用户要的不是这个 —— 那样还得滚。）
+const eraDefault = () => currentEraLabel(sections.value, props.instance?.level ?? 1)
+const selectedEra = ref(eraDefault())
+const activeSec = computed(() => sections.value.find((s) => s.label === selectedEra.value) ?? sections.value[0] ?? null)
+// 技能页(采集/狩猎/垂钓/挖掘)来回切换时 targets/sections 会变化 → 回到「当前等级段」
+watch(sections, () => { selectedEra.value = eraDefault() })
+function selectEra(label) {
+  selectedEra.value = label
 }
 
-// 分类快速导航：点击滚动到对应分段
-function scrollToSection(label) {
-  const el = document.getElementById('sec-' + label)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
+// 时代快速导航：点击滚动到对应分段
 </script>
 
 <template>
   <div>
-    <!-- 顶部说明（仿制作页：一行公共说明，替代原“已停止/正在采摘/间隔/已执行/距下次产出”实时状态框；
-         挂机的停止/继续与到达进度展示在右侧“挂机中”列表） -->
-    <div class="card status-line">
-      <span class="dim">
-        共 {{ instance.targets.length }} 个{{ isFishing ? '垂钓目标' : isHunting ? '狩猎目标' : isExcavation ? '挖掘目标' : isMining ? '采矿目标' : isWoodcutting ? '伐木目标' : '采集目标' }}
-        · {{ isFishing ? '成功率随等级提升（基础 55%），失败得 20% 经验；4.5% 概率稀有金龙鱼' : isHunting ? '1% 双倍产出；野鸡 15% 概率额外掉落野鸡蛋' : isExcavation ? '2% 化石食材（远古食谱原料）+ 50% 铜矿 + 30% 铁矿附带（矿物本身已归采矿）' : isMining ? '矿物供锻造、保鲜与宝石镶嵌；铜矿与铁矿此前只能靠挖掘附带，现在可定向开采' : isWoodcutting ? '每 5 级一档木材，供锻造同档装备与装备强化（N 级装备用 N 级木材）' : '1% 双倍产出（随专精提升）+ 50% 附带木材' }}
-        <template v-if="isForagingLike">· 可种作物每次动作 10% 掉落对应种子（矿物目标不掉）</template>
-      </span>
-      <!-- 弹药提示（狩猎）：放到本框最右侧 -->
-      <div v-if="isHunting" class="biscuit-inline" style="margin-left: auto">
-        <strong>陷阱（弹药）：</strong>
-        <span class="mono">{{ player.inventory.trap ?? 0 }}</span> 个，每次狩猎消耗 1 个
-        <button v-if="instance.outOfAmmo" class="btn btn-primary btn-sm" @click="goShop">去商店购买</button>
-        <span v-else class="dim">（杂货铺有售：1 金币/个）</span>
-      </div>
-    </div>
+    <!-- 精通池（技能级共享）——补给目标 = 当前选中/挂机的那个目标 -->
+    <MasteryPoolBar
+      :skill-id="instance.id"
+      :card-key="currentTargetId"
+      :card-name="getItem(currentTargetId)?.name ?? ''"
+      :card-count="currentTargetId ? (instance.mastery[currentTargetId] ?? 0) : 0"
+      mode="gather"
+    />
 
     <!-- 目标列表（卡片式：按等级分段，可折叠）-->
     <div class="card">
       <h3 class="target-head-row">
         <span>目标列表（按等级分段，点击段标题折叠）</span>
         <span class="target-head-extra">
+          <!-- 狩猎弹药（2026-09-19 用户要求「移到别处」）：从页顶那张说明卡挪到标题行右侧 -->
+          <template v-if="isHunting">
+            <span class="dim">陷阱（弹药）：</span>
+            <span class="mono">{{ player.inventory.trap ?? 0 }}</span>
+            <span class="dim">个，每次狩猎消耗 1 个</span>
+            <button v-if="instance.outOfAmmo" class="btn btn-primary btn-sm" @click="goShop">去商店购买</button>
+            <span v-else class="dim">（杂货铺有售：1 金币/个）</span>
+          </template>
           <MasteryHelp />
         </span>
       </h3>
 
-      <!-- 分类快速导航 -->
-      <div v-if="sections.length > 1" class="quick-nav">
-        <span class="dim" style="font-size: 12px">快速跳转：</span>
-        <button v-for="sec in sections" :key="sec.label" class="btn btn-sm" @click="scrollToSection(sec.label)">{{ sec.label }}</button>
+      <!-- 等级段标签页：点上面切段，下面只显示该段的卡片（没有折叠） -->
+      <div v-if="sections.length > 1" class="era-tabs">
+        <button
+          v-for="sec in sections"
+          :key="sec.label"
+          class="btn btn-sm era-tab"
+          :class="{ 'btn-primary': selectedEra === sec.label }"
+          @click="selectEra(sec.label)"
+        >
+          {{ sec.label }}
+          <span v-if="eraName(sec)" class="era-tab-name">{{ eraName(sec) }}</span>
+        </button>
       </div>
-
-      <div v-for="sec in sections" :key="sec.label" class="gather-section" :id="'sec-' + sec.label">
-        <div class="gather-section-title" @click="toggleSection(sec.label)">
-          <span class="mono">{{ isOpen(sec.label) ? '−' : '+' }}</span>
-          <strong>{{ sec.kind === 'level' ? `Lv ${sec.label}` : sec.label }}</strong>
-          <span class="dim">{{ sec.list.length }} 个目标</span>
-          <span v-if="sec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
-        </div>
-        <div v-if="isOpen(sec.label)" class="gather-grid">
+      <div v-if="activeSec" class="era-head">
+        <!-- 时代名 = 该档最高级产出：一眼看出「这一档能拿到什么新东西」 -->
+        <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级产出：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
+        <span class="dim">{{ activeSec.list.length }} 个目标</span>
+        <span class="dim" :title="`该档已精通满 100 的卡片数 / 该档卡片数`">精通 {{ eraDone(activeSec) }}/{{ activeSec.list.length }}</span>
+        <span v-if="activeSec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
+      </div>
+      <div v-if="activeSec" class="gather-grid">
           <div
-            v-for="t in sec.list"
+            v-for="t in activeSec.list"
             :key="t.itemId"
-            v-tilt
             class="gather-card"
             :class="{ locked: !isUnlocked(t.itemId), selected: isSelected(t.itemId) && !skillClosed }"
           >
@@ -202,6 +217,14 @@ function scrollToSection(label) {
                 {{ cardIntervalSec(t).toFixed(1) }}s<template v-if="intervalByFixedTier(t)"
                   ><span class="dim" style="font-size: 11px" title="精通 20 级起按「固定档值」与「基础间隔÷2」取更快者；此处固定档更快">&nbsp;· 固定档</span></template>
               </span>
+            </div>
+            <div class="gather-card-row">
+              <span>效率</span>
+              <span class="mono">{{ fmtRate(instance.xpPerHour(t)) }}</span>
+            </div>
+            <!-- 「当前最优」独占一行：塞进右侧值里会被挤成竖排（窄屏卡片只有两列宽） -->
+            <div v-if="t.itemId === bestTargetId" class="best-flag">
+              ⚡ 最优<template v-if="gainVsCurrent(t) != null"> · 比当前快 {{ (gainVsCurrent(t) * 100).toFixed(0) }}%</template>
             </div>
             <div v-if="getItem(t.itemId)?.spoilMs" class="gather-card-row">
               <span>腐坏</span>
@@ -229,7 +252,6 @@ function scrollToSection(label) {
             </button>
           </div>
         </div>
-      </div>
     </div>
 
     <!-- 弹药不足提示弹窗 -->

@@ -87,7 +87,6 @@ function unlockNode(id) {
         <div
           v-for="a in filteredAojis()"
           :key="a.id"
-          v-tilt
           class="item-card"
           :class="{ active: isOn(a.id) }"
         >

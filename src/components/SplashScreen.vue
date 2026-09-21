@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useUiStore } from '../stores/ui.js'
 import { usePlayerStore } from '../stores/player.js'
 import { saveManager, startGame } from '../game/bootstrap.js'
+import { DEV_PANEL_ENABLED, requestDevEntry } from '../game/dev/devFlag.js'
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -25,6 +26,24 @@ function startNew() {
   startGame({ newGame: true, slot: 0 })
   ui.toggleStartSlotModal(false)
 }
+
+// ── 开发者入口（隐蔽）───────────────────────────────────────────────
+// 标题连点 5 下（2 秒内）→ 打开开发者登录挡板。**只在含开发者模式的构建里生效**：
+// 生产构建下 `DEV_PANEL_ENABLED` 是静态 false，这段判断会被整块消掉、点了也没反应。
+// 工具提示同样只在开发构建里出现（用「不在构建里」而不是「藏起来」来实现不可见）。
+const devHint = DEV_PANEL_ENABLED ? '开发者入口：连点 5 下（或 Ctrl+Shift+D）' : undefined
+let taps = 0
+let lastTap = 0
+function tapTitle() {
+  if (!DEV_PANEL_ENABLED) return
+  const now = Date.now()
+  taps = now - lastTap > 2000 ? 1 : taps + 1
+  lastTap = now
+  if (taps >= 5) {
+    taps = 0
+    requestDevEntry(ui) // 已登录就直接开面板（不会重复问口令）
+  }
+}
 </script>
 
 <template>
@@ -33,7 +52,9 @@ function startNew() {
     <!-- 柔和渐变遮罩：让标题自然浮现（无边框、无毛玻璃） -->
     <div class="splash-overlay"></div>
     <div class="splash-content">
-      <h1 class="splash-title">美食放置：食灵山海</h1>
+      <!-- 开发者入口（隐蔽）：标题连点 5 下。不放可见按钮——演示时不会被随手点开，
+           也避免老师/玩家把它当成游戏功能。热键 Ctrl+Shift+D 与 `?dev=1` 是另外两个入口。 -->
+      <h1 class="splash-title" :title="devHint" @click="tapTitle()">美食放置：食灵山海</h1>
       <p class="splash-sub">— 挂机美食主题放置游戏 —</p>
       <button class="splash-start-btn" @click="ui.toggleStartSlotModal(true)">开始游戏</button>
     </div>

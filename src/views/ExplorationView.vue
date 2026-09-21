@@ -1,6 +1,6 @@
 <script setup>
 // 美食探索视图 — 需求文档 §3.4.3：目标选择 / 成功率 / 掉落预览 / 失败惩罚
-// 卡片式 UI（复用采集页 gather-card 体系）：按等级分段、可折叠、快速导航、v-tilt 3D 倾斜。
+// 卡片式 UI（复用采集页 gather-card 体系）：按等级分段、可折叠、快速导航。
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -36,7 +36,10 @@ function selectTarget(id) {
   props.instance.cycleStartAt = performance.now() // 重新选择目标：重置本周期起点
 }
 function lootLine(l) {
-  return l.type === 'gold' ? `金币 ${l.min}-${l.max}（${Math.round(l.chance * 100)}%）` : `${getItem(l.itemId)?.name} ×${l.min}-${l.max}（${Math.round(l.chance * 100)}%）`
+  // 概率必须走技能实例的 lootChance（= 难度系数后的实际值；金币条目原样）——
+  // 直接读 l.chance 会显示成 28% 而实际按 14% 结算
+  const pct = Math.round(props.instance.lootChance(l) * 100)
+  return l.type === 'gold' ? `金币 ${l.min}-${l.max}（${pct}%）` : `${getItem(l.itemId)?.name} ×${l.min}-${l.max}（${pct}%）`
 }
 
 // ── 分段：按 reqLevel 每 5 级一段（与采集页一致）──
@@ -71,13 +74,6 @@ function scrollToSection(label) {
 
 <template>
   <div>
-    <!-- 顶部说明（仿制作页：一行公共说明，替代原实时状态框） -->
-    <div class="card status-line">
-      <span class="dim">
-        共 {{ instance.targets.length }} 个探索目标 · 成功获得稀有食材/道具，失败被抓住损失金币或品鉴值 · 成功率随等级提升
-      </span>
-    </div>
-
     <!-- 目标列表（卡片式：按等级分段，可折叠） -->
     <div class="card">
       <h3 class="target-head-row">
@@ -102,7 +98,6 @@ function scrollToSection(label) {
           <div
             v-for="t in sec.list"
             :key="t.id"
-            v-tilt
             class="gather-card"
             :class="{ locked: !isUnlocked(t.id), selected: isSelected(t.id) && !skillClosed }"
           >

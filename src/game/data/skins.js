@@ -90,6 +90,10 @@ function buildLight(p) {
     '--muted': mix(L.gray, p, 0.38),
     '--panel-rgb': rgbOf(mix(L.paper, p, 0.02)),
     '--panel-soft-rgb': rgbOf(mix(L.paper, p, 0.035)),
+    // 浅色玻璃面（行/卡片的高光底）：原先是各 .vue 里写死的 `rgba(255,255,255,0.6)`，
+    // **每套皮肤下都是纯白、完全不跟皮肤**（实测 .card 跟着 --panel-soft-rgb 变色、.fest-ms 不变）。
+    // 按主色推导后白色行底随皮肤走；原味是空覆盖 ⇒ 仍由 main.css 的 255,255,255 兜底，逐值不变。
+    '--glass-rgb': rgbOf(mix(L.paper, p, 0.02)),
     '--panel-raised-rgb': rgbOf(mix(L.paper, p, 0.02)),
     '--panel-hi-rgb': rgbOf(mix(L.paper, p, 0.035)),
     '--tint-rgb': rgbOf(mix(L.tint, p, 0.45)),
@@ -142,6 +146,9 @@ function buildDark(pd) {
     '--scrollbar': mix('#3a2b22', pd, 0.30),
     '--panel-rgb': rgbOf(mix(D.surf, pd, 0.12)),
     '--panel-soft-rgb': rgbOf(mix(D.surf2, pd, 0.12)),
+    // 深色下玻璃面**保持浅色**：深色侧的面底由上面这些 `--panel-*-rgb` 的深色规则单独管，
+    // 而 `inset 0 1px 0 rgba(255,255,255,…)` 这类同一字面量承担的是「高光」，改成深色会把高光抹掉。
+    '--glass-rgb': '255, 255, 255',
     '--panel-raised-rgb': rgbOf(mix(D.raised, pd, 0.12)),
     '--panel-hi-rgb': rgbOf(mix(D.hi, pd, 0.12)),
     '--tint-rgb': rgbOf(mix(D.tint, pd, 0.35)),
@@ -187,7 +194,7 @@ export const SKIN_REQUIRED_KEYS = [
   '--on-primary-tint', '--on-primary-tint-2', '--on-primary-tint-3', '--on-primary-tint-4', '--btn-primary-bg', '--btn-primary-border', '--btn-primary-hover', '--btn-primary-disabled-rgb',
   '--accent', '--accent-strong', '--bg', '--card', '--bg-soft', '--sidebar-bg', '--lock-bg',
   '--border', '--scrollbar', '--text', '--text-dim', '--muted',
-  '--panel-rgb', '--panel-soft-rgb', '--tint-rgb', '--ink-rgb', '--scrim-rgb',
+  '--panel-rgb', '--panel-soft-rgb', '--glass-rgb', '--tint-rgb', '--ink-rgb', '--scrim-rgb',
 ]
 
 const SKIN_INDEX = new Map(SKINS.map((s) => [s.id, s]))

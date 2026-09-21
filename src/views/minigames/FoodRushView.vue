@@ -1,6 +1,6 @@
 <script setup>
 // 大胃王挑战（2026-09-07 十模式版：15s→300s 时长梯度 · 绿色玻璃面板 ← 连连看配色 · 「📖 模式说明」弹窗）
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { assetUrl } from '../../game/data/itemImage.js'
@@ -87,6 +87,15 @@ function finish() {
 }
 const mg = computed(() => player.minigames?.foodrush ?? {})
 const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.value.length - 1].need) * 100))
+
+// 离场即中止：本组件原先没有 onUnmounted，切页后 setInterval 仍在跑，
+// 计时到点照样 finish() 结算并发游戏币（实测离场 30 秒后仍入账，可反复进出刷币）。
+// 这里只停表、不结算——已经离场的那一局按放弃处理。
+onUnmounted(() => {
+  if (timerId) clearInterval(timerId)
+  timerId = null
+  RUNNING.value = false
+})
 </script>
 
 <template>
@@ -132,7 +141,7 @@ const progress = computed(() => Math.min(100, (bowls.value / TIERS.value[TIERS.v
           <div class="fs-info-row fs-info-rule">通用规则：快速连点 10 下触发「暴食」×2（持续 3 秒）· 每局结算达标最高档游戏币</div>
           <div v-for="(m, key) in MODES" :key="key" class="fs-info-row">
             <b class="fs-info-name">{{ m.label }}</b>
-            <span class="fs-info-desc">{{ m.desc }}</span>
+            <span class="fs-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

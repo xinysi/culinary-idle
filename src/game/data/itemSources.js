@@ -18,6 +18,7 @@ import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from '.
 import { SHOP_ITEMS } from './shop.js'
 import { ALCHEMY_RECIPES } from './alchemy.js'
 import { getItem, ITEMS } from './items.js'
+import { materialText } from './materialCost.js' // 材料用量唯一出口（图鉴来源串必须与实际扣料同源）
 import { MIJIAN_POOLS, poolItems, materialFoodItems, mijianPoolVersion } from './mijianDraws.js'
 import { ENCOUNTERS } from './encounters.js'
 import { COMBAT_BOSSES } from './combat.js'
@@ -113,16 +114,20 @@ for (const [skill, name] of [['cooking', '烹饪制作'], ['baking', '烘焙制�
 for (const r of PRESERVE_EXT) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
 for (const r of PRESERVE_EXT2) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
 // 副业·木工（v2.9.0）：木器是**技能独占产物**（采集/商店/抽卡都拿不到，见 woodworking.js 的口径）
+// 材料串里的物品名（`materialText` 的回调；缺名回退 id）。
+// ⚠️ 必须在**下面第一条用到它的登记语句之前**声明：本模块是「加载即执行登记」的顶层代码，放后面会 TDZ 报错。
+const itemNameOf = (id) => getItem(id)?.name ?? id
 for (const r of WOODWORKING_RECIPES) {
-  const mats = Object.entries(r.ingredients).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('+')
-  add(r.output?.itemId, `木工制作（${mats}，Lv${r.reqLevel} 可学）`)
+  add(r.output?.itemId, `木工制作（${materialText(r, itemNameOf)}，Lv${r.reqLevel} 可学）`)
 }
 // 副业四支（v2.10.0）：陶器/织物/绣品/蜡烛同样是技能独占产物；来源串必须是「技能名 + 制作」，
 // sourceJump.js 里有对应的跳转规则（图鉴三查会查「来源串都能跳转」）。
+// ⚠️ 蜡烛那支的技能名本身就叫「蜡烛制作」（`SIDELINE_SKILL_LIST` 里 name='蜡烛制作'），
+// 直接再拼一个「制作」会得到「蜡烛制作制作」（2026-09-21 修）——所以这里按后缀去重。
+const craftLabelOf = (name) => (name.endsWith('制作') ? name : `${name}制作`)
 for (const def of SIDELINE_SKILL_LIST) {
   for (const r of SIDELINE_RECIPES[def.id] ?? []) {
-    const mats = Object.entries(r.ingredients).map(([id, q]) => `${getItem(id)?.name ?? id}×${q}`).join('+')
-    add(r.output?.itemId, `${def.name}制作（${mats}，Lv${r.reqLevel} 可学）`)
+    add(r.output?.itemId, `${craftLabelOf(def.name)}（${materialText(r, itemNameOf)}，Lv${r.reqLevel} 可学）`)
   }
 }
 
@@ -285,7 +290,9 @@ for (const [id, it] of Object.entries(ITEMS)) {
 }
 
 // 公会商店（公会点数兑换，清单见 guilds.js 的 GUILD_SHOP）
-for (const g of GUILD_SHOP) add(g.itemId, `公会商店购买（${g.cost} 公会点数）`)
+// ⚠️ GUILD_SHOP 的字段名是 `price`（GuildView 也读 price）；这里原先写成 `g.cost`，
+// 于是 24 件公会商店物品的来源行全显示「公会商店购买（undefined 公会点数）」（2026-09-21 修）
+for (const g of GUILD_SHOP) add(g.itemId, `公会商店购买（${g.price} 公会点数）`)
 
 // 区域对手掉落（对决区域内的普通对手；BOSS 另有上面的「首领掉落」）
 for (const r of COMBAT_REGIONS) {

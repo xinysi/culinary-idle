@@ -14,6 +14,7 @@
 // 设计约束：不新增物品（种子/作物/花类都是既有物品）；温室只读 CROPS（农耕表），不改农耕任何数值。
 import { CROPS } from '../skills/FarmingSkill.js'
 import { getItem } from './items.js'
+import { otherChance } from './difficulty.js' // 全局难度系数（伴生蜂蜜概率的唯一缩放出口）
 
 export const GREENHOUSE_UNLOCK_SKILL = 'farming'
 export const GREENHOUSE_UNLOCK_LEVEL = 20
@@ -25,8 +26,15 @@ export const GREENHOUSE_EXPAND_COSTS = [25000, 70000, 150000, 300000]
 
 /** 温室生长加速（0.75 = 时间 ×0.75，即提速 25%） */
 export const GREENHOUSE_GROW_FACTOR = 0.75
-/** 作物伴生蜂蜜的概率（用户指定 10%） */
+/** 作物伴生蜂蜜的概率（用户指定 10%）——**基准数据值，不要直接拿去判定或显示** */
 export const GREENHOUSE_HONEY_CHANCE = 0.1
+
+/**
+ * 伴生蜂蜜的**实际生效概率**（基准值 × 全局难度系数，下限 1%）。
+ * 🔴 判定（`stores/player.js` 的收获结算）与显示（`GreenhouseView` 两处、`activeEffects` 的效果总览行）
+ *    都**必须读这个**，否则页面写 10% 而实际按 5% 结算。改难度只改 `data/difficulty.js`。
+ */
+export const greenhouseHoneyChance = () => otherChance(GREENHOUSE_HONEY_CHANCE)
 
 /** 蜂箱：1 → 3 */
 export const HIVE_BASE_COUNT = 1

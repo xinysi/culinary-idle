@@ -5,6 +5,7 @@ import { ALCHEMY_RECIPES } from './alchemy.js'
 import { CRAFTED_DECOR } from './woodworking.js'
 import { sidelineWorkOf, SIDELINE_AXES, sidelineSkillOfItem, SIDELINE_LADDERS } from './sidelineWorks.js'
 import { getItem } from './items.js'
+import { effIngredients } from './materialCost.js' // 材料用量唯一出口（用量显示与扣料同源）
 
 /** 返回该物品可制作成的产物列表：[{ outputId, name, qty, kind? }]（按配方合并去重）
  *  `kind: 'decor'` 表示产物是**装潢**而非物品（木器 → 手工装潢）；
@@ -21,7 +22,7 @@ export function itemUses(itemId) {
   }
   for (const inst of getAllSkillInstances()) {
     for (const r of inst.recipes ?? []) {
-      const qty = r.ingredients?.[itemId]
+      const qty = effIngredients(r)[itemId]
       if (!qty) continue
       add(r.output?.itemId ?? r.itemId, r.name, qty)
     }

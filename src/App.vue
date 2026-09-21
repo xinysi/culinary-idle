@@ -4,16 +4,17 @@
 import { onMounted, onUnmounted, computed, ref, defineAsyncComponent, watch, nextTick } from 'vue'
 import SplashScreen from './components/SplashScreen.vue'
 import Sidebar from './components/Sidebar.vue'
-import StatusPanel from './components/StatusPanel.vue'
 import BgmPlayer from './components/BgmPlayer.vue'
+import SkillGuideModal from './components/SkillGuideModal.vue'
 import SavePanel from './components/SavePanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
-import InventoryModal from './components/InventoryModal.vue'
-import EquipmentModal from './components/EquipmentModal.vue'
 import SignInModal from './components/SignInModal.vue'
 import SearchModal from './components/SearchModal.vue'
 import EncounterModal from './components/EncounterModal.vue'
 import NewbieGuide from './components/NewbieGuide.vue'
+import BottomDock from './components/BottomDock.vue'
+import CelebrationOverlay from './components/CelebrationOverlay.vue'
+import { initCelebrations } from './game/core/celebrations.js'
 import OfflineReportModal from './components/OfflineReportModal.vue'
 import ShareCardModal from './components/ShareCardModal.vue'
 import MarketEventsModal from './components/MarketEventsModal.vue'
@@ -26,7 +27,18 @@ import { getBgmTrack, bgmTrackOfScene, nextTrackId, getBgmMode } from './game/da
 import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
+import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
+import { initTelemetry } from './game/dev/telemetry.js'
 
+// 🔒 开发者面板 = **构建期隔离**：生产构建里 `DEV_PANEL_ENABLED` 会被静态替换成 `false`，
+// 于是下面这个动态 import 会被打包器整块丢弃 —— **面板代码连同口令哈希都不进产物**。
+// （守卫 `scripts/ci/dev_panel_audit.mjs` 会真的构建一次并在产物里断言这件事。）
+// 要临时给打包版留入口：`VITE_DEV_PANEL=1 npm run build`。
+const DevEntry = DEV_PANEL_ENABLED ? defineAsyncComponent(() => import('./components/DevEntry.vue')) : null
+
+// 2026-09-19：厨藏/装备由弹窗升级为独立页面（厨藏的「厨藏」与「仓库」同屏合一）
+const InventoryView = defineAsyncComponent(() => import('./views/InventoryView.vue'))
+const EquipmentView = defineAsyncComponent(() => import('./views/EquipmentView.vue'))
 const SkillView = defineAsyncComponent(() => import('./views/SkillView.vue'))
 const DaoView = defineAsyncComponent(() => import('./views/DaoView.vue'))
 const ShanhaiView = defineAsyncComponent(() => import('./views/ShanhaiView.vue'))
@@ -238,10 +250,32 @@ onMounted(() => {
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
+
+  // ── 开发者面板入口（仅含开发者模式的构建）──────────────────────────────
+  if (DEV_PANEL_ENABLED) {
+    initTelemetry(player) // 本地埋点：只写本机、不进存档、不联网
+    // Ctrl + Shift + D：任意阶段都能唤出开发者入口（按下去只开「登录挡板」，不直接开面板）
+    devHotkey = (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault()
+        requestDevEntry(ui) // 已登录直接开面板，否则弹口令；面板开着再按一次收起
+      }
+    }
+    window.addEventListener('keydown', devHotkey)
+    // ?dev=1：在线版/演示时最方便的入口（exe 用热键或启动页连点）
+    try {
+      if (new URLSearchParams(window.location.search).get('dev') === '1') requestDevEntry(ui)
+    } catch { /* 忽略非法 URL */ }
+  }
+
+  // 大反馈演出（2026-09-18 留存改进 ⑥）：首次转生 / 首次赛季满档。**与开发者面板无关**，正式构建里也生效
+  disposeCelebrations = initCelebrations(player, ui)
 })
 onUnmounted(() => {
+  disposeCelebrations?.()
   clearInterval(refreshTodayTimer)
   bgm.onEnded(null)
+  if (devHotkey) window.removeEventListener('keydown', devHotkey)
 })
 // 主题切换实时生效（设置面板修改 settings.theme），并写入全局键供启动页复用
 watch(() => player.settings?.theme, (v) => {
@@ -277,6 +311,9 @@ watch(
 
 // 跨午夜刷新定时器句柄
 let refreshTodayTimer = null
+// 开发者热键（Ctrl+Shift+D）的监听句柄：只在含开发者模式的构建里被赋值
+let devHotkey = null
+let disposeCelebrations = null
 
 // 进入游戏主界面后初始化"回到顶部"按钮显示状态（main-scroll 此时才渲染）
 watch(
@@ -390,10 +427,11 @@ onMounted(() => {
             <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖<span class="nav-btn-text">图鉴</span></button>
             <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️<span class="nav-btn-text">攻略</span></button>
             <span class="top-nav-sep"></span>
+            <!-- 顶栏 ⚡（状态抽屉入口）已于 2026-09-20 删除：那六块整体移到底部胶囊弹出的面板里 -->
             <button class="top-nav-btn has-dot" :class="{ 'dot-on': signInDot }" @click="ui.toggleSignIn(true)">🎁签到</button>
             <button class="top-nav-btn" @click="ui.toggleSearch(true)">🔍搜索</button>
-            <button class="top-nav-btn" @click="ui.toggleBagModal(true, 'bag')">🧺厨藏</button>
-            <button class="top-nav-btn" @click="ui.toggleEquipModal(true)">⚔️装备</button>
+            <button class="top-nav-btn" @click="ui.setView('inventory')">🧺厨藏</button>
+            <button class="top-nav-btn" @click="ui.setView('equipment')">⚔️装备</button>
             <span class="top-nav-sep"></span>
             <button class="top-nav-btn" title="设置" @click="ui.toggleSettingsPanel(true)">⚙️<span class="nav-btn-text">设置</span></button>
             <button class="top-nav-btn" title="存档" @click="ui.toggleSavePanel(true)">💾<span class="nav-btn-text">存档</span></button>
@@ -410,7 +448,6 @@ onMounted(() => {
 
         <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
         <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll" :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai' }">
-          <NewbieGuide />
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />
@@ -478,42 +515,37 @@ onMounted(() => {
           <FestView v-else-if="ui.activeView === 'fest'" />
           <MijianView v-else-if="ui.activeView === 'mijian'" />
           <GuideView v-else-if="ui.activeView === 'guide'" />
+          <InventoryView v-else-if="ui.activeView === 'inventory'" />
+          <EquipmentView v-else-if="ui.activeView === 'equipment'" />
           <SkillView v-else />
         </div>
 
-        <!-- 中间底部状态条：左「角色状态」| 虚线 | 右「装备」 -->
-        <nav class="bottom-nav">
-          <div class="bottom-nav-col">
-            <div class="bottom-nav-stats">
-              <div class="bottom-nav-stat"><span class="dim">品鉴力 / 生命</span><span class="mono">{{ Math.round(player.maxHp) }}</span></div>
-              <div class="bottom-nav-stat"><span class="dim">品鉴点数</span><span class="mono">{{ Math.floor(player.tastePoints) }}</span></div>
-              <div class="bottom-nav-stat"><span class="dim">调味能量</span><span class="mono">{{ player.combat.flavorEnergy }}</span></div>
-              <div class="bottom-nav-stat"><span class="dim">金币</span><span class="mono gold">{{ player.gold.toLocaleString() }}</span></div>
-            </div>
-          </div>
-          <div class="bottom-nav-sep"></div>
-          <div class="bottom-nav-col">
-            <div class="bottom-nav-grid">
-              <div v-for="(itemId, slot) in player.equipment" :key="slot" class="bottom-nav-slot">
-                <span class="dim">{{ SLOT_NAMES[slot] }}</span>
-                <span :class="{ dim: !itemId }">{{ itemId ? getItem(itemId)?.name : '—' }}</span>
-              </div>
-            </div>
-          </div>
-        </nav>
+        <!-- 两条常驻提示（新手横幅 + 下一个目标）：2026-09-19 用户要求「移位置，太碍眼了」——
+             从内容滚动区**顶部**挪到中间列的**底栏**（原底部状态条的位置，同轮那条被用户去掉）。
+             每页正文因此从最顶端开始，提示仍在最外层常驻可见（新手任务不该被藏进抽屉）。
+             ⚠️ 右下角 BGM 胶囊是 fixed 浮层、压在中间列右侧 ⇒ 这里必须留 padding-right。 -->
+        <div class="head-strips">
+          <NewbieGuide />
+        </div>
       </main>
-      <StatusPanel class="app-status" />
     </div>
 
+    <!-- 原「顶栏 ⚡ 抽屉」已于 2026-09-20 撤掉：那六块（食灵出战/美食奥义/生效中/快捷状态/事件日志）
+         与「挂机动向」一起搬到底部胶囊向上弹出的面板里（`components/BottomDock.vue`）。
+         组件本体 `StatusPanel.vue` 仍**一行未改**地复用 ⇒ 零功能丢失（暂停/继续/关闭、各页入口都在）。 -->
     <!-- 一键回到顶部（中间页面右下角） -->
     <button v-if="showTopBtn" class="btn btn-primary back-top-btn" @click="scrollTop" title="回到顶部">⬆ 顶部</button>
+
+    <!-- 底部状态胶囊组（右下角，紧贴 BGM 胶囊左边；2026-09-20 用户要求）。
+         ⚠️ 必须放在这里而不是底栏 `.head-strips` 里：那个容器有 `z-index: 20` 的**层叠上下文**，
+         会把内部的 fixed 子元素一起按 20 参与层叠 ⇒ 手机上被底部导航（z-index 40）盖住、点不动。 -->
+    <BottomDock v-if="ui.phase === 'game'" />
 
     <!-- 背景音乐播放器（右下角玻璃胶囊，点击向上展开选曲；2026-09-17） -->
     <BgmPlayer v-if="ui.phase === 'game'" />
 
     <!-- 弹层：背包/仓库（§5.4）/ 存档（§8.2）/ 设置 / 签到 / 搜索 / 奇遇 -->
-    <InventoryModal v-if="ui.showBagModal" />
-    <EquipmentModal v-if="ui.showEquipModal" />
+    <SkillGuideModal v-if="ui.skillGuide" />
     <SavePanel v-if="ui.showSavePanel" />
     <SettingsPanel v-if="ui.showSettingsPanel" />
     <SignInModal v-if="ui.showSignIn" />
@@ -522,6 +554,7 @@ onMounted(() => {
     <ShareCardModal />
     <MarketEventsModal />
     <OfflineReportModal />
+
 
     <!-- 移动端：技能抽屉 + 底部导航（§9.3 单栏布局） -->
     <template v-if="ui.showMobileSkills">
@@ -532,8 +565,15 @@ onMounted(() => {
       <button class="mobile-nav-btn" :class="{ active: ui.activeView === 'skill' }" @click="ui.toggleMobileSkills(true)">🏠<span>技能</span></button>
       <button class="mobile-nav-btn" :class="{ active: ui.activeView === 'restaurant' }" @click="ui.setView('restaurant')">🏮<span>餐厅</span></button>
       <button class="mobile-nav-btn" :class="{ active: ui.activeView === 'shop' }" @click="ui.setView('shop')">🛒<span>商店</span></button>
-      <button class="mobile-nav-btn" @click="ui.toggleBagModal(true, 'bag')">🎒<span>背包</span></button>
+      <button class="mobile-nav-btn" @click="ui.setView('inventory')">🎒<span>厨藏</span></button>
       <button class="mobile-nav-btn" @click="ui.toggleSettingsPanel(true)">⚙️<span>设置</span></button>
     </nav>
   </div>
+
+  <!-- 开发者入口与面板（2026-09-18）：**必须挂在根级**，不能放进上面那个 `v-else` 的 .app-layout ——
+       面板要在「启动页」和「游戏内」两个阶段都能用（启动页阶段要在那里管存档/看数据）。
+       `DevEntry` 在不含开发者模式的构建里是 null，其动态 import 会被打包器整块丢弃。 -->
+  <DevEntry v-if="DevEntry" />
+  <!-- 大反馈演出（首次转生 / 首次赛季满档）：根级挂载，任何阶段都能盖在最上层 -->
+  <CelebrationOverlay />
 </template>

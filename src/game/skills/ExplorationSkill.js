@@ -7,6 +7,7 @@ import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryXpMultiplier } from '../core/mastery.js'
 import { itemName } from '../data/items.js'
 import { EXPLORATION_TARGETS_ALL } from '../data/explorationTargets.js'
+import { exploreSuccessChance, exploreLootChance } from '../data/difficulty.js' // 全局难度系数（唯一缩放出口）
 
 const SUCCESS_PER_LEVEL = 0.015
 const MAX_SUCCESS = 0.95
@@ -31,10 +32,24 @@ export class ExplorationSkill extends Skill {
     return this.targets.find((t) => t.id === targetId) ?? null
   }
 
-  /** 成功率：基础 + 等级差（§3.4.3） */
+  /**
+   * 成功率：基础 + 等级差（§3.4.3），再乘全局难度系数（÷2，下限 12%）。
+   * ⚠️ 系数作用在**最终值**上（含等级差加成之后）才是「有效成功率」的真实倍率。
+   * 显示点 `ExplorationView` 读的就是本方法 ⇒ 同源。
+   */
   successChance(target = this.currentTarget) {
     if (!target) return 0
-    return Math.min(Math.max(target.baseSuccess + (this.level - target.reqLevel) * SUCCESS_PER_LEVEL, MIN_SUCCESS), MAX_SUCCESS)
+    const raw = Math.min(Math.max(target.baseSuccess + (this.level - target.reqLevel) * SUCCESS_PER_LEVEL, MIN_SUCCESS), MAX_SUCCESS)
+    return exploreSuccessChance(raw)
+  }
+
+  /**
+   * 单条战利品的实际概率。
+   * 🔴 **金币条目走原值**（用户明确要求「除了金币」）：`type === 'gold'` 直接返回 `entry.chance`。
+   * 在线掷骰、离线期望、页面显示三处都必须调它，否则会「显示 28% 实际 14%」。
+   */
+  lootChance(entry) {
+    return entry?.type === 'gold' ? (entry.chance ?? 0) : exploreLootChance(entry?.chance ?? 0)
   }
 
   intervalMs(target = this.currentTarget) {
@@ -76,7 +91,7 @@ export class ExplorationSkill extends Skill {
       // 成功：结算掉落
       const gained = []
       for (const entry of target.loot) {
-        if (Math.random() >= entry.chance) continue
+        if (Math.random() >= this.lootChance(entry)) continue
         const qty = entry.min === undefined ? 1 : entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1))
         if (entry.type === 'gold') {
           this.player.gainGold(qty)
@@ -123,7 +138,8 @@ export class ExplorationSkill extends Skill {
     const items = {}
     for (const entry of target.loot ?? []) {
       const avgQty = entry.min === undefined ? 1 : (entry.min + (entry.max ?? entry.min)) / 2
-      const expected = ok * (entry.chance ?? 0) * avgQty
+      // 与实际掷骰同源（含难度系数；金币走原值），否则离线收益会与在线不一致
+      const expected = ok * this.lootChance(entry) * avgQty
       if (entry.type === 'gold') { gold += expected; continue }
       const qty = Math.round(expected)
       if (qty > 0) items[entry.itemId] = (items[entry.itemId] ?? 0) + qty

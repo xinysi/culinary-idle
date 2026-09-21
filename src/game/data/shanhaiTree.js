@@ -1,4 +1,4 @@
-// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-09-16，勿手改）
+// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-09-19，勿手改）
 //
 // 口径：12 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= 552 节点；**纯条件点亮**（不消耗资源）。
 // 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能转生次数（req.kind 恒为 'codex'）。
@@ -22,24 +22,24 @@ export const SHANHAI_PATHS = [
     "skill": "fishing",
     "name": "渔获",
     "icon": "🎣",
-    "desc": "72 件可收集",
-    "total": 72
+    "desc": "76 件可收集",
+    "total": 76
   },
   {
     "id": "hunt",
     "skill": "hunting",
     "name": "山猎",
     "icon": "🏹",
-    "desc": "70 件可收集",
-    "total": 70
+    "desc": "73 件可收集",
+    "total": 73
   },
   {
     "id": "dig",
     "skill": "excavation",
     "name": "掘藏",
     "icon": "⛏️",
-    "desc": "42 件可收集",
-    "total": 42
+    "desc": "49 件可收集",
+    "total": 49
   },
   {
     "id": "farm",
@@ -1010,18 +1010,18 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "渔获·渐熟录",
     "icon": "🐠",
-    "iconItem": "fishing_ext_03",
+    "iconItem": "perch",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 11,
+      "count": 12,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 11 件 → 背包格数 +1"
+    "desc": "渔获线收集 12 件 → 背包格数 +1"
   },
   {
     "id": "fish22",
@@ -1033,14 +1033,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 11,
+      "count": 12,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 11 件 → 背包格数 +1"
+    "desc": "渔获线收集 12 件 → 背包格数 +1"
   },
   {
     "id": "fish23",
@@ -1052,14 +1052,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 11,
+      "count": 12,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 11 件 → 背包格数 +1"
+    "desc": "渔获线收集 12 件 → 背包格数 +1"
   },
   {
     "id": "fish31",
@@ -1067,18 +1067,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓录",
     "icon": "🦐",
-    "iconItem": "fishing_ext2_07",
+    "iconItem": "fishing_ext_07",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 22,
+      "count": 23,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 22 件 → 仓库格数 +1"
+    "desc": "渔获线收集 23 件 → 仓库格数 +1"
   },
   {
     "id": "fish32",
@@ -1086,18 +1086,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓谱",
     "icon": "🦐",
-    "iconItem": "fishing_ext_07",
+    "iconItem": "fishing_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 22,
+      "count": 23,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 22 件 → 仓库格数 +1"
+    "desc": "渔获线收集 23 件 → 仓库格数 +1"
   },
   {
     "id": "fish33",
@@ -1105,18 +1105,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "渔获·通晓典",
     "icon": "🦐",
-    "iconItem": "fishing_ext2_08",
+    "iconItem": "fishing_ext_08",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 22,
+      "count": 23,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 22 件 → 仓库格数 +1"
+    "desc": "渔获线收集 23 件 → 仓库格数 +1"
   },
   {
     "id": "fish41",
@@ -1124,18 +1124,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "渔获·精研录",
     "icon": "🦀",
-    "iconItem": "fishing_ext_10",
+    "iconItem": "fishing_ext_11",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 36,
+      "count": 38,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 36 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 38 件、渔获技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "fish42",
@@ -1143,18 +1143,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "渔获·精研谱",
     "icon": "🦀",
-    "iconItem": "fishing_ext_11",
+    "iconItem": "eel",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 36,
+      "count": 38,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 36 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 38 件、渔获技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "fish43",
@@ -1162,18 +1162,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "渔获·精研典",
     "icon": "🦀",
-    "iconItem": "eel",
+    "iconItem": "fishing_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 36,
+      "count": 38,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 36 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 38 件、渔获技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "fish51",
@@ -1181,18 +1181,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "渔获·大成录",
     "icon": "🐙",
-    "iconItem": "fishing_ext_14",
+    "iconItem": "fishing_ext2_15",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 51,
+      "count": 54,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 51 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 54 件、渔获技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "fish52",
@@ -1200,18 +1200,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "渔获·大成谱",
     "icon": "🐙",
-    "iconItem": "lobster",
+    "iconItem": "fishing_ext_15",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 51,
+      "count": 54,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 51 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 54 件、渔获技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "fish53",
@@ -1219,18 +1219,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "渔获·大成典",
     "icon": "🐙",
-    "iconItem": "fishing_ext2_15",
+    "iconItem": "fishing_ext2_16",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 51,
+      "count": 54,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 51 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 54 件、渔获技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "fish61",
@@ -1238,18 +1238,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境录",
     "icon": "🐋",
-    "iconItem": "fishing_ext2_17",
+    "iconItem": "fishing_ext_18",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 75
     },
     "effect": {
       "field": "offlineH",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 75 级 → 离线收益时长上限 +1 小时"
+    "desc": "渔获线收集 69 件、渔获技能达 75 级 → 离线收益时长上限 +1 小时"
   },
   {
     "id": "fish62",
@@ -1257,18 +1257,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境谱",
     "icon": "🐋",
-    "iconItem": "fishing_ext2_18",
+    "iconItem": "fishing_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 75
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 75 级 → 渔获每次动作额外 +1 件"
+    "desc": "渔获线收集 69 件、渔获技能达 75 级 → 渔获每次动作额外 +1 件"
   },
   {
     "id": "fish63",
@@ -1276,18 +1276,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境典",
     "icon": "🐋",
-    "iconItem": "fishing_ext_18",
+    "iconItem": "fishing_ext_19",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 75
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 75 级 → 冷库格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能达 75 级 → 冷库格数 +1"
   },
   {
     "id": "fish64",
@@ -1295,18 +1295,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境章",
     "icon": "🐋",
-    "iconItem": "fishing_ext2_19",
+    "iconItem": "kaluga",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 75
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能达 75 级 → 仓库格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能达 75 级 → 仓库格数 +2"
   },
   {
     "id": "fish65",
@@ -1314,18 +1314,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "渔获·化境卷",
     "icon": "🐋",
-    "iconItem": "fishing_ext_19",
+    "iconItem": "abalone",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 75
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 75 级 → 背包格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能达 75 级 → 背包格数 +1"
   },
   {
     "id": "fish71",
@@ -1333,18 +1333,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满录",
     "icon": "🦑",
-    "iconItem": "fishing_ext_20",
+    "iconItem": "fishing_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能达 100 级 → 背包格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能达 100 级 → 背包格数 +2"
   },
   {
     "id": "fish72",
@@ -1352,18 +1352,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满谱",
     "icon": "🦑",
-    "iconItem": "fishing_ext2_21",
+    "iconItem": "fishing_ext_21",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 100
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 100 级 → 渔获每次动作额外 +1 件"
+    "desc": "渔获线收集 69 件、渔获技能达 100 级 → 渔获每次动作额外 +1 件"
   },
   {
     "id": "fish73",
@@ -1371,18 +1371,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满典",
     "icon": "🦑",
-    "iconItem": "fishing_ext_21",
+    "iconItem": "fishing_ext_22",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 100
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 100 级 → 冷库格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能达 100 级 → 冷库格数 +1"
   },
   {
     "id": "fish74",
@@ -1390,18 +1390,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满章",
     "icon": "🦑",
-    "iconItem": "fishing_ext2_22",
+    "iconItem": "lionfish",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 100
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能达 100 级 → 仓库格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能达 100 级 → 仓库格数 +2"
   },
   {
     "id": "fish75",
@@ -1409,18 +1409,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "渔获·圆满卷",
     "icon": "🦑",
-    "iconItem": "fishing_ext_22",
+    "iconItem": "fishing_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能达 100 级 → 背包格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能达 100 级 → 背包格数 +1"
   },
   {
     "id": "fish81",
@@ -1428,11 +1428,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回录",
     "icon": "🐚",
-    "iconItem": "fishing_ext_23",
+    "iconItem": "seaCucumber",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 1
     },
@@ -1440,7 +1440,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 1 次 → 背包格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能转生 1 次 → 背包格数 +2"
   },
   {
     "id": "fish82",
@@ -1448,11 +1448,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回谱",
     "icon": "🐚",
-    "iconItem": "seaCucumber",
+    "iconItem": "fishing_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 1
     },
@@ -1460,7 +1460,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 1 次 → 仓库格数 +3"
+    "desc": "渔获线收集 69 件、渔获技能转生 1 次 → 仓库格数 +3"
   },
   {
     "id": "fish83",
@@ -1468,11 +1468,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回典",
     "icon": "🐚",
-    "iconItem": "fishing_ext2_24",
+    "iconItem": "fishing_ext_24",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 1
     },
@@ -1480,7 +1480,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 1 次 → 冷库格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能转生 1 次 → 冷库格数 +1"
   },
   {
     "id": "fish84",
@@ -1488,11 +1488,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回章",
     "icon": "🐚",
-    "iconItem": "fishing_ext_24",
+    "iconItem": "blackMarlin",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 1
     },
@@ -1500,7 +1500,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 1 次 → 仓库格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能转生 1 次 → 仓库格数 +2"
   },
   {
     "id": "fish85",
@@ -1508,11 +1508,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "渔获·轮回卷",
     "icon": "🐚",
-    "iconItem": "fishing_ext2_25",
+    "iconItem": "fishing_ext_25",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 1
     },
@@ -1520,7 +1520,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 1 次 → 背包格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能转生 1 次 → 背包格数 +1"
   },
   {
     "id": "fish91",
@@ -1528,11 +1528,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫录",
     "icon": "🦞",
-    "iconItem": "bluefin",
+    "iconItem": "fishing_ext2_26",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 5
     },
@@ -1540,7 +1540,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 5 次 → 背包格数 +3"
+    "desc": "渔获线收集 69 件、渔获技能转生 5 次 → 背包格数 +3"
   },
   {
     "id": "fish92",
@@ -1548,11 +1548,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫谱",
     "icon": "🦞",
-    "iconItem": "fishing_ext2_26",
+    "iconItem": "fishing_ext_26",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 5
     },
@@ -1560,7 +1560,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 5 次 → 仓库格数 +4"
+    "desc": "渔获线收集 69 件、渔获技能转生 5 次 → 仓库格数 +4"
   },
   {
     "id": "fish93",
@@ -1568,11 +1568,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫典",
     "icon": "🦞",
-    "iconItem": "fishing_ext_26",
+    "iconItem": "fishing_ext2_27",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 5
     },
@@ -1580,7 +1580,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 5 次 → 冷库格数 +1"
+    "desc": "渔获线收集 69 件、渔获技能转生 5 次 → 冷库格数 +1"
   },
   {
     "id": "fish94",
@@ -1592,7 +1592,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 5
     },
@@ -1600,7 +1600,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 5 次 → 仓库格数 +3"
+    "desc": "渔获线收集 69 件、渔获技能转生 5 次 → 仓库格数 +3"
   },
   {
     "id": "fish95",
@@ -1608,11 +1608,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "渔获·历劫卷",
     "icon": "🦞",
-    "iconItem": "fishing_ext2_28",
+    "iconItem": "humpheadWrasse",
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 5
     },
@@ -1620,7 +1620,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 5 次 → 背包格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能转生 5 次 → 背包格数 +2"
   },
   {
     "id": "fish101",
@@ -1632,7 +1632,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 10
     },
@@ -1640,7 +1640,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 10 次 → 背包格数 +3"
+    "desc": "渔获线收集 69 件、渔获技能转生 10 次 → 背包格数 +3"
   },
   {
     "id": "fish102",
@@ -1652,7 +1652,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 10
     },
@@ -1660,7 +1660,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 10 次 → 仓库格数 +5"
+    "desc": "渔获线收集 69 件、渔获技能转生 10 次 → 仓库格数 +5"
   },
   {
     "id": "fish103",
@@ -1672,7 +1672,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 10
     },
@@ -1680,7 +1680,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 10 次 → 冷库格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能转生 10 次 → 冷库格数 +2"
   },
   {
     "id": "fish104",
@@ -1692,7 +1692,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 10
     },
@@ -1700,7 +1700,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 10 次 → 仓库格数 +3"
+    "desc": "渔获线收集 69 件、渔获技能转生 10 次 → 仓库格数 +3"
   },
   {
     "id": "fish105",
@@ -1712,7 +1712,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "fishing",
-      "count": 65,
+      "count": 69,
       "level": 0,
       "prestige": 10
     },
@@ -1720,7 +1720,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "渔获线收集 65 件、渔获技能转生 10 次 → 背包格数 +2"
+    "desc": "渔获线收集 69 件、渔获技能转生 10 次 → 背包格数 +2"
   },
   {
     "id": "hunt11",
@@ -1785,7 +1785,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "山猎·渐熟录",
     "icon": "🦌",
-    "iconItem": "pheasantMeat",
+    "iconItem": "hunting_ext2_04",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1804,7 +1804,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "山猎·渐熟谱",
     "icon": "🦌",
-    "iconItem": "hunting_ext2_04",
+    "iconItem": "hunting_ext_04",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1823,7 +1823,7 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "山猎·渐熟典",
     "icon": "🦌",
-    "iconItem": "hunting_ext_04",
+    "iconItem": "hunting_ext2_05",
     "req": {
       "kind": "codex",
       "skill": "hunting",
@@ -1846,14 +1846,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 21,
+      "count": 22,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 21 件 → 仓库格数 +1"
+    "desc": "山猎线收集 22 件 → 仓库格数 +1"
   },
   {
     "id": "hunt32",
@@ -1865,14 +1865,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 21,
+      "count": 22,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 21 件 → 仓库格数 +1"
+    "desc": "山猎线收集 22 件 → 仓库格数 +1"
   },
   {
     "id": "hunt33",
@@ -1884,14 +1884,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 21,
+      "count": 22,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 21 件 → 仓库格数 +1"
+    "desc": "山猎线收集 22 件 → 仓库格数 +1"
   },
   {
     "id": "hunt41",
@@ -1899,18 +1899,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "山猎·精研录",
     "icon": "🐻",
-    "iconItem": "hunting_ext2_11",
+    "iconItem": "hunting_ext_11",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 35,
+      "count": 37,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 35 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 37 件、山猎技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "hunt42",
@@ -1918,18 +1918,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "山猎·精研谱",
     "icon": "🐻",
-    "iconItem": "hunting_ext_11",
+    "iconItem": "goatMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 35,
+      "count": 37,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 35 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 37 件、山猎技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "hunt43",
@@ -1937,18 +1937,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "山猎·精研典",
     "icon": "🐻",
-    "iconItem": "goatMeat",
+    "iconItem": "hunting_ext2_12",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 35,
+      "count": 37,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 35 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 37 件、山猎技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "hunt51",
@@ -1956,18 +1956,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "山猎·大成录",
     "icon": "🦅",
-    "iconItem": "hunting_ext_14",
+    "iconItem": "bisonMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 49,
+      "count": 52,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 49 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 52 件、山猎技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "hunt52",
@@ -1975,18 +1975,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "山猎·大成谱",
     "icon": "🦅",
-    "iconItem": "bisonMeat",
+    "iconItem": "hunting_ext_15",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 49,
+      "count": 52,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 49 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 52 件、山猎技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "hunt53",
@@ -1994,18 +1994,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "山猎·大成典",
     "icon": "🦅",
-    "iconItem": "hunting_ext2_15",
+    "iconItem": "hunting_ext2_16",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 49,
+      "count": 52,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 49 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 52 件、山猎技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "hunt61",
@@ -2013,18 +2013,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境录",
     "icon": "🐉",
-    "iconItem": "hunting_ext2_17",
+    "iconItem": "hunting_ext2_18",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 75
     },
     "effect": {
       "field": "offlineH",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 75 级 → 离线收益时长上限 +1 小时"
+    "desc": "山猎线收集 66 件、山猎技能达 75 级 → 离线收益时长上限 +1 小时"
   },
   {
     "id": "hunt62",
@@ -2032,18 +2032,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境谱",
     "icon": "🐉",
-    "iconItem": "hunting_ext_17",
+    "iconItem": "hunting_ext_18",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 75
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 75 级 → 山猎每次动作额外 +1 件"
+    "desc": "山猎线收集 66 件、山猎技能达 75 级 → 山猎每次动作额外 +1 件"
   },
   {
     "id": "hunt63",
@@ -2051,18 +2051,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境典",
     "icon": "🐉",
-    "iconItem": "hunting_ext2_18",
+    "iconItem": "hunting_ext2_19",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 75
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 75 级 → 冷库格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能达 75 级 → 冷库格数 +1"
   },
   {
     "id": "hunt64",
@@ -2070,18 +2070,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境章",
     "icon": "🐉",
-    "iconItem": "hunting_ext_18",
+    "iconItem": "hunting_ext_19",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 75
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能达 75 级 → 仓库格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能达 75 级 → 仓库格数 +2"
   },
   {
     "id": "hunt65",
@@ -2089,18 +2089,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "山猎·化境卷",
     "icon": "🐉",
-    "iconItem": "hunting_ext2_19",
+    "iconItem": "bearMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 75
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 75 级 → 背包格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能达 75 级 → 背包格数 +1"
   },
   {
     "id": "hunt71",
@@ -2108,18 +2108,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满录",
     "icon": "🦊",
-    "iconItem": "hunting_ext2_20",
+    "iconItem": "hunting_ext2_21",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能达 100 级 → 背包格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能达 100 级 → 背包格数 +2"
   },
   {
     "id": "hunt72",
@@ -2127,18 +2127,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满谱",
     "icon": "🦊",
-    "iconItem": "hunting_ext_20",
+    "iconItem": "hunting_ext_21",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 100
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 100 级 → 山猎每次动作额外 +1 件"
+    "desc": "山猎线收集 66 件、山猎技能达 100 级 → 山猎每次动作额外 +1 件"
   },
   {
     "id": "hunt73",
@@ -2146,18 +2146,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满典",
     "icon": "🦊",
-    "iconItem": "hunting_ext2_21",
+    "iconItem": "cougarMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 100
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 100 级 → 冷库格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能达 100 级 → 冷库格数 +1"
   },
   {
     "id": "hunt74",
@@ -2165,18 +2165,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满章",
     "icon": "🦊",
-    "iconItem": "hunting_ext_21",
+    "iconItem": "hunting_ext2_22",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 100
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能达 100 级 → 仓库格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能达 100 级 → 仓库格数 +2"
   },
   {
     "id": "hunt75",
@@ -2184,18 +2184,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "山猎·圆满卷",
     "icon": "🦊",
-    "iconItem": "hunting_ext2_22",
+    "iconItem": "hunting_ext2_23",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能达 100 级 → 背包格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能达 100 级 → 背包格数 +1"
   },
   {
     "id": "hunt81",
@@ -2203,11 +2203,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回录",
     "icon": "🐺",
-    "iconItem": "hunting_ext2_23",
+    "iconItem": "hunting_ext2_24",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 1
     },
@@ -2215,7 +2215,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 1 次 → 背包格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能转生 1 次 → 背包格数 +2"
   },
   {
     "id": "hunt82",
@@ -2223,11 +2223,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回谱",
     "icon": "🐺",
-    "iconItem": "hunting_ext_23",
+    "iconItem": "hunting_ext_24",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 1
     },
@@ -2235,7 +2235,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 1 次 → 仓库格数 +3"
+    "desc": "山猎线收集 66 件、山猎技能转生 1 次 → 仓库格数 +3"
   },
   {
     "id": "hunt83",
@@ -2243,11 +2243,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回典",
     "icon": "🐺",
-    "iconItem": "hunting_ext_24",
+    "iconItem": "mammothMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 1
     },
@@ -2255,7 +2255,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 1 次 → 冷库格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能转生 1 次 → 冷库格数 +1"
   },
   {
     "id": "hunt84",
@@ -2263,11 +2263,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回章",
     "icon": "🐺",
-    "iconItem": "mammothMeat",
+    "iconItem": "hunting_ext2_25",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 1
     },
@@ -2275,7 +2275,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 1 次 → 仓库格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能转生 1 次 → 仓库格数 +2"
   },
   {
     "id": "hunt85",
@@ -2283,11 +2283,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "山猎·轮回卷",
     "icon": "🐺",
-    "iconItem": "hunting_ext2_25",
+    "iconItem": "hunting_ext_25",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 1
     },
@@ -2295,7 +2295,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 1 次 → 背包格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能转生 1 次 → 背包格数 +1"
   },
   {
     "id": "hunt91",
@@ -2307,7 +2307,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 5
     },
@@ -2315,7 +2315,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 5 次 → 背包格数 +3"
+    "desc": "山猎线收集 66 件、山猎技能转生 5 次 → 背包格数 +3"
   },
   {
     "id": "hunt92",
@@ -2327,7 +2327,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 5
     },
@@ -2335,7 +2335,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 5 次 → 仓库格数 +4"
+    "desc": "山猎线收集 66 件、山猎技能转生 5 次 → 仓库格数 +4"
   },
   {
     "id": "hunt93",
@@ -2347,7 +2347,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 5
     },
@@ -2355,7 +2355,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 5 次 → 冷库格数 +1"
+    "desc": "山猎线收集 66 件、山猎技能转生 5 次 → 冷库格数 +1"
   },
   {
     "id": "hunt94",
@@ -2367,7 +2367,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 5
     },
@@ -2375,7 +2375,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 5 次 → 仓库格数 +3"
+    "desc": "山猎线收集 66 件、山猎技能转生 5 次 → 仓库格数 +3"
   },
   {
     "id": "hunt95",
@@ -2383,11 +2383,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "山猎·历劫卷",
     "icon": "🦉",
-    "iconItem": "hunting_ext2_28",
+    "iconItem": "hunting_ext_28",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 5
     },
@@ -2395,7 +2395,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 5 次 → 背包格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能转生 5 次 → 背包格数 +2"
   },
   {
     "id": "hunt101",
@@ -2403,11 +2403,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道录",
     "icon": "🦬",
-    "iconItem": "hunting_ext_28",
+    "iconItem": "dragonMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 10
     },
@@ -2415,7 +2415,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 10 次 → 背包格数 +3"
+    "desc": "山猎线收集 66 件、山猎技能转生 10 次 → 背包格数 +3"
   },
   {
     "id": "hunt102",
@@ -2423,11 +2423,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道谱",
     "icon": "🦬",
-    "iconItem": "dragonMeat",
+    "iconItem": "hunting_ext2_29",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 10
     },
@@ -2435,7 +2435,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 10 次 → 仓库格数 +5"
+    "desc": "山猎线收集 66 件、山猎技能转生 10 次 → 仓库格数 +5"
   },
   {
     "id": "hunt103",
@@ -2443,11 +2443,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道典",
     "icon": "🦬",
-    "iconItem": "hunting_ext2_29",
+    "iconItem": "hunting_ext_29",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 10
     },
@@ -2455,7 +2455,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 10 次 → 冷库格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能转生 10 次 → 冷库格数 +2"
   },
   {
     "id": "hunt104",
@@ -2463,11 +2463,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "山猎·悟道章",
     "icon": "🦬",
-    "iconItem": "hunting_ext_29",
+    "iconItem": "yetiMeat",
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 10
     },
@@ -2475,7 +2475,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 10 次 → 仓库格数 +3"
+    "desc": "山猎线收集 66 件、山猎技能转生 10 次 → 仓库格数 +3"
   },
   {
     "id": "hunt105",
@@ -2487,7 +2487,7 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "hunting",
-      "count": 63,
+      "count": 66,
       "level": 0,
       "prestige": 10
     },
@@ -2495,7 +2495,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "山猎线收集 63 件、山猎技能转生 10 次 → 背包格数 +2"
+    "desc": "山猎线收集 66 件、山猎技能转生 10 次 → 背包格数 +2"
   },
   {
     "id": "dig11",
@@ -2541,7 +2541,7 @@ export const SHANHAI_NODES = [
     "ring": 1,
     "name": "掘藏·初识典",
     "icon": "🪨",
-    "iconItem": "potato",
+    "iconItem": "excavation_ext2_02",
     "req": {
       "kind": "codex",
       "skill": "excavation",
@@ -2560,18 +2560,18 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟录",
     "icon": "🔶",
-    "iconItem": "excavation_ext_02",
+    "iconItem": "sweetPotato",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 7,
+      "count": 8,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 7 件 → 背包格数 +1"
+    "desc": "掘藏线收集 8 件 → 背包格数 +1"
   },
   {
     "id": "dig22",
@@ -2579,18 +2579,18 @@ export const SHANHAI_NODES = [
     "ring": 2,
     "name": "掘藏·渐熟谱",
     "icon": "🔶",
-    "iconItem": "sweetPotato",
+    "iconItem": "excavation_ext2_03",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 7,
+      "count": 8,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 7 件 → 背包格数 +1"
+    "desc": "掘藏线收集 8 件 → 背包格数 +1"
   },
   {
     "id": "dig23",
@@ -2602,14 +2602,14 @@ export const SHANHAI_NODES = [
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 7,
+      "count": 8,
       "level": 0
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 7 件 → 背包格数 +1"
+    "desc": "掘藏线收集 8 件 → 背包格数 +1"
   },
   {
     "id": "dig31",
@@ -2617,18 +2617,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓录",
     "icon": "💎",
-    "iconItem": "excavation_ext_04",
+    "iconItem": "excavation_ext_05",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 13,
+      "count": 15,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 15 件 → 仓库格数 +1"
   },
   {
     "id": "dig32",
@@ -2636,18 +2636,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓谱",
     "icon": "💎",
-    "iconItem": "excavation_ext2_05",
+    "iconItem": "excavation_ext2_06",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 13,
+      "count": 15,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 15 件 → 仓库格数 +1"
   },
   {
     "id": "dig33",
@@ -2655,18 +2655,18 @@ export const SHANHAI_NODES = [
     "ring": 3,
     "name": "掘藏·通晓典",
     "icon": "💎",
-    "iconItem": "excavation_ext2_05",
+    "iconItem": "excavation_ext2_06",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 13,
+      "count": 15,
       "level": 0
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 13 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 15 件 → 仓库格数 +1"
   },
   {
     "id": "dig41",
@@ -2674,18 +2674,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研录",
     "icon": "🪙",
-    "iconItem": "onion",
+    "iconItem": "excavation_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 21,
+      "count": 25,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 25 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig42",
@@ -2693,18 +2693,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研谱",
     "icon": "🪙",
-    "iconItem": "excavation_ext2_07",
+    "iconItem": "excavation_ext2_08",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 21,
+      "count": 25,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 25 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig43",
@@ -2712,18 +2712,18 @@ export const SHANHAI_NODES = [
     "ring": 4,
     "name": "掘藏·精研典",
     "icon": "🪙",
-    "iconItem": "excavation_ext2_07",
+    "iconItem": "excavation_ext_08",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 21,
+      "count": 25,
       "level": 20
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 21 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 25 件、掘藏技能达 20 级 → 仓库格数 +1"
   },
   {
     "id": "dig51",
@@ -2731,18 +2731,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成录",
     "icon": "🔷",
-    "iconItem": "excavation_ext2_09",
+    "iconItem": "excavation_ext2_10",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 30,
+      "count": 35,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 35 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig52",
@@ -2750,18 +2750,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成谱",
     "icon": "🔷",
-    "iconItem": "excavation_ext_09",
+    "iconItem": "excavation_ext_10",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 30,
+      "count": 35,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 35 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig53",
@@ -2769,18 +2769,18 @@ export const SHANHAI_NODES = [
     "ring": 5,
     "name": "掘藏·大成典",
     "icon": "🔷",
-    "iconItem": "excavation_ext_09",
+    "iconItem": "excavation_ext2_11",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 30,
+      "count": 35,
       "level": 45
     },
     "effect": {
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 30 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 35 件、掘藏技能达 45 级 → 仓库格数 +1"
   },
   {
     "id": "dig61",
@@ -2788,18 +2788,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境录",
     "icon": "🏆",
-    "iconItem": "excavation_ext_10",
+    "iconItem": "excavation_ext_12",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 75
     },
     "effect": {
       "field": "offlineH",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 离线收益时长上限 +1 小时"
+    "desc": "掘藏线收集 45 件、掘藏技能达 75 级 → 离线收益时长上限 +1 小时"
   },
   {
     "id": "dig62",
@@ -2807,18 +2807,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境谱",
     "icon": "🏆",
-    "iconItem": "excavation_ext2_11",
+    "iconItem": "ginger",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 75
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 掘藏每次动作额外 +1 件"
+    "desc": "掘藏线收集 45 件、掘藏技能达 75 级 → 掘藏每次动作额外 +1 件"
   },
   {
     "id": "dig63",
@@ -2826,18 +2826,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境典",
     "icon": "🏆",
-    "iconItem": "excavation_ext_11",
+    "iconItem": "excavation_ext_13",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 75
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 冷库格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能达 75 级 → 冷库格数 +1"
   },
   {
     "id": "dig64",
@@ -2845,18 +2845,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境章",
     "icon": "🏆",
-    "iconItem": "excavation_ext_11",
+    "iconItem": "excavation_ext_14",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 75
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能达 75 级 → 仓库格数 +2"
   },
   {
     "id": "dig65",
@@ -2864,18 +2864,18 @@ export const SHANHAI_NODES = [
     "ring": 6,
     "name": "掘藏·化境卷",
     "icon": "🏆",
-    "iconItem": "excavation_ext2_12",
+    "iconItem": "excavation_ext_14",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 75
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 75 级 → 背包格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能达 75 级 → 背包格数 +1"
   },
   {
     "id": "dig71",
@@ -2883,18 +2883,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满录",
     "icon": "🧱",
-    "iconItem": "excavation_ext_12",
+    "iconItem": "yam",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 背包格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能达 100 级 → 背包格数 +2"
   },
   {
     "id": "dig72",
@@ -2902,18 +2902,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满谱",
     "icon": "🧱",
-    "iconItem": "ginger",
+    "iconItem": "excavation_ext_16",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 100
     },
     "effect": {
       "field": "flatYield",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 掘藏每次动作额外 +1 件"
+    "desc": "掘藏线收集 45 件、掘藏技能达 100 级 → 掘藏每次动作额外 +1 件"
   },
   {
     "id": "dig73",
@@ -2921,18 +2921,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满典",
     "icon": "🧱",
-    "iconItem": "excavation_ext_13",
+    "iconItem": "excavation_ext_17",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 100
     },
     "effect": {
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 冷库格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能达 100 级 → 冷库格数 +1"
   },
   {
     "id": "dig74",
@@ -2940,18 +2940,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满章",
     "icon": "🧱",
-    "iconItem": "excavation_ext_13",
+    "iconItem": "excavation_ext_17",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 100
     },
     "effect": {
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能达 100 级 → 仓库格数 +2"
   },
   {
     "id": "dig75",
@@ -2959,18 +2959,18 @@ export const SHANHAI_NODES = [
     "ring": 7,
     "name": "掘藏·圆满卷",
     "icon": "🧱",
-    "iconItem": "excavation_ext_14",
+    "iconItem": "excavation_ext_18",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 100
     },
     "effect": {
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能达 100 级 → 背包格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能达 100 级 → 背包格数 +1"
   },
   {
     "id": "dig81",
@@ -2978,11 +2978,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回录",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_15",
+    "iconItem": "lingzhi",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 1
     },
@@ -2990,7 +2990,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 背包格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 1 次 → 背包格数 +2"
   },
   {
     "id": "dig82",
@@ -2998,11 +2998,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回谱",
     "icon": "⛰️",
-    "iconItem": "yam",
+    "iconItem": "excavation_ext_19",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 1
     },
@@ -3010,7 +3010,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 1 次 → 仓库格数 +3"
   },
   {
     "id": "dig83",
@@ -3018,11 +3018,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回典",
     "icon": "⛰️",
-    "iconItem": "yam",
+    "iconItem": "excavation_ext_20",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 1
     },
@@ -3030,7 +3030,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 冷库格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 1 次 → 冷库格数 +1"
   },
   {
     "id": "dig84",
@@ -3038,11 +3038,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回章",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_16",
+    "iconItem": "excavation_ext_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 1
     },
@@ -3050,7 +3050,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 仓库格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 1 次 → 仓库格数 +2"
   },
   {
     "id": "dig85",
@@ -3058,11 +3058,11 @@ export const SHANHAI_NODES = [
     "ring": 8,
     "name": "掘藏·轮回卷",
     "icon": "⛰️",
-    "iconItem": "excavation_ext_17",
+    "iconItem": "excavation_ext_21",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 1
     },
@@ -3070,7 +3070,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 1 次 → 背包格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 1 次 → 背包格数 +1"
   },
   {
     "id": "dig91",
@@ -3078,11 +3078,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫录",
     "icon": "🗿",
-    "iconItem": "excavation_ext_18",
+    "iconItem": "rockCoreRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 5
     },
@@ -3090,7 +3090,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 背包格数 +3"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 5 次 → 背包格数 +3"
   },
   {
     "id": "dig92",
@@ -3098,11 +3098,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫谱",
     "icon": "🗿",
-    "iconItem": "excavation_ext_18",
+    "iconItem": "jadePithRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 5
     },
@@ -3110,7 +3110,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 仓库格数 +4"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 5 次 → 仓库格数 +4"
   },
   {
     "id": "dig93",
@@ -3118,11 +3118,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫典",
     "icon": "🗿",
-    "iconItem": "lingzhi",
+    "iconItem": "jadePithRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 5
     },
@@ -3130,7 +3130,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 冷库格数 +1"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 5 次 → 冷库格数 +1"
   },
   {
     "id": "dig94",
@@ -3138,11 +3138,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫章",
     "icon": "🗿",
-    "iconItem": "excavation_ext_19",
+    "iconItem": "cloudFungus",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 5
     },
@@ -3150,7 +3150,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 5 次 → 仓库格数 +3"
   },
   {
     "id": "dig95",
@@ -3158,11 +3158,11 @@ export const SHANHAI_NODES = [
     "ring": 9,
     "name": "掘藏·历劫卷",
     "icon": "🗿",
-    "iconItem": "excavation_ext_19",
+    "iconItem": "bloodFungus",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 5
     },
@@ -3170,7 +3170,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 5 次 → 背包格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 5 次 → 背包格数 +2"
   },
   {
     "id": "dig101",
@@ -3178,11 +3178,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道录",
     "icon": "👑",
-    "iconItem": "excavation_ext_20",
+    "iconItem": "dragonRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 10
     },
@@ -3190,7 +3190,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 背包格数 +3"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 10 次 → 背包格数 +3"
   },
   {
     "id": "dig102",
@@ -3198,11 +3198,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道谱",
     "icon": "👑",
-    "iconItem": "excavation_ext_21",
+    "iconItem": "dragonRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 10
     },
@@ -3210,7 +3210,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 仓库格数 +5"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 10 次 → 仓库格数 +5"
   },
   {
     "id": "dig103",
@@ -3218,11 +3218,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道典",
     "icon": "👑",
-    "iconItem": "excavation_ext_21",
+    "iconItem": "taiSui",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 10
     },
@@ -3230,7 +3230,7 @@ export const SHANHAI_NODES = [
       "field": "coldStorageCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 冷库格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 10 次 → 冷库格数 +2"
   },
   {
     "id": "dig104",
@@ -3238,11 +3238,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道章",
     "icon": "👑",
-    "iconItem": "ginseng",
+    "iconItem": "vermilionGrass",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 10
     },
@@ -3250,7 +3250,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 仓库格数 +3"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 10 次 → 仓库格数 +3"
   },
   {
     "id": "dig105",
@@ -3258,11 +3258,11 @@ export const SHANHAI_NODES = [
     "ring": 10,
     "name": "掘藏·悟道卷",
     "icon": "👑",
-    "iconItem": "dragonRoot",
+    "iconItem": "mysticRoot",
     "req": {
       "kind": "codex",
       "skill": "excavation",
-      "count": 38,
+      "count": 45,
       "level": 0,
       "prestige": 10
     },
@@ -3270,7 +3270,7 @@ export const SHANHAI_NODES = [
       "field": "inventoryCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 38 件、掘藏技能转生 10 次 → 背包格数 +2"
+    "desc": "掘藏线收集 45 件、掘藏技能转生 10 次 → 背包格数 +2"
   },
   {
     "id": "farm11",
@@ -9484,14 +9484,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "foraging",
       "skill2": "fishing",
-      "count": 193,
+      "count": 197,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "采撷线与渔获线合计收集 193 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "采撷线与渔获线合计收集 197 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap0_7",
@@ -9505,14 +9505,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "foraging",
       "skill2": "fishing",
-      "count": 193,
+      "count": 197,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "采撷线与渔获线合计收集 193 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "采撷线与渔获线合计收集 197 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap0_8",
@@ -9526,7 +9526,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "foraging",
       "skill2": "fishing",
-      "count": 193,
+      "count": 197,
       "level": 0,
       "prestige": 1
     },
@@ -9534,7 +9534,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "采撷线与渔获线合计收集 193 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "采撷线与渔获线合计收集 197 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap0_9",
@@ -9548,7 +9548,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "foraging",
       "skill2": "fishing",
-      "count": 193,
+      "count": 197,
       "level": 0,
       "prestige": 5
     },
@@ -9556,7 +9556,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "采撷线与渔获线合计收集 193 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "采撷线与渔获线合计收集 197 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap0_10",
@@ -9570,7 +9570,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "foraging",
       "skill2": "fishing",
-      "count": 193,
+      "count": 197,
       "level": 0,
       "prestige": 10
     },
@@ -9578,7 +9578,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "采撷线与渔获线合计收集 193 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "采撷线与渔获线合计收集 197 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap1_6",
@@ -9592,14 +9592,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "fishing",
       "skill2": "hunting",
-      "count": 128,
+      "count": 135,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "渔获线与山猎线合计收集 128 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "渔获线与山猎线合计收集 135 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap1_7",
@@ -9613,14 +9613,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "fishing",
       "skill2": "hunting",
-      "count": 128,
+      "count": 135,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "渔获线与山猎线合计收集 128 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "渔获线与山猎线合计收集 135 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap1_8",
@@ -9634,7 +9634,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "fishing",
       "skill2": "hunting",
-      "count": 128,
+      "count": 135,
       "level": 0,
       "prestige": 1
     },
@@ -9642,7 +9642,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "渔获线与山猎线合计收集 128 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "渔获线与山猎线合计收集 135 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap1_9",
@@ -9656,7 +9656,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "fishing",
       "skill2": "hunting",
-      "count": 128,
+      "count": 135,
       "level": 0,
       "prestige": 5
     },
@@ -9664,7 +9664,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "渔获线与山猎线合计收集 128 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "渔获线与山猎线合计收集 135 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap1_10",
@@ -9678,7 +9678,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "fishing",
       "skill2": "hunting",
-      "count": 128,
+      "count": 135,
       "level": 0,
       "prestige": 10
     },
@@ -9686,7 +9686,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "渔获线与山猎线合计收集 128 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "渔获线与山猎线合计收集 135 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap2_6",
@@ -9700,14 +9700,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 101,
+      "count": 111,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "山猎线与掘藏线合计收集 111 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap2_7",
@@ -9721,14 +9721,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 101,
+      "count": 111,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "山猎线与掘藏线合计收集 111 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap2_8",
@@ -9742,7 +9742,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 101,
+      "count": 111,
       "level": 0,
       "prestige": 1
     },
@@ -9750,7 +9750,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "山猎线与掘藏线合计收集 111 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap2_9",
@@ -9764,7 +9764,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 101,
+      "count": 111,
       "level": 0,
       "prestige": 5
     },
@@ -9772,7 +9772,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "山猎线与掘藏线合计收集 111 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap2_10",
@@ -9786,7 +9786,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "hunting",
       "skill2": "excavation",
-      "count": 101,
+      "count": 111,
       "level": 0,
       "prestige": 10
     },
@@ -9794,7 +9794,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "山猎线与掘藏线合计收集 101 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "山猎线与掘藏线合计收集 111 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap3_6",
@@ -9808,14 +9808,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 218,
+      "count": 225,
       "level": 75
     },
     "effect": {
       "field": "gold",
       "amount": 6000
     },
-    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均达 75 级 → 金币 +6,000"
+    "desc": "掘藏线与稼穑线合计收集 225 件、两条线技能均达 75 级 → 金币 +6,000"
   },
   {
     "id": "gap3_7",
@@ -9829,14 +9829,14 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 218,
+      "count": 225,
       "level": 100
     },
     "effect": {
       "field": "gold",
       "amount": 18000
     },
-    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均达 100 级 → 金币 +18,000"
+    "desc": "掘藏线与稼穑线合计收集 225 件、两条线技能均达 100 级 → 金币 +18,000"
   },
   {
     "id": "gap3_8",
@@ -9850,7 +9850,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 218,
+      "count": 225,
       "level": 0,
       "prestige": 1
     },
@@ -9858,7 +9858,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 48000
     },
-    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 1 次 → 金币 +48,000"
+    "desc": "掘藏线与稼穑线合计收集 225 件、两条线技能均转生 1 次 → 金币 +48,000"
   },
   {
     "id": "gap3_9",
@@ -9872,7 +9872,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 218,
+      "count": 225,
       "level": 0,
       "prestige": 5
     },
@@ -9880,7 +9880,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 120000
     },
-    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 5 次 → 金币 +120,000"
+    "desc": "掘藏线与稼穑线合计收集 225 件、两条线技能均转生 5 次 → 金币 +120,000"
   },
   {
     "id": "gap3_10",
@@ -9894,7 +9894,7 @@ export const SHANHAI_NODES = [
       "kind": "codex",
       "skill": "excavation",
       "skill2": "farming",
-      "count": 218,
+      "count": 225,
       "level": 0,
       "prestige": 10
     },
@@ -9902,7 +9902,7 @@ export const SHANHAI_NODES = [
       "field": "gold",
       "amount": 300000
     },
-    "desc": "掘藏线与稼穑线合计收集 218 件、两条线技能均转生 10 次 → 金币 +300,000"
+    "desc": "掘藏线与稼穑线合计收集 225 件、两条线技能均转生 10 次 → 金币 +300,000"
   },
   {
     "id": "gap4_6",

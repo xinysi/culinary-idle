@@ -59,7 +59,7 @@ function taskProgress(task) {
     <div class="card" v-if="guild">
       <h3>公会任务（每日重置）</h3>
       <div class="season-task-grid">
-        <div v-for="(t, ti) in guild.tasks" :key="t.id" v-tilt class="season-task-card" :style="{ animationDelay: (ti * 0.06) + 's' }" :class="{ done: taskProgress(t) >= t.qty }">
+        <div v-for="(t, ti) in guild.tasks" :key="t.id" class="season-task-card" :style="{ animationDelay: (ti * 0.06) + 's' }" :class="{ done: taskProgress(t) >= t.qty }">
           <div class="season-task-top">
             <strong class="season-task-name">{{ t.name }}</strong>
             <span class="badge season-task-pts" :class="{ 'badge-on': taskProgress(t) >= t.qty }">{{ taskProgress(t) >= t.qty ? '完成' : `+${t.reward.points} 点` }}</span>
@@ -78,7 +78,7 @@ function taskProgress(task) {
     <div class="card" v-if="player.guild.id">
       <h3>公会商店（{{ GUILD_SHOP.length }} 件）· 公会点数兑换</h3>
       <div class="guild-shop-grid">
-        <div v-for="(s, si) in GUILD_SHOP" :key="s.itemId" v-tilt class="season-tier-card guild-shop-card" :style="{ animationDelay: (si * 0.06) + 's' }" :class="player.guild.points >= s.price ? 'buyable' : 'poor'">
+        <div v-for="(s, si) in GUILD_SHOP" :key="s.itemId" class="season-tier-card guild-shop-card" :style="{ animationDelay: (si * 0.06) + 's' }" :class="player.guild.points >= s.price ? 'buyable' : 'poor'">
           <div class="season-tier-head">
             <div class="item-label">
               <img v-if="itemImage(s.itemId)" :src="itemImage(s.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
@@ -117,6 +117,7 @@ function taskProgress(task) {
           <!-- 右：公会详情 -->
           <div class="guild-list-right" v-if="detail">
             <h3>{{ detail.name }} <span class="badge" style="background: var(--sidebar-bg); color: var(--text)">{{ detail.type }}</span></h3>
+            <div class="table-scroll">
             <table class="target-table item-detail-table">
               <tbody>
                 <tr><td class="dim" style="width: 90px">公会描述</td><td>{{ detail.desc }}</td></tr>
@@ -126,6 +127,7 @@ function taskProgress(task) {
                 <tr><td class="dim">当前状态</td><td>{{ player.guild.id === detail.id ? '已加入' : player.guild.id ? '换入（100 金币，点数减半）' : '未加入' }}</td></tr>
               </tbody>
             </table>
+            </div>
             <div style="margin-top: 10px; text-align: right">
               <button class="btn btn-sm btn-primary" :disabled="player.guild.id === detail.id" @click="join(detail.id)">
                 {{ player.guild.id === detail.id ? '已加入' : player.guild.id ? '换入' : '加入' }}
@@ -154,10 +156,10 @@ function taskProgress(task) {
   gap: 10px;
   align-items: stretch;
 }
-/* 卡片 3D 倾斜 + 毛玻璃 + 流光动效（配合 v-tilt 的 --tilt-x/--tilt-y） */
+/* 卡片毛玻璃 + 流光动效（3D 倾斜已于 2026-09-21 按用户要求移除） */
 .season-task-card,
 .season-tier-card {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(var(--glass-rgb), 0.94);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(var(--tint-rgb), 0.32);
   border-radius: 12px;
@@ -166,7 +168,6 @@ function taskProgress(task) {
   flex-direction: column;
   gap: 6px;
   box-shadow: 0 6px 18px rgba(var(--tint-rgb), 0.16);
-  transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   will-change: transform;
   min-height: 104px;
@@ -213,7 +214,7 @@ function taskProgress(task) {
 /* 进度条流光 */
 .season-task-bar :deep(.progress-bar-fill) {
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(var(--glass-rgb), 0.4) 50%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--primary), var(--primary-strong));
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -223,13 +224,13 @@ function taskProgress(task) {
 @keyframes seasonBarFlow { from { background-position: 200% 0, 0 0; } to { background-position: 0 0, 0 0; } }
 .season-task-card.done :deep(.progress-bar-fill) {
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(var(--glass-rgb), 0.4) 50%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--good), var(--good-strong));
   animation: seasonBarFlow 4s linear infinite, seasonDoneGlow 0.6s ease;
 }
 @keyframes seasonDoneGlow {
-  0% { box-shadow: 0 0 0 0 rgba(92, 184, 92, 0.7); }
-  100% { box-shadow: 0 0 0 8px rgba(92, 184, 92, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--good-rgb), 0.7); }
+  100% { box-shadow: 0 0 0 8px rgba(var(--good-rgb), 0); }
 }
 .season-task-card.done { border-color: var(--good-soft); }
 /* ── 商店卡 ── */

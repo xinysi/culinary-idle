@@ -4,11 +4,17 @@
 // 注意：扫描函数以「真函数」形式传给 page.evaluate —— 不要写成模板字符串！
 //       模板字面量会吃掉正则里的反斜杠（`\(` → `(`），曾导致 whiteGlow 检查恒不命中、守卫形同虚设。
 import fs from 'node:fs'
+import { SKILL_DEFS } from './src/game/data/skills.js'
 import { test, expect } from '@playwright/test'
 
 import { SKINS, skinVars } from './src/game/data/skins.js'
 
 /** 把 token 值转成 [r,g,b]：'217, 90, 56' 或 '#d95a38' */
+// 全部 38 个技能页（`skill` 视图只渲染「当时激活的那一个技能」⇒ 不切 activeSkill 就一次都扫不到）。
+// ⚠️ 此前这里硬编码的只有**副业 16 支**，于是对决的 6 个 combat 技能页（CombatView）从没被扫过 ——
+//    玩家报「对决，敌人的掉落看不到了」（dropModal 漏声明）就是从这个盲区溜出去的。现改为从 SKILL_DEFS 派生。
+const SKILL_IDS = Object.keys(SKILL_DEFS)
+
 const toTriplet = (v) => {
   const t = String(v).trim()
   if (!t) return null
@@ -31,6 +37,8 @@ const skinAllowedRgb = (id) => {
 const SKIN_ALLOWED = new Map(SKINS.map((s) => [s.id, skinAllowedRgb(s.id)]))
 
 const VIEWS = [
+  // 2026-09-19：厨藏/装备升级为独立页面后加入逐页扫描
+  'inventory', 'equipment',
   'skill', 'shop', 'deluxe', 'alchemy', 'expedition', 'regions', 'ranch', 'cellar', 'automation',
   'kitchenNotes', 'flavorBook', 'schools', 'michelin', 'staff', 'branches', 'exchange', 'regulars',
   'trials', 'gearContest', 'minigames', 'festival', 'legacy', 'patrons', 'spiritStories', 'restaurant',
@@ -61,9 +69,18 @@ const VIEWS = [
   // 2026-09-14 挂机产线四套
   'caravan', 'mycoField', 'greenhouse',
 ]
-const MODALS = ['bag', 'bank', 'equip', 'settings', 'save', 'signin']
+// 2026-09-19：厨藏/装备由弹窗升级为独立页面 ⇒ 移出弹窗清单（改由逐页扫描覆盖）
+const MODALS = ['settings', 'save', 'signin', 'guide'] // guide=技能页指南弹窗（2026-09-19 新增）
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等
 const EXEMPT = ['.gacha-btn-top', '.gacha-btn-price', '.gacha-btn-tag', 'b.mono', '.hp-bar', '.mg-']
+
+/** 底部胶囊（五块）逐块点开；扫描根是 `.dock-panel`。
+ *  ⚠️ 面板必须**真展开**才匹配得到；否则那五块的深色/皮肤问题会被静默漏掉。 */
+const DOCK_SECS = ['idle', 'spirit', 'aoji', 'status', 'log']
+async function openStatusDrawer(page, sec = 'idle') {
+  await page.locator(`.dock-pill[data-sec="${sec}"]`).click()
+  await page.waitForTimeout(260)
+}
 
 /** 页面内扫描（真函数） */
 function scanPage({ exempt, theme, skin, allowed = [] }) {
@@ -95,7 +112,7 @@ function scanPage({ exempt, theme, skin, allowed = [] }) {
   const bad = []
   const seen = new Set()
   // 2026-09-11：把三块面板/两条栏**本身**也纳入扫描（原来只扫后代 '*'，导致'深色下某面板底色变白'这类问题扫不到）
-  const roots = '.app-main, .app-main *, .app-status, .app-status *, .app-sidebar, .app-sidebar *, .top-nav, .top-nav *, .bottom-nav, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
+  const roots = '.app-main, .app-main *, .dock-panel, .dock-panel *, .app-sidebar, .app-sidebar *, .top-nav, .top-nav *, .bottom-nav, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
   let scanned = 0
   for (const el of document.querySelectorAll(roots)) {
     const cs = getComputedStyle(el)
@@ -197,7 +214,7 @@ function scanOrange({ skin, exempt, allowed = [] }) {
   const BRAND = [[217, 90, 56], [224, 112, 74], [232, 112, 63], [201, 84, 46], [184, 68, 42], [255, 138, 94], [255, 185, 142], [255, 176, 138], [255, 201, 173]]
   const near = (c, [r0, g0, b0]) => Math.abs(c.r - r0) <= 12 && Math.abs(c.g - g0) <= 12 && Math.abs(c.b - b0) <= 12
   const hit = (c) => c && c.a >= 0.12 && BRAND.some((b) => near(c, b)) && !allowed.some((b) => near(c, b))
-  const roots = '.app-main, .app-main *, .app-status, .app-status *, .app-sidebar, .app-sidebar *, .top-nav, .top-nav *, .bottom-nav, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
+  const roots = '.app-main, .app-main *, .dock-panel, .dock-panel *, .app-sidebar, .app-sidebar *, .top-nav, .top-nav *, .bottom-nav, .bottom-nav *, .modal-backdrop *, .bg *, .mg-shell *'
   const bad = []
   const seen = new Set()
   let scanned = 0
@@ -223,70 +240,80 @@ function scanOrange({ skin, exempt, allowed = [] }) {
   return { bad, scanned }
 }
 
+/** 进游戏 + 种入代表性数据（皮肤切片与「全部页面/弹窗」两段都要 → 抽成一处，免得两份数据打架） */
+async function enterGameDark(page) {
+  await page.goto('http://localhost:5173')
+  await page.waitForTimeout(700)
+  await page.locator('.splash-start-btn').click()
+  await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+  await expect(page.locator('.app-layout')).toBeVisible()
+  await page.waitForTimeout(1000)
+  // 种入代表性数据（2026-09-10）：空档上大量 UI 不渲染（装备总属性/词条/宝石/图鉴已收集/背包物品…）
+  await page.evaluate(() => {
+    const pin = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+    const p = pin._s.get('player')
+    const gear = { weapon: 'copperKnife', helmet: 'copperHat', body: 'copperApron', legs: 'smith_铜_legs', boots: 'smith_铜_boots', offhand: 'copperPot', amulet: 'copperBottle', ring: 'smith_铜_ring' }
+    for (const [slot, id] of Object.entries(gear)) { p.inventory[id] = 1; p.equipment[slot] = id }
+    p.gearMods.copperKnife = { mods: [{ stat: 'goldPct', label: '金币', value: 0.63 }, { stat: 'hpBonus', label: '生命', value: 24.82 }], at: Date.now() } // 词条按装备 id 存
+    p.gemSockets.weapon = { itemId: 'copperKnife', gems: ['goldOre'] }
+    p.inventory.apple = 50
+    p.inventory.wheat = 30
+    p.inventory.mysterySpice = 3
+    p.inventory.energyBiscuit = 2
+    p.inventory.trap = 20
+    p.upgrades.copperKnife = 2
+    p.gold = 250000
+    p.tastePoints = 500
+    p.guild = { id: 'umami', points: 120, day: null, taskProgress: {} }
+    p.collected = { ...p.collected, apple: 1, wheat: 1, copperKnife: 1 }
+    p.ranch.pens = [{ animalId: 'chicken', lastAt: Date.now() }, null]
+    p.branches = { east: { lastAt: Date.now(), manager: true } }
+    p.staff = { chef: { level: 2, lastPayAt: Date.now(), unpaid: false } }
+    p.regions = { plain: true }
+    p.regionPosting = { fishery: 'plain' }
+    p.schools = { s_main: { level: 2, research: null } }
+    p.patron = { active: 'p_stove', levels: { p_stove: 1 }, lastSwitchAt: Date.now() }
+    p.gearContest = { week: null, score: 0, rank: 'B', best: 9000, runs: 3 }
+    p.michelin = { score: 420, stars: 2, best: 2, lastReviewDay: null }
+    p.flavors = { fp_tomato_basil: true, fp_milk_egg: true }
+    p.legacy = { carry: { knife: 5 }, apprentice: { level: 12, lastDay: null } }
+    p.spirits = { active: ['appleSpirit_1'], owned: { appleSpirit_1: 1 } }
+    p.spiritBonds = { appleSpirit_1: 7 * 86400000 }
+    p.realm = { active: false, floor: 3, buffs: ['atk10'], best: 12, pending: null }
+    p.stats = { ...p.stats, criticServed: 4, gemsSocketed: 6, challengesDone: 2, plansDone: 1, cellarRounds: 5, cellarGold: 12000, regularServes: 9, spiritStoryClaims: 2, autoSold: 30, autoSoldGold: 900, ranchCycles: 12, branchGold: 5000, exchangeTrades: 14, trialClears: 3, ordersServed: 25, schoolLevels: 2, gearContestRuns: 3, staffWages: 4000, flavorsFound: 2 }
+    p.trials = { t_speed: { clears: 1, best: 80, streak: 0 } }
+    p.daily = { day: null, streak: 3, tasks: [], claimedAll: false }
+    p.settings.crispMode = false
+  })
+  await page.waitForTimeout(300)
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+}
+
+const SKIN_IDS = (() => {
+  try { return fs.readFileSync(new URL('./src/game/data/skins.js', import.meta.url), 'utf8').match(/id: '([a-z]+)', name:/g).map((x) => x.match(/'([a-z]+)'/)[1]) } catch { return [] }
+})()
+const SKIN_VIEWS = ['skill', 'shop', 'stats', 'restaurant', 'guide'] // 每套皮肤 × 每个主题扫这 5 页，控制耗时
+// ⚡ 并行切片（2026-09-21）：皮肤体检原先是**一个 test 串行跑 15 套 × 浅深两轮 × (5 页 + 4 面板)**（实测 2.9 分钟）。
+//    现在按皮肤轮转切成 `E2E_SLICES`（默认 3）片并行跑；「全部页面/弹窗/侧栏页签/38 技能页」那一段独立成第二个 test，
+//    与皮肤切片并行。`E2E_SLICES=1` 退回单进程。
+const DARK_SLICES = Math.max(1, Number(process.env.E2E_SLICES || 3))
+
 test.describe('深色模式配色体检', () => {
-  test.describe.configure({ timeout: 300000 }) // 皮肤扩到 15 套后扫描量上涨
+  test.describe.configure({ timeout: 420000, mode: 'parallel' })
 
-  test('全部页面与弹窗在深色下无对比度/亮底/白边问题', async ({ page }) => {
-    const errors = []
-    page.on('pageerror', (e) => errors.push(String(e)))
-    await page.goto('http://localhost:5173')
-    await page.waitForTimeout(700)
-    await page.locator('.splash-start-btn').click()
-    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
-    await expect(page.locator('.app-layout')).toBeVisible()
-    await page.waitForTimeout(1000)
-    // 种入代表性数据（2026-09-10）：空档上大量 UI 不渲染（装备总属性/词条/宝石/图鉴已收集/背包物品…）
-    await page.evaluate(() => {
-      const pin = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
-      const p = pin._s.get('player')
-      const gear = { weapon: 'copperKnife', helmet: 'copperHat', body: 'copperApron', legs: 'smith_铜_legs', boots: 'smith_铜_boots', offhand: 'copperPot', amulet: 'copperBottle', ring: 'smith_铜_ring' }
-      for (const [slot, id] of Object.entries(gear)) { p.inventory[id] = 1; p.equipment[slot] = id }
-      p.gearMods.weapon = { itemId: 'copperKnife', mods: [{ stat: 'goldPct', label: '金币', value: 0.63 }, { stat: 'hpBonus', label: '生命', value: 24.82 }] }
-      p.gemSockets.weapon = { itemId: 'copperKnife', gems: ['goldOre'] }
-      p.inventory.apple = 50
-      p.inventory.wheat = 30
-      p.inventory.mysterySpice = 3
-      p.inventory.energyBiscuit = 2
-      p.inventory.trap = 20
-      p.upgrades.copperKnife = 2
-      p.gold = 250000
-      p.tastePoints = 500
-      p.guild = { id: 'umami', points: 120, day: null, taskProgress: {} }
-      p.collected = { ...p.collected, apple: 1, wheat: 1, copperKnife: 1 }
-      p.ranch.pens = [{ animalId: 'chicken', lastAt: Date.now() }, null]
-      p.branches = { east: { lastAt: Date.now(), manager: true } }
-      p.staff = { chef: { level: 2, lastPayAt: Date.now(), unpaid: false } }
-      p.regions = { plain: true }
-      p.regionPosting = { fishery: 'plain' }
-      p.schools = { s_main: { level: 2, research: null } }
-      p.patron = { active: 'p_stove', levels: { p_stove: 1 }, lastSwitchAt: Date.now() }
-      p.gearContest = { week: null, score: 0, rank: 'B', best: 9000, runs: 3 }
-      p.michelin = { score: 420, stars: 2, best: 2, lastReviewDay: null }
-      p.flavors = { fp_tomato_basil: true, fp_milk_egg: true }
-      p.legacy = { carry: { knife: 5 }, apprentice: { level: 12, lastDay: null } }
-      p.spirits = { active: ['appleSpirit_1'], owned: { appleSpirit_1: 1 } }
-      p.spiritBonds = { appleSpirit_1: 7 * 86400000 }
-      p.realm = { active: false, floor: 3, buffs: ['atk10'], best: 12, pending: null }
-      p.stats = { ...p.stats, criticServed: 4, gemsSocketed: 6, challengesDone: 2, plansDone: 1, cellarRounds: 5, cellarGold: 12000, regularServes: 9, spiritStoryClaims: 2, autoSold: 30, autoSoldGold: 900, ranchCycles: 12, branchGold: 5000, exchangeTrades: 14, trialClears: 3, ordersServed: 25, schoolLevels: 2, gearContestRuns: 3, staffWages: 4000, flavorsFound: 2 }
-      p.trials = { t_speed: { clears: 1, best: 80, streak: 0 } }
-      p.daily = { day: null, streak: 3, tasks: [], claimedAll: false }
-      p.settings.crispMode = false
-    })
-    await page.waitForTimeout(300)
-    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
-
-    const bad = []
-    let scannedTotal = 0
-    // ── 皮肤体检（v2.1）：逐套皮肤再扫一轮代表性页面 ──────────────────────────
-    // 皮肤只改主色系（--primary/--primary-strong/--primary-deep），但主色会用在
-    // 按钮/选中态/进度条/描边上——**换肤前必须重新量对比度**，否则很容易出现
-    // 「深色下主色文字压主色底」这类问题（同侧栏选中行那条教训）。
-    const SKIN_IDS = (() => {
-      try { return fs.readFileSync(new URL('./src/game/data/skins.js', import.meta.url), 'utf8').match(/id: '([a-z]+)', name:/g).map((x) => x.match(/'([a-z]+)'/)[1]) } catch { return [] }
-    })()
-    const SKIN_VIEWS = ['skill', 'shop', 'stats', 'restaurant', 'guide'] // 15 套 × 2 主题 × 5 页，控制耗时
-    for (const skinTheme of ['light', 'dark']) {
-      for (const skin of SKIN_IDS) {
+  for (let i = 0; i < DARK_SLICES; i++) {
+    const mine = SKIN_IDS.filter((_, k) => k % DARK_SLICES === i)
+    test(`皮肤配色体检（切片 ${i + 1}/${DARK_SLICES}，${mine.length} 套 × 浅深）：无对比度/亮底/白边/残留品牌橙`, async ({ page }) => {
+      const errors = []
+      page.on('pageerror', (e) => errors.push(String(e)))
+      await enterGameDark(page)
+      const bad = []
+      let scannedTotal = 0      // ── 皮肤体检（v2.1）：逐套皮肤再扫一轮代表性页面 ──────────────────────────
+      // 皮肤只改主色系（--primary/--primary-strong/--primary-deep），但主色会用在
+      // 按钮/选中态/进度条/描边上——**换肤前必须重新量对比度**，否则很容易出现
+      // 「深色下主色文字压主色底」这类问题（同侧栏选中行那条教训）。
+      for (const skinTheme of ['light', 'dark']) {
+        for (const skin of mine) {
         await page.evaluate(([sid, th]) => {
           const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
           pinia._s.get('player').settings.skin = sid
@@ -296,6 +323,11 @@ test.describe('深色模式配色体检', () => {
         }, [skin, skinTheme])
         // 700ms：等 CSS 过渡（0.18~0.25s）走完再扫，否则读到的是「上一套皮肤→本套」的中间色
         await page.waitForTimeout(700)
+        // 2026-09-19：状态面板改为**抽屉**（默认收起）⇒ 不打开它，`scanPage` 扫描根里的
+        // `.dock-panel, .dock-panel *` 一个都匹配不到，那六块（挂机中/快捷状态/事件日志…）的
+        // 深色对比度与「残留品牌橙」就**不再被检查**（保护面悄悄缩小，而且不会报错）。
+        // 所以每套皮肤都先呼出抽屉再扫；抽屉是 fixed 浮层，不挡 setView/evaluate 切页。
+        await openStatusDrawer(page)
         for (const v of SKIN_VIEWS) {
           await page.evaluate((vv) => {
             document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').setView(vv)
@@ -307,8 +339,33 @@ test.describe('深色模式配色体检', () => {
           scannedTotal += r.scanned
           for (const b of r.bad) bad.push({ page: `skin-${skinTheme}:${skin}/${v}`, ...b })
         }
+        // 其余四块面板（食灵 / 奥义 / 快捷状态 / 事件日志）：它们只在各自胶囊展开时存在，
+        // 页面循环里扫不到 ⇒ 逐块点开各补一轮（2026-09-20 五胶囊化后新增）。
+        for (const sec of DOCK_SECS.slice(1)) {
+          await openStatusDrawer(page, sec)
+          await page.waitForTimeout(200)
+          const r2 = skinTheme === 'light'
+            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          scannedTotal += r2.scanned
+          for (const b of r2.bad) bad.push({ page: `skin-${skinTheme}:${skin}/dock-${sec}`, ...b })
+        }
       }
-    }
+      }
+      console.log(`  皮肤切片 ${i + 1}/${DARK_SLICES}：${mine.length} 套 · 扫描元素 ${scannedTotal}`)
+      // 自检：扫描量太小说明这一片没跑起来（守卫本身失效）
+      expect(scannedTotal, '扫描元素过少，这一片体检可能没跑起来').toBeGreaterThan(2000)
+      expect(bad, `深色模式存在 ${bad.length} 处问题`).toEqual([])
+      expect(errors.length, `控制台错误 ${errors.length} 条`).toBe(0)
+    })
+  }
+
+  test('全部页面、弹窗、侧栏页签与全部技能页在深色下无对比度/亮底/白边问题', async ({ page }) => {
+    const errors = []
+    page.on('pageerror', (e) => errors.push(String(e)))
+    await enterGameDark(page)
+    const bad = []
+    let scannedTotal = 0
     // 复位主题到深色（后续逐页扫描按深色进行）
     await page.evaluate(() => {
       document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').settings.theme = 'dark'
@@ -334,10 +391,8 @@ test.describe('深色模式配色体检', () => {
     for (const m of MODALS) {
       await page.evaluate((mm) => {
         const ui = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')
-        if (mm === 'bag') ui.toggleBagModal(true, 'bag')
-        else if (mm === 'bank') ui.toggleBagModal(true, 'bank')
-        else if (mm === 'equip') ui.toggleEquipModal(true)
-        else if (mm === 'settings') ui.toggleSettingsPanel(true)
+        if (mm === 'settings') ui.toggleSettingsPanel(true)
+        else if (mm === 'guide') ui.toggleSkillGuide('foraging')
         else if (mm === 'save') ui.toggleSavePanel(true)
         else if (mm === 'signin') ui.toggleSignIn(true)
       }, m)
@@ -366,8 +421,6 @@ test.describe('深色模式配色体检', () => {
       // 先把上一段逐弹窗扫描留下的浮层全部显式关掉（Escape 不保证关得掉存档/签到面板），
       // 否则 backdrop 会盖住左栏、下面点页签会一直等不到可点状态。
       const ui = pinia._s.get('ui')
-      ui.toggleBagModal(false)
-      ui.toggleEquipModal(false)
       ui.toggleSettingsPanel(false)
       ui.toggleSavePanel(false)
       ui.toggleSignIn(false)
@@ -382,9 +435,9 @@ test.describe('深色模式配色体检', () => {
       scannedTotal += r.scanned
       for (const b of r.bad) bad.push({ page: `sidebar-tab#${ti}`, ...b })
     }
-    // 副业技能页（v2.10.0）：`skill` 视图只会渲染「当时激活的那一个技能」，副业五支共用一个
-    // ProductionView（含新的「作品面板」.sw-*）——不切 activeSkill 就一次都扫不到。
-    for (const sid of ['woodworking', 'pottery', 'weaving', 'embroidery', 'candles', 'fletching', 'netmaking', 'incense', 'festivalGoods', 'jadecraft', 'goodsTag', 'miningGear', 'papermaking', 'instrument', 'soapmaking', 'exchequer']) {
+    // 全部技能页：`skill` 视图只会渲染「当时激活的那一个技能」——不切 activeSkill 就一次都扫不到。
+    // （v2.10.0 起只列了副业 16 支；2026-09-18 起改为全部 38 个，含对决的 CombatView。）
+    for (const sid of SKILL_IDS) {
       await page.evaluate((s) => {
         const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
         pinia._s.get('ui').setView('skill')
@@ -393,9 +446,9 @@ test.describe('深色模式配色体检', () => {
       await page.waitForTimeout(280)
       const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme: 'dark', skin: 'classic' })
       scannedTotal += r.scanned
-      for (const b of r.bad) bad.push({ page: 'sideline:' + sid, ...b })
+      for (const b of r.bad) bad.push({ page: 'skill:' + sid, ...b })
     }
-    console.log(`扫描元素合计 ${scannedTotal}`)
+    console.log(`  页面/弹窗/页签/技能页 · 扫描元素合计 ${scannedTotal}`)
     if (bad.length) console.log('深色问题明细：\n' + bad.slice(0, 25).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''}`).join('\n'))
     // 自检：扫描量太小说明页面/数据没渲染出来（守卫本身失效）
     expect(scannedTotal, '扫描元素过少，体检可能没跑起来').toBeGreaterThan(2000)

@@ -554,7 +554,7 @@ reset()
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="fm-info-row">
             <b class="fm-info-name">{{ m.label }}</b>
-            <span class="fm-info-desc">{{ m.desc }}</span>
+            <span class="fm-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

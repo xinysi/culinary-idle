@@ -1,9 +1,53 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+/** 本次构建是否把开发者面板打进去：默认只认 dev（`vite build` 下 import.meta.env.DEV 为 false） */
+const devPanelEnabled = process.env.VITE_DEV_PANEL === '1'
+
+/**
+ * 开发者面板的**构建期隔离**（2026-09-18 立）
+ *
+ * 背景：`App.vue` 里写的是 `DEV_PANEL_ENABLED ? defineAsyncComponent(() => import('DevEntry.vue')) : null`。
+ * 生产构建下这个条件会被静态折叠成 `false`，**入口 chunk 里就不会引用它**（实测主包确实没有 DevEntry 字样）——
+ * 但打包器**仍然会把那个动态 import 的异步 chunk 生成出来**（一个没人引用的孤立 chunk），
+ * 里面有面板代码与**口令哈希**。文件照样发布出去 ⇒ 玩家可以按 URL 把 JS 拉下来读。
+ *
+ * 所以这里在产物写完后把它清掉，且**删之前先断言入口没引用它**：
+ * 一旦入口引用了（说明隔离失效、开关被打开了），直接让构建失败，而不是悄悄删掉一个还要用的文件。
+ */
+function stripDevPanelChunks() {
+  let outDir = 'dist'
+  return {
+    name: 'strip-dev-panel-chunks',
+    apply: 'build',
+    configResolved(c) {
+      outDir = c.build.outDir
+    },
+    closeBundle() {
+      if (devPanelEnabled) return // 明确要带面板的构建：不动
+      const assets = path.resolve(outDir, 'assets')
+      if (!fs.existsSync(assets)) return
+      const orphans = fs.readdirSync(assets).filter((f) => /^(DevEntry|DevPanel)-.*\.js$/.test(f))
+      if (!orphans.length) return
+      const entries = fs.readdirSync(assets).filter((f) => f.endsWith('.js') && !orphans.includes(f))
+      const entryText = entries.map((f) => fs.readFileSync(path.join(assets, f), 'utf8')).join('\n')
+      for (const f of orphans) {
+        const base = f.replace(/\.js$/, '')
+        if (entryText.includes(base)) {
+          throw new Error(`[dev-panel] 入口 chunk 引用了 ${f}，但它不该在本次构建里出现（VITE_DEV_PANEL=${process.env.VITE_DEV_PANEL ?? '未设置'}）——请检查 App.vue 的门控条件`)
+        }
+        fs.rmSync(path.join(assets, f))
+        console.log(`[dev-panel] 已移除开发者面板的孤立 chunk：assets/${f}`)
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), stripDevPanelChunks()],
   // 相对 base：构建产物用 ./assets/… 引用——
   // ① GitHub Pages 子路径（/culinary-idle/）直接可用；
   // ② Electron file:// 加载不再依赖 fix_paths 改写（保留兼容）。

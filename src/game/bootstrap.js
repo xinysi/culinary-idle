@@ -18,6 +18,7 @@ import { applyValueBalance } from './data/valueBalance.js'
 import { applySpoilBalance } from './data/spoilBalance.js'
 import { applyAojiBalance } from './data/aojis.js'
 import { ENCOUNTERS } from './data/encounters.js'
+import { otherChance } from './data/difficulty.js' // 全局难度系数（奇遇触发率）
 import { offlineMailBody } from './data/mail.js'
 import { FEST_MILESTONES } from './data/cookingFest.js'
 
@@ -94,6 +95,20 @@ export function settleOffline(player, ui, elapsedMs) {
     })
   }
   return reports.length || restGold > 0 ? { reports, restGold, elapsedMs } : null
+}
+
+/**
+ * 离线报告的「教学首秀」（2026-09-18，留存改进 ③）：
+ * 只有在**有产出**时才弹报告，于是新玩家第一次回来（通常只有几分钟、且可能还没设挂机目标）
+ * 什么都看不到 —— 拿不到「放着也有收获」这个最关键的认知。
+ * 这里补一次：离开 ≥1 分钟、没产出、且从没弹过教学报告时，照样弹（内容换成「怎么让离线有产出」）。
+ * ⚠️ 只弹一次（`stats.offlineTaught`），否则每次刷新页面都弹一个空报告。
+ */
+export function teachOfflineOnce(player, elapsedMs) {
+  if (player.stats?.offlineTaught) return null
+  if (elapsedMs < 60_000) return null
+  player.stats.offlineTaught = true
+  return { reports: [], restGold: 0, elapsedMs, teaching: true }
 }
 
 // ── 事件监听注册（一次性，供 startGame 与启动界面共用）──────────
@@ -180,8 +195,8 @@ export function registerGameEvents() {
       player.bumpSeason('gather', itemId)
       player.bumpGuild('gather', itemId, skillId)
       player.bumpDaily('gather', itemId, skillId)
-      // 随机奇遇：在线动作 0.2% 概率（10 秒防抖，一次只弹一个）
-      if (Math.random() < 0.002 && Date.now() - lastEncounterAt > 10_000) {
+      // 随机奇遇：在线动作 0.2% 概率（10 秒防抖，一次只弹一个）；概率走全局难度系数（÷2）
+      if (Math.random() < otherChance(0.002) && Date.now() - lastEncounterAt > 10_000) {
         lastEncounterAt = Date.now()
         const enc = ENCOUNTERS[Math.floor(Math.random() * ENCOUNTERS.length)]
         if (ui.openEncounter(enc)) {
@@ -560,7 +575,8 @@ export function startGame({ slot, newGame = false } = {}) {
   // 3. 离线结算
   const now = Date.now()
   const elapsed = now - (player.lastOnlineAt || now)
-  const report = settleOffline(player, ui, elapsed)
+  // 没产出时也给一次「教学首秀」报告（只弹一次，见 teachOfflineOnce）
+  const report = settleOffline(player, ui, elapsed) ?? teachOfflineOnce(player, elapsed)
   // 结算后立刻把「上次在线时间」推进到 now 并落盘（此处已确定要进这个存档位，可以写）：
   // 否则同一份存档反复读取会反复发放同一段离线收益（关页面前没触发自动存档时尤其明显）
   player.lastOnlineAt = now
@@ -650,7 +666,8 @@ export function loadSlot(slot) {  const player = usePlayerStore()
   if (player.combat.hp > player.maxHp) player.setCombat({ hp: player.maxHp })
   createSkillInstances(player) // 重建技能实例（绑定同一 store）
   const now = Date.now()
-  const report = settleOffline(player, ui, now - (player.lastOnlineAt || now))
+  const elapsedLoad = now - (player.lastOnlineAt || now)
+  const report = settleOffline(player, ui, elapsedLoad) ?? teachOfflineOnce(player, elapsedLoad)
   // 同 startGame：结算后推进并落盘「上次在线时间」，避免重读同一存档重复结算离线收益
   player.lastOnlineAt = now
   saveManager.saveSlot(slot, buildSaveData())

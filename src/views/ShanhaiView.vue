@@ -238,6 +238,10 @@ const ringName = (t) => RING_NAME[t - 1] ?? `第 ${t} 环`
   background: rgba(var(--panel-rgb), 0.9);
   font-size: 12.5px;
 }
+/* 窄屏：工具栏收成一行后只占顶部 ~42px，HUD 下移让开它（原先两边都在 top:8px，390px 下相撞） */
+@media (max-width: 720px) {
+  .sh-hud { top: 54px; max-width: 72%; }
+}
 .sh-hud-title {
   font-weight: 800;
   color: var(--text);

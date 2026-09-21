@@ -24,3 +24,10 @@ lmewexe/release2/
 
 # Python 脚本缓存（scripts/gen/process_item_images.py 会生成）
 __pycache__/
+
+# 模拟器的暂存输出（原始 CSV 已归档到 docs/实验记录/<日期>_模拟_*_csv/）
+/test-data/
+
+# 样式指纹工具的工作目录 / 临时探针截图（可重建）
+.fingerprint/
+.probe-*.png

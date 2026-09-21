@@ -120,7 +120,8 @@ function feed() {
         <span class="dim">做成后给 <b>{{ workAxisLabel }}</b> 永久加成（每件 {{ amountText(rows[0]?.amount ?? 0) }} 起）</span>
       </div>
       <p class="dim sw-note">
-        {{ workNote }} · 已完成 <b>{{ ownedCount }}/{{ rows.length }}</b> 件，
+        <!-- materialNote 里带 <b> 强调标记 ⇒ 这一段单独 v-html（其余是普通插值，别一起塞进去） -->
+        <span v-html="workNote"></span> · 已完成 <b>{{ ownedCount }}/{{ rows.length }}</b> 件，
         作品合计 <b>{{ amountText(workOnlyTotal) }}</b>（满级 {{ amountText(workMaxTotal) }}）。
       </p>
       <div class="sw-grid">

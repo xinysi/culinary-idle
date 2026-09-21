@@ -89,6 +89,7 @@ const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', l
 
       <h3 style="margin-top: 14px">评分构成</h3>
       <div class="card">
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="p in review.parts" :key="p.id">
@@ -104,6 +105,7 @@ const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', l
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <h3 style="margin-top: 14px">星级与收益</h3>

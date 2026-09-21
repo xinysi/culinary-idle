@@ -8,6 +8,7 @@ import { GATHERING_EXT } from '../data/expansion1.js'
 import { GATHERING_EXT2 } from '../data/expansion2.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
+import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率）
 
 export const HUNTING_TARGETS = [
   { itemId: 'rabbitMeat', reqLevel: 1, xpPerAction: 10, intervalSec: 3.0 },
@@ -20,6 +21,11 @@ export const HUNTING_TARGETS = [
   { itemId: 'bearMeat', reqLevel: 65, xpPerAction: 185, intervalSec: 6.5 },
   { itemId: 'mammothMeat', reqLevel: 80, xpPerAction: 260, intervalSec: 7.0 },
   { itemId: 'dragonMeat', reqLevel: 95, xpPerAction: 400, intervalSec: 8.0 },
+  // ── 后期补档（2026-09-19）：把 61-99 段的平均间距 3.2 → ~2.4（对齐参照作 Melvor 的收官密度 2.6）──
+  // intervalSec 取本技能后期实测的恒定值 8.0；xpPerAction = `10 + 5×reqLevel`（与所有后期目标一致）。
+  { itemId: 'cougarMeat', reqLevel: 69, xpPerAction: 355, intervalSec: 8.0 },
+  { itemId: 'rhinoMeat', reqLevel: 84, xpPerAction: 430, intervalSec: 8.0 },
+  { itemId: 'yetiMeat', reqLevel: 97, xpPerAction: 495, intervalSec: 8.0 },
 ]
 
 const PHESANT_EGG_CHANCE = 0.15
@@ -48,7 +54,7 @@ export class HuntingSkill extends GatheringSkill {
 
     // 野鸡额外掉落野鸡蛋
     let extraItem = null
-    if (target.itemId === 'pheasantMeat' && Math.random() < PHESANT_EGG_CHANCE) {
+    if (target.itemId === 'pheasantMeat' && Math.random() < gatherExtraChance(PHESANT_EGG_CHANCE)) {
       this.player.gainItem('pheasantEgg', 1)
       extraItem = 'pheasantEgg'
     }

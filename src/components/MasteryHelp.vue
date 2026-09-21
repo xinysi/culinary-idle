@@ -13,7 +13,7 @@
 // 3. `showInterval`：制作类配方没有「采集间隔」，该类页面传 false 少一列，避免误导。
 // 4. 文案里的「经验倍率与设置倍率取较大」是既有规则（见 mastery 在 Skill.addXp 的取用），别丢。
 import { ref, computed } from 'vue'
-import { MASTERY_TIERS, MASTERY_LEVEL_CAP, masteryIntervalText } from '../game/core/mastery.js'
+import { MASTERY_TIERS, MASTERY_LEVEL_CAP, masteryIntervalText, MASTERY_POOL_TIERS, MASTERY_POOL_PER_CARD, MASTERY_POOL_GAIN_RATE } from '../game/core/mastery.js'
 
 const props = defineProps({
   label: { type: String, default: '📖 精通档位说明' },
@@ -35,6 +35,9 @@ const tiers = computed(() =>
   }))
 )
 const isCraft = computed(() => props.mode === 'craft')
+// 精通池的文案也从函数派生（档位百分比、最高档经验加成）——一个数字都不手写
+const poolPcts = computed(() => MASTERY_POOL_TIERS.map((t) => `${Math.round(t.pct * 100)}%`).join(' / '))
+const poolXpCap = computed(() => MASTERY_POOL_TIERS.at(-1).xpPct)
 </script>
 
 <template>
@@ -86,6 +89,17 @@ const isCraft = computed(() => props.mode === 'craft')
         <p class="dim" style="margin-top: 5px">
           经验倍率与「设置经验倍率」<b>不叠加</b>（取较大）：当精通倍数 &gt; 设置倍率时用精通倍数（精通为独立成长线）；
           当设置倍率 &gt; 精通倍数（或无精通）时用设置倍率（作用于非精通部分）。
+        </p>
+        <h4 style="margin: 12px 0 4px">🏊 精通池（整个技能共享）</h4>
+        <p class="dim">
+          每次动作的精通次数有 <b>{{ Math.round(MASTERY_POOL_GAIN_RATE * 100) }}%</b> 也记进该技能的<b>池</b>；
+          池的上限 = 该技能卡片数 × {{ MASTERY_POOL_PER_CARD }}。池在
+          <b>{{ poolPcts }}</b> 触发里程碑，给<b>整个技能</b>加成：双倍产出、制作成功率，
+          最高档再加 <b>+{{ poolXpCap }}% 经验</b>。
+        </p>
+        <p class="dim" style="margin-top: 5px">
+          ⚠️ 里程碑<b>只在池不低于该阈值时生效</b>——池点数可以 1:1 补给任意卡片，但花掉就会掉档、加成随之消失。
+          所以「攒着吃加成」还是「花掉补一张卡」是一个取舍，这也是它和「点亮即永久」类系统的最大不同。
         </p>
       </div>
     </div>

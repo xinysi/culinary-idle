@@ -94,7 +94,9 @@ const overviewCount = computed(() => GUIDE_OVERVIEW.reduce((a, c) => a + c.items
       <div class="guide-block">
         <h4>📋 行动清单</h4>
         <ol class="guide-list guide-actions">
-          <li v-for="(a, i) in selected.actions" :key="i">{{ a }}</li>
+          <!-- actions / tips 里带 <b> 强调标记（GUIDE_STAGES 的数据是富文本）⇒ 必须 v-html，
+               用 {{ }} 会把标记当纯文本显示出来（2026-09-21 修，与上面的 ov-desc 同理） -->
+          <li v-for="(a, i) in selected.actions" :key="i" v-html="a"></li>
         </ol>
       </div>
 
@@ -108,7 +110,7 @@ const overviewCount = computed(() => GUIDE_OVERVIEW.reduce((a, c) => a + c.items
       <div class="guide-block">
         <h4>💡 提示</h4>
         <ul class="guide-list guide-tips">
-          <li v-for="(t, i) in selected.tips" :key="i">{{ t }}</li>
+          <li v-for="(t, i) in selected.tips" :key="i" v-html="t"></li>
         </ul>
       </div>
     </div>

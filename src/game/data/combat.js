@@ -1,6 +1,7 @@
 // 料理对决数据 — 需求文档 §3.3 / §4
 // 对决三角（§3.3）：刀工 克 摆盘 克 调味 克 刀工（+15% 伤害）
 import { EQUIP_POOL, MAT_POOL, ITEM_LEVEL, EQUIP_SLOT, LEGENDARY, LEGENDARY_LEVEL } from './combatLoot.js'
+import { applyRegionOpponentNames } from './enemyNames.js'
 
 export const STYLE_INFO = {
   knife: { id: 'knife', name: '刀工流', skillId: 'knife', desc: '近战：高伤害、高命中、中等速度，克制摆盘流', ammo: null },
@@ -170,6 +171,10 @@ BOSS_EXT2.forEach((b, i) => {
 // §4.4.2 首领 标记（成就/任务/掉落统计用）
 for (const b of COMBAT_BOSSES) b.isBoss = true
 
+// 首领立绘文件名（2026-09-21）：扩充首领自带 `key`（boss_brothKing.png 这种），
+// 本体 8 位没有 key ⇒ 用**按等级排序后的下标**（boss_b2.png / boss_b5.png…），与 `敌名清单.xlsx` 一致。
+COMBAT_BOSSES.slice().sort((a, b) => a.level - b.level).forEach((b, i) => { b.imgKey = `boss_${b.key ?? 'b' + i}` })
+
 // ── 对决掉落定级平衡 ───────────────────────────────────────────────
 // 目标：每件普通掉落物（装备/材料）的等级应与敌人等级匹配（≤ 敌级+5、≥ 敌级-15），
 // 去掉超纲/低纲/无等级占位掉落；传说/神话装备为专属掉落，保留 itemId 交由档位定级。
@@ -231,6 +236,12 @@ function rebalanceDrops(e, seed) {
   }
   e.drops = out
 }
+// 区域敌人改名（2026-09-20 用户要求「全部改名、像 boss 那样生动、符合所在区域」）：
+// 只改 name，等级/属性/掉落/机制一律不动；生成器产物不重跑（见 enemyNames.js 的说明）。
+// ⚠️ 必须在 `rebalanceDrops` **之前**套用？——不必，掉落按 itemId 分配、与 name 无关；
+//    放在这里只是为了「名字先定下来，后面日志/图鉴来源都用新名字」。
+export const ENEMY_RENAME_LOG = applyRegionOpponentNames(COMBAT_REGIONS)
+
 COMBAT_REGIONS.forEach((r, ri) => r.opponents.forEach((o, oi) => rebalanceDrops(o, ri * 10 + oi)))
 COMBAT_BOSSES.forEach((b, bi) => rebalanceDrops(b, 1000 + bi))
 

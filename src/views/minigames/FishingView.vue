@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { itemImage } from '../../game/data/itemImage.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -158,23 +159,11 @@ const IMGS = FISH.map((f) => {
   return im
 })
 
-// ── 音效 ──
-let soundCtx = null
-function beep(freq, dur, type = 'sine', vol = 0.08) {
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
+function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 鱼群生成 ──
@@ -1422,7 +1411,7 @@ onUnmounted(() => {
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="fh-info-row">
             <b class="fh-info-name">{{ m.label }}</b>
-            <span class="fh-info-desc">{{ m.desc }}</span>
+            <span class="fh-info-desc" v-html="m.desc"></span>
           </div>
           <div class="fh-info-row fh-info-rule">
             鱼类图鉴：{{ FISH.map((f) => f.name + '(' + RARITY[f.r].name + ' ' + f.score + '分)').join('、') }}

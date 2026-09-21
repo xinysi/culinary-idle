@@ -184,7 +184,7 @@ const cells = computed(() => tiles.value)
           <div class="pz-info-row pz-info-rule">通用规则：点击与空格相邻的碎片滑入还原 · 图片与初始乱序每次随机（已取消当日固定）· 限步模式超步即失败、不可继续点击</div>
           <div v-for="(m, key) in MODES" :key="key" class="pz-info-row">
             <b class="pz-info-name">{{ m.label }}</b>
-            <span class="pz-info-desc">{{ m.desc }}</span>
+            <span class="pz-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

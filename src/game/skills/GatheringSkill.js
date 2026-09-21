@@ -5,7 +5,7 @@
 // - 弹药消耗（狩猎 §3.1.3）：ammoItemId 配置后，每次动作消耗对应道具，弹药不足不累积计时
 // - 离线收益：computeOffline（§10.2.2，80% 效率）
 
-import { Skill } from './Skill.js'
+import { Skill, CARD_XP_SCALE } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryIntervalFactor, masteryFixedInterval, masteryXpMultiplier, masteryLevelProgress, masteryYieldBonus } from '../core/mastery.js'
 import { applyGatherXp } from './xpBalance.js'
@@ -111,11 +111,14 @@ export class GatheringSkill extends Skill {
     return fixedSec < sec * masteryIntervalFactor(lv) ? 'fixed' : 'ratio'
   }
 
-  /** 双倍产出几率：按该卡片精通档位（0/5%/15%/25%/50%），无精通时保留基础 1% */
+  /** 双倍产出几率：按该卡片精通档位（0/5%/15%/25%/50%），无精通时保留基础 1%
+   *  + 精通池里程碑的整技能 +doublePP 百分点（2026-09-19）。
+   *  ⚠️ 池加成**只挂在这里**：`performAction`（在线）与 `expectedYield`（离线）都读它 ⇒ 天然同源。 */
   doubleChance(target = this.currentTarget) {
     if (!target) return 0
     const mLevel = this.masteryLevel(target)
-    return Math.max(BASE_DOUBLE_CHANCE, masteryDoubleChance(mLevel))
+    const poolPP = (this.player.masteryPoolBonus?.(this.id)?.doublePP ?? 0) / 100
+    return Math.min(1, Math.max(BASE_DOUBLE_CHANCE, masteryDoubleChance(mLevel)) + poolPP)
   }
 
   /** 精通保底批量（50 级 +1 / 100 级 +2）：写死数量、不靠随机（2026-09-09）
@@ -175,6 +178,41 @@ export class GatheringSkill extends Skill {
     return masteryXpMultiplier(this.masteryLevel(target))
   }
 
+  /**
+   * 该目标的**实际效率**（技能经验/小时）＝ 卡片经验 × 精通经验倍率 × 3600 ÷ 实际间隔。
+   *
+   * 🔴 这是玩家横向比较目标时**唯一需要的数字**，也是「换更高级资源」这条设计意图的可见化：
+   *   卡片上原本只有「基础经验」与「间隔」两列，玩家得自己心算「经验 ÷ 间隔 × 精通倍率」，
+   *   而精通倍率只在 ≥5 级时才显示、且间隔有「固定档取更快者」的分支 —— 心算很容易得出反的结论。
+   *   实测（`scripts/sim/target_choice.mjs`）：同精通下最高级目标是最低卡的 ×8.5~×26.9，
+   *   「跟等级换」比「全程蹲最低级卡片」24h 多拿 ×9.2 经验，是全局最强的成长杠杆。
+   * ⚠️ 乘 `CARD_XP_SCALE` 是为了与技能经验条同口径（`Skill.addCardXp` 也乘它）；
+   *   倍率关系不受影响，但**数字要与玩家在经验条上看到的对得上**，否则又是一个「页面骗人」。
+   * ⚠️ 含增益剂带来的间隔乘区（`intervalMs` 里已乘），所以它会随增益剂波动 —— 这是对的，
+   *   玩家比较目标时本来就在同一个时刻比较。
+   */
+  xpPerHour(target = this.currentTarget) {
+    if (!target) return 0
+    const sec = this.intervalMs(target) / 1000
+    if (!(sec > 0)) return 0
+    return (target.xpPerAction * CARD_XP_SCALE * masteryXpMultiplier(this.masteryLevel(target))) / sec * 3600
+  }
+
+  /** 当前**已解锁**目标里效率最高的那个（未解锁的不参与，避免给玩家「换过去更快」的错误引导） */
+  bestUnlockedTarget() {
+    let best = null
+    let bestRate = -1
+    for (const t of this.targets) {
+      if (this.level < t.reqLevel) continue
+      const r = this.xpPerHour(t)
+      if (r > bestRate) {
+        bestRate = r
+        best = t
+      }
+    }
+    return best
+  }
+
   /** 弹药是否充足 */
   get outOfAmmo() {
     return this.ammoItemId ? (this.player.inventory[this.ammoItemId] ?? 0) < this.ammoPerAction : false
@@ -225,8 +263,11 @@ export class GatheringSkill extends Skill {
   /** 发放产出：物品 + 专精 + 经验 + 事件（子类复用） */
   award(target, qty, flags = {}) {
     if (qty > 0) this.player.gainItem(target.itemId, qty)
+    // 轶事进度不在这里写：addMastery 已经按**正确键** `gather:<技能id>:<物品id>` 记过一笔
+    // （看见 StoryView 的 storyProg / tales 生成器的 unlock 口径）。
+    // 这里原先还有一句 `bumpStory('gather', target.itemId)` → 键成了 `gather:<物品id>`，
+    // 没有任何消费方读得到，只会往存档里灌垃圾键（2026-09-18 删）。
     this.player.addMastery(this.id, target.itemId, 1)
-    this.player.bumpStory('gather', target.itemId)
     const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)))
     EventBus.emit('skill:action', { skillId: this.id, itemId: target.itemId, qty, expGained, ...flags, timestamp: Date.now() })
   }

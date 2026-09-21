@@ -51,6 +51,26 @@
   --amber: #eab04a;
   --amber-strong: #d98a2b;
   --warn-soft: #fbf0da;
+  /* ── 2026-09-18 补：把散在 .vue / 本文件里的硬编码色值收成 token（默认值 == 原字面量，
+        所以「原味」渲染逐值不变；指纹比对兜底）。── */
+  --glass-rgb: 255, 255, 255;         /* 浅色玻璃面：行/卡片的高光底与描边。
+                                         ⚠️ **皮肤会覆盖它**（按主色推导）——这正是修「白色行底不跟皮肤」的地方；
+                                         深色主题与深色皮肤仍保持 255,255,255：深色侧的面底已由 `--panel-soft-rgb`
+                                         的深色规则单独管，而 `inset 0 1px 0 rgba(255,255,255,…)` 这类是**高光**，
+                                         深色下也必须保持浅色（改成深色会把高光抹掉）。 */
+  --shadow-rgb: 0, 0, 0;              /* 阴影/遮罩黑（深色主题也用黑，故不做主题/皮肤覆盖） */
+  --good-rgb: 87, 168, 97;            /* = --good（深色块有独立值）：供 `rgba(var(--good-rgb), α)` 用 */
+  --warn-rgb: 224, 140, 14;           /* = --warn */
+  --bad-rgb: 217, 75, 63;             /* = --bad */
+  --quest: var(--quest);                   /* 主线任务标记蓝（语义色，不随皮肤） */
+  --quest-rgb: 46, 107, 214;
+  --quest-soft: var(--quest-soft);
+  --quest-line: var(--quest-line);
+  --rarity-common: var(--rarity-common);           /* 觅珍抽卡稀有度识别色（语义色，不随皮肤） */
+  --rarity-rare: var(--rarity-rare);
+  --rarity-rare-rgb: 74, 144, 217;
+  --rarity-epic: var(--rarity-epic);
+  --rarity-epic-rgb: 123, 31, 162;
   --panel-rgb: 255, 252, 246;         /* 面板/卡片底色（深色块有独立值） */
   --panel-soft-rgb: 255, 251, 244;    /* 次级表面 */
   --panel-raised-rgb: 255, 252, 246;  /* 抬升/悬停表面 */
@@ -90,7 +110,7 @@
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0);
+  background: rgba(var(--shadow-rgb), 0);
 }
 
 *::-webkit-scrollbar-thumb {
@@ -148,8 +168,10 @@ body {
   /* 2026-09-11：三栏 = 三块**直角**面板，**贴顶贴底贴左右**；壁纸只出现在面板之间的竖缝里 */
   padding: 0;
   gap: 10px;
-  /* 左右栏随视口/缩放等比自适应（2026-09-06：固定 230px 在放大时被内容撑破导致错位） */
-  grid-template-columns: minmax(170px, min(22%, 250px)) minmax(0, 1fr) minmax(170px, min(22%, 250px));
+  /* 2026-09-19：**三栏改两栏** —— 右栏（状态面板）改为顶栏呼出的浮层抽屉（2026-09-20 起又搬到底部胶囊 `.dock-panel`），
+     主内容区因此独占「中间 + 右边」全部横向空间。左栏仍随视口等比自适应
+     （2026-09-06：固定 230px 在放大时被内容撑破导致错位）。 */
+  grid-template-columns: minmax(170px, min(22%, 250px)) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -284,84 +306,8 @@ body {
   50% { opacity: 0.65; }
 }
 
-/* 中间底部状态条（样式复用顶部导航毛玻璃）：左角色状态 | 虚线 | 右装备 */
-.bottom-nav {
-  display: flex;
-  align-items: stretch;
-  gap: 14px;
-  padding: 6px 12px;
-  /* 与顶栏同口径：面板内的下段分区（2026-09-11 重构） */
-  margin: 0;
-  background: none;
-  border: none;
-  border-top: 1px solid rgba(150, 105, 78, 0.16);
-  border-radius: 0;
-  box-shadow: none;
-  flex-shrink: 0;
-  z-index: 20;
-  position: relative;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-}
-.bottom-nav-col {
-  flex: 1;
-  min-width: 0;
-}
 
-/* 底栏压在壁纸上（毛玻璃 0.68），--text-dim 小字实测 4.40:1 → 该处单独加深（2026-09-11，同 .app-status .dim 的处理） */
-.bottom-nav .dim { color: #574439; }
-.bottom-nav-col:first-child {
-  flex: 0 1 auto; /* 放大时可收缩（2026-09-06：与顶部导航同策略） */
-  min-width: 0;
-}
-.bottom-nav-col:last-child {
-  flex: 1 1 auto; /* 右侧装备内容多，占宽 */
-}
-.bottom-nav-title {
-  font-weight: 700;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.bottom-nav-stats {
-  display: flex;
-  gap: 18px;
-  align-items: center;
-  flex-wrap: nowrap; /* 放大时保持单行，溢出交给容器 */
-  overflow: hidden;
-}
-.bottom-nav-stat {
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
-  white-space: nowrap; /* 数值/标签不换行，避免把状态条撑高 */
-}
-.bottom-nav-stat .gold {
-  color: var(--gold);
-  font-weight: 700;
-}
-.bottom-nav-sep {
-  width: 1px;
-  border-left: 1px dashed rgba(var(--ink-rgb), 0.35);
-  align-self: stretch;
-  flex-shrink: 0;
-}
-.bottom-nav-grid {
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr)); /* 可收缩列：放大时不撑破单行（2026-09-06） */
-  gap: 3px 10px;
-}
-.bottom-nav-slot {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  white-space: nowrap;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* 底栏压在壁纸上（毛玻璃 0.68），--text-dim 小字实测 4.40:1 → 该处单独加深（2026-09-11，同 `.dock-status .dim` 的处理） */
 
 .app-sidebar {
   position: relative;
@@ -413,77 +359,23 @@ body {
 }
 
 /* 右栏压在壁纸上，--muted 小字实测仅 3.95:1，此处单独加深（2026-09-11） */
-.app-status .dim { color: #5f5148; }
-.app-status {
-  position: relative;
-  /* 直角面板（2026-09-11）：本栏内容多、自身滚动，金边改由 .app-body::after 覆盖右列绘制 */
-  background-color: rgba(var(--panel-rgb), 0.82);
-  
-  overflow-y: auto;
-  padding: 12px;
-  /* 2026-09-17：右下角的 BGM 播放器胶囊浮在本栏下缘 → 预留出它的高度，事件日志不会被压在胶囊底下 */
-  padding-bottom: 52px;
-}
-
-/* ══ 面板金边：金色流光描边环（2026-09-11）══
-   用 mask **只画那一圈 2px 的环**——金色不会渗进面板内部（此前用"分层背景 + border-box 裁切"会让整块面板染金）。
-   环的渐隐方向按栏位：左栏向右渐隐、右栏向左渐隐、中区两端渐隐。
-   金边为静止的渐变（渐隐方向按栏位）；见下方「流光性能结论」。 */
-.app-sidebar::after, .app-main::after, .app-body::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 2px;              /* 环宽 */
-  pointer-events: none;
-  z-index: 3;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-.app-sidebar::after { background-image: linear-gradient(90deg, rgba(214, 170, 84, 0.90) 0%, rgba(214, 170, 84, 0.82) 45%, rgba(214, 170, 84, 0) 92%); }
-.app-main::after { background-image: linear-gradient(90deg, rgba(214, 170, 84, 0) 0%, rgba(214, 170, 84, 0.90) 10%, rgba(214, 170, 84, 0.90) 90%, rgba(214, 170, 84, 0) 100%); }
-/* 右栏面板自身滚动，环挂在 .app-body 上覆盖右列（伪元素放在滚动容器里会跟着内容滚走） */
-.app-body { position: relative; }
-.app-body::after {
-  inset: 0 0 0 auto;                    /* 右栏贴右边、贴顶贴底 */
-  width: clamp(170px, 22%, 250px);      /* 直角矩形，与面板同形 */
-  z-index: 4;
-  background-image: linear-gradient(270deg, rgba(214, 170, 84, 0.90) 0%, rgba(214, 170, 84, 0.82) 45%, rgba(214, 170, 84, 0) 92%);
-}
-html[data-theme='dark'] .app-sidebar::after { background-image: linear-gradient(100deg, rgba(240, 206, 140, 0) 43%, rgba(240, 206, 140, 0.42) 50%, rgba(240, 206, 140, 0) 57%), linear-gradient(90deg, rgba(186, 142, 62, 0.85) 0%, rgba(186, 142, 62, 0.72) 45%, rgba(186, 142, 62, 0) 92%); }
-html[data-theme='dark'] .app-main::after {
-  border-top-color: rgba(186, 142, 62, 0.85);
-  border-bottom-color: rgba(186, 142, 62, 0.85);
-}
-html[data-theme='dark'] .app-body::after { background-image: linear-gradient(100deg, rgba(240, 206, 140, 0) 43%, rgba(240, 206, 140, 0.42) 50%, rgba(240, 206, 140, 0) 57%), linear-gradient(270deg, rgba(186, 142, 62, 0.85) 0%, rgba(186, 142, 62, 0.72) 45%, rgba(186, 142, 62, 0) 92%); }
-
-/* 金色流光：2026-09-11 实测结论——带 mask 的环上任何动画（background-position / opacity）都会让
-   滚动帧时长从 16.6ms(60fps) 掉到 44~56ms(~18-23fps)，will-change / translateZ 提升都无效；
-   因此金边**保持静止**（只留渐变与各栏渐隐）。要做真流光需改用真实元素承载，另行评估。 */
-
-/* 点击/键盘焦点：去掉 Chromium 默认粗黑 outline（曾把导航按钮框成黑边），仅键盘导航时给淡主色描边（2026-09-11） */
-button:focus:not(:focus-visible) { outline: none; }
-button:focus-visible { outline: 2px solid rgba(var(--primary-tint-rgb), 0.55); outline-offset: 2px; }
-
-/* 三块面板滚动条：玻璃质感（2026-09-11 二调）——轨道全透明；滑块=半透明玻璃棒（暖灰/暖白），
-   中段透亮、两端略深 + 一道极淡内壁高光；圆头、四周 2px 留白收细；悬浮整体加深一档。
-   ⚠️ 别用高不透明度的白（0.6+）：在浅色面板上会读成实心白棒，不像玻璃。 */
-.app-sidebar > .skill-nav::-webkit-scrollbar,
-.main-scroll::-webkit-scrollbar,
-.app-status::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
+.dock-status .dim { color: #5f5148; }
+/* ══ 状态面板（2026-09-20：底部胶囊向上弹出）══
+   原「顶栏呼出的固定右栏抽屉」已撤掉；它的定位/宽度/滚动条样式（`.app-status{position:fixed;...}`）
+   随之删除——面板本体样式改由 `components/BottomDock.vue` 的 scoped 样式负责（`.dock-panel`）。
+   保留下来的只有「面板内 dim 小字加深」这一条（面板底是 0.97 的浅底，dim 直接压上去对比不足）。 */
+.dock-panel-body::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
 .app-sidebar > .skill-nav::-webkit-scrollbar-track,
 .main-scroll::-webkit-scrollbar-track,
-.app-status::-webkit-scrollbar-track { background: transparent; }
+.dock-panel-body::-webkit-scrollbar-track { background: transparent; }
 .app-sidebar > .skill-nav::-webkit-scrollbar-corner,
 .main-scroll::-webkit-scrollbar-corner,
-.app-status::-webkit-scrollbar-corner { background: transparent; }
+.dock-panel-body::-webkit-scrollbar-corner { background: transparent; }
 /* 三块面板滚动条：**玻璃质感**（2026-09-11）——半透明渐变玻璃棒 + 内壁高光（玻璃棱）+ 圆头；
    轨道全透明，滑块四周留 2px 透明边 → 又细又"轻"，悬浮时玻璃变亮 */
 .app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
 .main-scroll::-webkit-scrollbar-thumb,
-.app-status::-webkit-scrollbar-thumb {
+.dock-panel-body::-webkit-scrollbar-thumb {
   /* 玻璃：半透明暖灰玻璃棒——上下略深、中段透亮，再压一道极淡内壁高光当"玻璃棱"
      （不要用高不透明度的白：在浅色面板上会读成一条实心白棒） */
   background: transparent;                       /* 本体全透明：这才叫透明玻璃 */
@@ -492,35 +384,50 @@ button:focus-visible { outline: 2px solid rgba(var(--primary-tint-rgb), 0.55); o
 }
 .app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
 .main-scroll:hover::-webkit-scrollbar-thumb,
-.app-status:hover::-webkit-scrollbar-thumb {
+.dock-panel-body:hover::-webkit-scrollbar-thumb {
   background: rgba(118, 94, 76, 0.14);           /* 悬停才给一点极淡的体感 */
   border-color: rgba(118, 94, 76, 0.55);
   border-radius: 999px;
 }
 html[data-theme='dark'] .app-sidebar > .skill-nav::-webkit-scrollbar-thumb,
 html[data-theme='dark'] .main-scroll::-webkit-scrollbar-thumb,
-html[data-theme='dark'] .app-status::-webkit-scrollbar-thumb {
+html[data-theme='dark'] .dock-panel-body::-webkit-scrollbar-thumb {
   background: transparent;                       /* 本体全透明 */
-  border: 1px solid rgba(0, 0, 0, 0.70);          /* 深色下棱用黑色（用户要求） */
+  border: 1px solid rgba(var(--shadow-rgb), 0.70);          /* 深色下棱用黑色（用户要求） */
   border-radius: 999px;
 }
 html[data-theme='dark'] .app-sidebar > .skill-nav:hover::-webkit-scrollbar-thumb,
 html[data-theme='dark'] .main-scroll:hover::-webkit-scrollbar-thumb,
-html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
+html[data-theme='dark'] .dock-panel-body:hover::-webkit-scrollbar-thumb {
   background: rgba(255, 246, 236, 0.14);
-  border-color: rgba(0, 0, 0, 0.85);              /* 悬停：黑棱更实 */
+  border-color: rgba(var(--shadow-rgb), 0.85);              /* 悬停：黑棱更实 */
   border-radius: 999px;
+}
+
+/* 🔒 底部胶囊的统一高度（2026-09-21 用户：「BGM 胶囊是不是融合进底栏了，那大小应该也适配为旁边五个胶囊的大小」）——
+   右下角现在是**一条**胶囊带：五个功能胶囊（`.dock-pill`）+ BGM 播放器（`.bgm-pill`）。
+   两侧各自是 scoped 样式，所以高度在这**唯一一处**定义，谁都别再写死：
+   · 5 个功能胶囊 / BGM 胶囊的高度都取它；
+   · **底栏条本身也取它**（`.head-strips`）：2026-09-21 用户报「左边目标的条是占满底栏的吗、胶囊没占满」——
+     目标条实测 35px、胶囊 24px，底边对齐但顶边差 11px ⇒ 现在两边都用同一个令牌、整条底边齐平。
+     30px = 目标条内容（`.newbie-guide` 30px）的高度；定高只在 >940px 生效（窄屏允许折行）；
+   · BGM 胶囊原本 33px（竖 padding 7px）、窄屏还有一条 `padding: 7px 10px` 撑到 47px ⇒ 看起来是两块东西。 */
+:root {
+  --dock-pill-h: 30px;
 }
 
 /* 一键回到顶部按钮（中间页面右下角，避开右侧面板）*/
 .back-top-btn {
   position: fixed;
-  bottom: 28px;
-  right: 256px;
+  /* 2026-09-19：右栏改抽屉后不再需要避让（原 right:256px 是给它让位的）；
+     下移到 bottom:64px 是为了避开右下角的 BGM 胶囊（bottom:14px，胶囊高约 40px）——
+     与 ≤940px 断点里那条「回顶上移」用的是同一个规则，现在宽窄屏一致。 */
+  bottom: 64px;
+  right: 24px;
   z-index: 60;
   border-radius: 999px;
   padding: 8px 16px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(var(--shadow-rgb), 0.25);
   opacity: 0.92;
   transition: opacity 0.2s;
 }
@@ -546,11 +453,8 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
   .app-body {
     grid-template-columns: 200px minmax(0, 1fr);
   }
-  /* ⚠️ 必须带 `.app-layout` 前缀提权：`.status-panel { display:flex }`（见「右栏」一节）声明在本媒体查询**之后**，
-     与裸 `.app-status` 同为 (0,1,0) 特指度时会由后者胜出 → 右栏在平板/手机上一直没收起（2026-09-11 修）。 */
-  .app-layout .app-status {
-    display: none;
-  }
+  /* ⚠️ 2026-09-19 原先这里有 `.app-layout .app-status { display: none }`，改成抽屉后删掉；
+     2026-09-20 又去掉整块：状态面板搬到底部胶囊（`.dock-panel`），窄屏由胶囊自己保证不超出视口。 */
 
   /* 顶栏窄屏（2026-09-11 修实测缺陷）：改前共用 `overflow-x:auto` 的单行容器，
      实测 768px 被裁 6 个按钮（签到/搜索/厨藏/装备/设置/存档）、390px 被裁 7 个（含攻略），
@@ -611,7 +515,7 @@ html[data-theme='dark'] .app-status:hover::-webkit-scrollbar-thumb {
   .app-layout {
     padding-bottom: 56px; /* 底部导航高度 */
   }
-  /* ⚠️ 以下两条同样必须带 `.app-layout` 前缀提权（原因同上面的 `.app-status`）：
+  /* ⚠️ 以下两条同样必须带 `.app-layout` 前缀提权（原因同上面的 `.app-sidebar`）：
      `.sidebar { display:flex }`、`.mobile-nav { display:none }` 都声明在本媒体查询之后，
      裸选择器会被它们反向覆盖 → 手机端左栏没收起、底部导航永远不显示（2026-09-11 修）。
      注意 `.app-sidebar` 是网格里那一栏；抽屉里的 `<Sidebar />` 只有 `.sidebar` 类，不受影响。 */
@@ -709,7 +613,7 @@ html[data-theme='dark'] .mobile-skills {
   padding: 12px 14px;
   margin-bottom: 12px;
   /* 2026-09-10 清晰度：1px 落影 + 顶部内高光，让卡片边界不再发虚 */
-  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06), inset 0 1px 0 rgba(var(--glass-rgb), 0.6);
 }
 
 /* 含实时动画进度条的卡片：去掉 backdrop-filter，避免进度条 fill 每帧动画触发 blur 重采样（→ 保持 ~60fps）。
@@ -735,7 +639,7 @@ h2 {
 }
 
 .btn {
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(var(--glass-rgb), 0.5);
   background: rgba(var(--panel-rgb), 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -762,7 +666,7 @@ h2 {
   background: rgba(var(--primary-tint-rgb), 0.78);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(var(--glass-rgb), 0.5);
   color: #fff;
 }
 
@@ -782,7 +686,7 @@ h2 {
   border-radius: 4px;
   overflow: hidden;
   background: rgba(255, 250, 240, 0.45); /* 简单纯色底，避免 repeating 渐变每帧重绘导致卡顿 */
-  box-shadow: 0 1px 3px rgba(var(--tint-deep-rgb), 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 1px 3px rgba(var(--tint-deep-rgb), 0.18), inset 0 1px 1px rgba(var(--glass-rgb), 0.4);
 }
 
 .progress-bar-fill {
@@ -794,7 +698,7 @@ h2 {
   transform: translateZ(0);
   will-change: transform;
   background: linear-gradient(90deg, var(--primary), var(--primary-strong));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(var(--glass-rgb), 0.3);
 }
 
 .badge {
@@ -862,8 +766,8 @@ h2 {
 
 .avatar-img {
   object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid rgb(var(--glass-rgb));
+  box-shadow: 0 1px 4px rgba(var(--shadow-rgb), 0.2);
 }
 
 /* 游戏商店「神厨」头像框（2026-09-07）：金色描边 + 光晕 */
@@ -949,14 +853,38 @@ h2 {
   overflow-y: auto;
 }
 
+/* 分组标题 = 可点击的折叠开关（2026-09-18 分组默认折叠：首屏只见 6 个分组入口） */
 .feature-group-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
   font-size: 12px;
   color: var(--text-dim);
   font-weight: 600;
-  padding: 4px 2px 6px;
+  padding: 5px 2px 6px;
+  background: transparent;
+  border: none;
+  border-top: 1px dashed var(--border);
+  cursor: pointer;
+  text-align: left;
 }
+.feature-group-label.open { color: var(--text); }
+.feature-group-label:hover { color: var(--primary-strong); }
+.fg-arrow { font-size: 10px; width: 10px; flex: 0 0 auto; }
+.fg-count { margin-left: auto; font-weight: 400; }
 
 /* 功能页方块网格（2026-09-10）：全部展开、正方形磁贴（列数 3→4 的实测依据见 .feature-grid 内注释，2026-09-11） */
+/* 未解锁功能页的收起提示 + 开关（2026-09-18 留存改进 5） */
+.feature-hidden {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 2px 6px;
+  font-size: 11px;
+}
+
 .feature-grid {
   display: grid;
   /* 4 列（2026-09-11 实测调优）：3 列时 45 个瓦片要滚 746px（可视仅 56%，后 3 组全在折叠线下）；
@@ -1029,7 +957,7 @@ h2 {
   line-height: 15px;
   text-align: center;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.25);
 }
 
 
@@ -1157,6 +1085,21 @@ h2 {
   min-width: 220px;
   max-width: 46%;
   flex-shrink: 0; /* 不被左侧标题挤压，保证经验区有足够宽度 */
+  /* 🔒 右上角 HUD 的**所有行统一右对齐**（2026-09-21 用户报「很多页面的右上角文字都没有对齐」）：
+     66 个页面共用这套头部。原先只有 `.xp-num` 自己 `text-align: right`，而同一块里的次级说明
+     （技能页的「转生加成：+20% 经验」、各页的「还需…」「距换货…」）是左对齐 ⇒ 一个块里出现
+     左/右两套右缘、看着就是「没对齐」。这一条把整块统一到同一条右缘（`.skill-head-xp-row` 是
+     flex 两端撑开，不受 text-align 影响，等级在左、经验在右的版式保持不变）。 */
+  text-align: right;
+}
+/* 头部右侧的按钮不许在括号中间断行（「扩建 +3 格（5,000」/「金币）」这种断法最显乱）。
+   有些页面（地窖/牧场/商队/温室/菌房/外卖/年鉴…）的头部右上是**裸按钮**、没有 `.skill-head-right` 包裹，
+   所以两条选择器都写。窄屏（≤720px）放开——那时头部本来就折行，nowrap 反而会溢出。 */
+@media (min-width: 721px) {
+  .skill-head > .btn,
+  .skill-head-right .btn {
+    white-space: nowrap;
+  }
 }
 
 .xp-num {
@@ -1200,6 +1143,14 @@ h2 {
    桌面下表格本来就装得下、不会出现滚动条（无副作用）。新增 >5 列的表格请一律包上。 */
 .table-scroll { overflow-x: auto; }
 .table-scroll > .target-table { min-width: 0; }
+/* ⚠️ 2026-09-18 修：上面那条 `min-width: 0` 配合 `.target-table { width: 100% }` 等于
+   **只允许表格被压缩、不允许横滑** —— 于是 390px 手机上列多的表被压成「每行一个字」：
+   实测牧场「饲料 玉米 ×3」竖排成 5 行、野鸡那一格压成 13 行；蜂蜜一览表头「效果（使用后同时生效）」
+   竖排 4 行。窄屏改为按内容宽度排布 + 容器内横滑；桌面**完全不受影响**
+   （宽度 ≥ 内容宽时 `min-width: 100%` 让表格照旧铺满，不会冒出滚动条）。 */
+@media (max-width: 940px) {
+  .table-scroll > .target-table { width: max-content; min-width: 100%; }
+}
 
 .target-table th,
 .target-table td {
@@ -1655,7 +1606,7 @@ h2 {
 }
 .guild-shop-card.buyable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 10px rgba(var(--shadow-rgb), 0.12);
 }
 /* 买不起：置灰降透明度 */
 .guild-shop-card.poor {
@@ -1973,6 +1924,29 @@ h2 {
   background: var(--sidebar-bg);
 }
 
+/* 分段的「时代名」——该档最高级产出/配方的名字（2026-09-19）
+ * 采集/制作的目标列表现在按 10 级一档切「时代」，这一格就是那段的名字，
+ * 读起来是「Lv 41-50 · 榆木」= 参照作 Rocky Idle 那种「一档一件资源」的梯级读法。
+ * ⚠️ 字号**不设**（继承 body 的 14px）：同排的「N 个目标」「精通 x/N」都是继承字号，
+ *   单独设成 12px 会让它比同排元信息更小、也把它推进 WCAG 更严的档位
+ *   （≥18.66px，或「加粗且 ≥14px」只需 3.0；12px 则要 4.5）——实测深色下 `--primary` 对
+ *   段标题底色只有 4.06，被判 FAIL。这不是放宽守卫，是让它与同排元素同类。
+ * nowrap：段标题是 flex 行，长名字换行会把整行撑高、把右侧的计数挤出视线。 */
+.era-name {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+/* ⚠️ 深色侧必须换成「淡彩底上的文字」token：深色皮肤的 `--primary` 是为按钮底/强调文字标定的
+   （L* 55~65），当 11~13px 小字落在深色卡片上只有 3.4~4.0 对比度（e2e-dark 逐皮肤抓到 14 套全 FAIL）。
+   `--on-primary-tint` 由皮肤按 `shade(pd, 0.45)` 提亮推导，正是为此准备的色。 */
+html[data-theme='dark'] .era-name {
+  color: var(--on-primary-tint);
+}
+
 .gather-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
@@ -1984,17 +1958,16 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(var(--glass-rgb), 0.5);
   border-radius: 10px;
   padding: 10px;
   background: rgba(var(--panel-soft-rgb), 0.55);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 2px 8px rgba(var(--tint-deep-rgb), 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-  /* 3D 倾斜：perspective 800px，rotateX/rotateY 由 v-tilt 写入的 CSS 变量驱动 */
-  transform: perspective(800px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-  will-change: transform;
-  transition: transform 0.15s ease-out;
+  box-shadow: 0 2px 8px rgba(var(--tint-deep-rgb), 0.14), inset 0 1px 1px rgba(var(--glass-rgb), 0.4);
+  /* 🚫 卡片随光标倾斜（v-tilt）已于 2026-09-21 按用户要求整体移除：卡片的 perspective/rotateX/rotateY 与
+     `--tilt-x/--tilt-y` 变量全部删掉（技能页采集卡、制作卡、物品卡、公会/赛季卡以及 StoryView 的剧情卡）。
+     悬停抬升（`translateY(-2px)`）是另一回事，保留。 */
 }
 
 .gather-card.locked {
@@ -2149,7 +2122,7 @@ h2 {
   gap: 6px;
   padding-top: 6px;
   margin-top: 2px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.18);
+  border-top: 1px dashed rgba(var(--shadow-rgb), 0.18);
   min-width: 0;
 }
 .alchemy-extra {
@@ -2175,7 +2148,7 @@ h2 {
 
 /* 探索卡片：战利品列表（多物品 loot 预览）*/
 .gather-card-divider {
-  border-top: 1px dashed rgba(0, 0, 0, 0.18);
+  border-top: 1px dashed rgba(var(--shadow-rgb), 0.18);
   margin-top: 2px;
 }
 .loot-list {
@@ -2229,7 +2202,7 @@ h2 {
 .eq-option:hover,
 .eq-option.equipped {
   border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(var(--shadow-rgb), 0.12);
 }
 
 .eq-option.current {
@@ -2273,7 +2246,7 @@ h2 {
   background: rgba(200, 60, 50, 0.78);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(var(--glass-rgb), 0.5);
   color: #fff;
 }
 
@@ -2415,7 +2388,7 @@ h2 {
   background: rgba(var(--panel-rgb), 0.62);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(var(--glass-rgb), 0.5);
   border-radius: 16px;
   padding: 16px;
   width: min(560px, 94vw);
@@ -2552,7 +2525,8 @@ h2 {
    属性选择器匹配不到「**没有 type 属性**」的 input（「👤 角色」页的改名输入框就没有 type），
    漏掉它会让那一页的框退回浏览器默认样式（19px 高、白底、灰色直角边）——第二轮就是漏在这里。 */
 .settings-body input:not([type="checkbox"]):not([type="range"]),
-.settings-body select {
+.settings-body select,
+.equip-pane--detail select {
   background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2562,6 +2536,11 @@ h2 {
   height: 30px;
   box-sizing: border-box;
   min-width: 0;
+}
+/* 2026-09-18：装备弹窗的「宝石选择框」原先是裸的原生控件（白底、灰直角边、19px 高），
+   与全站玻璃控件不是一套材质 —— 并入这组统一控件（与 .bgm-vol 滑块同一处理方式）。 */
+.equip-pane--detail select {
+  cursor: pointer;
 }
 .settings-body select {
   flex: 1;
@@ -2574,9 +2553,11 @@ h2 {
   box-shadow: 0 0 0 2px var(--primary-soft);
 }
 /* 滑块：统一轨道与滑钮（原先是浏览器默认样式，与旁边的框差异很大）
-   2026-09-17：选择器扩到右下角 BGM 播放器（`.bgm-vol`）——否则它又退化成浏览器默认的蓝滑块，与全站玻璃控件不是一套材质 */
+   2026-09-17：选择器扩到右下角 BGM 播放器（`.bgm-vol`）——否则它又退化成浏览器默认的蓝滑块，与全站玻璃控件不是一套材质
+   2026-09-20：再扩到厨藏右侧详情的**数量拉条**（`.bd-qty`），同上 */
 .settings-body input[type="range"],
-.bgm-vol input[type="range"] {
+.bgm-vol input[type="range"],
+.bd-qty input[type="range"] {
   flex: 1;
   appearance: none;
   -webkit-appearance: none;
@@ -2586,14 +2567,16 @@ h2 {
   accent-color: var(--primary);
 }
 .settings-body input[type="range"]::-webkit-slider-runnable-track,
-.bgm-vol input[type="range"]::-webkit-slider-runnable-track {
+.bgm-vol input[type="range"]::-webkit-slider-runnable-track,
+.bd-qty input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
   background: var(--lock-bg);
   border: 1px solid var(--border);
 }
 .settings-body input[type="range"]::-webkit-slider-thumb,
-.bgm-vol input[type="range"]::-webkit-slider-thumb {
+.bgm-vol input[type="range"]::-webkit-slider-thumb,
+.bd-qty input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
@@ -2604,11 +2587,13 @@ h2 {
   box-shadow: 0 1px 4px rgba(var(--scrim-rgb), 0.3);
 }
 .settings-body input[type="range"]:focus-visible,
-.bgm-vol input[type="range"]:focus-visible {
+.bgm-vol input[type="range"]:focus-visible,
+.bd-qty input[type="range"]:focus-visible {
   outline: none;
 }
 .settings-body input[type="range"]:focus-visible::-webkit-slider-thumb,
-.bgm-vol input[type="range"]:focus-visible::-webkit-slider-thumb {
+.bgm-vol input[type="range"]:focus-visible::-webkit-slider-thumb,
+.bd-qty input[type="range"]:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 /* 复选框：与其它控件同一套「玻璃框」（原来用 accent-color 保留系统原生方块，
@@ -2652,7 +2637,7 @@ h2 {
   top: 1px;
   width: 4px;
   height: 8px;
-  border: solid #fff;
+  border: solid rgb(var(--glass-rgb));
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -2747,20 +2732,17 @@ h2 {
   -webkit-backdrop-filter: blur(14px);
   cursor: pointer;
   text-align: center;
-  /* 3D 倾斜同 .gather-card：由 v-tilt 驱动 --tilt-x/-y */
-  transform: perspective(800px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-  will-change: transform;
   transition: transform 0.15s ease-out, box-shadow 0.12s;
 }
 
 .item-card:hover {
-  transform: perspective(800px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 3px 8px rgba(var(--tint-deep-rgb), 0.15);
 }
 
 .item-card.selected {
   box-shadow: 0 0 0 2px var(--primary);
-  transform: perspective(800px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-2px);
+  transform: translateY(-2px);
 }
 
 .item-card-name {
@@ -3124,7 +3106,7 @@ h2 {
 
 .item-cell:hover,
 .item-cell.pinned {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.18);
   z-index: 30; /* 高于兄弟格子，让悬浮详情不被遮挡 */
 }
 
@@ -3174,7 +3156,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 6px 20px rgba(var(--shadow-rgb), 0.28);
   z-index: 999;
   text-align: left;
 }
@@ -3285,6 +3267,79 @@ h2 {
   opacity: 0.7;
 }
 
+/* 顶部两条常驻提示（新手横幅 + 下一个目标）——**并排一行**，别再各占一整行。
+   用 grid 而不是 flex-wrap：flex 下两条的基宽相加会超出内容宽 → 直接折成两行（实测 1440 都没合上）。 */
+/* 两条常驻提示 = 中间列的**底栏**（2026-09-19 用户要求「移位置，太碍眼了」：从内容顶部挪下来；
+   原先这个位置是「中间底部状态条」，同轮被用户去掉）。样式沿用原底栏口径：细分隔线、不抢内容。
+   ⚠️ padding-right 给右下角 BGM 胶囊让位（fixed 浮层压在本列右侧）。 */
+.head-strips {
+  /* 用 flex 而不是 grid：新手横幅被 ✕ 掉后它会 v-if 整块消失，
+     grid 的两列模板会把「目标条」塞进第一列（auto）⇒ 只剩半行宽、文案被截断。
+     flex 下 `.goal-strip` 自带 `flex: 1 1 460px`，无论横幅在不在都能吃掉整行。 */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 12px;
+  padding-right: 250px;
+  border-top: 1px solid rgba(150, 105, 78, 0.16);
+  position: relative;
+  z-index: 20;
+}
+/* 底栏条定高 = 胶囊高度（同一个令牌）⇒ 整条底边（目标条 + 五个胶囊 + BGM 胶囊）齐平。
+   ⚠️ 只在 >940px 用定高：窄屏这条会 `flex-wrap` 折成两行，定高会把内容切掉。 */
+@media (min-width: 941px) {
+  .head-strips {
+    height: var(--dock-pill-h);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+.head-strips > * {
+  min-width: 0;
+}
+/* 窄屏（平板/手机）才折行；胶囊在窄屏只留图标 ⇒ 让位宽度收窄 */
+@media (max-width: 940px) {
+  .head-strips {
+    flex-wrap: wrap;
+    padding-right: 168px;
+  }
+}
+html[data-theme='dark'] .head-strips {
+  border-top-color: rgba(255, 236, 214, 0.12);
+}
+
+/* ── 战斗类页面统一两栏外壳（2026-09-20）───────────────────────────────
+   用户要求「对决页面的排版没有同步到其它战斗相关的页面」⇒ 把这套网格从 CombatView 的
+   scoped 样式提到**全局**，五个战斗页（对决页 / 竞技场 / 通天塔 / 试炼 / 厨神大赛 / 食神秘境）
+   用同一组类名：左（`.combat-page-main`，自适应宽）= 战斗屏 + 选怪/榜单/清单；
+   右（`.combat-page-side`，288px sticky）= 该页详情卡 + **战斗日志**（2026-09-21 与装备槽互换位置：
+   装备槽回到左栏与「战备」同屏，八个槽位排成一排）。
+   窄屏（≤900px）回落成上下堆叠、详情挪到最下方（先打再看）。 */
+.combat-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
+  gap: 12px;
+  align-items: start;
+}
+.combat-page-main,
+.combat-page-side {
+  min-width: 0;
+}
+.combat-page-side {
+  position: sticky;
+  top: 8px;
+}
+@media (max-width: 900px) {
+  .combat-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .combat-page-side {
+    position: static;
+  }
+}
+
 /* ── 背包/仓库弹窗（InventoryModal）───────────────── */
 .bag-modal {
   max-width: 1260px; /* 背包/仓库弹窗加宽到原+一半，格子更大、数量更从容 */
@@ -3292,6 +3347,16 @@ h2 {
   height: min(660px, 92vh); /* 高度恒定：详情栏有无内容时弹窗长度一致 */
   display: flex;
   flex-direction: column;
+}
+
+/* 装备弹窗单独加高（2026-09-18 用户报「词条洗练与镶嵌被遮挡」）：
+   它的页脚（装备总属性 + 装备详情：词条 chips / 洗练 / 0~3 个宝石插槽行）实测高 406px，
+   而 header 62 + 栏位最小 220 + 页脚 406 = 688 > 660 ⇒ 末尾两条插槽行的「选择宝石/镶嵌」
+   落在弹窗可视区之外（top 774/802 > 弹窗底 780）。加高到 820 后 62+406 之外仍留给栏位 352px。
+   ⚠️ 只改装备弹窗：`.bag-modal` 是背包/仓库共用的，那个 660 是标定过的。 */
+.bag-modal.equip-modal {
+  height: min(820px, 92vh);
+  max-height: 94vh; /* 覆盖 .modal 的 max-height: 86vh —— 装备页脚更高，需要多出来的这几十 px */
 }
 
 .bag-body {
@@ -3313,19 +3378,155 @@ h2 {
   gap: 4px 6px; /* 行距 4px，列距 6px */
 }
 
-/* 穿戴装备界面（装备 tab）三栏：当前穿戴 | 强化框 | 背包可穿戴 */
+/* 穿戴装备界面（装备 tab）三栏：当前穿戴 | 强化框 | 背包可穿戴
+   ⚠️ 高度必须夹住：`.bag-modal` 是「定高 flex 列」，而 grid 子项默认 `min-height:auto`
+   ⇒ 背包可穿戴的列表会把栏位（以及整张弹窗）一路撑长，页脚被顶到视口外
+   （2026-09-18 用户报「背包装备过多时窗口被无限往下伸长」：实测 20 件→body 740px、
+   60 件→2060px，而弹窗可视只有 658px）。修法：body 吃掉剩余高度并夹住，栏位各自内部滚动。 */
 .equip-body {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
   margin: 8px 0;
   grid-column: 1 / -1; /* 占满弹窗宽度，避免右侧留白 */
+  flex: 1; /* 吃掉 header/footer 之外的全部高度 */
+  min-height: 140px; /* 矮屏时优先让栏位变矮（页脚那栏有上限+内部滚动），也别被页脚彻底挤没 */
+  overflow: hidden;
+}
+/* 页面版（2026-09-19 装备由弹窗升级为独立页面）：`.equip-body` 的 `flex: 1` 是给**弹窗**写的
+   （`.modal` 自己有定高），搬成整页后那层约束没了 ⇒ 60 件装备会把三栏撑到 2060px，
+   `.equip-pane` 的 `overflow-y: auto` 随之失效。做法是给**页面根**一个视口高，
+   让原来那条 flex 链重新生效（而不是给 body 塞一个魔法数字高度——那会因为页脚实际高度而偏）。
+   96px = 顶栏 + 内容区上下 padding 的余量。
+   ⚠️ 这就是「背包可穿戴再多也不撑长」那条守卫（e2e-test）依赖的不变量。 */
+.equipment-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 96px);
+  min-height: 460px;
+}
+/* 版式（2026-09-20 用户给图 p3）：**网格分块**，不再是一条竖列。
+   ┌───────────┬────────┬────────┐
+   │           │  强化  │ 总属性 │
+   │ 当前穿戴  ├────────┴────────┤
+   │           │    装备详情      │
+   ├───────────┴─────────────────┤
+   │        背包可穿戴            │
+   └─────────────────────────────┘
+   每块一张卡（背景 + 描边），页面整体滚动。 */
+.equipment-view {
+  display: block;
+  height: auto;
+  min-height: 0;
+}
+.equipment-view .equip-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'worn upgrade stats'
+    'worn detail detail'
+    'bag bag bag';
+  /* 2026-09-21 用户：「所有面板应该默认长宽为最大的长宽」——每块**铺满自己的网格区**。
+     原来是 `align-items: start`（各卡按内容高、参差不齐），截图里那几片空白就是没铺满露出的页面底色
+     （当前穿戴下方、强化下方两处）。改成 stretch 后：同一行等高、竖跨两行的「当前穿戴」与右侧两行总高一致。 */
+  align-items: stretch;
+  gap: 12px;
+  height: auto;
+  overflow: visible;
+}
+/* 「装备详情」给一个**下限高度**：它是最会长高的一块（选中越好的装备，词条/插槽行越多），
+   不定下限就会出现「选一件短详情 → 整页跟着缩短」——那既违反用户此前那条「点选前后尺寸不变」，
+   也让刚改好的「铺满网格」看起来忽高忽低。320px = 实测最长详情（3 词条 + 洗练 + 3 插槽 = 314px）+ 余量。
+   ⚠️ 只在 ≥901px 生效：窄屏高度紧张，宁可让详情按内容高（省下的空间给背包列表）。 */
+@media (min-width: 901px) {
+  .equipment-view .equip-body > .equip-pane--detail { min-height: 320px; }
+}
+/* ⚠️ **不要**给 `.equip-pane` 加 `display: flex; flex-direction: column`（2026-09-21 踩过）：
+   铺满网格后为了让内容从顶部排加了它，结果「背包可穿戴」那份**限高内滚**的清单一夜之间被压扁 ——
+   定高的 flex 列里子项默认 `flex-shrink: 1`，几百行 `.equip-row` 会各自缩到几像素高、文字叠在一起
+   （`overflow-y: auto` 挡不住，只有 `flex: 0 0 auto` 才行）。块级布局天然从顶部排 ⇒ 保持默认即可。 */
+.equipment-view .equip-body > .equip-pane { overflow: visible; }
+.equip-pane--worn { grid-area: worn; }
+.equip-pane--upgrade { grid-area: upgrade; }
+.equip-pane--stats { grid-area: stats; }
+.equip-pane--detail { grid-area: detail; }
+.equip-pane--bag { grid-area: bag; }
+/* 「背包可穿戴」**必须限高内滚**：它是唯一会无限增长的列表，不限高就会把下面的
+   总属性 / 装备详情整块顶出视野（用户实测报「背包可穿戴多起来就看不到属性和详情」）。
+   这是**有意为之的内部滚动**（`min-height: 0` 已在页面安全网里设好，不会挤到兄弟框）。 */
+.equipment-view .equip-body > .equip-pane--bag {
+  max-height: 44vh;
+  overflow-y: auto;
+}
+/* 背包可穿戴：**卡片网格**（2026-09-21 用户要求「改成卡片式显示」）。
+   原先是一行一件（名字在左、穿戴按钮在右），宽屏上中间空一大片；改成与厨藏页同观的卡片。 */
+.equipment-view .equip-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.equipment-view .equip-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(var(--panel-rgb), 0.5);
+  cursor: pointer;
+}
+.equipment-view .equip-card:hover { border-color: var(--primary); }
+.equipment-view .equip-card.selected { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.14); }
+.equipment-view .equip-card-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.equipment-view .equip-card-name {
+  width: 100%;
+  font-size: 12px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.equipment-view .equip-card-qty { font-size: 11px; }
+.equipment-view .equip-card .btn { width: 100%; }
+
+/* 「当前穿戴」：两列紧凑（8 槽只占 4 行），每行等高 —— 词条那行单独占满整行，别把两列挤错位 */
+.equipment-view .equip-body > .equip-pane--worn {
+  /* 一行一个槽位（2026-09-21 用户要求）：原来两列并排，8 槽挤成 4 行、词条那行还得分两列塞。 */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-content: start;
+}
+.equipment-view .equip-body > .equip-pane--worn > .equip-section-title {
+  grid-column: 1 / -1;
+}
+.equipment-view .equip-body > .equip-pane--worn .equip-row {
+  margin: 0;
+  align-self: stretch;
+}
+/* 单列后词条 chips **就排在名字后面**（不再另起一行）：它 `flex: 1 1 auto` 吃掉中间的空档，
+   「卸下 / 强化」被自然顶到最右 —— ⚠️ 别改用 `margin-left: auto` 去右靠（flex 容器里会引发折行问题）。 */
+.equipment-view .equip-body > .equip-pane--worn .equip-row { flex-wrap: wrap; }
+.equipment-view .equip-body > .equip-pane--worn .equip-name { flex: 0 1 auto; min-width: 0; }
+.equipment-view .equip-body > .equip-pane--worn .equip-mod-chips {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
 }
 .equip-pane {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px;
   background: rgba(var(--panel-soft-rgb), 0.5);
+  min-height: 0; /* 关键：不写就会被内容撑开、overflow 失效 */
+  overflow-y: auto; /* 长列表在本栏内滚动，不再撑长弹窗 */
 }
 .equip-section-title {
   font-weight: 700;
@@ -3383,18 +3584,74 @@ h2 {
   margin-top: 6px;
   flex-wrap: wrap;
 }
+/* 宝石插槽行（2026-09-18 用户报「选择宝石的框没适配、注意排版」）：
+   行内是「插槽名 | 选择宝石框 + 镶嵌按钮」。框宽按最长选项定（「蓝晶矿（攻/防/命中/闪避 +4）×N」≈250px），
+   原先是内联 max-width:150px ⇒ 长宝石名在闭合态被截断；窄处允许换行，别把按钮挤出去。 */
+.equip-pane--detail .socket-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.equip-pane--detail .socket-acts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+.equip-pane--detail select.gem-pick {
+  flex: 0 1 280px;
+  min-width: 150px;
+  max-width: 280px;
+}
 .equip-row.selected,
 .equip-row-equipped.selected {
   background: rgba(var(--primary-tint-rgb), 0.12);
   border-radius: 6px;
 }
-.equip-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  border-top: 1px solid var(--border);
-  margin-top: 10px;
-  padding-top: 10px;
+/* 详情卡（原 `.equip-footer` 的一列，2026-09-20 併入 p3 网格）：只保留「纵向排列 + 不被挤扁」两条。
+   旧的 312px 定高是弹窗时代为「点选前后不跳」设的，页面版区块顺序固定，已删除。 */
+.equip-pane--detail {
+  display: flex;
+  flex-direction: column;
+}
+/* ⚠️ 加了 flex 之后必须显式禁止压缩：否则内容超高时子项被「挤扁」而不是溢出，
+   最后一行插槽会消失且 **不出现滚动条**（实测踩过：第 3 个空插槽被吃掉）。 */
+.equip-pane--detail > * {
+  flex: 0 0 auto;
+}
+/* 洗练按钮按自身宽度，别被 flex 拉满整行 */
+.equip-pane--detail > .btn {
+  align-self: flex-start;
+}
+/* 该件属性的一行紧凑标签（替代原先 6 行明细：信息不变、矮 ~120px） */
+.equip-stat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 6px;
+}
+.equip-stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  background: rgba(var(--panel-soft-rgb), 0.7);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+/* 未选中时的占位：填满整列，让「预留的高度」看起来是**有意的留白**而不是漏渲染。
+   1px 虚线用 --border 太淡（在玻璃面板上几乎看不见），改用主色淡调 + 极淡底 */
+.equip-pane--detail > .equip-detail-empty {
+  flex: 1 1 auto; /* 覆盖上面的 `> * { flex: 0 0 auto }`（那条选择器更具体，这里必须写全） */
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed rgba(var(--primary-tint-rgb), 0.38);
+  background: rgba(var(--primary-tint-rgb), 0.04);
+  border-radius: 8px;
+  padding: 12px;
 }
 .equip-stat-grid {
   display: grid;
@@ -3738,8 +3995,6 @@ h2 {
   font-size: 12px;
 }
 
-/* 已有 3D tilt 的卡片，动画结束后还原 transform（动画 only，不影响 tilt hover 的手势） */
-.gather-card, .item-card, .opp-row, .opp-card { transform-style: preserve-3d; }
 
 /* ── 冷库格子与背包卡片一致：列宽加大成矩形（数量从容且不裁剪） ── */
 .cold-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); grid-auto-rows: 74px; gap: 4px 6px; }
@@ -3768,7 +4023,8 @@ h2 {
   border: 1px solid rgba(var(--tint-rgb), 0.42);
 }
 
-/* 固定列数网格（分页用）：强制每行 N 个，不随窗宽变化 */
+/* 固定列数网格（分页用）：强制每行 N 个（分页确定性的前提）。
+   窄屏降列见文件末尾「窄屏降列」块（那里能压过 html[data-scale='110'] 那组）。 */
 .grid-n-5 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 .grid-n-6 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
 .grid-n-7 { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
@@ -3781,10 +4037,14 @@ h2 {
   background: transparent;
 }
 
-/* 分页等高网格：每行固定高度，所有页每行同高 → 网格总高恒定，翻页器位置固定不跳动。
-   超出固定行高的内容被截断(卡片 overflow hidden)，避免撑高某页。 */
+/* 分页网格：行高**至少** 150px（保持原有观感与「同页等高」），内容更高时按内容撑开。
+   ⚠️ 2026-09-18 修：原先是写死的 `grid-auto-rows: 150px`，注释写着「超出固定行高的内容被截断，
+   避免撑高某页」—— 但被截掉的正是**卡片自己的「融合」按钮**：炼金卡带附加材料行时内容要 192~273px
+   （窗口越窄、卡片越窄，字换行就越多），实测 1440px 下 24 张卡里 11 张的按钮被切到卡片外，
+   而 `overflow: hidden` **同时裁剪命中测试** ⇒ 按钮不仅看不见、**根本点不到**（窄屏更糟，全部被切）。
+   改成 `minmax(150px, auto)`：短内容仍是 150px（翻页器位置照旧），长内容撑开而不被裁。 */
 .grid-equal {
-  grid-auto-rows: 150px;
+  grid-auto-rows: minmax(150px, auto);
 }
 .grid-equal > .gather-card,
 .grid-equal > .item-cell,
@@ -3837,6 +4097,55 @@ h2 {
   color: var(--primary);
   font-weight: 600;
 }
+/* 采集卡片：「⚡ 当前最优」标记（2026-09-19）
+ * 独立成行、右对齐、nowrap —— 卡片只有两列宽，塞进「效率」行右侧会被挤成逐字竖排。
+ * 底与字都用**主题感知**的 `--primary-rgb`（深色下会跟着变），不用两主题同值的
+ * `--primary-tint-rgb` —— 后者在深色下仍是浅色橙，与文字色撞成一片、对比度也会掉。
+ * 与「当前」页签徽标同族但更轻，避免一张卡里出现两个同等权重的徽标。 */
+/* 等级段标签页（2026-09-19 用户要求：默认只显示当前段的卡片、点标签切换、不折叠）：
+   与对决页的区域页签同款读法 —— 横排按钮、当前段用主色底，段名后跟灰色时代名。 */
+.era-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 8px;
+}
+.era-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.era-tab-name {
+  font-size: 11px;
+  opacity: 0.75;
+}
+/* 当前段概览行（目标数 / 精通进度 / 「当前」徽标） */
+.era-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+/* 「⚡ 最优」标记。⚠️ 必须用**不随皮肤**的功能语义色（--good*），不能用 `--primary`：
+   深色皮肤的深色主色是为「按钮底/强调文字」标定的，落在深色卡片上当 11px 小字只有 3.3~3.9 对比度
+   （e2e-dark 逐皮肤抓到 14 套全 FAIL）。这是**之前就有的缺陷**——以前各等级段默认折叠，
+   这张卡根本不渲染，所以从没被扫到；2026-09-19 改成「默认展开当前段」后它才浮出来。 */
+.best-flag {
+  margin-top: 2px;
+  align-self: flex-end;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--good-strong);
+  background: rgba(var(--good-rgb), 0.16);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
 /* ── 食灵图鉴：列表行展示（信息横排，无大片空白，行高自适应） ── */
 .spirit-row-list {
   display: flex;
@@ -3849,7 +4158,7 @@ h2 {
   align-items: center;
   gap: 12px;
   background: rgba(var(--panel-rgb), 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 12px;
   padding: 8px 12px;
 }
@@ -3864,7 +4173,7 @@ h2 {
 .row-spacer { height: 0; }
 /* ── 食灵分区食盒看板：每阶级一个食盒（标题+主题色），区内紧凑行 ── */
 .spirit-box {
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 14px;
   background: rgba(var(--panel-rgb), 0.8);
   padding: 8px;
@@ -3887,7 +4196,7 @@ h2 {
 .spirit-box-1 .spirit-box-dot { background: #7aa25f; }
 .spirit-box-2 .spirit-box-title { color: var(--primary); }
 .spirit-box-2 .spirit-box-dot { background: var(--primary); }
-.spirit-box-3 .spirit-box-title { color: #2e6bd6; }
+.spirit-box-3 .spirit-box-title { color: var(--quest); }
 .spirit-box-3 .spirit-box-dot { background: #5a8fe0; }
 .spirit-box-4 .spirit-box-title { color: #b5443c; }
 .spirit-box-4 .spirit-box-dot { background: #d16a60; }
@@ -3914,7 +4223,7 @@ h2 {
   display: flex;
   gap: 12px;
   background: rgba(var(--panel-rgb), 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 14px;
   padding: 12px;
   align-items: stretch;
@@ -3938,7 +4247,7 @@ h2 {
 /* ── 收纳抽屉（方案B）：按阶级分抽屉，头连缩略图带+数量+箭头，点开展开该类行 ── */
 .spirit-drawers { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .spirit-drawer {
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 14px;
   background: rgba(var(--panel-rgb), 0.8);
   overflow: hidden;
@@ -3981,7 +4290,7 @@ h2 {
   flex-direction: column;
   gap: 10px;
   background: rgba(var(--panel-rgb), 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
   border-radius: 16px;
   padding: 16px;
   align-items: center;
@@ -4036,7 +4345,10 @@ h2 {
 .spirit-wall-col { flex: 1; min-width: 0; height: 530px; display: flex; flex-direction: column; }
 .spirit-cell.selected { border: 2px solid var(--primary); box-shadow: 0 2px 6px rgba(var(--tint-deep-rgb), 0.16); }
 /* 未拥有标识 */
-.badge.badge-locked { background: rgba(var(--tint-rgb), 0.14); color: #8a6a4a; border: 1px dashed rgba(var(--tint-rgb), 0.4); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+/* ⚠️ 2026-09-18 修：这里原先是写死的棕 `#8a6a4a`（**不跟主题**）——深色下对比度只有 **2.95:1**（WCAG AA 要求 4.5），
+   「未拥有」三个字在深色里几乎看不清。改用既有的语义色 `--muted`（浅 `#7a6f68` / 深 `#bfa98f` ⇒ 深色 6.5:1）。
+   它是**食灵阁**（`skill:spiritSummoning`）与美食知识页上的锁标，此前没被发现是因为这两个技能页从没进过扫描清单。 */
+.badge.badge-locked { background: rgba(var(--tint-rgb), 0.14); color: var(--muted); border: 1px dashed rgba(var(--tint-rgb), 0.4); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
 /* 翻页按钮固定在底部（不随内容移动） */
 .spirit-wall-col .pager-row, .spirit-wall-col .pager { flex-shrink: 0; z-index: 5; background: rgba(var(--panel-rgb), 0.95); border-radius: 10px; padding: 4px 0; }
 .spirit-detail-panel {
@@ -4114,7 +4426,6 @@ h2 {
   .top-nav { gap: 4px; padding: 5px 6px; }
   .top-nav-btn { padding: 3px 7px; font-size: 12px; }
   .top-nav-pagenum { display: none; }
-  .bottom-nav { flex-wrap: wrap; }
   .season-grid, .fest-grid, .tower-milestones { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .daily-grid { gap: 4px; }
   .newbie-guide { flex-direction: column; align-items: flex-start; gap: 4px; }
@@ -4143,6 +4454,10 @@ html[data-theme='dark'] {
   --bad: #ff6a5e;
   --bad-strong: #ff8a80;
   --bad-soft: #4a221e;
+  /* 语义色的 -rgb 三元组：深色下换成深色版，# 之前的 rgba(92,184,92,…) 这类字面量连主题都不跟（2026-09-18） */
+  --good-rgb: 111, 191, 122;          /* = --good #6fbf7a */
+  --warn-rgb: 240, 160, 51;           /* = --warn #f0a033 */
+  --bad-rgb: 255, 106, 94;            /* = --bad #ff6a5e */
   --muted: #bfa98f;
   --lock-bg: #2e2118;
   /* 调色板三元组·深色版（未列出的 token 沿用 :root，即两主题同值） */
@@ -4185,12 +4500,10 @@ html[data-theme='dark'] .btn:disabled, html[data-theme='dark'] .btn-sm:disabled 
 /* ── 导航/侧栏/主区 ── */
 /* 深色：面板底（深色金边环见「面板金边」一节；光带 alpha 0.42，远低于"金光过亮"判定线） */
 html[data-theme='dark'] .app-sidebar { background-color: rgba(var(--panel-rgb), 0.82); }
-html[data-theme='dark'] .app-status { background-color: rgba(var(--panel-rgb), 0.82); }  /* 2026-09-11 补回：此前被补丁误删，导致深色下右栏还是白底 */
 html[data-theme='dark'] .app-main { background-color: rgba(var(--panel-rgb), 0.88); }
 html[data-theme='dark'] .top-nav { background: none; border-bottom-color: rgba(255, 236, 214, 0.12); }
 /* 窄屏「⋯」浮层在深色下也要有底（否则浮层内按钮悬空在壁纸上） */
 html[data-theme='dark'] .top-nav-right { background: rgba(32, 24, 18, 0.95); border-color: rgba(255, 236, 214, 0.16); }
-html[data-theme='dark'] .bottom-nav { background: none; border-top-color: rgba(255, 236, 214, 0.12); }
 html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6); color: #e6d8c5; }
 html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active {
   background: rgba(var(--primary-rgb), 0.34); color: var(--on-primary-tint-3); border-color: rgba(var(--primary-rgb), 0.7);
@@ -4203,14 +4516,14 @@ html[data-theme='dark'] .splash-bg { background-image: url('../../public/images/
 /* 夜景壁纸：标题区本身是暗的，故撤掉米白柔光、文字翻回白/暖白（与亮色版互为镜像） */
 html[data-theme='dark'] .splash-overlay {
   background: linear-gradient(180deg,
-    rgba(0, 0, 0, 0.30) 0%,
-    rgba(0, 0, 0, 0.06) 32%,
-    rgba(0, 0, 0, 0.05) 55%,
-    rgba(0, 0, 0, 0.30) 82%,
-    rgba(0, 0, 0, 0.45) 100%);
+    rgba(var(--shadow-rgb), 0.30) 0%,
+    rgba(var(--shadow-rgb), 0.06) 32%,
+    rgba(var(--shadow-rgb), 0.05) 55%,
+    rgba(var(--shadow-rgb), 0.30) 82%,
+    rgba(var(--shadow-rgb), 0.45) 100%);
 }
-html[data-theme='dark'] .splash-title { color: #fff; text-shadow: 0 4px 18px rgba(0, 0, 0, 0.75); }
-html[data-theme='dark'] .splash-sub { color: #ffe8d0; font-weight: 600; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); }
+html[data-theme='dark'] .splash-title { color: #fff; text-shadow: 0 4px 18px rgba(var(--shadow-rgb), 0.75); }
+html[data-theme='dark'] .splash-sub { color: #ffe8d0; font-weight: 600; text-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.7); }
 /* （2026-09-11 重构后已废弃：深色侧栏不再用羽化渐变，面板底由 .app-sidebar/.app-status 的 background-color 提供） */
 
 /* ── 内部构件 ── */
@@ -4228,6 +4541,10 @@ html[data-theme='dark'] .mono { color: #f0e0c8; }
 html[data-theme='dark'] .battle-log { color: #d9c9b6; }
 html[data-theme='dark'] .log-list li { border-color: var(--border); }
 html[data-theme='dark'] .badge, html[data-theme='dark'] .badge-on { border-color: var(--border-strong); }
+/* 2026-09-18 修：`.badge-tier` 是 `--primary` 文字压在 `rgba(--primary-tint-rgb, 0.18)` 上，
+   深色下实测 **4.26:1**（AA 要求 4.5，差一点）。深色改用既有的「淡彩底上的文字」token
+   `--on-primary-tint-2`（#ffb08a，皮肤侧按主色推导）⇒ 8.2:1。浅色不受影响（仍用 --primary）。 */
+html[data-theme='dark'] .badge-tier { color: var(--on-primary-tint-2); }
 
 /* ── 深色主题 v4 补丁（2026-09-06）：表单控件 / 背包详情 / 食灵格 / 冷库 / 进度条 ── */
 html[data-theme='dark'] input,
@@ -4326,8 +4643,9 @@ html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85)
   line-height: 1.2;
 }
 
-/* 视口级背景（觅珍抽卡等）置于左右栏之下（2026-09-06） */
-.app-sidebar, .app-status { position: relative; z-index: 1; }
+/* 视口级背景（觅珍抽卡等）置于左右栏之下（2026-09-06）
+   （`.app-status` 已于 2026-09-20 移除：状态面板搬到底部胶囊 `.dock-panel`，不再有 fixed 右栏抽屉。） */
+.app-sidebar { position: relative; z-index: 1; }
 
 /* ── 觅珍页暗色覆盖（组件 :global 规则迁移至此，html[data-theme=dark] 全局写法）── */
 html[data-theme='dark'] .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: var(--border); color: #e8dccb; }
@@ -4434,7 +4752,7 @@ html[data-theme='dark'] .equip-mod-chips .mod-chip {
 .rt-qty { color: var(--gold); font-weight: 700; }
 .rt-src { font-size: 12px; color: var(--muted); white-space: normal; }
 .rt-src-craft { color: var(--primary-strong); }
-html[data-theme='dark'] .rt-row:hover { background: rgba(255, 255, 255, 0.06); }
+html[data-theme='dark'] .rt-row:hover { background: rgba(var(--glass-rgb), 0.06); }
 html[data-theme='dark'] .rt-node::before { border-left-color: rgba(232, 180, 95, 0.28); }
 html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); }
 
@@ -4466,7 +4784,7 @@ html[data-theme='dark'] .rt-row::before { background: rgba(232, 180, 95, 0.55); 
 .cb-round.lose { background: rgba(217, 75, 63, 0.1); }
 .cb-round.win .cb-round-verdict { color: var(--good-strong); }
 .cb-round.lose .cb-round-verdict { color: var(--bad-strong); }
-html[data-theme='dark'] .cb-card:hover { box-shadow: 0 0 12px rgba(255, 255, 255, 0.12); }
+html[data-theme='dark'] .cb-card:hover { box-shadow: 0 0 12px rgba(var(--glass-rgb), 0.12); }
 html[data-theme='dark'] .cb-round.win { background: rgba(87, 168, 97, 0.14); }
 html[data-theme='dark'] .cb-round.lose { background: rgba(217, 75, 63, 0.14); }
 /* 卡牌对战奖励明细（2026-09-06 平衡优化） */
@@ -4489,8 +4807,6 @@ html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); c
 .top-nav::-webkit-scrollbar { display: none; }
 
 /* 底部状态栏单行（2026-09-06）：隐藏横向滚动条；装备名超长省略 */
-.bottom-nav::-webkit-scrollbar { display: none; }
-.bottom-nav-slot span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* 界面放大 110%：物品/卡牌网格自动减一列，避免卡片信息显示不全（2026-09-06） */
 html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
@@ -4816,7 +5132,7 @@ html[data-theme='dark'] .mg-shell .mf-cell.cleared { background: rgba(87, 168, 9
 html[data-theme='dark'] .mg-shell .mf-cell.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(230, 190, 90, 0.55); }
 html[data-theme='dark'] .mg-shell .hz-track {
   background: linear-gradient(90deg, #4a3a2c, #5c4936 30%, #5c4936 70%, #4a3a2c);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 4px rgba(var(--shadow-rgb), 0.45);
 }
 html[data-theme='dark'] .mg-shell .tv-opt { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.3); color: #f2e6d7; }
 html[data-theme='dark'] .mg-shell .g2048-cell2 {
@@ -5013,7 +5329,7 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(var(--tint-
 .title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(var(--amber-rgb), 0.25); color: var(--primary-strong); }
 .gather-card:not(.locked) { cursor: pointer; }
 html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
-html[data-theme='dark'] .mg-entry-sep { background: rgba(255, 255, 255, 0.18); }
+html[data-theme='dark'] .mg-entry-sep { background: rgba(var(--glass-rgb), 0.18); }
 
 /* ── 水果合成 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .fm-mode, html[data-theme='dark'] .mg-shell .fm-chip {
@@ -5212,15 +5528,10 @@ html[data-crisp='1'][data-theme='dark'] .skill-item,
 html[data-crisp='1'][data-theme='dark'] .feature-tile,
 html[data-crisp='1'][data-theme='dark'] .sidebar-tab,
 html[data-crisp='1'][data-theme='dark'] .top-nav,
-html[data-crisp='1'][data-theme='dark'] .bottom-nav {
-  background-color: #2e2118;
-  background-image: none;
-}
 
 /* 深色下侧栏/主区的背景图一并压暗（清晰优先，保留一点纹理） */
 /* 高清晰模式：侧栏/右栏只加深色纱（壁纸由 .app-body 提供），保留一点纹理 */
-html[data-crisp='1'][data-theme='dark'] .app-sidebar,
-html[data-crisp='1'][data-theme='dark'] .app-status {
+html[data-crisp='1'][data-theme='dark'] .app-sidebar {
   background-image: linear-gradient(rgba(16, 11, 7, 0.90), rgba(16, 11, 7, 0.90));
 }
 
@@ -5259,10 +5570,10 @@ html[data-theme='dark'] .skill-item.active .skill-xp { color: var(--on-primary-t
 /* ④ 侧栏页签 / 功能磁贴：硬编码亮玻璃底（rgb(255,252,246,.3)）→ 深色玻璃底 */
 html[data-theme='dark'] .sidebar-tab,
 html[data-theme='dark'] .feature-tile,
-html[data-theme='dark'] .feature-group-label { background: rgba(255, 255, 255, 0.06); }
+html[data-theme='dark'] .feature-group-label { background: rgba(var(--glass-rgb), 0.06); }
 html[data-theme='dark'] .sidebar-tab { color: #e6d8c5; }
 html[data-theme='dark'] .sidebar-tab:hover,
-html[data-theme='dark'] .feature-tile:hover { background: rgba(255, 255, 255, 0.12); }
+html[data-theme='dark'] .feature-tile:hover { background: rgba(var(--glass-rgb), 0.12); }
 html[data-theme='dark'] .sidebar-tab.active,
 html[data-theme='dark'] .feature-tile.active {
   background: rgba(var(--primary-rgb), 0.34);
@@ -5271,7 +5582,7 @@ html[data-theme='dark'] .feature-tile.active {
 }
 
 /* ⑤ 装备/背包弹窗内的浅色面板（硬编码 rgba(255,251,244,.5) → 实测呈灰色块） */
-html[data-theme='dark'] .equip-pane { background: rgba(255, 255, 255, 0.05); }
+html[data-theme='dark'] .equip-pane { background: rgba(var(--glass-rgb), 0.05); }
 
 /* ⑥ 觅珍卡池主题色：亮色下用 --pc1/--pc2（深彩），深色下需提亮才可读（原 1.5~2.9:1） */
 html[data-theme='dark'] .pool-mini.pool-material .pool-mini-name { color: #4fd6b4; }
@@ -5293,15 +5604,15 @@ html[data-theme='dark'] .btn-primary strong { color: #fff !important; }
 
 /* ⑧ 抽卡按钮上的「10连/100连」药丸：硬编码亮底，深色下改深色玻璃底（按钮底色为渐变，扫描器读不到，此处按目视结果补） */
 html[data-theme='dark'] .gacha-btn-tag {
-  background: rgba(0, 0, 0, 0.28);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(var(--shadow-rgb), 0.28);
+  border-color: rgba(var(--glass-rgb), 0.35);
   color: #fff;
 }
 
 /* ⑨ 装备弹窗「当前装备总属性」小方块：硬编码亮底 rgba(255,251,244,.6)，深色下与浅色文字同色（几乎看不见）
    漏检原因：该区块仅在「已穿戴装备」时渲染，早先的扫描跑在空档上 → 已把守卫改成带数据的档位 */
 html[data-theme='dark'] .equip-stat-card {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glass-rgb), 0.06);
   border-color: var(--border);
 }
 
@@ -5327,13 +5638,13 @@ html[data-theme='dark'] .season-card,
 html[data-theme='dark'] .alchemy-card,
 html[data-theme='dark'] .story-chapter {
   border-color: var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 14px var(--gold-glow), inset 0 1px 0 rgba(240, 196, 118, 0.06);
+  box-shadow: 0 2px 8px rgba(var(--shadow-rgb), 0.45), 0 0 14px var(--gold-glow), inset 0 1px 0 rgba(240, 196, 118, 0.06);
 }
 
 html[data-theme='dark'] .btn,
 html[data-theme='dark'] .btn-sm {
   border-color: var(--border-strong);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 10px var(--gold-glow-strong);
+  box-shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.4), 0 0 10px var(--gold-glow-strong);
 }
 html[data-theme='dark'] .badge,
 html[data-theme='dark'] .feature-tile,
@@ -5348,7 +5659,7 @@ html[data-theme='dark'] .btn-danger { border-color: var(--border) !important; }
 
 /* 进度条：去掉白色内高光与浅色槽底（深色下槽底会发白） */
 html[data-theme='dark'] .progress-bar {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(var(--glass-rgb), 0.10);
   box-shadow: none;
 }
 html[data-theme='dark'] .progress-bar-fill,
@@ -5362,5 +5673,53 @@ html[data-theme='dark'] .top-nav-btn.active,
 html[data-theme='dark'] .season-tier-card.active,
 html[data-theme='dark'] .season-pts-card,
 html[data-theme='dark'] .btn-primary {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 16px var(--gold-glow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.4), 0 0 16px var(--gold-glow-strong), inset 0 1px 0 rgba(var(--glass-rgb), 0.06) !important;
+}
+
+/* ── 窄屏降列（2026-09-18 补）─────────────────────────────────────────────
+   背景：`.grid-n-5/6/7` 是「分页用固定列数」，原先**完全不随屏宽变化**（只有 110% 缩放降一列）。
+   实测 390px 手机上炼金页仍是 6 列 ⇒ 卡片仅 52px 宽，菜名被逐字竖排、卡片底部按钮整个挤出卡外。
+   这里按档降列；**必须放在文件末尾**：`html[data-scale='110'] .grid-n-6`（特指度更高）写在上面，
+   只有同特指度且更靠后的规则才压得住它，故同时给出带 data-scale 的选择器。 */
+@media (max-width: 1180px) {
+  .grid-n-6, html[data-scale='90'] .grid-n-6, html[data-scale='110'] .grid-n-6 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .grid-n-7, html[data-scale='90'] .grid-n-7, html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 940px) {
+  .grid-n-5, html[data-scale='90'] .grid-n-5, html[data-scale='110'] .grid-n-5 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .grid-n-6, html[data-scale='90'] .grid-n-6, html[data-scale='110'] .grid-n-6 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .grid-n-7, html[data-scale='90'] .grid-n-7, html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 720px) {
+  .grid-n-5, html[data-scale='90'] .grid-n-5, html[data-scale='110'] .grid-n-5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-n-6, html[data-scale='90'] .grid-n-6, html[data-scale='110'] .grid-n-6 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid-n-7, html[data-scale='90'] .grid-n-7, html[data-scale='110'] .grid-n-7 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+
+/* ══ 厨藏 / 装备：**内容溢出不许挤压兄弟框**（2026-09-20 用户三次反馈「排版乱」后重做）══
+   依据（flex/grid 规范的「自动最小尺寸」）：flex/grid 子项的 `min-width/min-height` 默认是 `auto`
+   = **不小于内容尺寸** ⇒ 某个框内容一多，它就把同一行的兄弟框挤扁 / 把整页顶宽。
+   两条硬规矩，都要**逐层**满足（嵌套的 grid/flex 每层都算，只加内层不够）：
+     ① 行方向 `min-width: 0`、列方向 `min-height: 0`；
+     ② 需要「滚到底才看得见」的列表用**定高 + overflow:auto**（这是有意为之的内部滚动，
+        不是让内容把别人顶开）；其余一律**内容驱动高度**、由页面滚动。
+   下面这条「核弹一行」一次覆盖整页（含所有嵌套层），并在需要处显式放回 `flex-shrink: 0`。 */
+.inventory-view, .inventory-view *,
+.equipment-view, .equipment-view * {
+  min-width: 0;
+  min-height: 0;
+}
+/* 详情表里的长值（如「装备属性」把 6 个数值挤成一行、或超长的获取来源列表）允许在词内断行，
+   否则会把右栏顶宽（实测「防御 22.62、命中 20.00…」整行不换行）。 */
+.item-detail-table td,
+.bag-detail-src-item {
+  overflow-wrap: anywhere;
+}
+/* 名字类文本一律「可缩 + 省略号」，别用不换行的长名字把按钮挤出可视区 */
+.equip-name,
+.equip-row .dim,
+.monster-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

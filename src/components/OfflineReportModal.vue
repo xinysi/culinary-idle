@@ -38,6 +38,12 @@ function reportLines() {
 function fmtGolds(n) {
   return (n ?? 0).toLocaleString()
 }
+
+/** 教学报告里的行动按钮：关掉弹窗并切到技能页（那里才能设挂机目标） */
+function goSetTarget() {
+  ui.closeOfflineReport()
+  ui.setView('skill')
+}
 </script>
 
 <template>
@@ -50,7 +56,18 @@ function fmtGolds(n) {
 
       <p class="dim">离开游戏 <strong class="mono">{{ formatDuration(report.elapsedMs ?? 0) }}</strong>（离线收益 80% 效率）</p>
 
-      <div class="offline-list">
+      <!-- 教学首秀（2026-09-18，留存改进 ③）：这一次没有产出，正好告诉玩家「离线怎么才有收获」 -->
+      <template v-if="report.teaching">
+        <div class="offline-teach">
+          <p><strong>这一次没有产出</strong>——离线时只有<strong>挂着目标</strong>的技能才会继续干活。</p>
+          <p class="dim" style="margin-top: 6px">
+            去技能页给一个技能选目标（比如「采摘 · 采蘑菇」），再摆上餐厅菜单；下次回来这里就会列出
+            这段时间的经验、物品与金币。离线最多结算 <strong>{{ player.offlineMaxHours() }} 小时</strong>。
+          </p>
+        </div>
+      </template>
+
+      <div v-else class="offline-list">
         <div v-for="(l, i) in reportLines()" :key="i" class="offline-row">
           <div class="offline-row-head">
             <strong>{{ l.name }}</strong>
@@ -72,6 +89,7 @@ function fmtGolds(n) {
       </div>
 
       <div class="offline-footer">
+        <button v-if="report.teaching" class="btn btn-sm" @click="goSetTarget()">去技能页选目标</button>
         <button class="btn btn-sm btn-primary" @click="ui.closeOfflineReport()">收下</button>
       </div>
     </div>
@@ -84,7 +102,22 @@ function fmtGolds(n) {
 .offline-row { padding: 8px 10px; border-radius: 8px; background: rgba(var(--panel-soft-rgb), 0.8); border: 1px dashed rgba(var(--primary-tint-rgb), 0.3); font-size: 13px; }
 .offline-row-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .offline-row-body { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--muted); }
-.offline-row.restaurant { border-color: rgba(92, 184, 92, 0.5); background: rgba(92, 184, 92, 0.07); }
+.offline-row.restaurant { border-color: rgba(var(--good-rgb), 0.5); background: rgba(var(--good-rgb), 0.07); }
 .offline-row.restaurant .mono { margin-left: auto; }
-.offline-footer { margin-top: 12px; text-align: right; }
+/* 教学首秀块（没产出时替代清单） */
+.offline-teach {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(var(--primary-tint-rgb), 0.07);
+  border: 1px dashed rgba(var(--primary-tint-rgb), 0.38);
+  font-size: 13px;
+}
+.offline-footer {
+  margin-top: 12px;
+  text-align: right;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 </style>

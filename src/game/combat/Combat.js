@@ -8,6 +8,7 @@ import { getItem, itemName } from '../data/items.js'
 import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
+import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
 const DRUNK_TURNS = 5 // 醉酒 负面效果 持续 5 回合
@@ -243,6 +244,14 @@ export class Combat {
     const hp = this.player.combat.hp
     const max = this.player.maxHp
     if (max <= 0 || hp / max > (s.autoEatThreshold ?? 50) / 100) return
+    // 优先吃玩家在「战备」里点选的那味料理（settings.autoEatItem，2026-09-21 用户要求
+    // 「点击选择食物为当前自动进食的食物」）：指定的是**策略**而不是「只准吃这个」——
+    // 指定品吃光/没带时回落到「回血最高」，否则自动进食会静默停摆。
+    const picked = s.autoEatItem ? getItem(s.autoEatItem) : null
+    if (picked?.type === 'food' && picked.heal && (this.player.inventory[s.autoEatItem] ?? 0) > 0) {
+      this.useFood(picked.id, true)
+      return
+    }
     // 选背包中回血最高的料理
     let best = null
     for (const [id, qty] of Object.entries(this.player.inventory)) {
@@ -251,6 +260,26 @@ export class Combat {
       if (item?.type === 'food' && item.heal && (!best || item.heal > best.heal)) best = item
     }
     if (best) this.useFood(best.id, true)
+  }
+
+  // ── 只读展示用getter（2026-09-19，供属性面板）─────────────────────────
+  // ⚠️ 这两个只是把**既有公式里的常量**暴露给界面，不参与任何计算、不改公式：
+  //    属性面板要显示「伤害减免」与「暴击伤害」，重算一遍会让界面与战斗出现两套真相
+  //    （改公式时忘改界面 ⇒ 页面显示的数字与实际伤害不符）。
+  /** 暴击倍率。与 playerAttack 里 `dmg *= 2` 同源；C51 有「此值 == 公式里的字面量」断言 */
+  critMultiplier() {
+    return 2
+  }
+
+  /** 减伤率 = def/(def+100)。与 playerAttack（看对手 def）与对手攻击（看玩家 defense）同一口径 */
+  reductionPct(def) {
+    const d = Number(def) || 0
+    return d / (d + 100)
+  }
+
+  /** 克制倍率。与两处 `advantage ? 1.15 : 1`（玩家/对手）同源；C51 有「此值 == 公式里的字面量」断言 */
+  advantageMultiplier() {
+    return 1.15
   }
 
   playerAttack(o) {
@@ -390,7 +419,8 @@ export class Combat {
     getSkillInstance('heatControl')?.addXp(xpHeat)
     const drops = []
     for (const d of o.drops ?? []) {
-      if (Math.random() < d.chance) {
+      // 概率走全局难度系数（÷5，下限 1%）；`DropList.vue` 显示的是**同一个函数**的结果，两边不会差
+      if (Math.random() < dropChance(d.chance)) {
         const qty = d.qty ?? 1
         this.player.gainItem(d.itemId, qty)
         drops.push({ itemId: d.itemId, qty })
@@ -432,14 +462,25 @@ export class Combat {
     }
     const slots = Object.keys(this.player.equipment).filter((s) => this.player.equipment[s])
     let lost = null
-    if (slots.length) {
+    // 🔴 2026-09-19：**可无限重复刷的 PvE 不再夺走装备**（挑战塔 / 食神秘境）。
+    // 原因（实测）：夺走装备 + 无限刷 = **死亡螺旋** —— 输一场掉一件装备，而强化/词条/宝石是按**装备 id** 记的，
+    // 一掉就全部失效 → 属性阶梯下滑 → 更容易输 → 再掉。塔里实测同一层因此给出 100%/76%/38%/0% 四种结果。
+    // 现改为：塔/秘境战败只**清空品鉴点**（奥义随之熄灭，张力仍在），区域对决 / 首领 / 竞技场保留原惩罚。
+    const repeatable = !!(this.opponent?.isTower || this.opponent?.isRealm)
+    if (slots.length && !repeatable) {
       const slot = slots[Math.floor(Math.random() * slots.length)]
       lost = this.player.equipment[slot]
       this.player.unequip(slot, { destroy: true }) // 物品被夺走：就地销毁，不回背包（否则背包满时会转投信箱，可从信箱找回）
+    } else if (repeatable) {
+      this.player.setCombat({ flavorEnergy: 0 })
+      this.player.tastePoints = 0 // 品鉴点清空 → 已激活的奥义随下一帧 drainAoji 全部熄灭
     }
     this.player.setCombat({ hp: this.player.maxHp })
     this.player.onCombatLose?.() // 败场统计（§13）
-    this.logLine(`💀 你被打败了……${lost ? `失去了 ${itemName(lost)}` : ''}（品鉴值已恢复）`, 'lose')
+    this.logLine(
+      `💀 你被打败了……${lost ? `失去了 ${itemName(lost)}` : (repeatable ? '（塔/秘境不夺装备，但品鉴点清空）' : '')}（品鉴值已恢复）`,
+      'lose',
+    )
     // 硬核模式（§4.1/§8.2）：死亡即删档（由 bootstrap 处理）
     if (this.player.hardcore) {
       EventBus.emit('hardcore:death', {})

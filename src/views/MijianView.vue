@@ -438,7 +438,7 @@ function typeLabel(id) {
   min-width: 210px;
   font-size: 15px;
   color: var(--ttm, #fff); /* 单抽：主题亮彩色字 */
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.3);
   background: linear-gradient(120deg, var(--tmd1, #b76e79), var(--tmd2, #e0a980));
 
   box-shadow: 0 4px 14px rgba(var(--tglow, 183, 110, 121), 0.4);
@@ -547,10 +547,10 @@ function typeLabel(id) {
 .gacha-front-sub { font-size: 12px; color: var(--muted); }
 
 /* 品质光晕（边框 + 阴影随稀有度增强） */
-.gacha-card.q-common .gacha-front { border-color: #b9a993; }
+.gacha-card.q-common .gacha-front { border-color: var(--rarity-common); }
 .gacha-card.q-fine .gacha-front { border-color: var(--info); }
-.gacha-card.q-rare .gacha-front { border-color: #4a90d9; box-shadow: 0 0 10px rgba(74, 144, 217, 0.45); }
-.gacha-card.q-epic .gacha-front { border-color: #7b1fa2; box-shadow: 0 0 12px rgba(123, 31, 162, 0.5); }
+.gacha-card.q-rare .gacha-front { border-color: var(--rarity-rare); box-shadow: 0 0 10px rgba(var(--rarity-rare-rgb), 0.45); }
+.gacha-card.q-epic .gacha-front { border-color: var(--rarity-epic); box-shadow: 0 0 12px rgba(var(--rarity-epic-rgb), 0.5); }
 .gacha-card.q-legend .gacha-front { border-color: var(--amber-strong); box-shadow: 0 0 14px rgba(var(--amber-strong-rgb), 0.6); }
 .gacha-card.q-myth .gacha-front {
   border-color: var(--primary);
@@ -683,7 +683,7 @@ function typeLabel(id) {
 }
 /* 按钮文字浮于流光之上（轻阴影增强可读性） */
 .gacha-btn > *,
-.gacha-sim .sim-btn > * { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28); }
+.gacha-sim .sim-btn > * { position: relative; z-index: 1; text-shadow: 0 1px 3px rgba(var(--shadow-rgb), 0.28); }
 @media (prefers-reduced-motion: reduce) {
   .gacha-btn::before, .gacha-btn::after,
   .gacha-sim .sim-btn::before, .gacha-sim .sim-btn::after { animation: none; }

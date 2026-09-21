@@ -4,6 +4,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -11,13 +12,13 @@ const ui = useUiStore()
 const MODES = {
   m1: { label: '模式1', dur: 40, start: 3, grow: 1, speed: 0.6, lives: 3, target: 385, gold: 45, desc: '40 秒 · 目标 385 分 · 从 3 步开始，亮灯慢，3 条命 · +45 币' },
   m2: { label: '模式2', dur: 45, start: 3, grow: 1, speed: 0.5, lives: 3, target: 420, gold: 55, desc: '45 秒 · 目标 420 分 · 亮灯加快 · +55 币' },
-  m3: { label: '模式3', dur: 50, start: 4, grow: 1, speed: 0.45, lives: 3, target: 455, gold: 60, desc: '50 秒 · 目标 455 分 · **从 4 步开始** · +60 币' },
+  m3: { label: '模式3', dur: 50, start: 4, grow: 1, speed: 0.45, lives: 3, target: 455, gold: 60, desc: '50 秒 · 目标 455 分 · <b>从 4 步开始</b> · +60 币' },
   m4: { label: '模式4', dur: 55, start: 4, grow: 1, speed: 0.4, lives: 2, target: 500, gold: 70, desc: '55 秒 · 目标 500 分 · 只有 2 条命 · +70 币' },
-  m5: { label: '模式5', dur: 60, start: 4, grow: 2, speed: 0.38, lives: 3, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · **每轮加 2 步**，涨得快 · +80 币' },
-  m6: { label: '模式6', dur: 65, start: 5, grow: 1, speed: 0.34, lives: 3, target: 700, gold: 90, desc: '65 秒 · 目标 700 分 · **从 5 步开始** · +90 币' },
+  m5: { label: '模式5', dur: 60, start: 4, grow: 2, speed: 0.38, lives: 3, target: 650, gold: 80, desc: '60 秒 · 目标 650 分 · <b>每轮加 2 步</b>，涨得快 · +80 币' },
+  m6: { label: '模式6', dur: 65, start: 5, grow: 1, speed: 0.34, lives: 3, target: 700, gold: 90, desc: '65 秒 · 目标 700 分 · <b>从 5 步开始</b> · +90 币' },
   m7: { label: '模式7', dur: 70, start: 5, grow: 2, speed: 0.32, lives: 2, target: 750, gold: 100, desc: '70 秒 · 目标 750 分 · 加 2 步 + 2 条命 · +100 币' },
   m8: { label: '模式8', dur: 80, start: 5, grow: 2, speed: 0.3, lives: 2, target: 900, gold: 120, desc: '80 秒 · 目标 900 分 · 亮灯很快 · +120 币' },
-  m9: { label: '模式9', dur: 90, start: 5, grow: 2, speed: 0.28, lives: 1, target: 1100, gold: 140, desc: '90 秒 · 目标 1100 分 · **只有 1 条命** · +140 币' },
+  m9: { label: '模式9', dur: 90, start: 5, grow: 2, speed: 0.28, lives: 1, target: 1100, gold: 140, desc: '90 秒 · 目标 1100 分 · <b>只有 1 条命</b> · +140 币' },
   m10: { label: '模式10', dur: 100, start: 5, grow: 2, speed: 0.25, lives: 1, target: 1355, gold: 160, desc: '100 秒 · 目标 1355 分 · 1 条命 + 最快亮灯，记忆极限 · +160 币' },
 }
 const TILES = [
@@ -54,23 +55,11 @@ let timers = []
 let showAt = 0
 let showIdx = 0
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 function tone(i) { return 520 + i * 110 }
 
@@ -266,7 +255,7 @@ onUnmounted(() => { clearTimers(); stopLoop() })
           <div class="sv-info-row sv-info-rule">通用规则：先看系统<b>依次点亮</b>几个菜品格（顺序），亮完后<b>按同样顺序点一遍</b> · 每点对一步 +20 分，整轮通过额外 +50 分（并按步数加成），下一轮序列更长 · 点错扣 1 条命（共 3 条，模式 9/10 只有 1 条），命耗尽立即结束 · 限时结束按得分结算，达标发游戏币（超出目标最多 +50%）</div>
           <div v-for="(m, key) in MODES" :key="key" class="sv-info-row">
             <b class="sv-info-name">{{ m.label }}</b>
-            <span class="sv-info-desc">{{ m.desc }}</span>
+            <span class="sv-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

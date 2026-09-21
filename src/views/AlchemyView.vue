@@ -184,7 +184,7 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'deluxe', label
       </div>
       <div class="gather-grid grid-n-6 grid-equal">
         <template v-for="(v, ei) in listPaged" :key="v.r?.id ?? 'pad-' + ei">
-          <div v-if="!v._pad" v-tilt class="gather-card alchemy-card" :class="{ locked: v.max <= 0 }">
+          <div v-if="!v._pad" class="gather-card alchemy-card" :class="{ locked: v.max <= 0 }">
           <div class="alchemy-flow">
             <div class="alchemy-side">
               <template v-for="m in v.inputs.main" :key="m.id">

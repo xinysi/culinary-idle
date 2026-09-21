@@ -1,11 +1,10 @@
 <script setup>
 // 杂货铺 — 需求文档 §11.3：购买弹药/种子/容量扩展 + 出售背包物品（价值×0.5）
 import { ref, computed } from 'vue'
-import { PAID_CAP_MAX } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { SHOP_ITEMS, shopItemName } from '../game/data/shop.js'
-import { expansionsByGroup } from '../game/data/expansions.js'
+import { expansionsByGroup, EXPANSIONS } from '../game/data/expansions.js'
 import { getItem } from '../game/data/items.js'
 import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
@@ -50,6 +49,21 @@ function buyExpansion(e) {
   if (r.ok) ui.pushLog(`🧱 ${e.name}：${r.msg ?? '已升级'}`, 'gain')
   else ui.pushLog(`${e.name}：${r.msg ?? '无法升级'}`, 'warn')
 }
+/**
+ * 一键买满（**只给存储容量组**）：厨藏从 120 买到 2500 要 119 次「+20 格」点击（上限 2026-09-20 由 600 提到 2500），
+ * 手动点不现实。其它扩建的价格是递增曲线，一键买满会一次花掉远超预期的金币，故不开这个口子。
+ * 循环里同时以「金币不足 / 已到上限 / 数值没变化」三种情况收口，避免死循环。
+ */
+function expBulk(e) {
+  let n = 0
+  for (let i = 0; i < 500; i++) {
+    const before = e.current(player)
+    const r = e.apply(player)
+    if (!r.ok || e.current(player) <= before) break
+    n++
+  }
+  ui.pushLog(n ? `🧱 ${e.name}：连买 ${n} 次 → 当前 ${e.current(player)}${e.unit}` : `${e.name}：买不动了（金币不足或已到上限）`, n ? 'gain' : 'warn')
+}
 function goExpansionPage(e) {
   if (e.view === 'skill' && e.skill) player.setActiveSkill(e.skill)
   ui.setView(e.view)
@@ -62,6 +76,9 @@ const buyList = computed(() =>
 )
 function buyListCount(tabId) {
   if (tabId === 'all') return SHOP_ITEMS.length
+  // 扩建类商品不在 SHOP_ITEMS 里（它们在 `expansions.js` 的注册表）⇒ 计数必须从这里取，
+  // 否则页签一直显示「容量与扩建（0）」而面板里却有 16 行（2026-09-20 存储合一时发现）
+  if (tabId === 'expansion') return EXPANSIONS.length
   return SHOP_ITEMS.filter((s) => shopCat(s) === tabId).length
 }
 // 分页切片与页数（补满到 PAGE_SIZE，避免最后页不满导致底部翻页按钮跳动）
@@ -75,10 +92,7 @@ const buyListPaged = computed(() => {
 
 // 卡片动态样式：是否可负担/可购买（买不起或容量已满 → locked 置灰）
 function canAffordBuy(entry) {
-  if (player.gold < entry.price) return false
-  if (entry.action === 'inventorySlot' && player.inventoryCap >= PAID_CAP_MAX.inventory) return false
-  if (entry.action === 'bankSlot' && player.bankCap >= PAID_CAP_MAX.bank) return false
-  return true
+  return player.gold >= entry.price
 }
 
 // 数量选择弹窗状态
@@ -105,18 +119,6 @@ function confirmQty(n) {
 }
 
 function buy(entry) {
-  if (entry.action === 'inventorySlot') {
-    if (!player.spendGold(entry.price)) return
-    if (player.expandInventory(10)) ui.pushLog(`背包容量 +10（当前 ${player.inventoryCap}/${PAID_CAP_MAX.inventory}）`, 'info')
-    else { player.gainGold(entry.price); ui.pushLog(`背包已达商店上限 ${PAID_CAP_MAX.inventory} 格（可用山海食经继续扩容）`, 'warn') }
-    return
-  }
-  if (entry.action === 'bankSlot') {
-    if (!player.spendGold(entry.price)) return
-    if (player.expandBank(20)) ui.pushLog(`仓库容量 +20（当前 ${player.bankCap}/${PAID_CAP_MAX.bank}）`, 'info')
-    else { player.gainGold(entry.price); ui.pushLog(`仓库已达商店上限 ${PAID_CAP_MAX.bank} 格（可用山海食经继续扩容）`, 'warn') }
-    return
-  }
   openBuyQty(entry)
 }
 
@@ -124,7 +126,7 @@ function buy(entry) {
 const sellList = computed(() =>
   Object.entries(player.inventory)
     .filter(([id, q]) => q > 0 && getItem(id))
-    .map(([id, qty]) => ({ id, qty, item: getItem(id), price: Math.max(1, Math.floor(getItem(id).value * 0.5)) }))
+    .map(([id, qty]) => ({ id, qty, item: getItem(id), price: player.sellUnitPrice(id) }))
     .sort((a, b) => b.item.value - a.item.value)
 )
 function sell(id, qty = 1) {
@@ -191,7 +193,8 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
             <div v-for="e in g.rows" :key="e.id" class="card exp-row">
               <div class="exp-main">
                 <div class="exp-name">{{ e.icon }} {{ e.name }}</div>
-                <div class="dim exp-desc">{{ e.desc }}</div>
+                <!-- expansions.js 的 desc 带 <b> 强调标记 ⇒ 必须 v-html（{{ }} 会显示成纯文本） -->
+                <div class="dim exp-desc" v-html="e.desc"></div>
               </div>
               <div class="exp-state mono">
                 {{ e.current(player) }}<span class="dim"> / {{ e.max }}{{ e.unit }}</span>
@@ -204,6 +207,7 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
                 <button class="btn btn-sm btn-primary" :disabled="!expCanBuy(e)" @click="buyExpansion(e)">
                   {{ expMaxed(e) ? '已满级' : '购买' }}
                 </button>
+                <button v-if="e.group === 'storage'" class="btn btn-sm" title="连续购买直到金币不足或达到上限" @click="expBulk(e)">买满</button>
                 <button class="btn btn-sm" @click="goExpansionPage(e)">去页面 ↗</button>
               </div>
             </div>
@@ -213,24 +217,20 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
 
       <div v-else class="gather-grid grid-n-6">
         <template v-for="(entry, ei) in buyListPaged" :key="entry.itemId ?? entry.action ?? 'pad-' + ei">
-          <div v-if="!entry._pad" v-tilt class="gather-card shop-card" :class="{ locked: !canAffordBuy(entry), affordable: canAffordBuy(entry) }">
+          <div v-if="!entry._pad" class="gather-card shop-card" :class="{ locked: !canAffordBuy(entry), affordable: canAffordBuy(entry) }">
           <div class="gather-card-head">
             <img v-if="entry.itemId && itemImage(entry.itemId)" :src="itemImage(entry.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
-            <strong>{{ entry.action === 'inventorySlot' ? '🎒 背包扩展' : entry.action === 'bankSlot' ? '📦 仓库扩展' : shopItemName(entry.itemId) }}</strong>
+            <strong>{{ shopItemName(entry.itemId) }}</strong>
           </div>
           <div class="gather-card-row"><span class="dim">{{ entry.desc ?? CATEGORY_LABEL[getItem(entry.itemId)?.category] ?? getItem(entry.itemId)?.category }}</span></div>
           <div class="gather-card-row"><span>价格</span><span class="mono">{{ entry.price }} 金币</span></div>
           <div class="gather-card-row">
             <span>持有</span>
-            <span class="mono">
-              <template v-if="entry.action === 'inventorySlot'">{{ player.inventoryCap }}/{{ PAID_CAP_MAX.inventory }}<span v-if="player.inventoryCap > PAID_CAP_MAX.inventory" class="dim">（商店已满）</span></template>
-              <template v-else-if="entry.action === 'bankSlot'">{{ player.bankCap }}/{{ PAID_CAP_MAX.bank }}<span v-if="player.bankCap > PAID_CAP_MAX.bank" class="dim">（商店已满）</span></template>
-              <template v-else>{{ player.inventory[entry.itemId] ?? 0 }}</template>
-            </span>
+            <span class="mono">{{ player.inventory[entry.itemId] ?? 0 }}</span>
           </div>
           <button
             class="btn btn-sm btn-primary"
-            :disabled="player.gold < entry.price || (entry.action === 'inventorySlot' && player.inventoryCap >= PAID_CAP_MAX.inventory) || (entry.action === 'bankSlot' && player.bankCap >= PAID_CAP_MAX.bank)"
+            :disabled="!canAffordBuy(entry)"
             @click="buy(entry)"
           >
             购买

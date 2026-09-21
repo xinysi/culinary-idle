@@ -1,15 +1,19 @@
 // 技能基类 — 需求文档 §3：等级 / 经验 / 专精
 // 等级上限 100，转生后突破至 120（§3）
-// 经验加成来源（乘法叠加）：食灵（§3.3.6）→ 奥义（§3.4.1）→ 转生加成（每层 +20%）→ 增益剂（§3.4.2）
+// 经验加成来源：**加法层**（食灵/奥义/公会/图谱/米其林/荣誉/厨神之路/食神/精通池，各自 +0~17%）
+// 与**乘法层**（转生 每层 +20% / 增益剂 / 卡片精通或设置倍率 取较大 / 对决补正 / 限时窗口）——
+// 乘法层先相乘、再经 `dampXpStack` 统一阻尼（2026-09-21，见 core/growthRate.js）。
 // 设计：level / exp / mastery 一律从 player store 读取（store 是唯一数据源），
 // 实例自身只保留运行时状态（actionsDone、timerMs 等，不持久化）。
 
 import { EventBus } from '../core/EventBus.js'
 import { getSkillDef } from '../data/skills.js'
+import { dampXpStack } from '../core/growthRate.js'
 
 export const MAX_LEVEL = 100
 export const PRESTIGE_MAX_LEVEL = 120
-const PRESTIGE_XP_BONUS = 0.2 // 每次转生 +20% 经验（2026-09 调高：100→120 曲线偏肝，提升转生收益）
+// 导出供「效果总览」按同一口径展示（此前 activeEffects 里又硬写了一遍 0.2，属于两处真相）
+export const PRESTIGE_XP_BONUS = 0.2 // 每次转生 +20% 经验（2026-09 调高：100→120 曲线偏肝，提升转生收益）
 // 数值平衡：卡片经验统一缩放系数。采集目标/制作配方/作物等「卡片」给予的经验统一放大，
 // 以匹配新的经验曲线（99→100 = 3亿），保持各卡片相对差异、不逐条改数据。
 // CARD_XP_SCALE = 60 时，单技能挂机满级约 9 天（接受精通间隔/双倍加成后约 7~8 天）。
@@ -53,10 +57,16 @@ export class Skill {
   }
 
   /** 加卡片经验：采集/制作/作物等「卡片」给予的经验，统一乘以 CARD_XP_SCALE 后走 addXp；
-   *  mult 为卡片精通经验倍数（默认 1），作为 addXp 的独立成长线传入（与设置倍率取较大、不叠加）。 */
+   *  mult 为卡片精通经验倍数（默认 1），作为 addXp 的独立成长线传入（与设置倍率取较大、不叠加）。
+   *  ⚠️ 精通池最高里程碑（95%）给该技能 +xpPct% 卡片经验，**必须加在这里**：
+   *     在线（`award()` / `craft()`）与离线（`bootstrap.settleOffline` 的 `inst.addCardXp(r.exp, …)`）
+   *     都走这一个出口 ⇒ 天然同源，不会出现「离线吃不到池加成」。 */
   addCardXp(base, mult = 1) {
     if (!(base > 0)) return 0
-    return this.addXp(base * CARD_XP_SCALE, mult > 0 ? mult : 1)
+    // 夹 5%：池加成是全技能口径，不能因为新系统把标定过的升级时长整体位移
+    const poolXpPct = Math.min(5, this.player.masteryPoolBonus?.(this.id)?.xpPct ?? 0)
+    const b = poolXpPct > 0 ? base * (1 + poolXpPct / 100) : base
+    return this.addXp(b * CARD_XP_SCALE, mult > 0 ? mult : 1)
   }
 
   /** 加经验：应用全部加成后处理升级，写回玩家状态
@@ -88,7 +98,7 @@ export class Skill {
     const prestigeMult = 1 + this.prestiges * PRESTIGE_XP_BONUS
     // 增益剂经验倍率（§3.4.2）
     const tonicMult = this.player.getXpMultiplier?.() ?? 1
-    // 设置里的全局经验倍率（设置面板：1/10/50/100/250/500/1000）
+    // 设置里的全局经验倍率（档位唯一口径在 caps.js 的 XP_MULTIPLIER_OPTIONS，现为 1/2/3/5）
     const settingsMult = this.player.settings?.xpMultiplier ?? 1
     // 设置倍率与精通倍数不叠加：取较大（精通独立成长线，设置倍率只作用于非精通部分）
     const growthMult = Math.max(settingsMult, mult > 0 ? mult : 1)
@@ -103,7 +113,13 @@ export class Skill {
       : this.def.category === 'production' ? (market.craftXp ?? 1)
       : 1
 
-    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100 + daoPct / 100) * prestigeMult * tonicMult * growthMult * catchup * marketMult
+    // 乘法叠区（2026-09-21）：上面这几层**先相乘、再统一阻尼**（唯一出口 `dampXpStack`）。
+    // 阻尼作用在乘积上而不是某一层上 ⇒ 各条阶梯（转生层数、增益剂档位）的档间差距一分不变、
+    // 只是整体被压缩；低乘区几乎不动（×1.2 → ×1.15），只有乘区堆高时才明显（×13.5 → ×10.4）。
+    // ⚠️ 别改成「逐层乘阻尼」——那等价于把每层的系数都调低，高档位就白做了（见 growthRate.js 的说明）。
+    const expMult = dampXpStack(prestigeMult * tonicMult * growthMult * catchup * marketMult)
+
+    let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100 + daoPct / 100) * expMult
     let level = this.level
     let leveled = false
     while (level < this.maxLevel && exp >= this.player.xpTotalForLevel(level + 1)) {

@@ -153,7 +153,7 @@ const nextReward = computed(() => {
           <div class="hz-info-row hz-info-rule">通用规则：指针扫入定火金区即「完美」，相邻窄区为「不错」；连击越顺奖励越高 · 双锅模式两轨**异速**（第二轨慢 20~25%），需同时完美计双完美</div>
           <div v-for="(m, key) in METAS" :key="key" class="hz-info-row">
             <b class="hz-info-name">{{ m.label }}</b>
-            <span class="hz-info-desc">{{ m.desc }}</span>
+            <span class="hz-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

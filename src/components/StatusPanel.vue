@@ -3,6 +3,7 @@
 import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
+import { useIdleTasks } from '../composables/useIdleTasks.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
@@ -12,6 +13,12 @@ import ProgressBar from './ProgressBar.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
+
+// 分区渲染（2026-09-20 用户要求：「挂机动向 · 食灵 · 奥义 · 快捷状态 · 事件日志，应该是五个独立的胶囊和弹出面板」）：
+// 每个底部胶囊各渲染一个 `<StatusPanel :section="'spirit'|'aoji'|'status'|'log'" />`；
+// 不传 `section`（默认空串）= 五块全渲染（兼容旧用法，也方便单独调试）。
+const props = defineProps({ section: { type: String, default: '' } })
+const show = (sec) => !props.section || props.section === sec
 
 // ── 快捷状态（§13：当前任务 / 赛季 / 公会）──
 import { getSeason, activeSeasonId } from '../game/data/seasons.js'
@@ -45,75 +52,16 @@ const seasonClaimable = computed(() => {
 })
 const currentGuild = computed(() => getGuild(player.guild?.id))
 
-// §5.1 装备槽位名称
-const SLOT_NAMES = {
-  weapon: '武器',
-  helmet: '头盔',
-  body: '身体',
-  legs: '腿部',
-  boots: '脚部',
-  offhand: '副手',
-  amulet: '饰品1',
-  ring: '饰品2',
-}
-
-// 装备部位换装：点击槽位 → 列出背包中该槽位装备
-const eqTarget = ref(null) // 当前选择的槽位
-const QUALITY_RANK = { 神话: 6, 传说: 5, 史诗: 4, 稀有: 3, 精良: 2, 普通: 1 }
-const slotOptions = computed(() => {
-  if (!eqTarget.value) return []
-  return Object.entries(player.inventory)
-    .filter(([id, q]) => q > 0 && getItem(id)?.type === 'equipment' && getItem(id)?.slot === eqTarget.value)
-    .map(([id, qty]) => ({ id, qty, item: getItem(id) }))
-    .sort((a, b) => (QUALITY_RANK[b.item.quality] ?? 0) - (QUALITY_RANK[a.item.quality] ?? 0) || b.item.value - a.item.value)
-})
-function eqStatsText(it) {
-  return Object.entries(it.stats ?? {}).map(([k, v]) => `${EQ_STAT_LABEL[k] ?? k} ${v}`).join('、')
-}
-const EQ_STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', hpBonus: '生命值', speedBonus: '攻速' }
-function equipFromSlot(id) {
-  if (player.equip(id)) ui.pushLog(`穿戴了 ${getItem(id)?.name}`, 'gain')
-  eqTarget.value = null
-}
-function upgradeCostFor(itemId) {
-  return player.upgradeCost(itemId)
-}
-function doUpgrade(itemId) {
-  const r = player.upgradeItem(itemId)
-  ui.pushLog(r.ok ? `⚒️ ${getItem(itemId)?.name} 强化到 +${r.level}` : r.msg ?? '强化失败', r.ok ? 'gain' : 'warn')
-}
-
+// ⚠️ 2026-09-20：这里原先还有一套「装备部位换装弹窗」（eqTarget / slotOptions / equipFromSlot /
+//    doUpgrade / upgradeCostFor）。装备块在 2026-09-19 升级为独立页面时就从右栏删掉了，
+//    但那段代码留了下来 —— `eqTarget` 除了被置 null **从无入口赋值**，即整块不可达。
+//    本轮胶囊化后本组件会被实例化 5 次（每个胶囊一份），更不能留 5 份无用 Teleport，故整体删除。
 const logCollapsed = ref(false) // 事件日志折叠：折叠时用 v-if 不渲染列表(优化性能)
 const recentLog = computed(() => [...ui.log].reverse().slice(0, 8))
 
-// 全局挂机任务列表（§3.1：含暂停/超限展示；已关闭的任务不显示；并行上限内才实际运行）
-const runningTasks = computed(() => {
-  ui.loopTick // 依赖全局循环计数：每引擎 tick 重算（进度实时）
-  const running = new Set(player.getRunningIdleSkills().map((i) => i.id))
-  const tasks = []
-  for (const inst of getAllSkillInstances()) {
-    if (!inst || !['gathering', 'exploration'].includes(inst.type)) continue
-    if (player.closedIdleTasks?.[inst.id]) continue // 关闭的任务不显示
-    const t = inst.currentTarget
-    if (!t || inst.level < t.reqLevel) continue
-    tasks.push({
-      id: inst.id,
-      inst,
-      target: t,
-      paused: player.isSkillPaused(inst.id),
-      running: running.has(inst.id),
-      pct: inst.progressPct,
-      // 该任务技能受食灵的经验加成（§3.3.6，%）
-      spiritXp: player.spiritEffects?.()?.xpPct?.[inst.id] ?? 0,
-      // 时间戳 rAF 用：让挂机进度条不依赖 engine tick（已降到 100ms）→ 无论引擎多慢都丝滑
-      durationMs: inst.intervalMs ? inst.intervalMs(t) : 0,
-      cycleStartAt: inst.cycleStartAt ?? 0,
-      active: running.has(inst.id) && !player.isSkillPaused(inst.id) && !player.closedIdleTasks?.[inst.id],
-    })
-  }
-  return tasks
-})
-const parallelLimit = computed(() => player.settings.maxParallelIdle ?? 0)
+// ⚠️ 2026-09-19：挂机任务列表抽到 `composables/useIdleTasks.js` —— 中间底栏的「挂机中条」读同一份，
+//    免得两处各算一遍、出现「底栏显示在跑、抽屉显示已暂停」这类两套真相。
+const { runningTasks, parallelLimit } = useIdleTasks()
 function toggleTaskPause(id) {
   const next = !player.isSkillPaused(id)
   player.setSkillPaused(id, next)
@@ -159,33 +107,10 @@ function closeAoji(id) {
   <aside class="status-panel">
     <!-- 角色状态已移至中间底部状态条，此处删除 -->
 
-    <!-- 挂机任务（§3.1 多技能并行，任意页面可见可控；无任务时常驻显示空态）-->
-    <div class="card">
-      <h3>⚡ 挂机中（{{ runningTasks.length }}{{ parallelLimit > 0 ? `/${parallelLimit}` : '' }}）</h3>
-      <template v-if="runningTasks.length">
-        <div v-for="task in runningTasks" :key="task.id" class="idle-task" :class="{ 'idle-waiting': !task.running && !task.paused }">
-          <div class="stat-line">
-            <span class="dim">{{ getSkillDef(task.id)?.name }} · {{ getItem(task.target.itemId)?.name }}</span>
-            <span class="mono">×{{ task.inst.actionsDone }}</span>
-          </div>
-          <div v-if="task.spiritXp > 0" class="dim task-spirit">食灵经验 +{{ task.spiritXp }}%</div>
-          <ProgressBar :start-at="task.cycleStartAt" :duration-ms="task.durationMs" :active="task.active" />
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px">
-            <span class="dim">{{ task.paused ? '已暂停' : task.running ? '切页不中断' : '并行位已满' }}</span>
-            <div style="display: flex; gap: 6px">
-              <button v-if="task.paused || task.running" class="btn btn-sm" :class="{ 'btn-primary': task.paused }" @click="toggleTaskPause(task.id)">
-                {{ task.paused ? '继续' : '停止' }}
-              </button>
-              <button class="btn btn-sm" title="关闭（停止并隐藏此任务）" @click="closeTask(task.id)">✕</button>
-            </div>
-          </div>
-        </div>
-      </template>
-      <p v-else class="dim panel-empty">暂无挂机任务 — 到技能页选择目标开始采集/加工/探索</p>
-    </div>
+    <!-- 「⚡ 挂机动向」块在底部胶囊弹出的面板里（components/BottomDock.vue，2026-09-20 起由它统一承载） -->
 
     <!-- 食灵出战加成（§3.3.6）：无食灵时常驻显示引导 -->
-    <div class="card spirit-side">
+    <div v-if="show('spirit')" class="card spirit-side">
       <template v-if="spiritActiveCount > 0">
         <h3>食灵出战 {{ spiritActiveCount }}/{{ SPIRIT_SLOTS }}</h3>
         <div class="dim" v-if="spiritXpPct > 0">{{ spiritSkillName }}经验 +{{ spiritXpPct }}%（食灵加成）</div>
@@ -199,7 +124,7 @@ function closeAoji(id) {
     </div>
 
     <!-- 美食奥义（§3.4.1）：常驻显示激活状态 + 消耗 + 快捷关闭 -->
-    <div class="card aoji-side">
+    <div v-if="show('aoji')" class="card aoji-side">
       <h3>美食奥义 {{ activeAojis.length }} 个</h3>
       <template v-if="activeAojis.length">
         <div v-for="a in activeAojis" :key="a.id" class="aoji-row">
@@ -214,7 +139,7 @@ function closeAoji(id) {
     </div>
 
     <!-- 生效中的增益剂（2026-09-14：增益剂此前无使用入口也无状态展示）-->
-    <div v-if="activeBuffs.length" class="card quick-status">
+    <div v-if="show('status') && activeBuffs.length" class="card quick-status">
       <h3>🧪 生效中</h3>
       <div v-for="b in activeBuffs" :key="b.key" class="quick-group">
         <div class="quick-row"><span>{{ b.label }}</span><b class="mono">{{ b.shown }}</b></div>
@@ -223,7 +148,7 @@ function closeAoji(id) {
     </div>
 
     <!-- 快捷状态（§13）-->
-    <div class="card quick-status">
+    <div v-if="show('status')" class="card quick-status">
       <h3>快捷状态</h3>
 
       <!-- 信箱（2026-09-11）：只在有未领附件时出现，避免占位 -->
@@ -302,57 +227,9 @@ function closeAoji(id) {
 
     <!-- 装备已移至顶部导航“装备”穿戴弹窗，此处删除 -->
 
-    <!-- 装备选择弹窗（部位换装） -->
-    <Teleport to="body">
-      <div v-if="eqTarget" class="modal-backdrop" @click.self="eqTarget = null">
-        <div class="modal eq-modal">
-        <header class="modal-head">
-          <h3>{{ SLOT_NAMES[eqTarget] }}装备</h3>
-          <button class="btn btn-sm" @click="eqTarget = null">✕</button>
-        </header>
-        <div class="item-detail-body">
-          <div v-if="player.equipment[eqTarget]" class="eq-option current">
-            <strong>{{ getItem(player.equipment[eqTarget])?.name }}</strong>
-            <span class="dim">（当前穿戴）</span>
-            <button class="btn btn-sm" @click="player.unequip(eqTarget); eqTarget = null">卸下</button>
-          </div>
-          <!-- 强化（§13）：每级 +10% 属性，上限 5 级 -->
-          <div v-if="player.equipment[eqTarget]" class="upgrade-box">
-            <div class="dim">强化等级：<strong>+{{ player.upgrades[player.equipment[eqTarget]] ?? 0 }}</strong>/5（每级属性 +10%）</div>
-            <div v-if="(player.upgrades[player.equipment[eqTarget]] ?? 0) < 5" class="dim" style="font-size: 12px">
-              费用：{{ upgradeCostFor(player.equipment[eqTarget])?.gold }} 金币 + {{ upgradeCostFor(player.equipment[eqTarget])?.timberName }}×{{ upgradeCostFor(player.equipment[eqTarget])?.qty }} + {{ upgradeCostFor(player.equipment[eqTarget])?.oreName }}×{{ upgradeCostFor(player.equipment[eqTarget])?.qty }}<span class="dim">（按装备等级取同档木材与矿）</span>
-            </div>
-            <button
-              class="btn btn-sm btn-primary"
-              :disabled="(player.upgrades[player.equipment[eqTarget]] ?? 0) >= 5"
-              @click="doUpgrade(player.equipment[eqTarget])"
-            >
-              强化
-            </button>
-            <p class="dim" style="font-size: 12px; margin-top: 4px">💡 建议：强化适合中后期装备（金装/史诗/神话），前期铜铁装收益低、成本高</p>
-          </div>
-          <div
-            v-for="o in slotOptions"
-            :key="o.id"
-            class="eq-option"
-            :class="{ equipped: player.equipment[eqTarget] === o.id }"
-            @click="equipFromSlot(o.id)"
-          >
-            <div>
-              <strong>{{ o.item.name }}</strong>
-              <span v-if="o.item.quality" class="dim">{{ o.item.quality }}</span>
-              <span class="dim mono">×{{ o.qty }}</span>
-            </div>
-            <div class="dim" style="font-size: 12px">{{ eqStatsText(o.item) }}</div>
-          </div>
-          <p v-if="!slotOptions.length" class="dim">背包中没有该部位的装备</p>
-        </div>
-      </div>
-    </div>
-    </Teleport>
 
     <!-- 事件日志 -->
-    <div class="card log-card">
+    <div v-if="show('log')" class="card log-card">
       <h3>事件日志
         <span class="log-actions">
           <button class="btn btn-sm" @click="ui.clearLog()">清空</button>

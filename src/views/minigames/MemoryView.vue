@@ -170,7 +170,7 @@ resetDay()
           <div class="mm-info-row mm-info-rule">通用规则：牌面朝下 ❓，翻开两张相同即消除、不同抖动盖回（记牌考验记忆力）· 全部配对得游戏币 · 最佳 = 最少翻牌次数 · 限时/限翻模式超限即失败</div>
           <div v-for="(m, key) in MODES" :key="key" class="mm-info-row">
             <b class="mm-info-name">{{ m.label }}</b>
-            <span class="mm-info-desc">{{ m.desc }}</span>
+            <span class="mm-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

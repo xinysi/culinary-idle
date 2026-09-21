@@ -1,5 +1,6 @@
 // 全游戏内容同步审计 — 检查跨系统引用一致性与攻略数值
 // 运行：node scripts/ci/audit_sync.mjs
+import fs from 'node:fs'
 import { ITEMS, itemName } from '../../src/game/data/items.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS, STYLE_INFO, STYLE_ADVANTAGE } from '../../src/game/data/combat.js'
 import { SEASONS } from '../../src/game/data/seasons.js'
@@ -80,7 +81,14 @@ const check = (name, cond, detail = '') => {
   check('攻略：离线 12h/80% 表述', t.includes('12h') && t.includes('80%'))
   check('攻略：能量饼干 +4h 上限 +12h 表述', t.includes('+4h') && t.includes('12h'))
   check('攻略：背包 20 格/100 表述', t.includes('20 格') && t.includes('100'))
-  check('攻略：转生 99/+10%/120 表述', t.includes('99 级') && t.includes('+10%') && t.includes('120'))
+  // ⚠️ 转生加成是 +20%（`Skill.js` 的 `PRESTIGE_XP_BONUS = 0.2`）。原断言写「+10%」且靠**强化每级 +10%** 那串字样蒙过去，
+  //    等于断言写错了却一直 PASS（守卫自身的口子）——现拆成两条，各查各的。
+  // ⚠️ 断言更正（2026-09-19）：转生门槛是 **100 级**（`Skill.js` 的 `MAX_LEVEL = 100`；转生后上限 120）。
+  // 旧断言写「99 级」是**过时口径**（历史上上限曾是 99，连代码注释里都残留过「否则 99」），
+  // 它此前能通过是因为攻略里另有一句「对决 99 级解锁挑战塔」——而那扇门本轮已按参考作下调到 60，
+  // 于是这条断言暴露了：**它一直在检查一个已经不存在的数字**。
+  check('攻略：转生 100 级 / +20% / 120 表述', t.includes('100 级') && t.includes('+20%') && t.includes('120'))
+  check('攻略：强化 +10% 表述', t.includes('+10%'))
   check('攻略：金刀 74 / 水晶刀 86 表述', t.includes('74') && t.includes('86'), '攻略未提及金刀 74 / 水晶刀 86 的锻造等级')
 }
 
@@ -113,6 +121,85 @@ const check = (name, cond, detail = '') => {
       return a.check({ collected: all, seasons: {}, collectionPct: pct }) === true
     }),
   )
+}
+
+// ── 存档字段三处一致（defaultState / serialize / applySave，2026-09-18 立）──────────
+// 起因：`storyProgress`（轶事/故事进度）**只在 defaultState 里声明**，serialize 与 applySave
+// 两边都漏了 —— 于是 3988 条「传闻轶事」的进度**每次刷新归零**，玩家永远解锁不了。
+// 这类缺陷不报错、不白屏、既有守卫全绿，只有玩家点进去才发现 → 用源码断言钉住三处键集一致。
+{
+  const storeSrc = fs.readFileSync(new URL('../../src/stores/player.js', import.meta.url), 'utf8')
+  /** 从 fromIdx 之后的第一个 { 开始取配平的 {...} 文本 */
+  const braceBlock = (fromIdx) => {
+    const i = storeSrc.indexOf('{', fromIdx)
+    let d = 0
+    for (let j = i; j < storeSrc.length; j++) {
+      if (storeSrc[j] === '{') d++
+      else if (storeSrc[j] === '}') { d--; if (d === 0) return storeSrc.slice(i, j + 1) }
+    }
+    return ''
+  }
+  /** 取某一缩进层级上的顶层 `key:` */
+  const keysAt = (text, indent) => {
+    const out = []
+    const re = new RegExp('^ {' + indent + '}([A-Za-z_$][\\w$]*):')
+    for (const ln of text.split('\n')) {
+      const m = ln.match(re)
+      if (m) out.push(m[1])
+    }
+    return out
+  }
+  const defKeys = keysAt(braceBlock(storeSrc.indexOf('const defaultState = () =>')), 4)
+  const serKeys = keysAt(braceBlock(storeSrc.indexOf('serialize() {')), 8)
+  const patchKeys = keysAt(braceBlock(storeSrc.indexOf('this.$patch({', storeSrc.indexOf('applySave(saved)'))), 8)
+
+  // 豁免：不进存档（派生 / 一次性）；skills 在 applySave 里由局部变量合成后再 patch
+  const NO_SAVE = ['todayKey', 'activeTrial', 'activeTrialOpp']
+  const NO_PATCH = ['skills']
+  const missSer = defKeys.filter((k) => !NO_SAVE.includes(k) && !serKeys.includes(k))
+  const missPatch = serKeys.filter((k) => !NO_PATCH.includes(k) && !patchKeys.includes(k))
+  const extraPatch = patchKeys.filter((k) => !serKeys.includes(k))
+  check(
+    '存档：三处字段一致（默认 ' + defKeys.length + ' · 存档 ' + serKeys.length + ' · 还原 ' + patchKeys.length + '）',
+    missSer.length === 0 && missPatch.length === 0 && extraPatch.length === 0,
+    'serialize 漏字段：' + (missSer.join(',') || '无') + '；applySave 漏还原：' + (missPatch.join(',') || '无') + '；applySave 多余：' + (extraPatch.join(',') || '无'),
+  )
+}
+
+// ── 7b. 里程碑：凡是「全 / 满 / 集齐」类目标，target 必须等于真实总量 ──
+// 起因（2026-09-19 审计）：成就「全清」目标写 151 而实际 262（58% 就报完成）、分店「四家」实际 6 家、常客「八位」实际 12 位、
+// 套装目标 81 而实际上限 43（永远做不完）。这类错误玩家只会看到「已完成」，必须由守卫拦住回归。
+{
+  const { MILESTONES } = await import('../../src/game/data/milestones.js')
+  const { ALL_ACHIEVEMENTS, collectionTotal } = await import('../../src/game/data/achievements.js')
+  const { BRANCHES } = await import('../../src/game/data/branches.js')
+  const { REGULARS } = await import('../../src/game/data/regulars.js')
+  const { COLLECTABLE_SETS } = await import('../../src/game/data/setBonuses.js')
+  const { SKILL_DEFS } = await import('../../src/game/data/skills.js')
+  const TOTALS = {
+    m_achievementAll: ALL_ACHIEVEMENTS.length,
+    m_branchAll: BRANCHES.length,
+    m_regularAll: REGULARS.length,
+    m_gearSetAll: COLLECTABLE_SETS.length,
+    m_spirit160: Object.keys(SPIRITS).length,
+    m_boss28: COMBAT_BOSSES.length,
+    m_season40: SEASONS.length,
+  }
+  const bad = []
+  for (const [id, total] of Object.entries(TOTALS)) {
+    const m = MILESTONES.find((x) => x.id === id)
+    if (!m) { bad.push(`${id} 不存在`); continue }
+    if (m.target !== total) bad.push(`${m.name}: target ${m.target} ≠ 实际 ${total}`)
+  }
+  check('里程碑：全/满类目标 == 真实总量（成就/分店/常客/套装/食灵/首领/赛季）', bad.length === 0, bad.join('; '))
+
+  // hint 里的总量数字也不能飘（改了数据忘了改文案 = 玩家看到过期数字）
+  const txt = MILESTONES.map((m) => `${m.name} ${m.hint}`).join(' ')
+  const miss = []
+  for (const [label, n] of [['成就', ALL_ACHIEVEMENTS.length], ['图鉴', collectionTotal()], ['技能', Object.keys(SKILL_DEFS).length]]) {
+    if (!txt.includes(String(n))) miss.push(`${label} ${n}`)
+  }
+  check('里程碑：文案里的总量数字与数据一致', miss.length === 0, `缺/过期: ${miss.join(', ')}`)
 }
 
 console.log(fail === 0 ? '\nSYNC AUDIT PASS' : `\n${fail} FAILURES`)

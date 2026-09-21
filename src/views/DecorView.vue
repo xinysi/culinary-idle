@@ -39,7 +39,8 @@ const decorTotalBonus = computed(() => {
 function perK(id) {
   const d = RESTAURANT_DECOR_BY_ID[id]
   if (!d || !d.price) return 0
-  return +((d.effect / d.price) * 10000).toFixed(3)
+  // 保留 2 位小数（2026-09-21 用户：「数值没有控制小数」）——原先是 3 位，300 件装潢全是「2.973%/万金」这种读着累
+  return +((d.effect / d.price) * 10000).toFixed(2)
 }
 
 const decorList = computed(() => {
@@ -130,6 +131,10 @@ const catRows = computed(() =>
           共 <b>{{ DECOR_TOTAL }}</b> 件装潢（商店 {{ RESTAURANT_DECOR.length }} 件 + 手工 {{ CRAFTED_DECOR.length }} 件），
           每件永久提升<b>餐厅收入 %</b>（与餐厅等级、菜单、套餐相乘叠加）。
           已购 {{ owned.size }} 件，当前总加成 <b>+{{ decorTotalBonus }}%</b>。
+        </p>
+        <p class="dim">
+          💡 <b>投资优先级</b>：装潢是<b>长期资产</b>（按实测，满 300 件的回本时间约 <b>600 小时</b>餐厅收入），
+          而<b>餐厅分店</b>的回本只要<b>十几小时</b>——金币紧张时先开分店、先把菜单与等级做上去，装潢留到金币宽裕再收。
         </p>
       </div>
     </header>

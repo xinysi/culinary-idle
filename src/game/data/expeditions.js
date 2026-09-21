@@ -34,7 +34,7 @@ export const EXPEDITIONS = [
     name: '远洋渔队',
     icon: '🚢',
     skill: 'fishing',
-    reqLevel: 25,
+    reqLevel: 12, // 2026-09-18：25 → 12（新玩家第一场就能见到「离线也有收获」这条腿）
     desc: '出海数小时，带回一船鲜货',
     rare: { itemId: 'goldenDragonFish', chance: 0.005 }, // 金龙鱼（唯一额外来源：0.5% + 档位加成）
     slots: [
@@ -49,7 +49,7 @@ export const EXPEDITIONS = [
     name: '深山采药队',
     icon: '⛰️',
     skill: 'foraging',
-    reqLevel: 30,
+    reqLevel: 15, // 2026-09-18：30 → 15
     desc: '深入山林采药，带回珍稀菌草',
     rare: { itemId: 'spiritFruit', chance: 0.01 }, // 灵果
     slots: [
@@ -64,7 +64,7 @@ export const EXPEDITIONS = [
     name: '矿脉勘探队',
     icon: '⛏️',
     skill: 'mining',
-    reqLevel: 25,
+    reqLevel: 12, // 2026-09-18：25 → 12
     desc: '勘探深层矿脉，运回整箱矿石',
     rare: { itemId: 'excavation_ext2_18', chance: 0.02 }, // 黄金矿
     slots: [
@@ -76,7 +76,8 @@ export const EXPEDITIONS = [
   },  {
     // v2.8.0 新增：伐木队（20 档木材的挂机来源；与矿脉勘探队同构，4 槽按等级分段）
     id: 'timberYard', name: '伐木队', icon: '🪓',
-    skill: 'woodcutting', reqLevel: 25, desc: '进驻林场，成批运回各档木料',
+    skill: 'woodcutting', reqLevel: 12, // 2026-09-18：25 → 12（原 25）
+    desc: '进驻林场，成批运回各档木料',
     rare: { itemId: 'primalWood', chance: 0.02 }, // 太初神木
     slots: [
       { reqLevel: 1, hours: 1, goldPerHour: 110, pool: ['pineWood', 'cedarWood', 'birchWood'] },
@@ -86,7 +87,7 @@ export const EXPEDITIONS = [
     ],
   },
   {
-    id: 'exp_bakery', name: '面点采买队', icon: '🍞', skill: 'baking', reqLevel: 25,
+    id: 'exp_bakery', name: '面点采买队', icon: '🍞', skill: 'baking', reqLevel: 12, // 2026-09-18：25 → 12
     desc: '常年在麦香里打转的队伍，替你把烘焙原料一并带回。',
     rare: { itemId: 'saffron', chance: 0.012 },
     slots: [
@@ -97,7 +98,7 @@ export const EXPEDITIONS = [
     ],
   },
   {
-    id: 'exp_pickle', name: '腌酿商队', icon: '🫙', skill: 'preserving', reqLevel: 25,
+    id: 'exp_pickle', name: '腌酿商队', icon: '🫙', skill: 'preserving', reqLevel: 12, // 2026-09-18：25 → 12
     desc: '沿盐道走的商队，坛坛罐罐里都是能久放的滋味。',
     rare: { itemId: 'mysterySpice', chance: 0.01 },
     slots: [

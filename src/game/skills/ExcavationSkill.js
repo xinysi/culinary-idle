@@ -18,6 +18,7 @@ import { SEED_MAP } from '../data/farmSeeds.js'
 import { SMITH_ORE_TARGETS } from '../data/smithOres.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { getItem } from '../data/items.js'
+import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率；只压常量基准值）
 
 /** ⚠️ 历史手写清单（10 条，含 1 个矿物 `saltOre`）——**内容保持原样**（见文件头注释）。 */
 export const EXCAVATION_TARGETS = [
@@ -31,6 +32,17 @@ export const EXCAVATION_TARGETS = [
   { itemId: 'lingzhi', reqLevel: 60, xpPerAction: 150, intervalSec: 5.6 },
   { itemId: 'ginseng', reqLevel: 75, xpPerAction: 215, intervalSec: 6.2 },
   { itemId: 'dragonRoot', reqLevel: 90, xpPerAction: 320, intervalSec: 7.0 },
+  // ── 后期补档（2026-09-19）：修「75→90 有 15 级空档、91-99 一件都没有」 ──
+  // 效果：61-99 段平均间距 7.3 → 3.5、最大空档 15 → 7、最深等级 90 → 99（对齐参照作 Melvor 的收官密度）。
+  // 等级按间距 ~3 级铺；intervalSec 沿用本技能 75→90 的实测趋势（约 +0.053 秒/级）；
+  // xpPerAction 取 `10 + 5×reqLevel` 下限（与所有后期目标一致，也是 `applyGatherXp` 的口径）。
+  { itemId: 'rockCoreRoot', reqLevel: 78, xpPerAction: 400, intervalSec: 6.4 },
+  { itemId: 'jadePithRoot', reqLevel: 81, xpPerAction: 415, intervalSec: 6.5 },
+  { itemId: 'cloudFungus', reqLevel: 84, xpPerAction: 430, intervalSec: 6.7 },
+  { itemId: 'bloodFungus', reqLevel: 87, xpPerAction: 445, intervalSec: 6.8 },
+  { itemId: 'taiSui', reqLevel: 93, xpPerAction: 475, intervalSec: 7.2 },
+  { itemId: 'vermilionGrass', reqLevel: 96, xpPerAction: 490, intervalSec: 7.3 },
+  { itemId: 'mysticRoot', reqLevel: 99, xpPerAction: 505, intervalSec: 7.5 },
 ]
 
 /** 是否矿物（分流依据**只看物品类别**，不看名字——石膏/硝石/明矾这类名字里没有「矿」） */
@@ -83,22 +95,23 @@ export class ExcavationSkill extends GatheringSkill {
 
     let extraItem = null
     const extras = []
-    if (Math.random() < FOSSIL_CHANCE) {
+    if (Math.random() < gatherExtraChance(FOSSIL_CHANCE)) {
       this.player.gainItem(FOSSIL_ITEM_ID, 1)
       extraItem = FOSSIL_ITEM_ID
       extras.push(FOSSIL_ITEM_ID)
     }
-    if (Math.random() < COPPER_CHANCE) {
+    if (Math.random() < gatherExtraChance(COPPER_CHANCE)) {
       this.player.gainItem('copperOre', 1)
       extras.push('copperOre')
     }
-    if (Math.random() < IRON_CHANCE) {
+    if (Math.random() < gatherExtraChance(IRON_CHANCE)) {
       this.player.gainItem('ironOre', 1)
       extras.push('ironOre')
     }
     // 10% 掉落本作物种子（仅对可种作物；矿物目标无种子自动跳过）
     const seedId = SEED_MAP[target.itemId]
-    if (seedId && Math.random() < SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100) {
+    // 只压常量基准值；daoEffects.seedChancePct 是轮回天赋练出来的加成，加回去
+    if (seedId && Math.random() < gatherExtraChance(SEED_CHANCE) + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100) {
       this.player.gainItem(seedId, 1)
       extras.push(seedId)
     }
@@ -116,19 +129,19 @@ export class ExcavationSkill extends GatheringSkill {
     })
   }
 
-  /** 离线结算：产出含期望化石/矿石数量 */
+  /** 离线结算：产出含期望化石/矿石数量。⚠️ 概率一律走 gatherExtraChance，否则在线/离线不同口径 */
   computeOffline(durationMs, efficiency) {
     const result = super.computeOffline(durationMs, efficiency)
     if (!result) return null
-    const fossils = Math.round(result.actions * FOSSIL_CHANCE)
+    const fossils = Math.round(result.actions * gatherExtraChance(FOSSIL_CHANCE))
     if (fossils > 0) result.items[FOSSIL_ITEM_ID] = fossils
-    const coppers = Math.round(result.actions * COPPER_CHANCE)
+    const coppers = Math.round(result.actions * gatherExtraChance(COPPER_CHANCE))
     if (coppers > 0) result.items.copperOre = coppers
-    const irons = Math.round(result.actions * IRON_CHANCE)
+    const irons = Math.round(result.actions * gatherExtraChance(IRON_CHANCE))
     if (irons > 0) result.items.ironOre = irons
     const seedId = SEED_MAP[this.currentTarget?.itemId]
     if (seedId) {
-      const seeds = Math.round(result.actions * (SEED_CHANCE + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100))
+      const seeds = Math.round(result.actions * (gatherExtraChance(SEED_CHANCE) + (this.player.daoEffects?.()?.seedChancePct ?? 0) / 100))
       if (seeds > 0) result.items[seedId] = seeds
     }
     return result

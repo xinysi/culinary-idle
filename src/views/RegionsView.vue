@@ -169,6 +169,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'autom
       <button class="btn btn-sm" style="margin-left: 8px" @click="goExpedition">去采集队页</button>
     </h3>
     <div class="card">
+      <div class="table-scroll">
       <table class="target-table">
         <tbody>
           <tr v-for="l in lines" :key="l.def.id">
@@ -189,6 +190,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'autom
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
     <RelatedPages :links="RELATED" />
 </div>

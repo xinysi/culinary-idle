@@ -40,6 +40,19 @@ export const EQUIPMENT_SETS = (() => {
     if (!inip.has(m[1])) inip.set(m[1], [])
     inip.get(m[1]).push(id)
   }
+  // ⚠️ 每个矿套其实是 **9 件**：8 件 `inip{矿}_*`（刀/锅/砧板/围裙/帽/腿/靴/戒指）+ 1 件**单独定义**的
+  //    同族饰品（`graphiteAmulet` 石墨护符 / `amethystRing` 紫水晶戒指 / `tinAmulet` 锡护符…），
+  //    它的 id **不带 `inip` 前缀** ⇒ 上面那条正则漏掉它，整族少认一件。
+  //    实测症状（2026-09-21 用户报「我图里现在穿了石墨两件，右边好像没检测到」）：穿「石墨护符 + 石墨戒指」
+  //    只算 1 件 → 2 件套不触发、界面上什么都不显示。21 个矿套**每个都少这一件**。
+  //    补法用「矿名 + 槽位后缀」精确拼 id（不要用前缀正则：`^tin` 会误吞 `titaniumAmulet`）。
+  for (const [key, ids] of inip) {
+    const mineral = key.replace(/^inip/, '')
+    for (const suffix of ['Ring', 'Amulet', 'Necklace', 'Bracelet', 'Earring']) {
+      const id = mineral + suffix
+      if (ITEMS[id]?.type === 'equipment' && !ids.includes(id)) ids.push(id)
+    }
+  }
   for (const [key, ids] of inip) if (ids.length >= 6) out.push({ key, name: keyToName(key, ids), ids })
   // ③ 40 赛季套（limitedItems + 限定单件）
   for (const se of SEASONS) {

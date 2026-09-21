@@ -1,5 +1,6 @@
 // 吉祥物（2026-09-10 新增）— 餐厅吉祥物：买下后可「每天蹭一次」，给随机小奖励并积累好感。
 // 设计约束：奖励全部为既有物品/金币；不新增物品、不改动任何固定数据。
+import { otherChance } from './difficulty.js' // 全局难度系数（itemChance 的唯一缩放出口）
 
 /** 吉祥物：cost 售价、pets 好感等级门槛（蹭的次数）、rewards 每次奖励池 */
 export const MASCOTS = [
@@ -37,12 +38,18 @@ export function mascotBondProgress(pets) {
   return { level: lv, current: n - base, needed: next - base, progress: Math.min(1, (n - base) / (next - base)) }
 }
 
-/** 每日奖励：金币 = 基础 ×（1 + 0.25×好感等级），并有机会给吉祥物专属物品 */
+/**
+ * 每日礼物掉出「吉祥物专属物品」的**实际概率**（基准值 × 全局难度系数，下限 1%）。
+ * 🔴 发放（`mascotReward`）与显示（`MascotView` 的 itemPct）都读它 ⇒ 同源。
+ */
+export const mascotItemChance = (def) => otherChance(def?.itemChance ?? 0)
+
+/** 每日奖励：金币 = 基础 ×（1 + 0.25×好感等级），并有机会给吉祥物专属物品（**金币不受难度系数影响**） */
 export function mascotReward(def, pets, rng = Math.random) {
   const lv = mascotBondLevel(pets)
   const gold = Math.round((def?.goldBase ?? 0) * (1 + 0.25 * lv))
   const items = {}
-  if (def?.items && rng() < (def.itemChance ?? 0)) {
+  if (def?.items && rng() < mascotItemChance(def)) {
     for (const [id, qty] of Object.entries(def.items)) items[id] = qty
   }
   return { gold, items }

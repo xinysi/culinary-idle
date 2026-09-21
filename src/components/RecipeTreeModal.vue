@@ -3,6 +3,7 @@
 import { computed } from 'vue'
 import { getItem } from '../game/data/items.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
+import { effIngredients } from '../game/data/materialCost.js'
 import RecipeTreeNode from './RecipeTreeNode.vue'
 
 const props = defineProps({
@@ -32,7 +33,7 @@ function buildTree(itemId, qty, depth, seen) {
   node.recipe = { name: entry.recipe.name, skillId: entry.skillId, recipeId: entry.recipe.id, reqLevel: entry.recipe.reqLevel, isSelf: depth === 0 }
   const seen2 = new Set(seen)
   seen2.add(itemId)
-  for (const [mid, mqty] of Object.entries(entry.recipe.ingredients)) {
+  for (const [mid, mqty] of Object.entries(effIngredients(entry.recipe))) {
     node.children.push(buildTree(mid, mqty * qty, depth + 1, seen2))
   }
   return node

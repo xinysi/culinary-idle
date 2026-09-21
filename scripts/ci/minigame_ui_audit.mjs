@@ -1,9 +1,11 @@
-// 小游戏 UI 标准 · 静态合规检查（27 款 × 11 项）
+// 小游戏 UI 标准 · 静态合规检查（27 款 × 13 项）
 // 标准见《小游戏UI标准.md》§11。用法：node scripts/ci/minigame_ui_audit.mjs
 // 例外（见标准 §10）：火候炉无开始门控/结算弹窗；大胃王开始按钮类名为 .fs-btn。
+// 2026-09-21 新增两项「资源与生命周期」检查：音效单例（不许自建 AudioContext）、卸载清理（定时器/循环必须清）。
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { stripComments } from './lib/comments.mjs' // 三态剥注释（字符串/行注释/块注释），防注释把文本检查骗成假绿
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..') // 上浮两层：scripts/ci → 仓库根（2026-09-10 归类后）
 const dir = join(root, 'src/views/minigames/')
@@ -38,6 +40,19 @@ const checks = [
   ['结算弹窗', (s, tpl, pre) => new RegExp(pre + '-mask').test(tpl) && new RegExp(pre + '-result').test(tpl) && new RegExp(pre + '-again').test(tpl)],
   ['无提示行', (s, tpl, pre) => !new RegExp('<div[^>]*class="' + pre + '-hint"').test(tpl) && !/hint\.value/.test(s)],
   ['深色适配', (s, tpl, pre) => new RegExp("data-theme='dark'][^{]*\\.mg-shell \\.(" + pre + "-mode|" + pre + "-chip)").test(css)],
+  // ── 以下两条是「资源与生命周期」守卫（2026-09-21 立，两处真实缺陷都曾长期潜伏）──
+  // ① 音效必须走共用单例 game/core/minigameAudio.js：原先 15 个页各自 `new AudioContext()` 且从不 close，
+  //    凑凑消更是「每响一声新建一个」（实测一局 created 57 / closed 0）；JS 堆不增长 ⇒ 看内存的守卫都发现不了。
+  ['音效单例', (s) => !/new\s*\(?\s*window\.AudioContext/.test(s)],
+  // ② 用了定时器/动画循环就必须在卸载时清理：大胃王原先没有 onUnmounted ⇒ 离场后 setInterval 照跑、
+  //    到点仍 finish() 结算发币；吃豆人的 onUnmounted 只摘了 keydown、没停 rAF ⇒ 无鬼模式永久 60fps 空转。
+  //    ⚠️ 判断前先剥注释：这是**文本检查**，注释里提一句 onUnmounted 就会假绿（本项目有先例）。
+  ['卸载清理', (s) => {
+    const code = stripComments(s)
+    if (!/setInterval|requestAnimationFrame/.test(code)) return true
+    if (!/onUnmounted\s*\(|onBeforeUnmount\s*\(/.test(code)) return false
+    return /clearInterval|cancelAnimationFrame/.test(code)
+  }],
 ]
 const rows = []
 for (const [file, name, pre] of GAMES) {

@@ -7,6 +7,8 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { primeAudio, sfx } from '../game/core/sound.js'
 import { SKINS, skinUnlocked } from '../game/data/skins.js'
+import { CHEF_AVATARS } from '../game/data/chefImage.js'
+import { XP_MULTIPLIER_OPTIONS } from '../game/data/caps.js' // 经验倍率档位的唯一口径（读档夹取也用它）
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -137,17 +139,15 @@ function openSavePanel() {
           <section class="set-group">
             <h4>成长</h4>
             <div class="settings-row">
-              <span class="dim">经验倍率：</span>
+              <span class="dim">成长加速：</span>
               <select v-model.number="player.settings.xpMultiplier" style="flex: 1">
-                <option :value="1">1×（默认）</option>
-                <option :value="10">10×</option>
-                <option :value="50">50×</option>
-                <option :value="100">100×</option>
-                <option :value="250">250×</option>
-                <option :value="500">500×</option>
-                <option :value="1000">1000×</option>
+                <!-- 档位来自 caps.js 的 XP_MULTIPLIER_OPTIONS（唯一口径；读档夹取也引用它） -->
+                <option v-for="m in XP_MULTIPLIER_OPTIONS" :key="m" :value="m">{{ m === 1 ? '1×（标准）' : m + '×' }}</option>
               </select>
             </div>
+            <p class="dim set-note">
+              技能经验倍率。仅在想少刷一会儿时使用——它直接乘在全部成长之上，调高会明显缩短标定好的升级时长（上限 ×{{ XP_MULTIPLIER_OPTIONS[XP_MULTIPLIER_OPTIONS.length - 1] }}）。
+            </p>
           </section>
         </template>
 
@@ -230,7 +230,7 @@ function openSavePanel() {
             <div class="settings-row">
               <label class="switch-row">
                 <input type="checkbox" v-model="player.settings.bgmEnabled" @change="player.settings.bgmEnabled && primeAudio()" />
-                <span>开启背景音乐（3 首：昼 / 夜 / 战斗，按主题与战况自动切换）</span>
+                <span>开启背景音乐（13 首；默认跟随场景自动换曲，可在右下角播放器里选曲与暂停）</span>
               </label>
             </div>
             <div class="settings-row">
@@ -251,6 +251,22 @@ function openSavePanel() {
               <input v-model="nameDraft" type="text" maxlength="16" style="flex: 1" @keyup.enter="saveName" />
               <button class="btn btn-sm" @click="saveName">保存</button>
               <span v-if="nameMsg" class="dim" style="font-size: 12px">{{ nameMsg }}</span>
+            </div>
+          </section>
+
+          <section class="set-group">
+            <h4>我的形象</h4>
+            <div class="settings-row" style="flex-wrap: wrap; gap: 6px">
+              <button
+                v-for="a in CHEF_AVATARS"
+                :key="a.id"
+                class="btn btn-sm"
+                :class="{ 'btn-primary': player.settings.chefAvatar === a.id }"
+                @click="player.settings.chefAvatar = a.id"
+              >{{ a.icon }} {{ a.name }}</button>
+              <span class="dim" style="flex: 1 1 100%; font-size: 12px">
+                战斗屏左侧「你」那一格用它；对面还没有对手时，右侧会显示同一形象的镜像。
+              </span>
             </div>
           </section>
 

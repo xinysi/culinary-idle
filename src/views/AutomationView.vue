@@ -108,6 +108,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'ranch
 
     <div class="card" style="margin-top: 14px">
       <h3>🧩 已有自动化（免费，随设置/页面开关）</h3>
+      <div class="table-scroll">
       <table class="target-table">
         <tbody>
           <tr v-for="f in FREE_AUTOMATIONS" :key="f.id">
@@ -116,6 +117,7 @@ const RELATED = [{ view: 'expedition', label: '🚢 采集队' }, { view: 'ranch
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
     <RelatedPages :links="RELATED" />
 </div>

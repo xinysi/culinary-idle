@@ -22,6 +22,8 @@ export const VIEW_KEYS = [
   // 挂机产线四套（2026-09-14）：商队线 / 菌房 / 灵田 / 温室蜂场（蜂场与温室合并；网箱并入牧场不另开页）
   'caravan', 'mycoField', 'greenhouse', // 「灵圃菌房」由原「菌房」+「灵田」合并（v2.3.0）；网箱并入牧场不另开页
   'effects', // 效果总览（v2.6.0）：今日组，汇总此刻生效的全部增益 / 效果 / 减益
+  // 2026-09-19：厨藏/装备由弹窗升级为独立页面（用户要求；厨藏的「厨藏」与「仓库」同屏合一）
+  'inventory', 'equipment',
 ]
 
 export const useUiStore = defineStore('ui', {
@@ -34,17 +36,24 @@ export const useUiStore = defineStore('ui', {
     showSavePanel: false, // 存档面板（§8.2）
     showSettingsPanel: false, // 设置面板
     showMobileSkills: false, // 移动端技能抽屉
-    showBagModal: false, // 背包/仓库弹窗
-    bagModalTab: 'bag', // 弹窗初始页：bag | bank
-    showEquipModal: false, // 装备（穿戴）弹窗（独立于背包/仓库）
+    skillGuide: null, // 技能页「指南」弹窗：null = 关闭，否则为技能 id（2026-09-19）
     showSignIn: false, // 每日签到弹窗
     showSearch: false, // 全局搜索弹窗
     showShareCard: false, // 战报分享卡弹窗（2026-09-06）
     showMarketModal: false, // 限时活动轮换表弹窗（2026-09-06）
+    // 底部状态面板（2026-09-19 由右栏改为浮层；2026-09-20 再改成**五个独立胶囊各自向上弹出**）：
+    // `dockSection` = 当前展开的那一块（'idle'|'spirit'|'aoji'|'status'|'log'，null = 全收起）。
+    // 同时只开一个（点另一个自动换）。非存档（与其它浮层一致，刷新后收起）。
+    dockSection: null,
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）
+    celebration: null, // 大反馈演出（非存档：{ icon, title, sub, tone }）——首次转生 / 首次赛季满档
     loopTick: 0, // 全局循环计数：每引擎 tick +1，驱动进度条等 UI 刷新
+    // 开发者面板（2026-09-18）：两个**非存档**标志。组件本体只在含开发者模式的构建里存在——
+    // 生产构建下 DevPanel 的 import 会被静态替换掉（见 App.vue 的 DEV_PANEL_ENABLED 分支）。
+    devGate: false, // 登录挡板（启动页连点标题 / Ctrl+Shift+D / ?dev=1 都打开它）
+    showDevPanel: false, // 面板本体
   }),
 
   actions: {
@@ -53,6 +62,13 @@ export const useUiStore = defineStore('ui', {
     },
     toggleStartSlotModal(open) {
       this.showStartSlotModal = open ?? !this.showStartSlotModal
+    },
+    /** 打开开发者登录挡板（启动页连点标题 / Ctrl+Shift+D / ?dev=1 都走它） */
+    openDevGate() {
+      this.devGate = true
+    },
+    toggleDevPanel(open) {
+      this.showDevPanel = open ?? !this.showDevPanel
     },
     setView(v) {
       // 未知 key：开发期告警并按 App.vue 的兜底行为落到技能页；线上保持原样，行为与旧版完全一致。
@@ -71,6 +87,11 @@ export const useUiStore = defineStore('ui', {
     },
     toggleSettingsPanel(open) {
       this.showSettingsPanel = open ?? !this.showSettingsPanel
+    },
+    /** 底部状态胶囊（2026-09-20）：传入区块 id 打开；传 null 收起；传当前 id 则切换（点第二下收起） */
+    toggleDockSection(sec) {
+      if (sec == null) this.dockSection = null
+      else this.dockSection = this.dockSection === sec ? null : sec
     },
     toggleSignIn(open) {
       this.showSignIn = open ?? !this.showSignIn
@@ -92,13 +113,11 @@ export const useUiStore = defineStore('ui', {
     toggleMobileSkills(open) {
       this.showMobileSkills = open ?? !this.showMobileSkills
     },
-    toggleBagModal(open, tab = 'bag') {
-      this.showBagModal = open ?? !this.showBagModal
-      if (this.showBagModal) this.bagModalTab = tab
+    /** 技能页指南弹窗（2026-09-19）：传 null 关闭，传技能 id 打开 */
+    toggleSkillGuide(id) {
+      this.skillGuide = id ?? null
     },
-    toggleEquipModal(open) {
-      this.showEquipModal = open ?? !this.showEquipModal
-    },
+
     openEncounter(encounter) {
       if (this.encounter) return false // 一次只弹一个
       this.encounter = { encounter, startedAt: Date.now() }
@@ -112,6 +131,13 @@ export const useUiStore = defineStore('ui', {
     },
     closeOfflineReport() {
       this.offlineReport = null
+    },
+    /** 大反馈演出（2026-09-18，留存改进 ⑥）：同一时刻只演一个，后到的覆盖先到的 */
+    celebrate(payload) {
+      this.celebration = payload ?? null
+    },
+    closeCelebration() {
+      this.celebration = null
     },
     bumpLoop() {
       this.loopTick++

@@ -5,6 +5,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -14,13 +15,13 @@ const MODES = {
   m1: { label: '模式1', n: 6, mines: 5, timeLimit: 0, gold: 20, desc: '6×6 · 5 个烂食材 · 3 条命 · +20 币' },
   m2: { label: '模式2', n: 8, mines: 10, timeLimit: 0, gold: 40, desc: '8×8 · 10 个烂食材 · +40 币' },
   m3: { label: '模式3', n: 10, mines: 18, timeLimit: 0, gold: 55, desc: '10×10 · 18 个烂食材 · +55 币' },
-  m4: { label: '模式4', n: 10, mines: 18, timeLimit: 120, gold: 55, desc: '10×10 · 18 个烂食材 · **限时 120 秒** · +55 币' },
+  m4: { label: '模式4', n: 10, mines: 18, timeLimit: 120, gold: 55, desc: '10×10 · 18 个烂食材 · <b>限时 120 秒</b> · +55 币' },
   m5: { label: '模式5', n: 12, mines: 26, timeLimit: 0, gold: 85, desc: '12×12 · 26 个烂食材 · +85 币' },
-  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, lives: 1, gold: 115, desc: '12×12 · 26 个烂食材 · **只有 1 条命**（一踩即负）· +115 币' },
-  m7: { label: '模式7', n: 12, mines: 26, timeLimit: 0, cluster: true, gold: 115, desc: '12×12 · 26 个烂食材 · **簇状雷区**（成堆聚集，更难拆）· +115 币' },
+  m6: { label: '模式6', n: 12, mines: 26, timeLimit: 0, lives: 1, gold: 115, desc: '12×12 · 26 个烂食材 · <b>只有 1 条命</b>（一踩即负）· +115 币' },
+  m7: { label: '模式7', n: 12, mines: 26, timeLimit: 0, cluster: true, gold: 115, desc: '12×12 · 26 个烂食材 · <b>簇状雷区</b>（成堆聚集，更难拆）· +115 币' },
   m8: { label: '模式8', n: 14, mines: 36, timeLimit: 0, gold: 140, desc: '14×14 · 36 个烂食材 · +140 币' },
-  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, lives: 1, gold: 205, desc: '16×16 · 40 个烂食材 · **只有 1 条命** · +205 币' },
-  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, lives: 1, cluster: true, gold: 205, desc: '16×16 · 40 个烂食材 · **簇状 + 1 命 + 限时 240 秒** · +205 币' },
+  m9: { label: '模式9', n: 16, mines: 40, timeLimit: 0, lives: 1, gold: 205, desc: '16×16 · 40 个烂食材 · <b>只有 1 条命</b> · +205 币' },
+  m10: { label: '模式10', n: 16, mines: 40, timeLimit: 240, lives: 1, cluster: true, gold: 205, desc: '16×16 · 40 个烂食材 · <b>簇状 + 1 命 + 限时 240 秒</b> · +205 币' },
 }
 const showInfo = ref(false)
 
@@ -51,23 +52,11 @@ let elapsedAccum = 0
 let lastTs = 0
 let firstClick = true
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 棋盘生成 ──
@@ -317,7 +306,7 @@ onUnmounted(() => { stopTimer() })
           </div>
           <div v-for="(m, key) in MODES" :key="key" class="ms-info-row">
             <b class="ms-info-name">{{ m.label }}</b>
-            <span class="ms-info-desc">{{ m.desc }}</span>
+            <span class="ms-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

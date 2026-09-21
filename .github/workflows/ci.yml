@@ -31,6 +31,10 @@ jobs:
           node scripts/ci/content_sync_audit.mjs
           node scripts/ci/item_triple_audit.mjs
           node scripts/ci/minigame_ui_audit.mjs
+          # 难度系数审计（2026-09-21 立）：概率难度是**全局系数**（data/difficulty.js）而非改数据值——
+          # 断言四件事：① 冻结数据（200/500/909/117/1213 条及其取值区间）未被改写 ② 没有任何地方绕过
+          # difficulty.js 直接用原始概率（否则「显示 30% 实际 6%」）③ 金币不受影响 ④ 下限与边界不变量
+          node scripts/ci/difficulty_audit.mjs
           # 图片/静态资源路径审计（2026-09-17 立）：禁止根绝对 URL `/images/…` —— dev 与 Pages
           # 下看不出问题，但 Electron 打包后页面是 file:///…/dist/index.html，会解析到磁盘根而全 404
           node scripts/ci/image_path_audit.mjs
@@ -47,6 +51,14 @@ jobs:
       # 而新版 Chromium 不认 `-webkit-backdrop-filter` ⇒ 毛玻璃在构建产物里全失效（用户报过「线上与 exe 的窗口透明度跟本地不一样」）
       - name: CSS output audit
         run: node scripts/ci/css_output_audit.mjs
+
+      # 开发者面板审计（2026-09-18 立）也必须在 build 之后跑（读 dist）：
+      # 断言「源码里有这个面板，但**产物里没有**」。面板含口令哈希与调试入口，
+      # 纯前端唯一可靠的保护就是「构建期隔离」：生产构建下 DEV_PANEL_ENABLED 静态为 false，
+      # App.vue 的动态 import 被 DCE，vite.config 的 strip-dev-panel-chunks 再把残留的孤立 chunk 删掉。
+      # 反例：`VITE_DEV_PANEL=1 npm run build` 后跑本审计 → 4 项 FAIL。
+      - name: Dev-panel isolation audit
+        run: node scripts/ci/dev_panel_audit.mjs
 
   e2e:
     runs-on: ubuntu-latest
@@ -70,7 +82,10 @@ jobs:
             (echo '首次安装失败，15s 后重试…' && sleep 15 && npx playwright install --with-deps chromium) ||
             (echo '二次失败，30s 后再试…' && sleep 30 && npx playwright install --with-deps chromium)
 
-      - name: E2E（流程 9 项 + 深色配色体检 + 标签裸露扫描 + 皮肤与音频）
+      # 布局守卫（2026-09-18 立）：全页面扫描「控件被 overflow 裁掉而点不到」（炼金页固定行高
+      # 把「融合」按钮切出卡外过）与「文字被挤成逐字竖排」（窄屏强排多列 + 宽表不横滑过）。
+      # 1440px 与 390px 各扫一轮，故单独一步、超时放宽。
+      - name: E2E（流程 9 项 + 深色配色体检 + 标签裸露扫描 + 皮肤与音频 + 布局守卫 + 交互守卫）
         run: |
           npm run dev &
           for i in $(seq 1 30); do
@@ -81,3 +96,9 @@ jobs:
           npx playwright test e2e-dark.spec.mjs
           npx playwright test e2e-text.spec.mjs
           npx playwright test e2e-audio-skin.spec.mjs
+          npx playwright test e2e-layout.spec.mjs
+          # 交互守卫（2026-09-18 立）：逐页点击**所有绑定了 @click 的元素**（含 `<div @click>` 卡片，
+          # 不只是 <button>），抓「模板引用了未声明的绑定」这类只在点击时才炸的错
+          # （玩家报「对决，敌人的掉落看不到了」= CombatView 漏声明 dropModal）。
+          # 页面清单含全部 38 个技能页 —— 对决的 6 个 combat 技能此前从未被任何扫描覆盖。
+          npx playwright test e2e-interact.spec.mjs

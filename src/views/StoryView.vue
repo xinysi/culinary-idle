@@ -4,11 +4,8 @@
 // 纯读取层（STORY / TALES / tales_ext + player 进度），不改动任何剧情数据；样式全部复用全局类。
 import { computed, ref, onMounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { STORY } from '../game/data/story.js'
+import { STORY, storyReqCur } from '../game/data/story.js'
 import { TALES, QUIRK_CAT_DEFS, quirkCategoryStats } from '../game/data/tales.js'
-import { SPIRITS } from '../game/data/spiritTiers.js'
-import { AOJIS } from '../game/data/aojis.js'
-import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import Pagination from '../components/Pagination.vue'
 import RelatedPages from '../components/RelatedPages.vue'
@@ -31,44 +28,10 @@ const quirks = ref(null) // QUIRKS（3988 条轶事，v2.7.4 起含伐木/采矿
 const quirkList = computed(() => quirks.value ?? [])
 const quirkPage = ref(1)
 // ── 故事（§13：线性七章，每章覆盖全部功能，需求全达标解锁下一章）──
-function storyCur(kind) {
-  const p = player
-  switch (kind) {
-    case 'totalLevel': return p.totalLevels
-    case 'gather': return p.gatherLevels
-    case 'craft': return p.craftLevels
-    case 'support': return p.supportLevels
-    case 'combatWins': return p.stats.combatWins
-    case 'regions': return p.regionsUnlocked
-    case 'bosses': return p.stats.bosses?.length ?? 0
-    case 'gear': return Object.keys(p.collected).filter((id) => getItem(id)?.type === 'equipment').length
-    case 'upgrades': return Object.values(p.upgrades ?? {}).filter((v) => v > 0).length
-    case 'spirits': return SPIRITS.filter((s) => p.collected[s.id]).length
-    case 'aojis': return AOJIS.filter((a) => p.collected[a.id]).length
-    case 'restaurant': return p.restaurant?.level ?? 1
-    case 'decor': return (p.restaurant?.decor ?? []).length
-    case 'guild': return p.guild?.id ? 1 : 0
-    case 'seasons': return Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length
-    case 'arena': return p.stats.arena?.bestStreak ?? 0
-    case 'card': return p.stats.cardBattle?.wins ?? 0
-    case 'explore': return p.stats.explorations ?? 0
-    case 'prestiges': return p.stats.prestiges ?? 0
-    // 挂机产线：商队出航次数（2026-09-14）
-    case 'caravan': return p.stats?.caravanTrips ?? 0
-    // 效果总览：历史同时生效项数（v2.6.0）
-    case 'effects': return p.stats?.effectsSeenMax ?? 0
-    case 'signin': return p.signIn?.day ?? 0
-    case 'gold': return p.stats.totalGoldEarned ?? 0
-    case 'alchemy': return p.stats.alchemyCrafts ?? 0
-    case 'hardcore': return p.hardcore ? 1 : 0
-    case 'collection': return p.collectionPct
-    default: return 0
-  }
-}
 const storyChapters = computed(() => {
   let prevDone = true
   return STORY.map((ch) => {
-    const reqs = (ch.requirements ?? []).map((r) => ({ ...r, cur: Math.min(storyCur(r.kind), r.need) }))
+    const reqs = (ch.requirements ?? []).map((r) => ({ ...r, cur: Math.min(storyReqCur(player, r.kind), r.need) }))
     const done = reqs.length > 0 && reqs.every((r) => r.cur >= r.need)
     const unlocked = prevDone
     prevDone = prevDone && done
@@ -84,7 +47,7 @@ function storyProg(t) {
     const key = [u.kind, u.sub, u.param].filter(Boolean).join(':')
     return player.storyProgress?.[key] ?? 0
   }
-  return storyCur(u.kind)
+  return storyReqCur(player, u.kind)
 }
 function taleProgress(t) {
   return Math.min(storyProg(t), t.unlock.need)
@@ -193,7 +156,6 @@ onMounted(() => {
       <div
       v-for="(ch, ci) in storyChapters"
       :key="ci"
-      v-tilt:small
       class="gather-card story-chapter"
       :class="{ locked: !ch.unlocked }"
       style="margin-bottom: 10px"
@@ -238,7 +200,6 @@ onMounted(() => {
           <div
             v-for="t in group.tales"
             :key="t.id"
-            v-tilt
             class="gather-card"
             style="opacity: 1"
           >
@@ -284,7 +245,6 @@ onMounted(() => {
         <template v-for="(q, qi) in quirkPaged" :key="q.id ?? 'pad-' + qi">
         <div
           v-if="!q._pad"
-          v-tilt
           class="gather-card"
           style="opacity: 1"
         >

@@ -145,6 +145,7 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'honor', lab
       <div class="card legacy-card">
         <h3>📈 转生传承预览</h3>
         <p class="dim legacy-sub">仅列出当前已达 100 级、可转生的技能；转生后这些技能将从「1 + 传承等级」起步。</p>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="p in preview" :key="p.id">
@@ -155,11 +156,13 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'honor', lab
             <tr v-if="!preview.length"><td colspan="3" class="dim">暂无满 100 级的技能——先去把某个技能练满再转生。</td></tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="card legacy-card">
         <h3>🎓 已保留的传承</h3>
         <p class="dim legacy-sub">每次转生会取「历史最高传承等级」，不会因后续转生而降低。</p>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="c in carryRows" :key="c.id">
@@ -173,6 +176,7 @@ const RELATED = [{ view: 'patrons', label: '🏛 信仰' }, { view: 'honor', lab
             <tr v-if="!carryRows.length"><td colspan="4" class="dim">尚未转生过——首次转生后这里会记录保留等级。</td></tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
     <RelatedPages :links="RELATED" />

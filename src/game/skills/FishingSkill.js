@@ -8,6 +8,7 @@ import { GATHERING_EXT } from '../data/expansion1.js'
 import { GATHERING_EXT2 } from '../data/expansion2.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
+import { otherChance } from '../data/difficulty.js' // 全局难度系数（成功率与稀有鱼的唯一缩放出口）
 
 export const FISHING_TARGETS = [
   { itemId: 'crucian', reqLevel: 1, xpPerAction: 10, intervalSec: 3.2 },
@@ -22,6 +23,12 @@ export const FISHING_TARGETS = [
   { itemId: 'seaCucumber', reqLevel: 75, xpPerAction: 250, intervalSec: 6.8 },
   { itemId: 'bluefin', reqLevel: 85, xpPerAction: 320, intervalSec: 7.2 },
   { itemId: 'grouper', reqLevel: 95, xpPerAction: 450, intervalSec: 8.0 },
+  // ── 后期补档（2026-09-19）：把 61-99 段的平均间距 3.5 → ~2.5（对齐参照作 Melvor 的收官密度 2.6）──
+  // intervalSec 取本技能后期实测的恒定值 8.0；xpPerAction = `10 + 5×reqLevel`（与所有后期目标一致）。
+  { itemId: 'kaluga', reqLevel: 63, xpPerAction: 325, intervalSec: 8.0 },
+  { itemId: 'lionfish', reqLevel: 73, xpPerAction: 375, intervalSec: 8.0 },
+  { itemId: 'blackMarlin', reqLevel: 80, xpPerAction: 410, intervalSec: 8.0 },
+  { itemId: 'humpheadWrasse', reqLevel: 90, xpPerAction: 460, intervalSec: 8.0 },
 ]
 
 export const RARE_FISH_ID = 'goldenDragonFish'
@@ -36,18 +43,28 @@ export class FishingSkill extends GatheringSkill {
     super('fishing', player, [...FISHING_TARGETS, ...GATHERING_EXT.fishing, ...GATHERING_EXT2.fishing])
   }
 
-  /** 成功率：55% 基础 + 等级差加成 + 鱼灵加成，封顶 99% */
+  /**
+   * 成功率：55% 基础 + 等级差加成 + 鱼灵加成，封顶 99%，再乘全局难度系数（÷2，下限 1%）。
+   * 🔴 垂钓是**采集类里唯一的概率闸门**（失败只得 `FAIL_XP_RATIO` 经验、不给鱼）⇒ 属于「概率获得」，纳入难度系数。
+   * ⚠️ 系数作用在**最终值**上（含鱼灵 `fishingAccPct` 之后）才是有效成功率的真实倍率。
+   * 显示点 `GatheringView` 读的就是本方法 ⇒ 同源。离线的 `computeOffline` 也读它。
+   */
   successChance(target = this.currentTarget) {
     if (!target) return 0
     const base = Math.min(BASE_SUCCESS + (this.level - target.reqLevel) * SUCCESS_PER_LEVEL, MAX_SUCCESS)
     const accPct = this.player.spiritEffects?.()?.fishingAccPct ?? 0
-    return Math.min(base + accPct / 100, 0.99)
+    return otherChance(Math.min(base + accPct / 100, 0.99))
   }
 
-  /** 副业·制网：稀有鱼（金龙鱼）的**实际**概率 = 基础 0.5% + 渔具加成（封顶 5%，即 10×） */
+  /**
+   * 副业·制网：稀有鱼（金龙鱼）的**实际**概率 = （基础 0.5% + 渔具加成，封顶 5%）× 全局难度系数。
+   * 🔴 **整条都乘系数**（不是只乘 `RARE_CHANCE`）：制网轴的设计是「满配 = 基础的 1.88×」，
+   *    若只压基础、留加成不压，相对倍数会被悄悄推到 2.76× —— 等于把这条轴改强了，
+   *    而 `system_test` 的轴比值守卫正是钉这件事的。同乘系数才能保持「轴的相对强度」设计不变。
+   */
   get rareChance() {
     const pp = (this.player.sidelineEffectTotal?.('rareFishPP') ?? 0) / 100
-    return Math.max(0, Math.min(0.05, RARE_CHANCE + pp))
+    return Math.max(0, otherChance(Math.min(RARE_CHANCE + pp, 0.05)))
   }
 
   performAction(target) {

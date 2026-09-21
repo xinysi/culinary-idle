@@ -79,6 +79,7 @@ const RELATED = [{ view: 'weather', label: '🌤 天气运势' }, { view: 'resta
 
     <h3 style="margin-top: 16px">未来 12 天预告</h3>
     <div class="card">
+      <div class="table-scroll">
       <table class="target-table">
         <tbody>
           <tr v-for="u in upcoming" :key="u.date">
@@ -90,6 +91,7 @@ const RELATED = [{ view: 'weather', label: '🌤 天气运势' }, { view: 'resta
           <tr v-if="!upcoming.length"><td colspan="4" class="dim">未来 12 天暂无节庆。</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
     <RelatedPages :links="RELATED" />
 </div>

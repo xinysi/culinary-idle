@@ -8,6 +8,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import { TRIALS, TRIAL_UNLOCK_LEVEL, trialOpponent } from '../game/data/trials.js'
 import { getItem } from '../game/data/items.js'
 import CombatPanel from '../components/CombatPanel.vue'
+import CombatLog from '../components/CombatLog.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -102,8 +103,10 @@ const RELATED = [{ view: 'arena', label: '🏆 竞技场' }, { view: 'chefChalle
         </div>
       </StatusChips>
 
-      <!-- 对决面板（风格+属性组合框 / 对决框）：与对决页共用 CombatPanel -->
-    <CombatPanel />
+      <!-- 两栏外壳（2026-09-20 与对决页同步）：左＝战斗区 + 试炼清单，右＝装备槽 -->
+      <div class="combat-page">
+        <div class="combat-page-main">
+          <CombatPanel />
 
     <div class="trial-grid">
         <div v-for="r in rows" :key="r.def.id" class="card trial-card" :class="{ active: r.active }">
@@ -136,6 +139,13 @@ const RELATED = [{ view: 'arena', label: '🏆 竞技场' }, { view: 'chefChalle
       <p class="dim" style="margin-top: 10px">
         提示：试炼对手沿用你的自动进食/料理策略；速攻与无伤试炼建议带足高回血料理后再来。
       </p>
+        </div>
+
+        <!-- 右栏：战斗日志（2026-09-21 与「装备」互换位置：日志搬到右栏，装备回左栏与战备同屏） -->
+        <aside class="combat-page-side">
+          <CombatLog />
+        </aside>
+      </div>
     </template>
     <RelatedPages :links="RELATED" />
 </div>

@@ -148,6 +148,7 @@ const RELATED = [
     <FoldCard title="🐾 可驯养动物一览" hint="野鸡 4h 最勤、野牛 12h 单产最高；四种各带一件加工品（鸡油/猪油/羊酪/牛骨高汤）">
       <div class="card" style="margin-top: 14px">
         <h3>🐾 可驯养动物一览</h3>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="a in RANCH_ANIMALS" :key="a.id">
@@ -158,12 +159,14 @@ const RELATED = [
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </FoldCard>
 
     <FoldCard title="🐠 可养鱼种一览" hint="鲫鱼 3h 最快、鲍鱼 12h 最贵；都额外产一件水产加工品（鱼酱/鱼子酱/虾油/鲍汁）">
       <div class="card" style="margin-top: 14px">
         <h3>🐠 可养鱼种一览</h3>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr v-for="f in POND_FISH" :key="f.id">
@@ -174,6 +177,7 @@ const RELATED = [
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </FoldCard>
 

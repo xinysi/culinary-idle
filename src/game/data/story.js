@@ -5,9 +5,47 @@
 // 每章 requirements 全达标 → 通过本章 → 解锁下一章。
 // requirements.kind 由 StoryView 映射为玩家实时进度。
 
-import { ITEMS } from './items.js'
+import { ITEMS, getItem } from './items.js' // getItem：storyReqCur 的 'gear' 分支要用（2026-09-19 搬入时漏了，被 e2e-text 的控制台错误抓到）
 import { SPIRITS } from './spiritTiers.js'
 import { AOJIS } from './aojis.js'
+
+export function storyReqCur(p, kind) {
+  switch (kind) {
+    case 'totalLevel': return p.totalLevels
+    case 'gather': return p.gatherLevels
+    case 'craft': return p.craftLevels
+    case 'support': return p.supportLevels
+    case 'combatWins': return p.stats.combatWins
+    case 'regions': return p.regionsUnlocked
+    case 'bosses': return p.stats.bosses?.length ?? 0
+    case 'gear': return Object.keys(p.collected).filter((id) => getItem(id)?.type === 'equipment').length
+    case 'upgrades': return Object.values(p.upgrades ?? {}).filter((v) => v > 0).length
+    case 'spirits': return SPIRITS.filter((s) => p.collected[s.id]).length
+    case 'aojis': return AOJIS.filter((a) => p.collected[a.id]).length
+    case 'restaurant': return p.restaurant?.level ?? 1
+    case 'decor': return (p.restaurant?.decor ?? []).length
+    case 'guild': return p.guild?.id ? 1 : 0
+    // ⚠️ 2026-09-19 参照 Rocky Idle 调整：**累计**领奖次数（原为「不同赛季数」⇒ 终章 8 季 = 8×14 = **112 天日历硬门**，
+    //    努力无法缩短）。实测参考作 Rocky Idle 的构建产物里**没有任何赛季/日历机制**，长线全靠努力门。
+    //    每季 10 档 ⇒ 认真参与一季即可累计 8 次。**「终极收集」的时间门仍保留**（图鉴 100% / 40 季套装 = 560 天），
+    //    那是毕业后的事，不挡毕业（见 docs/毕业口径说明.md）。
+    case 'seasons': return Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0)
+    case 'arena': return p.stats.arena?.bestStreak ?? 0
+    case 'card': return p.stats.cardBattle?.wins ?? 0
+    case 'explore': return p.stats.explorations ?? 0
+    case 'prestiges': return p.stats.prestiges ?? 0
+    // 挂机产线：商队出航次数（2026-09-14）
+    case 'caravan': return p.stats?.caravanTrips ?? 0
+    // 效果总览：历史同时生效项数（v2.6.0）
+    case 'effects': return p.stats?.effectsSeenMax ?? 0
+    case 'signin': return p.signIn?.day ?? 0
+    case 'gold': return p.stats.totalGoldEarned ?? 0
+    case 'alchemy': return p.stats.alchemyCrafts ?? 0
+    case 'hardcore': return p.hardcore ? 1 : 0
+    case 'collection': return p.collectionPct
+    default: return 0
+  }
+}
 
 export const STORY = [
   // ── 序章 · 启程 ──
@@ -108,7 +146,7 @@ export const STORY = [
       { kind: 'guild', need: 1, label: '加入公会' },
       { kind: 'restaurant', need: 4, label: '餐厅等级' },
       { kind: 'decor', need: 20, label: '餐厅装饰' },
-      { kind: 'seasons', need: 1, label: '赛季领奖' },
+      { kind: 'seasons', need: 1, label: '赛季领奖次数' },
       { kind: 'gold', need: 5000, label: '累计金币' },
       { kind: 'alchemy', need: 1, label: '炼金体验' },
     ],
@@ -178,7 +216,7 @@ export const STORY = [
     icon: '🐉',
     requirements: [
       { kind: 'prestiges', need: 2, label: '转生次数' },
-      { kind: 'seasons', need: 3, label: '赛季领奖' },
+      { kind: 'seasons', need: 3, label: '赛季领奖次数' },
       { kind: 'arena', need: 6, label: '竞技场最佳连胜' },
       { kind: 'decor', need: 50, label: '餐厅装饰' },
       { kind: 'gear', need: 160, label: '装备图鉴' },
@@ -236,7 +274,7 @@ export const STORY = [
       { kind: 'bosses', need: 22, label: '击败首领' },
       { kind: 'prestiges', need: 4, label: '转生次数' },
       { kind: 'upgrades', need: 8, label: '强化装备' },
-      { kind: 'seasons', need: 5, label: '赛季领奖' },
+      { kind: 'seasons', need: 5, label: '赛季领奖次数' },
       { kind: 'gold', need: 100000, label: '累计金币' },
     ],
     parts: [
@@ -265,7 +303,7 @@ export const STORY = [
       { kind: 'bosses', need: 26, label: '击败首领' },
       { kind: 'prestiges', need: 6, label: '转生次数' },
       { kind: 'upgrades', need: 12, label: '强化装备' },
-      { kind: 'seasons', need: 8, label: '赛季领奖' },
+      { kind: 'seasons', need: 8, label: '赛季领奖次数' },
       { kind: 'card', need: 15, label: '卡牌对战胜利' },
       { kind: 'gold', need: 300000, label: '累计金币' },
       { kind: 'caravan', need: 10, label: '商队出航' },
@@ -279,7 +317,7 @@ export const STORY = [
       },
       {
         title: '万法归一',
-        body: '八季食节领奖、十五场卡牌对决战无不胜——从初学的五味，到如今掌控百般技艺，你终于站上了厨道之巅。',
+        body: '八次食节领奖、十五场卡牌对决战无不胜——从初学的五味，到如今掌控百般技艺，你终于站上了厨道之巅。',
         ties: ['seasons', 'card'],
       },
       {

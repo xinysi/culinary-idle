@@ -6,6 +6,7 @@ import { CATEGORY_LABEL, itemDetailLines } from '../../src/game/data/itemDetail.
 import { itemSources } from '../../src/game/data/itemSources.js'
 import { itemUses } from '../../src/game/data/itemUses.js'
 import { jumpForSource } from '../../src/game/data/sourceJump.js'
+import { VIEW_KEYS } from '../../src/stores/ui.js'
 import { itemImage } from '../../src/game/data/itemImage.js'
 import fsSync from 'node:fs'
 import { ALCHEMY_RECIPES } from '../../src/game/data/alchemy.js'
@@ -150,6 +151,83 @@ const items = Object.values(ITEMS)
     }
   }
   check('获取来源：全部来源均可跳转（与实际跳转表同源）', missing.size === 0, [...missing.entries()].slice(0, 4).map(([g, n]) => `${n}x ${g.slice(0, 40)}`).join('; '))
+
+  // ── 4b. 获取来源：**跳对了没有**（2026-09-21 立）──
+  // 上面那条只断言「有跳转目标」，跳错页面照样 PASS —— 而 sourceJump 是**首次命中的子串扫描**，
+  // 表尾补的具体规则会被表头通用关键词抢先命中。实测曾因此有 211 个 (物品,来源) 对跳错：
+  // 「赛季「香料远征季」奖励」被『香料』抢到调料技能页、「游戏商店·精酿调料礼包」被『调料』抢到调料页、
+  // 「远行采集队·伐木队」被『伐木』抢到伐木页、「成就「常客盈门」」被『常客』抢到常客页……
+  // 判据：来源串**以某个系统名开头**时，落地视图必须就是那个系统（前缀锚定优先于关键词扫描）。
+  // 反例验证：删掉 sourceJump.js 的 SOURCE_PREFIX_RULES 前缀段 → 本项立刻 FAIL 并逐条点名。
+  const MIGRATED = { quest: 'quests', achieve: 'achievements', title: 'achievements' }
+  const resolveDest = (s) => {
+    const t = jumpForSource(s)
+    if (!t) return null
+    if (t.skill) return `${t.view}:${t.skill}`
+    if (t.view === 'log' && t.logTab && MIGRATED[t.logTab]) return MIGRATED[t.logTab]
+    if (t.view === 'log' && t.logTab) return `log/${t.logTab}`
+    return t.view
+  }
+  const EXPECT = [
+    ['赛季', 'season'],
+    ['炼金合成', 'alchemy'],
+    ['游戏商店', 'minigames'],
+    ['远行采集队', 'expedition'],
+    ['供应商合约', 'suppliers'],
+    ['成就', 'achievements'],
+    ['探索', 'skill:exploration'],
+    ['竞技场', 'arena'],
+    ['珍馐阁购买', 'deluxe'],
+    ['公会商店购买', 'guild'],
+    ['图鉴兑换所兑换', 'codexExchange'],
+    ['每日签到', 'today'],
+    ['周常任务', 'quests'],
+    ['每周挑战赛', 'quests'],
+    ['主线任务', 'quests'],
+    ['随机奇遇', 'encounters'],
+    ['风味搭配', 'flavorBook'],
+    ['食灵物语', 'spiritStories'],
+    ['厨神试炼', 'trials'],
+    ['厨具大赛', 'gearContest'],
+    ['无尽挑战塔', 'tower'],
+    ['食神秘境', 'realm'],
+    ['同业竞争榜', 'rivals'],
+    ['宴会承办', 'banquet'],
+    ['锻造套装集齐', 'gear'],
+    ['卡牌对战', 'cards'],
+    ['美食评论家到访', 'restaurant'],
+    ['温室蜂场', 'greenhouse'],
+    ['灵圃菌房', 'mycoField'],
+    ['产地与风土', 'regions'],
+    ['商队线', 'caravan'],
+    ['吉祥物', 'mascot'],
+    ['名厨挑战', 'chefChallenge'],
+    ['区域对手', 'skill:knife'],
+    ['首领', 'skill:knife'],
+    ['交易所', 'exchange'],
+    ['牧场', 'ranch'],
+    ['觅珍', 'mijian'],
+  ]
+  const wrong = new Map()
+  for (const it of items) for (const s of itemSources(it.id)) {
+    const dest = resolveDest(s)
+    for (const [p, want] of EXPECT) {
+      if (s.startsWith(p) && dest !== want) {
+        const key = `${s} → ${dest}（应 ${want}）`
+        wrong.set(key, (wrong.get(key) ?? 0) + 1)
+        break
+      }
+    }
+  }
+  check('获取来源：来源串开头的系统名与落地页面一致（防通用关键词抢先命中）', wrong.size === 0,
+    [...wrong.entries()].slice(0, 6).map(([g, n]) => `${n}x ${g.slice(0, 60)}`).join('; '))
+  // 跳转目标必须都是已注册视图（跳到一个不存在的 view 会白屏/无反应）
+  const badView = new Set()
+  for (const it of items) for (const s of itemSources(it.id)) {
+    const t = jumpForSource(s)
+    if (t && !VIEW_KEYS.includes(t.view)) badView.add(`${s} → ${t.view}`)
+  }
+  check('获取来源：跳转目标均为已注册视图', badView.size === 0, [...badView].slice(0, 4).join('; '))
 }
 
 // ── 5. 交叉引用：采集/三农/商店/探索/食灵/BOSS/赛季/成就/任务 所有 id 存在 ──

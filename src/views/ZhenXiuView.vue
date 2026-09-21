@@ -113,7 +113,7 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'alchemy', labe
       </div>
       <div class="gather-grid grid-n-6">
         <template v-for="([id, it], ei) in goodsPaged" :key="id ?? 'pad-' + ei">
-          <div v-if="id" v-tilt class="gather-card shop-card" :class="{ locked: !canAfford(id), affordable: canAfford(id) }">
+          <div v-if="id" class="gather-card shop-card" :class="{ locked: !canAfford(id), affordable: canAfford(id) }">
           <div class="gather-card-head">
             <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
             <strong>{{ it.name }}</strong>

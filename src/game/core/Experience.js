@@ -55,7 +55,20 @@ export function xpProgress(exp, maxLevel = 100, level = null) {
   }
   const base = totalXpForLevel(cur)
   const next = totalXpForLevel(cur + 1)
+  // ⚠️ exp 可能**低于本级基线**：转生「师徒传承」直接把等级抬到 1+carry 而 exp 归零
+  // （player.prestigeSkill），于是 (exp - base) 是负数——实测 level=6/exp=0 时
+  // current = -113,528、progress = -3.74，侧栏直接显示「-113,528 / 30,372」。
+  // 该状态下的真实口径是「从 0 攒到下一级」（Skill.addXp 的升级判定就是 exp >= next），
+  // 故 current 记 exp、needed 记 next：进度在 exp 达到 next 那一刻恰好满格，中间平滑增长。
+  if (exp < base) {
+    return { level: cur, current: Math.floor(exp), needed: next, progress: clamp01(next > 0 ? exp / next : 1) }
+  }
   const current = Math.floor(exp - base)
   const needed = next - base
-  return { level: cur, current, needed, progress: Math.min(1, current / needed) }
+  return { level: cur, current, needed, progress: clamp01(needed > 0 ? current / needed : 1) }
+}
+
+/** 夹到 0~1（含 NaN 兜底）：进度条宽度/文案都直接吃这个值，绝不能是负数或 NaN */
+function clamp01(v) {
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0
 }

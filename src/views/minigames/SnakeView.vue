@@ -168,7 +168,7 @@ reset()
           <div class="sn-info-row sn-info-rule">通用规则：方向键/WASD 控制 · 吃苹果 +1 分 · 撞墙/撞身/撞障碍死亡 · 死亡按「食物数 × 模式单价」结算游戏币</div>
           <div v-for="(m, key) in METAS" :key="key" class="sn-info-row">
             <b class="sn-info-name">{{ m.label }}</b>
-            <span class="sn-info-desc">{{ m.desc }}</span>
+            <span class="sn-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

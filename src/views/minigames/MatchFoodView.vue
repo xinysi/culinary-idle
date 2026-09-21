@@ -170,7 +170,7 @@ resetDay()
           <div class="mf-info-row mf-info-rule">通用规则：点两张相同食材消除 · 全部清空得游戏币 · 偶数棋盘恰好填满（无缺格）· 限时/限步/翻牌为玩法变体</div>
           <div v-for="(m, key) in MODES" :key="key" class="mf-info-row">
             <b class="mf-info-name">{{ m.label }}</b>
-            <span class="mf-info-desc">{{ m.desc }}</span>
+            <span class="mf-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

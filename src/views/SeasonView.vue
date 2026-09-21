@@ -127,7 +127,7 @@ function doClaim(i, ev) {
     <div class="card">
       <h3>赛季任务（按主题动态）</h3>
       <div class="season-task-grid">
-        <div v-for="(m, mi) in season?.missions ?? []" :key="m.id" v-tilt class="season-task-card" :style="{ animationDelay: (mi * 0.06) + 's' }" :class="{ done: missionProgress(m) >= m.qty }">
+        <div v-for="(m, mi) in season?.missions ?? []" :key="m.id" class="season-task-card" :style="{ animationDelay: (mi * 0.06) + 's' }" :class="{ done: missionProgress(m) >= m.qty }">
           <div class="season-task-top">
             <strong class="season-task-name">{{ m.name }}</strong>
             <span class="badge season-task-pts" :class="{ 'badge-on': missionProgress(m) >= m.qty }">{{ missionProgress(m) >= m.qty ? '完成' : `+${m.points} 点` }}</span>
@@ -146,7 +146,7 @@ function doClaim(i, ev) {
     <div class="card">
       <h3>奖励档位（赛季结束前领取）</h3>
       <div class="season-tier-grid">
-        <div v-for="(tier, i) in season?.tiers ?? []" :key="i" v-tilt class="season-tier-card" :style="{ animationDelay: (i * 0.06) + 's' }" :class="{ claimed: state.claimed.includes(i), claimable: state.points >= tier.points && !state.claimed.includes(i) }">
+        <div v-for="(tier, i) in season?.tiers ?? []" :key="i" class="season-tier-card" :style="{ animationDelay: (i * 0.06) + 's' }" :class="{ claimed: state.claimed.includes(i), claimable: state.points >= tier.points && !state.claimed.includes(i) }">
           <div class="season-tier-head">
             <strong>{{ tier.name ?? `第 ${i + 1} 档` }}</strong>
             <span class="dim season-tier-pts">需 {{ tier.points }} 点</span>
@@ -170,10 +170,10 @@ function doClaim(i, ev) {
   gap: 10px;
   align-items: stretch;
 }
-/* 卡片 3D 倾斜动效（配合 v-tilt 的 --tilt-x/--tilt-y） */
+/* 卡片动效（3D 倾斜已于 2026-09-21 按用户要求移除） */
 .season-task-card,
 .season-tier-card {
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(var(--glass-rgb), 0.94);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(var(--tint-rgb), 0.32);
   border-radius: 12px;
@@ -182,7 +182,6 @@ function doClaim(i, ev) {
   flex-direction: column;
   gap: 6px;
   box-shadow: 0 6px 18px rgba(var(--tint-rgb), 0.16);
-  transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   will-change: transform;
   min-height: 104px;
@@ -230,7 +229,7 @@ function doClaim(i, ev) {
 /* 进度条流动高光：白高光滑过 + 底层保持主色渐变（不可覆盖底色，否则进度条变白） */
 .season-task-bar :deep(.progress-bar-fill) {
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(var(--glass-rgb), 0.4) 50%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--primary), var(--primary-strong));
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;
@@ -242,13 +241,13 @@ function doClaim(i, ev) {
 /* 完成：底层变绿 + 闪光 */
 .season-task-card.done :deep(.progress-bar-fill) {
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(var(--glass-rgb), 0.4) 50%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--good), var(--good-strong));
   animation: seasonBarFlow 4s linear infinite, seasonDoneGlow 0.6s ease;
 }
 @keyframes seasonDoneGlow {
-  0% { box-shadow: 0 0 0 0 rgba(92, 184, 92, 0.7); }
-  100% { box-shadow: 0 0 0 8px rgba(92, 184, 92, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--good-rgb), 0.7); }
+  100% { box-shadow: 0 0 0 8px rgba(var(--good-rgb), 0); }
 }
 .season-task-card.done { border-color: var(--good-soft); }
 /* ── 奖励卡 ── */
@@ -280,7 +279,7 @@ function doClaim(i, ev) {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(var(--glass-rgb), 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(var(--tint-rgb), 0.42);
@@ -296,7 +295,7 @@ function doClaim(i, ev) {
   font-size: 22px;
   font-weight: 700;
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,80,80,0.85) 20%, rgba(255,190,60,0.85) 40%, rgba(80,220,120,0.85) 60%, rgba(70,170,255,0.85) 80%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(255,80,80,0.85) 20%, rgba(255,190,60,0.85) 40%, rgba(80,220,120,0.85) 60%, rgba(70,170,255,0.85) 80%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--primary), var(--primary-strong));
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;

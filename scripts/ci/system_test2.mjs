@@ -10,6 +10,7 @@ import { SEASONS, getSeason, activeSeasonId } from '../../src/game/data/seasons.
 import { ITEMS } from '../../src/game/data/items.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS } from '../../src/game/data/combat.js'
 import { totalXpForLevel } from '../../src/game/core/Experience.js'
+import { craftSuccessChance } from '../../src/game/data/difficulty.js'
 import { getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { GUILDS, GUILD_SHOP } from '../../src/game/data/guilds.js'
 import { ITEMS as _ } from '../../src/game/data/items.js'
@@ -79,9 +80,17 @@ console.log('══ W3. 公会扩展 ══')
   // 注意：等级差加成会把基础成功率顶到 0.98 封顶，此时 +5% 看不出来。
   // 这里把技能等级压到配方同级的「无等级差」状态，保证有 5% 的余量可观测。
   p2.setSkillState('cooking', { level: recipe.reqLevel, exp: 0 })
-  const base = Math.min(recipe.successChance, 0.98)
-  const buffed = cooking.successChance(recipe)
-  check('公会：制作型 buff 提升成功率 5%', Math.abs(buffed - base - 0.05) < 1e-9, `base=${base} buffed=${buffed}`)
+  const base = Math.min(recipe.successChance, 0.98) // 基准成功率（数据层口径，受 AGENTS 数据铁律保护）
+  const buffed = cooking.successChance(recipe) // 生效成功率（= 基准 + 公会 +5% 后再乘全局难度系数）
+  // ⚠️ 不能拿「基准」直接和「生效值」相减：两者跨了 difficulty 出口那一层（2026-09-21 引入）。
+  //    两边同走出口才有可比性；同时单独断言「公会确实带来提升」，防止 +5% 被写丢。
+  const expectBuffed = craftSuccessChance(base + 0.05)
+  const expectNoGuild = craftSuccessChance(base)
+  check('公会：制作型 buff 提升成功率（+5% 加在基准上，生效值同走难度系数出口）',
+    Math.abs(buffed - expectBuffed) < 1e-9,
+    `基准 ${base} → 生效 ${buffed}（期望 ${expectBuffed}）；同等下无公会应为 ${expectNoGuild}`)
+  check('公会：制作型 buff 确实带来提升（不是把 +5% 写丢了）',
+    buffed > expectNoGuild + 1e-9, `无公会 ${expectNoGuild} vs 有公会 ${buffed}`)
   // 辅助型公会「全技能经验」为数值型 xpPct（2026-09-09 修复：此前按对象下标取值，恒为 0）
   {
     const p3 = freshPlayer({ foraging: 50 })

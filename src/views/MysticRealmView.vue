@@ -7,8 +7,9 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
-import { REALM_BUFFS, realmOpponent, realmOpponentLevel, realmReward } from '../game/data/mysticRealm.js'
+import { REALM_BUFFS, realmOpponent, realmOpponentLevel, realmReward, realmTierMult, realmTierGoal, REALM_TIER_MAX } from '../game/data/mysticRealm.js'
 import CombatPanel from '../components/CombatPanel.vue'
+import CombatLog from '../components/CombatLog.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 
 const player = usePlayerStore()
@@ -37,7 +38,7 @@ function fightRealmFloor() {
   const st = player.realmState()
   if (!st.active || !combat) return
   if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
-  combat.start(realmOpponent(st.floor, player.combatLevel))
+  combat.start(realmOpponent(st.floor, player.combatLevel, player.realmTier()))
 }
 function pickRealmBuff(id) {
   if (player.realmPickBuff(id)) fightRealmFloor()
@@ -65,13 +66,18 @@ onBeforeUnmount(() => {
 
 // 下一层对手预览（等级 / 血量上浮），让玩家知道还能撑几层
 const nextFloor = computed(() => realm.value.floor)
-const nextLevel = computed(() => realmOpponentLevel(nextFloor.value, player.combatLevel))
+const nextLevel = computed(() => realmOpponentLevel(nextFloor.value, player.combatLevel, player.realmTier()))
+// 档位（2026-09-19 参照 Rocky Idle 的 Runs 新增）：对手属性与本局奖励同时乘该倍率，通关达标即升档
+const tier = computed(() => player.realmTier())
+const tierMult = computed(() => realmTierMult(tier.value))
+const tierGoal = computed(() => realmTierGoal(tier.value))
+const tierProgress = computed(() => `${realm.value.floor}/${tierGoal.value}`)
 const nextHpBoost = computed(() => Math.round(nextFloor.value * 6))
 
 const REWARD_FLOORS = [1, 3, 5, 10, 15, 20, 30]
 const rewardTable = computed(() =>
   REWARD_FLOORS.map((f) => {
-    const r = realmReward(f)
+    const r = realmReward(f, player.realmTier())
     const items = Object.entries(r.items ?? {}).filter(([, q]) => q > 0).map(([id, q]) => `${id === 'mysterySpice' ? '神秘调料' : '能量饼干'} ×${q}`)
     return { floor: f, gold: r.gold, items: items.join('、') || '—' }
   })
@@ -97,6 +103,10 @@ const rewardTable = computed(() =>
         <span v-if="realm.active" class="dim">当前对手：{{ nextLevel }} 级 · 血量 +{{ nextHpBoost }}%</span>
         <span v-else class="dim">起点对手按你的对决等级生成，每往下一层：对手等级 +1.5、血量 +6%</span>
         <div class="realm-head-right">
+          <span class="badge" :title="`秘境第 ${tier} 档：对手属性与本局奖励都 ×${tierMult}；本局通过 ${tierGoal} 层即升档`">
+            🏅 第 {{ tier }} 档 · ×{{ tierMult }}
+          </span>
+          <span v-if="realm.active" class="dim">距升档 {{ tierProgress }} 层</span>
           <span v-if="realm.best" class="dim">历史最佳 {{ realm.best }} 层</span>
           <template v-if="realm.active">
             <span class="badge badge-on">已获 {{ realm.buffDefs.length }} 项祝福</span>
@@ -128,8 +138,11 @@ const rewardTable = computed(() =>
       </div>
     </div>
 
-    <!-- 对战框（与对决页/试炼页共用） -->
-    <CombatPanel />
+    <!-- 两栏外壳（2026-09-20 与对决页同步）：左＝战斗区 + 祝福池/结算/规则，右＝装备槽 -->
+    <div class="combat-page">
+      <div class="combat-page-main">
+        <!-- 对战框（与对决页/试炼页共用） -->
+        <CombatPanel />
 
     <!-- 祝福池 -->
     <div class="card rz-card">
@@ -166,6 +179,14 @@ const rewardTable = computed(() =>
         <li>本局中途切到别的页面不会中断（战斗与层数都记在存档里），回到本页继续。</li>
         <li>历史最佳层数会记进<b>年鉴</b>与<b>统计</b>页。</li>
       </ul>
+    </div>
+
+      </div>
+
+      <!-- 右栏：战斗日志（2026-09-21 与「装备」互换位置：日志搬到右栏，装备回左栏与战备同屏） -->
+      <aside class="combat-page-side">
+        <CombatLog />
+      </aside>
     </div>
 
     <RelatedPages :links="RELATED" />

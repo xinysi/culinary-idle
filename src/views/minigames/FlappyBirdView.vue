@@ -265,7 +265,7 @@ reset()
           <div class="fb-info-row fb-info-rule">通用规则：点击画面 / 空格 / ↑ 扑翼 · 穿过管道 +1 管 · 撞管/落地即结算（管数 × 模式单价）· 每局结算游戏币</div>
           <div v-for="(m, key) in METAS" :key="key" class="fb-info-row">
             <b class="fb-info-name">{{ m.label }}</b>
-            <span class="fb-info-desc">{{ m.desc }}</span>
+            <span class="fb-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { itemImage } from '../../game/data/itemImage.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -37,10 +38,10 @@ const FRUITS = [
 const MODES = {
   m1: { label: '1关 五格', cells: 7, layers: 3, groups: 15, matchN: 3, types: 6, slots: 5, gold: 60, desc: '45 张 · 3 层 · 卡槽仅 5 格 · +60 币' },
   m2: { label: '2关 限时', cells: 7, layers: 3, groups: 30, matchN: 3, types: 6, slots: 6, time: 110, gold: 100, desc: '90 张 · 3 层 · 限时 110 秒 · +100 币' },
-  m3: { label: '3关 盲盒', cells: 7, layers: 4, groups: 45, matchN: 3, types: 7, slots: 6, blind: 0.3, gold: 150, desc: '135 张 · 4 层 · 30% 卡牌**图案隐藏**（入槽才揭晓，考验取舍）· +150 币' },
+  m3: { label: '3关 盲盒', cells: 7, layers: 4, groups: 45, matchN: 3, types: 7, slots: 6, blind: 0.3, gold: 150, desc: '135 张 · 4 层 · 30% 卡牌<b>图案隐藏</b>（入槽才揭晓，考验取舍）· +150 币' },
   m4: { label: '4关 四消', cells: 8, layers: 4, groups: 45, matchN: 4, types: 8, slots: 7, gold: 220, desc: '180 张 · 需 4 张同款才消除 · +220 币' },
   m5: { label: '5关 移位', cells: 8, layers: 5, groups: 75, matchN: 3, types: 8, slots: 6, shift: 8, gold: 260, desc: '225 张 · 5 层 · 每 8 秒全部卡牌重排位置 · +260 币' },
-  m6: { label: '6关 锁链', cells: 8, layers: 5, groups: 90, matchN: 3, types: 9, slots: 6, lock: 0.25, gold: 300, desc: '270 张 · 5 层 · 25% 卡被锁**不可点取**（每消除一组解锁 1 张）· +300 币' },
+  m6: { label: '6关 锁链', cells: 8, layers: 5, groups: 90, matchN: 3, types: 9, slots: 6, lock: 0.25, gold: 300, desc: '270 张 · 5 层 · 25% 卡被锁<b>不可点取</b>（每消除一组解锁 1 张）· +300 币' },
   m7: { label: '7关 极限五格', cells: 9, layers: 6, groups: 120, matchN: 3, types: 9, slots: 5, gold: 360, desc: '360 张 · 6 层 · 卡槽 5 格 · +360 币' },
   m8: { label: '8关 限时·五格', cells: 9, layers: 6, groups: 150, matchN: 3, types: 10, slots: 5, time: 540, gold: 420, desc: '450 张 · 6 层 · 5 格 + 限时 540 秒 · +420 币' },
   m9: { label: '9关 盲盒·四消', cells: 9, layers: 7, groups: 135, matchN: 4, types: 10, slots: 7, blind: 0.25, gold: 480, desc: '540 张 · 7 层 · 四消 + 25% 背面卡 · +480 币' },
@@ -64,7 +65,6 @@ const withdrawN = ref(1)
 const hintIds = ref([])
 const celebrating = ref(false)
 const timeLeft = ref(null)
-let soundCtx = null
 const mode = ref('m1')
 
 // ── 派生布局 ──
@@ -82,22 +82,11 @@ const remainSlot = computed(() => slots.value.filter((s) => s !== null).length)
 const lockedCount = computed(() => cards.value.filter((c) => c.locked && !c.cleared && !c.inSlot).length)
 const hiddenCount = computed(() => cards.value.filter((c) => c.hidden && !c.cleared && !c.inSlot).length)
 
-// ── 音效 ──
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine') {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(0.1, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, 0.1)
 }
 
 // ── 生成关卡（可解性保证）──
@@ -526,7 +515,7 @@ reset()
           </div>
           <div v-for="(cfg, key) in MODES" :key="key" class="gg-info-row">
             <b class="gg-info-name">{{ cfg.label }}</b>
-            <span class="gg-info-desc">{{ cfg.desc }}</span>
+            <span class="gg-info-desc" v-html="cfg.desc"></span>
           </div>
         </div>
       </div>

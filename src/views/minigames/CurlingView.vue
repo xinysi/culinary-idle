@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { cssVar, cssRgb } from '../../game/core/cssVar.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -13,10 +14,10 @@ const MODES = {
   m1: { label: '模式1', dur: 40, opp: 0, blocks: 0, fric: 0.980, ring: 1.15, curl: 0, target: 225, gold: 45, desc: '40 秒 · 目标 225 分 · 空场练习：冰面好控制，专注瞄准圆心 · +45 币' },
   m2: { label: '模式2', dur: 45, opp: 2, blocks: 0, fric: 0.980, ring: 1.10, curl: 0, target: 245, gold: 55, desc: '45 秒 · 目标 245 分 · 2 个对手汤圆挡路，可以撞开 · +55 币' },
   m3: { label: '模式3', dur: 50, opp: 3, blocks: 2, fric: 0.978, ring: 1.05, curl: 0, target: 265, gold: 60, desc: '50 秒 · 目标 265 分 · 3 个对手 + 2 块砧板障碍 · +60 币' },
-  m4: { label: '模式4', dur: 55, opp: 3, blocks: 2, fric: 0.988, ring: 1.00, curl: 0, target: 290, gold: 70, desc: '55 秒 · 目标 290 分 · **冰面更滑**，汤圆滑得更远更难停 · +70 币' },
+  m4: { label: '模式4', dur: 55, opp: 3, blocks: 2, fric: 0.988, ring: 1.00, curl: 0, target: 290, gold: 70, desc: '55 秒 · 目标 290 分 · <b>冰面更滑</b>，汤圆滑得更远更难停 · +70 币' },
   m5: { label: '模式5', dur: 60, opp: 4, blocks: 4, fric: 0.986, ring: 0.95, curl: 0, target: 310, gold: 80, desc: '60 秒 · 目标 310 分 · 4 对手 + 4 障碍 · +80 币' },
-  m6: { label: '模式6', dur: 65, opp: 4, blocks: 4, fric: 0.984, ring: 0.85, curl: 0, target: 330, gold: 90, desc: '65 秒 · 目标 330 分 · **圆心缩小**，精度要求更高 · +90 币' },
-  m7: { label: '模式7', dur: 70, opp: 5, blocks: 3, fric: 0.986, ring: 0.95, curl: 1, target: 350, gold: 100, desc: '70 秒 · 目标 350 分 · **弧线冰面**：汤圆会拐弯，要算提前量 · +100 币' },
+  m6: { label: '模式6', dur: 65, opp: 4, blocks: 4, fric: 0.984, ring: 0.85, curl: 0, target: 330, gold: 90, desc: '65 秒 · 目标 330 分 · <b>圆心缩小</b>，精度要求更高 · +90 币' },
+  m7: { label: '模式7', dur: 70, opp: 5, blocks: 3, fric: 0.986, ring: 0.95, curl: 1, target: 350, gold: 100, desc: '70 秒 · 目标 350 分 · <b>弧线冰面</b>：汤圆会拐弯，要算提前量 · +100 币' },
   m8: { label: '模式8', dur: 80, opp: 6, blocks: 6, fric: 0.988, ring: 0.90, curl: 0, target: 400, gold: 120, desc: '80 秒 · 目标 400 分 · 6 对手 + 6 障碍的拥挤冰面 · +120 币' },
   m9: { label: '模式9', dur: 90, opp: 6, blocks: 5, fric: 0.990, ring: 0.80, curl: 1, target: 445, gold: 140, desc: '90 秒 · 目标 445 分 · 小环 + 弧线，极限瞄准 · +140 币' },
   m10: { label: '模式10', dur: 100, opp: 8, blocks: 8, fric: 0.992, ring: 0.75, curl: 1, target: 495, gold: 160, desc: '100 秒 · 目标 495 分 · 满场混战 + 最滑冰面 + 弧线 · +160 币' },
@@ -65,23 +66,11 @@ let curlSign = 1
 function rand(a, b) { return a + Math.random() * (b - a) }
 function ringR(i) { const s = cfg.value.ring; return [30, 62, 96][i] * s }
 
-// ── 音效 ──
-let soundCtx = null
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程
 function beep(freq, dur, type = 'sine', vol = 0.06) {
   if (!player.settings?.soundEnabled) return
-  try {
-    soundCtx = soundCtx ?? new (window.AudioContext || window.webkitAudioContext)()
-    const o = soundCtx.createOscillator()
-    const g = soundCtx.createGain()
-    o.type = type
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(soundCtx.destination)
-    g.gain.setValueAtTime(vol, soundCtx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime + dur)
-    o.start()
-    o.stop(soundCtx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, type, vol)
 }
 
 // ── 开局 ──
@@ -534,7 +523,7 @@ onUnmounted(() => stopLoop())
           <div class="cu-info-row cu-info-rule">通用规则：按住冰面往目标方向拖拽，拖得越远力度越大，松手推出汤圆 · 汤圆会一直滑到停下，<b>离圆心越近得分越高</b>（正中心 100 分）· 连续两次 60 分以上有连击加成（最高 ×1.5）· 场上最多留 4 个自己的汤圆，会把后面的汤圆撞开 · 限时结束按得分结算，达标发游戏币（超出目标最多 +50%）</div>
           <div v-for="(m, key) in MODES" :key="key" class="cu-info-row">
             <b class="cu-info-name">{{ m.label }}</b>
-            <span class="cu-info-desc">{{ m.desc }}</span>
+            <span class="cu-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

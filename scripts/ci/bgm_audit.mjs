@@ -125,9 +125,52 @@ check('I. 播放模式是持久化设置（settings.bgmMode 默认 repeat）', /
 // 引擎侧：只有 repeat 用 el.loop
 check('I. 引擎按模式设置 el.loop（顺序/随机不循环）', /el\.loop = playMode === 'repeat'/.test(soundCode))
 const compCode = stripComments(compSrc)
-const controls = ['⏮', '⏭', '上一首', '下一首', '播放模式', '关闭背景音乐']
-check('I. 播放器收起态就有全套常驻控件（上一首/暂停/下一首/模式/开关）', controls.every((k) => compCode.includes(k)) && /bgm-tbtn/.test(compCode))
-check('I. 🔊 开关常驻（不在 v-if=open 里）', /class="bgm-pp"[\s\S]{0,240}toggleEnabled/.test(compCode))
+// 2026-09-18 起胶囊上不再有 🔊 开关（用户要求删掉，开关改到设置面板的音频页签）
+const controls = ['⏮', '⏭', '上一首', '下一首', '播放模式']
+check('I. 播放器收起态就有全套常驻控件（上一首/暂停/下一首/模式）', controls.every((k) => compCode.includes(k)) && /bgm-tbtn/.test(compCode))
+// 2026-09-18 用户要求删掉胶囊上的 🔊：开关改到「设置 → 🔊 音频」页签（那边本来就有 bgmEnabled）
+// ⚠️ 判据只看「按钮元素」而不是扫全文：`.vue` 模板里的 HTML 注释 `<!-- -->` 不会被 JS 注释剥离器剥掉，
+//    写 `!/🔊/` 会把注释里那句「已删 🔊」也算进去 → 恒 FAIL（本轮踩过）。
+check('I. 胶囊上**没有** 🔊 开关（用户 2026-09-18 要求删掉），且开关仍在设置面板里',
+  !/class="bgm-pp"/.test(compCode) && !/class="bgm-pp"[\s\S]{0,200}toggleEnabled/.test(compCode)
+  && /bgmEnabled/.test(fs.readFileSync(new URL('../../src/components/SettingsPanel.vue', import.meta.url), 'utf8')))
+
+/* J. 胶囊宽度恒定（2026-09-18 用户报「播放器老是变短变长」）：
+   ① `.bgm-name` 必须是**固定 width**，只写 max-width 会让名字区随内容伸缩
+      （实测「自动」24px / 4 字曲名 48px / 9 字变奏 83px ⇒ 胶囊在 197~256px 之间来回变）；
+   ② ⏸/▶ 字形宽度差 1.8px，播放钮也必须定宽，否则播放态与暂停态差 1.8px；
+   ③ 暂停态不许再拼「已暂停 ·」前缀（用户明确要求去掉那三个字，状态由 ⏸/▶ 图标表达）。
+   行为层断言在 `e2e-test.spec.mjs` 的 BGM 用例 ⑥（量 4 种状态的胶囊宽度差 < 0.6px）。 */
+// ⚠️ 必须**锚定行首**：`/.bgm-name\s*\{/` 会先命中 `.bgm-pill--off .bgm-name { color: … }`（2026-09-21 新增的关闭态规则），
+//    于是这条断言对着一条只有 color 的规则判断 → 恒 FAIL（"找不到 .bgm-name 规则"）。
+//    同源教训：守卫的正则要匹配「规则定义」而不是「任何含该选择器的规则」。
+const nameMatch = compCode.match(/(?:^|\n)\.bgm-name\s*\{([^}]*)\}/)
+check('J. `.bgm-name` 用固定 width（不能只写 max-width，否则胶囊宽度跟着曲名变）',
+  !!nameMatch && /\bwidth\s*:\s*\d+px/.test(nameMatch[1]) && !/max-width\s*:/.test(nameMatch[1]),
+  nameMatch ? nameMatch[1].trim() : '找不到 .bgm-name 规则')
+const playMatch = compCode.match(/\.bgm-tbtn--play\s*\{([^}]*)\}/)
+check('J. 播放/暂停钮定宽（⏸ 与 ▶ 字形宽度不同，不定宽会让胶囊差 1.8px）',
+  !!playMatch && /\bwidth\s*:\s*\d+px/.test(playMatch[1]), playMatch ? playMatch[1].trim() : '找不到 .bgm-tbtn--play 规则')
+check('J. 暂停态不再拼「已暂停 ·」前缀（用户要求那三个字不要）',
+  !/已暂停\s*·/.test(compCode))
+
+/* K. BGM 胶囊与旁边五个功能胶囊**同高同排**（2026-09-21 用户：「BGM 胶囊是不是融合进底栏了，那大小应该也适配为
+   旁边五个胶囊的大小」）。原先 BGM 胶囊 33px（竖 padding 7px）、窄屏那条 `padding: 7px 10px` 更把它撑到 47px，
+   而五个功能胶囊是 24px ⇒ 右下角看起来是两块东西。
+   口径：高度只在 `main.css` 的 `--dock-pill-h` 定义一处，两边都用 `var(--dock-pill-h)`（谁写死都会被这里抓住）；
+   行为层断言在 `e2e-test.spec.mjs` 的 BGM 用例 ⑦（量真实高度、两者与 token 相等、底边对齐）。 */
+const mainCss = fs.readFileSync(path.join(ROOT, 'src/styles/main.css'), 'utf8')
+const tokenMatch = mainCss.match(/--dock-pill-h\s*:\s*(\d+)px/)
+check('K. 底部胶囊高度有唯一 token（main.css 的 --dock-pill-h）', !!tokenMatch, tokenMatch ? '' : '找不到 --dock-pill-h')
+const dockSrc = fs.readFileSync(new URL('../../src/components/BottomDock.vue', import.meta.url), 'utf8')
+const pillRule = stripComments(dockSrc).match(/\.dock-pill\s*\{([^}]*)\}/)
+check('K. 五个功能胶囊的高度取自 --dock-pill-h（别写死）',
+  !!pillRule && /height\s*:\s*var\(--dock-pill-h\)/.test(pillRule[1]), pillRule ? pillRule[1].trim().slice(0, 80) : '找不到 .dock-pill 规则')
+const bgmPillRule = compCode.match(/\.bgm-pill\s*\{([^}]*)\}/)
+check('K. BGM 胶囊的高度也取自 --dock-pill-h（与功能胶囊等高）',
+  !!bgmPillRule && /height\s*:\s*var\(--dock-pill-h\)/.test(bgmPillRule[1]), bgmPillRule ? bgmPillRule[1].trim().slice(0, 80) : '找不到 .bgm-pill 规则')
+check('K. BGM 胶囊没有靠竖 padding 撑高（那是「比旁边高一截」的成因）',
+  !!bgmPillRule && !/padding\s*:\s*\d+px\s+\d+px\s*;/.test(bgmPillRule[1]) && !/padding\s*:\s*\d+px\s+\d+px\s+\d+px\s+\d+px\s*;/.test(bgmPillRule[1]), bgmPillRule ? bgmPillRule[1].trim().slice(0, 80) : '')
 
 console.log(fail ? `\nBGM 审计：FAIL（${fail} 项）` : `\nBGM 审计：PASS（${BGM_TRACKS.length} 首，音频 ${onDisk.length} 个文件）`)
 process.exit(fail ? 1 : 0)

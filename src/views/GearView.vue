@@ -108,11 +108,11 @@ const ownedSetCount = computed(() => setRows.value.filter((r) => r.ownedCount > 
 const fullSetCount = computed(() => setRows.value.filter((r) => r.ownedCount === r.total).length)
 const activeSetList = computed(() => equipSetBonuses(player.equipment).active)
 
-// 当前穿戴的词条
+// 当前穿戴的词条（2026-09-18 起词条按**装备 id** 存：同一件装备穿在哪个槽位都带着自己那套）
 const wornMods = computed(() =>
-  Object.entries(player.gearMods ?? {})
-    .filter(([slot, m]) => m?.itemId && player.equipment?.[slot] === m.itemId && (m.mods ?? []).length)
-    .map(([slot, m]) => ({ slot, name: getItem(m.itemId)?.name ?? m.itemId, mods: m.mods }))
+  Object.entries(player.equipment ?? {})
+    .filter(([, itemId]) => itemId && (player.gearModsOf(itemId) ?? []).length)
+    .map(([slot, itemId]) => ({ slot, name: getItem(itemId)?.name ?? itemId, mods: player.gearModsOf(itemId) }))
 )
 
 // ── 宝石 ──
@@ -287,7 +287,7 @@ const rerollTable = computed(() =>
         <div class="gv-chips">
           <span v-for="m in modCountTable" :key="m.quality" class="gv-chip">{{ m.quality }} <b class="mono">{{ m.text }}</b></span>
         </div>
-        <p class="dim gv-sub">词条在<b>穿戴装备时随机掷出</b>，绑定到「槽位 + 装备」，换装会重掷。</p>
+        <p class="dim gv-sub">词条在<b>第一次穿戴该装备时随机掷出</b>，之后<b>永久绑定在这件装备上</b>：换穿、卸下再穿都不会变，洗练出的结果也不会被换装抹掉。</p>
       </div>
 
       <div class="card gv-card">

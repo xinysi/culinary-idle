@@ -19,7 +19,7 @@ const MODES = {
   '5x5': { label: '5×5 挑战', size: 5, four: 0.1, mult: 2, desc: '25 格 · 出4率 10% · 奖励×2 —— 空间充足，平稳合大块' },
   w5: { label: '5+ 狂野', size: 5, four: 0.3, mult: 1.8, desc: '25 格 · 出4率 30% · 奖励×1.8 —— 大而凶' },
   s6: { label: '6×6 漫游', size: 6, four: 0.1, mult: 0.6, desc: '36 格 · 出4率 10% · 奖励×0.6 —— 最大棋盘，合出 2048 几乎必成' },
-  s6f: { label: '6+ 巨人', size: 6, four: 0.55, mult: 2.5, desc: '36 格 · 出4率 55% · 奖励×2.5 —— 大空间高难度，四率 55%' },
+  s6f: { label: '6+ 巨人', size: 6, four: 0.55, mult: 2.5, desc: '36 格 · 出4率 55% · 奖励×2.5 —— 大空间高难度，出4率 55%' },
 }
 const showInfo = ref(false)
 const mode = ref('4x4')
@@ -285,7 +285,7 @@ function posStyle(t) {
         <div class="g2048-info-row g2048-info-rule">通用规则：方向键 / 下方按钮滑动整盘，相同数字相撞合并 · 每步生成一个新块 · 首次合出某档位即得该档游戏币（越高越多，按模式倍率）· 无路可走即结束</div>
           <div v-for="(m, id) in MODES" :key="id" class="g2048-info-row">
             <b class="g2048-info-name">{{ m.label }}</b>
-            <span class="g2048-info-desc">{{ m.desc }}</span>
+            <span class="g2048-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

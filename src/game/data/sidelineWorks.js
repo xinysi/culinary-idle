@@ -43,36 +43,45 @@ export const SIDELINE_ITEM_CATEGORIES = [
  * 效果轴定义：每个副业**作品**（每件一次）贡献的那条轴。
  * `perItem` = 单件增量；`label/amountLabel` 供 UI 与图鉴文案复用。
  */
+/** 轴数值的统一文案格式（2026-09-21 用户报「数值没有控制小数」）——
+ *  原先 `amountLabel` 直接插值原始浮点，页面上会蹦出「+7.999999999999999%」「+0.19999999999999998%」这种毛刺。
+ *  规则：先按 2 位小数取整，是整数就不带小数点（`+8%`、`+0.2%`），否则保留必要位（`+1.25%`）。
+ *  ⚠️ 所有对外显示的轴数值都要走它，别再直接 `${v}` 插值。 */
+export function fmtAxisNum(v) {
+  const n = Math.round((Number(v) || 0) * 100) / 100
+  return Number.isInteger(n) ? String(n) : String(n)
+}
+
 export const SIDELINE_AXES = {
-  cellarValue: { label: '地窖单槽价值上限', amountLabel: (v) => `${v.toLocaleString()} 金币`, perItem: 1500 },
-  tipPct: { label: '餐厅小费', amountLabel: (v) => `+${v}%`, perItem: 2 },
-  michelinScore: { label: '米其林评分', amountLabel: (v) => `+${v} 分`, perItem: 12 },
-  nightHours: { label: '夜市狂潮时长', amountLabel: (v) => `+${v} 小时`, perItem: 1 },
+  cellarValue: { label: '地窖单槽价值上限', amountLabel: (v) => `${fmtAxisNum(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 金币`, perItem: 1500 },
+  tipPct: { label: '餐厅小费', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 2 },
+  michelinScore: { label: '米其林评分', amountLabel: (v) => `+${fmtAxisNum(v)} 分`, perItem: 12 },
+  nightHours: { label: '夜市狂潮时长', amountLabel: (v) => `+${fmtAxisNum(v)} 小时`, perItem: 1 },
   // ── v2.12.0：五支「干净轴」（每支占一条此前**没人占**的乘区，判据见文件头）──
   /** 狩猎时**不消耗陷阱**的概率（百分点）。基础 0 ⇒ 满配约 38%。出口在 HuntingSkill 的弹药扣减与离线动作上限 */
-  huntSavePct: { label: '狩猎省箭', amountLabel: (v) => `+${v}%`, perItem: 2 },
+  huntSavePct: { label: '狩猎省箭', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 2 },
   /** **稀有鱼（金龙鱼）概率的绝对增量**（百分点）。基础 0.5% ⇒ 满配约 0.94%。出口在 FishingSkill 的 RARE_CHANCE */
-  rareFishPP: { label: '稀有鱼概率', amountLabel: (v) => `+${v}%`, perItem: 0.02 },
+  rareFishPP: { label: '稀有鱼概率', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 0.02 },
   /** 食客订单**到访提速**（%）。基础 25~45 分钟一位 ⇒ 满配约 −27% 间隔。出口在订单生成的时间戳 */
-  orderSpeedPct: { label: '订单到访提速', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  orderSpeedPct: { label: '订单到访提速', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1.5 },
   /** **节庆加成放大**（%）：只放大 boost 中 >1 的部分，绝不放大减益。出口在 festivalBoost */
-  festivalPct: { label: '节庆加成放大', amountLabel: (v) => `+${v}%`, perItem: 1 },
+  festivalPct: { label: '节庆加成放大', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1 },
   /** **宝石镶嵌效果**（%）：乘在 gemsBonus 的合计上。出口在 player 的宝石加成读取处 */
-  gemPct: { label: '宝石镶嵌效果', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  gemPct: { label: '宝石镶嵌效果', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1.5 },
   // ── v2.13.0 第二批 ──
   /** **交易所卖出价**（%）：乘在 sellPriceOf 上（玩家卖出所得）。出口只有这一个函数，两个调用点都传同一个值 */
-  tagSellPct: { label: '交易所卖出价', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  tagSellPct: { label: '交易所卖出价', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1.5 },
   /** **采矿附产率**（百分点）：加进 `GatheringSkill.yieldExtraChance`（**在线/离线同源，只改一处**），且**只对采矿生效** */
-  miningExtraPP: { label: '采矿附产率', amountLabel: (v) => `+${v}%`, perItem: 2 },
+  miningExtraPP: { label: '采矿附产率', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 2 },
   // ── v2.14.0：四支「既有系统接线」副业 ──
   /** **徒弟离线效率上限**（百分点）：加在 `player.apprenticeOfflineBonus()` 上，基础封顶 +20% */
-  apprenticePP: { label: '徒弟离线效率', amountLabel: (v) => `+${v}pp`, perItem: 0.8 },
+  apprenticePP: { label: '徒弟离线效率', amountLabel: (v) => `+${fmtAxisNum(v)}pp`, perItem: 0.8 },
   /** **常客好感增速**（%）：乘在唯一的 `player.favorGain()` 上（5 处好感来源统一走它） */
-  favorGainPct: { label: '常客好感增速', amountLabel: (v) => `+${v}%`, perItem: 1.5 },
+  favorGainPct: { label: '常客好感增速', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1.5 },
   /** **订单赏金**（%）：乘在 `makeOrder` 的赏金上（只放大单笔，不改到访间隔——那是香道的轴） */
-  orderGoldPct: { label: '订单赏金', amountLabel: (v) => `+${v}%`, perItem: 1 },
+  orderGoldPct: { label: '订单赏金', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1 },
   /** **金币获取**（%）：加在 `gainGold` 的乘数上（与装备词条 goldPct、厨神之路并列）。夹 ≤15% 防通胀 */
-  goldGainPct: { label: '金币获取', amountLabel: (v) => `+${v}%`, perItem: 0.8 },
+  goldGainPct: { label: '金币获取', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 0.8 },
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -123,7 +132,8 @@ export function ladderNextOf(points) {
 export function ladderTotalOf(skillId, points) {
   const cfg = SIDELINE_LADDERS.find((l) => l.skill === skillId)
   if (!cfg) return 0
-  return Math.round(ladderTierOf(points) * cfg.perTier * 1000) / 1000
+  // 2 位小数（2026-09-21）：与显示口径一致；原先 3 位会在页面上出现「+7.999999999999999%」这类浮点毛刺
+  return Math.round(ladderTierOf(points) * cfg.perTier * 100) / 100
 }
 
 /**
@@ -136,26 +146,26 @@ export function ladderTotalOf(skillId, points) {
  * 木工不在 `SIDELINE_SKILL_LIST` 里——它的产物走 `restaurant.decor`，所以类别名在这里也要有一份）。
  */
 export const SIDELINE_LADDERS = [
-  { skill: 'woodworking', name: '木工', catLabel: '木器', axis: 'decorPct', perTier: 2, unit: (v) => `装潢加成 +${v}%` },
-  { skill: 'pottery', name: '陶艺', catLabel: '陶器', axis: 'cellarValue', perTier: 750, unit: (v) => `地窖单槽上限 +${v.toLocaleString()}` },
-  { skill: 'weaving', name: '编织', catLabel: '织物', axis: 'tipPct', perTier: 1.5, unit: (v) => `小费 +${v}%` },
-  { skill: 'embroidery', name: '刺绣', catLabel: '绣品', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${v}` },
+  { skill: 'woodworking', name: '木工', catLabel: '木器', axis: 'decorPct', perTier: 2, unit: (v) => `装潢加成 +${fmtAxisNum(v)}%` },
+  { skill: 'pottery', name: '陶艺', catLabel: '陶器', axis: 'cellarValue', perTier: 750, unit: (v) => `地窖单槽上限 +${fmtAxisNum(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}` },
+  { skill: 'weaving', name: '编织', catLabel: '织物', axis: 'tipPct', perTier: 1.5, unit: (v) => `小费 +${fmtAxisNum(v)}%` },
+  { skill: 'embroidery', name: '刺绣', catLabel: '绣品', axis: 'michelinScore', perTier: 10, unit: (v) => `招牌分 +${fmtAxisNum(v)}` },
   // 蜡烛：**时长**已封顶 +8h（再延就失去「时段」意义），所以阶梯给它加**倍率**
-  { skill: 'candles', name: '蜡烛制作', catLabel: '蜡烛', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${v.toFixed(2)}` },
+  { skill: 'candles', name: '蜡烛制作', catLabel: '蜡烛', axis: 'nightMult', perTier: 0.03, unit: (v) => `夜市倍率 +${fmtAxisNum(v)}` },
   // ── v2.12.0 第一批：五支「干净轴」副业（阶梯每档 = 该轴的一个小增量，与作品层叠加）──
-  { skill: 'fletching', name: '制箭', catLabel: '猎具', axis: 'huntSavePct', perTier: 1.5, unit: (v) => `狩猎省箭 +${v}%` },
-  { skill: 'netmaking', name: '制网', catLabel: '渔具', axis: 'rareFishPP', perTier: 0.02, unit: (v) => `稀有鱼概率 +${v.toFixed(2)}%` },
-  { skill: 'incense', name: '香道', catLabel: '香品', axis: 'orderSpeedPct', perTier: 1, unit: (v) => `订单提速 +${v}%` },
-  { skill: 'festivalGoods', name: '年货', catLabel: '节礼', axis: 'festivalPct', perTier: 0.8, unit: (v) => `节庆放大 +${v}%` },
-  { skill: 'jadecraft', name: '玉作', catLabel: '玉器', axis: 'gemPct', perTier: 1.5, unit: (v) => `宝石效果 +${v}%` },
+  { skill: 'fletching', name: '制箭', catLabel: '猎具', axis: 'huntSavePct', perTier: 1.5, unit: (v) => `狩猎省箭 +${fmtAxisNum(v)}%` },
+  { skill: 'netmaking', name: '制网', catLabel: '渔具', axis: 'rareFishPP', perTier: 0.02, unit: (v) => `稀有鱼概率 +${fmtAxisNum(v)}%` },
+  { skill: 'incense', name: '香道', catLabel: '香品', axis: 'orderSpeedPct', perTier: 1, unit: (v) => `订单提速 +${fmtAxisNum(v)}%` },
+  { skill: 'festivalGoods', name: '年货', catLabel: '节礼', axis: 'festivalPct', perTier: 0.8, unit: (v) => `节庆放大 +${fmtAxisNum(v)}%` },
+  { skill: 'jadecraft', name: '玉作', catLabel: '玉器', axis: 'gemPct', perTier: 1.5, unit: (v) => `宝石效果 +${fmtAxisNum(v)}%` },
   // ── v2.13.0 第二批 ──
-  { skill: 'goodsTag', name: '货签', catLabel: '货签', axis: 'tagSellPct', perTier: 1.5, unit: (v) => `交易所卖出价 +${v}%` },
-  { skill: 'miningGear', name: '采掘器具', catLabel: '器具', axis: 'miningExtraPP', perTier: 1.5, unit: (v) => `采矿附产 +${v}%` },
+  { skill: 'goodsTag', name: '货签', catLabel: '货签', axis: 'tagSellPct', perTier: 1.5, unit: (v) => `交易所卖出价 +${fmtAxisNum(v)}%` },
+  { skill: 'miningGear', name: '采掘器具', catLabel: '器具', axis: 'miningExtraPP', perTier: 1.5, unit: (v) => `采矿附产 +${fmtAxisNum(v)}%` },
   // ── v2.14.0 ──
-  { skill: 'papermaking', name: '造纸', catLabel: '文房', axis: 'apprenticePP', perTier: 0.5, unit: (v) => `徒弟离线效率 +${v}pp` },
-  { skill: 'instrument', name: '乐器', catLabel: '乐器', axis: 'favorGainPct', perTier: 1, unit: (v) => `好感增速 +${v}%` },
-  { skill: 'soapmaking', name: '制皂', catLabel: '皂品', axis: 'orderGoldPct', perTier: 0.8, unit: (v) => `订单赏金 +${v}%` },
-  { skill: 'exchequer', name: '钱庄', catLabel: '账具', axis: 'goldGainPct', perTier: 0.6, unit: (v) => `金币获取 +${v}%` },
+  { skill: 'papermaking', name: '造纸', catLabel: '文房', axis: 'apprenticePP', perTier: 0.5, unit: (v) => `徒弟离线效率 +${fmtAxisNum(v)}pp` },
+  { skill: 'instrument', name: '乐器', catLabel: '乐器', axis: 'favorGainPct', perTier: 1, unit: (v) => `好感增速 +${fmtAxisNum(v)}%` },
+  { skill: 'soapmaking', name: '制皂', catLabel: '皂品', axis: 'orderGoldPct', perTier: 0.8, unit: (v) => `订单赏金 +${fmtAxisNum(v)}%` },
+  { skill: 'exchequer', name: '钱庄', catLabel: '账具', axis: 'goldGainPct', perTier: 0.6, unit: (v) => `金币获取 +${fmtAxisNum(v)}%` },
 ]
 
 /** 阶梯轴 → 文案（供 UI/效果总览复用） */
@@ -262,7 +272,7 @@ const DEFS = {
   //   制箭→狩猎省箭 · 制网→垂钓稀有鱼率 · 香道→食客订单到访提速 · 年货→节庆加成放大 · 玉作→宝石镶嵌效果
   fletching: {
     skill: 'fletching', name: '制箭', icon: '🏹', category: 'huntingGear', catLabel: '猎具',
-    axis: 'huntSavePct', materialNote: '箭杆用木料、箭头取矿物；做成后狩猎**更省陷阱**——离线结算按持有陷阱数封顶动作数，所以省箭直接提高离线吞吐',
+    axis: 'huntSavePct', materialNote: '箭杆用木料、箭头取矿物；做成后狩猎<b>更省陷阱</b>——离线结算按持有陷阱数封顶动作数，所以省箭直接提高离线吞吐',
     rows: [
       [1, '木箭', 'ironOre', 2, 2],
       [11, '骨镞箭', 'steelOre', 2, 2],
@@ -278,7 +288,7 @@ const DEFS = {
   },
   netmaking: {
     skill: 'netmaking', name: '制网', icon: '🎣', category: 'fishingGear', catLabel: '渔具',
-    axis: 'rareFishPP', materialNote: '浮子与竿用木料、网绳取茎叶纤维；做成后**稀有鱼（金龙鱼，基础 0.5%）更容易上钩**',
+    axis: 'rareFishPP', materialNote: '浮子与竿用木料、网绳取茎叶纤维；做成后<b>稀有鱼（金龙鱼，基础 0.5%）更容易上钩</b>',
     rows: [
       [1, '竹鱼笼', 'foraging_ext_15_young', 2, 2],
       [11, '麻线渔网', 'foraging_ext2_19_young', 2, 2],
@@ -294,7 +304,7 @@ const DEFS = {
   },
   incense: {
     skill: 'incense', name: '香道', icon: '🧴', category: 'incense', catLabel: '香品',
-    axis: 'orderSpeedPct', materialNote: '香骨用木料、香方取香料；做成后**食客订单到访更快**（基础 25~45 分钟一位，订单多则金币/好感/米其林三项一起涨）',
+    axis: 'orderSpeedPct', materialNote: '香骨用木料、香方取香料；做成后<b>食客订单到访更快</b>（基础 25~45 分钟一位，订单多则金币/好感/米其林三项一起涨）',
     rows: [
       [1, '艾草线香', 'salt', 2, 2],
       [11, '檀香盘', 'fangfengPowder', 2, 2],
@@ -310,7 +320,7 @@ const DEFS = {
   },
   festivalGoods: {
     skill: 'festivalGoods', name: '年货', icon: '🧧', category: 'gift', catLabel: '节礼',
-    axis: 'festivalPct', materialNote: '礼盒用木料、干货取腌味年货；做成后**节庆日的加成被放大**（只放大 >1 的部分，不会放大减益）',
+    axis: 'festivalPct', materialNote: '礼盒用木料、干货取腌味年货；做成后<b>节庆日的加成被放大</b>（只放大 >1 的部分，不会放大减益）',
     rows: [
       [1, '春联礼帖', 'preserving_ext_02', 2, 2],
       [11, '年糕礼盒', 'waxApplePreserve', 2, 2],
@@ -327,7 +337,7 @@ const DEFS = {
   // ── v2.13.0 第二批 ──
   goodsTag: {
     skill: 'goodsTag', name: '货签', icon: '🪙', category: 'goodsTag', catLabel: '货签',
-    axis: 'tagSellPct', materialNote: '木牌用木料、封条取兽胶；做成后**在交易所卖出更值钱**（每日每件限 60 件，吞吐有上限，不会通胀）',
+    axis: 'tagSellPct', materialNote: '木牌用木料、封条取兽胶；做成后<b>在交易所卖出更值钱</b>（每日每件限 60 件，吞吐有上限，不会通胀）',
     rows: [
       [1, '木货签', 'hunting_ext_02', 2, 2],
       [11, '火漆封', 'boarMeat', 2, 2],
@@ -343,7 +353,7 @@ const DEFS = {
   },
   miningGear: {
     skill: 'miningGear', name: '采掘器具', icon: '⛏️', category: 'miningGear', catLabel: '器具',
-    axis: 'miningExtraPP', materialNote: '镐柄与灯架用木料、镐头取矿物；做成后**采矿有概率多产出一份**（采矿原本完全没有附产）',
+    axis: 'miningExtraPP', materialNote: '镐柄与灯架用木料、镐头取矿物；做成后<b>采矿有概率多产出一份</b>（采矿原本完全没有附产）',
     rows: [
       [1, '木柄矿镐', 'ironOre', 2, 2],
       [11, '铁头矿镐', 'steelOre', 2, 2],
@@ -360,7 +370,7 @@ const DEFS = {
   // ── v2.14.0：四支「既有系统接线」副业（辅料依次取水果/肉类/矿物/海鲜，均按档位取件）──
   papermaking: {
     skill: 'papermaking', name: '造纸', icon: '📜', category: 'stationery', catLabel: '文房',
-    axis: 'apprenticePP', materialNote: '纸料用木料、纤维与胶取水果（桑皮/果胶）；做成后**徒弟的离线效率更高**（基础封顶 +20%）',
+    axis: 'apprenticePP', materialNote: '纸料用木料、纤维与胶取水果（桑皮/果胶）；做成后<b>徒弟的离线效率更高</b>（基础封顶 +20%）',
     rows: [
       [1, '竹纸', 'foraging_ext_02', 2, 2],
       [11, '麻纸', 'foraging_ext_05', 2, 2],
@@ -376,7 +386,7 @@ const DEFS = {
   },
   instrument: {
     skill: 'instrument', name: '乐器', icon: '🎼', category: 'instrument', catLabel: '乐器',
-    axis: 'favorGainPct', materialNote: '琴身用木料、弦取动物筋与肠衣；做成后**常客好感涨得更快**（好感本身给小费，这是加速而非破顶）',
+    axis: 'favorGainPct', materialNote: '琴身用木料、弦取动物筋与肠衣；做成后<b>常客好感涨得更快</b>（好感本身给小费，这是加速而非破顶）',
     rows: [
       [1, '竹笛', 'hunting_ext_02', 2, 2],
       [11, '木鱼', 'boarMeat', 2, 2],
@@ -392,7 +402,7 @@ const DEFS = {
   },
   soapmaking: {
     skill: 'soapmaking', name: '制皂', icon: '🧼', category: 'soap', catLabel: '皂品',
-    axis: 'orderGoldPct', materialNote: '皂基用木灰与油脂、碱取矿物；做成后**食客订单赏金更高**（只放大单笔，不改到访间隔）',
+    axis: 'orderGoldPct', materialNote: '皂基用木灰与油脂、碱取矿物；做成后<b>食客订单赏金更高</b>（只放大单笔，不改到访间隔）',
     rows: [
       [1, '草木灰皂', 'ironOre', 2, 2],
       [11, '猪胰皂', 'steelOre', 2, 2],
@@ -408,7 +418,7 @@ const DEFS = {
   },
   exchequer: {
     skill: 'exchequer', name: '钱庄', icon: '🏦', category: 'voucher', catLabel: '账具',
-    axis: 'goldGainPct', materialNote: '算具用木料、钱范取贝币与海鲜；做成后**一切金币收入都多一点**（夹 ≤15% 防通胀）',
+    axis: 'goldGainPct', materialNote: '算具用木料、钱范取贝币与海鲜；做成后<b>一切金币收入都多一点</b>（夹 ≤15% 防通胀）',
     rows: [
       [1, '木算筹', 'carp', 2, 2],
       [11, '贝币串', 'salmon', 2, 2],
@@ -424,7 +434,7 @@ const DEFS = {
   },
   jadecraft: {
     skill: 'jadecraft', name: '玉作', icon: '🔮', category: 'jade', catLabel: '玉器',
-    axis: 'gemPct', materialNote: '磨盘与架用木料、玉料取贝玉珍珠；做成后**宝石镶嵌的效果更强**',
+    axis: 'gemPct', materialNote: '磨盘与架用木料、玉料取贝玉珍珠；做成后<b>宝石镶嵌的效果更强</b>',
     rows: [
       [1, '磨石', 'carp', 2, 2],
       [11, '贝壳扣', 'salmon', 2, 2],

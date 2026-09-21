@@ -337,7 +337,7 @@ const statColumns = computed(() => {
   font-size: 20px;
   font-weight: 700;
   background-image:
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,80,80,0.85) 20%, rgba(255,190,60,0.85) 40%, rgba(80,220,120,0.85) 60%, rgba(70,170,255,0.85) 80%, rgba(255,255,255,0) 100%),
+    linear-gradient(90deg, rgba(var(--glass-rgb), 0) 0%, rgba(255,80,80,0.85) 20%, rgba(255,190,60,0.85) 40%, rgba(80,220,120,0.85) 60%, rgba(70,170,255,0.85) 80%, rgba(var(--glass-rgb), 0) 100%),
     linear-gradient(90deg, var(--primary), var(--primary-strong));
   background-size: 200% 100%, 100% 100%;
   background-position: 200% 0, 0 0;

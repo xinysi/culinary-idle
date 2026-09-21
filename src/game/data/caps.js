@@ -20,6 +20,22 @@ export const CAP_BASE = { inventory: 20, bank: 100, cold: 5 }
  * 抬硬顶**不得**顺手把金币能买到的地方也抬上去，只能让「商店之外的新来源」（山海食经）落进硬顶的余量里。
  */
 export const PAID_CAP_MAX = { inventory: 100, bank: 500, cold: 100 }
+// 2026-09-20：**存储合一**（用户要求「只有一个厨藏」）——仓库并入厨藏，容量相加。
+// 原「原背包 100 + 原仓库 500 = 600」；同一天用户又要求**商店的厨藏扩容上限提到 2500**
+// （「商店的厨藏扩容从600提到2500」）⇒ 这两个常量从此是**独立标定**的，不再等于三档之和。
+// ⚠️ 原来的 CAP_*/PAID_CAP_MAX 三档常量**继续保留**：① 山海食经的 220 条 `bankCap` 奖励是**固定数据**，
+//    必须还能引用；② `_grantShanhaiCaps` 的账本形状（inventory/bank/cold）也没变。
+//    但它们现在只描述「那一档奖励叫什么」，**钱能买多少 / 硬顶多高只看下面两个 STORAGE_***。
+export const STORAGE_BASE = CAP_BASE.inventory + CAP_BASE.bank
+/** 合并后的厨藏**金币可买到**的上限（2026-09-20 用户要求 600 → 2500；两件扩容商品的价格与增量不变） */
+export const STORAGE_PAID_MAX = 2500
+/**
+ * 合并后的厨藏**硬顶** = 金币路径上限 + 山海食经全树容量奖励。
+ * 山海食经全树（12 线，`shanhaiTree.js`，**固定数据**）：`inventoryCap` 合计 276 + `bankCap` 合计 456 = **732**
+ * ⇒ 2500 + 732 = **3232**。⚠️ 抬 `STORAGE_PAID_MAX` 时必须**同步抬这里**（C23 有守卫），
+ * 否则山海食经的容量奖励会撞顶后被顺位转投/静默吞掉（2026-09-13 用户实测报过「写的背包、加的是仓库」）。
+ */
+export const STORAGE_MAX = 3232
 /** 冷库付费扩容：每次 +1 格的价格（原来在 player.js 与 ProductionView.vue 各写一份） */
 export const COLD_EXPAND_COST = 1000
 
@@ -90,4 +106,26 @@ export function safeCap(value, fallback, max) {
 export function safeList(value, max) {
   if (!Array.isArray(value)) return []
   return max > 0 ? value.slice(0, max) : value
+}
+
+// ── 设置面板「经验倍率」的可选档位（2026-09-21 收口）──────────────────────
+//
+// 背景：这一项原先是 1/10/50/100/250/500/**1000×** 的玩家可随时切换的下拉。
+// 实测（`scripts/sim/xp_multiplier_breakdown.mjs`）它是**单层贡献最大的一项**（×10 档单独就 ×11），
+// 与增益剂 ×4.95、转生 ×3.3 相乘后总乘区可达 **×312** —— 于是「采摘 1→99 = 44.2h」这种标定过的时长
+// 会被一个下拉框直接抹平（含 ×10 的那档「满配」只要 40 分钟）。
+// ⇒ 收成有界的**加速档**（最高 ×5）：让「想快一点」仍是选项，但不再能一键作废整套进度标定。
+//
+// 🔴 **口径只能有一份**：设置面板的 `<option>` 与 `applySave` 的读档夹取都引用本常量。
+//    旧档里存着的 10/50/100/250/500/1000 会在读档时夹到合法档（见 `safeXpMultiplier`），
+//    否则老玩家会带着 ×1000 继续跑、而面板上已经没有那个选项（显示与实际不一致）。
+export const XP_MULTIPLIER_OPTIONS = [1, 2, 3, 5]
+
+/** 读档用：经验倍率必须落在合法档位内；非法值（含旧档的 1000）夹到**不超过它的最大合法档** */
+export function safeXpMultiplier(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return 1
+  if (XP_MULTIPLIER_OPTIONS.includes(n)) return n
+  const below = XP_MULTIPLIER_OPTIONS.filter((x) => x <= n)
+  return below.length ? below[below.length - 1] : XP_MULTIPLIER_OPTIONS[0]
 }

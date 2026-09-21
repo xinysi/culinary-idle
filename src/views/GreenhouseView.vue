@@ -7,7 +7,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { GREENHOUSE_UNLOCK_LEVEL, GREENHOUSE_HONEY_CHANCE, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
+import { GREENHOUSE_UNLOCK_LEVEL, greenhouseHoneyChance, HIVE_MEDIA, getHiveMedia, greenhouseCrop, greenhouseGrowMs, hiveMediaLevel, nextGreenhouseExpandCost, nextHiveExpandCost } from '../game/data/greenhouse.js'
 import { IDLE_CAP_HOURS } from '../game/data/caps.js'
 import { HONEY_TIERS, honeyTierForLevel } from '../game/data/honey.js'
 import { CROPS } from '../game/skills/FarmingSkill.js'
@@ -147,7 +147,7 @@ function expandHive() {
       <div>
         <h2>🐝 温室蜂场</h2>
         <p class="dim">
-          温室里种作物（生长提速 25%），每次收获有 <b>{{ Math.round(GREENHOUSE_HONEY_CHANCE * 100) }}%</b> 概率<b>伴生一瓶蜂蜜</b>，
+          温室里种作物（生长提速 25%），每次收获有 <b>{{ Math.round(greenhouseHoneyChance() * 100) }}%</b> 概率<b>伴生一瓶蜂蜜</b>，
           品级随作物等级；蜂箱则用<b>花类</b>做蜜源稳定产蜜。<b>蜂蜜只能在这里得到</b>——喝一瓶同时给经验与产量两条乘数。<br><b>温室不受天气影响</b>：农田会吃「当日天气 + 当季作物」两层乘区（恶劣天气减产），温室照常产出——坏天气时把种子挪到这里种。
         </p>
       </div>
@@ -160,6 +160,7 @@ function expandHive() {
     <FoldCard title="🍯 蜂蜜一览（8 品级 · 双效增益）" hint="一瓶同时给经验与产量；品级随作物/花的等级，且只能在这里获得">
       <div class="card" style="margin-top: 14px">
         <h3>🍯 蜂蜜一览（8 品级 · 双效增益）</h3>
+        <div class="table-scroll">
         <table class="target-table">
           <tbody>
             <tr>
@@ -177,6 +178,7 @@ function expandHive() {
             </tr>
           </tbody>
         </table>
+        </div>
         <p class="dim gh-sub" style="margin-top: 8px">
           蜂蜜是**双效**增益（一次同时给经验与产量两条乘数），单瓶弱于「两支同阶增益剂叠加」，
           但只占一个背包格子；在背包或物品详情里点「使用 1」即可饮用。
@@ -212,7 +214,7 @@ function expandHive() {
               <ItemImg :item-id="b.crop?.itemId ?? b.bed.seedId" size="lg" />
               <div>
                 <div>{{ b.seedName }} → {{ b.productName }}</div>
-                <div class="dim gh-sub">伴生蜂蜜：{{ b.honeyName }}（{{ Math.round(GREENHOUSE_HONEY_CHANCE * 100) }}%）</div>
+                <div class="dim gh-sub">伴生蜂蜜：{{ b.honeyName }}（{{ Math.round(greenhouseHoneyChance() * 100) }}%）</div>
               </div>
             </div>
             <ProgressBar :progress="b.progress" />

@@ -228,7 +228,7 @@ resetRound()
           <div class="tv-info-row tv-info-rule">通用规则：完成模式全部题目后判定 · 达标得金币（≥10 题模式额外得徽章）（可与兑换行换游戏币）· 徽章与本周记录按周重置</div>
           <div v-for="(m, key) in MODES" :key="key" class="tv-info-row">
             <b class="tv-info-name">{{ m.label }}</b>
-            <span class="tv-info-desc">{{ m.desc }}</span>
+            <span class="tv-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

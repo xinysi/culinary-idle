@@ -4,6 +4,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
+import { beep as miniBeep } from '../../game/core/minigameAudio.js'
 
 
 const player = usePlayerStore()
@@ -310,21 +311,11 @@ function reshuffle() {
   beep(440, 0.1)
 }
 
+// ── 音效 ──（共用单例 AudioContext，见 game/core/minigameAudio.js）
+// 原先这里各自持有 AudioContext 且**从不 close** ⇒ 每进一次页面就泄漏一个实时音频线程（这里更严重：每响一声就新建一个）
 function beep(freq, dur) {
   if (!player.settings?.soundEnabled) return
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.type = 'sine'
-    o.frequency.value = freq
-    o.connect(g)
-    g.connect(ctx.destination)
-    g.gain.setValueAtTime(0.12, ctx.currentTime)
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-    o.start()
-    o.stop(ctx.currentTime + dur)
-  } catch { /* 无音频环境忽略 */ }
+  miniBeep(freq, dur, 'sine', 0.12)
 }
 onUnmounted(() => { clearTimeout(unlockTimer) })
 reset()
@@ -390,7 +381,7 @@ reset()
           <div class="m10-info-row m10-info-rule">通用规则：多层嵌套（规则回字或随机挖孔+外扩异形）棋盘，外层清空才解锁内层 · 按模式运算配对即消除（加=目标和/差=固定差/积=目标积/商=固定商/混算=加10或乘12）· 锁定方块不可点击 · 全清通关得游戏币 · 无配对或步数耗尽即失败 · 提示×2/重排×1 每局免费</div>
           <div v-for="(m, key) in MODES" :key="key" class="m10-info-row">
             <b class="m10-info-name">{{ m.label }}</b>
-            <span class="m10-info-desc">{{ m.desc }}</span>
+            <span class="m10-info-desc" v-html="m.desc"></span>
           </div>
         </div>
       </div>

@@ -11,8 +11,11 @@ import { itemImage } from '../game/data/itemImage.js'
 import QuantityModal from '../components/QuantityModal.vue'
 import ItemImg from '../components/ItemImg.vue'
 import MasteryHelp from '../components/MasteryHelp.vue'
+import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { effIngredients } from '../game/data/materialCost.js' // 材料用量唯一出口（与实际扣料同源）
+import { levelEras, eraProgress, eraLabelOf, currentEraLabel } from '../game/data/levelEras.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 import SidelineWorkPanel from '../components/SidelineWorkPanel.vue'
@@ -181,6 +184,36 @@ function recipeCategory(r) {
   return CATEGORY_LABEL[r.category] ?? r.category
 }
 
+// ── 效率（经验/小时）与「当前最优」标记（2026-09-19，与采集页同口径）────────
+// 卡片上原本只有「经验」一列，玩家要自己乘精通倍率、**还要乘成功率**（失败只得半额），
+// 而成功率随等级差每级 +2% 且各配方基础值不同（0.6~0.9）⇒ 心算必错。
+// 实测「择优换配方」比「蹲最低级配方」多 ×14.6~×20.7，而「跟着解锁无脑换」只拿到择优的一半到四分之三
+// （锻造差 4 倍）—— 因为刚解锁的配方成功率最低，玩家却看不出来。
+const bestRecipeId = computed(() => props.instance.bestUnlockedRecipe?.()?.id ?? null)
+/** 非当前（队头）配方相对队头的效率提升；≤2% 不提示，免得满屏抖动数字 */
+function gainVsHead(r) {
+  if (!props.instance?.xpPerHour) return null
+  // ⚠️ 直接读存档字段，**不要**用 `instance.craftQueue` getter —— 它在队列缺失时会**写回**
+  //    `player.craftQueues[id]`，在渲染期改状态会触发 Vue 的「渲染中修改状态」告警。
+  const queue = player.craftQueues?.[props.instance.id]
+  const headId = Array.isArray(queue) ? queue[0]?.recipeId : null
+  if (!headId || headId === r.id) return null
+  const head = props.instance.recipes.find((x) => x.id === headId)
+  if (!head) return null
+  const a = props.instance.xpPerHour(r)
+  const b = props.instance.xpPerHour(head)
+  if (!(b > 0) || !(a > 0)) return null
+  const g = a / b - 1
+  return g > 0.02 ? g : null
+}
+/** 经验/小时的中文紧凑写法（亿/万） */
+function fmtRate(n) {
+  if (!(n > 0)) return '—'
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)} 亿/时`
+  if (n >= 1e4) return `${(n / 1e4).toFixed(1)} 万/时`
+  return `${Math.round(n)}/时`
+}
+
 // 成品品质徽章（仅装备有 quality 字段 → 只在锻造卡片显示；配色与图鉴/物品详情一致）
 const QUALITY_COLOR = { 普通: 'var(--muted)', 精良: 'var(--good-strong)', 稀有: 'var(--info)', 史诗: '#7b1fa2', 传说: 'var(--warn-strong)', 神话: 'var(--bad-strong)' }
 const qualityOf = computed(() => {
@@ -201,10 +234,10 @@ function need(itemId, qty) {
 function canAfford(recipe) {
   return props.instance.canCraft(recipe)
 }
-/** 材料能支撑的最大制作次数（上限 50） */
+/** 材料能支撑的最大制作次数（上限 50）——用量走 `effIngredients`（与扣料同源） */
 function maxCraft(recipe) {
   let n = 50
-  for (const [itemId, qty] of Object.entries(recipe.ingredients)) {
+  for (const [itemId, qty] of Object.entries(effIngredients(recipe))) {
     n = Math.min(n, Math.floor((player.inventory[itemId] ?? 0) / qty))
   }
   return Math.max(0, n)
@@ -270,9 +303,12 @@ function openTree(r) {
   treeRecipe.value = { ...r, skillId: props.instance.id }
 }
 const flashCard = ref(null) // { recipeId }：跳转后高亮闪烁
+// ⚠️ 必须用 `eraLabelOf`（与 `levelEras` 同一个算法）—— 原先这里自己按 5 级算标签，
+//    分段粒度改成 10 级「时代」后它会算出旧标签、跳到不存在的段，跳转静默失效
+//    （C48 有断言钉住「每个配方等级反查出的标签都是真实存在的段」）。
+//    2026-09-19 起跳转动作由「展开折叠段」改成「切标签页」（`selectEra`）。
 function sectionLabelOf(reqLevel) {
-  const start = Math.floor((reqLevel - 1) / 5) * 5 + 1
-  return `${start}-${start + 4}`
+  return eraLabelOf(reqLevel)
 }
 function goTree(nav) {
   const target = treeRecipe.value
@@ -280,10 +316,8 @@ function goTree(nav) {
   if (!target || !nav) return
   if (nav.type === 'craft') {
     if (nav.skillId === props.instance.id) {
-      // 同技能：「去做」= 展开目标配方所在等级段 + 滚动到该卡 + 闪烁高亮
-      const sec = sectionLabelOf(nav.reqLevel ?? target.reqLevel)
-      if (!isOpen(sec)) toggleSection(sec)
-      scrollToSection(sec)
+      // 同技能：「去做」= **切到目标配方所在等级段**（标签页）+ 闪烁高亮该卡
+      selectEra(sectionLabelOf(nav.reqLevel ?? target.reqLevel))
       flashCard.value = { recipeId: nav.recipeId }
       setTimeout(() => { flashCard.value = null }, 1800)
     } else {
@@ -304,77 +338,51 @@ function goTree(nav) {
   }
 }
 
-// ── 卡片式分段（按 reqLevel 每 5 级一段，可折叠）──
+// ── 卡片式分段（按「时代」每 10 级一档，可折叠）──
 // 副业五支**走平铺**：产物只有 8~10 件，按等级段切十段再默认全部折叠，等于每次进来都看不到东西
 // （2026-09-17 用户要求「副业的卡片去掉等级段分类和折叠，因为物品不多」）。
+// ⚠️ 2026-09-19 起粒度由 5 级改成 `ERA_SPAN`(10) 级「时代」，与采集页共用 `game/data/levelEras.js`：
+//    制作侧的密度和采集一样是「横向多、纵向少」（烹饪 294 个配方跨 100 级），5 级一段会切出 20 段，
+//    把纵向梯级读成平铺；10 级一档 + 用**该档最高级配方**命名，读起来才是 ~10 档的梯级结构。
 const flatMode = computed(() => SIDELINE_LADDER_SKILL_IDS.includes(props.instance.id))
 const sections = computed(() => {
-  if (flatMode.value) return [{ label: '全部', list: [...props.instance.recipes].sort((a, b) => a.reqLevel - b.reqLevel) }]
-  const map = new Map()
-  for (const r of props.instance.recipes) {
-    const start = Math.floor((r.reqLevel - 1) / 5) * 5 + 1
-    const label = `${start}-${start + 4}`
-    if (!map.has(label)) map.set(label, [])
-    map.get(label).push(r)
+  if (flatMode.value) {
+    return [{ label: '全部', era: '', list: [...props.instance.recipes].sort((a, b) => a.reqLevel - b.reqLevel) }]
   }
-  return [...map.entries()].map(([label, list]) => ({ label, list }))
+  return levelEras(props.instance.recipes, (r) => r.reqLevel, (r) => r.id).map((sec) => ({
+    label: sec.label,
+    // ⚠️ `from`/`to` 必须带走：`currentEraLabel()` 靠它们判断「当前等级在哪一段」，
+    //    丢了边界它会匹配不到、**静默回退到最后一段**（实测：1 级玩家进来默认展开的是 Lv91-100）。
+    from: sec.from,
+    to: sec.to,
+    era: getItem(props.instance.recipes.find((r) => r.id === sec.topId)?.output?.itemId)?.name ?? '',
+    list: sec.list,
+  }))
 })
-const collapsed = ref(new Set(flatMode.value ? [] : sections.value.map((s) => s.label))) // 默认全部折叠(等级段)
-/** 标题与量词：副业做的不是「食谱」（陶艺出陶器、木工出木器），用产物类别名 */
-// 用 `SIDELINE_LADDERS`（**五支齐全，含木工**）而不是 `SIDELINE_SKILL_LIST`（只含四支）
-const sidelineCatLabel = computed(() => SIDELINE_LADDERS.find((x) => x.skill === props.instance.id)?.catLabel ?? null)
-const headTitle = computed(() => (isSmithing.value ? '锻造配方' : isPreservation.value ? '保鲜配方' : sidelineCatLabel.value ? `${sidelineCatLabel.value}配方` : '食谱'))
-const recipeNoun = computed(() => (sidelineCatLabel.value ? '配方' : '食谱'))
-// 切换技能时重置折叠状态：组件实例在制作类技能之间会被复用，不重置会出现
-// 「从陶艺（平铺）切回烹饪 → 所有等级段都是展开的」（与默认全折叠不一致）
-watch(() => props.instance.id, () => {
-  collapsed.value = new Set(flatMode.value ? [] : sections.value.map((s) => s.label))
-})
-function toggleSection(label) {
-  const s = new Set(collapsed.value)
-  if (s.has(label)) s.delete(label)
-  else s.add(label)
-  collapsed.value = s
-}
-function isOpen(label) {
-  return !collapsed.value.has(label)
-}
-
-// 分类快速导航：点击滚动到对应分段
-function scrollToSection(label) {
-  const el = document.getElementById('sec-' + label)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+// 等级段 = 顶部**标签页**（2026-09-19 用户第二次澄清后定型）：
+//   默认**只显示「当前等级所在的段」的配方**，没有折叠、上面点标签切换。
+const eraDefault = () => currentEraLabel(sections.value, props.instance?.level ?? 1)
+const selectedEra = ref(flatMode.value ? '全部' : eraDefault())
+const activeSec = computed(() => sections.value.find((s) => s.label === selectedEra.value) ?? sections.value[0] ?? null)
+function selectEra(label) {
+  selectedEra.value = label
 }
 </script>
 
 <template>
   <div>
-    <div class="card status-line">
-      <span class="dim">共 {{ instance.recipes.length }} 个{{ recipeNoun }} · 制作失败消耗材料但获得半额经验 · 成功率随等级提升<template v-if="isPreservation"> · 保鲜 Lv 越高腐坏越慢（每级 +2%，封顶 +100%）</template></span>
-      <template v-if="isPreservation">
-        <button
-          class="btn btn-sm cold-store-btn"
-          @click="openColdStore"
-        >🧊 冷库</button>
-        <button
-          class="btn btn-sm spoil-preview-btn"
-          @click="openSpoilPreview"
-        >🔍 保鲜预览</button>
-      </template>
-      <!-- 烘焙：能量饼干（放到本框最右侧） -->
-      <div v-if="isBaking" class="biscuit-inline" style="margin-left: auto">
-        <strong>能量饼干（离线加成）：</strong>
-        <span>持有 <span class="mono">{{ player.inventory.energyBiscuit ?? 0 }}</span> 个</span>
-        <span class="dim">离线时长上限 {{ player.offlineMaxHours() }}h（基础 12 + 饼干 {{ player.offlineBonusH }}/{{ OFFLINE_CAP.biscuitMaxHours }} + 天赋加成）</span>
-        <button class="btn btn-sm btn-primary" :disabled="!(player.inventory.energyBiscuit ?? 0) || player.offlineBonusH >= OFFLINE_CAP.biscuitMaxHours" @click="useBiscuit()">
-          使用
-        </button>
-        <!-- 溢出后的两个出口（2026-09-10）：战斗内使用 / 奥义页回收 -->
-        <span v-if="player.biscuitOfflineMaxed()" class="dim biscuit-overflow">
-          已满上限 → 仍可用于<b>对决中的能量补给</b>，或在<b>美食知识页</b>回收成品鉴点
-        </span>
-      </div>
-    </div>
+
+
+
+
+    <!-- 精通池（技能级共享）——补给目标 = 制作队列的队头（没有队列就不给补，避免误花） -->
+    <MasteryPoolBar
+      :skill-id="instance.id"
+      :card-key="queueHeadId"
+      :card-name="queueHeadName"
+      :card-count="queueHeadCount"
+      mode="craft"
+    />
 
     <!-- 保鲜预览弹窗：列出需要保鲜的食材 -->
     <div v-if="showSpoilPreview" class="modal-backdrop" @click.self="closeSpoilPreview">
@@ -462,14 +470,46 @@ function scrollToSection(label) {
 
     <div class="card">
       <h3 class="target-head-row">
-        <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点击段标题折叠' }}）</span>
+        <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点上面的段切换' }}）</span>
         <span class="target-head-extra">
+          <template v-if="isPreservation">
+            <button
+              class="btn btn-sm cold-store-btn"
+              @click="openColdStore"
+            >🧊 冷库</button>
+            <button
+              class="btn btn-sm spoil-preview-btn"
+              @click="openSpoilPreview"
+            >🔍 保鲜预览</button>
+          </template>
+          <!-- 烘焙：能量饼干（放到本框最右侧） -->
+          <div v-if="isBaking" class="biscuit-inline" style="margin-left: auto">
+            <strong>能量饼干（离线加成）：</strong>
+            <span>持有 <span class="mono">{{ player.inventory.energyBiscuit ?? 0 }}</span> 个</span>
+            <span class="dim">离线时长上限 {{ player.offlineMaxHours() }}h（基础 12 + 饼干 {{ player.offlineBonusH }}/{{ OFFLINE_CAP.biscuitMaxHours }} + 天赋加成）</span>
+            <button class="btn btn-sm btn-primary" :disabled="!(player.inventory.energyBiscuit ?? 0) || player.offlineBonusH >= OFFLINE_CAP.biscuitMaxHours" @click="useBiscuit()">
+              使用
+            </button>
+            <!-- 溢出后的两个出口（2026-09-10）：战斗内使用 / 奥义页回收 -->
+            <span v-if="player.biscuitOfflineMaxed()" class="dim biscuit-overflow">
+              已满上限 → 仍可用于<b>对决中的能量补给</b>，或在<b>美食知识页</b>回收成品鉴点
+            </span>
+          </div>
           <MasteryHelp mode="craft" :show-interval="false" />
         </span>
       </h3>
-      <div v-if="!flatMode && sections.length > 1" class="quick-nav">
-        <span class="dim" style="font-size: 12px">快速跳转：</span>
-        <button v-for="sec in sections" :key="sec.label" class="btn btn-sm" @click="scrollToSection(sec.label)">{{ sec.label }}</button>
+      <!-- 等级段标签页（副业是平铺的单一「全部」段，不显示标签栏） -->
+      <div v-if="!flatMode && sections.length > 1" class="era-tabs">
+        <button
+          v-for="sec in sections"
+          :key="sec.label"
+          class="btn btn-sm era-tab"
+          :class="{ 'btn-primary': selectedEra === sec.label }"
+          @click="selectEra(sec.label)"
+        >
+          {{ sec.label }}
+          <span v-if="sec.era" class="era-tab-name">{{ sec.era }}</span>
+        </button>
       </div>
 
       <!-- 制作队列：排队自动制作（材料不足自动暂停，补料后恢复） -->
@@ -491,18 +531,19 @@ function scrollToSection(label) {
           </div>
         </div>
       </div>
-      <div v-for="sec in sections" :key="sec.label" class="gather-section" :id="'sec-' + sec.label">
-        <div v-if="!flatMode" class="gather-section-title" @click="toggleSection(sec.label)">
-          <span class="mono">{{ isOpen(sec.label) ? '▾' : '▸' }}</span>
-          <strong>Lv {{ sec.label }}</strong>
-          <span class="dim">{{ sec.list.length }} 个配方</span>
-          <span v-if="sec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
+      <template v-if="activeSec">
+        <div v-if="!flatMode" class="era-head">
+          <strong>{{ activeSec.label }}</strong>
+          <!-- 时代名 = 该档最高级配方的产出名：一眼看出「这一档能做什么新东西」 -->
+          <span v-if="activeSec.era" class="era-name" :title="`本档最高级配方：${activeSec.era}`">{{ activeSec.era }}</span>
+          <span class="dim">{{ activeSec.list.length }} 个{{ recipeNoun }}</span>
+          <span class="dim" title="该档已精通满 100 的配方数 / 该档配方数">精通 {{ eraProgress(activeSec.list, (r) => masteryOf(r).level).done }}/{{ activeSec.list.length }}</span>
+          <span v-if="activeSec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
         </div>
-        <div v-if="flatMode || isOpen(sec.label)" class="gather-grid recipe-grid">
+        <div class="gather-grid recipe-grid">
           <div
-            v-for="r in sec.list"
+            v-for="r in activeSec.list"
             :key="r.id"
-            v-tilt
             class="gather-card"
             :class="{ locked: player.skillState(instance.id).level < r.reqLevel, flash: flashCard?.recipeId === r.id }"
           >
@@ -517,6 +558,14 @@ function scrollToSection(label) {
             <div class="gather-card-row">
               <span>经验</span>
               <span class="mono">{{ r.xp }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
+            </div>
+            <div class="gather-card-row">
+              <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
+              <span class="mono" title="材料充足时的上限（3 秒/件）；实际受原料供给限制">{{ fmtRate(instance.xpPerHour(r)) }}</span>
+            </div>
+            <!-- 「当前最优」独占一行：塞进右侧值里会被挤成竖排（卡片只有两列宽） -->
+            <div v-if="r.id === bestRecipeId" class="best-flag">
+              ⚡ 最优<template v-if="gainVsHead(r) != null"> · 比队头快 {{ (gainVsHead(r) * 100).toFixed(0) }}%</template>
             </div>
             <div class="gather-card-row">
               <span>精通</span>
@@ -536,7 +585,7 @@ function scrollToSection(label) {
             </div>
             <div class="ing-cell gather-card-ing">
               <span
-                v-for="(qty, itemId) in r.ingredients"
+                v-for="(qty, itemId) in effIngredients(r)"
                 :key="itemId"
                 class="ing"
                 :class="{ lacking: have(itemId) < qty }"
@@ -563,7 +612,7 @@ function scrollToSection(label) {
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- 制作数量选择弹窗 -->

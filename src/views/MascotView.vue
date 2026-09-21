@@ -3,7 +3,7 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MASCOTS, MASCOT_BOND_STEPS, mascotReward, mascotBondLevel } from '../game/data/mascots.js'
+import { MASCOTS, MASCOT_BOND_STEPS, mascotReward, mascotItemChance, mascotBondLevel } from '../game/data/mascots.js'
 import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
@@ -31,7 +31,7 @@ const rows = computed(() =>
       maxed: prog.level >= MASCOT_BOND_STEPS.length,
       gold: preview.gold,
       itemText: Object.entries(def.items ?? {}).map(([id, q]) => `${getItem(id)?.name ?? id} ×${q}`).join('、'),
-      itemPct: Math.round((def.itemChance ?? 0) * 100),
+      itemPct: Math.round(mascotItemChance(def) * 100), // 显示实际生效概率（含难度系数），别读 def.itemChance
       // 好感收益阶梯（2026-09-10 补）：每级金币 = 基础 ×（1 + 25% × 等级）
       ladder: MASCOT_BOND_STEPS.map((need, i) => ({
         level: i + 1,
