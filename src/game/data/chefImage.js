@@ -5,7 +5,7 @@
 //     public/images/chef/chef_male.png    男厨师
 //     public/images/chef/chef_female.png  女厨师
 // 规格：**256×256 透明 PNG**（战斗屏按 112px 显示，2 倍图便于将来放大；像素风保持硬边）。
-// 生图提示词见仓库根目录 `厨师形象提示词.md`；处理脚本 `scripts/dev/process_enemy_images.py`
+// 处理脚本 `scripts/dev/process_enemy_images.py`（与本文件同步约定文件名与尺寸）
 // （与敌人立绘同一套抠底/裁剪/降采样，`chef_` 前缀按 256 出图）。
 //
 // ⚠️ 图还没就位时**回落 emoji**（不破图）；设置页里也标了「图片未就位」的提示，

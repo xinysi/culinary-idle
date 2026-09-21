@@ -91,7 +91,7 @@ export function applyRegionOpponentNames(regions) {
     if (!names) continue
     const order = r.opponents.map((o, i) => ({ o, i })).sort((a, b) => a.o.level - b.o.level || a.i - b.i)
     order.forEach(({ o }, rank) => {
-      // 立绘文件名（2026-09-21）：与 `敌名清单.xlsx` 的「建议图片文件名」同一排序口径（区内等级升序）
+      // 立绘文件名（2026-09-21）：与立绘文件的排序口径一致（区内等级升序）
       o.imgKey = `enemy_${r.id}_${String(rank + 1).padStart(2, '0')}`
       const newName = names[rank] ?? o.name
       if (newName === o.name) return

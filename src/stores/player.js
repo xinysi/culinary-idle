@@ -1063,7 +1063,7 @@ export const usePlayerStore = defineStore('player', {
       if (n > 0) this.gameCoins += n
     },
     // ── 小游戏成绩记录（2026-09-12）──────────────────────────────
-    // 按《小游戏UI标准》既有约定「最佳成绩按模式独立记录在 player.minigames.<id>」：在每款游戏**自有字段**
+    // 既有约定「最佳成绩按模式独立记录在 player.minigames.<id>」：在每款游戏**自有字段**
     // （heat.bestStreak / kitchen2048.best / trivia.correct …）之外，再加一层统一的 records 子对象
     // { best, plays, coins, lower, unit, lastAt }，供「小游戏 · 记录墙」跨 27 款汇总。
     // additive：不动任何既有字段与存档结构，旧档缺 records 时懒建。

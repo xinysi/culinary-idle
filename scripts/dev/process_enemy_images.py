@@ -12,7 +12,7 @@
   实测根因**两条**：① 256 源图在 DPR≥1.5 的屏幕上不够用（176×1.5 = 264 > 256）；② CSS 里的
   `image-rendering: pixelated` 在**降采样**时是最近邻 —— 512→176 会丢掉 2/3 的像素，变成锯齿。
   ⇒ 源图 512 + **不要**给立绘加 pixelated（`system_test` C51 有断言钉住这两条）。
-文件名沿用原名（`enemy_<regionId>_<两位序>.png` / `boss_<key>.png`），与 `敌名清单.xlsx` 一一对应。
+文件名沿用原名（`enemy_<regionId>_<两位序>.png` / `boss_<key>.png`），与生成器给出的名字清单一一对应。
 
 用法：
   python scripts/dev/process_enemy_images.py --src D:\\plays\\lmew_art\\enemies-1024 --out public/images/enemies

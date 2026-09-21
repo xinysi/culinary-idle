@@ -1,5 +1,5 @@
 // 小游戏 UI 标准 · 静态合规检查（27 款 × 13 项）
-// 标准见《小游戏UI标准.md》§11。用法：node scripts/ci/minigame_ui_audit.mjs
+// 逐款检查：顶栏 / 模式胶囊 / 选中态 / 状态胶囊 / 说明按钮与弹窗 / 通用规则框 / 开始门控 / 结算弹窗 / 无提示行 / 深色适配 / 音效单例 / 卸载清理。
 // 例外（见标准 §10）：火候炉无开始门控/结算弹窗；大胃王开始按钮类名为 .fs-btn。
 // 2026-09-21 新增两项「资源与生命周期」检查：音效单例（不许自建 AudioContext）、卸载清理（定时器/循环必须清）。
 import { readFileSync } from 'node:fs'
@@ -68,7 +68,7 @@ for (const [file, name, pre] of GAMES) {
   rows.push({ name, fails })
 }
 const pad = (x, n) => String(x).padEnd(n)
-console.log('小游戏 UI 合规检查（标准见《小游戏UI标准.md》）\n')
+console.log('小游戏 UI 合规检查（逐款 13 项）\n')
 console.log(pad('游戏', 10) + checks.map(([l]) => pad(l, 9)).join(''))
 for (const r of rows) {
   const skip = EXCEPTIONS[r.name] || []

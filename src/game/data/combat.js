@@ -172,7 +172,7 @@ BOSS_EXT2.forEach((b, i) => {
 for (const b of COMBAT_BOSSES) b.isBoss = true
 
 // 首领立绘文件名（2026-09-21）：扩充首领自带 `key`（boss_brothKing.png 这种），
-// 本体 8 位没有 key ⇒ 用**按等级排序后的下标**（boss_b2.png / boss_b5.png…），与 `敌名清单.xlsx` 一致。
+// 本体 8 位没有 key ⇒ 用**按等级排序后的下标**（boss_b2.png / boss_b5.png…），与该区域的敌人清单一致。
 COMBAT_BOSSES.slice().sort((a, b) => a.level - b.level).forEach((b, i) => { b.imgKey = `boss_${b.key ?? 'b' + i}` })
 
 // ── 对决掉落定级平衡 ───────────────────────────────────────────────
