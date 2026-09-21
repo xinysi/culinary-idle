@@ -1,6 +1,9 @@
 // 全游戏内容同步审计 — 检查跨系统引用一致性与攻略数值
 // 运行：node scripts/ci/audit_sync.mjs
 import fs from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 import { ITEMS, itemName } from '../../src/game/data/items.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS, STYLE_INFO, STYLE_ADVANTAGE } from '../../src/game/data/combat.js'
 import { SEASONS } from '../../src/game/data/seasons.js'
@@ -200,6 +203,23 @@ const check = (name, cond, detail = '') => {
     if (!txt.includes(String(n))) miss.push(`${label} ${n}`)
   }
   check('里程碑：文案里的总量数字与数据一致', miss.length === 0, `缺/过期: ${miss.join(', ')}`)
+}
+
+// ── 发布面守卫（2026-09-21 立）：本地内部资料**不得进入仓库** ────────────────
+// 本仓库是公开的（在线游玩与 Releases 都靠它），而项目里有一部分资料只在本地保留、不随仓库发布
+// （清单见 `.gitignore` 末段）。这条守卫的作用：万一以后被 `git add -A` 误带进来，CI 立刻点名。
+// ⚠️ 判据用 `git ls-files`（索引），不看磁盘：那些文件**本来就在本地**（只是不入库）。
+{
+  const PRIVATE = ['AGENTS.md', 'docs/', 'scripts/sim/', 'scripts/measure/', 'scripts/dev/agents_split.mjs', 'scripts/dev/agents_assemble.mjs', 'scripts/dev/agents_verify.mjs']
+  let tracked = []
+  try {
+    const files = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 }).split('\n')
+    tracked = PRIVATE.filter((p) => files.some((f) => (p.endsWith('/') ? f.startsWith(p) : f === p)))
+  } catch {
+    tracked = [] // 非 git 环境（解压出来的源码包）⇒ 判不了就跳过，别误报
+  }
+  check('发布面：本地内部资料未进入仓库', tracked.length === 0,
+    `被跟踪了：${tracked.join('、')}（只该留在本地；见 .gitignore 末段）`)
 }
 
 console.log(fail === 0 ? '\nSYNC AUDIT PASS' : `\n${fail} FAILURES`)

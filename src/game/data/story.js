@@ -28,7 +28,7 @@ export function storyReqCur(p, kind) {
     // ⚠️ 2026-09-19 参照 Rocky Idle 调整：**累计**领奖次数（原为「不同赛季数」⇒ 终章 8 季 = 8×14 = **112 天日历硬门**，
     //    努力无法缩短）。实测参考作 Rocky Idle 的构建产物里**没有任何赛季/日历机制**，长线全靠努力门。
     //    每季 10 档 ⇒ 认真参与一季即可累计 8 次。**「终极收集」的时间门仍保留**（图鉴 100% / 40 季套装 = 560 天），
-    //    那是毕业后的事，不挡毕业（见 docs/毕业口径说明.md）。
+    //    那是毕业之后的长线内容，不挡主线完结。
     case 'seasons': return Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0)
     case 'arena': return p.stats.arena?.bestStreak ?? 0
     case 'card': return p.stats.cardBattle?.wins ?? 0
