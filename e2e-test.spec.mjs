@@ -1502,7 +1502,7 @@ test.describe('游戏全流程', () => {
   // 功能页「指南」按钮（2026-09-21 用户报「我看技能都有指南按钮，怎么功能没有？」）
   // 数据源 = 攻略总览里对应该页的那一条（`guide.js` 的 guideEntryForView + `featureGroups.js` 的视图→关键词）。
   // 断言四件事：功能页有 / 技能页与顶栏主页没有 / 点开是**渲染好的富文本** / 关得掉。
-  test('功能页「指南」按钮：功能页有、技能页与顶栏主页没有，内容 = 攻略里那一条', async ({ page }) => {
+  test('「指南」按钮：功能页 + 顶栏主页（厨藏/图鉴/装备/统计）都有且带文字，技能页/攻略页没有，内容 = 攻略里那一条', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(BASE)
     await page.evaluate(() => localStorage.clear())
@@ -1524,12 +1524,31 @@ test.describe('游戏全流程', () => {
     await page.waitForTimeout(250)
     await expect(page.locator('.skill-guide-btn').first()).toBeVisible()
     await expect(btn).toHaveCount(0)
-    // ② 顶栏主页（厨藏 / 装备）不在攻略条目里 ⇒ 没有指南按钮
-    for (const v of ['inventory', 'equipment']) {
+    // ② 攻略页自己 / 无条目的页 ⇒ 没有指南按钮（2026-09-22：厨藏/装备**已纳入**，见 ③b）
+    for (const v of ['guide']) {
       await setView(v)
       await page.waitForTimeout(250)
       await expect(btn, `${v} 不该有指南按钮`).toHaveCount(0)
     }
+    // ②b 顶栏主页（厨藏 / 图鉴 / 装备 / 统计）**也要有**（2026-09-22 用户报「没看到变动啊」：
+    //     玩家停在厨藏/图鉴/装备/统计时看不到任何变化，因为当时只挂在左栏功能页上）
+    for (const v of ['inventory', 'log', 'equipment', 'stats']) {
+      const entry = guideEntryForViewLocal(v)
+      expect(entry, `${v} 应能解析出指南条目`).toBeTruthy()
+      await setView(v)
+      await page.waitForTimeout(280)
+      await expect(btn, `${v}（顶栏主页）应有指南按钮`).toBeVisible()
+      await expect(btn).toHaveAttribute('title', `本页指南：${entry.name}`)
+    }
+    // ②c 按钮**带文字**（宽屏下顶栏按钮默认只有 emoji，只给 📘 等于没做）
+    await setView('ranch')
+    await page.waitForTimeout(250)
+    await expect(btn).toContainText('指南')
+    const labelVisible = await page.evaluate(() => {
+      const t = document.querySelector('.top-nav-guide .nav-btn-text')
+      return t ? getComputedStyle(t).display !== 'none' : false
+    })
+    expect(labelVisible, '「指南」两个字被 .nav-btn-text 的 display:none 藏起来了').toBe(true)
 
     // ③ 功能页：按钮出现、title 与弹窗内容都指向**本页对应那一条**（期望值取自数据模块，不手抄）
     const cases = ['ranch', 'michelin', 'legacy', 'codexExchange', 'spiritStories', 'weather', 'caravan', 'festival']

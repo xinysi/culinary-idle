@@ -143,6 +143,10 @@ export const VIEW_GUIDE_KEYWORD = {
   decor: '装饰', gearContest: '厨具大赛', chefChallenge: '名厨挑战', realm: '秘境',
   deluxe: '珍馐阁', michelin: '米其林', legacy: '师徒传承', patrons: '食神信仰',
   codexExchange: '图鉴兑换', festival: '节庆', spiritStories: '食灵',
+  // 🔴 **顶栏主页也要有「指南」**（2026-09-22 补）：它们不在左栏磁贴清单里，但玩家心里的「功能页」
+  //    就是这几页 —— 只挂在左栏磁贴上时，玩家停在厨藏/图鉴/装备/统计只会看到「什么都没变」
+  //    （2026-09-22 用户实测报「没看到变动啊」就是这么来的）。这四页在攻略总览里都有条目，补映射即可。
+  inventory: '厨藏', log: '图鉴', equipment: '装备', stats: '统计',
 }
 
 /** 某个视图在「攻略总览」里对应的关键词（磁贴名优先，例外查上表） */

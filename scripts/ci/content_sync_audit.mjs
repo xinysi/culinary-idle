@@ -195,6 +195,18 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   const noEntry = derived.filter((d) => !guideEntryForView(d.view)).map((d) => `${d.view}(${d.name})`)
   check(`攻略：每个功能页都能解析出「指南」条目（页面内按钮的数据源，${derived.length} 页）`,
     noEntry.length === 0, `无条目: ${noEntry.join(', ')}`)
+  // 顶栏主页（厨藏 / 图鉴 / 装备 / 统计）**也是玩家心里的「功能页」**：这四页的指南按钮靠
+  // `VIEW_GUIDE_KEYWORD` 的映射（不在左栏磁贴里，上面那条派生检查管不到）。2026-09-22 用户报
+  // 「没看到变动啊」就是因为它们当时没有按钮 —— 这条断言防止哪天映射被删后**静默消失**。
+  const topNavViews = ['inventory', 'log', 'equipment', 'stats']
+  const noTopEntry = topNavViews.filter((v) => !guideEntryForView(v))
+  check(`攻略：顶栏主页也能解析出「指南」条目（${topNavViews.join(' / ')}）`,
+    noTopEntry.length === 0, `无条目: ${noTopEntry.join(', ')}`)
+  // 指南按钮**必须带文字**（宽屏下顶栏按钮默认只有 emoji；纯 📘 混在 20 个 emoji 里等于没做）
+  const cssSrc = read('src/styles/main.css')
+  const hasGuideLabel = /\.top-nav-guide \.nav-btn-text\s*\{\s*display:\s*inline/.test(cssSrc)
+    && /<span class="nav-btn-text">指南<\/span>/.test(read('src/App.vue'))
+  check('攻略：指南按钮带可见文字（不是只有一个 📘 图标）', hasGuideLabel, '缺少 .top-nav-guide .nav-btn-text 的 display:inline 或按钮里的文字')
   // 接线：顶栏按钮 + 弹窗 + store 状态三处都要在（少一处就是「按钮点了没反应」的静默失效）
   const appSrc2 = read('src/App.vue')
   const uiSrc = read('src/stores/ui.js')
