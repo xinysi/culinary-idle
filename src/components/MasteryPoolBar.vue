@@ -74,8 +74,11 @@ function doSpend() {
       <span class="dim mono">{{ Math.floor(st.pool).toLocaleString() }} / {{ st.cap.toLocaleString() }}</span>
       <span v-if="st.tier" class="mp-tier on">{{ Math.round(st.tier.pct * 100) }}% {{ st.tier.name }}</span>
       <span class="dim mp-next">{{ nextText }}</span>
-      <button class="btn btn-sm" :disabled="!canSpend" :title="canSpend ? `把池里的 ${willSpend} 点补给「${cardName}」；花掉会让池掉档、加成随之消失` : '需要先选中一个还没满精通的卡片'" @click="doSpend">
-        {{ canSpend ? `补给「${cardName}」${willSpend} 次` : (cardKey ? '该卡已满精通' : `先选一个${isCraft ? '配方' : '目标'}`) }}
+      <!-- 禁用原因必须**说准是哪一种**（2026-09-22 线上核验发现）：修好「模板标识符」后按钮真的能定位到
+           卡片了，但池为 0 时它显示「该卡已满精通」——**那是假的**（新档的烤土豆一次都没练过）。
+           三种情形分别说：没选卡片 / 卡片已满精通（need ≤ 0）/ 池里还没点数（唯一能靠「多干活」解决的）。 -->
+      <button class="btn btn-sm" :disabled="!canSpend" :title="canSpend ? `把池里的 ${willSpend} 点补给「${cardName}」；花掉会让池掉档、加成随之消失` : (!cardKey ? `需要先选中一个还没满精通的${isCraft ? '配方' : '目标'}` : (need <= 0 ? `「${cardName}」已满精通，补给会蒸发` : `精通池里还没有点数：每次动作有 ${Math.round(MASTERY_POOL_GAIN_RATE * 100)}% 的精通次数会记进池里`))" @click="doSpend">
+        {{ canSpend ? `补给「${cardName}」${willSpend} 次` : (!cardKey ? `先选一个${isCraft ? '配方' : '目标'}` : (need <= 0 ? '该卡已满精通' : '精通池是空的')) }}
       </button>
       <button class="btn btn-sm btn-ghost" :title="expanded ? '收起精通池详情' : '展开精通池详情（档位与规则）'" @click="expanded = !expanded">
         {{ expanded ? '收起 ▴' : '详情 ▾' }}

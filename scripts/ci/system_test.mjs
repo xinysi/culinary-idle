@@ -7352,6 +7352,19 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   q2.applySave(legacy)
   check('精通池', '旧档没有 masteryPool 字段时回退 0（不炸、不 NaN）', q2.skills.foraging.masteryPool === 0, `实得 ${q2.skills.foraging.masteryPool}`)
 
+  // ⑧-b 补给按钮的「禁用原因」必须说准是哪一种（2026-09-22 线上核验发现）
+  //     起因：修好「模板里用了脚本里没定义的名字」后按钮真的定位到卡片了，但**池为 0 时显示「该卡已满精通」**——
+  //     那是假的（新档的烤土豆一次都没练过，卡片并没满）。三种原因必须分开：没选卡片 / 卡片已满 / 池里空。
+  {
+    const bar = stripComments(readFileSync(new URL('../../src/components/MasteryPoolBar.vue', import.meta.url), 'utf8'))
+    check('精通池', '补给按钮的文案有**三分支**（先选一个 / 该卡已满精通 / 精通池是空的）',
+      /先选一个\$\{isCraft/.test(bar) && /need <= 0 \? '该卡已满精通'/.test(bar) && bar.includes("'精通池是空的'"))
+    check('精通池', '三分支的**判据顺序**正确：先判有没有卡片，再判卡片是否已满（池空是最后的兜底）',
+      /!cardKey \? `先选一个\$\{isCraft/.test(bar) && /: \(need <= 0 \? '该卡已满精通' : '精通池是空的'\)/.test(bar))
+    check('精通池', '禁用时的 tooltip 说明了「池里还没点数」以及点数从哪来（含入池率）',
+      /每次动作有 \$\{Math\.round\(MASTERY_POOL_GAIN_RATE \* 100\)\}% 的精通次数会记进池里/.test(bar) && bar.includes('MASTERY_POOL_GAIN_RATE'))
+  }
+
   // ⑧ 精通「横向铺开」奖励（Melvor 让铺开划算的**真正机制**——只移植池是不够的）
   check('精通池', `广度倍率：0 广度 = ×1、满广度 = ×${1 + M.MASTERY_BREADTH_MAX}（上界钉死）、越界被夹取`,
     M.masteryBreadthMultiplier(0, 20) === 1 &&
