@@ -58,18 +58,35 @@ const CASES = [
     expect: '离线同口径',
   },
   {
-    name: '⑦ 界面漏标记（采集页没有「经验减半」）',
+    name: '⑦ 界面漏标记（采集页没有减半标签）',
     rel: 'src/views/GatheringView.vue',
     // ⚠️ 锚点**不能带尾随换行**：本仓库的 .vue 是 CRLF，写 `</span>\n` 会匹配 0 次（AGENTS 记过一次）
-    from: '<span v-if="isLow(t)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>',
+    // 2026-09-23 起标签是「经验数值旁」的紧凑标签（原先塞在卡片头部的徽章已按用户截图报的排版问题移走）
+    from: '<span v-if="isLow(t)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span>',
     to: '',
-    expect: '采集页有「经验减半」徽章',
+    expect: '减半」紧凑标签',
+  },
+  {
+    name: '⑩ 减半标签又跑回卡片头部（会把同排卡片行高顶乱 —— 用户截图报的那个排版问题）',
+    rel: 'src/views/GatheringView.vue',
+    from: '<div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>',
+    to: '<span v-if="isLow(t)" class="xp-low-chip">{{ LOW_TARGET_CHIP }}</span><div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>',
+    expect: '不在卡片头部',
+  },
+  {
+    name: '⑪ 农耕的标签塞进「N 经验」那一行（窄格会把同行「90s 生长」挤成两行）',
+    rel: 'src/views/FarmingView.vue',
+    from: '<div v-if="isLow(c)" class="item-cell-sub" style="font-size: 12px">',
+    to: '<div v-if="isLow(c) && false" class="item-cell-sub" style="font-size: 12px">',
+    expect: '独占一行',
   },
   {
     name: '⑧ 显示与结算脱钩（效率不折低目标 ⇒ 卡片数字是实际的两倍）',
     rel: 'src/game/skills/GatheringSkill.js',
-    from: 'const lowMult = targetLevelXpMult(this.level, target.reqLevel, this.topTargetLevel)\n    return (target.xpPerAction * CARD_XP_SCALE * lowMult * masteryXpMultiplier',
-    to: 'return (target.xpPerAction * CARD_XP_SCALE * masteryXpMultiplier',
+    // ⚠️ 锚点必须**单行**：多行锚点里的 `\n` 匹配不到 CRLF 文件（本仓库 .vue/.js 都可能是 CRLF，
+    //    AGENTS 记过这个坑；第一版就是多行锚点 ⇒ 匹配 0 次、被当成「跳过」）
+    from: 'const lowMult = targetLevelXpMult(this.level, target.reqLevel, this.topTargetLevel)',
+    to: 'const lowMult = 1 // 注入缺陷：显示不折低目标',
     expect: '目标效率',
   },
   {
@@ -108,5 +125,5 @@ for (const [rel, content] of backups) writeFileSync(P(rel), content, 'utf8')
 const back = run()
 const clean = back.code === 0 && /失败 0/.test(back.out)
 console.log(`${clean ? '✅' : '❌'} 还原后 system_test 全绿（${(back.out.match(/通过 \d+ \/ 失败 \d+/) ?? ['?'])[0]}）`)
-console.log(okAll && clean ? '\n反例验证通过：9 个注入缺陷全部被点名，还原后恢复全绿' : '\n反例验证失败，见上')
+console.log(okAll && clean ? '\n反例验证通过：${CASES.length} 个注入缺陷全部被点名，还原后恢复全绿' : '\n反例验证失败，见上')
 process.exit(okAll && clean ? 0 : 1)

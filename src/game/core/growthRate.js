@@ -94,3 +94,9 @@ export function targetLevelXpMult(skillLevel, targetLevel, topTargetLevel = null
 /** 规则说明（**唯一文案出口**：界面与指南都读它，别再手写「低 5 级」「减半」） */
 export const LOW_TARGET_NOTE = `正在做的目标/配方比技能等级低 ${LOW_TARGET_GAP} 级及以上时，卡片经验 ×${LOW_TARGET_XP_MULT}（挑本档最高级的目标才满经验）。参照的是「你这个技能能做到的最高档」，所以顶档目标永远不会被罚。`
 
+/** 卡片上的紧凑标签（**从系数派生**，改 `LOW_TARGET_XP_MULT` 时它自己跟着变）
+ *  ⚠️ 用它、不要在页面里写死 `−50%`；它挂在「经验」那一行的数值旁，**不进卡片头部** ——
+ *  徽章塞进头部（名字那一格）时，窄卡上会整枚换行、把各卡行高顶得参差不齐（2026-09-23 用户截图报的排版乱）。 */
+export const LOW_TARGET_CHIP = `−${Math.round((1 - LOW_TARGET_XP_MULT) * 100)}%`
+
+

@@ -7,7 +7,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
-import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -110,13 +110,13 @@ function scrollToSection(label) {
             <div class="gather-card-head">
               <div>
                 <strong>{{ t.name }}</strong><span v-if="!isUnlocked(t.id)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
-                <span v-if="isLow(t)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>
+            <!-- 低目标减半（2026-09-23）：挂在「经验」数值旁而不是卡片头部（头部窄，徽章会换行顶乱行高） -->
             <div class="gather-card-row">
-              <span>基础经验</span>
-              <span class="mono">{{ t.xp }}</span>
+              <span :title="isLow(t) ? LOW_TARGET_NOTE : ''">基础经验</span>
+              <span class="mono" :title="isLow(t) ? LOW_TARGET_NOTE : ''">{{ t.xp }}<span v-if="isLow(t)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
             </div>
             <div class="gather-card-row">
               <span>间隔</span>

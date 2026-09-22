@@ -10,7 +10,7 @@ import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSea
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, nextToolCost } from '../game/data/farmTools.js'
 import { PRIME_BASE_CHANCE, PRIME_CROP_ID, PRIME_MAX_CHANCE, PRIME_MIN_LEVEL } from '../game/data/primeCrop.js'
 import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
-import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import FoldCard from '../components/FoldCard.vue'
@@ -289,7 +289,11 @@ function seedName(seedId) {
             <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
               <span class="dim" :title="LOW_TARGET_NOTE">{{ isLow(c) ? Math.round(c.xp * LOW_TARGET_XP_MULT) : c.xp }} 经验</span>
-              <span v-if="isLow(c)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
+            </div>
+            <!-- 低目标减半（2026-09-23）：农耕的种子格子**只有 ~110px 宽**，标签塞进上面那行会把
+                 「90s 生长」挤成两行（实测截图）。所以给低目标**单独一行**，宁可格子高一行，也不挤坏同行文字。 -->
+            <div v-if="isLow(c)" class="item-cell-sub" style="font-size: 12px">
+              <span class="xp-low-chip" :title="LOW_TARGET_NOTE">低目标经验 {{ LOW_TARGET_CHIP }}</span>
             </div>
             <div class="item-cell-sub" style="font-size: 12px">
               <span v-if="farmGatherPct(c.itemId) > 0" class="badge" style="background: var(--good-soft); color: var(--good-strong)">采集 +{{ Math.round(farmGatherPct(c.itemId) * 100) }}%</span>

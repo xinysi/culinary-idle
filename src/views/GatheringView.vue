@@ -9,7 +9,7 @@ import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
-import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { levelEras, eraProgress, currentEraLabel } from '../game/data/levelEras.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -220,14 +220,15 @@ function selectEra(label) {
               <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
               <div>
                 <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
-                <!-- 低目标减半（2026-09-22）：必须**看得见**，否则就是「静默减半」。文案与判定同源 -->
-                <span v-if="isLow(t)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>
+            <!-- 低目标减半（2026-09-22）：必须**看得见**，否则就是「静默减半」。
+                 2026-09-23 用户截图报「排版乱七八糟」——徽章原先塞在**卡片头部**（名字那一格），
+                 窄卡上会整枚换行 ⇒ 同排卡片行高参差。现改为挂在「经验」这行的数值旁（紧凑、派生）。 -->
             <div class="gather-card-row">
               <span :title="XP_HINT">经验/次</span>
-              <span class="mono" :title="XP_HINT">{{ xpPerAction(t) }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryMult(t) }}</span></span>
+              <span class="mono" :title="isLow(t) ? LOW_TARGET_NOTE : XP_HINT">{{ xpPerAction(t) }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryMult(t) }}</span><span v-if="isLow(t)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
             </div>
             <div class="gather-card-row">
               <span>间隔</span>

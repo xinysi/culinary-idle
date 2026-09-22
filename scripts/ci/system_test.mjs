@@ -8091,17 +8091,36 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       !/addCardXp/.test(c54('game/combat/Combat.js')))
     // 界面必须看得见（四条列表：采集/制作/探索/农耕），且判定一律走实例出口。
     // 🔴 **必须连 HTML 注释一起剥掉**：守卫第一版只 `stripComments`（管 JS 的 `//`、`/* */`），
-    //    而 .vue 模板里的 `<!-- … 经验减半 … -->` 不在它的管辖内 ⇒ 删掉徽章后 `/经验减半/` 仍为真
-    //    ⇒ **假绿**（反例验证 ⑦ 抓出来的，与 AGENTS「守卫被注释骗过」同源）。所以这里另剥 HTML 注释，
-    //    并要求**徽章元素本身**在（`badge-warn` + `经验减半` 同一行/同标签）。
+    //    而 .vue 模板里的 `<!-- … 经验减半 … -->` 不在它的管辖内 ⇒ 删掉标签后仍为真 ⇒ **假绿**
+    //    （反例验证 ⑦ 抓出来的，与 AGENTS「守卫被注释骗过」同源）。所以这里另剥 HTML 注释，
+    //    并要求**标签元素本身**在（`.xp-low-chip` 且内容是 `LOW_TARGET_CHIP` 派生的紧凑标签）。
+    // ⚠️ 2026-09-23 改位置：标签从**卡片头部**挪到**经验数值旁**（头部窄，徽章会整枚换行、
+    //    把同排卡片行高顶得参差不齐 —— 用户截图报的「排版乱七八糟」）。这条断言同步改成认新元素。
     const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
     for (const [rel, label] of [['views/GatheringView.vue', '采集'], ['views/ProductionView.vue', '制作'],
       ['views/ExplorationView.vue', '探索'], ['views/FarmingView.vue', '农耕']]) {
       const src = stripHtml(c54(rel))
-      const badge = src.match(/<span[^>]*badge-warn[^>]*>([^<]*)<\/span>/g) ?? []
-      check('低目标衰减', `界面：${label}页有「经验减半」徽章且判定走 isLowTargetLevel（不自己算）`,
-        src.includes('isLowTargetLevel') && badge.some((b) => /经验减半/.test(b)),
-        badge.join(' | ') || '找不到 badge-warn 元素')
+      // 标签元素的内容里必须出现 `LOW_TARGET_CHIP`（农耕那页还带一句「低目标经验」前缀，故不写死整串）
+      const chip = src.match(/<span[^>]*xp-low-chip[^>]*>[\s\S]*?<\/span>/g) ?? []
+      check('低目标衰减', `界面：${label}页有「减半」紧凑标签（.xp-low-chip + LOW_TARGET_CHIP）且判定走 isLowTargetLevel`,
+        src.includes('isLowTargetLevel') && chip.some((c) => c.includes('LOW_TARGET_CHIP')),
+        chip.length ? chip.join(' | ').slice(0, 120) : '找不到 xp-low-chip 元素')
+      // 🔴 标签**不许回到卡片头部**：头部那一格装不下（图片 + 名字），会整枚换行顶乱行高。
+      // ⚠️ 这里的 `{0,N}` 上界必须**够大且「抓不到头部算 FAIL」**：第一版写 `{0,400}` 而采集页头部
+      //    实测 ≈415 字符 ⇒ 正则失配 ⇒ `!head` 恒真 ⇒ **注入缺陷也照样绿**（反例验证 ⑩ 抓出来的，
+      //    与 AGENTS「静默跳过 = 假绿」同源）。改成 1200 + 要求必须抓到。
+      if (rel === 'views/FarmingView.vue') {
+        // 农耕没有 .gather-card-head（它的列表是 .item-cell 小格）：那里要求标签**独占一行**
+        // （格子只有 ~110px，塞进「N 经验」那行会把「90s 生长」挤成两行 —— 实测截图）
+        check('低目标衰减', '界面：农耕页的减半标签独占一行（.item-cell-sub；格子太窄，塞进数值行会挤坏同行文字）',
+          /<div v-if="isLow\(c\)" class="item-cell-sub"[\s\S]{0,200}?xp-low-chip/.test(src),
+          '标签没挂在自己的 .item-cell-sub 行上')
+        continue
+      }
+      const head = src.match(/<div class="gather-card-head">[\s\S]{0,1200}?<\/div>\s*<\/div>/)
+      check('低目标衰减', `界面：${label}页的减半标签**不在卡片头部**（头部窄，会把行高顶乱）`,
+        !!head && !/xp-low-chip|badge-warn/.test(head[0]),
+        head ? head[0].slice(0, 160) : '没抓到卡片头部（正则失配 —— 这里不能当成通过）')
     }
     // 视图不许手写系数（写死的 0.5 会在调系数时静默与结算脱钩）。
     // 只扫 .vue（技能的 `recipe.xp * 0.5` 是**失败只给半额经验**，另一件事；`FAIL_XP_RATIO` 同理）。

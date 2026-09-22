@@ -757,6 +757,22 @@ h2 {
   white-space: nowrap;
 }
 
+/* 卡片上「低目标减半」的紧凑标签（2026-09-23）：**挂在经验数值后面**，不占行、不换行。
+   为什么不做成徽章塞进卡片头部：头部那一格窄（图片 40px + 名字），徽章会整枚折到下一行，
+   同排卡片行高立刻参差（用户 2026-09-23 截图报「排版乱七八糟」）。这里的字号再小一档、
+   与旁边的等宽数字同基线，标识「这个数是打过折的」。 */
+.xp-low-chip {
+  margin-left: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+  white-space: nowrap;
+  cursor: help;
+}
+
 /* ── 侧边栏 ─────────────────────────────────────────────── */
 .sidebar {
   display: flex;

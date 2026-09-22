@@ -15,7 +15,7 @@ import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'
-import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { effIngredients } from '../game/data/materialCost.js' // 材料用量唯一出口（与实际扣料同源）
 import { levelEras, eraProgress, eraLabelOf, currentEraLabel } from '../game/data/levelEras.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
@@ -592,15 +592,15 @@ const recipeNoun = '配方'
               <ItemImg :item-id="r.output.itemId" />
               <div>
                 <strong>{{ r.name }}</strong>
-                <!-- 低目标减半必须看得见（2026-09-22）：判定走实例唯一出口，文案走常量 -->
-                <span v-if="isLow(r)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
                 <div class="dim" style="font-size: 12px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
             </div>
+            <!-- 低目标减半（2026-09-23 改位置）：挂在「经验」这行的数值旁，**不进卡片头部** ——
+                 头部（名字那一格）窄，塞徽章会整枚换行、把同排卡片行高顶得参差不齐（用户截图报的排版乱）。 -->
             <div class="gather-card-row">
               <span :title="XP_HINT">经验/次</span>
-              <span class="mono" :title="XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
+              <span class="mono" :title="isLow(r) ? LOW_TARGET_NOTE : XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span><span v-if="isLow(r)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
             </div>
             <div class="gather-card-row">
               <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
