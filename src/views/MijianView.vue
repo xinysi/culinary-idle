@@ -284,8 +284,10 @@ function typeLabel(id) {
               <li><b>{{ o.filler.cheapPct }}%</b> 一档物品（池内价值最低的 20%，共 {{ o.filler.cheapCount }} 件）</li>
               <li><b>{{ o.filler.drawPct }}%</b> 正常抽取（价值加权）</li>
             </ul>
-            <ul v-else class="odds-list">
-              <li><b>{{ o.extra[0]?.pct }}%</b> {{ o.extra[0]?.label }}<template v-if="o.extra[1]"> · <b>{{ o.extra[1].pct }}%</b> {{ o.extra[1].label }}</template></li>
+            <!-- ⚠️ 只有真的有分支占比时才出这一行：厨具池既无垫底档、也无分支（extra 为空），
+                 无条件渲染会在页面上留下一条空的「• %」（2026-09-22 线上截图复核抓到） -->
+            <ul v-else-if="o.extra.length" class="odds-list">
+              <li><b>{{ o.extra[0].pct }}%</b> {{ o.extra[0].label }}<template v-if="o.extra[1]"> · <b>{{ o.extra[1].pct }}%</b> {{ o.extra[1].label }}</template></li>
             </ul>
             <!-- 品质权重表（装备类池） -->
             <template v-if="o.quality">

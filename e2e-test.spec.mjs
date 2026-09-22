@@ -1652,6 +1652,14 @@ test.describe('游戏全流程', () => {
         // 稀有+ 百分比必须与权重表算出来的一致
         await expect(sec).toContainText(`稀有及以上合计 ${o.rarePct}%`)
       }
+      // 没有分支占比的池（厨具池：无垫底档 + 无分支）**不许留下空的「• %」行**（2026-09-22 线上截图抓到）
+      if (!o.filler && !o.extra.length) {
+        await expect(sec.locator('.odds-list'), `${o.name} 渲染了没有内容的分支行`).toHaveCount(0)
+      }
+      // 每条分支行都必须是「数字% + 说明」的完整句，不能只有百分号
+      for (const li of await sec.locator('.odds-list li').allInnerTexts()) {
+        expect(li, `${o.name} 的分支行不完整：${li}`).toMatch(/\d+(\.\d+)?%\s*\S/)
+      }
     }
     await oddsModal.locator('.modal-head button').click()
     await expect(oddsModal).toHaveCount(0)
