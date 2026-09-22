@@ -387,13 +387,23 @@ export const usePlayerStore = defineStore('player', {
     activeSkillState(s) {
       return s.skills[s.activeSkill] ?? { level: 1, exp: 0, mastery: {}, prestiges: 0 }
     },
-    /** §3.3.5 品鉴力 生命值：初始 10，每级 +10 + 装备加成 + 奥义「铁胃」 */
+    /** §3.3.5 品鉴力 生命值：初始 10，每级 +10 + 装备加成 + 奥义「铁胃」
+     *  🔴 **唯一口径**（2026-09-22 收口）：所有外部「品鉴值上限 +%」**只在这里乘一次** ——
+     *     道树（`daoEffectSum`）+ 菜系图谱（`insightEffectSum`）+ 秘境局内（`realmModifiers`）。
+     *     战斗侧 `Combat.playerStats().maxHp` 直接取本 getter、**不再乘第二遍**。
+     *  修之前的三套口径（`scripts/sim/combat_buff_audit.mjs` 实测）：
+     *    ① 道树 % 被算两次（战斗里再乘一遍 ⇒ ×1.16² 而不是 ×1.16）；
+     *    ② 图谱 % 只在战斗里生效（商店/血条看不到 ⇒ 战斗屏出现「920 / 800」）；
+     *    ③ 料理/饮品的回血封顶用**未加成的**值，而食灵/秘境/饼干用战斗上限 ⇒ 同一场战斗里
+     *       「料理永远补不满、食灵能补满」。现在四者读同一个数。 */
     maxHp(s) {
       const level = s.skills.tasteAcumen?.level ?? 1
       const eq = s.equippedStats
       const aoji = s.gastronomyEffects()?.maxHpBonus ?? 0
-      const daoHp = (s.daoEffectSumCache ?? daoEffectSum(s.daoUnlocked ?? [])).maxHpPct ?? 0
-      return Math.round((10 + (level - 1) * 10 + eq.hpBonus + aoji) * (1 + daoHp / 100))
+      const daoPct = (s.daoEffectSumCache ?? daoEffectSum(s.daoUnlocked ?? [])).maxHpPct ?? 0
+      const insightPct = insightEffectSum(s.insights ?? []).maxHpPct ?? 0
+      const realmPct = (this.realmModifiers?.() ?? {}).maxHpPct ?? 0 // 仅在秘境激活时非 0
+      return Math.round((10 + (level - 1) * 10 + eq.hpBonus + aoji) * (1 + (daoPct + insightPct + realmPct) / 100))
     },
     totalLevels(s) {
       return Object.values(s.skills).reduce((a, sk) => a + (sk.level ?? 1), 0)

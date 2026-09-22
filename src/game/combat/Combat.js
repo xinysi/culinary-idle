@@ -8,6 +8,7 @@ import { getItem, itemName } from '../data/items.js'
 import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
+import { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap } from '../data/caps.js' // 攻速地板常量单一来源
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
@@ -69,6 +70,8 @@ export class Combat {
     this.foodCooldown = 0
     this.biscuitCooldown = 0 // 能量饼干冷却（2026-09-10）
     this.biscuitSpeedPct = 0 // 「精力充沛」攻速加成，随 buffTurns 归零
+    this.biscuitTurns = 0 // 饼干自己的增益计时（2026-09-22：不再与酱料共用 buffTurns）
+    this.buffDelta = { item: {}, biscuit: {} } // 各来源各贡献了多少，到期时按来源精确扣除
     this.result = null // win | lose
   }
 
@@ -85,7 +88,12 @@ export class Combat {
     return STYLE_INFO[this.styleId].name
   }
 
-  /** 玩家实时属性（§4.2）；食神秘境局内增益（2026-09-09）仅在秘境激活时叠加 */
+  /** 玩家实时属性（§4.2）；食神秘境局内增益（2026-09-09）仅在秘境激活时叠加
+   *  ⚠️ 2026-09-22 收口三件事：
+   *    · `maxHp` **直接取 store 的唯一口径**（`player.maxHp` 已含道树/图谱/秘境的全部 %），
+   *      这里**不再乘第二遍**（此前道树 % 被算两次、图谱 % 只在战斗里生效、料理回血又按未加成的值封顶）。
+   *    · 回合间隔走 `caps.js` 的 `combatTurnIntervalSec()`（地板常量单一来源），并暴露 `speedAtCap`。
+   *    · 受伤减免（奥义 defensePct）暴露成 `damageTakenPct`，`opponentAttack` 与界面读同一个值。 */
   playerStats() {
     const eq = this.player.equippedStats
     const sl = this.styleLevel
@@ -97,19 +105,22 @@ export class Combat {
     const dao = this.player.daoEffects?.() ?? {} // 厨神之路·厨武之道（v2.0）
     const atkPct = (realm?.attackPct ?? 0) + (insight.attackPct ?? 0)
     const defPct = (realm?.defensePct ?? 0) + (insight.defensePct ?? 0)
-    const hpPct = (realm?.maxHpPct ?? 0) + (insight.maxHpPct ?? 0) + (dao.maxHpPct ?? 0)
-    const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0) + (this.biscuitSpeedPct || 0) // +能量饼干「精力充沛」（2026-09-10）
+    // 攻速加成：奥义 + 秘境 + 能量饼干「精力充沛」+ 酱料/饮品的 `buff.speed`（2026-09-22 起真被消费）
+    const speedPct = (Number(gEff.speedPct) || 0) + (realm?.speedPct ?? 0) + (this.biscuitSpeedPct || 0) + (Number(this.buffs.speed) || 0)
     const speedBonus = Number(eq.speedBonus) || 0
-    const baseSpeed = Math.max(1.2, (2.4 - sl * 0.02 - speedBonus) * (1 - speedPct / 100))
+    const atCap = combatSpeedAtCap(sl, speedBonus)
     return {
       hp: this.player.combat.hp,
-      maxHp: this.player.maxHp * (1 + hpPct / 100),
+      maxHp: this.player.maxHp, // 唯一口径：外面那一层 % 已在 store 的 getter 里乘过
       attack: (sl * 3 + eq.attack + this.buffs.atk) * (1 + atkPct / 100),
       accuracy: Math.max(1, Math.floor((10 + sl + eq.accuracy + this.buffs.accuracy) * (1 - drunkPenalty) * (1 + (realm?.accuracyPct ?? 0) / 100))),
       defense: (heat + eq.defense + this.buffs.defense) * (1 + defPct / 100),
       evasion: Math.floor((5 + heat * 0.5 + eq.evasion + this.buffs.evasion) * (1 + (realm?.evasionPct ?? 0) / 100)),
       critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance + (realm?.critChance ?? 0) + (dao.critPct ?? 0) / 100, 0.8),
-      speedMs: Math.floor(baseSpeed * 1000 * (this.slowTurns > 0 ? 1.5 : 1)),
+      speedMs: Math.floor(combatTurnIntervalSec(sl, speedBonus, speedPct) * 1000 * (this.slowTurns > 0 ? 1.5 : 1)),
+      speedAtCap: atCap, // 已在地板上 ⇒ 一切「攻速 +%」当前都是零效果（界面据此提示，别再让玩家白花品鉴点）
+      speedFloorMs: COMBAT_SPEED_FLOOR_SEC * 1000,
+      damageTakenPct: Number(gEff.defensePct) || 0, // 受伤减免（奥义「铜墙铁壁」等），界面与 opponentAttack 同一来源
       flavorEnergy: this.player.combat.flavorEnergy,
     }
   }
@@ -117,6 +128,39 @@ export class Combat {
   logLine(text, kind = 'info') {
     this.log.push({ text, kind, turn: this.turnCount })
     if (this.log.length > 80) this.log.shift()
+  }
+
+  /**
+   * 施加增益（**按来源分别记账**，2026-09-22）：
+   * 问题：原先所有增益共用一个 `buffTurns`，且到期时把 `this.buffs` 整个清零 ⇒
+   *   ① 饼干的攻速会被「之后用的那瓶 10 回合酱料」顺带延长（自己的 5 回合形同虚设）；
+   *   ② 反过来先酱料后饼干时，酱料的属性也会跟着饼干的节奏走。
+   * 现在每个来源各自记「贡献了多少」，各自到期时**只扣自己那份**。
+   * ⚠️ 同来源内部仍是「取最长」（连喝两瓶 10 回合酱料 = 10 回合，不是 20），这是原有的设计口径。
+   */
+  addBuff(source, obj, turns) {
+    const dst = this.buffDelta[source] ?? (this.buffDelta[source] = {})
+    for (const [k, v] of Object.entries(obj)) {
+      if (k === 'duration') continue
+      this.buffs[k] = (this.buffs[k] ?? 0) + v
+      dst[k] = (dst[k] ?? 0) + v
+    }
+    const t = Math.max(1, Math.round(Number(turns) || 1))
+    if (source === 'biscuit') this.biscuitTurns = Math.max(this.biscuitTurns, t)
+    else this.buffTurns = Math.max(this.buffTurns, t)
+  }
+
+  /** 某来源的增益到期：只扣掉它自己贡献的那部分 */
+  expireBuff(source) {
+    const src = this.buffDelta[source] ?? {}
+    for (const [k, v] of Object.entries(src)) this.buffs[k] = (this.buffs[k] ?? 0) - v
+    this.buffDelta[source] = {}
+    if (source === 'biscuit') this.biscuitSpeedPct = 0
+  }
+
+  /** 增益剩余回合（界面显示用：两个来源取较长者） */
+  buffTurnsLeft() {
+    return Math.max(this.buffTurns, this.biscuitTurns)
   }
 
   start(opponent) {
@@ -140,6 +184,8 @@ export class Combat {
     this.foodCooldown = 0
     this.biscuitCooldown = 0 // 能量饼干冷却（2026-09-10）
     this.biscuitSpeedPct = 0 // 「精力充沛」攻速加成，随 buffTurns 归零
+    this.biscuitTurns = 0
+    this.buffDelta = { item: {}, biscuit: {} }
     this.result = null
     this.logLine(`⚔️ 对决开始：${opponent.name}（等级 ${opponent.level}，${opponent.styleName}）`)
     EventBus.emit('combat:start', { opponent: opponent.name })
@@ -173,10 +219,11 @@ export class Combat {
     if (this.biscuitCooldown > 0) this.biscuitCooldown--
     if (this.buffTurns > 0) {
       this.buffTurns--
-      if (this.buffTurns === 0) {
-        this.buffs = { atk: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0 }
-        this.biscuitSpeedPct = 0 // 增益到期，攻速加成同时失效
-      }
+      if (this.buffTurns === 0) this.expireBuff('item') // 只扣「酱料/饮品/调料」那一份
+    }
+    if (this.biscuitTurns > 0) {
+      this.biscuitTurns--
+      if (this.biscuitTurns === 0) this.expireBuff('biscuit') // 饼干自己的命中/攻速到期（不被酱料延长）
     }
     if (this.drunkTurns > 0) this.drunkTurns--
     if (this.slowTurns > 0) this.slowTurns--
@@ -370,18 +417,17 @@ export class Combat {
     if (o.mechanic?.phases) atk *= this.bossPhase * 0.4 + 0.6 // 阶段1:1.0 阶段2:1.4 阶段3:1.8
     // 对手克制玩家
     const advantage = STYLE_ADVANTAGE[this.oppStyle] === this.styleId
-    const gEff = this.player.gastronomyEffects?.() ?? {}
-    const defensePct = gEff.defensePct ?? 0
+    const defensePct = p.damageTakenPct ?? 0 // 与属性面板「受击减免」同一来源
     let dmg = Math.max(1, Math.floor(atk * (advantage ? 1.15 : 1) * (1 - p.defense / (p.defense + 100)) * (1 - defensePct / 100)))
     let crit = false
     if (Math.random() < o.crit) {
       dmg *= 2
       crit = true
     }
-    // 火锅真君：施加灼烧
+    // 火锅真君：施加灼烧（伤害值与结算同源：`o.level * 0.5`，把数字写进日志，别再让玩家猜）
     if (o.mechanic?.burn && Math.random() < 0.5) {
       this.burnTurns = 3
-      this.logLine('🔥 火锅真君：你被灼烧了（每回合损失 生命值）！', 'warn')
+      this.logLine(`🔥 火锅真君：你被灼烧了（每回合损失 ${Math.max(1, Math.floor(o.level * 0.5))} 生命值）！`, 'warn')
     }
     // 黑暗料理王：施加中毒
     if (o.mechanic?.poison && Math.random() < 0.5) {
@@ -527,10 +573,7 @@ export class Combat {
     const item = getItem(itemId)
     if (!item?.buff) return false
     if (!this.player.spendItem(itemId, 1)) return false
-    for (const [k, v] of Object.entries(item.buff)) {
-      if (k !== 'duration') this.buffs[k] = (this.buffs[k] ?? 0) + v
-    }
-    this.buffTurns = Math.max(this.buffTurns, item.buff.duration ?? 10)
+    this.addBuff('item', item.buff, item.buff.duration ?? 10)
     this.logLine(`🌶️ 使用 ${item.name}：获得增益 ${item.buff.duration ?? 10} 回合`)
     return true
   }
@@ -550,10 +593,7 @@ export class Combat {
       this.logLine(`🍵 饮用 ${item.name}：+${item.flavorEnergy} 调味能量`)
     }
     if (item.buff) {
-      for (const [k, v] of Object.entries(item.buff)) {
-        if (k !== 'duration') this.buffs[k] = (this.buffs[k] ?? 0) + v
-      }
-      this.buffTurns = Math.max(this.buffTurns, item.buff.duration ?? 8)
+      this.addBuff('item', item.buff, item.buff.duration ?? 8)
       this.logLine(`🍷 ${item.name} 提供增益 ${item.buff.duration ?? 8} 回合`)
     }
     if (item.drunk) {
@@ -578,12 +618,13 @@ export class Combat {
     const before = this.player.combat.hp
     const after = Math.min(p.maxHp, before + heal)
     this.player.setCombat({ hp: after })
-    this.buffs.accuracy += BISCUIT_ACC
+    // 命中/攻速走**饼干自己的计时**（`biscuitTurns`）：不和酱料/饮品共用 buffTurns，
+    // 于是「先喝 10 回合的酒再吃饼干」不会把饼干加成拉长到 10 回合（2026-09-22 修）。
+    this.addBuff('biscuit', { accuracy: BISCUIT_ACC }, BISCUIT_BUFF_TURNS)
     this.biscuitSpeedPct = BISCUIT_SPEED_PCT
-    this.buffTurns = Math.max(this.buffTurns, BISCUIT_BUFF_TURNS)
     this.biscuitCooldown = BISCUIT_COOLDOWN_TURNS
     this.player.stats.biscuitsUsed = (this.player.stats.biscuitsUsed ?? 0) + 1
-    this.logLine(`🍪 能量补给：回复 ${after - before} 品鉴值，命中 +${BISCUIT_ACC}、攻速 +${BISCUIT_SPEED_PCT}%（${BISCUIT_BUFF_TURNS} 回合）`)
+    this.logLine(`🍪 能量补给：回复 ${after - before} 品鉴值，命中 +${BISCUIT_ACC}、攻速 +${BISCUIT_SPEED_PCT}%${p.speedAtCap ? '（⚠️ 已到攻速上限，攻速部分无效果）' : ''}（${BISCUIT_BUFF_TURNS} 回合）`)
     EventBus.emit('combat:biscuit', { heal: after - before })
     return true
   }
@@ -593,8 +634,7 @@ export class Combat {
     if ((this.player.inventory.mysterySpice ?? 0) < 1) return false
     this.player.spendItem('mysterySpice', 1)
     const 增益 = MYSTERY_BUFFS[Math.floor(Math.random() * MYSTERY_BUFFS.length)]
-    for (const [k, v] of Object.entries(增益)) this.buffs[k] = (this.buffs[k] ?? 0) + v
-    this.buffTurns = Math.max(this.buffTurns, 10)
+    this.addBuff('item', 增益, 10)
     // 用中文显示随机增益（数值不变，只改提示文案）
     const LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速' }
     const gainText = Object.entries(增益).map(([k, v]) => `${LABEL[k] ?? k} +${(k === 'critChance' ? Math.round(v * 100) : v)}`).join('、')

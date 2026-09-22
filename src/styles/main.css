@@ -740,6 +740,13 @@ h2 {
   color: var(--good-strong);
 }
 
+/* 「这条加成当前无效果」类提示（2026-09-22：攻速撞硬下限的奥义）。
+   语义色不随皮肤；`--warn-soft` / `--warn-strong` 浅深两套都已定义（深色那份是本轮补的）。 */
+.badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn-strong);
+}
+
 /* ── 侧边栏 ─────────────────────────────────────────────── */
 .sidebar {
   display: flex;
@@ -4457,6 +4464,9 @@ html[data-theme='dark'] {
   --good-soft: #22402a;
   --warn: #f0a033;
   --warn-strong: #ffb84d;
+  /* ⚠️ 深色必须**自己**定义 --warn-soft：缺了它就会回落到浅色那份奶白（#fbf0da），
+     而深色的 --warn-strong 是亮琥珀 ⇒ 文字压在浅底上几乎看不见（2026-09-22 立 .badge-warn 时发现的） */
+  --warn-soft: #3d2c14;
   --bad: #ff6a5e;
   --bad-strong: #ff8a80;
   --bad-soft: #4a221e;

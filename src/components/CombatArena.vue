@@ -14,6 +14,7 @@ import { enemyImage } from '../game/data/enemyImage.js'
 import { chefImage, chefEmoji } from '../game/data/chefImage.js'
 import { ref } from 'vue'
 import { sfx } from '../game/core/sound.js'
+import { BISCUIT_HEAL_PCT, BISCUIT_ACC, BISCUIT_SPEED_PCT } from '../game/data/biscuitUse.js'
 import ProgressBar from './ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -30,7 +31,8 @@ const battleFrame = computed(() => {
     opponentHp: combat?.opponentHp ?? 0,
     opponentHpMax: combat?.opponent?.hp ?? 1,
     playerHp: player.combat.hp,
-    playerHpMax: player.maxHp,
+    playerHpMax: player.maxHp, // 与引擎同一口径（store 的 maxHp 已含全部外部 %）
+    speedAtCap: combat?.playerStats?.().speedAtCap === true, // 攻速撞硬下限 ⇒ 饼干/奥义的攻速部分无效果
     turn: combat?.turnCount ?? 0,
     turnStartAt: combat?.inFight ? (combat.turnStartAt ?? performance.now()) : 0,
     turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
@@ -139,7 +141,7 @@ watch(
         <button class="btn btn-sm" :disabled="combat.biscuitCooldown > 0" @click="useItem('biscuit')">
           🍪 能量补给 ×{{ player.inventory.energyBiscuit }}
           <span v-if="combat.biscuitCooldown > 0" class="dim">（冷却 {{ combat.biscuitCooldown }} 回合）</span>
-          <span v-else class="dim">（回血 {{ Math.floor(player.maxHp * 0.25) }} · 命中+8 · 攻速+10%）</span>
+          <span v-else class="dim">（回血 {{ Math.floor(battleFrame.playerHpMax * BISCUIT_HEAL_PCT) }} · 命中+{{ BISCUIT_ACC }} · 攻速+{{ BISCUIT_SPEED_PCT }}%<template v-if="battleFrame.speedAtCap">，已到上限</template>）</span>
         </button>
       </div>
     </div>

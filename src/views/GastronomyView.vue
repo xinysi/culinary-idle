@@ -5,6 +5,7 @@ import { OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
+import { getCombat } from '../game/combat/Combat.js'
 import { INSIGHT_NODES, INSIGHT_BRANCHES, getInsightNode } from '../game/data/insightTree.js'
 import { BISCUIT_TASTE_RATE } from '../game/data/biscuitUse.js'
 
@@ -29,6 +30,16 @@ function toggle(id) {
 }
 function totalDrain() {
   return player.gastronomy.active.reduce((s, id) => s + (AOJIS.find((a) => a.id === id)?.costPerSec ?? 0), 0)
+}
+// 攻速是否已撞硬下限（2026-09-22）：`playerStats().speedAtCap` 由引擎算出（地板常量在 caps.js，单一来源）。
+// 奥义是**冻结数据**（desc/effect 不许改）⇒「已到上限」这条提示只能在界面侧派生，
+// 否则玩家会为一个当前零效果的「攻速 +%」奥义白付品鉴点（实测流派等级 60 起必撞顶，而挑战塔正是 60 解锁）。
+const speedAtCap = computed(() => {
+  ui.loopTick
+  return getCombat()?.playerStats?.()?.speedAtCap === true
+})
+function speedWasted(a) {
+  return speedAtCap.value && (a.effect?.speedPct ?? 0) > 0
 }
 function filteredAojis() {
   return AOJIS.filter((a) => !catFilter.value || a.category === catFilter.value)
@@ -101,6 +112,8 @@ function unlockNode(id) {
           </div>
           <div class="spirit-card-badges">
             <span v-if="isOn(a.id)" class="badge badge-on">激活中</span>
+            <!-- 攻速类奥义撞硬下限时的诚实提示（2026-09-22）：数据不能改，界面上说清楚 -->
+            <span v-if="speedWasted(a)" class="badge badge-warn" title="当前回合间隔已到 1.2s 硬下限，攻速加成不会再缩短间隔">⚠️ 攻速已到上限，此加成当前无效果</span>
           </div>
           <div class="spirit-card-effect dim">
             <span class="ing">{{ a.desc }}</span>

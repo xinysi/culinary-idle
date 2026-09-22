@@ -1597,7 +1597,10 @@ console.log('══ E. 离线进度 ══')
     check('能量饼干', '战斗内使用：回血 + 扣 1 块', okB === true && pc.combat.hp > hpBefore && pc.inventory.energyBiscuit === 9, `hp ${hpBefore}→${pc.combat.hp}`)
     check('能量饼干', `回血量为最大品鉴值的 ${Math.round(BISCUIT_HEAL_PCT * 100)}%（封顶不超上限）`, pc.combat.hp <= pc.maxHp)
     check('能量饼干', '给命中与攻速增益', cb.buffs.accuracy >= BISCUIT_ACC && cb.biscuitSpeedPct === BISCUIT_SPEED_PCT)
-    check('能量饼干', `增益持续 ${BISCUIT_BUFF_TURNS} 回合`, cb.buffTurns >= BISCUIT_BUFF_TURNS)
+    // 2026-09-22：饼干改走**自己的计时** `biscuitTurns`（原先与酱料共用 `buffTurns`，
+    // 会被之后用的一瓶 10 回合酱料顺带延长到 10 回合）⇒ 断言改成看它自己的计数
+    check('能量饼干', `增益持续 ${BISCUIT_BUFF_TURNS} 回合（饼干自己的计时，不与酱料共用）`,
+      cb.biscuitTurns >= BISCUIT_BUFF_TURNS && cb.buffTurns === 0)
     check('能量饼干', '自身冷却期不可再用', cb.useEnergyBiscuit() === false && pc.inventory.energyBiscuit === 9)
     check('能量饼干', '计入使用统计', (pc.stats.biscuitsUsed ?? 0) === 1)
     // 冷却走完后可再用（证明不封顶）
@@ -2180,10 +2183,12 @@ console.log('══ J. 数值安全 ══')
   check('安全', '种植越界地块被拒', farm.canPlant(99, 'wheatSeed') === false)
   // 装备槽未知
   check('安全', '未知装备槽拒绝', p.equip('apple') === false)
-  // 战斗属性无装备无 NaN
+  // 战斗属性无装备无 NaN（2026-09-22：playerStats 里多了两个**派生**字段——`speedAtCap` 布尔、
+  // `speedFloorMs` 上限值——它们不是战斗数值，只喂界面提示，故按「数值字段必须有限」判定）
   const combat = new Combat(p)
   const st = combat.playerStats()
-  check('安全', '战斗属性全部有限数', Object.values(st).every((v) => Number.isFinite(v)), JSON.stringify(st))
+  const NON_NUMERIC = new Set(['speedAtCap'])
+  check('安全', '战斗属性全部有限数', Object.entries(st).every(([k, v]) => NON_NUMERIC.has(k) || Number.isFinite(v)), JSON.stringify(st))
   // 大数经验（120 级 ~1 亿）无溢出
   check('安全', '120 级经验无溢出', totalXpForLevel(120) > totalXpForLevel(99) && Number.isFinite(totalXpForLevel(120)))
 }
@@ -6631,6 +6636,184 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   ap5._aojiActivatedAt = { [a0.id]: 1 }
   ap5.drainAoji(60000)
   check('续航', '品鉴点耗尽后奥义全部熄灭（界面上的「还能撑多久」是硬约束，不是参考值）', ap5.gastronomy.active.length === 0 && ap5.tastePoints === 0)
+}
+
+// ══════════ C45c：战斗 × buff/加成 的口径收口（2026-09-22，源自 combat_buff_audit 体检）══════════
+// 体检（`scripts/sim/combat_buff_audit.mjs`，真实引擎 134 项）查出并修掉的问题，逐条钉住：
+//   ① 「品鉴值上限」曾有三套口径：道树 % 被算两次、图谱 % 只在战斗里生效、料理回血又按未加成的值封顶；
+//   ② 「攻速 +%」撞 1.2s 硬下限后零效果，而界面上毫无提示（玩家为 4 个奥义白付品鉴点）；
+//   ③ 奥义「受到伤害 -15%」在界面上完全不可见；④ buff 的 critChance 显示成 0.1 而不是 10%；
+//   ⑤ 灼烧日志缺伤害数字；⑥ 饼干加成会被「之后用的酱料」顺带延长；⑦ 任何未消费的 buff 键都会静默无效。
+{
+  const fsMod = await import('node:fs')
+  const { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap } = await import('../../src/game/data/caps.js')
+  const { Combat } = await import('../../src/game/combat/Combat.js')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const { DAO_NODES } = await import('../../src/game/data/daoTree.js')
+  const { INSIGHT_NODES } = await import('../../src/game/data/insightTree.js')
+  const { REALM_BUFFS } = await import('../../src/game/data/mysticRealm.js')
+  const { AOJIS } = await import('../../src/game/data/aojis.js')
+  const rd = (p) => fsMod.readFileSync(p, 'utf8')
+
+  // ① 品鉴值上限：**一个数**（store getter = 战斗口径），且每个来源只乘一次
+  const withSources = (apply) => {
+    const p = freshPlayer()
+    p.skills.knife.level = 80
+    p.skills.tasteAcumen.level = 80
+    const base = p.maxHp
+    apply(p)
+    const c = new Combat(p)
+    return { store: p.maxHp, combat: c.playerStats().maxHp, base }
+  }
+  const daoHpNode = DAO_NODES.find((n) => (n.effect?.maxHpPct ?? 0) > 0)
+  const insHpNode = INSIGHT_NODES.find((n) => (n.effect?.maxHpPct ?? 0) > 0)
+  const r1 = withSources((p) => { p.daoUnlocked = [daoHpNode.id] })
+  const r2 = withSources((p) => { p.insights = [insHpNode.id] })
+  const r3 = withSources((p) => { p.realm = { active: true, floor: 1, buffs: ['hp15'], best: 0, pending: null } })
+  const once = (r, pct) => Math.abs(r.combat / r.base - (1 + pct / 100)) < 0.02
+  check('战斗口径', '品鉴值上限：store 与战斗**同一个数**（不再各乘一遍）',
+    [r1, r2, r3].every((r) => Math.abs(r.store - r.combat) <= 1),
+    `道树 ${r1.store}/${r1.combat} · 图谱 ${r2.store}/${r2.combat} · 秘境 ${r3.store}/${r3.combat}`)
+  check('战斗口径', `品鉴值上限：每个来源只乘一次（道树 +${daoHpNode.effect.maxHpPct}%、图谱 +${insHpNode.effect.maxHpPct}%、秘境 +15%）—— 修前道树被算两次`,
+    once(r1, daoHpNode.effect.maxHpPct) && once(r2, insHpNode.effect.maxHpPct) && once(r3, 15),
+    `实测比 道树 ${(r1.combat / r1.base).toFixed(3)} · 图谱 ${(r2.combat / r2.base).toFixed(3)} · 秘境 ${(r3.combat / r3.base).toFixed(3)}`)
+  // 回血封顶：从「差 10 点满血」吃一口，必须补到**战斗上限**（修前料理按未加成的 store 值封顶 ⇒
+  // 秘境带 hp15 时最小值会把玩家**从 910 拉回 800**，比饿着还差）
+  {
+    const p = freshPlayer()
+    p.skills.tasteAcumen.level = 80
+    p.realm = { active: true, floor: 1, buffs: ['hp15'], best: 0, pending: null }
+    const c = new Combat(p)
+    const cap = Math.round(c.playerStats().maxHp)
+    const food = Object.values(ITEMS).filter((it) => it.type === 'food' && (it.heal ?? 0) >= 50).sort((a, b) => b.heal - a.heal)[0]
+    p.inventory[food.id] = 5
+    c.inFight = true
+    p.setCombat({ hp: cap - 10 })
+    c.useFood(food.id, true)
+    const foodTop = p.combat.hp
+    check('战斗口径', '回血封顶一致：料理补到**战斗上限**（修前封在未加成的 store 值上，甚至会把血拉低）',
+      Math.abs(foodTop - cap) <= 1, `料理补到 ${foodTop}，战斗上限 ${cap}（起始 ${cap - 10}）`)
+  }
+
+  // ② 攻速：地板常量单一来源 + 撞顶必须被标记（界面据此提示）
+  const combatSrc = rd('src/game/combat/Combat.js')
+  check('战斗口径', '攻速地板常量只有一处（`caps.js` 的 `COMBAT_SPEED_FLOOR_SEC`），引擎与界面都引用它',
+    /COMBAT_SPEED_FLOOR_SEC/.test(combatSrc) && /combatTurnIntervalSec/.test(combatSrc) && !/Math\.max\(1\.2/.test(combatSrc),
+    'Combat.js 里不得再出现写死的 1.2')
+  const capP = freshPlayer()
+  capP.skills.knife.level = 80
+  const capC = new Combat(capP)
+  const capSt = capC.playerStats()
+  const rawBase = 2.4 - 80 * 0.02
+  check('战斗口径', `撞顶标记：等级 80（原始间隔 ${rawBase.toFixed(2)}s ≤ 下限 ${COMBAT_SPEED_FLOOR_SEC}s）⇒ speedAtCap 必须为 true`,
+    capSt.speedAtCap === true && capSt.speedFloorMs === COMBAT_SPEED_FLOOR_SEC * 1000, JSON.stringify({ cap: capSt.speedAtCap, floor: capSt.speedFloorMs }))
+  const lowP = freshPlayer()
+  lowP.skills.knife.level = 30
+  check('战斗口径', '未撞顶时不误报（等级 30 ⇒ 原始间隔 1.8s > 下限 ⇒ speedAtCap 为 false）',
+    new Combat(lowP).playerStats().speedAtCap === false)
+  check('战斗口径', '`combatSpeedAtCap()` 与引擎判定同源（同一个函数，不是两套阈值）',
+    combatSpeedAtCap(80, 0) === true && combatSpeedAtCap(30, 0) === false && combatSpeedAtCap(50, 0.4) === true,
+    `50 级 + 0.4s 攻速装 ⇒ ${combatSpeedAtCap(50, 0.4)}（应撞顶）`)
+  check('战斗口径', '回合间隔公式是唯一出口（同参数下与引擎 speedMs 一致）',
+    new Combat(lowP).playerStats().speedMs === Math.floor(combatTurnIntervalSec(30, 0, 0) * 1000))
+  // 界面侧接线（撞顶提示的三处：属性面板 / 奥义页 / 饼干按钮）
+  const panelSrc = rd('src/components/CombatPanel.vue')
+  const arenaSrc = rd('src/components/CombatArena.vue')
+  const gastroSrc = rd('src/views/GastronomyView.vue')
+  check('战斗口径', '撞顶提示接线齐备（属性面板写「已到上限」· 奥义页给攻速类奥义挂警告 · 饼干按钮标「已到上限」）',
+    /已到上限/.test(panelSrc) && /speedAtCap/.test(panelSrc) && /speedWasted/.test(gastroSrc) && /badge-warn/.test(gastroSrc) && /speedAtCap/.test(arenaSrc),
+    '缺一处玩家就会看到「点了没变化」')
+  // ③ 受伤减免（奥义 defensePct）暴露给界面，且 opponentAttack 与界面读同一个值
+  const takenP = freshPlayer()
+  takenP.skills.knife.level = 80
+  const aojiDef = AOJIS.find((a) => (a.effect?.defensePct ?? 0) > 0)
+  takenP.gastronomy.active = [aojiDef.id]
+  takenP._aojiActivatedAt = { [aojiDef.id]: 1 }
+  takenP.tastePoints = 99999
+  const takenC = new Combat(takenP)
+  check('战斗口径', `奥义「${aojiDef.name}」的受伤减免暴露成 damageTakenPct（界面「受击减免」行读它）`,
+    takenC.playerStats().damageTakenPct === aojiDef.effect.defensePct && /damageTakenPct/.test(panelSrc) && /受击减免/.test(panelSrc),
+    `damageTakenPct=${takenC.playerStats().damageTakenPct}`)
+  // ⚠️ 上面那条只查「文本存在」——把整行的**条件**改成 `...(false` 时它照样 PASS（首版反例验证就漏了）。
+  //    这里补上「条件必须是 `takenPct.value > 0`」的断言，让「悄悄禁用这一行」也会 FAIL。
+  check('战斗口径', '「受击减免」行是**按条件真的渲染出来**的（不是被 `...(false` 之类悄悄禁用）',
+    /takenPct\.value > 0/.test(panelSrc))
+
+  // ④ buff 文案：critChance 按百分比显示
+  check('战斗口径', '增益行把 critChance 显示成百分比（修前面板写 +0.1、日志写 +10）',
+    /critChance' \? Math\.round\(Number\(v\) \* 100\)/.test(panelSrc))
+  check('战斗口径', '增益行为 0 值时不出「+0」噪声（buff 到期扣回 0 之后仍会显示）',
+    /\(Number\(v\) \|\| 0\) !== 0/.test(panelSrc))
+
+  // ⑤ 灼烧日志必须带伤害数字（与结算同一个 `o.level * 0.5`）
+  check('战斗口径', '灼烧日志带伤害数字（修前是「每回合损失 生命值」，数字空洞）',
+    /每回合损失 \$\{Math\.max\(1, Math\.floor\(o\.level \* 0\.5\)\)\} 生命值/.test(combatSrc))
+
+  // ⑥ 饼干自己的增益计时：不被酱料延长、到期只扣自己那份
+  {
+    const { opp } = await import('../../src/game/data/combat.js')
+    /** 造一个打不死也打不死的「桩」对手，好让 resolveTurn 能连着跑几回合 */
+    const dummy = (c) => {
+      c.opponent = opp(20, '计时桩', 'flavor', { hp: 1e7 })
+      c.oppStyle = 'flavor'
+      c.opponentHp = 1e7
+      c.inFight = true
+    }
+    const p = freshPlayer()
+    p.skills.knife.level = 80
+    p.skills.tasteAcumen.level = 80
+    const c = new Combat(p)
+    dummy(c)
+    p.inventory.energyBiscuit = 3
+    p.setCombat({ hp: 1e6, flavorEnergy: 100 })
+    const sauce = Object.values(ITEMS).find((it) => it.buff && !it.drunk && it.type !== 'drink' && (it.buff.duration ?? 0) >= 10)
+    p.inventory[sauce.id] = 3
+    c.useSauce(sauce.id) // 先来一瓶 10 回合酱料
+    const accFromSauce = c.buffs.accuracy
+    c.useEnergyBiscuit() // 再吃饼干（自身 5 回合）
+    const accAfterBoth = c.buffs.accuracy
+    for (let i = 0; i < 5; i++) c.resolveTurn() // 跑 5 回合：饼干应到期，酱料还在
+    const biscuitGone = c.biscuitTurns === 0 && c.biscuitSpeedPct === 0
+    const sauceKept = c.buffs.accuracy === accFromSauce && accAfterBoth === accFromSauce + BISCUIT_ACC
+    const sauceStillOn = c.buffTurns > 0
+    check('战斗口径', '饼干增益按**自己的**回合数到期（5 回合），不被 10 回合的酱料延长；且到期只扣自己那份（酱料属性仍在）',
+      biscuitGone && sauceKept && sauceStillOn,
+      JSON.stringify({ biscuitGone, sauceKept, sauceStillOn, accFromSauce, accAfterBoth, buffTurns: c.buffTurns }))
+    // 反方向：饼干剩余回合不该被后来的酱料拉长
+    const p2 = freshPlayer()
+    p2.skills.knife.level = 80
+    const c2 = new Combat(p2)
+    dummy(c2)
+    p2.inventory.energyBiscuit = 3
+    p2.inventory[sauce.id] = 3
+    c2.useEnergyBiscuit()
+    c2.useSauce(sauce.id)
+    check('战斗口径', '饼干剩余回合不被后来的酱料拉长（`biscuitTurns` 与 `buffTurns` 是两个计数）',
+      c2.biscuitTurns === 5 && c2.buffTurns >= 10, JSON.stringify({ biscuit: c2.biscuitTurns, item: c2.buffTurns }))
+    check('战斗口径', '界面显示的增益回合取两个来源的较大者（`buffTurnsLeft()`）',
+      c2.buffTurnsLeft() === Math.max(c2.buffTurns, c2.biscuitTurns) && /buffTurnsLeft/.test(panelSrc))
+  }
+
+  // ⑦ buff 键必须是引擎真消费的键（静默无效的防护：`speed` 现在真变速，其余不许出现）
+  {
+    const CONSUMED = new Set(['atk', 'accuracy', 'defense', 'evasion', 'critChance', 'speed', 'duration'])
+    const offenders = []
+    for (const it of Object.values(ITEMS)) {
+      if (!it.buff || typeof it.buff !== 'object') continue
+      for (const k of Object.keys(it.buff)) if (!CONSUMED.has(k)) offenders.push(`${it.id}.${k}`)
+    }
+    check('战斗口径', `物品数据里的每个 buff 键都被引擎消费（扫描 ${Object.values(ITEMS).filter((i) => i.buff).length} 件带 buff 的物品）`,
+      offenders.length === 0, offenders.slice(0, 6).join(', '))
+    // `speed` 键必须真的进攻速（否则「加个 speed 酱料」会静默无效）
+    const spP = freshPlayer()
+    spP.skills.knife.level = 30
+    const spC = new Combat(spP)
+    const before = spC.playerStats().speedMs
+    spC.addBuff('item', { speed: 20 }, 3)
+    const after = spC.playerStats().speedMs
+    check('战斗口径', '`buff.speed` 真的缩短回合间隔（此前只有标签表里有 speed、引擎不读 ⇒ 静默无效）',
+      after < before, `${before} → ${after}ms`)
+  }
 }
 
 // ══════════ C46：采集目标「效率」的可见性与正确性（2026-09-19）══════════

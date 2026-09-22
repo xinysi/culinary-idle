@@ -129,3 +129,29 @@ export function safeXpMultiplier(value) {
   const below = XP_MULTIPLIER_OPTIONS.filter((x) => x <= n)
   return below.length ? below[below.length - 1] : XP_MULTIPLIER_OPTIONS[0]
 }
+
+// ── 对决「回合间隔」的硬下限（2026-09-22 收口）──────────────────────────
+//
+// 公式：`间隔 = max(FLOOR, (2.4 − 0.02×流派等级 − 装备 speedBonus) × (1 − 攻速加成%/100))`。
+// 🔴 **这个地板会把「攻速 +%」整类加成吃光**（`combat_buff_audit.mjs` 实测）：
+//    流派等级 60 时 `2.4 − 1.2` 已经等于地板 ⇒ 任何 speedPct 都不再省时间；穿 0.6s 攻速装的话 30 级就到顶。
+//    **受影响的来源**（都不是数据错，是「撞了上限」）：4 个只给攻速的奥义（疾风步伐/疾风步/迅捷高手/疾风迅雷）、
+//    秘境「快刀乱麻」、能量饼干「攻速 +10%」、以及装备/宝石的 `speedBonus`。
+// ⚠️ 处置**不是**抬这个数（那会改掉全部 TTK 标定），而是：
+//    ① 常量搬到这里（上限单一来源），公式与界面**同一个出口**；
+//    ② `playerStats().speedAtCap` 把「已到上限」暴露给界面 —— 属性面板写「已到上限」、
+//       奥义页给只加攻速的奥义挂提示，玩家不必自己发现「点了没变化」。
+export const COMBAT_SPEED_FLOOR_SEC = 1.2
+
+/** 对决回合间隔（秒）：**唯一出口**（引擎公式与界面上限提示都走它，避免两套真相） */
+export function combatTurnIntervalSec(styleLevel = 1, eqSpeedBonus = 0, speedPct = 0) {
+  const raw = 2.4 - (Number(styleLevel) || 1) * 0.02 - (Number(eqSpeedBonus) || 0)
+  const pct = Number(speedPct) || 0
+  return Math.max(COMBAT_SPEED_FLOOR_SEC, raw * (1 - pct / 100))
+}
+
+/** 加成前的原始间隔是否**已经**在地板以下（= 再加攻速也毫无效果，界面据此提示） */
+export function combatSpeedAtCap(styleLevel = 1, eqSpeedBonus = 0) {
+  return 2.4 - (Number(styleLevel) || 1) * 0.02 - (Number(eqSpeedBonus) || 0) <= COMBAT_SPEED_FLOOR_SEC
+}
+

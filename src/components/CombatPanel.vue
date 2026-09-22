@@ -27,6 +27,8 @@ const inFight = computed(() => combat?.inFight ?? false)
 // 「伤害减免」与「暴击伤害」此前界面上没有、但伤害公式里真实存在（def/(def+100)、暴击 ×2），
 // 玩家看不出防御到底减了多少伤。数值一律从引擎的只读 getter 取，不在组件里重算。
 const reductionPct = computed(() => combat?.reductionPct?.(pStats.value.defense ?? 0) ?? 0)
+/** 受击减免（%）：奥义等来源的受伤乘区，由引擎统一暴露（`playerStats().damageTakenPct`） */
+const takenPct = computed(() => Math.round(pStats.value.damageTakenPct ?? 0))
 const critMult = computed(() => combat?.critMultiplier?.() ?? 2)
 // 克制加成（+15%）：数值取自引擎 getter，避免界面与伤害公式两套真相
 const advPct = computed(() => Math.round(((combat?.advantageMultiplier?.() ?? 1.15) - 1) * 100))
@@ -42,9 +44,22 @@ const offense = computed(() => [
 const defense = computed(() => [
   { k: '最大品鉴值', v: Math.round(pStats.value.maxHp ?? 0), hint: '生命上限，归零即战败' },
   { k: '防御力', v: Math.round(pStats.value.defense ?? 0), hint: '决定下方的伤害减免' },
-  { k: '伤害减免', v: `${(reductionPct.value * 100).toFixed(1)}%`, hint: '每次受击按此比例减伤' },
+  { k: '伤害减免', v: `${(reductionPct.value * 100).toFixed(1)}%`, hint: '由防御力算出的减伤（def/(def+100)）' },
+  // 受伤减免（2026-09-22）：奥义「铜墙铁壁」这类**直接按比例减少受击伤害**的加成，与「防御力」是两条独立乘区。
+  // 此前界面上完全没有它 ⇒ 激活后防御/减伤数字一动不动，玩家看不出发生了什么（实测确认的显示缺口）。
+  ...(takenPct.value > 0
+    ? [{ k: '受击减免', v: `-${takenPct.value}%`, hint: '奥义等来源直接按比例减少你受到的伤害（与防御力相乘，不显示在防御力里）' }]
+    : []),
   { k: '闪避率', v: Math.round(pStats.value.evasion ?? 0), hint: '与对手准确率对抗，决定是否被打中' },
-  { k: '回合间隔', v: `${(pStats.value.speedMs / 1000).toFixed(1)}s`, hint: '每隔这么久自动打出一回合' },
+  // 回合间隔（2026-09-22）：到 1.2s 硬地板时必须写出来 —— 否则玩家点了「攻速 +25%」的奥义却看不出任何变化
+  // （地板常量与公式都在 caps.js，这里只读引擎给的结果，不重算）
+  {
+    k: '回合间隔',
+    v: `${(pStats.value.speedMs / 1000).toFixed(1)}s${pStats.value.speedAtCap ? '（已到上限）' : ''}`,
+    hint: pStats.value.speedAtCap
+      ? `已达 ${(pStats.value.speedFloorMs / 1000).toFixed(1)}s 硬下限：此时的「攻速 +%」加成（奥义/秘境/饼干/宝石）都不会再缩短间隔`
+      : '每隔这么久自动打出一回合；下限 1.2s',
+  },
 ])
 
 // 当前出站食灵的对决加成（§3.3.6）：在对决属性区明显展示
@@ -74,7 +89,14 @@ function setStyle(style) {
 }
 function buffText() {
   const b = combat.buffs ?? {}
-  return Object.entries(b).filter(([k]) => k !== 'duration').map(([k, v]) => `${BUFF_LABEL[k] ?? k} +${v}`).join('、') || '—'
+  // ⚠️ critChance 的数值是**小数**（0.1 = 10%）⇒ 必须按百分比显示。
+  //    原先直接拼 `${v}`，面板写「暴击 +0.1」而神秘调料的日志写「暴击 +10」，同一个效果两种单位。
+  return (
+    Object.entries(b)
+      .filter(([k, v]) => k !== 'duration' && (Number(v) || 0) !== 0) // 0 值不显示（避免「+0」噪声）
+      .map(([k, v]) => `${BUFF_LABEL[k] ?? k} +${k === 'critChance' ? Math.round(Number(v) * 100) : v}`)
+      .join('、') || '—'
+  )
 }
 </script>
 
@@ -165,7 +187,7 @@ function buffText() {
           </span>
           <span v-if="aojiKeep.low" class="warn-text">⚠️ 快见底了：归零时全部奥义会<b>立刻熄灭</b>（深塔连战最容易在这里翻车）</span>
         </p>
-        <p v-if="combat?.buffTurns > 0" class="dim">增益 {{ combat.buffTurns }} 回合：{{ buffText() }}</p>
+        <p v-if="combat?.buffTurnsLeft?.() > 0" class="dim">增益 {{ combat.buffTurnsLeft() }} 回合：{{ buffText() }}</p>
         <p v-if="combat?.drunkTurns > 0" class="dim warn-text">🥴 醉酒中（命中 -15%）：{{ combat.drunkTurns }} 回合</p>
         <p v-if="player.combat.style === 'plating'" class="dim">🎨 装饰食材：<span class="mono">{{ player.inventory.garnish ?? 0 }}</span>（每次攻击消耗 1 个，杂货铺有售）</p>
       </div>
