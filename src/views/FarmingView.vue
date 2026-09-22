@@ -10,6 +10,7 @@ import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSea
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, nextToolCost } from '../game/data/farmTools.js'
 import { PRIME_BASE_CHANCE, PRIME_CROP_ID, PRIME_MAX_CHANCE, PRIME_MIN_LEVEL } from '../game/data/primeCrop.js'
 import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import FoldCard from '../components/FoldCard.vue'
@@ -44,6 +45,9 @@ const toolLv = computed(() => player.farmToolLevel())
 const toolCost = computed(() => nextToolCost(toolLv.value))
 const toolTimeText = (growSec) => `${Math.round(growSec * player.farmTimeFactor())}s`
 /** 某作物的「每次收获期望件数」（含精通保底批量与双倍；丰沃肥料/山海食经等按未施状态估） */
+/** 这个作物是否吃「低目标经验减半」——判定走实例的唯一出口（`Skill.isLowTargetLevel`），视图不自己算 */
+const isLow = (c) => props.instance.isLowTargetLevel(c.reqLevel)
+
 function expectedPerHarvest(crop) {
   const m = masteryLevelFromCount(props.instance.mastery?.[crop.itemId] ?? 0)
   const base = 1 + masteryYieldBonus(m)
@@ -284,7 +288,8 @@ function seedName(seedId) {
             </div>
             <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
-              <span class="dim">{{ c.xp }} 经验</span>
+              <span class="dim" :title="LOW_TARGET_NOTE">{{ isLow(c) ? Math.round(c.xp * LOW_TARGET_XP_MULT) : c.xp }} 经验</span>
+              <span v-if="isLow(c)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
             </div>
             <div class="item-cell-sub" style="font-size: 12px">
               <span v-if="farmGatherPct(c.itemId) > 0" class="badge" style="background: var(--good-soft); color: var(--good-strong)">采集 +{{ Math.round(farmGatherPct(c.itemId) * 100) }}%</span>

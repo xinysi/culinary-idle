@@ -9,6 +9,7 @@ import { getSkillDef } from '../data/skills.js'
 import { applyCraftXp } from './xpBalance.js'
 import { craftSuccessChance } from '../data/difficulty.js' // 全局难度系数：成功率唯一缩放出口
 import { effIngredients } from '../data/materialCost.js' // 全局材料系数：材料用量唯一出口
+import { targetLevelXpMult } from '../core/growthRate.js' // 低目标经验减半：显示（效率）与结算同源
 
 const BASE_SUCCESS_LEVEL_BONUS = 0.02 // 每高于食谱等级 1 级 +2% 成功率
 const MAX_SUCCESS = 0.98
@@ -108,7 +109,10 @@ export class ProductionSkill extends Skill {
   xpPerHour(recipe) {
     if (!recipe) return 0
     const schoolMult = 1 + (this.player.schoolCraftXpPct?.(recipe.category) ?? 0) / 100
-    return (this.xpPerCraft(recipe) * schoolMult * CARD_XP_SCALE * masteryXpMultiplier(this.masteryLevel(recipe))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+    // 低目标经验减半（2026-09-22）：效率必须与结算同源 —— 否则卡片上写着「120 万/时」而实际到账只有 60 万，
+    // 正是本项目最忌的「显示与结算不一致」（`system_test` 的「配方效率」那条就是拿它跟真实引擎对账的）。
+    const lowMult = targetLevelXpMult(this.level, recipe.reqLevel, this.topTargetLevel)
+    return (this.xpPerCraft(recipe) * schoolMult * CARD_XP_SCALE * lowMult * masteryXpMultiplier(this.masteryLevel(recipe))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   }
 
   /** 当前**已解锁**配方里效率最高的那个（未解锁的不参与，避免给玩家「换过去更快」的错误引导） */
@@ -158,7 +162,7 @@ export class ProductionSkill extends Skill {
       this.player.discoverFlavors?.(Object.keys(mats))
       // 菜系研究（2026-09-10）：该学派配方经验加成
       const schoolMult = 1 + (this.player.schoolCraftXpPct?.(recipe.category) ?? 0) / 100
-      const expGained = this.addCardXp(recipe.xp * schoolMult, masteryXpMultiplier(this.masteryLevel(recipe)))
+      const expGained = this.addCardXp(recipe.xp * schoolMult, masteryXpMultiplier(this.masteryLevel(recipe)), recipe.reqLevel)
       EventBus.emit('skill:action', {
         skillId: this.id,
         itemId: out.itemId,
@@ -172,7 +176,7 @@ export class ProductionSkill extends Skill {
       return 'ok'
     }
 
-    const expGained = this.addCardXp(recipe.xp * 0.5, masteryXpMultiplier(this.masteryLevel(recipe)))
+    const expGained = this.addCardXp(recipe.xp * 0.5, masteryXpMultiplier(this.masteryLevel(recipe)), recipe.reqLevel)
     EventBus.emit('skill:action', {
       skillId: this.id,
       itemId: recipe.output.itemId,

@@ -83,7 +83,7 @@ export class ForagingSkill extends GatheringSkill {
     const qty = this.yieldQuantity(doubled ? 2 : 1)
     this.player.gainItem(target.itemId, qty)
     this.player.addMastery(this.id, target.itemId, 1)
-    const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)))
+    const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)), target.reqLevel)
 
     const extras = []
     if (Math.random() < gatherExtraChance(WOOD_CHANCE)) {

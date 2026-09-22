@@ -2241,7 +2241,7 @@ export const usePlayerStore = defineStore('player', {
       this.gainTastePoints(Math.floor(opponent.level * 1.5)) // 品鉴点数（§3.4.1 来源；乘 1.5 缓解奥义持久消耗）
       // 美食知识（2026-09-09）：原无任何经验来源 → 永久 Lv1（但其等级计入辅助公会入会门槛）。
       // 改为随对决胜利积累（与品鉴力同源，按敌人等级），使其与对决线同步成长。
-      getSkillInstance('gastronomy')?.addCardXp(Math.floor(opponent.level * 6))
+      getSkillInstance('gastronomy')?.addCardXp(Math.floor(opponent.level * 6), 1, opponent.level)
       this.bumpQuest('combatWin', 'any')
       // 对决·战斗：所有敌人单独计次（含普通对手与首领）
       this.bumpStory('battle', 'battle:' + opponent.name)

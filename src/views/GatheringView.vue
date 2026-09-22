@@ -9,6 +9,7 @@ import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { levelEras, eraProgress, currentEraLabel } from '../game/data/levelEras.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -52,8 +53,14 @@ function masteryMult(t) { return masteryXpMultiplier(props.instance.masteryLevel
  *  ⚠️ 2026-09-21 用户实测问「新档采苹果怎么一次 900 经验」——因为卡片原先显示的是作者基数 15，
  *     而经验条进的是 15×60=900（`CARD_XP_SCALE`，让 1~99 级曲线对得上）。显示与结算必须同源，
  *     所以这里直接给生效值；作者基数与全局系数的说明放进 tooltip。 */
-function xpPerAction(t) { return t.xpPerAction * CARD_XP_SCALE }
+function xpPerAction(t) {
+  const base = t.xpPerAction * CARD_XP_SCALE
+  // 低目标经验减半（2026-09-22）：判定问实例、系数读常量（视图不自己写 0.5），显示与结算同源
+  return isLow(t) ? Math.round(base * LOW_TARGET_XP_MULT) : base
+}
 const XP_HINT = `一次动作实际获得的技能经验（已计入全局卡片经验系数 ×${CARD_XP_SCALE}，与经验条同一口径）`
+/** 这个目标是否吃「低目标经验减半」——判定一律走实例的唯一出口（`Skill.isLowTargetLevel`） */
+const isLow = (t) => props.instance.isLowTargetLevel(t.reqLevel)
 // 当前精通档位的保底产量加成（50 级 +1、100 级 +2；0 表示无）
 function masteryBatch(t) { return masteryYieldBonus(props.instance.masteryLevel(t)) }
 // 卡片显示间隔：精通≥5 级用精通后的实际间隔（秒）；否则用基础间隔
@@ -167,6 +174,8 @@ function selectEra(label) {
     <div class="card">
       <h3 class="target-head-row">
         <span>目标列表（按等级分段，点击段标题折叠）</span>
+        <!-- 规则常驻（2026-09-22）：低目标经验减半，玩家必须**事先**看得到，别等发现经验变少 -->
+        <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
         <span class="target-head-extra">
           <!-- 狩猎弹药（2026-09-19 用户要求「移到别处」）：从页顶那张说明卡挪到标题行右侧 -->
           <template v-if="isHunting">
@@ -211,6 +220,8 @@ function selectEra(label) {
               <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
               <div>
                 <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
+                <!-- 低目标减半（2026-09-22）：必须**看得见**，否则就是「静默减半」。文案与判定同源 -->
+                <span v-if="isLow(t)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>

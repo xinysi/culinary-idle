@@ -104,7 +104,7 @@ export class ExplorationSkill extends Skill {
       this.player.addMastery(this.id, target.id, 1)
       // 卡片经验（2026-09-09 修复）：此前误用 addXp，少了 ×60 卡片系数与精通倍率 → 满级时长
       // 比同类采集慢约 12 倍（基准 64 天 vs 5 天）。改用 addCardXp，与采集/制作同口径。
-      this.addCardXp(target.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[target.id] ?? 0)))
+      this.addCardXp(target.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[target.id] ?? 0)), target.reqLevel)
       this.player.onExplorationSuccess()
       // 掉落清单用中文描述的字符串（extraGain）；itemId 仍是目标 id，仅用于计数，不再当物品名拼接日志
       EventBus.emit('skill:action', { skillId: this.id, itemId: target.id, qty: 1, outcome: 'explore', timestamp: Date.now(), extraGain: gained.length ? gained.join('、') : null })

@@ -7,6 +7,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -15,6 +16,9 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const skillClosed = computed(() => !!player.closedIdleTasks?.[props.instance.id])
+
+/** 这个目标是否吃「低目标经验减半」——判定走实例的唯一出口（`Skill.isLowTargetLevel`），视图不自己算 */
+const isLow = (t) => props.instance.isLowTargetLevel(t.reqLevel)
 
 function isUnlocked(id) {
   const t = props.instance.targets.find((x) => x.id === id)
@@ -78,6 +82,8 @@ function scrollToSection(label) {
     <div class="card">
       <h3 class="target-head-row">
         <span>探索目标（按等级分段，点击段标题折叠）</span>
+        <!-- 规则常驻（2026-09-22）：低目标经验减半 -->
+        <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
         <span class="dim target-head-extra">成功率随等级提升，基础成功率见各卡片</span>
       </h3>
 
@@ -104,6 +110,7 @@ function scrollToSection(label) {
             <div class="gather-card-head">
               <div>
                 <strong>{{ t.name }}</strong><span v-if="!isUnlocked(t.id)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
+                <span v-if="isLow(t)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>

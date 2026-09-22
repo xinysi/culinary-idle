@@ -30,3 +30,67 @@ export function dampXpStack(stack) {
   if (!Number.isFinite(p) || p <= 1) return 1
   return 1 + (p - 1) * XP_STACK_DAMPING
 }
+
+// ── 低目标经验衰减（2026-09-22 用户要求）────────────────────────────────────────
+// 「所有技能、副业，如果正在进行的目标等级小于技能等级 5 级及以上，获得的经验减半，
+//   鼓励玩家去挂对应等级段的目标」
+//
+// 为什么需要它：采集/制作的经验**不随目标等级递增**到足以抵消「低阶目标更快」的程度 ——
+// 高级目标只是把间隔略微拉长，于是一直蹲最低阶目标（苹果/小麦）反而是最优解，
+// 玩家没有理由换目标（实测见 `skills/xpBalance.js` 与 `scripts/sim/camp_vs_optimal.mjs`）。
+// 这条规则把「蹲低阶」直接砍掉一半经验，让「挑当前最高档的目标」变成明显更优。
+//
+// 🔴 参照系必须**夹到「该技能最高可用目标等级」**（`lowTargetRefLevel`）：
+//    副业的最高配方只到 Lv91、多数技能到 Lv99~100，而技能上限是 99（转生后 120）——
+//    不夹的话，副业 96 级、以及转生后的 100~120 段会出现「**所有**目标都被判低目标」的退化
+//    （明明已经做到自己能做的最高档，却处处减半）。夹过之后规则的含义才是「挑你这一档最高的目标」。
+//
+// ⚠️ 唯一出口：`Skill.addCardXp(base, mult, targetLevel)` —— 采集/制作/探索/农耕/副业/离线
+//    全部卡片经验都从那里过。**新增给卡片经验的系统必须从那里走**并在 `targetLevel` 位置传入目标等级
+//    （忘了传 ⇒ 不减半 = 静默失效，`template`/`system_test` 的 C54 有「每个调用点都传了等级」的静态断言）。
+// ⚠️ 不作用于：对决类技能（`Combat.js` 的 `addXp`）—— 那里经验**已经是按伤害、按敌人等级**给的
+//    （打低级怪本来就只有零头），再叠一层减半等于罚两次；也对精通次数、精通池、里程碑点数**完全无影响**。
+
+/** 目标等级比技能等级低这么多级（及以上）⇒ 卡片经验按 `LOW_TARGET_XP_MULT` 计 */
+export const LOW_TARGET_GAP = 5
+/** 低目标的经验系数（0.5 = 减半） */
+export const LOW_TARGET_XP_MULT = 0.5
+
+/** 把「可能是空值」的等级读成数字：null / undefined / '' / NaN / ≤0 一律返回 NaN（= 拿不到等级） */
+function toLevel(v) {
+  // 🔴 必须先挡 null/undefined/''：`Number(null) === 0`、`Number('') === 0` —— 直接 Number() 会把
+  //    「没给等级」读成 0 级，于是 `0 <= 参照−5` 恒真 ⇒ **本来该不减半的反而被减半**
+  //    （2026-09-22 探针实测：离线 `currentTarget?.reqLevel ?? null` 在拿不到目标时把经验砍了一半）。
+  if (v === null || v === undefined || v === '') return NaN
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 ? n : NaN
+}
+
+/**
+ * 衰减的参照等级 = `min(技能等级, 该技能最高可用目标等级)`。
+ * `topTargetLevel` 拿不到（无目标表的技能）时退回技能等级本身。
+ */
+export function lowTargetRefLevel(skillLevel, topTargetLevel) {
+  const s = toLevel(skillLevel)
+  if (!Number.isFinite(s)) return NaN
+  const t = toLevel(topTargetLevel)
+  return Number.isFinite(t) ? Math.min(s, t) : s
+}
+
+/** 这个目标/配方是否属于「低目标」（比参照等级低 5 级及以上）。等级拿不到 ⇒ 不算（不误罚） */
+export function isLowTarget(skillLevel, targetLevel, topTargetLevel = null) {
+  const lv = toLevel(targetLevel)
+  if (!Number.isFinite(lv)) return false
+  const ref = lowTargetRefLevel(skillLevel, topTargetLevel)
+  if (!Number.isFinite(ref)) return false
+  return lv <= ref - LOW_TARGET_GAP
+}
+
+/** 低目标衰减系数：`isLowTarget` ? `LOW_TARGET_XP_MULT` : 1 */
+export function targetLevelXpMult(skillLevel, targetLevel, topTargetLevel = null) {
+  return isLowTarget(skillLevel, targetLevel, topTargetLevel) ? LOW_TARGET_XP_MULT : 1
+}
+
+/** 规则说明（**唯一文案出口**：界面与指南都读它，别再手写「低 5 级」「减半」） */
+export const LOW_TARGET_NOTE = `正在做的目标/配方比技能等级低 ${LOW_TARGET_GAP} 级及以上时，卡片经验 ×${LOW_TARGET_XP_MULT}（挑本档最高级的目标才满经验）。参照的是「你这个技能能做到的最高档」，所以顶档目标永远不会被罚。`
+

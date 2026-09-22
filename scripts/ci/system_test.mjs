@@ -38,7 +38,7 @@ import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '..
 import { Combat } from '../../src/game/combat/Combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel, masteryXpMultiplier, masteryXpMultiplierRaw, MASTERY_XP_BONUS_SCALE, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
-import { XP_STACK_DAMPING, dampXpStack } from '../../src/game/core/growthRate.js'
+import { XP_STACK_DAMPING, dampXpStack, LOW_TARGET_GAP, LOW_TARGET_XP_MULT, lowTargetRefLevel, targetLevelXpMult } from '../../src/game/core/growthRate.js'
 import { PRESTIGE_XP_BONUS } from '../../src/game/skills/Skill.js'
 import { MATERIAL_COST_MULT, materialQty, effIngredients, materialTotal } from '../../src/game/data/materialCost.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
@@ -6998,12 +6998,16 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   check('目标效率', '用于测的样本目标存在且已解锁', !!t && t.reqLevel <= 40, t?.itemId)
 
   // ① 公式：经验 × 精通倍率 × CARD_XP_SCALE × 3600 ÷ 实际间隔（独立重算对照）
+  // 低目标经验减半（2026-09-22）：grape reqLevel 30 而技能 40 级 ⇒ 低目标，两侧都要带系数
+  const lowR = inst.isLowTargetLevel(t.reqLevel) ? LOW_TARGET_XP_MULT : 1
   const recompute = () =>
-    (t.xpPerAction * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
+    (t.xpPerAction * lowR * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
   check('目标效率', '效率 == 卡片经验×精通倍率×3600÷实际间隔', Math.abs(inst.xpPerHour(t) - recompute()) < 1e-6,
     `${inst.xpPerHour(t)} vs ${recompute()}`)
   // 与经验条同口径：必须乘 CARD_XP_SCALE，否则页面数字与玩家在经验条上看到的对不上（又是一个「页面骗人」）
-  const withoutScale = (t.xpPerAction * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
+  // 两边都要带低目标系数（grape reqLevel 30 而技能 40 级 ⇒ 低目标），否则比值里混进 0.5（2026-09-22）
+  const lowT = inst.isLowTargetLevel(t.reqLevel) ? LOW_TARGET_XP_MULT : 1
+  const withoutScale = (t.xpPerAction * lowT * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
   check('目标效率', '效率按 CARD_XP_SCALE 与技能经验条同口径',
     Math.abs(inst.xpPerHour(t) / withoutScale - CARD_XP_SCALE) < 1e-6, `倍数 ${inst.xpPerHour(t) / withoutScale}`)
 
@@ -7076,11 +7080,13 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // ① 公式：期望经验 × 学派加成 × CARD_XP_SCALE × 精通倍率 × 3600 ÷ 队列节奏（独立重算）
   const succ = inst.successChance(r)
   const expXp = r.xp * (succ + (1 - succ) * 0.5)
-  const recompute = () => (expXp * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  // 低目标经验减半（2026-09-22）：烤土豆 reqLevel 1 而技能 99 级 ⇒ 是低目标，效率也减半（显示与结算同源）
+  const lowMult = inst.isLowTargetLevel(r.reqLevel) ? LOW_TARGET_XP_MULT : 1
+  const recompute = () => (expXp * lowMult * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   check('配方效率', '效率 == 期望经验×精通倍率×3600÷队列节奏', Math.abs(inst.xpPerHour(r) - recompute()) < 1e-6,
     `${inst.xpPerHour(r)} vs ${recompute()}`)
   // ② 🔴 成功率必须算进去：效率必须**严格小于**「零失败假设」的效率（这是「有没有乘成功率」的判据）
-  const noFail = (r.xp * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  const noFail = (r.xp * lowMult * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   check('配方效率', '效率已折算成功率（失败只得半额经验）——必须严格小于「零失败」的效率',
     succ < 1 && inst.xpPerHour(r) < noFail, `成功率 ${(succ * 100).toFixed(0)}%：显示 ${Math.round(inst.xpPerHour(r))} < 零失败 ${Math.round(noFail)}`)
   check('配方效率', '未解锁（等级不够）时成功率不参与显示成负数', !(inst.xpPerHour(r) < 0))
@@ -7138,7 +7144,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   //      （本守卫第一版就是这么错的）。
   p.setSkillState('cooking', { level: 99, exp: 0 })
   const s2 = inst.successChance(r)
-  const fresh = (r.xp * (s2 + (1 - s2) * 0.5) * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  const fresh = (r.xp * (s2 + (1 - s2) * 0.5) * (inst.isLowTargetLevel(r.reqLevel) ? LOW_TARGET_XP_MULT : 1) * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   check('配方效率', '等级变化后效率跟着变（读的是当前成功率，不是缓存值）；队列节奏走唯一常量',
     Math.abs(inst.xpPerHour(r) - fresh) < 1e-6 && CRAFT_QUEUE_INTERVAL_MS === 3000,
     `实得 ${Math.round(inst.xpPerHour(r))} vs 重算 ${Math.round(fresh)}，常量 ${CRAFT_QUEUE_INTERVAL_MS}ms`)
@@ -7946,6 +7952,160 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       uses.length > 0 && uses.every((u) => u.qty === effIngredients(r0)[mid]), JSON.stringify(uses.map((u) => u.qty)))
     check('材料成本', '炼金刻意未纳入（AlchemyView 不引用材料系数：产物价值由投入价值反推，放大投入会静默重新定价）',
       !c53('views/AlchemyView.vue').includes('materialCost'))
+  }
+}
+
+// ══════════ C54：低目标经验衰减（2026-09-22，用户「鼓励玩家去挂对应等级段的目标」）══════════
+// 机制：目标/配方等级 ≤ 参照等级 − 5 ⇒ 卡片经验 ×0.5。参照等级 = min(技能等级, 该技能最高可用目标等级)。
+// 唯一出口 = `Skill.addCardXp(base, mult, targetLevel)`（采集/制作/探索/农耕/副业/离线全部经此）。
+{
+  const { readdirSync, readFileSync } = await import('node:fs')
+  const c54 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
+
+  // ── A. 常数与纯函数（growthRate.js）──
+  check('低目标衰减', '常数：低 5 级起减半（LOW_TARGET_GAP=5 / LOW_TARGET_XP_MULT=0.5）',
+    LOW_TARGET_GAP === 5 && LOW_TARGET_XP_MULT === 0.5, `${LOW_TARGET_GAP} / ${LOW_TARGET_XP_MULT}`)
+  check('低目标衰减', '边界：低 4 级不减 / 低 5 级减半 / 低 6 级也减半（「5 级及以上」）',
+    targetLevelXpMult(50, 46, 99) === 1 && targetLevelXpMult(50, 45, 99) === 0.5 && targetLevelXpMult(50, 44, 99) === 0.5,
+    `${targetLevelXpMult(50, 46, 99)} / ${targetLevelXpMult(50, 45, 99)} / ${targetLevelXpMult(50, 44, 99)}`)
+  check('低目标衰减', '参照等级 = min(技能等级, 该技能顶档)：技能 120 而顶档 91 ⇒ 参照 91（顶档不被罚）',
+    lowTargetRefLevel(120, 91) === 91 && lowTargetRefLevel(50, 99) === 50 && lowTargetRefLevel(50, null) === 50,
+    `${lowTargetRefLevel(120, 91)} / ${lowTargetRefLevel(50, 99)} / ${lowTargetRefLevel(50, null)}`)
+  check('低目标衰减', '🔴 空值不误罚（**不是**当成 0 级）：null/undefined/空串/NaN/0/负数 ⇒ 系数 1',
+    [null, undefined, '', NaN, 0, -3, 'abc'].every((v) => targetLevelXpMult(50, v, 99) === 1),
+    // 踩过的真缺陷：`Number(null) === 0` ⇒ 0 ≤ 参照−5 恒真 ⇒ 离线拿不到目标时反而把经验砍半
+    JSON.stringify([null, undefined, '', NaN, 0, -3].map((v) => targetLevelXpMult(50, v, 99))))
+  check('低目标衰减', '永不抬高：枚举 1~130 级 × 1~130 级目标，结果只可能是 1 或 0.5',
+    (() => {
+      const bad = []
+      for (let s = 1; s <= 130; s++) for (let t = 1; t <= 130; t++) {
+        for (const top of [null, 85, 99, 120]) {
+          const v = targetLevelXpMult(s, t, top)
+          if (v !== 1 && v !== LOW_TARGET_XP_MULT) bad.push(`${s}/${t}/${top}=${v}`)
+        }
+      }
+      return bad.length === 0
+    })())
+  check('低目标衰减', '等级可能是字符串（数据里 reqLevel 有字符串形态）⇒ 与数字等价',
+    targetLevelXpMult(50, '45', 99) === 0.5 && targetLevelXpMult('50', '46', 99) === 1)
+
+  // ── B. 实例层：参照系是真实顶档，且真实引擎恰好按 0.5 结算 ──
+  {
+    freshPlayer()
+    const rows = []
+    for (const inst of getAllSkillInstances()) {
+      const list = inst.targets ?? inst.recipes ?? inst.crops ?? null
+      if (!Array.isArray(list) || !list.length) continue
+      rows.push({ id: inst.id, top: Math.max(...list.map((x) => x.reqLevel)), got: inst.topTargetLevel })
+    }
+    check('低目标衰减', `每个带目标表的技能都报出真实顶档（≥85 级，共 ${rows.length} 个）`,
+      rows.length >= 30 && rows.every((r) => r.got === r.top && r.top >= 85),
+      JSON.stringify(rows.filter((r) => r.got !== r.top || r.top < 85)))
+
+    // 真实引擎行为（大 base 避开 Math.floor 噪声）：低目标 0.5×、非低目标 1×、拿不到等级 1×
+    const p = freshPlayer()
+    const p0 = freshPlayer({ foraging: 50 })
+    const fo = getSkillInstance('foraging')
+    const gain = (base, lv, inst = fo) => {
+      const before = inst.exp
+      inst.addCardXp(base, 1, lv)
+      return inst.exp - before
+    }
+    const hi = gain(1000, 50) // 参照 = min(50,99) = 50 ⇒ 目标 50 不减半
+    check('低目标衰减', '行为：低目标恰好 0.5×（真实 addCardXp）',
+      gain(1000, 45) === Math.round(hi * 0.5) || Math.abs(gain(1000, 45) / hi - 0.5) < 0.005,
+      `${gain(1000, 45)} vs ${hi}`)
+    check('低目标衰减', '行为：低 4 级仍是 1×（边界没写宽）', gain(1000, 46) === hi, `${gain(1000, 46)} vs ${hi}`)
+    check('低目标衰减', '行为：拿不到等级（null）⇒ 1×（离线缺目标时不会误砍）', gain(1000, null) === hi, `${gain(1000, null)} vs ${hi}`)
+    // 副业的参照系必须夹住：陶艺顶档 91，技能 120 时顶档配方仍满经验
+    const po = getSkillInstance('pottery')
+    p.setSkillState('pottery', { level: 120, exp: totalXpForLevel(120), prestiges: 1 })
+    check('低目标衰减', `行为：副业（顶档 ${po.topTargetLevel}）在技能 120 时顶档配方**不被罚**（参照系夹取生效，否则转生后全域减半）`,
+      gain(1000, po.topTargetLevel, po) === gain(1000, po.topTargetLevel - 4, po) &&
+      po.topTargetLevel > 0 && po.isLowTargetLevel(po.topTargetLevel) === false,
+      `top=${po.topTargetLevel} isLow(top)=${po.isLowTargetLevel(po.topTargetLevel)}`)
+    check('低目标衰减', '行为：同一技能里「低目标不再是经验/秒最优」（规则真的改变了取舍）',
+      (() => {
+        // 只比「经验 ÷ 间隔」的相对关系：低档减半后必须慢于顶档
+        const list = fo.targets.filter((t) => t.reqLevel <= 50)
+        const rate = (t) => (t.xpPerAction * (fo.isLowTargetLevel(t.reqLevel) ? LOW_TARGET_XP_MULT : 1)) / fo.intervalMs(t)
+        const bestLow = Math.max(...list.filter((t) => fo.isLowTargetLevel(t.reqLevel)).map(rate))
+        const bestHi = Math.max(...list.filter((t) => !fo.isLowTargetLevel(t.reqLevel)).map(rate))
+        return bestHi > bestLow
+      })())
+    // 精通次数不受影响（规则只碰经验，不碰精通/池/里程碑）
+    check('低目标衰减', '只减经验、不动精通：`addCardXp` 里不得出现 addMastery（精通次数仍由各动作 +1）',
+      !/addMastery/.test(c54('game/skills/Skill.js')))
+    void p
+    void p0
+  }
+
+  // ── C. 接线（静态，**计数式**：漏一处就是「页面写着满经验、实际减半」）──
+  {
+    const files = []
+    const walk = (dir) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = new URL(`${e.name}${e.isDirectory() ? '/' : ''}`, dir)
+        if (e.isDirectory()) { walk(p); continue }
+        if (/\.(js|vue)$/.test(e.name)) files.push([e.name, p])
+      }
+    }
+    walk(new URL('../../src/', import.meta.url))
+    const calls = []
+    // ⚠️ 参数个数必须**按括号深度**数：第 2 个参数自带括号（`masteryXpMultiplier(this.masteryLevel(t))`），
+    //    用 `/addCardXp\(([^)]*)\)/` 这种正则会停在第一个 `)` ⇒ 3 个参数被数成 2 个（第一版就假 FAIL 了）。
+    for (const [name, p] of files) {
+      const src = stripComments(readFileSync(p, 'utf8'))
+      for (const m of src.matchAll(/addCardXp\(/g)) {
+        if (name === 'Skill.js') continue // 定义处
+        let depth = 1
+        let args = 1
+        for (let i = m.index + m[0].length; i < src.length && depth > 0; i++) {
+          const ch = src[i]
+          if (ch === '(' || ch === '[' || ch === '{') depth++
+          else if (ch === ')' || ch === ']' || ch === '}') depth--
+          else if (ch === ',' && depth === 1) args++
+        }
+        calls.push({ name, args })
+      }
+    }
+    check('低目标衰减', `接线：src 里 ${calls.length} 个 addCardXp 调用点**全部**传了目标等级（第 3 个参数）`,
+      calls.length >= 13 && calls.every((c) => c.args >= 3),
+      JSON.stringify(calls.filter((c) => c.args < 3)))
+    check('低目标衰减', '离线同口径：bootstrap 的离线结算把实例当前目标的等级传进去（否则脱机练级不减半）',
+      /inst\.addCardXp\(r\.exp, r\.xpMult \?\? 1, inst\.currentTarget\?\.reqLevel \?\? null\)/.test(c54('game/bootstrap.js')))
+    check('低目标衰减', '战斗不参与（它已按伤害/敌人等级给）：Combat.js 不得出现 addCardXp',
+      !/addCardXp/.test(c54('game/combat/Combat.js')))
+    // 界面必须看得见（四条列表：采集/制作/探索/农耕），且判定一律走实例出口。
+    // 🔴 **必须连 HTML 注释一起剥掉**：守卫第一版只 `stripComments`（管 JS 的 `//`、`/* */`），
+    //    而 .vue 模板里的 `<!-- … 经验减半 … -->` 不在它的管辖内 ⇒ 删掉徽章后 `/经验减半/` 仍为真
+    //    ⇒ **假绿**（反例验证 ⑦ 抓出来的，与 AGENTS「守卫被注释骗过」同源）。所以这里另剥 HTML 注释，
+    //    并要求**徽章元素本身**在（`badge-warn` + `经验减半` 同一行/同标签）。
+    const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
+    for (const [rel, label] of [['views/GatheringView.vue', '采集'], ['views/ProductionView.vue', '制作'],
+      ['views/ExplorationView.vue', '探索'], ['views/FarmingView.vue', '农耕']]) {
+      const src = stripHtml(c54(rel))
+      const badge = src.match(/<span[^>]*badge-warn[^>]*>([^<]*)<\/span>/g) ?? []
+      check('低目标衰减', `界面：${label}页有「经验减半」徽章且判定走 isLowTargetLevel（不自己算）`,
+        src.includes('isLowTargetLevel') && badge.some((b) => /经验减半/.test(b)),
+        badge.join(' | ') || '找不到 badge-warn 元素')
+    }
+    // 视图不许手写系数（写死的 0.5 会在调系数时静默与结算脱钩）。
+    // 只扫 .vue（技能的 `recipe.xp * 0.5` 是**失败只给半额经验**，另一件事；`FAIL_XP_RATIO` 同理）。
+    const hardcoded = []
+    for (const [name, p] of files) {
+      if (!name.endsWith('.vue')) continue
+      const src = stripComments(readFileSync(p, 'utf8'))
+      if (/xp[^;\n]*\*\s*0\.5\b/i.test(src)) hardcoded.push(name)
+    }
+    check('低目标衰减', '视图不许手写 0.5 当经验系数（一律读 LOW_TARGET_XP_MULT，否则调系数时会静默脱钩）',
+      hardcoded.length === 0, hardcoded.join('、'))
+    check('低目标衰减', '规则写进攻略（玩家能事先看到，不用等经验变少才发现）',
+      /低 5 级|低 \$\{LOW_TARGET_GAP\} 级/.test(c54('game/data/guide.js')) && /经验 ×0\.5|经验减半/.test(c54('game/data/guide.js')))
+    check('低目标衰减', '规则文案只有一个出口（LOW_TARGET_NOTE 在 growthRate.js，页面读它不手抄）',
+      /export const LOW_TARGET_NOTE/.test(c54('game/core/growthRate.js')) &&
+      ['views/GatheringView.vue', 'views/ProductionView.vue', 'views/ExplorationView.vue', 'views/FarmingView.vue']
+        .every((f) => c54(f).includes('LOW_TARGET_NOTE')))
   }
 }
 

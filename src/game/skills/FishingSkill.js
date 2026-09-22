@@ -74,7 +74,7 @@ export class FishingSkill extends GatheringSkill {
       if (Math.random() < this.rareChance) {
         this.player.gainItem(RARE_FISH_ID, 1)
         this.player.addMastery(this.id, target.itemId, 1)
-        const expGained = this.addCardXp(target.xpPerAction * 2, masteryXpMultiplier(this.masteryLevel(target)))
+        const expGained = this.addCardXp(target.xpPerAction * 2, masteryXpMultiplier(this.masteryLevel(target)), target.reqLevel)
         EventBus.emit('skill:action', {
           skillId: this.id,
           itemId: RARE_FISH_ID,
@@ -89,7 +89,7 @@ export class FishingSkill extends GatheringSkill {
       const qty = this.yieldQuantity(doubled ? 2 : 1)
       this.player.gainItem(target.itemId, qty)
       this.player.addMastery(this.id, target.itemId, 1)
-      const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)))
+      const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)), target.reqLevel)
       EventBus.emit('skill:action', {
         skillId: this.id,
         itemId: target.itemId,
@@ -102,7 +102,7 @@ export class FishingSkill extends GatheringSkill {
     } else {
       // 失败：无产出，20% 经验
       this.player.addMastery(this.id, target.itemId, 1)
-      const expGained = this.addCardXp(target.xpPerAction * FAIL_XP_RATIO, masteryXpMultiplier(this.masteryLevel(target)))
+      const expGained = this.addCardXp(target.xpPerAction * FAIL_XP_RATIO, masteryXpMultiplier(this.masteryLevel(target)), target.reqLevel)
       EventBus.emit('skill:action', {
         skillId: this.id,
         itemId: target.itemId,

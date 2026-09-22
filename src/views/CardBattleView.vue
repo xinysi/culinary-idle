@@ -124,9 +124,13 @@ function doCardBattle() {
         <button class="btn btn-sm" title="自动选择战力最高的前 3 张" :disabled="!filteredPool.length" @click="pickBest">✨ 一键最强</button>
       </div>
       <div class="card-grid">
+        <!-- ⚠️ `v-if` 与 `v-for` **不能写在同一个元素上**：Vue 3 里 `v-if` 优先级更高、会在
+             v-for 作用域**之外**求值 ⇒ 这里的 `id` 变成 `_ctx.id`（undefined）、`!id?._pad` 恒为真
+             ⇒ **占位卡被当成真卡渲染**（空白卡 + `cardColor(undefined)`）。正确写法是把 `v-if`
+             放进 `<template v-for>` 里。（2026-09-22 由新加的「模板标识符必须已声明」静态守卫抓出：
+             这类 `_ctx.xxx` 的静默 undefined **不报错、不白屏**，控制台与运行时守卫都看不见。） -->
+        <template v-for="(id, ii) in pagedCards" :key="id?.id ?? 'pad-' + ii">
         <div
-          v-for="(id, ii) in pagedCards"
-          :key="id?.id ?? 'pad-' + ii"
           v-if="!id?._pad"
           class="item-card cb-card"
           :style="{ borderColor: cardColor(id) }"
@@ -142,6 +146,7 @@ function doCardBattle() {
           <div class="dim">{{ CATEGORY_LABEL[getItem(id)?.category] ?? getItem(id)?.category ?? '' }}</div>
           <div class="mono dim">T{{ getItem(id)?.tier }}</div>
         </div>
+        </template>
         <p v-if="!cardPool.length" class="dim" style="grid-column: 1 / -1">还没有收集到料理/装备，去制作或获得吧。</p>
         <p v-else-if="!filteredPool.length" class="dim" style="grid-column: 1 / -1">没有符合搜索/筛选的卡牌。</p>
       </div>

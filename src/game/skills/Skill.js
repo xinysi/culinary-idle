@@ -8,7 +8,7 @@
 
 import { EventBus } from '../core/EventBus.js'
 import { getSkillDef } from '../data/skills.js'
-import { dampXpStack } from '../core/growthRate.js'
+import { dampXpStack, targetLevelXpMult, isLowTarget } from '../core/growthRate.js'
 
 export const MAX_LEVEL = 100
 export const PRESTIGE_MAX_LEVEL = 120
@@ -58,15 +58,46 @@ export class Skill {
 
   /** 加卡片经验：采集/制作/作物等「卡片」给予的经验，统一乘以 CARD_XP_SCALE 后走 addXp；
    *  mult 为卡片精通经验倍数（默认 1），作为 addXp 的独立成长线传入（与设置倍率取较大、不叠加）。
+   *  targetLevel 为该目标/配方的等级（`reqLevel`）——**低目标经验衰减的唯一接线点**（见 growthRate.js）。
    *  ⚠️ 精通池最高里程碑（95%）给该技能 +xpPct% 卡片经验，**必须加在这里**：
    *     在线（`award()` / `craft()`）与离线（`bootstrap.settleOffline` 的 `inst.addCardXp(r.exp, …)`）
    *     都走这一个出口 ⇒ 天然同源，不会出现「离线吃不到池加成」。 */
-  addCardXp(base, mult = 1) {
+  addCardXp(base, mult = 1, targetLevel = null) {
     if (!(base > 0)) return 0
     // 夹 5%：池加成是全技能口径，不能因为新系统把标定过的升级时长整体位移
     const poolXpPct = Math.min(5, this.player.masteryPoolBonus?.(this.id)?.xpPct ?? 0)
     const b = poolXpPct > 0 ? base * (1 + poolXpPct / 100) : base
-    return this.addXp(b * CARD_XP_SCALE, mult > 0 ? mult : 1)
+    // 低目标经验衰减（2026-09-22）：目标比「你能做到的最高档」低 5 级及以上 ⇒ 经验减半。
+    // 乘在这里（而非让各调用点自己乘）⇒ 采集/制作/探索/农耕/副业/离线全部同源，且加成的日志数字
+    // （返回的 expGained）与实际到账一致。规则与常数见 core/growthRate.js。
+    const lowMult = targetLevelXpMult(this.level, targetLevel, this.topTargetLevel)
+    return this.addXp(b * CARD_XP_SCALE * lowMult, mult > 0 ? mult : 1)
+  }
+
+  /** 该技能「最高可用目标/配方等级」——低目标衰减的参照系（`lowTargetRefLevel` 会与技能等级取小）。
+   *  采集类读 `targets`、制作类（含副业）读 `recipes`、农耕读 `crops`；都没有的技能（对决类、食灵）
+   *  退回技能等级。没有它的话，副业 96 级 / 转生后 100+ 会出现「所有目标都被判低目标」的退化。 */
+  get topTargetLevel() {
+    const list = this.targets ?? this.recipes ?? this.crops ?? null
+    if (!Array.isArray(list) || !list.length) return this.level
+    // 缓存：界面每张卡都要问一次（列表最多 365 条），不缓存就成了渲染热点（全表扫 × 卡片数）。
+    // 键用「列表身份 + 条数」—— 只有列表真的换了/长了才重算（扩充模块会往 targets/recipes 追加）。
+    const c = this._topLvCache
+    if (c && c.list === list && c.n === list.length) return c.v
+    let m = 0
+    for (const x of list) {
+      const lv = Number(x?.reqLevel)
+      if (Number.isFinite(lv)) m = Math.max(m, lv)
+    }
+    const v = m > 0 ? m : this.level
+    this._topLvCache = { list, n: list.length, v }
+    return v
+  }
+
+  /** 界面用：这个目标/配方是否吃「低目标经验减半」（视图统一读它，别各自手写 0.5/5 —— 
+   *  否则页面写着「满经验」而实际减半，正是本项目最忌的「显示与结算不一致」）。 */
+  isLowTargetLevel(targetLevel) {
+    return isLowTarget(this.level, targetLevel, this.topTargetLevel)
   }
 
   /** 加经验：应用全部加成后处理升级，写回玩家状态

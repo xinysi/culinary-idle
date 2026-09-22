@@ -747,6 +747,16 @@ h2 {
   color: var(--warn-strong);
 }
 
+/* 「低目标经验减半」的规则提示（2026-09-22）：常驻在目标/配方列表的标题行。
+   下划虚线 + help 光标表示「悬停有说明」（title 是 growthRate.js 的 LOW_TARGET_NOTE 全文）。
+   采集 / 制作 / 探索 三页共用这一个类，别在页面里各写一份。 */
+.low-target-hint {
+  font-size: 12px;
+  border-bottom: 1px dashed var(--border);
+  cursor: help;
+  white-space: nowrap;
+}
+
 /* ── 侧边栏 ─────────────────────────────────────────────── */
 .sidebar {
   display: flex;

@@ -50,6 +50,15 @@ export class FarmingSkill extends Skill {
     super('farming', player)
   }
 
+  /** 作物表（模块级 `CROPS`）。两个消费方读它：
+   *  ① 基类 `topTargetLevel`（低目标经验衰减的参照系 = 最高作物等级 Lv99，见 core/growthRate.js）；
+   *  ② 「效果总览」的 `farmMasteryLink`（农耕精通→采集联动）——它读 `inst.crops` 而**这个字段
+   *     此前从不存在** ⇒ 恒为 `undefined ?? []` = 空数组 ⇒ 那一行永远显示「还没有把任何作物种到
+   *     精通 10 级以上」，哪怕玩家早就种满了（2026-09-22 加这个 getter 时顺带发现）。 */
+  get crops() {
+    return CROPS
+  }
+
   get type() {
     return 'farming'
   }
@@ -269,7 +278,7 @@ export class FarmingSkill extends Skill {
       }
     }
     this.player.addMastery(this.id, crop.itemId, 1)
-    const expGained = this.addCardXp(crop.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)))
+    const expGained = this.addCardXp(crop.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)), crop.reqLevel)
     this.player.clearPlot(i)
     EventBus.emit('skill:action', {
       skillId: this.id,

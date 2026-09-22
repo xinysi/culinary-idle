@@ -9,6 +9,7 @@ import { Skill, CARD_XP_SCALE } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryIntervalFactor, masteryFixedInterval, masteryXpMultiplier, masteryLevelProgress, masteryYieldBonus } from '../core/mastery.js'
 import { applyGatherXp } from './xpBalance.js'
+import { targetLevelXpMult } from '../core/growthRate.js' // 低目标经验减半：显示（效率）与结算同源
 
 export const BASE_DOUBLE_CHANCE = 0.01 // 1%
 const MASTERY_DOUBLE_PER_LEVEL = 0.0005
@@ -195,7 +196,10 @@ export class GatheringSkill extends Skill {
     if (!target) return 0
     const sec = this.intervalMs(target) / 1000
     if (!(sec > 0)) return 0
-    return (target.xpPerAction * CARD_XP_SCALE * masteryXpMultiplier(this.masteryLevel(target))) / sec * 3600
+    // 低目标经验减半（2026-09-22）：效率必须与结算同源 —— 不然卡片写着「880 万/时」而实际只到账 440 万，
+    // 正是本项目最忌的「显示与结算不一致」（`system_test` 的「目标效率」那条就是拿它与真实引擎对账的）。
+    const lowMult = targetLevelXpMult(this.level, target.reqLevel, this.topTargetLevel)
+    return (target.xpPerAction * CARD_XP_SCALE * lowMult * masteryXpMultiplier(this.masteryLevel(target))) / sec * 3600
   }
 
   /** 当前**已解锁**目标里效率最高的那个（未解锁的不参与，避免给玩家「换过去更快」的错误引导） */
@@ -268,7 +272,7 @@ export class GatheringSkill extends Skill {
     // 这里原先还有一句 `bumpStory('gather', target.itemId)` → 键成了 `gather:<物品id>`，
     // 没有任何消费方读得到，只会往存档里灌垃圾键（2026-09-18 删）。
     this.player.addMastery(this.id, target.itemId, 1)
-    const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)))
+    const expGained = this.addCardXp(target.xpPerAction, masteryXpMultiplier(this.masteryLevel(target)), target.reqLevel)
     EventBus.emit('skill:action', { skillId: this.id, itemId: target.itemId, qty, expGained, ...flags, timestamp: Date.now() })
   }
 

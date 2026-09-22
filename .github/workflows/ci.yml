@@ -42,6 +42,10 @@ jobs:
           node scripts/ci/bgm_audit.mjs
           # 生成器漂移审计：在临时目录里复现各生成器输出并与仓库产物比对（只读，不写仓库）
           node scripts/ci/gen_drift_audit.mjs
+          # 模板绑定审计（2026-09-22 立）：问编译器 —— 模板里出现的每个名字（编译成 `_ctx.X`）
+          # 必须真的在 `<script setup>` 里声明。这类缺陷**不报错、不白屏、控制台无警告**，
+          # 既有的 pageerror / console.error 收集与静态正则都抓不到（玩家报「制作无法使用精通池」）。
+          node scripts/ci/template_binding_audit.mjs
 
       - name: Web build
         run: npm run build

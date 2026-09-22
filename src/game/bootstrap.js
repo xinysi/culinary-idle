@@ -52,7 +52,7 @@ export function settleOffline(player, ui, elapsedMs) {
     inst.actionsDone += r.actions
     if (r.consumed) player.spendItems(r.consumed) // 离线消耗弹药等
     player.gainItems(r.items)
-    inst.addCardXp(r.exp, r.xpMult ?? 1) // 卡片精通经验倍数：在线在 award() 里就要带上，离线同样要带（否则脱机练级吃亏）
+    inst.addCardXp(r.exp, r.xpMult ?? 1, inst.currentTarget?.reqLevel ?? null) // 卡片精通经验倍数：在线在 award() 里就要带上，离线同样要带（否则脱机练级吃亏）
     if (r.gold > 0) player.gainGold(r.gold) // 探索等离线金币（§3.4.3）
     reports.push({ inst, r })
   }

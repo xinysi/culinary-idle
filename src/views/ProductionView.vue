@@ -15,6 +15,7 @@ import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
 import { effIngredients } from '../game/data/materialCost.js' // 材料用量唯一出口（与实际扣料同源）
 import { levelEras, eraProgress, eraLabelOf, currentEraLabel } from '../game/data/levelEras.js'
 import RecipeTreeModal from '../components/RecipeTreeModal.vue'
@@ -33,6 +34,10 @@ const ui = useUiStore()
  *  ⚠️ 2026-09-21 用户实测问「新档采苹果怎么一次 900 经验」——卡片原先前显示作者基数（15），
  *     而经验条进的是 15×60=900。显示与结算必须同源，故直接给生效值。 */
 const XP_HINT = `一次动作实际获得的技能经验（已计入全局卡片经验系数 ×${CARD_XP_SCALE}，与经验条同一口径）`
+/** 这个配方是否吃「低目标经验减半」——判定一律走实例的唯一出口（`Skill.isLowTargetLevel`） */
+const isLow = (r) => props.instance.isLowTargetLevel(r.reqLevel)
+/** 卡片上「经验/次」= 生效值（低目标已减半），显示与结算同源 */
+function xpOfRecipe(r) { const base = r.xp * CARD_XP_SCALE; return isLow(r) ? Math.round(base * LOW_TARGET_XP_MULT) : base }
 
 // 用 computed 而非常量：组件在制作类技能间复用时（烹饪→烘焙→锻造）需响应式跟随 props.instance
 const isBaking = computed(() => props.instance.id === 'baking')
@@ -272,6 +277,7 @@ function onHeatResult(type) {
   runCraftBatch(hm.recipe, hm.n, bonus, type)
 }
 function runCraftBatch(r, n, bonus, heatType) {
+  lastRecipeId.value = r.id // 精通池的补给目标 = 你刚刚做的那味（没有队列时的回落）
   let ok = 0
   for (let i = 0; i < n; i++) {
     const res = props.instance.craft(r)
@@ -279,7 +285,7 @@ function runCraftBatch(r, n, bonus, heatType) {
     if (res === 'ok') ok++
   }
   if (bonus > 0 && ok > 0) {
-    props.instance.addCardXp(Math.round(r.xp * bonus * ok), 1)
+    props.instance.addCardXp(Math.round(r.xp * bonus * ok), 1, r.reqLevel)
   }
   if (ok > 0) {
     ui.pushLog(`制作 ${getItem(r.output.itemId)?.name} ×${ok}${heatType === 'perfect' ? '（🔥火候完美 +30% 经验）' : heatType === 'good' ? '（火候良好 +15% 经验）' : ''}`, 'info')
@@ -291,6 +297,8 @@ function useBiscuit() {
 }
 
 // ── 制作队列（2026-09-06）：排队自动连续制作，每 3 秒 1 份 ──
+/** 本次会话最后排过/做过的配方（精通池的补给回落目标，见下方注释） */
+const lastRecipeId = ref(null)
 const queueList = computed(() =>
   (props.instance.craftQueue ?? []).map((e) => ({
     ...e,
@@ -299,9 +307,28 @@ const queueList = computed(() =>
 )
 function queueAdd(r, qty) {
   const res = props.instance.enqueue(r, qty)
-  if (res.ok) ui.pushLog(`「${r.name}」×${qty} 已加入制作队列（每 3 秒自动制作 1 次）`, 'info')
-  else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
+  if (res.ok) {
+    lastRecipeId.value = r.id // 精通池的补给目标跟着「你正在做的这味」走
+    ui.pushLog(`「${r.name}」×${qty} 已加入制作队列（每 3 秒自动制作 1 次）`, 'info')
+  } else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
 }
+
+// ── 精通池的「补给目标」（2026-09-22 用户报「制作的无法使用精通池」）──────────────
+// 🔴 修前：模板里用了 `queueHeadId` / `queueHeadName` / `queueHeadCount` 三个名字，
+//    而 `<script setup>` 里**一个都没定义** ⇒ 模板里的未定义标识符会**静默解析成 undefined**
+//    （不报错、不白屏、控制台也没警告）⇒ `cardKey` 恒为 null ⇒ 制作页的「补给」按钮
+//    **永远显示「先选一个配方」且禁用**。（同类前科：`dropModal` 漏声明、`ui` 漏 import。）
+// 口径：优先**制作队列的队头**（正在做的那味，避免误花），没有队列时回落到**最后排过/做过的配方**。
+// ⚠️ 与 `gainVsHead` 同一纪律：直接读存档字段，不用 `craftQueue` getter（它在队列缺失时会写回状态，
+//    渲染期改状态会触发 Vue 的「渲染中修改状态」告警）。
+const queueHeadId = computed(() => {
+  const q = player.craftQueues?.[props.instance.id]
+  return Array.isArray(q) ? (q[0]?.recipeId ?? null) : null
+})
+const poolCardId = computed(() => queueHeadId.value ?? lastRecipeId.value)
+const poolCard = computed(() => props.instance.recipes.find((r) => r.id === poolCardId.value) ?? null)
+const poolCardName = computed(() => poolCard.value?.name ?? '')
+const poolCardCount = computed(() => (poolCardId.value ? (props.instance.mastery?.[poolCardId.value] ?? 0) : 0))
 
 // ── 配方导航树（2026-09-06）──
 const treeRecipe = ref(null)
@@ -373,6 +400,12 @@ const activeSec = computed(() => sections.value.find((s) => s.label === selected
 function selectEra(label) {
   selectedEra.value = label
 }
+
+// 列表区标题与量词（2026-09-22）：这两个名字模板里一直在用、`<script setup>` 里**从未声明** ⇒
+// 静默变 undefined ⇒ 标题渲染成「（全部平铺）」、段头渲染成「8 个」。
+// 与精通池的 `queueHeadId` 同源缺陷（未定义标识符在模板里不报错），见下方精通池那段的注释。
+const headTitle = '配方列表'
+const recipeNoun = '配方'
 </script>
 
 <template>
@@ -381,12 +414,12 @@ function selectEra(label) {
 
 
 
-    <!-- 精通池（技能级共享）——补给目标 = 制作队列的队头（没有队列就不给补，避免误花） -->
+    <!-- 精通池（技能级共享）——补给目标 = 制作队列队头；没有队列时回落「最后做过的配方」 -->
     <MasteryPoolBar
       :skill-id="instance.id"
-      :card-key="queueHeadId"
-      :card-name="queueHeadName"
-      :card-count="queueHeadCount"
+      :card-key="poolCardId"
+      :card-name="poolCardName"
+      :card-count="poolCardCount"
       mode="craft"
     />
 
@@ -477,6 +510,8 @@ function selectEra(label) {
     <div class="card">
       <h3 class="target-head-row">
         <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点上面的段切换' }}）</span>
+        <!-- 规则常驻（2026-09-22）：低目标经验减半 -->
+        <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
         <span class="target-head-extra">
           <template v-if="isPreservation">
             <button
@@ -557,13 +592,15 @@ function selectEra(label) {
               <ItemImg :item-id="r.output.itemId" />
               <div>
                 <strong>{{ r.name }}</strong>
+                <!-- 低目标减半必须看得见（2026-09-22）：判定走实例唯一出口，文案走常量 -->
+                <span v-if="isLow(r)" class="badge badge-warn" :title="LOW_TARGET_NOTE">⚠ 经验减半</span>
                 <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
                 <div class="dim" style="font-size: 12px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
             </div>
             <div class="gather-card-row">
               <span :title="XP_HINT">经验/次</span>
-              <span class="mono" :title="XP_HINT">{{ r.xp * CARD_XP_SCALE }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
+              <span class="mono" :title="XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span></span>
             </div>
             <div class="gather-card-row">
               <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
