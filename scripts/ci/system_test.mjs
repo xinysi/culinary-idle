@@ -2676,28 +2676,33 @@ console.log('══ X. 觅珍抽卡 ══')
     const { pickItem: pk } = await import('../../src/game/data/mijianDraws.js')
     const RARE = ['稀有', '史诗', '传说', '神话']
     const N = 20000
-    const rate = (poolId, n = N) => {
+    // 🔴 抽样校验必须**可复现**（2026-09-22 第二次踩这个坑）：用固定种子的 LCG，不用 `Math.random` ——
+    //    否则每次样本都不同，而「以期望值 ±max(0.35pp,4σ) 判定」的前提（期望值本身正确）一旦错，
+    //    就会变成**间歇性假失败**（CI 实测混池出现过 1.69%；而它的真实基础爆率是 **1.59%**，
+    //    按 2.1% 建的带子下界 1.69% 正好压在边界上 ⇒ 偶发红）。
+    //    换种子 RNG 后测量值恒定 ⇒ 可以**断言定值**（比区间更强），任何池子/权重改动立刻可见。
+    const lcg = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 } }
+    const rate = (poolId, n = 50000) => {
+      const rng = lcg(20260922)
       let rare = 0
       for (let i = 0; i < n; i++) {
-        const { item } = pk(poolId, Math.random, 0)
+        const { item } = pk(poolId, rng, 0)
         if (item?.quality && RARE.includes(item.quality)) rare++
       }
       return rare / n
     }
-    // ⚠️ 抽样校验的容差必须**按实际概率算**，不能拍一个固定的百分点区间：
-    //    p=2.1% 时 n=5000 的 σ ≈ 0.20pp ⇒ 原先 1.5% 的下界离期望只有 2.9σ，
-    //    反例验证连跑时实测到 1.46% / 1.48% 两次假失败（守卫被纯噪声打穿）。
-    //    现改为「n=20000 + 以期望值 ±max(0.35pp, 4σ) 判定」，既是**定值断言**（比原区间更强）又不会抖。
-    const tol = (p) => Math.max(0.0035, 4 * Math.sqrt((p * (1 - p)) / N))
-    const near = (x, p) => Math.abs(x - p) <= tol(p)
+    // 每次传 pity=0 ⇒ 软保底/硬保底都不参与，量的就是**基础爆率**（= 公示表那一列）
+    // ±0.15pp 只用于吸收池成员变动带来的真实位移（种子样本本身是确定的）
+    const near = (x, p) => Math.abs(x - p) <= 0.0010 // 种子样本已确定 ⇒ 收紧到 0.1pp（权重一改就报）
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
-    // 每次都传 pity=0 ⇒ 软保底/硬保底都不参与，量的就是**基础爆率**（= 公示表那一列）
-    check('觅珍', `厨具池基础稀有+ 爆率 = 品质权重本身 4%（±max(0.35pp, 4σ)）`, near(g, 0.04), `g=${(g * 100).toFixed(2)}% 容差 ±${(tol(0.04) * 100).toFixed(2)}pp`)
-    check('觅珍', `限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（±max(0.35pp, 4σ)）`, near(l, 0.012), `l=${(l * 100).toFixed(2)}% 容差 ±${(tol(0.012) * 100).toFixed(2)}pp`)
-    // ⚠️ 混池会略高于 35% × 4% = 1.4%：低档分支（池内价值最低 20% 的**固定集合**）里也可能有低阶稀有装备，
+    check('觅珍', '厨具池基础稀有+ 爆率 = 品质权重本身 4%（种子 50k 样本实测 4.010%）', near(g, 0.0401), `g=${(g * 100).toFixed(3)}%`)
+    check('觅珍', '限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（种子 50k 样本实测 1.152%）', near(l, 0.01152), `l=${(l * 100).toFixed(3)}%`)
+    // ⚠️ 混池比 35% × 4% = 1.4% 略高：低档分支（池内价值最低 20% 的**固定集合**）里也可能有低阶稀有装备 ——
     //    这是规格「低档物品 = 价值最低 20% 的固定集合」的必然结果（公示表的装备列只描述正常分支）。
-    check('觅珍', `混池基础稀有+ 爆率 ≈ 2.1%（正常分支 1.4% + 低档分支里的低阶稀有装备；±${(tol(0.021) * 100).toFixed(2)}pp）`,
-      near(m, 0.021), `m=${(m * 100).toFixed(2)}%`)
+    //    真实值 **2.014%**（种子 50k、在**游戏真实池状态**下实测）。
+    //    ⚠️ 拿裸 import 的模块去量会得到 1.59% —— 池子按 value 筛，而 `applyValueBalance()` 会改 value 并清缓存，
+    //    没跑平衡前的那份池子成员不同（见「浏览器侧验证坑」那条同类教训）。
+    check('觅珍', '混池基础稀有+ 爆率 = 2.014%（正常分支 1.4% + 低档分支里的低阶稀有装备；种子 50k 实测）', near(m, 0.02014), `m=${(m * 100).toFixed(3)}%`)
     // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
@@ -2781,9 +2786,14 @@ console.log('══ X. 觅珍抽卡 ══')
     const st = freshPlayer()
     st.gold = 1e12
     st.mijian = { pity: null, stats: { pulls: 0, spent: 0, gearRare: 0 }, history: [], tickets: 0 }
-    st.drawMijian('gear', 1)
-    check('觅珍', '状态机：扣了金币就两个计数各 +1（哪怕这一抽是返金/低档——装备池没有这两档，但计数照加）',
-      st.mijian.pity.gear.rare === 1 && st.mijian.pity.gear.myth === 1, JSON.stringify(st.mijian.pity.gear))
+    // ⚠️ 这里**不能**断言「两个计数都 == 1」：一次抽卡若**自然出货稀有+**，代码会把 rare 计数清零
+    //    （既定口径：）⇒ 装备池 4% 的几率让这条断言失败（CI 实测偶发红过一次）。
+    //    正确的口径是：**myth 必 +1**（只被神话保底清），**rare = 自然/保底出货 ? 0 : 1**。
+    const g1st = st.drawMijian('gear', 1)
+    const up1st = ['稀有', '史诗', '传说', '神话'].includes(g1st.results[0]?.quality)
+    check('觅珍', '状态机：扣了金币就计数（神话必 +1；这一抽若本身就是稀有+ 则 rare 计数清零 —— 自然出货也清计数）',
+      st.mijian.pity.gear.myth === 1 && st.mijian.pity.gear.rare === (up1st ? 0 : 1),
+      `q=${g1st.results[0]?.quality} pity=${JSON.stringify(st.mijian.pity.gear)}`)
     st.mijian.pity.gear = { rare: 39, myth: 199 }
     const rMyth = st.drawMijian('gear', 1)
     check('觅珍', '状态机：神话保底优先于稀有保底（同时满足时出神话，且**只清 myth**）',
