@@ -38,6 +38,7 @@ export const useUiStore = defineStore('ui', {
     showMobileSkills: false, // 移动端技能抽屉
     skillGuide: null, // 技能页「指南」弹窗：null = 关闭，否则为技能 id（2026-09-19）
     featureGuide: false, // 功能页「指南」弹窗（2026-09-21）：说明取自攻略总览里对应该页的条目
+    mijianOdds: false, // 觅珍「概率说明」弹窗（2026-09-22）：放 store 是为了让深色体检（e2e-dark）能打开它逐皮肤扫
     showSignIn: false, // 每日签到弹窗
     showSearch: false, // 全局搜索弹窗
     showShareCard: false, // 战报分享卡弹窗（2026-09-06）
@@ -121,6 +122,10 @@ export const useUiStore = defineStore('ui', {
     /** 功能页指南弹窗（2026-09-21）：只对「攻略总览里有条目」的页显示按钮 */
     toggleFeatureGuide(open) {
       this.featureGuide = open ?? !this.featureGuide
+    },
+    /** 觅珍概率说明弹窗（2026-09-22） */
+    toggleMijianOdds(open) {
+      this.mijianOdds = open ?? !this.mijianOdds
     },
 
     openEncounter(encounter) {

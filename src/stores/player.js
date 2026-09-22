@@ -5180,12 +5180,34 @@ export const usePlayerStore = defineStore('player', {
 
     /** 该物品若能整批放入背包则 true（严格：新种类要有空格、已有种类要够堆叠余量） */
     canGainItem(itemId, qty = 1) {
-      if (!(qty > 0)) return true
+      return this.gainBlockReason(itemId, qty) === null
+    },
+
+    /**
+     * 放不下的**原因**（2026-09-22 加）：`null` = 放得下，否则两类之一。
+     *
+     * 为什么要把原因分出来：玩家报「在商店买满了厨藏容量，去邮箱领还是说满了」——
+     * 引擎的两道闸门是**独立**的：① 厨藏格数（新物品种类要有空格，买容量能救）；
+     * ② 该物品自身的**堆叠/持有上限**（不可堆叠的装备上限 1、材料到 maxStack，**买容量救不了**）。
+     * 原先两者共用一句「背包空间不足，请先清理后再领取」，于是玩家照着去买容量、回来还是被拒，
+     * 只会以为出 bug。分开报并给出**能解决问题的动作**，才算「显示与原因同源」。
+     * @returns {'slots'|'stack'|null}
+     */
+    gainBlockReason(itemId, qty = 1) {
+      if (!(qty > 0)) return null
       const item = getItem(itemId)
-      const cap = item?.stackable === false ? 1 : item?.maxStack ?? 9999
+      if (!item) return 'stack' // 不存在的物品：别让「没空格」这种说法误导
       const have = this.inventory?.[itemId] ?? 0
-      if (!(itemId in (this.inventory ?? {})) && this.inventorySlotsUsed >= this.inventoryCap) return false
-      return cap - have >= qty
+      if (!(itemId in (this.inventory ?? {})) && this.inventorySlotsUsed >= this.inventoryCap) return 'slots'
+      const cap = item.stackable === false ? 1 : item.maxStack ?? 9999
+      return cap - have >= qty ? null : 'stack'
+    },
+
+    /** 该物品的持有上限（用于文案：不可堆叠装备 = 1，材料 = maxStack） */
+    stackCapOf(itemId) {
+      const item = getItem(itemId)
+      if (!item) return 1
+      return item.stackable === false ? 1 : item.maxStack ?? 9999
     },
 
     /**
@@ -5244,7 +5266,22 @@ export const usePlayerStore = defineStore('player', {
       const gold = m.reward.gold ?? 0
       const items = m.reward.items ?? {}
       for (const [itemId, qty] of Object.entries(items)) {
-        if (!this.canGainItem(itemId, qty)) return { ok: false, msg: '背包空间不足，请先清理后再领取' }
+        // 两类拒绝分开说（见 gainBlockReason）：只有「格数不够」才是买容量能解决的
+        const why = this.gainBlockReason(itemId, qty)
+        if (why === 'slots') {
+          return { ok: false, reason: 'slots', msg: `厨藏已满（${this.inventorySlotsUsed}/${this.inventoryCap} 格）：新物品种类要先腾出一格（或去商店买「厨藏扩容」）` }
+        }
+        if (why === 'stack') {
+          const name = getItem(itemId)?.name ?? itemId
+          const cap = this.stackCapOf(itemId)
+          const have = this.inventory?.[itemId] ?? 0
+          return {
+            ok: false, reason: 'stack', itemId,
+            msg: cap === 1
+              ? `「${name}」不可堆叠（每人只能持有 1 件，当前已有）：先把它装备上或卖掉，再来领这封附件`
+              : `「${name}」已达持有上限 ${have}/${cap}：把手上这批用掉/卖掉一些，再来领（买容量没用，这是该物品自己的上限）`,
+          }
+        }
       }
       if (gold > 0) this.gainGold(gold)
       const got = []
@@ -5261,17 +5298,26 @@ export const usePlayerStore = defineStore('player', {
       return { ok: true, gold, items: got }
     },
 
-    /** 一键领取全部可领附件 */
+    /** 一键领取全部可领附件（被拒的按原因分类汇总，文案与单封领取同源） */
     claimAllMail() {
       let gold = 0
       let count = 0
       let blocked = 0
+      const reasons = { slots: 0, stack: 0 }
+      let firstMsg = ''
       for (const m of [...(this.mail?.list ?? [])]) {
         if (!m.reward || m.claimed) continue
         const r = this.claimMail(m.id)
-        if (r.ok) { gold += r.gold ?? 0; count++ } else blocked++
+        if (r.ok) { gold += r.gold ?? 0; count++ } else {
+          blocked++
+          if (r.reason) reasons[r.reason] = (reasons[r.reason] ?? 0) + 1
+          if (!firstMsg && r.msg) firstMsg = r.msg
+        }
       }
-      return { ok: count > 0, gold, count, blocked }
+      const parts = []
+      if (reasons.slots) parts.push(`${reasons.slots} 封因厨藏格数不足`)
+      if (reasons.stack) parts.push(`${reasons.stack} 封因物品已达持有上限`)
+      return { ok: count > 0, gold, count, blocked, reasons, msg: firstMsg, reasonText: parts.join('、') }
     },
 
     /** 删除邮件（有未领附件的不能删，防误删） */

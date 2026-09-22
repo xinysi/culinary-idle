@@ -2617,11 +2617,11 @@ console.log('══ X. 觅珍抽卡 ══')
   // 垫底档会返还金币（材料/食物池）⇒ 扣费口径 = 花费 − 返还
   const refund1 = (r1.gold ?? 0) + (r2.gold ?? 0)
   check('觅珍', '金币扣费（材料60*3+食物110+厨具500=790，扣掉垫底档返还）', p.gold === 100000 - 790 + refund1, `gold=${p.gold} refund=${refund1}`)
-  // 保底计数：连续抽 10 次厨具必出现稀有及以上（前置计数模拟）
-  p.mijian.pity = 9
+  // 保底计数：连续未出稀有+ → 到保底抽数必出（2026-09-22 起两池都是 50 抽）
+  p.mijian.pity = 49
   const r4 = p.drawMijian('gear', 1)
   const boosted = r4.boosted && ['稀有', '史诗', '传说', '神话'].includes(r4.results[0]?.quality)
-  check('觅珍', '保底第 10 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
+  check('觅珍', '保底第 50 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
   check('觅珍', '保底后计数清零（gear）', p.mijian.pity.gear === 0 || p.mijian.pity === 0)
   // 混池 / 限时池 / 百连
   const r5 = p.drawMijian('mix', 5)
@@ -2634,11 +2634,11 @@ console.log('══ X. 觅珍抽卡 ══')
   const afterSpent = p.gold
   const refundAll = (r1.gold ?? 0) + (r2.gold ?? 0) + (r5.gold ?? 0) + (r100.gold ?? 0)
   check('觅珍', '金币扣费与累计花费一致（stats.spent = 花费 − 返还 − 剩余）', p.mijian.stats.spent === 100000 + refundAll - afterSpent, `spent=${p.mijian.stats.spent} gold=${afterSpent} refund=${refundAll}`)
-  // 限时池保底：5 抽短保底（pity.limited = 4 → 下一抽必稀有+）
+  // 限时池保底：50 抽（pity.limited = 49 → 下一抽必稀有+）
   p.mijian.pity = p.mijian.pity ?? { gear: 0, limited: 0 }
-  p.mijian.pity.limited = 4
+  p.mijian.pity.limited = 49
   const r7 = p.drawMijian('limited', 1)
-  check('觅珍', '限时池保底第 5 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
+  check('觅珍', '限时池保底第 50 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
   // 爆率口径（2026-09-06 全面下调后；5000 次抽样区间校验）
   {
     const { pickItem: pk } = await import('../../src/game/data/mijianDraws.js')
@@ -2652,9 +2652,10 @@ console.log('══ X. 觅珍抽卡 ══')
       return rare / n
     }
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
-    check('觅珍', '厨具池稀有+ 爆率 8-14%（当前 10-11% 档）', g >= 0.08 && g <= 0.14, `g=${(g * 100).toFixed(2)}%`)
-    check('觅珍', '混池稀有+ 爆率 ≤2%（0.2% 档：垫底档上线后装备被压到 23%×8%）', m >= 0.0005 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
-    check('觅珍', '限时池稀有+ 爆率 ≤4%（5 抽保底兜底）', l >= 0.005 && l <= 0.04, `l=${(l * 100).toFixed(2)}%`)
+    // 2026-09-22 用户：「稀有以上的物品概率还是太高了」→ 厨具 12% → 4%、限时 3% → 1.5%
+    check('觅珍', '厨具池稀有+ 爆率 3-5%（2026-09-22 由 12% 下调到 4%）', g >= 0.03 && g <= 0.05, `g=${(g * 100).toFixed(2)}%`)
+    check('觅珍', '混池稀有+ 爆率 ≤2%（垫底档上线后装备被压到 23%×8%）', m >= 0.0005 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
+    check('觅珍', '限时池稀有+ 爆率 1-2%（2026-09-22 由 3% 再下调，配 50 抽保底兜底）', l >= 0.01 && l <= 0.02, `l=${(l * 100).toFixed(2)}%`)
     // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
@@ -2706,6 +2707,75 @@ console.log('══ X. 觅珍抽卡 ══')
     const refunded = rd.gold ?? 0
     check('觅珍', '行为：金币档直接返还金币、不占背包（200 抽：金币净变化 == 返还 − 花费）',
       p2.gold === before + refunded - 200 * 60 && refunded > 0, `refund=${refunded} gold=${p2.gold - before}`)
+  }
+  // ── 保底 50 + 概率说明面板（2026-09-22 用户：「稀有以上概率还是太高」「厨具池和限时池应该 50 抽保底」
+  //    「尤其是觅珍得详细讲一下各池子概率」）──
+  {
+    const MJ = await import('../../src/game/data/mijianDraws.js')
+    const RARE = ['稀有', '史诗', '传说', '神话']
+    check('觅珍', '两池保底都是 50 抽（GEAR_PITY == LIMITED_PITY == 50）',
+      MJ.GEAR_PITY === 50 && MJ.LIMITED_PITY === 50, `${MJ.GEAR_PITY}/${MJ.LIMITED_PITY}`)
+    // 保底命中时的品质**以稀有为主**（旧版是史诗 51%+传说 34%+神话 15%，等于每 10 抽白送史诗+）
+    const pw = MJ.PITY_QUALITY_WEIGHT
+    check('觅珍', '保底命中的品质以「稀有」为主（稀有占比 ≥60%，且神话 ≤5%）',
+      pw.稀有 / Object.values(pw).reduce((a, b) => a + b, 0) >= 0.6 && pw.神话 <= 5, JSON.stringify(pw))
+    check('觅珍', '稀有+ 百分比是**算出来的**（与权重表同源，不是手写常数）',
+      MJ.GEAR_RARE_PCT === MJ.rareUpPct(MJ.QUALITY_WEIGHT) && MJ.LIMITED_RARE_PCT === MJ.rareUpPct(MJ.LIMITED_QUALITY_WEIGHT),
+      `${MJ.GEAR_RARE_PCT}/${MJ.LIMITED_RARE_PCT}`)
+    check('觅珍', '两张品质权重表的「稀有+」合计都在 5% 以下（2026-09-22 下调目标）',
+      MJ.GEAR_RARE_PCT < 5 && MJ.LIMITED_RARE_PCT < 5, `${MJ.GEAR_RARE_PCT}% / ${MJ.LIMITED_RARE_PCT}%`)
+    // poolOdds()：概率说明面板的**唯一数据源**——面板渲染它就够了，页面上不许再手写概率
+    const odds = MJ.allPoolOdds()
+    check('觅珍', `概率说明：五个池都有明细（${odds.length} 池）`, odds.length === MJ.MIJIAN_POOLS.length && odds.every((o) => o.members > 0), odds.map((o) => `${o.name}:${o.members}`).join(' '))
+    check('觅珍', '概率说明：垫底档三档加起来 == 100%（金币+一档+抽物品）',
+      odds.filter((o) => o.filler).every((o) => Math.abs(o.filler.goldPct + o.filler.cheapPct + o.filler.drawPct - 100) < 0.01),
+      odds.filter((o) => o.filler).map((o) => `${o.name}:${o.filler.goldPct}+${o.filler.cheapPct}+${o.filler.drawPct}`).join(' '))
+    check('觅珍', '概率说明：分支占比（装备/美食、装备/素材）加起来 == 100%',
+      odds.filter((o) => o.extra.length === 2).every((o) => Math.abs(o.extra[0].pct + o.extra[1].pct - 100) < 0.01),
+      odds.filter((o) => o.extra.length === 2).map((o) => `${o.name}:${o.extra.map((e) => e.pct).join('+')}`).join(' '))
+    check('觅珍', '概率说明：带品质表的池，其 rarePct 与表一致；带保底的池，need == 该池保底常量',
+      odds.every((o) => (o.quality ? o.rarePct === MJ.rareUpPct(o.quality) : o.rarePct === null)) &&
+      odds.find((o) => o.id === 'gear').pity.need === MJ.GEAR_PITY &&
+      odds.find((o) => o.id === 'limited').pity.need === MJ.LIMITED_PITY)
+    // 页面不许另写一份概率数字：MijianView 只能从 poolOdds 取
+    const mv = fs.readFileSync(new URL('../../src/views/MijianView.vue', import.meta.url), 'utf8')
+    check('觅珍', '概率说明面板接的是数据源（MijianView 用 allPoolOdds()，且没有手写「保底 10/5 抽」这类旧文案）',
+      /allPoolOdds\(\)/.test(mv) && !/保底 10 抽|保底 5 抽|每 10 抽保底|5 抽保底稀有/.test(mv))
+  }
+
+  // ── 信箱：两类「放不下」要分开报（2026-09-22 用户：「在商店买满了厨藏容量，去邮箱领还是说满了」）──
+  {
+    const pm = freshPlayer()
+    // ① 厨藏格数不足：塞满新种类 → 拒绝理由必须说「格数」
+    const ids = Object.keys(ITEMS)
+    for (const id of ids) {
+      if (pm.inventorySlotsUsed >= pm.inventoryCap) break
+      pm.inventory[id] = 1
+    }
+    const newId = ids.find((id) => !(id in pm.inventory))
+    const mailA = pm.sendMail({ kind: 'system', subject: '格数不足用例', body: 'x', reward: { items: { [newId]: 1 } } })
+    const ra = pm.claimMail(mailA)
+    check('邮箱', '厨藏没格时：拒绝原因标为 slots，且文案提到「格」与扩容',
+      ra.ok === false && ra.reason === 'slots' && /格/.test(ra.msg) && /扩容/.test(ra.msg), JSON.stringify(ra))
+    // ② 堆叠/持有上限：不可堆叠装备已有一件 → 拒绝理由必须说「该物品的上限」，并点明买容量没用
+    const eqId = Object.values(ITEMS).find((it) => it.type === 'equipment' && it.stackable === false)?.id
+    pm.inventory[eqId] = 1
+    const mailB = pm.sendMail({ kind: 'system', subject: '堆叠上限用例', body: 'x', reward: { items: { [eqId]: 1 } } })
+    const rb = pm.claimMail(mailB)
+    check('邮箱', '物品达持有上限时：拒绝原因标为 stack，文案点明「买容量没用」并给出可行动作',
+      rb.ok === false && rb.reason === 'stack' && /不可堆叠|持有上限/.test(rb.msg) && /装备上|卖掉|用掉/.test(rb.msg), JSON.stringify(rb))
+    check('邮箱', 'canGainItem 与 gainBlockReason 同源（前者就是后者 == null）',
+      pm.canGainItem(eqId, 1) === (pm.gainBlockReason(eqId, 1) === null))
+    check('邮箱', 'stackCapOf：不可堆叠装备 = 1，可堆叠材料 = maxStack',
+      pm.stackCapOf(eqId) === 1 && pm.stackCapOf(newId) === (ITEMS[newId].maxStack ?? 9999))
+    // ③ 一键领取也要按原因分类汇总
+    pm.inventory = {}
+    const mailC = pm.sendMail({ kind: 'system', subject: '汇总用例', body: 'x', reward: { items: { [eqId]: 1 } } })
+    pm.inventory[eqId] = 1
+    const rc = pm.claimAllMail()
+    check('邮箱', '一键领取：按原因分类汇总（reasonText 里能看出是哪种放不下）',
+      rc.blocked >= 1 && rc.reasons.stack >= 1 && /堆叠|持有上限|格数/.test(rc.reasonText ?? ''), JSON.stringify(rc))
+    void mailC
   }
   // 图鉴三查：抽卡来源
   const { itemSources: src } = await import('../../src/game/data/itemSources.js')

@@ -80,10 +80,17 @@ function claim(m) {
 function claimAll() {
   const r = player.claimAllMail()
   if (!r.ok) {
-    ui.pushLog(r.blocked ? '背包空间不足，请先清理后再领取' : '没有待领的附件', 'warn')
+    // 被拒原因分开说（2026-09-22）：只有「格数不足」才是买容量能解决的；堆叠/持有上限买容量没用，
+    // 原先一律说「背包空间不足」，玩家照着去买容量、回来还是被拒，只会以为出 bug。
+    ui.pushLog(
+      r.blocked
+        ? `背包放不下：${r.reasonText || '空间不足'}。${r.msg}`
+        : '没有待领的附件',
+      'warn',
+    )
     return
   }
-  ui.pushLog(`📬 一键领取 ${r.count} 封${r.gold ? `，共 ${r.gold.toLocaleString()} 金币` : ''}${r.blocked ? `（${r.blocked} 封因背包不足未领）` : ''}`, 'gain')
+  ui.pushLog(`📬 一键领取 ${r.count} 封${r.gold ? `，共 ${r.gold.toLocaleString()} 金币` : ''}${r.blocked ? `（${r.blocked} 封未领：${r.reasonText}）` : ''}`, 'gain')
 }
 function del(m) {
   if (!player.deleteMail(m.id)) { ui.pushLog('有未领附件的邮件不能删除', 'warn'); return }
@@ -185,6 +192,7 @@ function clearSettled() {
       <ul class="mv-rules">
         <li><b>背包满不再丢东西</b>：新物品种类放不下、或已有物品到了堆叠上限时，没发出去的部分会自动转存到「溢出转存」邮件里，腾出空间后领取即可（不会过期）。</li>
         <li><b>领取需要空间</b>：背包装不下时领取会被拒绝（邮件保持未领），避免「领出来又立刻转存成一封新邮件」的循环。</li>
+        <li><b>放不下有两种，原因不一样</b>：① <b>厨藏格数不足</b>（新物品种类没空格）→ 腾一格、或去商店买「厨藏扩容」；② <b>该物品自己的持有上限</b>（不可堆叠的装备每人 1 件、可堆叠材料到堆叠上限）→ <b>买容量没用</b>，得先装备/使用/出售手上的那件。领取失败时提示会直接写明是哪种。</li>
         <li><b>信箱很宽松（软上限 {{ MAIL_CAP }} 封）</b>：达到软上限只淘汰最旧的「已领或无附件」邮件；<b>即使全是未领附件也照收</b>（硬上限 {{ MAIL_HARD_CAP }} 封才止收）。同一物品的溢出会<b>合并成一封</b>，所以封数≈有溢出的物品种类数，正常玩用不到上限。</li>
         <li><b>信箱里的东西不能用</b>：它只是「暂时取不走」的缓冲，不是额外仓库——想真正用上还是得清理/扩容背包。</li>
         <li><b>离线回执只是明细</b>：产出在离线结算时就已直接发放，邮件里不会再发一次。</li>

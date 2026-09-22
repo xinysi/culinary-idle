@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, poolPreview, limitedRemainingMs, pickItem } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, GEAR_RARE_PCT, LIMITED_RARE_PCT, allPoolOdds, poolPreview, limitedRemainingMs, pickItem } from '../game/data/mijianDraws.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -24,6 +24,13 @@ const bgItems = computed(() => {
 // 抽卡结果（翻牌揭示序列）：{ id, rare, revealed }
 const results = ref({ list: [], sim: false })
 const drawing = ref(false)
+// 各池概率明细：**数字全部由数据模块算出**（别在这手抄，改权重时说明会变成谎话）；
+// 弹窗开关放 ui store（2026-09-22）——这样深色体检 e2e-dark 能像其它弹窗一样打开它逐皮肤扫。
+const showOdds = computed({
+  get: () => ui.mijianOdds,
+  set: (v) => ui.toggleMijianOdds(v),
+})
+const odds = computed(() => allPoolOdds())
 const hasResults = computed(() => results.value.list.length > 0)
 const allRevealed = computed(() => results.value.list.length > 0 && results.value.list.every((r) => r.revealed))
 
@@ -124,7 +131,11 @@ function typeLabel(id) {
     <header class="skill-head">
       <div>
         <h2>🎴 觅珍</h2>
-        <p class="dim">三种卡池 · 金币抽取 · 价值加权随机；厨具池每 10 抽保底稀有及以上</p>
+        <p class="dim">
+          五种卡池 · 金币抽取 · 价值加权随机；厨具池稀有+ ≈ {{ GEAR_RARE_PCT }}% / 限时池 ≈ {{ LIMITED_RARE_PCT }}%，
+          两池都是 <b>{{ GEAR_PITY }} 抽保底</b>稀有及以上
+          <button class="btn btn-sm odds-btn" title="每个池子能抽到什么、各自概率多少" @click="showOdds = true">📊 概率说明</button>
+        </p>
       </div>
       <div class="skill-head-right">
         <div class="season-pts-card">
@@ -248,7 +259,54 @@ function typeLabel(id) {
           class="ing"
           :class="h === 'rare' ? 'gacha-hist-rare' : ''"
         >{{ h === 'rare' ? '⭐ 稀有+' : '⚪' }}</span>
-        <span class="dim" style="margin-left: 8px; font-size: 12px">⭐=稀有及以上（厨具池保底计数参考）</span>
+        <span class="dim" style="margin-left: 8px; font-size: 12px">⭐=稀有及以上（保底计数参考）</span>
+      </div>
+    </div>
+
+    <!-- 概率说明（2026-09-22 用户：「尤其是觅珍得详细讲一下各池子概率」）
+         数字全部来自 `mijianDraws.js` 的 poolOdds()，改权重这里自动跟着变。 -->
+    <div v-if="showOdds" class="modal-backdrop" @click.self="showOdds = false">
+      <div class="modal odds-modal">
+        <header class="modal-head">
+          <h3>📊 觅珍 · 各池概率说明</h3>
+          <button class="btn btn-sm" @click="showOdds = false">✕</button>
+        </header>
+        <div class="odds-body">
+          <p class="dim odds-intro">
+            抽卡只花金币，产出不进任何「固定数据」；每次抽取先按池子的规则决定落在哪一档，再在该档里均匀/加权取一件。
+            <b>保底</b>只在「连续未出稀有及以上」时生效，出一次就清零。
+          </p>
+          <section v-for="o in odds" :key="o.id" class="odds-pool" :class="`pool-${o.id}`">
+            <h4>{{ o.icon }} {{ o.name }} <span class="dim">{{ o.price }} 金/抽 · 池内 {{ o.members }} 件</span></h4>
+            <!-- 垫底档：金币 / 一档 / 抽物品 -->
+            <ul v-if="o.filler" class="odds-list">
+              <li><b>{{ o.filler.goldPct }}%</b> 直接返还金币（池价的 {{ o.filler.refundLo }}%~{{ o.filler.refundHi }}%，不进背包）</li>
+              <li><b>{{ o.filler.cheapPct }}%</b> 一档物品（池内价值最低的 20%，共 {{ o.filler.cheapCount }} 件）</li>
+              <li><b>{{ o.filler.drawPct }}%</b> 正常抽取（价值加权）</li>
+            </ul>
+            <ul v-else class="odds-list">
+              <li><b>{{ o.extra[0]?.pct }}%</b> {{ o.extra[0]?.label }}<template v-if="o.extra[1]"> · <b>{{ o.extra[1].pct }}%</b> {{ o.extra[1].label }}</template></li>
+            </ul>
+            <!-- 品质权重表（装备类池） -->
+            <template v-if="o.quality">
+              <div class="odds-sub">装备稀有度权重<span v-if="o.rarePct != null">（稀有及以上合计 <b>{{ o.rarePct }}%</b>）</span></div>
+              <div class="odds-bars">
+                <span v-for="(w, q) in o.quality" :key="q" class="odds-bar" :class="`q-${q}`">
+                  <em>{{ q }}</em><b>{{ w }}</b>
+                </span>
+              </div>
+            </template>
+            <!-- 保底 -->
+            <div v-if="o.pity" class="odds-pity">
+              ⭐ <b>{{ o.pity.need }} 抽保底</b>：连续 {{ o.pity.need }} 抽没出稀有及以上时，这一抽必出；命中时的稀有度分布为
+              <span v-for="(w, q) in o.pity.table" :key="q" class="odds-pity-q">{{ q }} {{ w }}<template v-if="w !== 1">%</template></span>
+            </div>
+          </section>
+          <p class="dim odds-foot">
+            金币返还档<b>不进背包</b>（直接加金币）；抽到的物品若背包放不下会转成「信箱」溢出邮件，不会丢。
+            保底进度按池分别累计，换池不重置。
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -698,5 +756,38 @@ function typeLabel(id) {
   .gacha-btn::before, .gacha-btn::after,
   .gacha-sim .sim-btn::before, .gacha-sim .sim-btn::after { animation: none; }
 }
+
+/* ── 概率说明弹窗（2026-09-22）── */
+.odds-btn { margin-left: 8px; font-size: 11px; padding: 1px 8px; vertical-align: middle; }
+.odds-modal { width: min(700px, 94vw); }
+.odds-body { max-height: min(64vh, 620px); overflow-y: auto; padding: 2px 2px 0; }
+.odds-intro { margin: 0 0 10px; font-size: 12px; line-height: 1.65; }
+.odds-pool {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--panel-soft-rgb), 0.6);
+  border: 1px solid rgba(var(--tint-rgb), 0.22);
+}
+.odds-pool h4 { margin: 0 0 6px; font-size: 13px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.odds-pool h4 .dim { font-size: 11px; font-weight: 400; }
+.odds-list { margin: 0 0 6px; padding-left: 18px; font-size: 12px; line-height: 1.7; }
+.odds-sub { font-size: 12px; margin: 4px 0 4px; }
+.odds-bars { display: flex; flex-wrap: wrap; gap: 6px; }
+.odds-bar {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 8px; border-radius: 999px; font-size: 11px;
+  background: rgba(var(--tint-rgb), 0.12);
+}
+.odds-bar em { font-style: normal; }
+.odds-bar { display: inline-flex; align-items: center; gap: 4px; }
+.odds-bar b { font-family: var(--mono, monospace); }
+/* 稀有/史诗用稀有度 token，传说/神话用琥珀（都是不随皮肤的语义色） */
+.odds-bar.q-稀有 { background: rgba(var(--rarity-rare-rgb), 0.2); }
+.odds-bar.q-史诗 { background: rgba(var(--rarity-epic-rgb), 0.22); }
+.odds-bar.q-传说, .odds-bar.q-神话 { background: rgba(var(--amber-rgb), 0.26); }
+.odds-pity { margin-top: 7px; font-size: 12px; line-height: 1.7; }
+.odds-pity-q { display: inline-block; margin-left: 6px; font-size: 11px; opacity: 0.85; }
+.odds-foot { margin: 4px 0 8px; font-size: 11px; line-height: 1.65; }
 
 </style>

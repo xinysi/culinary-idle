@@ -70,7 +70,7 @@ const VIEWS = [
   'caravan', 'mycoField', 'greenhouse',
 ]
 // 2026-09-19：厨藏/装备由弹窗升级为独立页面 ⇒ 移出弹窗清单（改由逐页扫描覆盖）
-const MODALS = ['settings', 'save', 'signin', 'guide', 'featureGuide'] // guide=技能页指南弹窗（2026-09-19）；featureGuide=功能页指南弹窗（2026-09-21）
+const MODALS = ['settings', 'save', 'signin', 'guide', 'featureGuide', 'mijianOdds'] // guide=技能页指南；featureGuide=功能页指南（2026-09-21）；mijianOdds=觅珍概率说明（2026-09-22）
 // 扫描器盲区白名单：渐变底抽卡按钮、禁用态、条状填充等
 const EXEMPT = ['.gacha-btn-top', '.gacha-btn-price', '.gacha-btn-tag', 'b.mono', '.hp-bar', '.mg-']
 
@@ -342,6 +342,23 @@ test.describe('深色模式配色体检', () => {
         await page.evaluate(() => {
           document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').toggleFeatureGuide(false)
         })
+        // 觅珍概率说明（2026-09-22）：底色走 --tint / 品质语义色（随皮肤变）⇒ 同样逐套皮肤扫一遍
+        await page.evaluate(() => {
+          const ui = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')
+          ui.setView('mijian')
+          ui.toggleMijianOdds(true)
+        })
+        await page.waitForTimeout(320)
+        {
+          const rodds = skinTheme === 'light'
+            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          scannedTotal += rodds.scanned
+          for (const b of rodds.bad) bad.push({ page: `skin-${skinTheme}:${skin}/mijianOdds`, ...b })
+        }
+        await page.evaluate(() => {
+          document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').toggleMijianOdds(false)
+        })
         // 2026-09-19：状态面板改为**抽屉**（默认收起）⇒ 不打开它，`scanPage` 扫描根里的
         // `.dock-panel, .dock-panel *` 一个都匹配不到，那六块（挂机中/快捷状态/事件日志…）的
         // 深色对比度与「残留品牌橙」就**不再被检查**（保护面悄悄缩小，而且不会报错）。
@@ -413,6 +430,7 @@ test.describe('深色模式配色体检', () => {
         if (mm === 'settings') ui.toggleSettingsPanel(true)
         else if (mm === 'guide') ui.toggleSkillGuide('foraging')
         else if (mm === 'featureGuide') { ui.setView('ranch'); ui.toggleFeatureGuide(true) } // 功能页指南（内容随页面变，取牧场为例）
+        else if (mm === 'mijianOdds') { ui.setView('mijian'); ui.toggleMijianOdds(true) } // 觅珍概率说明（表格密集，深色下要量对比度）
         else if (mm === 'save') ui.toggleSavePanel(true)
         else if (mm === 'signin') ui.toggleSignIn(true)
       }, m)
@@ -445,6 +463,7 @@ test.describe('深色模式配色体检', () => {
       ui.toggleSavePanel(false)
       ui.toggleSignIn(false)
       ui.toggleFeatureGuide(false)
+      ui.toggleMijianOdds(false)
       ui.setView('skill')
     })
     await page.waitForTimeout(400)
