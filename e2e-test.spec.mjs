@@ -5,7 +5,7 @@ import fs from 'fs'
 // 「指南」按钮的数据源（Node 侧直接用同一份数据断言渲染结果，避免在测试里手抄文案）
 import { guideEntryForView as guideEntryForViewLocal } from './src/game/data/guide.js'
 // 觅珍概率：期望值一律取自数据模块（面板/页头文案与它同源，测试不手抄数字）
-import { allPoolOdds as allPoolOddsLocal, GEAR_PITY as gePity, GEAR_RARE_PCT as gearRarePct } from './src/game/data/mijianDraws.js'
+import { allPoolOdds as allPoolOddsLocal, PITY_RULES } from './src/game/data/mijianDraws.js'
 
 const BASE = 'http://localhost:5173'
 
@@ -1595,7 +1595,7 @@ test.describe('游戏全流程', () => {
 
   // 觅珍（2026-09-22 用户三连报：稀有+ 概率还是太高 / 厨具池与限时池要 50 抽保底 / 概率得详细讲 /
   // 抽卡结果里得显示金币）。这条用例把「玩家看得见的那部分」钉住，数字一律取自数据模块。
-  test('觅珍：概率说明面板数字与数据一致 + 厨具/限时 50 抽保底 + 抽卡结果显示返还金币', async ({ page }) => {
+  test('觅珍：公示面板数字与数据一致 + 双保底（40/50 抽 + 神话）+ 抽卡结果显示返还金币', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(BASE)
     await page.evaluate(() => localStorage.clear())
@@ -1610,7 +1610,7 @@ test.describe('游戏全流程', () => {
     // 给足金币（抽卡唯一的货币入口是金币）
     const pin = () => page.evaluate(() => {
       const p = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
-      p.gold = 5_000_000
+      p.gold = 50_000_000
       return p.gold
     })
     expect(await pin()).toBeGreaterThan(1_000_000)
@@ -1620,13 +1620,13 @@ test.describe('游戏全流程', () => {
     await ui('mijian')
     await page.waitForTimeout(600)
 
-    // ① 页头那句概率文案与数据同源（旧版写死「每 10 抽保底」）
-    const head = await page.locator('.mijian-view .skill-head p').innerText()
-    expect(head, '页头还写着旧保底抽数').toContain(`${gePity} 抽保底`)
-    expect(head).toContain(`${gearRarePct}%`)
+    // ① 页头那句与常量同源（旧版写死「每 10 抽保底」；现在写两池的稀有/神话保底抽数）
+    const head = await page.locator('.mijian-view .skill-head p').first().innerText()
+    expect(head, '页头没写混池的稀有/神话保底').toContain(`${PITY_RULES.mix.rare}/${PITY_RULES.mix.myth}`)
+    expect(head, '页头没写厨具/限时的稀有/神话保底').toContain(`${PITY_RULES.gear.rare}/${PITY_RULES.gear.myth}`)
     expect(head, '页头不该再出现「三种卡池」').not.toContain('三种卡池')
 
-    // ② 📊 概率说明：五个池都在，数字与**页面自己那份** poolOdds() 完全一致（面板是渲染数据，不是手写）
+    // ② 📊 公示面板：五个池都在，数字与**页面自己那份** poolOdds() 完全一致（面板是渲染数据，不是手写）
     await page.locator('.odds-btn').click()
     const oddsModal = page.locator('.odds-modal')
     await expect(oddsModal).toBeVisible()
@@ -1643,65 +1643,97 @@ test.describe('游戏全流程', () => {
     for (const o of oddsInApp) {
       const sec = oddsModal.locator('.odds-pool', { hasText: o.name })
       await expect(sec, `${o.name} 的池内件数没显示`).toContainText(`池内 ${o.members} 件`)
-      if (o.filler) {
-        await expect(sec).toContainText(`${o.filler.goldPct}%`)
-        await expect(sec).toContainText(`${o.filler.cheapPct}%`)
+      if (o.branch) {
+        // 三档分支 + 返金额（材料 21 / 食物 38 / 混池 28，都是整数）
+        await expect(sec).toContainText(`${o.branch.gold}%`)
+        await expect(sec).toContainText(`${o.branch.cheap}%`)
+        await expect(sec).toContainText(`${o.branch.normal}%`)
+        await expect(sec).toContainText(`返还 ${o.refund.amount} 金币`)
+      } else {
+        // 装备池：每抽必出装备（限时池另有 80/20 分支）
+        await expect(sec).toContainText(o.gearPct ? `${o.gearPct}%` : '每抽必出装备')
       }
       if (o.pity) {
-        await expect(sec).toContainText(`${o.pity.need} 抽保底`)
-        // 稀有+ 百分比必须与权重表算出来的一致
-        await expect(sec).toContainText(`稀有及以上合计 ${o.rarePct}%`)
+        await expect(sec).toContainText(`稀有保底 ${o.pity.rare} 抽`)
+        await expect(sec).toContainText(`神话保底 ${o.pity.myth} 抽`)
+        await expect(sec).toContainText(`第 ${o.soft.start} 抽`)
+        for (const f of o.final) await expect(sec).toContainText(`${f.pct}%`)
       }
-      // 没有分支占比的池（厨具池：无垫底档 + 无分支）**不许留下空的「• %」行**（2026-09-22 线上截图抓到）
-      if (!o.filler && !o.extra.length) {
-        await expect(sec.locator('.odds-list'), `${o.name} 渲染了没有内容的分支行`).toHaveCount(0)
-      }
-      // 每条分支行都必须是「数字% + 说明」的完整句，不能只有百分号
-      for (const li of await sec.locator('.odds-list li').allInnerTexts()) {
-        expect(li, `${o.name} 的分支行不完整：${li}`).toMatch(/\d+(\.\d+)?%\s*\S/)
+      // 有分支的池：每条分支行都必须是「数字% + 说明」的完整句，不能只有百分号
+      // （厨具池那条是「每抽必出装备」的纯说明行，本来就没有数字 → 只对有分支/占比的池查）
+      if (o.branch || o.gearPct) {
+        for (const li of await sec.locator('.odds-list li').allInnerTexts()) {
+          expect(li, `${o.name} 的分支行不完整：${li}`).toMatch(/\d+(\.\d+)?%/)
+        }
       }
     }
     await oddsModal.locator('.modal-head button').click()
     await expect(oddsModal).toHaveCount(0)
 
-    // ③ 保底 50：把厨具池保底计数推到 49，下一抽必出稀有及以上（与引擎同一状态字段）
+    // ③ 双保底：厨具池 rare=39 → 下一抽必稀有+；神话保底优先（rare=39 + myth=199 → 出神话，且**只清 myth**）
     const boost = await page.evaluate(() => {
       const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
       const p = pinia._s.get('player')
       p.mijian = p.mijian ?? {}
-      p.mijian.pity = { gear: 49, limited: 49 }
+      p.mijian.pity = { mix: { rare: 0, myth: 0 }, gear: { rare: 39, myth: 0 }, limited: { rare: 0, myth: 0 } }
       const r = p.drawMijian('gear', 1)
-      const q = r.results[0]?.quality
-      return { boosted: r.boosted, quality: q, pityAfter: p.mijian.pity.gear }
+      const afterRare = JSON.parse(JSON.stringify(p.mijian.pity.gear))
+      p.mijian.pity.gear = { rare: 39, myth: 199 }
+      const r2 = p.drawMijian('gear', 1)
+      return {
+        rareQ: r.results[0]?.quality, boosted: r.boosted, afterRare,
+        mythQ: r2.results[0]?.quality, afterMyth: JSON.parse(JSON.stringify(p.mijian.pity.gear)),
+      }
     })
-    expect(boost.boosted, '第 50 抽没有触发保底').toBe(true)
-    expect(['稀有', '史诗', '传说', '神话'], `保底出的品质是 ${boost.quality}`).toContain(boost.quality)
-    expect(boost.pityAfter, '保底命中后计数没清零').toBe(0)
-    const limBoost = await page.evaluate(() => {
+    expect(boost.boosted, '第 40 抽没有触发稀有保底').toBe(true)
+    expect(['稀有', '史诗', '传说', '神话'], `保底出的品质是 ${boost.rareQ}`).toContain(boost.rareQ)
+    expect(boost.afterRare.rare, '稀有保底命中后 rare 没清零').toBe(0)
+    expect(boost.mythQ, '神话保底没有优先于稀有保底').toBe('神话')
+    expect(boost.afterMyth.myth, '神话保底命中后 myth 没清零').toBe(0)
+    expect(boost.afterMyth.rare, '触发神话保底不该清掉稀有计数').toBeGreaterThan(0)
+    // 混池 50 抽 / 限时池 40 抽各自独立
+    const mixBoost = await page.evaluate(() => {
       const p = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
-      p.mijian.pity.limited = 49
-      const r = p.drawMijian('limited', 1)
-      return { boosted: r.boosted, quality: r.results[0]?.quality }
+      p.mijian.pity.mix = { rare: 49, myth: 0 }
+      p.mijian.pity.limited = { rare: 39, myth: 0 }
+      const a = p.drawMijian('mix', 1)
+      const b = p.drawMijian('limited', 1)
+      return { mix: a.boosted, lim: b.boosted, mixQ: a.results[0]?.quality, limQ: b.results[0]?.quality }
     })
-    expect(limBoost.boosted, '限时池第 50 抽没有触发保底').toBe(true)
+    expect(mixBoost.mix, '混池第 50 抽没触发保底').toBe(true)
+    expect(mixBoost.lim, '限时池第 40 抽没触发保底').toBe(true)
 
     // ④ 抽卡结果里要显示返还金币（用户：「不然还以为出bug了」）：
-    //    材料池 55% 返还 ⇒ 百连几乎必有金币卡（100 张全是物品的概率 ≈ 0.45^100）
+    //    材料池 40% 返还 ⇒ 百连几乎必有返金卡（100 张全是物品的概率 ≈ 0.6^100）
     await page.locator('.pool-mini', { hasText: '材料池' }).click()
     await page.waitForTimeout(300)
     await page.locator('.gacha-btn-bulk').click()
     await expect(page.locator('.gacha-results .gacha-card')).toHaveCount(100, { timeout: 20000 })
     await page.waitForTimeout(3200) // 等翻牌揭示跑完
     const goldCards = page.locator('.gacha-results .gacha-card', { hasText: '金币' })
-    expect(await goldCards.count(), '百连里一张金币卡都没有（垫底档没渲染出来）').toBeGreaterThan(0)
+    expect(await goldCards.count(), '百连里一张返金卡都没有（返金档没渲染出来）').toBeGreaterThan(0)
     const goldTxt = await goldCards.first().locator('.gacha-front-sub').innerText()
-    expect(goldTxt, `金币卡没显示数量：${goldTxt}`).toMatch(/^\+\d/)
+    expect(goldTxt, `返金卡没显示数量：${goldTxt}`).toMatch(/^\+\d+/)
     // 日志里也要写返还了多少金币
     const log = await page.evaluate(() => {
       const uiStore = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui')
       return (uiStore.log ?? []).map((l) => l.message).filter((m) => m.includes('觅珍')).slice(-1)[0] ?? ''
     })
     expect(log, `抽卡日志没提返还金币：${log}`).toContain('返还金币')
+
+    // ⑤ 装备可堆叠（2026-09-22 用户要求）：同款无词条装备按件堆起来 + 上限 100 亿
+    const stackInfo = await page.evaluate(() => {
+      const p = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
+      p.inventory.copperKnife = 0
+      p.gearMods = {}
+      p.gainItem('copperKnife', 7)
+      const noMods = p.stackCapOf('copperKnife')
+      p.gearMods = { copperKnife: { mods: [{ stat: 'attack', value: 1 }], at: Date.now() } }
+      return { qty: p.inventory.copperKnife, noMods, withMods: p.stackCapOf('copperKnife') }
+    })
+    expect(stackInfo.qty, '无词条装备没堆起来').toBe(7)
+    expect(stackInfo.noMods, '无词条装备上限不是 100 亿').toBe(10_000_000_000)
+    expect(stackInfo.withMods, '有词条装备上限应回到 1').toBe(1)
   })
 
   // 装备弹窗布局固定（2026-09-18 第二轮用户报「点击装备前和点击后窗口会变化」）：

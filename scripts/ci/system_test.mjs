@@ -2058,16 +2058,36 @@ console.log('══ G. 背包 ══')
   p.gainItem('apple', 5)
   p.gainItem('apple', 5)
   check('背包', '同类堆叠 5+5=10', p.inventory.apple === 10)
-  // maxStack 9999 边界（文档 §5.4 最大堆叠 9999）
+  // 堆叠上限：2026-09-22 用户要求抬到 **100 亿**（stackRules.STACK_MAX；数据里的 9999 只是历史默认值）
+  const { STACK_MAX, shortCount, effectiveStackCap } = await import('../../src/game/data/stackRules.js')
   p.gainItem('apple', 20000)
-  check('背包', '堆叠上限 9999（文档）', p.inventory.apple <= 9999, `qty=${p.inventory.apple}`)
+  check('背包', `堆叠上限 = STACK_MAX（${STACK_MAX}，20000 件照收）`, p.inventory.apple === 20010, `qty=${p.inventory.apple}`)
+  p.spendItem('apple', p.inventory.apple)
+  p.gainItem('apple', STACK_MAX)
+  check('背包', '能真的堆到 100 亿（JS 安全整数，不用 32 位运算）', p.inventory.apple === STACK_MAX, `qty=${p.inventory.apple}`)
+  check('背包', '超上限的部分转信箱而不是丢（再发 1 件 → 背包仍 100 亿）', p.gainItem('apple', 1) === false && p.inventory.apple === STACK_MAX)
+  check('背包', '数量缩写：1e10 显示为「100.00亿」', shortCount(STACK_MAX) === '100.00亿' && shortCount(389100) === '38.91万', `${shortCount(STACK_MAX)} / ${shortCount(389100)}`)
   check('背包', 'spendItem 恰好清空删除键', p.spendItem('apple', p.inventory.apple) === true && p.inventory.apple === undefined)
   check('背包', 'spendItem 超出返回 false', p.spendItem('apple', 1) === false)
   p.gainItem('carrot', 3)
   check('背包', 'spendItem 部分消耗', p.spendItem('carrot', 2) === true && p.inventory.carrot === 1)
-  // 装备堆叠（stackable:false 物品）：修复后上限 1
-  p.gainItem('copperKnife', 2)
-  check('背包', '不可堆叠物品上限 1（§5.4）', p.inventory.copperKnife === 1, `qty=${p.inventory.copperKnife}`)
+  // 装备堆叠（2026-09-22 用户：「有什么办法让没有词条的装备可堆叠」）：
+  //   · **无词条**的装备可堆叠（上限 STACK_MAX）——装备的词条按 itemId 存、镶嵌按槽位存 ⇒ 堆叠不会丢状态
+  //   · 一旦该 id 洗练出词条，上限立刻回到 1
+  p.inventory.copperKnife = 0
+  p.gainItem('copperKnife', 5)
+  check('背包', '无词条的装备可堆叠（一次发 5 件 → 5 件都在）', p.inventory.copperKnife === 5, `qty=${p.inventory.copperKnife}`)
+  check('背包', '生效上限走唯一出口 effectiveStackCap（无词条装备 = STACK_MAX）',
+    p.stackCapOf('copperKnife') === STACK_MAX && effectiveStackCap({ type: 'equipment' }, false) === STACK_MAX)
+  p.gearMods = { ...(p.gearMods ?? {}), copperKnife: { mods: [{ stat: 'attack', value: 1 }], at: Date.now() } }
+  check('背包', '有词条的装备上限回到 1（不能再进）', p.stackCapOf('copperKnife') === 1 && p.gainItem('copperKnife', 1) === false, `cap=${p.stackCapOf('copperKnife')}`)
+  check('背包', '已堆起来的那一堆不会被强行拆分（上限只限制「还能不能再进」）', p.inventory.copperKnife === 5)
+  check('背包', 'gainBlockReason 与 stackCapOf 同源（有词条时报 stack）', p.gainBlockReason('copperKnife', 1) === 'stack')
+  p.gearMods = {}
+  check('背包', '物品数据一字未动（装备仍是 stackable:false，规则在运行时层）', (() => {
+    const mk = fs.readFileSync(new URL('../../src/game/data/items.js', import.meta.url), 'utf8')
+    return /stackable: false, slot: 'weapon'/.test(mk)
+  })())
 }
 
 // ── H. 经济系统（§11.3）───────────────────────────
@@ -2617,12 +2637,12 @@ console.log('══ X. 觅珍抽卡 ══')
   // 垫底档会返还金币（材料/食物池）⇒ 扣费口径 = 花费 − 返还
   const refund1 = (r1.gold ?? 0) + (r2.gold ?? 0)
   check('觅珍', '金币扣费（材料60*3+食物110+厨具500=790，扣掉垫底档返还）', p.gold === 100000 - 790 + refund1, `gold=${p.gold} refund=${refund1}`)
-  // 保底计数：连续未出稀有+ → 到保底抽数必出（2026-09-22 起两池都是 50 抽）
-  p.mijian.pity = 49
+  // 保底计数：连续未出稀有+ → 到保底抽数必出（2026-09-22 规格：厨具池 40 抽；pity 结构为 {rare, myth}）
+  p.mijian.pity = { mix: { rare: 0, myth: 0 }, gear: { rare: 39, myth: 0 }, limited: { rare: 0, myth: 0 } }
   const r4 = p.drawMijian('gear', 1)
   const boosted = r4.boosted && ['稀有', '史诗', '传说', '神话'].includes(r4.results[0]?.quality)
-  check('觅珍', '保底第 50 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
-  check('觅珍', '保底后计数清零（gear）', p.mijian.pity.gear === 0 || p.mijian.pity === 0)
+  check('觅珍', '保底第 40 抽必出稀有及以上', boosted, JSON.stringify(r4.results.map((it) => [it?.id, it?.quality])))
+  check('觅珍', '保底后 rare 计数清零（gear）', p.mijian.pity.gear.rare === 0)
   // 混池 / 限时池 / 百连
   const r5 = p.drawMijian('mix', 5)
   const mixOk = r5.ok && r5.results.length === 5 && r5.results.filter((it) => !it?.gold).every((it) => it && it.value > 0)
@@ -2634,11 +2654,10 @@ console.log('══ X. 觅珍抽卡 ══')
   const afterSpent = p.gold
   const refundAll = (r1.gold ?? 0) + (r2.gold ?? 0) + (r5.gold ?? 0) + (r100.gold ?? 0)
   check('觅珍', '金币扣费与累计花费一致（stats.spent = 花费 − 返还 − 剩余）', p.mijian.stats.spent === 100000 + refundAll - afterSpent, `spent=${p.mijian.stats.spent} gold=${afterSpent} refund=${refundAll}`)
-  // 限时池保底：50 抽（pity.limited = 49 → 下一抽必稀有+）
-  p.mijian.pity = p.mijian.pity ?? { gear: 0, limited: 0 }
-  p.mijian.pity.limited = 49
+  // 限时池保底：40 抽（rare = 39 → 下一抽必稀有+；神话计数别先撞线）
+  p.mijian.pity = { mix: { rare: 0, myth: 0 }, gear: { rare: 0, myth: 0 }, limited: { rare: 39, myth: 0 } }
   const r7 = p.drawMijian('limited', 1)
-  check('觅珍', '限时池保底第 50 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
+  check('觅珍', '限时池保底第 40 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
   // 爆率口径（2026-09-06 全面下调后；5000 次抽样区间校验）
   {
     const { pickItem: pk } = await import('../../src/game/data/mijianDraws.js')
@@ -2652,10 +2671,12 @@ console.log('══ X. 觅珍抽卡 ══')
       return rare / n
     }
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
-    // 2026-09-22 用户：「稀有以上的物品概率还是太高了」→ 厨具 12% → 4%、限时 3% → 1.5%
-    check('觅珍', '厨具池稀有+ 爆率 3-5%（2026-09-22 由 12% 下调到 4%）', g >= 0.03 && g <= 0.05, `g=${(g * 100).toFixed(2)}%`)
-    check('觅珍', '混池稀有+ 爆率 ≤2%（垫底档上线后装备被压到 23%×8%）', m >= 0.0005 && m <= 0.02, `m=${(m * 100).toFixed(2)}%`)
-    check('觅珍', '限时池稀有+ 爆率 1-2%（2026-09-22 由 3% 再下调，配 50 抽保底兜底）', l >= 0.01 && l <= 0.02, `l=${(l * 100).toFixed(2)}%`)
+    // 每次都传 pity=0 ⇒ 软保底/硬保底都不参与，量的就是**基础爆率**（= 公示表那一列）
+    check('觅珍', '厨具池基础稀有+ 爆率 = 品质权重本身 4%（3.5~4.5%）', g >= 0.035 && g <= 0.045, `g=${(g * 100).toFixed(2)}%`)
+    check('觅珍', '限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（0.9~1.5%）', l >= 0.009 && l <= 0.015, `l=${(l * 100).toFixed(2)}%`)
+    // ⚠️ 混池会略高于 35% × 4% = 1.4%：低档分支（池内价值最低 20% 的**固定集合**）里也可能有低阶稀有装备，
+    //    这是规格「低档物品 = 价值最低 20% 的固定集合」的必然结果（公示表的装备列只描述正常分支）。
+    check('觅珍', '混池基础稀有+ 爆率 1.5~2.8%（正常分支 1.4% + 低档分支里的低阶稀有装备）', m >= 0.015 && m <= 0.028, `m=${(m * 100).toFixed(2)}%`)
     // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
@@ -2667,115 +2688,124 @@ console.log('══ X. 觅珍抽卡 ══')
     }
     check('觅珍', '材料/食物池无珍品（价值上限 50/100）', capped)
   }
-  // ── 垫底档（2026-09-21 用户：「池子不够严谨，应该有超高概率的金币、中概率的 1 档东西占用概率」）──
+  // ── 分支 / 双保底 / 软保底 / 公示表（2026-09-22 用户给的完整规格）──
   {
     const MJ = await import('../../src/game/data/mijianDraws.js')
-    const { FILLER, FILLER_POOLS, FILLER_GOLD_PCT, fillerGoldAmount, cheapTier, poolItems, pickItem } = MJ
-    check('觅珍', '垫底档只挂「纯价值加权」的三个池（厨具/限时池本就有品质垫底 96%/97% + 保底）',
-      FILLER_POOLS.join(',') === 'material,food,mix', FILLER_POOLS.join(','))
-    check('觅珍', '垫底档权重：金币 55% + 一档 22%（余 23% 走原路径）', FILLER.gold === 0.55 && FILLER.cheap === 0.22, JSON.stringify(FILLER))
-    check('觅珍', '金币档返还 ∈ 池价的 25%~55%（定这两个数是为了总回收仍落在 30~40% 带内）',
-      FILLER_GOLD_PCT[0] === 0.25 && FILLER_GOLD_PCT[1] === 0.55 &&
-      fillerGoldAmount(100, () => 0) === 25 && fillerGoldAmount(100, () => 0.999) === 55,
-      `${fillerGoldAmount(100, () => 0)}~${fillerGoldAmount(100, () => 0.999)}`)
-    check('觅珍', '一档 = 池内价值最低的 20% 成员（按件取整，至少 1 件）', (() => {
+    const { BRANCH, BRANCH_POOLS, REFUND_PCT, refundOf, cheapTier, poolItems, pickItem } = MJ
+    // ① 三档分支与固定返金（规格「通用前置规则 #5」+「池子总览表」）
+    check('觅珍', '三档分支 = 40% 返金 / 25% 低档 / 35% 正常（三者相加 == 100%）',
+      BRANCH.gold === 0.4 && BRANCH.cheap === 0.25 && BRANCH.normal === 0.35 &&
+      Math.abs(BRANCH.gold + BRANCH.cheap + BRANCH.normal - 1) < 1e-9, JSON.stringify(BRANCH))
+    check('觅珍', '分支池 = 材料/食物/混池（装备池不返金、每抽必出装备）', BRANCH_POOLS.join(',') === 'material,food,mix', BRANCH_POOLS.join(','))
+    check('觅珍', '返金固定 35% 抽卡成本、**按整数落地**：材料 21 / 食物 38 / 混池 28（金币引擎会 floor）',
+      REFUND_PCT === 0.35 && refundOf(60) === 21 && refundOf(110) === 38 && refundOf(80) === 28 &&
+      Number.isInteger(refundOf(110)),
+      `${refundOf(60)} / ${refundOf(110)} / ${refundOf(80)}`)
+    check('觅珍', '低档物品 = 池内价值最低的 20%（按件取整，至少 1 件；判据并列安全）', (() => {
       const t = cheapTier('material')
       const all = poolItems('material')
       const tIds = new Set(t.map((x) => x.id))
       const maxT = Math.max(...t.map((x) => x.value ?? 0))
-      // ⚠️ 判据要「并列安全」：边界同价值可能有一批 ⇒ 不能数「大于最大值」的个数
       return t.length === Math.max(1, Math.floor(all.length * 0.2)) && all.filter((x) => !tIds.has(x.id)).every((x) => (x.value ?? 0) >= maxT)
     })())
-    // 行为断言：抽 4000 次，三档占比与设计一致（金币 ±6%），且金币档确实**不进背包**
-    const p2 = freshPlayer()
-    p2.gold = 1e9
-    let gold = 0
-    let cheap = 0
-    let item = 0
+    // ② 双保底表（规格「池子总览表」的保底类型列）
+    check('觅珍', '双保底上限：混池 50/300 · 厨具 40/200 · 限时 40/200（材料/食物无装备保底）',
+      MJ.PITY_RULES.mix.rare === 50 && MJ.PITY_RULES.mix.myth === 300 &&
+      MJ.PITY_RULES.gear.rare === 40 && MJ.PITY_RULES.gear.myth === 200 &&
+      MJ.PITY_RULES.limited.rare === 40 && MJ.PITY_RULES.limited.myth === 200 &&
+      MJ.pityRuleOf('material') === null && MJ.pityRuleOf('food') === null)
+    check('觅珍', '保底命中分布：混池 70/22/7/1 · 厨具与限时 65/24/9/2（两张不同的表）',
+      JSON.stringify(MJ.PITY_RULES.mix.table) === JSON.stringify({ 稀有: 70, 史诗: 22, 传说: 7, 神话: 1 }) &&
+      JSON.stringify(MJ.PITY_RULES.gear.table) === JSON.stringify({ 稀有: 65, 史诗: 24, 传说: 9, 神话: 2 }) &&
+      MJ.PITY_RULES.gear.table === MJ.PITY_RULES.limited.table)
+    // ③ 软保底：保底前 10 抽线性提升，且**不会到 100%**（否则硬保底与它的分布表就成了死代码）
+    const softAt = (pool, c) => MJ.softRareP(pool, c)
+    check('觅珍', '软保底区间 = 保底前 10 抽（厨具第 30~39 抽；混池第 40~49 抽）',
+      softAt('gear', 29) === null && softAt('gear', 30) !== null && softAt('gear', 39) !== null && softAt('gear', 40) === null &&
+      softAt('mix', 39) === null && softAt('mix', 40) !== null && softAt('mix', 49) !== null)
+    check('觅珍', '软保底线性单调递增，末抽 = SOFT_MAX_P（<100%，给硬保底留缺口）',
+      softAt('gear', 30) < softAt('gear', 35) && softAt('gear', 35) < softAt('gear', 39) &&
+      Math.abs(softAt('gear', 39) - MJ.SOFT_MAX_P) < 1e-9 && MJ.SOFT_MAX_P < 1 && MJ.SOFT_MAX_P >= 0.5,
+      `soft(30)=${softAt('gear', 30).toFixed(3)} soft(39)=${softAt('gear', 39).toFixed(3)}`)
+    check('觅珍', 'scaleRareShare：把稀有+ 占比抬到目标值，且表内比例（稀有:史诗:传说:神话）保持',
+      (() => {
+        const t = MJ.scaleRareShare(MJ.QUALITY_WEIGHT, 0.6)
+        const share = MJ.rareUpShare(t)
+        const ratio = (tab, q) => tab[q] / Object.entries(tab).filter(([k]) => MJ.RARE_UP.includes(k)).reduce((a, [, w]) => a + w, 0)
+        return Math.abs(share - 0.6) < 1e-9 && Math.abs(ratio(t, '稀有') - ratio(MJ.QUALITY_WEIGHT, '稀有')) < 1e-9
+      })())
+    // ④ 行为：分支占比 ≈40/25/35，返金固定；材料/食物池不出装备
+    let gold = 0, cheap = 0, item = 0, goldSum = 0
     for (let i = 0; i < 4000; i++) {
-      const r = pickItem('material', Math.random, 0)
-      if (r.gold) gold++
+      const r = pickItem('material', Math.random, 0, 0)
+      if (r.gold) { gold++; goldSum += r.gold }
       else if (r.cheap) cheap++
       else item++
     }
-    const pct = (n) => n / 4000
-    check('觅珍', '行为：材料池 4000 抽里金币档 ≈55%、一档 ≈22%、物品 ≈23%（各 ±6%）',
-      Math.abs(pct(gold) - 0.55) < 0.06 && Math.abs(pct(cheap) - 0.22) < 0.06 && Math.abs(pct(item) - 0.23) < 0.06,
-      `金币 ${(pct(gold) * 100).toFixed(1)}% / 一档 ${(pct(cheap) * 100).toFixed(1)}% / 物品 ${(pct(item) * 100).toFixed(1)}%`)
-    const before = p2.gold
-    const rd = p2.drawMijian('material', 200)
-    const refunded = rd.gold ?? 0
-    check('觅珍', '行为：金币档直接返还金币、不占背包（200 抽：金币净变化 == 返还 − 花费）',
-      p2.gold === before + refunded - 200 * 60 && refunded > 0, `refund=${refunded} gold=${p2.gold - before}`)
-  }
-  // ── 保底 50 + 概率说明面板（2026-09-22 用户：「稀有以上概率还是太高」「厨具池和限时池应该 50 抽保底」
-  //    「尤其是觅珍得详细讲一下各池子概率」）──
-  {
-    const MJ = await import('../../src/game/data/mijianDraws.js')
-    const RARE = ['稀有', '史诗', '传说', '神话']
-    check('觅珍', '两池保底都是 50 抽（GEAR_PITY == LIMITED_PITY == 50）',
-      MJ.GEAR_PITY === 50 && MJ.LIMITED_PITY === 50, `${MJ.GEAR_PITY}/${MJ.LIMITED_PITY}`)
-    // 保底命中时的品质**以稀有为主**（旧版是史诗 51%+传说 34%+神话 15%，等于每 10 抽白送史诗+）
-    const pw = MJ.PITY_QUALITY_WEIGHT
-    check('觅珍', '保底命中的品质以「稀有」为主（稀有占比 ≥60%，且神话 ≤5%）',
-      pw.稀有 / Object.values(pw).reduce((a, b) => a + b, 0) >= 0.6 && pw.神话 <= 5, JSON.stringify(pw))
-    check('觅珍', '稀有+ 百分比是**算出来的**（与权重表同源，不是手写常数）',
-      MJ.GEAR_RARE_PCT === MJ.rareUpPct(MJ.QUALITY_WEIGHT) && MJ.LIMITED_RARE_PCT === MJ.rareUpPct(MJ.LIMITED_QUALITY_WEIGHT),
-      `${MJ.GEAR_RARE_PCT}/${MJ.LIMITED_RARE_PCT}`)
-    check('觅珍', '两张品质权重表的「稀有+」合计都在 5% 以下（2026-09-22 下调目标）',
-      MJ.GEAR_RARE_PCT < 5 && MJ.LIMITED_RARE_PCT < 5, `${MJ.GEAR_RARE_PCT}% / ${MJ.LIMITED_RARE_PCT}%`)
-    // poolOdds()：概率说明面板的**唯一数据源**——面板渲染它就够了，页面上不许再手写概率
+    const pr = (n) => n / 4000
+    check('觅珍', '行为：材料池 4000 抽里 返金≈40% / 低档≈25% / 物品≈35%（各 ±5%）',
+      Math.abs(pr(gold) - 0.4) < 0.05 && Math.abs(pr(cheap) - 0.25) < 0.05 && Math.abs(pr(item) - 0.35) < 0.05,
+      `返金 ${(pr(gold) * 100).toFixed(1)}% / 低档 ${(pr(cheap) * 100).toFixed(1)}% / 物品 ${(pr(item) * 100).toFixed(1)}%`)
+    check('觅珍', '行为：返金金额恒为 21 金（固定 35% 池价，不是区间）', goldSum === gold * 21, `sum=${goldSum} n=${gold}`)
+    check('觅珍', '行为：材料/食物池各 1000 抽不出任何装备（无装备分支）', (() => {
+      for (const id of ['material', 'food']) {
+        for (let i = 0; i < 1000; i++) {
+          const r = pickItem(id, Math.random, 0, 0)
+          if (r.item?.type === 'equipment') return false
+        }
+      }
+      return true
+    })())
+    // ⑤ 状态机（真跑 drawMijian）：扣费即计数、神话优先、只清对应计数
+    const st = freshPlayer()
+    st.gold = 1e12
+    st.mijian = { pity: null, stats: { pulls: 0, spent: 0, gearRare: 0 }, history: [], tickets: 0 }
+    st.drawMijian('gear', 1)
+    check('觅珍', '状态机：扣了金币就两个计数各 +1（哪怕这一抽是返金/低档——装备池没有这两档，但计数照加）',
+      st.mijian.pity.gear.rare === 1 && st.mijian.pity.gear.myth === 1, JSON.stringify(st.mijian.pity.gear))
+    st.mijian.pity.gear = { rare: 39, myth: 199 }
+    const rMyth = st.drawMijian('gear', 1)
+    check('觅珍', '状态机：神话保底优先于稀有保底（同时满足时出神话，且**只清 myth**）',
+      rMyth.results[0]?.quality === '神话' && st.mijian.pity.gear.myth === 0 && st.mijian.pity.gear.rare !== 0,
+      `q=${rMyth.results[0]?.quality} pity=${JSON.stringify(st.mijian.pity.gear)}`)
+    st.mijian.pity.gear = { rare: 39, myth: 0 }
+    const rRare = st.drawMijian('gear', 1)
+    check('觅珍', '状态机：稀有保底出稀有+，且只清 rare',
+      ['稀有', '史诗', '传说', '神话'].includes(rRare.results[0]?.quality) && st.mijian.pity.gear.rare === 0,
+      `q=${rRare.results[0]?.quality} pity=${JSON.stringify(st.mijian.pity.gear)}`)
+    // ⑥ 公示表 = 分支 × 品质权重（规格里那张「单次抽卡最终概率」表）
     const odds = MJ.allPoolOdds()
-    check('觅珍', `概率说明：五个池都有明细（${odds.length} 池）`, odds.length === MJ.MIJIAN_POOLS.length && odds.every((o) => o.members > 0), odds.map((o) => `${o.name}:${o.members}`).join(' '))
-    check('觅珍', '概率说明：垫底档三档加起来 == 100%（金币+一档+抽物品）',
-      odds.filter((o) => o.filler).every((o) => Math.abs(o.filler.goldPct + o.filler.cheapPct + o.filler.drawPct - 100) < 0.01),
-      odds.filter((o) => o.filler).map((o) => `${o.name}:${o.filler.goldPct}+${o.filler.cheapPct}+${o.filler.drawPct}`).join(' '))
-    check('觅珍', '概率说明：分支占比（装备/美食、装备/素材）加起来 == 100%',
-      odds.filter((o) => o.extra.length === 2).every((o) => Math.abs(o.extra[0].pct + o.extra[1].pct - 100) < 0.01),
-      odds.filter((o) => o.extra.length === 2).map((o) => `${o.name}:${o.extra.map((e) => e.pct).join('+')}`).join(' '))
-    check('觅珍', '概率说明：带品质表的池，其 rarePct 与表一致；带保底的池，need == 该池保底常量',
-      odds.every((o) => (o.quality ? o.rarePct === MJ.rareUpPct(o.quality) : o.rarePct === null)) &&
-      odds.find((o) => o.id === 'gear').pity.need === MJ.GEAR_PITY &&
-      odds.find((o) => o.id === 'limited').pity.need === MJ.LIMITED_PITY)
+    const find = (id) => odds.find((o) => o.id === id)
+    const pctOf = (id, q) => find(id).final.find((f) => f.raw === q)?.pct
+    check('觅珍', `公示表：混池 普通装备 ${pctOf('mix', '普通')}% / 稀有 ${pctOf('mix', '稀有')}% / 神话 ${pctOf('mix', '神话')}%（= 35% × 品质权重）`,
+      pctOf('mix', '普通') === 28.7 && pctOf('mix', '稀有') === 0.945 && pctOf('mix', '神话') === 0.0175)
+    check('觅珍', `公示表：限时池 普通装备 ${pctOf('limited', '普通')}% / 稀有 ${pctOf('limited', '稀有')}% / 神话 ${pctOf('limited', '神话')}%（= 80% × 品质权重）`,
+      pctOf('limited', '普通') === 72 && pctOf('limited', '稀有') === 0.96 && pctOf('limited', '神话') === 0.008)
+    check('觅珍', `公示表：厨具池 = 品质权重本身（${pctOf('gear', '普通')}% / ${pctOf('gear', '稀有')}%）`,
+      pctOf('gear', '普通') === 82 && pctOf('gear', '稀有') === 2.7)
+    check('觅珍', '公示表：材料/食物池没有装备行（无装备分支）',
+      find('material').final.length === 0 && find('food').final.length === 0)
+    check('觅珍', '公示表：各池 final 之和 == 装备分支占比（混池 35% / 厨具 100% / 限时 80%）',
+      Math.abs(find('mix').final.reduce((a, f) => a + f.pct, 0) - 35) < 0.02 &&
+      Math.abs(find('gear').final.reduce((a, f) => a + f.pct, 0) - 100) < 0.02 &&
+      Math.abs(find('limited').final.reduce((a, f) => a + f.pct, 0) - 80) < 0.02,
+      `mix=${find('mix').final.reduce((a, f) => a + f.pct, 0).toFixed(3)} gear=${find('gear').final.reduce((a, f) => a + f.pct, 0).toFixed(3)} lim=${find('limited').final.reduce((a, f) => a + f.pct, 0).toFixed(3)}`)
+    check('觅珍', '公示面板：每池都带 desc（池卡描述从常量算出来），有装备分支的池才带保底/软保底明细',
+      odds.every((o) => typeof o.desc === 'string' && o.desc.length > 8) &&
+      ['mix', 'gear', 'limited'].every((id) => find(id).pity && find(id).soft) &&
+      ['material', 'food'].every((id) => !find(id).pity))
     // 页面不许另写一份概率数字：MijianView 只能从 poolOdds 取
     const mv = fs.readFileSync(new URL('../../src/views/MijianView.vue', import.meta.url), 'utf8')
-    check('觅珍', '概率说明面板接的是数据源（MijianView 用 allPoolOdds()，且没有手写「保底 10/5 抽」这类旧文案）',
-      /allPoolOdds\(\)/.test(mv) && !/保底 10 抽|保底 5 抽|每 10 抽保底|5 抽保底稀有/.test(mv))
-  }
-
-  // ── 信箱：两类「放不下」要分开报（2026-09-22 用户：「在商店买满了厨藏容量，去邮箱领还是说满了」）──
-  {
-    const pm = freshPlayer()
-    // ① 厨藏格数不足：塞满新种类 → 拒绝理由必须说「格数」
-    const ids = Object.keys(ITEMS)
-    for (const id of ids) {
-      if (pm.inventorySlotsUsed >= pm.inventoryCap) break
-      pm.inventory[id] = 1
-    }
-    const newId = ids.find((id) => !(id in pm.inventory))
-    const mailA = pm.sendMail({ kind: 'system', subject: '格数不足用例', body: 'x', reward: { items: { [newId]: 1 } } })
-    const ra = pm.claimMail(mailA)
-    check('邮箱', '厨藏没格时：拒绝原因标为 slots，且文案提到「格」与扩容',
-      ra.ok === false && ra.reason === 'slots' && /格/.test(ra.msg) && /扩容/.test(ra.msg), JSON.stringify(ra))
-    // ② 堆叠/持有上限：不可堆叠装备已有一件 → 拒绝理由必须说「该物品的上限」，并点明买容量没用
-    const eqId = Object.values(ITEMS).find((it) => it.type === 'equipment' && it.stackable === false)?.id
-    pm.inventory[eqId] = 1
-    const mailB = pm.sendMail({ kind: 'system', subject: '堆叠上限用例', body: 'x', reward: { items: { [eqId]: 1 } } })
-    const rb = pm.claimMail(mailB)
-    check('邮箱', '物品达持有上限时：拒绝原因标为 stack，文案点明「买容量没用」并给出可行动作',
-      rb.ok === false && rb.reason === 'stack' && /不可堆叠|持有上限/.test(rb.msg) && /装备上|卖掉|用掉/.test(rb.msg), JSON.stringify(rb))
-    check('邮箱', 'canGainItem 与 gainBlockReason 同源（前者就是后者 == null）',
-      pm.canGainItem(eqId, 1) === (pm.gainBlockReason(eqId, 1) === null))
-    check('邮箱', 'stackCapOf：不可堆叠装备 = 1，可堆叠材料 = maxStack',
-      pm.stackCapOf(eqId) === 1 && pm.stackCapOf(newId) === (ITEMS[newId].maxStack ?? 9999))
-    // ③ 一键领取也要按原因分类汇总
-    pm.inventory = {}
-    const mailC = pm.sendMail({ kind: 'system', subject: '汇总用例', body: 'x', reward: { items: { [eqId]: 1 } } })
-    pm.inventory[eqId] = 1
-    const rc = pm.claimAllMail()
-    check('邮箱', '一键领取：按原因分类汇总（reasonText 里能看出是哪种放不下）',
-      rc.blocked >= 1 && rc.reasons.stack >= 1 && /堆叠|持有上限|格数/.test(rc.reasonText ?? ''), JSON.stringify(rc))
-    void mailC
+    check('觅珍', '公示面板接的是数据源（MijianView 用 allPoolOdds()，且没有手写旧保底/旧返金文案）',
+      /allPoolOdds\(\)/.test(mv) && !/保底 10 抽|保底 5 抽|每 10 抽保底|55% 返还|22% 一档/.test(mv))
+    // ⑦ 旧档迁移（三种历史形态都要能读）
+    check('觅珍', '旧档迁移：数字 → gear.rare；{gear,limited} → 各组 rare；新形态原样',
+      JSON.stringify(MJ.migratePity(7).gear) === JSON.stringify({ rare: 7, myth: 0 }) &&
+      MJ.migratePity({ gear: 9, limited: 3 }).limited.rare === 3 &&
+      MJ.migratePity({ mix: { rare: 5, myth: 2 } }).mix.myth === 2 &&
+      JSON.stringify(MJ.migratePity(null)) === JSON.stringify(MJ.EMPTY_PITY()))
+    check('觅珍', '池成员口径仍是 poolItems（图鉴三查用同一份）',
+      ['material', 'food', 'gear', 'mix', 'limited'].every((id) => poolItems(id).length > 0))
   }
   // 图鉴三查：抽卡来源
   const { itemSources: src } = await import('../../src/game/data/itemSources.js')
@@ -2867,17 +2897,31 @@ console.log('══ C11. 信箱 ══')
   check('信箱', '被拒不会复制出第二封邮件', p5.mail.list.filter((m) => m.kind === 'overflow').length === 1)
   check('信箱', 'canGainItem 与实发一致', p5.canGainItem(ids[STORAGE_BASE], 3) === false && p5.canGainItem(ids[0], 1) === true)
 
-  // ⑥ 堆积上限截断的部分同样转存
+  // ⑥ 堆积上限截断的部分同样转存（2026-09-22：上限抬到 100 亿 ⇒ 用「差 3 件到顶」构造截断）
   const p6 = freshPlayer()
-  p6.inventory[ids[0]] = 9999 // 食材堆叠上限
+  const { STACK_MAX } = await import('../../src/game/data/stackRules.js')
+  p6.inventory[ids[0]] = STACK_MAX - 3
   p6.gainItem(ids[0], 5)
-  check('信箱', '堆叠上限截断的部分转存邮箱', p6.inventory[ids[0]] === 9999 && p6.mail.list.at(-1)?.reward?.items?.[ids[0]] === 5)
+  check('信箱', '堆叠上限截断的部分转存邮箱', p6.inventory[ids[0]] === STACK_MAX && p6.mail.list.at(-1)?.reward?.items?.[ids[0]] === 2,
+    `qty=${p6.inventory[ids[0]]} mail=${p6.mail.list.at(-1)?.reward?.items?.[ids[0]]}`)
 
-  // ⑦ 非堆叠品（装备）重复获得不再蒸发
+  // ⑦ 上限为 1 的物品（**有词条的装备**）重复获得不再蒸发
+  //    2026-09-22 语义变化：无词条装备现在可堆叠 ⇒ 只有「已洗练出词条」的装备才是上限 1 的那一类。
   const p7 = freshPlayer()
+  p7.gearMods = { ironKnife: { mods: [{ stat: 'attack', value: 2 }], at: Date.now() } }
   p7.gainItem('ironKnife', 1)
   p7.gainItem('ironKnife', 1)
-  check('信箱', '重复装备转存邮箱（改前静默丢失）', p7.inventory.ironKnife === 1 && p7.mail.list.at(-1)?.reward?.items?.ironKnife === 1)
+  check('信箱', '上限 1 的物品（有词条装备）重复获得转存邮箱（改前静默丢失）',
+    p7.inventory.ironKnife === 1 && p7.mail.list.at(-1)?.reward?.items?.ironKnife === 1,
+    `qty=${p7.inventory.ironKnife} mail=${p7.mail.list.at(-1)?.reward?.items?.ironKnife}`)
+  // ⑦b 无词条装备则直接堆起来（不再进信箱）
+  const p7b = freshPlayer()
+  const mailBefore = (p7b.mail?.list ?? []).length // 新档自带欢迎信，所以比「封数不变」而不是「为 0」
+  p7b.gainItem('ironKnife', 1)
+  p7b.gainItem('ironKnife', 1)
+  check('信箱', '无词条装备可堆叠 ⇒ 不进信箱（封数不变）',
+    p7b.inventory.ironKnife === 2 && (p7b.mail?.list ?? []).length === mailBefore,
+    `qty=${p7b.inventory.ironKnife} mail=${(p7b.mail?.list ?? []).length}(before=${mailBefore})`)
 
   // ⑧ 拆卸宝石：背包满时拒绝，且**不会**既留插槽又转投邮箱（防白嫖）
   //    注意要让「宝石」是背包里**没有**的种类、且格子已占满，才命中 canGainItem 的拒绝分支
@@ -6040,9 +6084,12 @@ console.log('══ C39. 装备词条按装备 id 存 ══')
   const pDup = freshPlayer()
   pDup.gainItem(A.id, 5)
   const dupQty = pDup.inventory[A.id] ?? 0
-  check('词条按装备存', '装备不可堆叠（一次发 5 件 → 背包只留 1 件），故按 id 存不会丢「同款两件各不相同」',
-    getItem(A.id).stackable === false && dupQty === 1 && Object.keys(pDup.gearMods).filter((k) => k === A.id).length <= 1,
-    `stackable=${getItem(A.id).stackable} qty=${dupQty}`)
+  // 2026-09-22 语义更新：无词条装备**可堆叠**了（用户要求），所以「同款两件各不相同」不可能发生
+  // 靠的是**新不变量**：一旦该 id 有词条，上限立刻回到 1（永远只可能有一件带词条的）
+  check('词条按装备存', '不变量：有词条 ⇒ 上限 1（不会出现「同款两件各自带不同词条」）；无词条才可堆叠',
+    getItem(A.id).stackable === false && dupQty === 5 &&
+    (() => { pDup.gearMods = { [A.id]: { mods: [{ stat: 'attack', value: 1 }], at: Date.now() } }; return pDup.stackCapOf(A.id) === 1 && pDup.gainItem(A.id, 1) === false })(),
+    `数据里 stackable=${getItem(A.id).stackable}（规则在运行时层） 无词条时堆到 ${dupQty} 件`)
 
   // ④ 只有「穿戴中」的词条才进属性合计
   const pOff = freshPlayer()

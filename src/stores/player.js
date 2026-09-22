@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList, safeXpMultiplier } from '../game/data/caps.js'
+import { STACK_MAX, effectiveStackCap } from '../game/data/stackRules.js'
 import { BANK_TAB_COUNT, DEFAULT_BANK_TABS, sanitizeBankTabs, sanitizeItemTabs, sanitizeTabIndex } from '../game/data/bankTabs.js'
 import { TOOL_MAX_LEVEL, nextToolCost, toolTimeFactor } from '../game/data/farmTools.js'
 import { PRIME_CATALYST_TIME, PRIME_CROP_ID, farmMasteryGatherChance } from '../game/data/primeCrop.js'
@@ -51,7 +52,7 @@ import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
 import { gemDef, socketCountOf, gemsBonus } from '../game/data/gems.js'
 import { activeMarketEvents as activeMarketEvents_, aggregateMarketBoost, marketEventsWithNightExtension, nightMarketEndHour, NIGHT_MARKET_BASE_MULT } from '../game/data/marketEvents.js'
-import { MIJIAN_POOLS, pickItem, GEAR_PITY, LIMITED_PITY } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, pickItem, pityRuleOf, migratePity, PITY_RULES } from '../game/data/mijianDraws.js'
 import { useUiStore } from './ui.js'
 import { makeOrder, nextOrderDelay, MAX_ORDERS, makeCriticOrder, criticDelay, catLabel } from '../game/data/restaurantOrders.js'
 import { SHOP_ITEMS } from '../game/data/shop.js'
@@ -1149,8 +1150,9 @@ export const usePlayerStore = defineStore('player', {
     gainItem(itemId, qty = 1) {
       if (!(qty > 0)) return false
       const item = getItem(itemId)
-      // §5.4 堆叠上限：食材/料理 9999；不可堆叠物品（装备等）上限 1
-      const cap = item?.stackable === false ? 1 : item?.maxStack ?? 9999
+      // §5.4 堆叠上限（唯一出口 = stackCapOf → game/data/stackRules.js）：
+      // 2026-09-22 起一律 100 亿，且**无词条的装备可堆叠**（理由见 stackRules.js 头注释）
+      const cap = this.stackCapOf(itemId)
       const have = this.inventory[itemId] ?? 0
       // §5.4 容量：不同物品种类数限制（已有种类不占新格）。
       // 2026-09-11 信箱：这里原本把整批发不出去的物品**静默丢弃**（只发事件、返回 false，而绝大多数调用方
@@ -5199,15 +5201,18 @@ export const usePlayerStore = defineStore('player', {
       if (!item) return 'stack' // 不存在的物品：别让「没空格」这种说法误导
       const have = this.inventory?.[itemId] ?? 0
       if (!(itemId in (this.inventory ?? {})) && this.inventorySlotsUsed >= this.inventoryCap) return 'slots'
-      const cap = item.stackable === false ? 1 : item.maxStack ?? 9999
+      const cap = this.stackCapOf(itemId)
       return cap - have >= qty ? null : 'stack'
     },
 
-    /** 该物品的持有上限（用于文案：不可堆叠装备 = 1，材料 = maxStack） */
+    /**
+     * 该物品的**生效持有上限**（唯一出口；规则见 `game/data/stackRules.js`）：
+     *   · 普通物品：100 亿（`STACK_MAX`；数据里的 9999 只是历史默认值）
+     *   · 装备：**没有词条时可堆叠**（100 亿），有词条时回到 1（每人 1 件，原规则）
+     * 用于 `gainItem` 的截断、`gainBlockReason`/`canGainItem` 的预检与领取文案。
+     */
     stackCapOf(itemId) {
-      const item = getItem(itemId)
-      if (!item) return 1
-      return item.stackable === false ? 1 : item.maxStack ?? 9999
+      return effectiveStackCap(getItem(itemId), !!this.gearMods?.[itemId])
     },
 
     /**
@@ -5886,29 +5891,34 @@ export const usePlayerStore = defineStore('player', {
       const goldCost = cost - useT * def.price
       if (goldCost > 0 && !this.spendGold(goldCost)) return { ok: false, msg: '金币不足（需 ' + goldCost + '）' }
       if (useT > 0) mjA.tickets = (mjA.tickets ?? 0) - useT
-      // 保底计数按池拆分（2026-09-06；兼容旧档数字形态 → 迁移为 { gear, limited }）
-      const mj = this.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
-      if (typeof mj.pity === 'number') mj.pity = { gear: mj.pity, limited: 0 }
-      mj.pity = mj.pity ?? { gear: 0, limited: 0 }
+      // 保底状态机（2026-09-22 按用户规格重写）：
+      //   ① 每池两个**独立**计数 rare/myth（材料/食物池无装备保底 ⇒ 不存计数）
+      //   ② 只要扣了金币就 +1（返金/低档/正常/保底产出都算），与「出没出」无关
+      //   ③ 判定顺序：神话保底 → 稀有+ 保底 → 分支 roll（神话优先，见 pickItem）
+      //   ④ 触发神话保底只清 myth；自然出稀有+ 只清 rare（规格「互不干扰」）
+      //   ⑤ 限时池的 20% 美食分支：计数照 +1，但**不清** rare（那不是装备）
+      const mj = this.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: null, history: [] }
+      mj.pity = migratePity(mj.pity) // 兼容三种历史形态（数字 / {gear,limited} / 本形态）
       mj.stats = mj.stats ?? { pulls: 0, spent: 0, gearRare: 0 }
-      const isGear = poolId === 'gear'
-      const isLimited = poolId === 'limited'
-      const pityKey = isGear ? 'gear' : isLimited ? 'limited' : null
-      const pityNeed = isLimited ? LIMITED_PITY : GEAR_PITY
+      const rule = pityRuleOf(poolId)
+      const st = rule ? mj.pity[poolId] : null
       const results = []
       let boosted = false
-      let goldBack = 0 // 垫底档返还的金币（材料/食物/混池，见 mijianDraws 的 FILLER）
-      const isRare = (it) => !!it?.quality && ['稀有', '史诗', '传说', '神话'].includes(it.quality)
+      let goldBack = 0 // 返金档（材料/食物/混池，固定 35% 池价）
       for (let i = 0; i < count; i++) {
-        const pv = pityKey ? mj.pity[pityKey] : 0
-        const { item, gold, boosted: b } = pickItem(poolId, Math.random, pv)
-        if (pityKey) {
-          if (isRare(item)) { mj.pity[pityKey] = 0; if (isGear) mj.stats.gearRare++ }
-          else mj.pity[pityKey] = Math.min(pv + 1, pityNeed)
+        if (st) { st.rare += 1; st.myth += 1 }
+        const r = pickItem(poolId, Math.random, st?.rare ?? 0, st?.myth ?? 0)
+        if (st) {
+          if (r.guaranteed === 'myth') st.myth = 0
+          else if (r.guaranteed === 'rare') st.rare = 0
+          else if (r.isRareUp) {
+            st.rare = 0
+            if (poolId === 'gear') mj.stats.gearRare++
+          }
         }
-        if (gold > 0) { goldBack += gold; results.push({ gold }) } // 金币档：直接返还，不进背包
-        else results.push(item)
-        if (b) boosted = true
+        if (r.gold > 0) { goldBack += r.gold; results.push({ gold: r.gold }) } // 返金：直接进余额，不进背包
+        else results.push(r.item)
+        if (r.boosted) boosted = true
       }
       const got = []
       for (const it of results) {
@@ -5917,17 +5927,26 @@ export const usePlayerStore = defineStore('player', {
       if (goldBack > 0) this.gainGold(goldBack)
       mj.stats.pulls += count
       mj.stats.spent += cost
-      const rareHit = results.some(isRare)
+      const rareHit = results.some((it) => !!it?.quality && ['稀有', '史诗', '传说', '神话'].includes(it.quality))
       mj.history = [...(mj.history ?? []), rareHit ? 'rare' : 'common'].slice(-10)
       this.mijian = mj
       EventBus.emit('mijian:draw', { poolId, count, boosted })
       return { ok: true, results, got, boosted, gold: goldBack }
     },
-    /** 保底进度（厨具 N/10 · 限时 N/5） */
+    /**
+     * 保底进度（2026-09-22 双保底版）：每池 `{rare, myth}` + 该池上限。
+     * 页面用它显示「稀有 x/N · 神话 y/M」；材料/食物池没有装备保底（返回 null）。
+     */
     mijianPity() {
-      const mj = this.mijian ?? {}
-      const pity = typeof mj.pity === 'number' ? { gear: mj.pity, limited: 0 } : (mj.pity ?? { gear: 0, limited: 0 })
-      return { current: pity.gear ?? 0, need: GEAR_PITY, limited: pity.limited ?? 0, limitedNeed: LIMITED_PITY }
+      const pity = migratePity((this.mijian ?? {}).pity)
+      const out = { byPool: {} }
+      for (const [poolId, rule] of Object.entries(PITY_RULES)) {
+        out.byPool[poolId] = {
+          rare: pity[poolId].rare, rareNeed: rule.rare,
+          myth: pity[poolId].myth, mythNeed: rule.myth,
+        }
+      }
+      return out
     },
 
     // ── 餐厅好感（2026-09-06）──

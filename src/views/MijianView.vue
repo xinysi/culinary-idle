@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { MIJIAN_POOLS, GEAR_PITY, LIMITED_PITY, GEAR_RARE_PCT, LIMITED_RARE_PCT, allPoolOdds, poolPreview, limitedRemainingMs, pickItem } from '../game/data/mijianDraws.js'
+import { MIJIAN_POOLS, PITY_RULES, SOFT_WINDOW, allPoolOdds, poolDesc, poolPreview, limitedRemainingMs, pickItem } from '../game/data/mijianDraws.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 
@@ -15,7 +15,13 @@ const activePool = ref('material')
 const pool = computed(() => MIJIAN_POOLS.find((p) => p.id === activePool.value))
 const isGearPool = computed(() => activePool.value === 'gear')
 const isLimitedPool = computed(() => activePool.value === 'limited')
-const pity = computed(() => player.mijianPity())
+/** 当前池的双保底进度（材料/食物池没有装备保底 ⇒ null，胶囊不显示） */
+const pityOf = computed(() => player.mijianPity().byPool[activePool.value] ?? null)
+/** 软保底区间（面板与提示用；从常量算出来） */
+const softOf = computed(() => {
+  const r = PITY_RULES[activePool.value]
+  return r ? { start: r.rare - SOFT_WINDOW, end: r.rare - 1 } : null
+})
 const bgItems = computed(() => {
   const list = poolPreview(activePool.value, 20)
   return [...list, ...list] // 双份 → translateX(-50%) 无痕循环
@@ -132,8 +138,9 @@ function typeLabel(id) {
       <div>
         <h2>🎴 觅珍</h2>
         <p class="dim">
-          五种卡池 · 金币抽取 · 价值加权随机；厨具池稀有+ ≈ {{ GEAR_RARE_PCT }}% / 限时池 ≈ {{ LIMITED_RARE_PCT }}%，
-          两池都是 <b>{{ GEAR_PITY }} 抽保底</b>稀有及以上
+          五种卡池 · 金币抽取；材料/食物/混池三档（返金 / 低档 / 正常），装备池每抽必出装备。
+          <b>双保底</b>：稀有及以上 + 神话各自独立计数（混池 {{ PITY_RULES.mix.rare }}/{{ PITY_RULES.mix.myth }} ·
+          厨具与限时 {{ PITY_RULES.gear.rare }}/{{ PITY_RULES.gear.myth }} 抽），保底前 10 抽还有<b>软保底</b>提升
           <button class="btn btn-sm odds-btn" title="每个池子能抽到什么、各自概率多少" @click="showOdds = true">📊 概率说明</button>
         </p>
       </div>
@@ -174,15 +181,17 @@ function typeLabel(id) {
       <div class="pool-banner-title">
         <span class="pool-banner-icon">{{ pool.icon }}</span>
         <b>{{ pool.name }}</b>
-        <em>{{ pool.desc }}</em>
+        <em>{{ poolDesc(activePool) }}</em>
       </div>
-      <div v-if="isGearPool" class="pool-banner-pity"><span class="pill">⭐ 保底 {{ pity.current }}/{{ pity.need }}</span></div>
-      <template v-if="isLimitedPool">
-        <div class="pool-banner-pity pills">
-          <span class="pill">⏳ 剩 {{ limitedRemaining }}</span>
-          <span class="pill">⭐ 保底 {{ pity.limited }}/{{ pity.limitedNeed }}</span>
-        </div>
-      </template>
+      <div v-if="pityOf" class="pool-banner-pity pills">
+        <span v-if="isLimitedPool" class="pill">⏳ 剩 {{ limitedRemaining }}</span>
+        <span class="pill" :title="`连续 ${pityOf.rare} 抽未出稀有及以上（第 ${pityOf.rareNeed} 抽必出）`">
+          ⭐ 稀有保底 {{ pityOf.rare }}/{{ pityOf.rareNeed }}
+        </span>
+        <span class="pill" :title="`连续 ${pityOf.myth} 抽未出神话（第 ${pityOf.mythNeed} 抽必出）`">
+          ✨ 神话保底 {{ pityOf.myth }}/{{ pityOf.mythNeed }}
+        </span>
+      </div>
     </div>
 
     <!-- 抽卡操作台 -->
@@ -263,50 +272,61 @@ function typeLabel(id) {
       </div>
     </div>
 
-    <!-- 概率说明（2026-09-22 用户：「尤其是觅珍得详细讲一下各池子概率」）
-         数字全部来自 `mijianDraws.js` 的 poolOdds()，改权重这里自动跟着变。 -->
+    <!-- 概率说明 / 公示（2026-09-22 用户：完整规格「公示文案模板」）
+         🔴 所有数字都由 `mijianDraws.js` 的 poolOdds() 算出——页面上一个概率数字都不许手写，
+            改权重时这份公示自动跟着变（名单见 system_test 的静态断言）。 -->
     <div v-if="showOdds" class="modal-backdrop" @click.self="showOdds = false">
       <div class="modal odds-modal">
         <header class="modal-head">
-          <h3>📊 觅珍 · 各池概率说明</h3>
+          <h3>📊 觅珍 · 抽卡概率公示</h3>
           <button class="btn btn-sm" @click="showOdds = false">✕</button>
         </header>
         <div class="odds-body">
           <p class="dim odds-intro">
-            抽卡只花金币，产出不进任何「固定数据」；每次抽取先按池子的规则决定落在哪一档，再在该档里均匀/加权取一件。
-            <b>保底</b>只在「连续未出稀有及以上」时生效，出一次就清零。
+            抽取只消耗金币，产出不进任何「固定数据」。<b>只要扣了金币就计入保底计数</b>（返金 / 低档 / 正常结果都算）；
+            保底命中时<b>不走进分支</b>（不会同时返金或给低档）。双保底相互独立：<b>神话保底优先于稀有保底</b>。
           </p>
           <section v-for="o in odds" :key="o.id" class="odds-pool" :class="`pool-${o.id}`">
             <h4>{{ o.icon }} {{ o.name }} <span class="dim">{{ o.price }} 金/抽 · 池内 {{ o.members }} 件</span></h4>
-            <!-- 垫底档：金币 / 一档 / 抽物品 -->
-            <ul v-if="o.filler" class="odds-list">
-              <li><b>{{ o.filler.goldPct }}%</b> 直接返还金币（池价的 {{ o.filler.refundLo }}%~{{ o.filler.refundHi }}%，不进背包）</li>
-              <li><b>{{ o.filler.cheapPct }}%</b> 一档物品（池内价值最低的 20%，共 {{ o.filler.cheapCount }} 件）</li>
-              <li><b>{{ o.filler.drawPct }}%</b> 正常抽取（价值加权）</li>
+            <!-- 三档分支（材料/食物/混池） -->
+            <ul v-if="o.branch" class="odds-list">
+              <li><b>{{ o.branch.gold }}%</b> 返还 <b>{{ o.refund.amount }} 金币</b>（固定抽卡成本 {{ o.refund.pct }}%，直接进余额、不生成道具）</li>
+              <li><b>{{ o.branch.cheap }}%</b> 低档物品（池内价值最低的 20%，共 {{ o.cheapCount }} 件，固定权重）</li>
+              <li><b>{{ o.branch.normal }}%</b> 正常抽取（固定权重，不再按价值加权）</li>
             </ul>
-            <!-- ⚠️ 只有真的有分支占比时才出这一行：厨具池既无垫底档、也无分支（extra 为空），
-                 无条件渲染会在页面上留下一条空的「• %」（2026-09-22 线上截图复核抓到） -->
-            <ul v-else-if="o.extra.length" class="odds-list">
-              <li><b>{{ o.extra[0].pct }}%</b> {{ o.extra[0].label }}<template v-if="o.extra[1]"> · <b>{{ o.extra[1].pct }}%</b> {{ o.extra[1].label }}</template></li>
+            <!-- 装备分支占比（限时池 80/20） -->
+            <ul v-else class="odds-list">
+              <li v-if="o.gearShare < 1"><b>{{ o.gearPct }}%</b> 装备 · <b>{{ o.foodPct }}%</b> 限定美食（美食分支不重置稀有保底计数）</li>
+              <li v-else><b>每抽必出装备</b>（无返金、无低档分支）</li>
             </ul>
-            <!-- 品质权重表（装备类池） -->
-            <template v-if="o.quality">
-              <div class="odds-sub">装备稀有度权重<span v-if="o.rarePct != null">（稀有及以上合计 <b>{{ o.rarePct }}%</b>）</span></div>
+            <!-- 最终概率表（规格里的「单次抽卡最终概率」） -->
+            <template v-if="o.final.length">
+              <div class="odds-sub">单次抽卡最终概率<span v-if="o.rarePct != null">（装备稀有及以上合计 <b>{{ o.rarePct }}%</b>）</span></div>
               <div class="odds-bars">
-                <span v-for="(w, q) in o.quality" :key="q" class="odds-bar" :class="`q-${q}`">
-                  <em>{{ q }}</em><b>{{ w }}</b>
+                <span v-for="f in o.final" :key="f.raw" class="odds-bar" :class="`q-${f.raw}`">
+                  <em>{{ f.quality }}</em><b>{{ f.pct }}%</b>
                 </span>
               </div>
+              <div class="odds-sub dim">装备分支内权重：<template v-for="(w, q) in o.quality" :key="q"><span class="odds-w">{{ q }} {{ w }}</span></template></div>
             </template>
-            <!-- 保底 -->
-            <div v-if="o.pity" class="odds-pity">
-              ⭐ <b>{{ o.pity.need }} 抽保底</b>：连续 {{ o.pity.need }} 抽没出稀有及以上时，这一抽必出；命中时的稀有度分布为
-              <span v-for="(w, q) in o.pity.table" :key="q" class="odds-pity-q">{{ q }} {{ w }}<template v-if="w !== 1">%</template></span>
-            </div>
+            <!-- 双保底 + 软保底 -->
+            <template v-if="o.pity">
+              <div class="odds-pity">
+                ⭐ <b>稀有保底 {{ o.pity.rare }} 抽</b>：连续 {{ o.pity.rare }} 抽未出稀有及以上 → 这一抽必出稀有及以上，命中分布
+                <span v-for="(w, q) in o.pity.table" :key="q" class="odds-pity-q">{{ q }} {{ w }}%</span>
+              </div>
+              <div class="odds-pity">
+                ✨ <b>神话保底 {{ o.pity.myth }} 抽</b>：连续 {{ o.pity.myth }} 抽未出神话 → 这一抽必出神话（<b>独立计数</b>，触发它不清稀有计数{{ o.id === 'limited' ? '，且跨期继承' : '' }}）
+              </div>
+              <div class="odds-pity">
+                📈 <b>软保底</b>：第 {{ o.soft.start }} 抽起，稀有+ 概率从基础值线性提升到 {{ o.soft.maxP }}%（第 {{ o.soft.end }} 抽），第 {{ o.pity.rare }} 抽仍未出则按上面的保底分布必出
+              </div>
+            </template>
+            <div v-else class="odds-pity dim">无装备分支 ⇒ 无装备保底（返金与低档物品不受保底影响）</div>
           </section>
           <p class="dim odds-foot">
-            金币返还档<b>不进背包</b>（直接加金币）；抽到的物品若背包放不下会转成「信箱」溢出邮件，不会丢。
-            保底进度按池分别累计，换池不重置。
+            返金<b>不生成背包道具</b>；抽到的物品若放不下会转成「信箱」溢出邮件，不会丢。
+            保底进度按池分别累计（材料/食物一组不存计数），限时池的保底<b>跨期继承</b>、活动结束不清零。
           </p>
         </div>
       </div>

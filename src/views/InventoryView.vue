@@ -8,6 +8,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { spoilCountdown } from '../game/data/itemDetail.js' // 腐坏倒计时文案（与「物品详情」弹窗共用同一格式）
 import { itemImage } from '../game/data/itemImage.js'
+import { shortCount as shortQty } from '../game/data/stackRules.js'
 import { sfx } from '../game/core/sound.js'
 import ItemDetailModal from '../components/ItemDetailModal.vue'
 
@@ -110,13 +111,11 @@ const sellTotal = computed(() => unitPrice.value * Math.max(1, Math.min(qty.valu
 
 const usableKind = computed(() => (selected.value ? player.usableOf?.(selected.value) : null))
 
-/** 格子上的数量：< 1 万显示**精确数字**，≥ 1 万显示「x.xx万」（悬停时换成精确数字，见模板的 hoverId）。
- *  梅尔沃式槽位（2026-09-20 用户给图）：38.91万 —— 厨藏后期动辄几十万件，长数字会顶破格子。
- *  设置里关掉「数量缩写」后恒显示精确数字（见右侧「设置」页签）。 */
-function shortQty(n) {
-  if (!(n >= 10000)) return n.toLocaleString()
-  return `${(n / 10000).toFixed(2)}万`
-}
+/** 格子上的数量：< 1 万显示**精确数字**，≥ 1 万显示「x.xx万 / x.xx亿 / x.xx万亿」
+ *  （悬停时换成精确数字，见模板的 hoverId）。梅尔沃式槽位（2026-09-20 用户给图）：38.91万。
+ *  设置里关掉「数量缩写」后恒显示精确数字（见右侧「设置」页签）。
+ *  ⚠️ 2026-09-22 上限抬到 100 亿后，格式化**统一走 `stackRules.shortCount`**——
+ *     旧实现只到「万」，会写出「1000000.00万」；以后别在这里重写一份。 */
 function qtyLabel(id, total) {
   if (hoverId.value === id || player.settings?.invShortQty === false) return total.toLocaleString()
   return shortQty(total)

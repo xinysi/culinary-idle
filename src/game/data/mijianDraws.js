@@ -1,4 +1,11 @@
-// 觅珍抽卡（2026-09-06）— 材料/食物/厨具三池，金币消费，价值加权随机（纯函数可测）
+// 觅珍抽卡（2026-09-06 立；2026-09-22 按用户完整规格重写概率核心）
+//
+// 规格来源（2026-09-22 用户给的「通用前置规则 + 池子总览表 + 保底状态机」）：
+//   · 分支：40% 返金（**固定 35% 抽卡成本**）｜25% 低档物品｜35% 正常抽取（固定权重，不再价值加权）
+//   · 双保底：稀有及以上保底 + 神话累计保底，**两套计数相互独立**；神话优先于稀有
+//   · 软保底：稀有保底前 10 抽内，稀有+ 概率线性提升（材料/食物池无装备分支 ⇒ 无保底）
+//   · 只要扣了金币，无论结果（返金/低档/正常）都计入保底计数
+//   · 保底产出**不走进分支 roll**（不会同时返金/给低档）
 // 纯新增获取来源（不动任何物品数值）；图鉴三查见 itemSources.js 的「觅珍」来源。
 import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
@@ -7,43 +14,114 @@ import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
 /** 抽卡池一律排除的类别：矿物（不对口径）与**全部副业独占品**（抽卡能出就等于绕过整条技能线） */
 const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
 
-// ── 概率常量（⚠️ 必须在 MIJIAN_POOLS **之前**：池描述里要引用它们，写在后面会 TDZ 报错）──
-// 保底抽数（2026-09-22 用户要求：「厨具池和限时池应该 50 抽保底」）——两池同为 50
-export const GEAR_PITY = 50
-export const LIMITED_PITY = 50
+// ── 概率常量（⚠️ 必须在 MIJIAN_POOLS **之前**：池描述要引用它们，写在后面会 TDZ 报错）──
 
-// 装备稀有度权重（**导出**：概率说明面板与守卫都读这一份，别在别处重抄）
-// 厨具池：稀有+ ≈ 4%（2026-09-22 用户报「稀有以上概率还是太高」→ 由 12% 下调）
+/** 三档分支（材料/食物/混池共用）：40% 返金 · 25% 低档 · 35% 正常 */
+export const BRANCH = { gold: 0.4, cheap: 0.25, normal: 0.35 }
+export const BRANCH_POOLS = ['material', 'food', 'mix']
+/** 返金比例：**固定**抽卡成本的 35%（规格「返金固定 35% 抽卡成本」） */
+export const REFUND_PCT = 0.35
+/** 返金额 = 池价 × 35%，**向下取整**（材料 21 / 食物 38 / 混池 28）。
+ *  ⚠️ 金币引擎是整数：`gainGold` 里 `Math.floor(amount * (1+加成))` ⇒ 110 × 35% = 38.5 实际只会到账 38。
+ *     所以**出口就按整数算**，公示与结算同源（否则页面上写 38.5、玩家拿到 38，正属本项目最忌的那类不一致）。 */
+export function refundOf(price) {
+  return Math.floor((Number(price) || 0) * REFUND_PCT)
+}
+
+// 装备稀有度权重（**导出**：公示面板与守卫都读这一份，别在别处重抄）
+// 厨具池 / 混池：稀有+ 4%
 export const QUALITY_WEIGHT = { 普通: 82, 精良: 14, 稀有: 2.7, 史诗: 0.95, 传说: 0.3, 神话: 0.05 }
-// 限时池装备权重：稀有+ ≈ 1.5%（由 3% 再下调；配 50 抽保底）
+// 限时池装备权重：稀有+ 1.5%
 export const LIMITED_QUALITY_WEIGHT = { 普通: 90, 精良: 8.5, 稀有: 1.2, 史诗: 0.24, 传说: 0.05, 神话: 0.01 }
-// 保底命中时的品质权重：**以稀有为主**（旧版是「史诗 51% + 传说 34% + 神话 15%」，配 10 抽保底等于
-// 每 10 抽白送一件史诗+，与「稀有以上要稀有」相悖；现在保底是兜底、不是奖励档）
-export const PITY_QUALITY_WEIGHT = { 稀有: 70, 史诗: 22, 传说: 7, 神话: 1 }
-const RARE_UP = ['稀有', '史诗', '传说', '神话']
-/** 某张权重表的「稀有及以上」合计百分比（面板/守卫共用；按表内总和归一） */
-export function rareUpPct(table = QUALITY_WEIGHT) {
-  const total = Object.values(table).reduce((a, b) => a + b, 0)
+// 保底命中时的品质分布（规格给了**每池不同**的两张表）
+export const PITY_QUALITY_MIX = { 稀有: 70, 史诗: 22, 传说: 7, 神话: 1 }
+export const PITY_QUALITY_GEAR = { 稀有: 65, 史诗: 24, 传说: 9, 神话: 2 }
+
+export const RARE_UP = ['稀有', '史诗', '传说', '神话']
+export const COMMON = ['普通', '精良']
+/** 某张权重表的「稀有及以上」占比（0~1；按表内总和归一） */
+export function rareUpShare(table = QUALITY_WEIGHT) {
+  const total = Object.values(table).reduce((a, b) => a + b, 0) || 1
   const rare = Object.entries(table).filter(([q]) => RARE_UP.includes(q)).reduce((a, [, w]) => a + w, 0)
-  return Math.round((rare / total) * 1000) / 10
+  return rare / total
+}
+/** 同上，以百分比表示（公示面板用；留一位小数） */
+export function rareUpPct(table = QUALITY_WEIGHT) {
+  return Math.round(rareUpShare(table) * 1000) / 10
 }
 export const GEAR_RARE_PCT = rareUpPct(QUALITY_WEIGHT)
 export const LIMITED_RARE_PCT = rareUpPct(LIMITED_QUALITY_WEIGHT)
-// 素材/食物池加权幂次（0.85→0.55：拉平价值差，珍品率下降）
+
+// ── 双保底（规格「保底状态机」）──
+/** 每池的保底上限与保底命中分布；材料/食物池**无装备保底**（不在表里 ⇒ 不存计数） */
+export const PITY_RULES = {
+  mix: { rare: 50, myth: 300, table: PITY_QUALITY_MIX },
+  gear: { rare: 40, myth: 200, table: PITY_QUALITY_GEAR },
+  limited: { rare: 40, myth: 200, table: PITY_QUALITY_GEAR },
+}
+export const PITY_POOLS = Object.keys(PITY_RULES)
+export function pityRuleOf(poolId) {
+  return PITY_RULES[poolId] ?? null
+}
+/** 软保底窗口：保底前 10 抽线性提升（厨具/限时第 30 抽起，混池第 40 抽起 = 各自 rare - 10） */
+export const SOFT_WINDOW = 10
+/**
+ * 软保底的上限概率（最后一抽前）。
+ * 🔴 为什么是 0.9 而不是 1.0：若提升到 100%，则「稀有保底」永远不会触发 ⇒ 规格里那张
+ *    **保底命中分布**（稀有 65/史诗 24/传说 9/神话 2）就成了死代码。留 10% 缺口，
+ *    硬保底才有意义（限时池因为 20% 美食分支不重置计数，触发率还会明显更高）。
+ */
+export const SOFT_MAX_P = 0.9
+/** 该池平时的品质权重表 */
+export function baseTableOf(poolId) {
+  return poolId === 'limited' ? LIMITED_QUALITY_WEIGHT : QUALITY_WEIGHT
+}
+/**
+ * 软保底后的稀有+ 概率（不在区间内返回 null = 用原表）。
+ * @param rareCount 当前**已累计未出稀有+**的抽数（含本抽，见 drawMijian 的 +1 时机）
+ */
+export function softRareP(poolId, rareCount) {
+  const rule = pityRuleOf(poolId)
+  if (!rule) return null
+  const start = rule.rare - SOFT_WINDOW
+  if (!(rareCount >= start) || rareCount >= rule.rare) return null
+  const base = rareUpShare(baseTableOf(poolId))
+  const t = (rareCount - start + 1) / SOFT_WINDOW
+  return base + (SOFT_MAX_P - base) * t
+}
+
+// 素材/食物池加权幂次（保留给非抽卡的价值加权用法；抽卡已改固定权重）
 const NORMAL_EXP = 0.85
 export const NORMAL_EXPONENT = NORMAL_EXP
-/** 混池里「出装备」的概率（其余走价值加权素材）—— 提为常量，概率面板与 pickItem 同源 */
-export const MIX_GEAR_PCT = 0.08
-/** 限时池里「出装备」的概率（其余为美食） */
+/** 限时池里「出装备」的概率（其余为限定美食） */
 export const LIMITED_GEAR_PCT = 0.8
 
 export const MIJIAN_POOLS = [
-  { id: 'material', name: '材料池', icon: '🧺', desc: '普通食材/香料（无珍品）。55% 返还金币 · 22% 一档低阶材料 · 23% 抽物品', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
-  { id: 'food', name: '食物池', icon: '🍱', desc: '普通料理/饮品（无珍品）。55% 返还金币 · 22% 一档料理 · 23% 抽物品', price: 110, kinds: ['food', 'drink'], cap: 100 },
-  { id: 'gear', name: '厨具池', icon: '⚔️', desc: `装备（八槽位，稀有度加权，稀有+ ≈ ${GEAR_RARE_PCT}%，${GEAR_PITY} 抽保底稀有+）`, price: 500, kinds: ['equipment'] },
-  { id: 'mix', name: '混池', icon: '🎲', desc: '55% 返还金币 · 22% 一档素材 · 23% 抽物品（其中含少量装备）', price: 80, kinds: ['mix'], cap: 60 },
-  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', desc: `80% 限时装备（极品率极低，稀有+ ≈ ${LIMITED_RARE_PCT}%）+ 20% 美食，${LIMITED_PITY} 抽保底稀有+`, price: 600, kinds: ['limited'], cap: 150 },
+  { id: 'material', name: '材料池', icon: '🧺', price: 60, kinds: ['ingredient', 'spice'], cap: 50 },
+  { id: 'food', name: '食物池', icon: '🍱', price: 110, kinds: ['food', 'drink'], cap: 100 },
+  { id: 'gear', name: '厨具池', icon: '⚔️', price: 500, kinds: ['equipment'] },
+  { id: 'mix', name: '混池', icon: '🎲', price: 80, kinds: ['mix'], cap: 60 },
+  { id: 'limited', name: '限时池', icon: '🌟', tag: '限时', price: 600, kinds: ['limited'], cap: 150 },
 ]
+/** 池子一句话描述（**从常量算出来**：改概率时说明自动跟着变，别手抄数字） */
+export function poolDesc(poolId) {
+  const def = MIJIAN_POOLS.find((p) => p.id === poolId)
+  if (!def) return ''
+  if (BRANCH_POOLS.includes(poolId)) {
+    const lowTxt = poolId === 'mix' ? '一档素材' : poolId === 'material' ? '一档低阶材料' : '一档料理'
+    const midTxt = poolId === 'mix' ? '池内素材或装备' : '池内素材'
+    const p = (x) => Math.round(x * 100)
+    const rule = pityRuleOf(poolId)
+    const tail = rule ? `；${rule.rare} 抽稀有保底 / ${rule.myth} 抽神话保底` : '（无装备保底）'
+    return `${p(BRANCH.gold)}% 返 ${refundOf(def.price)} 金 · ${p(BRANCH.cheap)}% ${lowTxt} · ${p(BRANCH.normal)}% 正常抽取（${midTxt}）${tail}`
+  }
+  if (poolId === 'gear') {
+    const rule = PITY_RULES.gear
+    return `装备（八槽位，稀有+ ≈ ${GEAR_RARE_PCT}%；${rule.rare} 抽稀有保底 / ${rule.myth} 抽神话保底）`
+  }
+  const rule = PITY_RULES.limited
+  return `80% 限时装备（稀有+ ≈ ${LIMITED_RARE_PCT}%）+ 20% 限定美食；${rule.rare} 抽稀有保底 / ${rule.myth} 抽神话保底（跨期继承）`
+}
 
 /** 限时池轮换周期（14 天）；剩余时间用于横幅角标倒计时 */
 export const LIMITED_PERIOD_MS = 14 * 24 * 3600_000
@@ -51,30 +129,33 @@ export function limitedRemainingMs(now = Date.now()) {
   return LIMITED_PERIOD_MS - (now % LIMITED_PERIOD_MS)
 }
 
-
 /**
- * 垫底档（2026-09-21 用户：「觅珍池子不够严谨，应该有高概率的东西来占用概率，比如超高概率的金币、
- * 中概率的 1 档东西」）——**只给「纯价值加权」的三个池**（材料 / 食物 / 混池）用。
- *
- * 它们原本每次抽都返回一个按 value 加权的随机物品（159 个成员里最高频只有 1.4%），
- * 于是「抽到什么都是差不多的东西」、好货也不稀有。现改为三档：
- *   55% 金币（返还池价的 25%~55%，均值 ≈40%）· 22% 一档（池内价值最低的 20%）· 余 23% 走原路径。
- * ⚠️ 厨具池与限时池**不叠这一层**：它们本来就有垫底结构（品质权重里 普通+精良 = **96% / 98.5%**）
- *    且各自带 50 抽保底，再叠一层会把「50 抽保底稀有」的节奏也一起改掉。
+ * 保底计数的**存档结构**：按池分开，每池两个独立计数
+ *   `{ mix: {rare, myth}, gear: {rare, myth}, limited: {rare, myth} }`
+ * ⚠️ 旧档有三种历史形态，都要迁移（见 `migratePity`）：数字 → `{gear: n, limited: n}` → 本形态。
  */
-export const FILLER = { gold: 0.55, cheap: 0.22 }
-/** 金币档的返还区间（占池价比例，下限/上限）—— 定这两个数是为了让总回收率仍落在本系统标定的 30~40% 带内 */
-export const FILLER_GOLD_PCT = [0.25, 0.55]
-/** 哪些池有垫底档（其余池走各自原有路径） */
-export const FILLER_POOLS = ['material', 'food', 'mix']
+export const EMPTY_PITY = () => ({ mix: { rare: 0, myth: 0 }, gear: { rare: 0, myth: 0 }, limited: { rare: 0, myth: 0 } })
 
-/** 金币档返还额：池价 × 12%~30%，至少 1 */
-export function fillerGoldAmount(price, rng = Math.random) {
-  const [a, b] = FILLER_GOLD_PCT
-  return Math.max(1, Math.round((price ?? 0) * (a + rng() * (b - a))))
+/** 旧档保底迁移（纯函数，读档/抽卡前都可调） */
+export function migratePity(saved) {
+  const out = EMPTY_PITY()
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.max(0, Math.floor(Number(v))) : 0)
+  if (typeof saved === 'number') {
+    out.gear.rare = num(saved) // 最旧形态：单一数字（当时只有厨具池有保底）
+  } else if (saved && typeof saved === 'object') {
+    for (const k of ['mix', 'gear', 'limited']) {
+      const v = saved[k]
+      if (typeof v === 'number') out[k].rare = num(v) // 中间形态 {gear: n, limited: n}
+      else if (v && typeof v === 'object') {
+        out[k].rare = num(v.rare)
+        out[k].myth = num(v.myth)
+      }
+    }
+  }
+  return out
 }
 
-/** 「一档」= 池内价值最低的 20% 成员（按件取整，至少 1 件） */
+/** 低档物品池：池内价值最低的 20%（**固定权重 = 均匀**，规格「不再动态计算价值」） */
 export function cheapTier(poolId) {
   const items = poolItems(poolId)
   const n = Math.max(1, Math.floor(items.length * 0.2))
@@ -121,7 +202,13 @@ export function poolItems(poolId) {
   return items
 }
 
-/** 价值加权随机（幂次控制稀有度分布：越低越偏普通，越高越陡） */
+/** 均匀取一件（规格：「固定权重」= 不再按价值加权） */
+function uniformPick(items, rng = Math.random) {
+  if (!items.length) return null
+  return items[Math.floor(rng() * items.length)] ?? items[items.length - 1]
+}
+
+/** 价值加权随机（保留给非抽卡用途；抽卡已改固定权重） */
 function weightedPick(items, rng = Math.random, exponent = 0.85) {
   const weights = items.map((it) => Math.pow(Math.max(1, it.value), exponent))
   let total = 0
@@ -137,7 +224,7 @@ function weightedPick(items, rng = Math.random, exponent = 0.85) {
 /** 按权重表掷一个稀有度（表内和不必正好 100，按总和归一） */
 function rollQuality(rng, table) {
   const entries = Object.entries(table)
-  const total = entries.reduce((a, [, w]) => a + w, 0)
+  const total = entries.reduce((a, [, w]) => a + w, 0) || 1
   let roll = rng() * total
   for (const [q, w] of entries) {
     roll -= w
@@ -146,53 +233,96 @@ function rollQuality(rng, table) {
   return entries[entries.length - 1][0]
 }
 
-/** 厨具池：先加权选稀有度 → 从该稀有度装备中随机一件
- *  @param pity 距上次稀有+的抽数（`>= 保底抽数 - 1` 时本次必出稀有+）
- *  @param weightTable 平时用的品质权重表；保底那一抽改用 PITY_QUALITY_WEIGHT */
-function pickGear(rng, pity, weightTable = QUALITY_WEIGHT, pityNeed = GEAR_PITY) {
-  const gear = poolItems('gear')
-  if (!gear.length) return null
-  const quality = pity >= pityNeed - 1 ? rollQuality(rng, PITY_QUALITY_WEIGHT) : rollQuality(rng, weightTable)
-  const cand = gear.filter((it) => it.quality === quality)
-  return cand.length ? cand[Math.floor(rng() * cand.length)] : weightedPick(gear, rng)
+/** 把「稀有+」的总占比整体抬到 p（表内 稀有:史诗:传说:神话 的比例不变；普通/精良按剩余比例分摊） */
+export function scaleRareShare(table, p) {
+  const target = Math.min(1, Math.max(0, p))
+  const cur = rareUpShare(table)
+  if (cur <= 0 || Math.abs(target - cur) < 1e-9) return table
+  const out = {}
+  const rareW = Object.entries(table).filter(([q]) => RARE_UP.includes(q)).reduce((a, [, w]) => a + w, 0)
+  const comW = Object.entries(table).filter(([q]) => COMMON.includes(q)).reduce((a, [, w]) => a + w, 0)
+  for (const q of COMMON) if (table[q] != null) out[q] = comW > 0 ? (table[q] / comW) * (1 - target) : 0
+  for (const q of RARE_UP) if (table[q] != null) out[q] = rareW > 0 ? (table[q] / rareW) * target : 0
+  return out
 }
 
-export function pickItem(poolId, rng = Math.random, pity = 0) {
-  // 垫底档（材料/食物/混池）：金币 或 一档物品 —— 见 FILLER 的说明
-  if (FILLER_POOLS.includes(poolId)) {
+/** 从装备里按品质取一件（该品质没有装备时退化为按权重取） */
+function equipOfQuality(quality, rng) {
+  const gear = poolItems('gear')
+  const cand = gear.filter((it) => it.quality === quality)
+  if (cand.length) return uniformPick(cand, rng)
+  return weightedPick(gear, rng)
+}
+
+/** 装备分支：软保底区间内用提升后的表，否则用原表 */
+function pickEquipBranch(poolId, rng, rareCount) {
+  const p = softRareP(poolId, rareCount)
+  const table = p == null ? baseTableOf(poolId) : scaleRareShare(baseTableOf(poolId), p)
+  return equipOfQuality(rollQuality(rng, table), rng)
+}
+
+export function isRareUpItem(item) {
+  return !!item?.quality && RARE_UP.includes(item.quality)
+}
+
+/**
+ * 抽一次（**纯函数**：计数由调用方维护，见 player.drawMijian 的状态机）。
+ * 判定顺序严格按规格：① 神话保底 → ② 稀有+ 保底 → ③ 分支 roll。
+ * @param rareCount 含本抽的「连续未出稀有+」计数（调用方已 +1）
+ * @param mythCount 含本抽的「连续未出神话」计数（调用方已 +1）
+ * @returns {{item?, gold?, cheap?, guaranteed: 'myth'|'rare'|null, isRareUp: boolean, softP: number|null, boosted: boolean}}
+ */
+export function pickItem(poolId, rng = Math.random, rareCount = 0, mythCount = 0) {
+  const rule = pityRuleOf(poolId)
+  // ① 神话保底（优先于稀有保底；产出直接结算，不走分支 roll）
+  if (rule && mythCount >= rule.myth) {
+    const item = equipOfQuality('神话', rng)
+    if (item) return { item, guaranteed: 'myth', isRareUp: true, softP: null, boosted: true }
+  }
+  // ② 稀有及以上保底（按该池的保底分布 roll）
+  if (rule && rareCount >= rule.rare) {
+    const item = equipOfQuality(rollQuality(rng, rule.table), rng)
+    if (item) return { item, guaranteed: 'rare', isRareUp: true, softP: null, boosted: true }
+  }
+  const softP = softRareP(poolId, rareCount)
+  // ③ 分支 roll
+  if (BRANCH_POOLS.includes(poolId)) {
     const def = MIJIAN_POOLS.find((p) => p.id === poolId)
     const roll = rng()
-    if (roll < FILLER.gold) return { gold: fillerGoldAmount(def?.price, rng), boosted: false }
-    if (roll < FILLER.gold + FILLER.cheap) {
-      const tier = cheapTier(poolId)
-      return { item: tier[Math.min(tier.length - 1, Math.floor(rng() * tier.length))], boosted: false, cheap: true }
+    if (roll < BRANCH.gold) {
+      return { gold: refundOf(def?.price), guaranteed: null, isRareUp: false, softP, boosted: false }
     }
+    if (roll < BRANCH.gold + BRANCH.cheap) {
+      const item = uniformPick(cheapTier(poolId), rng)
+      return { item, cheap: true, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
+    }
+    if (poolId === 'mix') {
+      // 混池的 35% 正常分支 = **装备**（按公示表的算法：0.35 × 品质权重 ⇒ 普通装备 28.7%）
+      const item = pickEquipBranch('mix', rng, rareCount)
+      return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
+    }
+    // 材料/食物：均匀抽一件池内物品（固定权重）
+    const item = uniformPick(poolItems(poolId), rng)
+    return { item, guaranteed: null, isRareUp: false, softP, boosted: false }
   }
-  if (poolId === 'gear') return { item: pickGear(rng, pity), boosted: pity >= GEAR_PITY - 1 }
-  if (poolId === 'mix') {
-    // 混池：MIX_GEAR_PCT 概率出装备（低权重表），其余素材（拉平；候选不含装备）
-    const item = rng() < MIX_GEAR_PCT ? pickGear(rng, 0) : weightedPick(materialFoodItems(60), rng, NORMAL_EXP)
-    return { item, boosted: false }
+  if (poolId === 'gear') {
+    const item = pickEquipBranch('gear', rng, rareCount)
+    return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
   }
   if (poolId === 'limited') {
-    // 限时池：LIMITED_GEAR_PCT 出装备（陡权重表，稀有+ ≈ 1.5%）+ 其余美食；50 抽保底
-    const boosted = pity >= LIMITED_PITY - 1
-    let item
-    if (boosted) {
-      // 保底触发：强制稀有及以上（同一张保底权重表，本池用自己的保底抽数）
-      item = pickGear(rng, pity, LIMITED_QUALITY_WEIGHT, LIMITED_PITY)
-    } else if (rng() < LIMITED_GEAR_PCT) {
-      item = pickGear(rng, 0, LIMITED_QUALITY_WEIGHT)
-    } else {
-      item = weightedPick(materialFoodItems(150), rng, NORMAL_EXP)
+    if (rng() < LIMITED_GEAR_PCT) {
+      const item = pickEquipBranch('limited', rng, rareCount)
+      return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
     }
-    return { item, boosted }
+    // 20% 限定美食：**不重置稀有计数**（规格「边界规则 3」）
+    const item = uniformPick(materialFoodItems(150), rng)
+    return { item, guaranteed: null, isRareUp: false, softP, boosted: false }
   }
-  const items = poolItems(poolId)
-  return { item: weightedPick(items, rng, NORMAL_EXP), boosted: false }
+  const item = uniformPick(poolItems(poolId), rng)
+  return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
 }
 
-/** 非装备素材缓存（混池/限时池的非装备分支与展示用） */
+/** 非装备素材缓存（限时池的非装备分支与展示用） */
 let _materialFoodCache = null
 export function materialFoodItems(cap = Infinity) {
   if (!_materialFoodCache) {
@@ -219,53 +349,68 @@ export function poolPreview(poolId, count = 18) {
 }
 
 /**
- * 各池概率明细（2026-09-22 用户：「尤其是觅珍得详细讲一下各池子概率」）。
- *
- * 🔴 **只读本模块的常量与池成员**——页面绝不能手抄这些数字，否则改权重时说明会变成谎话
- *    （本项目的老毛病：显示与结算不同源）。守卫会断言这里算出来的数与常量一致。
- * @returns {{id,name,icon,price,members,filler,pity,quality,rarePct,extra}}
+ * 单池公示明细（**唯一数据源**：游戏内「📊 概率说明」直接渲染它，一个数字都不许手抄）。
+ * 返回的 `final` 就是规格里那张「单次抽卡最终概率」表：分支概率 × 品质权重。
  */
 export function poolOdds(poolId) {
   const def = MIJIAN_POOLS.find((p) => p.id === poolId)
-  const r1 = (x) => Math.round(x * 10) / 10 // 百分比留一位小数（0.55*100 = 55.00000000000001 这类浮点尾巴别给玩家看）
+  const rule = pityRuleOf(poolId)
+  // 百分比精度：分支/返金这类大数留 1 位；**最终概率表留 4 位**（用户公示表用的是
+  // 28.700 / 4.900 / 0.945 / 0.3325 / 0.105 / 0.0175 这种精度，1 位会把 0.3325 压成 0.3）
+  const pct1 = (x) => Math.round(x * 10) / 10
+  const pct4 = (x) => Math.round(x * 10000) / 10000
+  const pct = (x) => pct1(x * 100)
   const out = {
     id: poolId,
     name: def?.name ?? poolId,
     icon: def?.icon ?? '🎴',
     price: def?.price ?? 0,
     members: poolItems(poolId).length,
-    filler: null,
+    desc: poolDesc(poolId),
+    branch: null,
+    refund: null,
+    cheapCount: 0,
     quality: null,
     rarePct: null,
+    gearShare: null,
+    gearPct: null,
+    foodPct: null,
+    final: [],
     pity: null,
-    extra: [],
+    soft: null,
   }
-  if (FILLER_POOLS.includes(poolId)) {
-    out.filler = {
-      goldPct: r1(FILLER.gold * 100),
-      cheapPct: r1(FILLER.cheap * 100),
-      drawPct: r1((1 - FILLER.gold - FILLER.cheap) * 100),
-      refundLo: r1(FILLER_GOLD_PCT[0] * 100),
-      refundHi: r1(FILLER_GOLD_PCT[1] * 100),
-      cheapCount: cheapTier(poolId).length,
-    }
+  if (BRANCH_POOLS.includes(poolId)) {
+    out.branch = { gold: pct(BRANCH.gold), cheap: pct(BRANCH.cheap), normal: pct(BRANCH.normal) }
+    out.refund = { pct: pct(REFUND_PCT), amount: refundOf(def?.price) }
+    out.cheapCount = cheapTier(poolId).length
   }
-  if (poolId === 'gear') {
+  if (poolId === 'mix') {
     out.quality = QUALITY_WEIGHT
     out.rarePct = GEAR_RARE_PCT
-    out.pity = { need: GEAR_PITY, table: PITY_QUALITY_WEIGHT }
+    out.gearShare = BRANCH.normal // 正常分支整支都是装备
+  } else if (poolId === 'gear') {
+    out.quality = QUALITY_WEIGHT
+    out.rarePct = GEAR_RARE_PCT
+    out.gearShare = 1
   } else if (poolId === 'limited') {
     out.quality = LIMITED_QUALITY_WEIGHT
     out.rarePct = LIMITED_RARE_PCT
-    out.pity = { need: LIMITED_PITY, table: PITY_QUALITY_WEIGHT }
-    out.extra.push({ label: '装备', pct: r1(LIMITED_GEAR_PCT * 100) }, { label: '美食', pct: r1((1 - LIMITED_GEAR_PCT) * 100) })
-  } else if (poolId === 'mix') {
-    // 混池里那 MIX_GEAR_PCT 的装备走厨具池同一张品质表
-    out.quality = QUALITY_WEIGHT
-    out.rarePct = GEAR_RARE_PCT
-    out.extra.push({ label: '装备', pct: r1(MIX_GEAR_PCT * 100) }, { label: '素材', pct: r1((1 - MIX_GEAR_PCT) * 100) })
-  } else {
-    out.extra.push({ label: '池内物品', pct: 100 })
+    out.gearShare = LIMITED_GEAR_PCT
+    out.gearPct = pct(LIMITED_GEAR_PCT) // 80
+    out.foodPct = pct(1 - LIMITED_GEAR_PCT) // 20
+  }
+  if (out.quality) {
+    const table = out.quality
+    const total = Object.values(table).reduce((a, b) => a + b, 0) || 1
+    out.final = Object.entries(table).map(([q, w]) => ({
+      quality: q === '普通' || q === '精良' ? `${q}装备` : `${q}装备`,
+      pct: pct4((w / total) * out.gearShare * 100),
+      raw: q,
+    }))
+  }
+  if (rule) {
+    out.pity = { rare: rule.rare, myth: rule.myth, table: rule.table, softStart: rule.rare - SOFT_WINDOW, softMaxP: pct(SOFT_MAX_P) }
+    out.soft = { start: rule.rare - SOFT_WINDOW, end: rule.rare - 1, maxP: pct(SOFT_MAX_P) }
   }
   return out
 }
