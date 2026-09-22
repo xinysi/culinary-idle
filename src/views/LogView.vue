@@ -10,6 +10,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
+import { scaledEnemy } from '../game/data/enemyScaling.js' // 首领图鉴的血量必须与战斗同源（(c) 血量分档）
 import { SEASONS } from '../game/data/seasons.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
@@ -403,7 +404,7 @@ const seasonPaged = computed(() => {
                 :key="b.name"
                 :class="{ 'boss-undefeated': !bossStatus(b.name) }"
                 style="cursor: pointer"
-                @click="bossDetail = b"
+                @click="bossDetail = scaledEnemy(b)"
               >
                 <td>
                   <span v-if="bossStatus(b.name)" class="badge badge-on">已击败</span>

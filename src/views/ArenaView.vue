@@ -10,6 +10,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import CombatPanel from '../components/CombatPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import { EventBus } from '../game/core/EventBus.js'
+import { scaledEnemy } from '../game/data/enemyScaling.js'
 import { generateArenaOpponents } from '../game/data/arena.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
 import { getItem } from '../game/data/items.js'
@@ -95,7 +96,8 @@ function getOpponents() {
   if (cachedArena && cachedArena.until > now) {
     // 校验缓存对手等级是否超当前对决等级（旧规则残留数据）：超限则强制重新生成
     if (cachedArena.opponents.some((o) => o.level > base)) return regenerateArena(now, base)
-    return cachedArena.opponents
+    // ⚠️ 旧版存档里的榜单没带血量分档 ⇒ 读出来也要过一遍 `scaledEnemy`（幂等，带标记不重复乘）
+    return cachedArena.opponents.map(scaledEnemy)
   }
   const st = loadArenaState()
   // 未到期（含页面刷新导致模块缓存丢失）：沿用原对手名单 + 原到期时间 + 已挑战记录，不倒计时重置/不恢复可打
@@ -103,14 +105,15 @@ function getOpponents() {
     // 校验旧榜单位超限：对手等级超过当前对决等级 → 视为旧规则残留，强制重新生成（封顶）
     if (st.opponents.some((o) => o.level > base)) return regenerateArena(now, base)
     cachedArena = { opponents: st.opponents, until: st.until }
-    return st.opponents
+    return st.opponents.map(scaledEnemy)
   }
   // 到期/无记录：重新生成名单，清空已挑战
   return regenerateArena(now, base)
 }
 // 重新生成榜单（等级封顶 ≤ 当前对决等级）并保存，清空已挑战
 function regenerateArena(now, base) {
-  const opponents = generateArenaOpponents(base)
+  // 血量分档（2026-09-22 (c)）：这里生成的一份同时用于**列表显示与开打**，所以两边必然一致
+  const opponents = generateArenaOpponents(base).map(scaledEnemy)
   const until = now + REFRESH_MS
   cachedArena = { opponents, until }
   saveArenaState({ until, opponents, challenged: [] })

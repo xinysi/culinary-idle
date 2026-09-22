@@ -8,6 +8,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_ADVANTAGE, COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
+import { scaledEnemy, enemyScalingText } from '../game/data/enemyScaling.js'
 import CombatPanel from '../components/CombatPanel.vue'
 import DropList from '../components/DropList.vue'
 import CombatLog from '../components/CombatLog.vue'
@@ -30,9 +31,12 @@ const selectedRegion = ref(0)
 const regionOpponents = computed(() => {
   // 展示按**等级升序**（数据里的顺序是「基础 2 + 扩充 10 + 扩充二 10」，等级会来回跳；
   // 只影响展示副本，不动原数组——掉落是按原下标分配的）
-  return [...(COMBAT_REGIONS[selectedRegion.value]?.opponents ?? [])].sort((a, b) => a.level - b.level)
+  // 🔴 同时套一层**血量分档**（2026-09-22 用户「abc 都做」→ (c)）：卡片显示 / 右栏详情 /
+  //    开打**共用这一个数组**，所以「显示的血量」与「打起来的血量」不可能不一致
+  //    （引擎的 `start()` 还会幂等地再确认一次，双保险）。
+  return [...(COMBAT_REGIONS[selectedRegion.value]?.opponents ?? [])].sort((a, b) => a.level - b.level).map(scaledEnemy)
 })
-const bossesSorted = computed(() => [...COMBAT_BOSSES].sort((a, b) => a.level - b.level))
+const bossesSorted = computed(() => [...COMBAT_BOSSES].sort((a, b) => a.level - b.level).map(scaledEnemy))
 /** 当前分类下已解锁的对手数（页签上显示进度用） */
 const regionLocked = computed(() => regionOpponents.value.filter((o) => !regionUnlocked(o)).length)
 const persistent = ref(false) // 持久战：胜利后自动挑战下一个对手（区域顺序循环）
@@ -98,6 +102,9 @@ function togglePersistent() {
 }
 function startNextOpponent() {
   if (!persistent.value || !combat) return
+  // 重生间隔（(b)）：等它走完再开下一场，避免「自动连打」把间隔刷掉
+  const wait = combat.respawnLeftMs?.() ?? 0
+  if (wait > 0) { setTimeout(() => startNextOpponent(), Math.ceil(wait) + 30); return }
   const o = combat?.opponent // 当前选中的敌人（胜利后 opponent 引用保留）
   if (!o) return
   if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
@@ -123,6 +130,7 @@ function startFight(opponent) {
   if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })
   let o = opponent
   // 困难模式（2026-09-06）：BOSS 属性 ×1.5 运行时副本；首杀额外奖励，不占 BOSS 击杀口径
+  // （副本从**已分档**的对手派生，自带 `__scaled` 标记 ⇒ `scaledEnemy` 不会二次缩放）
   if (hardMode.value && opponent.isBoss) {
     o = {
       ...opponent,
@@ -195,6 +203,13 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
               {{ COMBAT_REGIONS[selectedRegion].desc }} ·
               共 {{ regionOpponents.length }} 位对手<template v-if="regionLocked">（{{ regionLocked }} 位需更高对决等级）</template>
               · 点卡片看右侧详情，点「对决」开打
+            </p>
+            <!-- 玩法说明（2026-09-22 用户「abc 都做」）：血量分档与重生间隔是**规则**，
+                 不写出来就变成暗改（本项目的规矩：显示 = 结算 = 说明） -->
+            <p class="dim pick-note scaling-note">
+              ⚖️ 低等级对手血量已上调（{{ enemyScalingText() }}）⇒ 同等级一场约 8~12 秒；
+              击杀后有 <b>1.5 秒重生间隔</b>（一击秒杀因此不再划算）；对决经验改为<b>按造成的伤害</b>结算
+              （打得多、拿得多，溢出伤害不计）。
             </p>
             <div class="monster-cards">
               <div

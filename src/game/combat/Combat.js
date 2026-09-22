@@ -8,7 +8,9 @@ import { getItem, itemName } from '../data/items.js'
 import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
-import { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap } from '../data/caps.js' // 攻速地板常量单一来源
+import { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap, COMBAT_RESPAWN_SEC } from '../data/caps.js' // 攻速地板常量单一来源
+import { combatXpPerSkill, xpKillBaseline } from '../data/combatXpCurve.js' // 经验口径（按伤害）单一来源
+import { scaledEnemy } from '../data/enemyScaling.js' // 血量分档（读取点系数，冻结数据不动）
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
@@ -24,21 +26,9 @@ const MYSTERY_BUFFS = [
   { atk: 5, accuracy: 5 },
 ]
 
-// 获胜经验分段倍率（2026-09-06 曲线修正）：经验产出 O(L²) 跟不上经验需求 2^(L/7) 指数，
-// 后期（60+）按对手等级逐段补强，使 ×1 基准下 99 级从 ~6600 小时压到 ~700 小时量级：
-// L≤40 维持原速率（前期体验不动），40 之后每 10 级档位递进。
-// 2026-09-09 二次修正（对齐采集线）：90-99 档 9→12、100+ 档 12→16，配合下方 0.25→0.45 的二次项，
-// 使战斗三技能满级从 ~14 天压到 ~6 天量级（此前战斗比采集慢 25 倍，是唯一长板）。
-function winXpBoost(level) {
-  if (level <= 40) return 1
-  if (level <= 50) return 1.1
-  if (level <= 60) return 1.5
-  if (level <= 70) return 2.2
-  if (level <= 80) return 3.5
-  if (level <= 90) return 6
-  if (level <= 99) return 12
-  return 16
-}
+// 获胜经验的分段补强曲线已搬到 `data/combatXpCurve.js`（经验口径唯一来源）——
+// 那里同时负责「按造成的伤害给经验」的新口径与「同等级击杀 = 旧值」的等价性。
+// ⚠️ 别再在这里写第二份曲线：C46b 守卫断言「引擎里不得再出现 winXpBoost 的副本」。
 
 let instance = null
 export function setCombatInstance(c) {
@@ -72,6 +62,8 @@ export class Combat {
     this.biscuitSpeedPct = 0 // 「精力充沛」攻速加成，随 buffTurns 归零
     this.biscuitTurns = 0 // 饼干自己的增益计时（2026-09-22：不再与酱料共用 buffTurns）
     this.buffDelta = { item: {}, biscuit: {} } // 各来源各贡献了多少，到期时按来源精确扣除
+    this.damageDealt = 0 // 本场对敌人造成的**有效伤害**（经验口径用，2026-09-22）
+    this.respawnUntil = 0 // 击杀后的重生间隔（(b)，仅胜利时设置）
     this.result = null // win | lose
   }
 
@@ -163,15 +155,30 @@ export class Combat {
     return Math.max(this.buffTurns, this.biscuitTurns)
   }
 
+  /**
+   * 开始一场对决。
+   * ① **血量分档**（(c)，2026-09-22）：入场前套一层 `scaledEnemy()` 运行时副本 ——
+   *    冻结的敌人数据一个字节不动（与塔的难度档同一做法）。⚠️ 界面列表与这里必须用
+   *    **同一个** `scaledEnemy()`，否则会出现「卡片写 120 血、打起来 240 血」。
+   * ② **重生间隔**（(b)）：击杀后 `COMBAT_RESPAWN_SEC` 秒内拒绝开打（返回 false），
+   *    由界面显示倒计时。**只有胜利**才设这个门。
+   * @returns {boolean} 是否真的开打（false = 还在重生间隔里）
+   */
   start(opponent) {
-    this.opponent = opponent
-    this.opponentHp = opponent.hp
-    this.oppStyle = opponent.style
+    if (this.respawnLeftMs() > 0) {
+      this.logLine(`⏳ 敌人重生中（还剩 ${(this.respawnLeftMs() / 1000).toFixed(1)}s）`, 'warn')
+      return false
+    }
+    const o = scaledEnemy(opponent)
+    this.opponent = o
+    this.opponentHp = o.hp
+    this.oppStyle = o.style
     this.bossPhase = 1
     this.inFight = true
     this.turnTimer = 0
     this.turnStartAt = performance.now() // 本回合起点（绝对时间戳，战斗进度条 rAF 用）
     this.turnCount = 0
+    this.damageDealt = 0
     this.log = []
     this.buffs = { atk: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0 }
     this.buffTurns = 0
@@ -187,8 +194,15 @@ export class Combat {
     this.biscuitTurns = 0
     this.buffDelta = { item: {}, biscuit: {} }
     this.result = null
-    this.logLine(`⚔️ 对决开始：${opponent.name}（等级 ${opponent.level}，${opponent.styleName}）`)
-    EventBus.emit('combat:start', { opponent: opponent.name })
+    this.logLine(`⚔️ 对决开始：${o.name}（等级 ${o.level}，${o.styleName}）`)
+    EventBus.emit('combat:start', { opponent: o.name })
+    return true
+  }
+
+  /** 击杀后的重生剩余毫秒（0 = 可以开打）。界面据此显示倒计时/禁用按钮 */
+  respawnLeftMs() {
+    const left = (this.respawnUntil ?? 0) - performance.now()
+    return left > 0 ? left : 0
   }
 
   stop() {
@@ -372,6 +386,9 @@ export class Combat {
     if (o.mechanic?.phases && this.bossPhase > 1) {
       // 阶段体现在对手攻击上（opponentAttack 中处理），此处略
     }
+    // 有效伤害（用于「按伤害给经验」的口径）：溢出部分不计
+    const effDmg = Math.min(dmg, this.opponentHp)
+    this.damageDealt = (this.damageDealt ?? 0) + effDmg
     this.opponentHp = Math.max(0, this.opponentHp - dmg)
     getSkillInstance(this.styleSkillId)?.addXp(4) // 每次命中 +4（与受击经验对齐）
     this.logLine(`${crit ? '💥 暴击！' : '⚔️'} 对 ${o.name} 造成 ${dmg} 伤害${advantage ? '（克制 +15%）' : ''}`)
@@ -454,15 +471,21 @@ export class Combat {
     const o = this.opponent
     const gold = 5 + o.level * 3
     this.player.gainGold(gold)
-    // 击杀经验（2026-09-06 曲线修正，2026-09-09 二次项 0.25→0.45 对齐采集线）：三技能系数拉齐（总量 1.35L²，
-    // 消除“火候 0.2 系数拖慢对决等级”的隐性瓶颈），并按 winXpBoost 分段补强后期产出
-    const boost = winXpBoost(o.level)
-    const xpStyle = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
-    const xpTaste = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
-    const xpHeat = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost)
-    getSkillInstance(this.styleSkillId)?.addXp(xpStyle)
-    getSkillInstance('tasteAcumen')?.addXp(xpTaste)
-    getSkillInstance('heatControl')?.addXp(xpHeat)
+    // 🔴 击杀经验（2026-09-22 口径改为**按造成的伤害**，见 `data/combatXpCurve.js`）：
+    //    旧口径「按击杀、按等级固定给」使「给敌人加血」= 直接砍每小时经验；
+    //    新口径 `min(有效伤害, 怪物血量, 期望血量×2) × k(等级)` 保证
+    //    ① 同等级打赢一场的 XP 与改前**一模一样**（成长标定不动）；
+    //    ② 血量翻倍 ⇒ 打出的伤害翻倍 ⇒ 经验跟着翻倍（所以 (c) 加血不亏经验）；
+    //    ③ 溢出伤害与「自杀式刷级」都不占便宜（败场仍按 30%）。
+    const xpEach = combatXpPerSkill(o.level, this.damageDealt, o.hp, true)
+    getSkillInstance(this.styleSkillId)?.addXp(xpEach)
+    getSkillInstance('tasteAcumen')?.addXp(xpEach)
+    getSkillInstance('heatControl')?.addXp(xpEach)
+    const xpStyle = xpEach
+    const xpTaste = xpEach
+    const xpHeat = xpEach
+    // 击杀后的重生间隔（(b)：只惩罚一击秒杀，长战斗几乎无感）
+    this.respawnUntil = performance.now() + COMBAT_RESPAWN_SEC * 1000
     const drops = []
     for (const d of o.drops ?? []) {
       // 概率走全局难度系数（÷5，下限 1%）；`DropList.vue` 显示的是**同一个函数**的结果，两边不会差
@@ -496,12 +519,11 @@ export class Combat {
   lose() {
     this.inFight = false
     this.result = 'lose'
-    // 败场经验（2026-09-06 曲线修正）：获胜大额的 30%（鼓励挑战强敌与越级，
-    // 不再是「输了一无所获」的全抛）
+    // 败场经验：同样按**造成的伤害**算、系数 30%（保留原设计：打了一半也有收获，
+    // 但不鼓励「自杀式刷级」——没打完就打折，且败场在区域/首领里还要掉装备）
     const o = this.opponent
     if (o) {
-      const boost = winXpBoost(o.level)
-      const lostXp = Math.floor((o.level * 9.7 + o.level * o.level * 0.45) * boost * 0.3)
+      const lostXp = combatXpPerSkill(o.level, this.damageDealt, o.hp, false)
       getSkillInstance(this.styleSkillId)?.addXp(lostXp)
       getSkillInstance('tasteAcumen')?.addXp(lostXp)
       getSkillInstance('heatControl')?.addXp(lostXp)

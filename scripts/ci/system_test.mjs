@@ -421,11 +421,14 @@ console.log('══ C. 对决系统 ══')
   const p = freshPlayer({ knife: 5, tasteAcumen: 1, heatControl: 1 })
   p.inventory.roastPotato = 20
   const combat = new Combat(p)
-  const app = COMBAT_REGIONS[0].opponents[0] // L1 学徒厨师：hp18 def2 eva5.5 acc12 atk1.7
+  const app = COMBAT_REGIONS[0].opponents[0] // L1 学徒厨师：hp18 def2 eva5.5 acc12 atk1.7（血量分档后 ×2 = 36）
   combat.start(app)
   // 玩家攻击（强制命中、不暴击）：dmg = floor(15 × 1.0 × (1-2/102)) = floor(14.7) = 14
+  // ⚠️ 基准血量取**引擎里的那一份**（，已含血量分档），别再写死 18 —— 
+  //    否则每次调分档表都要回来改这条「测伤害公式」的断言（C46b 已单独钉住分档本身）
+  const maxHp = combat.opponent.hp
   withRandom([0.0, 0.9], () => combat.resolveTurn())
-  check('对决', '伤害公式精确（15攻 vs def2 → 14）', combat.opponentHp === 18 - 14, `hp=${combat.opponentHp}`)
+  check('对决', '伤害公式精确（15攻 vs def2 → 14）', combat.opponentHp === maxHp - 14, `hp=${combat.opponentHp}（上限 ${maxHp}）`)
 }
 // 克制三角（§3.3）：玩家 knife 对 plating 对手 +15%
 {
@@ -438,7 +441,8 @@ console.log('══ C. 对决系统 ══')
   // 预期 dmg = floor(15 × 1.15 × (1 - def/(def+100)))
   const expDmg = Math.floor(15 * 1.15 * (1 - stall.def / (stall.def + 100)))
   withRandom([0.0, 0.9], () => combat.resolveTurn())
-  check('对决', '克制 +15%（knife 克 plating）', combat.opponentHp === stall.hp - expDmg, `hp=${combat.opponentHp} exp=${stall.hp - expDmg}`)
+  const stallMax = combat.opponent.hp // 引擎口径（含血量分档）
+  check('对决', '克制 +15%（knife 克 plating）', combat.opponentHp === stallMax - expDmg, `hp=${combat.opponentHp} exp=${stallMax - expDmg}`)
 }
 // 命中/闪避边界 + 暴击
 {
@@ -448,13 +452,17 @@ console.log('══ C. 对决系统 ══')
   const app = COMBAT_REGIONS[0].opponents[0]
   combat.start(app)
   // 命中率 = acc/(acc+eva) = 15/(15+5.5) ≈ 0.73；强制 miss：hit roll 0.9 > 0.73
+  // （本段只测命中/暴击判定，不关心血量；暴击那条断言的是「溢出击杀」，对血量免疫）
   const hpBefore = combat.opponentHp
   withRandom([0.95, 0.95], () => combat.resolveTurn())
   check('对决', '命中判定：高随机值 → 闪避（无伤害）', combat.opponentHp === hpBefore, `hp=${combat.opponentHp}`)
-  // 暴击：crit roll 0 → ×2
+  // 暴击：crit roll 0 → ×2（断言**伤害倍率**，不再绑定「28 能秒掉 L1 敌人」——
+  // 血量分档后 L1 是 36 血，28 秒不掉；这条测的是暴击，不是血量）
   combat.start(app)
+  const hpB = combat.opponentHp
   withRandom([0.0, 0.0], () => combat.resolveTurn())
-  check('对决', '暴击 ×2（14×2=28 溢出击杀）', combat.opponentHp === 0 && combat.result === 'win', `hp=${combat.opponentHp}`)
+  const critDmg = hpB - combat.opponentHp
+  check('对决', '暴击 ×2（期望 28 伤害：14×2；血量不足时按剩余血量夹取）', critDmg === Math.min(28, hpB), `dmg=${critDmg}（攻击前血量 ${hpB}）`)
 }
 // 胜负判定 / 玩家死亡 / 食物冷却 / 自动进食阈值
 {
@@ -6839,6 +6847,127 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     check('战斗口径', '`buff.speed` 真的缩短回合间隔（此前只有标签表里有 speed、引擎不读 ⇒ 静默无效）',
       after < before, `${before} → ${after}ms`)
   }
+}
+
+// ══════════ C46b：敌人节奏三件套（(a) 按伤害给经验 · (b) 击杀重生间隔 · (c) 低中段血量分档）══════════
+// 背景（2026-09-22 用户「关于打敌人，太快结束战斗的应该提高血量吧」→ 对比 Melvor/Rocky 后「abc 都做」）：
+//   实测改前 248 个敌人同等级中位 6.0s（L1~20 只有 4.8s、最快 2 回合），而参考作 Melvor 的练级击杀
+//   普遍「数秒~数十秒」，且那边有 **3 秒重生 + 按伤害给经验**（所以「一击秒杀」是亏的）。
+//   本作原本两条都没有 ⇒ 秒杀是纯赚。三件事**必须成套**：(c) 加血会按比例砍掉每小时击杀，
+//   只有 (a) 把经验改成「按造成的伤害」之后，「加血」才不亏经验（这正是参考作的设计）。
+{
+  const fsMod2 = await import('node:fs')
+  const { scaledEnemy, enemyHpMult, enemyScalingText, ENEMY_HP_BANDS } = await import('../../src/game/data/enemyScaling.js')
+  const { combatXpPerSkill, xpKillBaseline, expectedEnemyHpAt, creditableDamage, XP_DAMAGE_CAP_MULT, xpPerDamage } = await import('../../src/game/data/combatXpCurve.js')
+  const { COMBAT_REGIONS, COMBAT_BOSSES } = await import('../../src/game/data/combat.js')
+  const { COMBAT_RESPAWN_SEC } = await import('../../src/game/data/caps.js')
+  const { Combat: CombatCls } = await import('../../src/game/combat/Combat.js')
+  const rd = (p) => fsMod2.readFileSync(p, 'utf8') // 本块自带的读文件小工具（C45c 里的 rd 是块级作用域）
+
+  // (c) 分档表本身
+  check('敌人节奏', `血量分档：倍率单调不增、满级为 1、最高倍率（${Math.max(...ENEMY_HP_BANDS.map((b) => b.mult))}）≤ 经验伤害上限倍率（${XP_DAMAGE_CAP_MULT}）—— 否则加血会亏经验`,
+    ENEMY_HP_BANDS.every((b, i) => i === 0 || b.mult <= ENEMY_HP_BANDS[i - 1].mult) && ENEMY_HP_BANDS[ENEMY_HP_BANDS.length - 1].mult === 1
+      && Math.max(...ENEMY_HP_BANDS.map((b) => b.mult)) <= XP_DAMAGE_CAP_MULT, enemyScalingText())
+  check('敌人节奏', `分档生效区间：L1×${enemyHpMult(1)} · L20×${enemyHpMult(20)} · L30×${enemyHpMult(30)} · L50×${enemyHpMult(50)} · L61×${enemyHpMult(61)}（后期不动）`,
+    enemyHpMult(1) === 2 && enemyHpMult(20) === 2 && enemyHpMult(21) === 1.8 && enemyHpMult(41) === 1.5 && enemyHpMult(61) === 1)
+  // `scaledEnemy` 必须是纯函数 + 幂等（列表先缩放、引擎再缩放 = ×4 的坑）
+  const sample = COMBAT_REGIONS[0].opponents[0]
+  const before = JSON.stringify(sample)
+  const once = scaledEnemy(sample)
+  const twice = scaledEnemy(once)
+  check('敌人节奏', '`scaledEnemy` 是纯函数（不改传入的冻结数据）、幂等（重复调用不再乘一次）',
+    JSON.stringify(sample) === before && twice === once && once.hp === Math.max(1, Math.round(sample.hp * enemyHpMult(sample.level))),
+    `hp ${sample.hp} → ${once.hp}（×${once.hpMult}）→ 再调用仍 ${twice.hp}`)
+  // 引擎入场也必须套分档（任何调用点都绕不过去）
+  {
+    const p0 = freshPlayer()
+    p0.skills.knife.level = 1
+    const c0 = new CombatCls(p0)
+    const o0 = COMBAT_REGIONS[0].opponents[0]
+    c0.start(o0)
+    check('敌人节奏', '引擎入场时幂等地再确认一次分档（`Combat.start` 里套 `scaledEnemy`）—— 任何调用点都绕不过去',
+      c0.opponentHp === scaledEnemy(o0).hp && o0.hp !== c0.opponentHp, `数据 ${o0.hp} → 入场 ${c0.opponentHp}`)
+    c0.inFight = false
+  }
+  // 冻结数据基线：敌人血量一个字节都不能动（改血量只能走读取点）
+  const flat = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
+  check('敌人节奏', `冻结的敌人数据未被改动（248 个敌人血量合计基线 = 87906）`,
+    flat.length === 248 && flat.reduce((s, e) => s + e.hp, 0) === 87906, `实得 ${flat.length} 个 / 合计 ${flat.reduce((s, e) => s + e.hp, 0)}`)
+
+  // (a) 经验口径：同等级击杀 == 旧口径（成长标定不动）；加血后成比例上升（不亏经验）
+  // ⚠️ 必须用**写死的冻结基线**比对，不能拿 `xpKillBaseline()` 当参照 —— 那是自比自：
+  //    把曲线整体 ×1.3 时两边一起变、比值恒为 1 ⇒ 首版反例验证时就抓不住（假绿）。
+  const XP_PINS = { 1: 10, 20: 374, 40: 1108, 60: 3303, 100: 87520 } // 改动前实测值（2026-09-22）
+  const pinsBad = Object.entries(XP_PINS).filter(([lv, xp]) => {
+    const l = Number(lv)
+    const hp = expectedEnemyHpAt(l)
+    return combatXpPerSkill(l, hp, hp, true) !== xp
+  })
+  check('敌人节奏', '经验口径与**改动前的击杀经验**逐级一致（冻结基线 L1=10 / L20=374 / L40=1108 / L60=3303 / L100=87520 ⇒ 成长速度标定不动）',
+    pinsBad.length === 0, pinsBad.map(([lv, xp]) => `L${lv} 期望 ${xp} 实得 ${combatXpPerSkill(Number(lv), expectedEnemyHpAt(Number(lv)), expectedEnemyHpAt(Number(lv)), true)}`).join(', '))
+  check('敌人节奏', '溢出伤害不计经验（`creditableDamage` 夹在怪物血量内）',
+    creditableDamage(50, 99999, 300) === Math.min(300, expectedEnemyHpAt(50) * XP_DAMAGE_CAP_MULT))
+  check('敌人节奏', `塔/秘境这类「为难度设计的血量」被封顶（≤ 期望血量 ×${XP_DAMAGE_CAP_MULT}）⇒ 深塔不会变成唯一练级点`,
+    creditableDamage(140, 11066, 11066) === expectedEnemyHpAt(140) * XP_DAMAGE_CAP_MULT, String(creditableDamage(140, 11066, 11066)))
+  const midLv = 40
+  const baseXp = combatXpPerSkill(midLv, expectedEnemyHpAt(midLv), expectedEnemyHpAt(midLv), true)
+  const scaledHp = Math.round(expectedEnemyHpAt(midLv) * enemyHpMult(midLv))
+  const scaledXp = combatXpPerSkill(midLv, scaledHp, scaledHp, true)
+  check('敌人节奏', `(a)+(c) 中性：血量 ×${enemyHpMult(midLv)} 后击杀经验也 ×${enemyHpMult(midLv)}（所以「加血」不砍每小时经验）`,
+    Math.abs(scaledXp / baseXp - enemyHpMult(midLv)) < 0.02, `${baseXp} → ${scaledXp}`)
+  check('敌人节奏', '败场经验是胜场的 30%（保留原设计，也抑制「自杀式刷级」）',
+    combatXpPerSkill(midLv, scaledHp, scaledHp, false) === Math.floor(scaledHp * xpPerDamage(midLv) * 0.3))
+  check('敌人节奏', '引擎里不再有 winXpBoost 的第二份副本（曲线只在 `combatXpCurve.js`）',
+    !/function winXpBoost/.test(rd('src/game/combat/Combat.js')) && /winXpBoost/.test(rd('src/game/data/combatXpCurve.js')))
+
+  // (b) 重生间隔：胜利才设门、门内拒绝开打（返回 false）、失败不设门
+  {
+    const { opp } = await import('../../src/game/data/combat.js')
+    const p = freshPlayer()
+    p.skills.knife.level = 60
+    p.skills.tasteAcumen.level = 60
+    p.skills.heatControl.level = 60
+    const c = new CombatCls(p)
+    const dummyO = opp(5, '木桩', 'flavor', { hp: 1 })
+    check('敌人节奏', '开打守卫：间隔内 `start()` 返回 false（引擎强制，任何调用点都绕不过去）',
+      c.start(dummyO) === true && c.inFight === true)
+    // 打死它 → 胜利 → 设门
+    let guard = 0
+    while (c.inFight && guard++ < 50) c.resolveTurn()
+    check('敌人节奏', `击杀后进入重生间隔（${COMBAT_RESPAWN_SEC}s），且此时 ` +
+      '`start()` 被拒绝', c.result === 'win' && c.respawnLeftMs() > 0 && c.start(dummyO) === false,
+      `left=${Math.round(c.respawnLeftMs())}ms`)
+    check('敌人节奏', '重生倒计时与常量同源（≤ COMBAT_RESPAWN_SEC 且 > 0）',
+      c.respawnLeftMs() <= COMBAT_RESPAWN_SEC * 1000 && c.respawnLeftMs() > COMBAT_RESPAWN_SEC * 1000 - 500)
+    // 等门开
+    c.respawnUntil = performance.now() - 1
+    check('敌人节奏', '间隔走完后可以再开打（门是临时的，不会永久锁死）', c.start(dummyO) === true)
+    c.inFight = false
+    // 失败不设门
+    const p2 = freshPlayer()
+    p2.skills.knife.level = 1
+    const c2 = new CombatCls(p2)
+    c2.start(opp(5, '木桩2', 'flavor', { hp: 999999, atk: 9999 }))
+    let g2 = 0
+    while (c2.inFight && g2++ < 200) c2.resolveTurn()
+    check('敌人节奏', '失败**不设**重生间隔（怪物还在原地，被反杀不该再罚时间）', c2.result === 'lose' && c2.respawnLeftMs() === 0)
+  }
+
+  // 界面接线（显示 = 结算 = 说明）
+  const cv = rd('src/views/CombatView.vue')
+  const ar = rd('src/components/CombatArena.vue')
+  const av = rd('src/views/ArenaView.vue')
+  const lv2 = rd('src/views/LogView.vue')
+  const tw = rd('src/views/TowerView.vue')
+  check('敌人节奏', '血量分档接线齐备（区域/首领列表 · 竞技场榜单 · 首领图鉴 都走同一个 `scaledEnemy`）',
+    // ⚠️ 必须**数出现次数 ≥2**（区域列表 + 首领列表各一处）：首版只查「有没有 `.map(scaledEnemy)`」，
+    //    反例验证时只改掉区域列表那一处、首领列表那处照样命中 ⇒ 假绿（与「受击减免」同一类坑）。
+    (cv.match(/\.map\(scaledEnemy\)/g) ?? []).length >= 2 && /scaledEnemy/.test(av) && /scaledEnemy\(b\)/.test(lv2),
+    `CombatView 里出现 ${(cv.match(/\.map\(scaledEnemy\)/g) ?? []).length} 处（需 ≥2：区域 + 首领）`)
+  check('敌人节奏', '页面上写明了规则（分档 + 重生间隔 + 经验改按伤害）——不然就是暗改',
+    /enemyScalingText\(\)/.test(cv) && /重生间隔/.test(cv) && /按造成的伤害/.test(cv))
+  check('敌人节奏', '重生倒计时在战斗屏可见，且与引擎同一个出口（`respawnLeftMs`）',
+    /respawnLeftMs/.test(ar) && /重生中/.test(ar) && /respawnLeftMs/.test(tw))
 }
 
 // ══════════ C46：采集目标「效率」的可见性与正确性（2026-09-19）══════════

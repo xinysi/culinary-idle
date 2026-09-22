@@ -105,7 +105,11 @@ function handleCombatEnd({ result }) {
   if (result === 'win') {
     const t = player.onTowerWin(lastFloor.value)
     ui.pushLog(`🗼 通过第 ${lastFloor.value} 层！（已过最高 ${t.best} 层）`, 'levelup')
-    if (autoNext.value && unlocked.value) setTimeout(() => { if (!fighting.value && !combat?.inFight) startFight() }, 500)
+    // 胜利自动爬楼：等**重生间隔**（(b)）走完再开下一场（间隔由引擎给，显示与结算同源）
+    if (autoNext.value && unlocked.value) {
+      const wait = Math.max(500, Math.ceil(combat?.respawnLeftMs?.() ?? 0) + 30)
+      setTimeout(() => { if (!fighting.value && !combat?.inFight) startFight() }, wait)
+    }
   } else {
     // 失败代价（2026-09-22）：从第 5 层起**退回上一层**（best 纪录永不回退）
     const r = player.onTowerLose(lastFloor.value)

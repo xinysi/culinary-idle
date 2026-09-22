@@ -33,6 +33,7 @@ const battleFrame = computed(() => {
     playerHp: player.combat.hp,
     playerHpMax: player.maxHp, // 与引擎同一口径（store 的 maxHp 已含全部外部 %）
     speedAtCap: combat?.playerStats?.().speedAtCap === true, // 攻速撞硬下限 ⇒ 饼干/奥义的攻速部分无效果
+    respawnLeftMs: combat?.respawnLeftMs?.() ?? 0, // 击杀后的重生倒计时（(b)，2026-09-22）
     turn: combat?.turnCount ?? 0,
     turnStartAt: combat?.inFight ? (combat.turnStartAt ?? performance.now()) : 0,
     turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
@@ -147,7 +148,13 @@ watch(
     </div>
 
     <div class="arena-foot">
-      <span class="dim">{{ battleFrame.inFight ? '自动回合制，无需操作；可随时吃料理/酱料或停止' : '选一个对手点「对决」即可开打' }}</span>
+      <!-- 重生间隔（(b)，2026-09-22）：击杀后 1.5s 才能开下一场。这条**必须显示** ——
+           参考作 Melvor 用它惩罚「一击秒杀」，但不写出来玩家只会以为按钮坏了。
+           倒计时与引擎同一个出口（`combat.respawnLeftMs()`），显示与结算同源。 -->
+      <span v-if="!battleFrame.inFight && battleFrame.respawnLeftMs > 0" class="dim arena-respawn">
+        ⏳ 敌人重生中… {{ (battleFrame.respawnLeftMs / 1000).toFixed(1) }}s
+      </span>
+      <span v-else class="dim">{{ battleFrame.inFight ? '自动回合制，无需操作；可随时吃料理/酱料或停止' : '选一个对手点「对决」即可开打' }}</span>
       <button v-if="battleFrame.inFight" class="btn btn-sm" @click="stopFight()">停止对决</button>
     </div>
   </div>
