@@ -10,7 +10,7 @@ import CombatLog from '../components/CombatLog.vue'
 import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_INFO } from '../game/data/combat.js'
 import { sfx } from '../game/core/sound.js'
-import { towerFloorName, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
+import { towerFloorName, towerMilestone, TOWER_UNLOCK_LEVEL, TOWER_TIERS, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -26,6 +26,8 @@ const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasi
 
 const floor = computed(() => Math.max(1, player.tower?.floor ?? 1))
 const best = computed(() => player.tower?.best ?? 0)
+/** 当前难度档（2026-09-22）：标准 / 精英×1.5 / 极限×2 —— 只影响之后的战斗与里程碑奖励 */
+const tier = computed(() => player.towerTier())
 const unlocked = computed(() => player.towerUnlocked())
 const combatLevel = computed(() => player.combatLevel)
 const pStats = computed(() => combat?.playerStats() ?? {})
@@ -105,14 +107,27 @@ function handleCombatEnd({ result }) {
     ui.pushLog(`🗼 通过第 ${lastFloor.value} 层！（已过最高 ${t.best} 层）`, 'levelup')
     if (autoNext.value && unlocked.value) setTimeout(() => { if (!fighting.value && !combat?.inFight) startFight() }, 500)
   } else {
-    ui.pushLog(`🗼 被第 ${lastFloor.value} 层守塔人击退……可继续挑战`, 'warn')
+    // 失败代价（2026-09-22）：从第 5 层起**退回上一层**（best 纪录永不回退）
+    const r = player.onTowerLose(lastFloor.value)
+    ui.pushLog(
+      r.dropped
+        ? `🗼 被第 ${lastFloor.value} 层守塔人击退 —— 退回第 ${r.floor} 层，重打一次就能再上来`
+        : `🗼 被第 ${lastFloor.value} 层守塔人击退……可继续挑战（第 ${TOWER_FLOOR_DROP_FROM} 层起被击退会退一层）`,
+      'warn',
+    )
   }
 }
 onMounted(() => EventBus.on('combat:end', handleCombatEnd))
 onBeforeUnmount(() => { EventBus.off?.('combat:end', handleCombatEnd); fighting.value = false; combat?.stop() })
 
 // 里程碑预览（最近 5 档）
-const milestones = computed(() => [1, 2, 3, 4, 5].map((i) => towerMilestone(i * 10)).filter(Boolean))
+// 里程碑按**当前档位的奖励倍率**预览（与发奖同一个函数、同一个倍率）
+const milestones = computed(() => [1, 2, 3, 4, 5].map((i) => towerMilestone(i * 10, tier.value.rewardMult)).filter(Boolean))
+function setTier(id) {
+  if (player.tower?.tier === id) return
+  const t = player.setTowerTier(id)
+  ui.pushLog(`🗼 挑战塔难度档改为「${t.name}」：守塔人属性 ×${t.mult}，里程碑金币与券 ×${t.rewardMult}（已领里程碑按档分别记账）`, 'info')
+}
 function fmt(g) { return g.toLocaleString() }
 </script>
 
@@ -121,7 +136,11 @@ function fmt(g) { return g.toLocaleString() }
     <header class="skill-head">
       <div>
         <h2>🗼 无尽挑战塔</h2>
-        <p class="dim">对决等级 {{ TOWER_UNLOCK_LEVEL }} 解锁 · 每 4 层对手 +1 级、属性逐层上浮 · 每 10 层里程碑奖励 · 胜利自动爬楼</p>
+        <p class="dim">
+          对决等级 {{ TOWER_UNLOCK_LEVEL }} 解锁 · 每 4 层对手 +1 级、属性逐层上浮 · 每 10 层里程碑奖励 · 胜利自动爬楼。
+          <b>难度档自选</b>（见下）：标准 / 精英 ×1.5 / 极限 ×2，奖励随档位放大；
+          第 {{ TOWER_FLOOR_DROP_FROM }} 层起<b>被击退会退回一层</b>（最高层纪录不回退）。
+        </p>
       </div>
     </header>
 
@@ -132,6 +151,27 @@ function fmt(g) { return g.toLocaleString() }
           <!-- 战斗屏 + 日志/战备 + 风格/属性（与对决页共用同一组件，不再各写一份） -->
           <CombatPanel />
 
+      <!-- 难度档（2026-09-22）：把「后期难度」做成玩家自选，而不是全局抬高敌人数值 -->
+      <div class="card tower-tiers">
+        <div class="tower-tier-row">
+          <span class="dim">难度档：</span>
+          <button
+            v-for="t in TOWER_TIERS"
+            :key="t.id"
+            class="btn btn-sm"
+            :class="{ 'btn-primary': tier.id === t.id }"
+            :title="t.desc"
+            @click="setTier(t.id)"
+          >{{ t.icon }} {{ t.name }}<template v-if="t.mult > 1"> ×{{ t.mult }}</template></button>
+          <span class="dim" :title="tier.desc">{{ tier.desc }}</span>
+        </div>
+        <p class="dim tower-tier-hint">
+          档位只改守塔人属性与里程碑倍率，<b>不改你已过的最高层</b>；里程碑按档<b>分别记账</b> ⇒
+          用标准档推深度、再用高难档把已经打得过的层按更高倍率领一遍，是后期多拿一份奖励的常规玩法。
+          高难档的墙会明显前移（实测满配：标准 ≈F1100、精英 ≈F800、极限 ≈F450），所以别指望在极限档推得比标准更深。
+        </p>
+      </div>
+
       <!-- 塔状态条：当前层 / 最高层 / 守塔人 / 挑战按钮 -->
       <div class="card quick-status tower-top">
         <div class="quick-group">
@@ -139,7 +179,9 @@ function fmt(g) { return g.toLocaleString() }
           <div class="quick-group-body">
             <div class="quick-item">
               <span class="quick-item-text">
-                第 {{ floor }} 层 · 守塔人 L{{ oppPreview?.level }} · HP {{ fmt(oppPreview?.hp ?? 0) }} · 已过最高 {{ best }} 层
+                第 {{ floor }} 层 · 守塔人 L{{ oppPreview?.level }} · HP {{ fmt(oppPreview?.hp ?? 0) }}
+                <template v-if="tier.mult > 1">（{{ tier.icon }} ×{{ tier.mult }} 档已计入）</template>
+                · 已过最高 {{ best }} 层
               </span>
               <button v-if="!battleFrame.inFight && !fighting" class="btn btn-sm btn-primary" @click="startFight">⚔️ 挑战</button>
               <button v-else class="btn btn-sm btn-danger" @click="stopFight">停止</button>
@@ -153,10 +195,10 @@ function fmt(g) { return g.toLocaleString() }
       <div class="card">
         <h3>🏅 里程碑（每 10 层一次，跨层自动发放）</h3>
         <div class="tower-milestones">
-          <div v-for="m in milestones" :key="m.floor" class="tower-ms" :class="{ got: (player.tower.rewarded ?? []).includes(m.floor) }">
+          <div v-for="m in milestones" :key="m.floor" class="tower-ms" :class="{ got: player.towerMilestoneClaimed(m.floor) }">
             <strong>第 {{ m.floor }} 层</strong>
             <span class="dim">+{{ fmt(m.gold) }} 金<template v-for="(q, id) in m.items" :key="id"> · {{ id === 'energyBiscuit' ? '能量饼干' : '神秘调料' }} ×{{ q }}</template></span>
-            <span v-if="(player.tower.rewarded ?? []).includes(m.floor)" class="badge badge-on">已领</span>
+            <span v-if="player.towerMilestoneClaimed(m.floor)" class="badge badge-on">已领（{{ tier.name }}档）</span>
           </div>
         </div>
             <p class="dim">100 层后进入「厨神之路」与「轮回饕餮殿」，难度继续无限爬升。</p>
@@ -190,6 +232,9 @@ function fmt(g) { return g.toLocaleString() }
   }
 }
 .tower-top { margin-bottom: 0; }
+.tower-tiers { padding: 10px 14px; }
+.tower-tier-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.tower-tier-hint { margin: 8px 0 0; font-size: 12px; line-height: 1.65; }
 .tower-milestones { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; }
 .tower-ms { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(var(--glass-rgb), 0.6); border: 1px solid rgba(var(--primary-tint-rgb), 0.18); font-size: 12px; }
 .tower-ms.got { border-color: var(--good); background: rgba(var(--good-rgb), 0.08); }

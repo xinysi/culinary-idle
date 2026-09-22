@@ -85,7 +85,8 @@ function selectType(t) {
 }
 const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击%', hpBonus: '品鉴值', speedBonus: '攻速' }
 const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速', duration: '持续' }
-const MECH_LABEL = { regen: '回血', slowEvery: '降攻速', burn: '灼烧', poison: '中毒', instantKill: '秒杀', randomStyle: '随机风格', phases: '三阶段', crit: '高暴击', eva: '高闪避', speedMs: '高攻速' }
+// ⚠️ 不含 speedMs：敌人攻速不参与结算（只有玩家攻速驱动回合，2026-09-22 实测），故不作为机制标签展示
+const MECH_LABEL = { regen: '回血', slowEvery: '降攻速', burn: '灼烧', poison: '中毒', instantKill: '秒杀', randomStyle: '随机风格', phases: '三阶段', crit: '高暴击', eva: '高闪避' }
 
 // 统计各类型收集数（依赖 player.collected；computed 缓存后每次渲染不再对 ITEMS 全表反复过滤）
 const typeStatsList = computed(() => {
@@ -144,7 +145,7 @@ function mechText(b) {
   }
   if (b.crit) ms.push(`暴击 ${Math.round(b.crit * 100)}%`)
   if (b.eva) ms.push(`闪避 ${b.eva}`)
-  if (b.speedMs) ms.push(`攻速 ${b.speedMs}ms`)
+  // 敌速不作为标签：见上（引擎不结算）
   return ms.join('、') || '—'
 }
 function bossStatus(name) {
@@ -558,7 +559,7 @@ const seasonPaged = computed(() => {
               <tr><td class="dim">生命值</td><td class="mono">{{ bossDetail.hp }}</td></tr>
               <tr><td class="dim">攻击 / 防御</td><td class="mono">{{ Math.round(bossDetail.atk) }} / {{ Math.round(bossDetail.def) }}</td></tr>
               <tr><td class="dim">命中 / 闪避</td><td class="mono">{{ Math.round(bossDetail.acc) }} / {{ Math.round(bossDetail.eva) }}</td></tr>
-              <tr><td class="dim">暴击 / 攻速</td><td class="mono">{{ (bossDetail.crit * 100).toFixed(1) }}% / {{ (bossDetail.speedMs / 1000).toFixed(1) }}s</td></tr>
+              <tr><td class="dim">暴击</td><td class="mono">{{ (bossDetail.crit * 100).toFixed(1) }}%</td></tr>
               <tr><td class="dim">机制</td><td>{{ mechText(bossDetail) }}</td></tr>
               <tr><td class="dim">状态</td><td>{{ bossStatus(bossDetail.name) ? '已击败' : '未击败' }}</td></tr>
             </tbody>

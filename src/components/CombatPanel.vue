@@ -4,6 +4,7 @@
 // 战斗日志 `CombatLog` 自 2026-09-21 起由各战斗页摆在右栏（与装备槽互换位置）。
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
+import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
 import { bindTip } from '../composables/useFixedTooltip.js'
@@ -12,6 +13,7 @@ import CombatLoadout from './CombatLoadout.vue'
 import EquipmentSlots from './EquipmentSlots.vue'
 
 const player = usePlayerStore()
+const ui = useUiStore()
 const combat = getCombat()
 
 const STYLES = ['knife', 'plating', 'flavor']
@@ -46,6 +48,14 @@ const defense = computed(() => [
 ])
 
 // 当前出站食灵的对决加成（§3.3.6）：在对决属性区明显展示
+// 奥义续航（2026-09-22 用户批准「让难度可见」）：深塔连战里「品鉴点耗尽 → 全部奥义熄灭」
+// 是实测到的真实断崖（tower_sim 两次扫描都出现「品鉴点最低 0」），但界面上原本完全看不见。
+// 数字与 `drainAoji` **同一个出口**（`player.aojiUpkeep()` → `aojiCostPerSec()`），显示与结算同源。
+const aojiKeep = computed(() => {
+  ui.loopTick // 逐帧刷新：品鉴点在战斗中也持续下降
+  return player.aojiUpkeep()
+})
+
 const spiritCombat = computed(() => {
   const e = player.spiritEffects?.() ?? {}
   const style = player.combat?.style
@@ -144,6 +154,17 @@ function buffText() {
           <span v-if="spiritCombat.healPerTurn">每回合回血 +{{ spiritCombat.healPerTurn }}%</span>
           <span v-if="spiritCombat.loseHp" class="warn-text">每回合损血 -{{ spiritCombat.loseHp }}%</span>
         </p>
+        <p v-if="aojiKeep.active.length" class="dim aoji-keep" :class="{ 'aoji-keep--low': aojiKeep.low }">
+          <span class="badge badge-on">🌀 奥义续航</span>
+          <span>
+            品鉴点 <b class="mono">{{ aojiKeep.points.toLocaleString() }}</b>
+            · 维持 {{ aojiKeep.active.length }} 个奥义 <b class="mono">-{{ aojiKeep.costPerSec }}/秒</b>
+            <template v-if="aojiKeep.secondsLeft != null">
+              ⇒ 约还能撑 <b class="mono">{{ aojiKeep.secondsLeft >= 3600 ? (aojiKeep.secondsLeft / 3600).toFixed(1) + ' 小时' : aojiKeep.secondsLeft >= 60 ? Math.floor(aojiKeep.secondsLeft / 60) + ' 分 ' + (aojiKeep.secondsLeft % 60) + ' 秒' : aojiKeep.secondsLeft + ' 秒' }}</b>
+            </template>
+          </span>
+          <span v-if="aojiKeep.low" class="warn-text">⚠️ 快见底了：归零时全部奥义会<b>立刻熄灭</b>（深塔连战最容易在这里翻车）</span>
+        </p>
         <p v-if="combat?.buffTurns > 0" class="dim">增益 {{ combat.buffTurns }} 回合：{{ buffText() }}</p>
         <p v-if="combat?.drunkTurns > 0" class="dim warn-text">🥴 醉酒中（命中 -15%）：{{ combat.drunkTurns }} 回合</p>
         <p v-if="player.combat.style === 'plating'" class="dim">🎨 装饰食材：<span class="mono">{{ player.inventory.garnish ?? 0 }}</span>（每次攻击消耗 1 个，杂货铺有售）</p>
@@ -153,6 +174,9 @@ function buffText() {
 </template>
 
 <style scoped>
+/* 奥义续航（2026-09-22）：把「深塔里为什么突然打不动」提前告诉玩家 */
+.aoji-keep { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.aoji-keep--low { color: var(--warn); }
 /* 属性面板：进攻 / 防御两栏（2026-09-19，参照 Melvor 的属性分区） */
 .attr-cols {
   display: grid;

@@ -75,10 +75,13 @@ export function towerFloor(floorNum, baseLevel) {
  *   ② 深层补**非金币**奖励：每 25 层给**觅珍抽卡券**（真货币，后期稀缺），每 100 层给「深潜礼包」（券 + 饼干 + 调料）。
  *   ⚠️ 里程碑是**一次性**的（`tower.rewarded` 记账），可重复刷的只有战斗本身，所以不构成刷金币漏洞。
  */
-export function towerMilestone(floorNum) {
+export function towerMilestone(floorNum, rewardMult = 1) {
   if (floorNum % 10 !== 0) return null
   const tier = floorNum / 10
-  const gold = 80 * tier * tier + 300
+  // 难度档的奖励倍率（2026-09-22）：**只放大金币与抽卡券**，礼包内物品数量保持不变 ——
+  // 饼干是离线上限、调料是准货币，按倍率翻倍会把「高难档」变成纯到账翻倍，收益不好标定。
+  const rm = Number(rewardMult) > 0 ? Math.round(Number(rewardMult) * 100) / 100 : 1
+  const gold = Math.round((80 * tier * tier + 300) * rm)
   const items = {}
   if (tier >= 2) items.energyBiscuit = 1
   if (tier >= 5) items.mysterySpice = 1
@@ -91,8 +94,50 @@ export function towerMilestone(floorNum) {
     items.energyBiscuit = (items.energyBiscuit ?? 0) + 3
     items.mysterySpice = (items.mysterySpice ?? 0) + 2
   }
-  return { floor: floorNum, gold, items, tickets }
+  return { floor: floorNum, gold, items, tickets: Math.round(tickets * rm), rewardMult: rm }
 }
+
+/**
+ * 塔的难度档（2026-09-22 用户批准「按合理平衡的方式改」）：
+ * 把「后期难度」做成**玩家自选**，而不是全局抬高敌人数值。
+ *
+ * 依据（`scripts/sim/enemy_ttk.mjs` + `tower_sim.mjs` 实测）：
+ *   · 普通对决 248 个敌人：同等级白板 100% 胜率、中位 6.0s；把敌人数值 ×1.5 只是把时长翻倍
+ *     （6→13.2s、L81+ 段 12→25s），败率仅 0→11%（区域 4%）⇒ 玩家感知是「变磨」不是「变难」。
+ *   · 塔是全游戏**唯一存在真墙**的地方：设计档满配 F1000 仍 100%、F1200 掉到 20%、F1400 起全败。
+ *   ⇒ 所以难度加在这里、且由玩家选，普通对决一个字节不动。
+ *
+ * ⚠️ 倍率只作用在**运行时副本**上（与「困难模式」对首领的 ×1.5 同一做法）——
+ *    `COMBAT_REGIONS` / `COMBAT_BOSSES` 的冻结数据一字未改（守卫有断言）。
+ */
+export const TOWER_TIERS = [
+  { id: 'standard', name: '标准', icon: '🗼', mult: 1, rewardMult: 1, desc: '原始强度' },
+  { id: 'elite', name: '精英', icon: '🔥', mult: 1.5, rewardMult: 1.5, desc: '守塔人属性 ×1.5 · 里程碑金币与抽卡券 ×1.5' },
+  { id: 'extreme', name: '极限', icon: '💀', mult: 2, rewardMult: 2, desc: '守塔人属性 ×2 · 里程碑金币与抽卡券 ×2（墙会明显前移）' },
+]
+export function towerTierOf(id) {
+  return TOWER_TIERS.find((t) => t.id === id) ?? TOWER_TIERS[0]
+}
+/** 把档位倍率作用到对手副本上（**返回新对象，不改传入数据**） */
+export function applyTowerTier(opponent, tierId) {
+  const t = towerTierOf(tierId)
+  if (!opponent || t.mult === 1) return opponent
+  return {
+    ...opponent,
+    tierId: t.id,
+    tierName: t.name,
+    hp: Math.round(opponent.hp * t.mult),
+    atk: opponent.atk * t.mult,
+    def: Math.round(opponent.def * t.mult),
+    eva: Math.round(opponent.eva * t.mult),
+  }
+}
+/** 里程碑记账键：标准档沿用旧档的**数字键**（旧存档无需迁移），其它档带前缀 */
+export function towerMilestoneKey(floorNum, tierId) {
+  return towerTierOf(tierId).id === 'standard' ? floorNum : `${towerTierOf(tierId).id}:${floorNum}`
+}
+/** 失败代价：塔内被击退 → **退回上一层**（从第 5 层起生效，低层不给新手施压；`best` 永不回退） */
+export const TOWER_FLOOR_DROP_FROM = 5
 
 /** 解锁条件：对决等级 60
  *  ⚠️ 2026-09-19 参照 Rocky Idle 从 **99 下调到 60**：参考作的挑战内容随档位**连续开放**（随时有下一档可推），

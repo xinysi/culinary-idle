@@ -146,7 +146,8 @@ function mechText(b) {
     else if (MECH_LABEL[k]) ms.push(MECH_LABEL[k])
   }
   if (b.crit && b.crit > 0.04) ms.push(`暴击 ${Math.round(b.crit * 100)}%`)
-  if (b.speedMs && b.speedMs < 2400 - b.level * 8 - 50) ms.push(`攻速 ${b.speedMs}ms`)
+  // ⚠️ 不再展示敌人的 `speedMs`：引擎只用**玩家**的攻速驱动回合，敌人的 speedMs 不参与结算
+  //    （2026-09-22 实测确认）——展示一个不生效的数值等于虚假承诺。
   return ms.join('、') || '—'
 }
 // 初次进页时先选中当前区域的第一个对手（watch 只在「变化」时触发，首次不会触发）

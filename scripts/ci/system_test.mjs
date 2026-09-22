@@ -2658,11 +2658,12 @@ console.log('══ X. 觅珍抽卡 ══')
   p.mijian.pity = { mix: { rare: 0, myth: 0 }, gear: { rare: 0, myth: 0 }, limited: { rare: 39, myth: 0 } }
   const r7 = p.drawMijian('limited', 1)
   check('觅珍', '限时池保底第 40 抽必出稀有及以上', r7.boosted && ['稀有', '史诗', '传说', '神话'].includes(r7.results[0]?.quality), JSON.stringify(r7.results.map((it) => [it?.id, it?.quality])))
-  // 爆率口径（2026-09-06 全面下调后；5000 次抽样区间校验）
+  // 爆率口径（2026-09-06 全面下调后；抽样区间校验）
   {
     const { pickItem: pk } = await import('../../src/game/data/mijianDraws.js')
     const RARE = ['稀有', '史诗', '传说', '神话']
-    const rate = (poolId, n = 5000) => {
+    const N = 20000
+    const rate = (poolId, n = N) => {
       let rare = 0
       for (let i = 0; i < n; i++) {
         const { item } = pk(poolId, Math.random, 0)
@@ -2670,13 +2671,20 @@ console.log('══ X. 觅珍抽卡 ══')
       }
       return rare / n
     }
+    // ⚠️ 抽样校验的容差必须**按实际概率算**，不能拍一个固定的百分点区间：
+    //    p=2.1% 时 n=5000 的 σ ≈ 0.20pp ⇒ 原先 1.5% 的下界离期望只有 2.9σ，
+    //    反例验证连跑时实测到 1.46% / 1.48% 两次假失败（守卫被纯噪声打穿）。
+    //    现改为「n=20000 + 以期望值 ±max(0.35pp, 4σ) 判定」，既是**定值断言**（比原区间更强）又不会抖。
+    const tol = (p) => Math.max(0.0035, 4 * Math.sqrt((p * (1 - p)) / N))
+    const near = (x, p) => Math.abs(x - p) <= tol(p)
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
     // 每次都传 pity=0 ⇒ 软保底/硬保底都不参与，量的就是**基础爆率**（= 公示表那一列）
-    check('觅珍', '厨具池基础稀有+ 爆率 = 品质权重本身 4%（3.5~4.5%）', g >= 0.035 && g <= 0.045, `g=${(g * 100).toFixed(2)}%`)
-    check('觅珍', '限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（0.9~1.5%）', l >= 0.009 && l <= 0.015, `l=${(l * 100).toFixed(2)}%`)
+    check('觅珍', `厨具池基础稀有+ 爆率 = 品质权重本身 4%（±max(0.35pp, 4σ)）`, near(g, 0.04), `g=${(g * 100).toFixed(2)}% 容差 ±${(tol(0.04) * 100).toFixed(2)}pp`)
+    check('觅珍', `限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（±max(0.35pp, 4σ)）`, near(l, 0.012), `l=${(l * 100).toFixed(2)}% 容差 ±${(tol(0.012) * 100).toFixed(2)}pp`)
     // ⚠️ 混池会略高于 35% × 4% = 1.4%：低档分支（池内价值最低 20% 的**固定集合**）里也可能有低阶稀有装备，
     //    这是规格「低档物品 = 价值最低 20% 的固定集合」的必然结果（公示表的装备列只描述正常分支）。
-    check('觅珍', '混池基础稀有+ 爆率 1.5~2.8%（正常分支 1.4% + 低档分支里的低阶稀有装备）', m >= 0.015 && m <= 0.028, `m=${(m * 100).toFixed(2)}%`)
+    check('觅珍', `混池基础稀有+ 爆率 ≈ 2.1%（正常分支 1.4% + 低档分支里的低阶稀有装备；±${(tol(0.021) * 100).toFixed(2)}pp）`,
+      near(m, 0.021), `m=${(m * 100).toFixed(2)}%`)
     // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
@@ -6477,6 +6485,152 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   p5.realmEnd()
   check('秘境档位', '满档后不再继续升（封顶）', p5.realmTier() === REALM_TIER_MAX)
   void totalXpForLevel
+}
+
+// ══════════ C45b：后期难度的「可自选化 + 失败代价 + 续航可见」（2026-09-22）══════════
+// 起因：实测 248 个敌人全部零败（中位 6.0 秒击杀）、塔在 F1000→F1200 之间从 100% 胜率掉到 20%（80pp 悬崖）
+// ⇒ 「难」这件事在玩家侧是不可见的：没有档位、败了不掉进度、奥义停摆也不知道为什么打不动。
+// 处置（用户 2026-09-22 批准「按合理平衡的方式改」）：
+//   ① 难度档 **运行时叠加**（`applyTowerTier`）—— 敌人冻结数据一个字节不动，想加难只改 `TOWER_TIERS`；
+//   ② 塔从第 5 层起被击退**退一层**（`onTowerLose`，`best` 纪录永不回退）；
+//   ③ 战斗面板显示奥义续航（`aojiUpkeep`），且必须与真实扣点**同源**（否则又是「显示与结算不一致」）。
+{
+  const { TOWER_TIERS, towerTierOf, applyTowerTier, towerMilestoneKey, towerMilestone, towerFloor, TOWER_FLOOR_DROP_FROM } =
+    await import('../../src/game/data/battleTower.js')
+  const { AOJIS } = await import('../../src/game/data/aojis.js')
+
+  // ① 档位表本身：三档、id 唯一、属性倍率与奖励倍率**同名同值**、标准档是第一档（= 默认，旧档回退目标）
+  const ids = TOWER_TIERS.map((t) => t.id)
+  check('难度档', `档位为 标准/精英/极限（${ids.join(' / ')}），id 唯一`, ids.length === 3 && new Set(ids).size === 3)
+  check('难度档', '属性倍率严格递增且标准档 = ×1', TOWER_TIERS[0].mult === 1 && TOWER_TIERS.every((t, i) => i === 0 || t.mult > TOWER_TIERS[i - 1].mult), TOWER_TIERS.map((t) => t.mult).join(' / '))
+  check('难度档', '每一档的属性倍率与奖励倍率相等（难 1.5 倍 ⇒ 奖励也 1.5 倍，不出现「更难但没多拿」）',
+    TOWER_TIERS.every((t) => t.rewardMult === t.mult))
+  check('难度档', '脏档/空档回退标准档（不产生越界倍率）', towerTierOf('nope').id === ids[0] && towerTierOf(undefined).id === ids[0] && towerTierOf(null).id === ids[0])
+
+  // ② `applyTowerTier` 是**纯函数**且只乘属性：不改传入的冻结对手对象、不动等级与掉落、不引入 NaN
+  const base = towerFloor(50, 100)
+  const snapshot = JSON.stringify(base)
+  const elite = applyTowerTier(base, 'elite'), extreme = applyTowerTier(base, 'extreme')
+  check('难度档', '叠加难度档**不修改**传入的对手对象（冻结数据不可被就地改写）', JSON.stringify(base) === snapshot)
+  // ⚠️ hp/def/eva 会 `Math.round`（这三个在别处以整数使用与显示），atk 保留小数 ⇒ 断言用「取整后相等」而不是裸乘
+  const mulOk = (o, m) => ['hp', 'atk', 'def', 'eva'].every((k) =>
+    (k === 'atk' ? o[k] === base[k] * m : o[k] === Math.round(base[k] * m)))
+  check('难度档', '精英/极限档把 hp/atk/def/eva 全部乘上倍率（整数属性取整）',
+    mulOk(elite, 1.5) && mulOk(extreme, 2) && ['hp', 'atk', 'def', 'eva'].every((k) => elite[k] > base[k] && extreme[k] > elite[k]),
+    `hp ${Math.round(base.hp)} → ${Math.round(elite.hp)} / ${Math.round(extreme.hp)}`)
+  check('难度档', '档位不改变对手等级与掉落（等级一致才能「同层同等级、只是更硬」）',
+    elite.level === base.level && extreme.level === base.level && JSON.stringify(elite.drops) === JSON.stringify(base.drops))
+  check('难度档', '标准档属性与原始对手逐字段一致（×1 不引入任何漂移）',
+    JSON.stringify(applyTowerTier(base, 'standard')) === snapshot)
+  check('难度档', '对手属性无 NaN（倍率作用后仍是可结算的数）', ['hp', 'atk', 'def', 'eva', 'crit'].every((k) => Number.isFinite(extreme[k])))
+
+  // ③ 里程碑按档放大：**金币与券乘以倍率，物品数量一件不加**（物品翻倍会直接破物品经济）
+  const m1 = towerMilestone(100, 1), m2 = towerMilestone(100, 2)
+  check('难度档', '里程碑金币与抽卡券随档位倍率放大', m2.gold === m1.gold * 2 && m2.tickets === m1.tickets * 2, `${m1.gold}/${m1.tickets} → ${m2.gold}/${m2.tickets}`)
+  check('难度档', '里程碑**物品**数量不随档位变化（奖励放大只走金币与券，不动物品产出）',
+    JSON.stringify(m2.items) === JSON.stringify(m1.items), JSON.stringify(m2.items))
+  check('难度档', '非法奖励倍率回退 ×1（0/负数/NaN/字符串都不会把奖励清零或放大）',
+    [0, -1, NaN, 'x', undefined].every((v) => towerMilestone(100, v).gold === m1.gold))
+  check('难度档', '里程碑换算带档位标识（同层不同档各记一笔；标准档沿用裸层号以兼容旧档）',
+    towerMilestoneKey(100, 'standard') === 100 && towerMilestoneKey(100, 'elite') === 'elite:100')
+
+  // ④ 行为（真实 store）：切档生效、按档发奖、重复不重发、按档分别记账、失败退层、best 不回退
+  const tp = freshPlayer()
+  check('难度档', '新档默认标准档', tp.towerTier().id === 'standard')
+  tp.setTowerTier('elite')
+  check('难度档', '切档后 towerTier() 立即生效（页面选择与结算同源）', tp.towerTier().id === 'elite')
+  tp.tower = { floor: 10, best: 9, rewarded: [], tier: 'elite' }
+  const g0 = tp.gold
+  tp.onTowerWin(10)
+  check('难度档', '精英档里程碑按 ×1.5 发金币（不是按标准档发）', tp.gold - g0 === towerMilestone(10, 1.5).gold, `实发 ${tp.gold - g0}，标准档应为 ${towerMilestone(10, 1).gold}`)
+  const g1 = tp.gold
+  tp.onTowerWin(10) // 同档重复通过同一层（页面重复发事件时）
+  check('难度档', '同一档位同一层的里程碑只发一次', tp.gold === g1)
+  tp.setTowerTier('extreme')
+  const rExt = tp.towerMilestoneClaimed(10)
+  check('难度档', '已领判定按**当前档位**的键（精英已领 ≠ 极限已领）', rExt === false)
+  const g2 = tp.gold
+  tp.onTowerWin(10)
+  check('难度档', '换档后同一层按新档位再记一笔并发 ×2 奖励（各档分别记账）', tp.gold - g2 === towerMilestone(10, 2).gold)
+  // ⚠️ 这条是**唯一能区分两套键**的断言：标准档领过 F10 之后切到精英档，该层必须判为「未领」。
+  //    写成 `rewarded.includes(floorNum)`（丢掉档位前缀）时它同样返回 true ⇒ 本断言 FAIL。
+  //    （第一版只查「精英已领 ≠ 极限已领」，两者键都带前缀、**永远不会相撞** ⇒ 反例验证时是假绿。）
+  const tp2 = freshPlayer()
+  tp2.tower = { floor: 11, best: 10, rewarded: [], tier: 'standard' }
+  tp2.onTowerWin(10)
+  const claimedStd = tp2.towerMilestoneClaimed(10)
+  tp2.setTowerTier('elite')
+  check('难度档', '标准档领过的层，切到精英档必须判为「未领」（键带档位前缀，不是裸层号）',
+    claimedStd === true && tp2.towerMilestoneClaimed(10) === false,
+    `标准档 ${claimedStd} / 切档后 ${tp2.towerMilestoneClaimed(10)}`)
+  // 旧档兼容：老存档 `rewarded` 里是**裸层号**
+  const oldP = freshPlayer()
+  oldP.tower = { floor: 20, best: 19, rewarded: [10], tier: 'standard' }
+  check('难度档', '旧档（rewarded 为裸层号）的「已领」判定仍然成立（老玩家不会被重发）', oldP.towerMilestoneClaimed(10) === true)
+  // 失败代价
+  const lp1 = freshPlayer()
+  lp1.tower = { floor: 10, best: 10, rewarded: [], tier: 'standard' }
+  const d1 = lp1.onTowerLose(10)
+  check('难度档', `第 ${TOWER_FLOOR_DROP_FROM} 层起被击退退一层`, d1.dropped === true && lp1.tower.floor === 9, `floor=${lp1.tower.floor}`)
+  check('难度档', '被击退**不抹掉**最高层纪录', lp1.tower.best === 10)
+  const lp2 = freshPlayer()
+  lp2.tower = { floor: 3, best: 3, rewarded: [], tier: 'standard' }
+  const d2 = lp2.onTowerLose(3)
+  check('难度档', `低层（< ${TOWER_FLOOR_DROP_FROM}）被击退不扣层（不惩罚新手）`, d2.dropped === false && lp2.tower.floor === 3)
+  const lp3 = freshPlayer()
+  lp3.tower = { floor: 1, best: 8, rewarded: [], tier: 'standard' }
+  lp3.onTowerLose(1)
+  check('难度档', '层号不会被退到 0 以下', lp3.tower.floor >= 1)
+  // 存档往返（tier 三处齐备）
+  const sp = freshPlayer()
+  sp.setTowerTier('extreme')
+  const spBack = freshPlayer()
+  spBack.applySave(JSON.parse(JSON.stringify(sp.serialize())))
+  check('难度档', '难度档随存档往返保留（defaultState/serialize/applySave 三处）', spBack.towerTier().id === 'extreme', `实得 ${spBack.towerTier().id}`)
+  const spDirty = freshPlayer()
+  spDirty.applySave({ ...sp.serialize(), tower: { floor: 5, best: 4, rewarded: [], tier: 'bogus' } })
+  check('难度档', '存档里的脏档位被夹回标准档（不炸、也不产生越界倍率）', spDirty.towerTier().id === 'standard')
+
+  // ⑤ 奥义续航：显示与扣点**必须同源**（否则又是「页面写能撑 10 分钟、实际 3 分钟就熄火」）
+  const ap = freshPlayer()
+  const a0 = AOJIS[0], a1 = AOJIS[1] // 0.5 + 0.6 = 1.1/秒（**小数**费率：扣点是「累积后取整」，不会超前扣）
+  const aInt = AOJIS.find((x) => Number.isInteger(x.costPerSec) && x.costPerSec > 0) // 1.0/秒，用于精确断言
+  ap.gastronomy.active = [a0.id, a1.id]
+  ap.tastePoints = 600
+  ap._aojiActivatedAt = { [a0.id]: 1, [a1.id]: 1 } // 远古时间 ⇒ 已过 10 秒宽限期
+  const up = ap.aojiUpkeep()
+  const expect = a0.costPerSec + a1.costPerSec
+  check('续航', '续航面板的「每秒消耗」与结算出口 `aojiCostPerSec()` 同源', up.costPerSec === ap.aojiCostPerSec() && up.costPerSec === expect, `显示 ${up.costPerSec} / 出口 ${ap.aojiCostPerSec()} / 应为 ${expect}`)
+  check('续航', '剩余秒数 = 品鉴点 ÷ 每秒消耗（向下取整）', up.secondsLeft === Math.floor(600 / expect), `实得 ${up.secondsLeft}`)
+  check('续航', '点数充裕时不报警（阈值 60 秒以内才提示）', up.low === false && up.active.length === 2)
+  const ap2 = freshPlayer()
+  ap2.gastronomy.active = [a0.id]
+  ap2.tastePoints = 20 // 20 ÷ 0.5 = 40 秒 ⇒ 应进入低警告
+  ap2._aojiActivatedAt = { [a0.id]: 1 }
+  check('续航', '撑不到 1 分钟时进入低警告状态（深塔连战最该看到的提示）', ap2.aojiUpkeep().low === true && ap2.aojiUpkeep().secondsLeft === 40, JSON.stringify(ap2.aojiUpkeep()))
+  const ap3 = freshPlayer()
+  ap3.gastronomy.active = [aInt.id]
+  ap3.tastePoints = 100
+  ap3._aojiActivatedAt = { [aInt.id]: 1 }
+  const before = ap3.tastePoints
+  ap3.drainAoji(1000) // 跑满 1 秒
+  check('续航', `跑满 1 秒正好扣掉「每秒消耗」（费率 ${aInt.costPerSec}/秒 ⇒ 实扣 ${aInt.costPerSec}）`, before - ap3.tastePoints === aInt.costPerSec, `实扣 ${before - ap3.tastePoints}`)
+  for (let i = 0; i < 9; i++) ap3.drainAoji(1000)
+  check('续航', '连跑 10 秒的扣点总量 = 速率 × 10（面板速率就是真实速率）', before - ap3.tastePoints === aInt.costPerSec * 10, `实扣 ${before - ap3.tastePoints}`)
+  // 小数费率：1 秒只扣整数部分（余数结转，不四舍五入超前扣费）
+  const ap4 = freshPlayer()
+  ap4.gastronomy.active = [a0.id]
+  ap4.tastePoints = 100
+  ap4._aojiActivatedAt = { [a0.id]: 1 }
+  ap4.drainAoji(1000)
+  check('续航', `小数费率（${a0.costPerSec}/秒）首秒只扣 ${Math.floor(a0.costPerSec)}，余数结转到下一秒（不超前扣）`,
+    100 - ap4.tastePoints === Math.floor(a0.costPerSec), `实扣 ${100 - ap4.tastePoints}`)
+  const ap5 = freshPlayer()
+  ap5.tastePoints = 5
+  ap5.gastronomy.active = [a0.id]
+  ap5._aojiActivatedAt = { [a0.id]: 1 }
+  ap5.drainAoji(60000)
+  check('续航', '品鉴点耗尽后奥义全部熄灭（界面上的「还能撑多久」是硬约束，不是参考值）', ap5.gastronomy.active.length === 0 && ap5.tastePoints === 0)
 }
 
 // ══════════ C46：采集目标「效率」的可见性与正确性（2026-09-19）══════════

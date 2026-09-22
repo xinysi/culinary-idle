@@ -174,8 +174,17 @@ async function scanPages(page, viewport, pages) {
   const errs = []
   let n = 0
   page.on('pageerror', (e) => errs.push(e.message))
+  // 🔴 控制台错误（2026-09-22 立）：**Vue 把渲染期抛出的错误交给 `console.error`，不会冒泡到 `pageerror`**
+  //   ⇒ 「模板/脚本里引用了未声明的标识符」这类错误对上面那行完全不可见。实测代价：漏写一行
+  //   `const ui = useUiStore()`（新加的奥义续航块里用了 `ui.loopTick`）→ `ui is not defined` 让**全部 40 个视图
+  //   渲染成空**、对决立绘与技能列表一并消失，而布局守卫与 e2e-interact 都报绿（最后是 e2e-test 偶然点破的）。
+  //   排除网络类噪声（图片 404 / favicon / vite 提示），只留真正的脚本错误。
+  const consoleErrs = []
+  const NOISE = /Failed to load resource|net::ERR|favicon|ERR_ABORTED|\[vite\]/
+  page.on('console', (m) => { if (m.type() === 'error' && !NOISE.test(m.text())) consoleErrs.push(m.text().slice(0, 220)) })
   for (const pg of pages) {
     const v = pg.skill ? `skill:${pg.skill}` : pg.view
+    const mark = consoleErrs.length
     await page.evaluate((p) => {
       const el = document.querySelector('#app')
       const app = el.__vue_app__
@@ -190,6 +199,7 @@ async function scanPages(page, viewport, pages) {
     // 记「点不到」的（可点但位置越界的只是视觉溢出，不算硬缺陷）
     for (const x of r.cutControl) if (!x.clickable) cut.push(`${v} · 「${x.ctrl}」被裁 ${x.over}px（${x.box}）`)
     for (const x of r.squeeze) sq.push(`${v} · 「${x.text}」被挤成 ${x.w}×${x.h}（逐字竖排）`)
+    for (const msg of consoleErrs.slice(mark)) errs.push(`${v} · 控制台错误：${msg}`)
     n++
   }
   return { cut, sq, errs, n }

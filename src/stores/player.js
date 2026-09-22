@@ -46,7 +46,7 @@ import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyC
 import { REALM_BUFFS, rollRealmChoices, realmReward, realmTierGoal, realmTierMult, REALM_TIER_MAX } from '../game/data/mysticRealm.js'
 import { DAO_NODES, DAO_PATHS, daoNode, daoEffectSum, daoSpent, daoCanUnlock, daoPathCost } from '../game/data/daoTree.js'
 import { INSIGHT_NODES, insightEffectSum, canUnlockInsight } from '../game/data/insightTree.js'
-import { towerFloor, towerMilestone, TOWER_UNLOCK_LEVEL } from '../game/data/battleTower.js'
+import { towerFloor, towerMilestone, towerMilestoneKey, towerTierOf, applyTowerTier, TOWER_UNLOCK_LEVEL, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
@@ -284,7 +284,7 @@ const defaultState = () => ({
     // 木工不在此列：它走既有 `restaurant.decor`（木器 = 手工装潢，v2.9.0）。
     sidelineWorks: [],
     // 无尽挑战塔（对决 99 解锁）：floor=当前挑战层，best=已通最高层，rewarded=已发里程碑层
-    tower: { floor: 1, best: 0, rewarded: [] },
+    tower: { floor: 1, best: 0, rewarded: [], tier: 'standard' }, // tier = 塔的难度档（2026-09-22）
     // 月度厨艺大赛：month=YYYYMM，score=当月累计分，entries=提交记录，rewarded=已领里程碑序号
     fest: { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
     // 食灵羁绊（2026-09-06）：{ spiritId: 累计出战毫秒 }；等级=出战天数阈值，放大该食灵效果（不改契约/效果数据）
@@ -830,7 +830,15 @@ export const usePlayerStore = defineStore('player', {
         daoUnlocked: Array.isArray(saved.daoUnlocked) ? saved.daoUnlocked : [],
         shanhaiUnlocked: Array.isArray(saved.shanhaiUnlocked) ? saved.shanhaiUnlocked : [],
         sidelineWorks: Array.isArray(saved.sidelineWorks) ? saved.sidelineWorks.filter((id) => !!SIDELINE_WORKS[id]) : [],
-        tower: saved.tower ?? { floor: 1, best: 0, rewarded: [] },
+        tower: (() => {
+          const t = saved.tower ?? {}
+          return {
+            floor: Math.max(1, Math.floor(t.floor ?? 1)),
+            best: Math.max(0, Math.floor(t.best ?? 0)),
+            rewarded: Array.isArray(t.rewarded) ? t.rewarded : [], // 数字键=标准档（旧档无需迁移），其余为 `档:层`
+            tier: towerTierOf(t.tier).id, // 脏档回退 standard
+          }
+        })(),
         fest: saved.fest ?? { month: null, score: 0, entries: [], lastEntryDay: null, todayEntries: 0, rewarded: [] },
         spiritBonds: saved.spiritBonds ?? {},
         hardcoreStats: saved.hardcoreStats ?? { days: 0, best: 0 },
@@ -1975,6 +1983,38 @@ export const usePlayerStore = defineStore('player', {
       if (n > 0) this.tastePoints += Math.floor(n)
     },
 
+    /**
+     * 当前奥义**每秒消耗**（唯一出口：`drainAoji` 与界面的「续航」显示都调它 —— 否则页面写的
+     * 剩余时间与真实扣点会不一致）。宽限期内免费，故宽限期未过的那些不计入。
+     */
+    aojiCostPerSec(now = Date.now()) {
+      const active = this.gastronomy?.active ?? []
+      if (!active.length || this.tastePoints <= 0) return 0
+      const GRACE = 10000
+      let cost = 0
+      for (const id of active) {
+        const a = AOJIS.find((x) => x.id === id)
+        if (!a) continue
+        const at = this._aojiActivatedAt?.[id]
+        if (at && now - at < GRACE) continue
+        cost += a.costPerSec
+      }
+      return cost
+    },
+    /**
+     * 奥义续航（2026-09-22：把「深塔里越打越虚」这件事**显式化**）：
+     * 返回 `{ active, costPerSec, points, secondsLeft, low }`。
+     * 品鉴点归零时 `drainAoji` 会**把全部奥义关掉**（实测深塔连战会出现"突然打不动"），
+     * 所以界面上必须能提前看到剩多久。
+     */
+    aojiUpkeep() {
+      const active = [...(this.gastronomy?.active ?? [])]
+      const costPerSec = this.aojiCostPerSec()
+      const points = Math.max(0, this.tastePoints ?? 0)
+      const secondsLeft = costPerSec > 0 ? Math.floor(points / costPerSec) : null
+      return { active, costPerSec, points, secondsLeft, low: secondsLeft != null && secondsLeft <= 60 }
+    },
+
     /** 每帧：奥义点数消耗（§3.4.1，每秒结算；激活后 10 秒宽限免费） */
     drainAoji(deltaMs) {
       const active = this.gastronomy.active
@@ -1984,17 +2024,7 @@ export const usePlayerStore = defineStore('player', {
         this.gastronomy.active = []
         return
       }
-      const now = Date.now()
-      const GRACE = 10000 // 宽限试用期（ms）
-      let cost = 0
-      for (const id of active) {
-        const a = AOJIS.find((x) => x.id === id)
-        if (!a) continue
-        // 宽限内免费（不扣品鉴点）：让玩家先看效果再决定长期开
-        const at = this._aojiActivatedAt?.[id]
-        if (at && now - at < GRACE) continue
-        cost += a.costPerSec
-      }
+      const cost = this.aojiCostPerSec()
       if (cost <= 0) return
       this._aojiAccum = (this._aojiAccum ?? 0) + (deltaMs / 1000) * cost
       const whole = Math.floor(this._aojiAccum)
@@ -5746,23 +5776,42 @@ export const usePlayerStore = defineStore('player', {
     towerUnlocked() {
       return this.combatLevel >= TOWER_UNLOCK_LEVEL
     },
-    /** 当前挑战层对手（动态生成） */
+    /** 当前**难度档**（脏值回退标准档；存档里存的是 id） */
+    towerTier() {
+      return towerTierOf(this.tower?.tier)
+    },
+    /** 切换难度档（只影响之后的战斗与奖励；已领里程碑按档分别记账） */
+    setTowerTier(id) {
+      const t = towerTierOf(id)
+      const cur = this.tower ?? { floor: 1, best: 0, rewarded: [], tier: 'standard' }
+      cur.tier = t.id
+      this.tower = cur
+      return t
+    },
+    /** 该层在当前档位下的里程碑是否已领（页面用它显示「已领」，与发奖**同一个键**） */
+    towerMilestoneClaimed(floorNum) {
+      const t = this.tower ?? {}
+      return (t.rewarded ?? []).includes(towerMilestoneKey(floorNum, t.tier ?? 'standard'))
+    },
+    /** 当前挑战层对手（动态生成 + **运行时**叠加难度档倍率；冻结数据不动） */
     towerOpp() {
       const floor = Math.max(1, this.tower?.floor ?? 1)
-      return towerFloor(floor, this.combatLevel)
+      return applyTowerTier(towerFloor(floor, this.combatLevel), this.tower?.tier ?? 'standard')
     },
-    /** 塔层胜利结算：推进层数 + 里程碑一次性奖励 */
+    /** 塔层胜利结算：推进层数 + 里程碑一次性奖励（金币/券按档位倍率） */
     onTowerWin(floor) {
       this.bumpChallenge('tower', floor) // 每周挑战赛：塔层（2026-09-09）
-      const t = this.tower ?? { floor: 1, best: 0, rewarded: [] }
+      const t = this.tower ?? { floor: 1, best: 0, rewarded: [], tier: 'standard' }
+      const tier = towerTierOf(t.tier)
       const tPrev = t.best ?? 0
       t.best = Math.max(t.best ?? 0, floor)
       if (t.best > tPrev) this.recordChronicle('tower:' + t.best, 'tower', `无尽挑战塔推进到第 ${t.best} 层`)
       t.floor = floor + 1
       t.rewarded = t.rewarded ?? []
-      const m = towerMilestone(floor)
-      if (m && !t.rewarded.includes(m.floor)) {
-        t.rewarded.push(m.floor)
+      const m = towerMilestone(floor, tier.rewardMult)
+      const key = towerMilestoneKey(floor, tier.id)
+      if (m && !t.rewarded.includes(key)) {
+        t.rewarded.push(key)
         this.gainGold(m.gold)
         for (const [id, qty] of Object.entries(m.items ?? {})) this.gainItem(id, qty)
         // 深层里程碑另给觅珍抽卡券（货币，不是物品；2026-09-19 加深塔长尾时加）
@@ -5774,6 +5823,22 @@ export const usePlayerStore = defineStore('player', {
       }
       this.tower = t
       return t
+    },
+    /**
+     * 塔层**失败**结算（2026-09-22 用户批准「给深塔失败一个代价」）：
+     * 被击退 → **退回上一层**（从 `TOWER_FLOOR_DROP_FROM` 层起；低层不惩罚新手）。
+     * ⚠️ `best`（最高层纪录）**永不回退** —— 代价是「要重打一层」，不是抹掉成绩。
+     */
+    onTowerLose(floor) {
+      const t = this.tower ?? { floor: 1, best: 0, rewarded: [], tier: 'standard' }
+      let dropped = false
+      if ((floor ?? 0) >= TOWER_FLOOR_DROP_FROM) {
+        t.floor = Math.max(1, (floor ?? 1) - 1)
+        dropped = true
+      }
+      this.tower = t
+      EventBus.emit('tower:lose', { floor, dropped, next: t.floor })
+      return { dropped, floor: t.floor }
     },
 
     // ── 限时窗口活动（2026-09-06 扩展）：夜市/晨集/茶歇/午夜/主厨日，倍率聚合可叠加 ──
