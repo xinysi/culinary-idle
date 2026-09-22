@@ -6646,7 +6646,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 //   ⑤ 灼烧日志缺伤害数字；⑥ 饼干加成会被「之后用的酱料」顺带延长；⑦ 任何未消费的 buff 键都会静默无效。
 {
   const fsMod = await import('node:fs')
-  const { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap } = await import('../../src/game/data/caps.js')
+  const { COMBAT_SPEED_FLOOR_SEC, COMBAT_SPEED_DECAY_PER_LEVEL, combatTurnIntervalSec, combatSpeedAtCap, combatSpeedCapLevel } =
+    await import('../../src/game/data/caps.js')
   const { Combat } = await import('../../src/game/combat/Combat.js')
   const { ITEMS } = await import('../../src/game/data/items.js')
   const { DAO_NODES } = await import('../../src/game/data/daoTree.js')
@@ -6704,13 +6705,37 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   capP.skills.knife.level = 80
   const capC = new Combat(capP)
   const capSt = capC.playerStats()
-  const rawBase = 2.4 - 80 * 0.02
-  check('战斗口径', `撞顶标记：等级 80（原始间隔 ${rawBase.toFixed(2)}s ≤ 下限 ${COMBAT_SPEED_FLOOR_SEC}s）⇒ speedAtCap 必须为 true`,
+  check('战斗口径', `撞顶标记：等级 80（原始间隔 ${combatTurnIntervalSec(80, 0, 0).toFixed(2)}s ≤ 下限 ${COMBAT_SPEED_FLOOR_SEC}s）⇒ speedAtCap 必须为 true`,
     capSt.speedAtCap === true && capSt.speedFloorMs === COMBAT_SPEED_FLOOR_SEC * 1000, JSON.stringify({ cap: capSt.speedAtCap, floor: capSt.speedFloorMs }))
   const lowP = freshPlayer()
   lowP.skills.knife.level = 30
-  check('战斗口径', '未撞顶时不误报（等级 30 ⇒ 原始间隔 1.8s > 下限 ⇒ speedAtCap 为 false）',
+  check('战斗口径', `未撞顶时不误报（等级 30 ⇒ 原始间隔 ${combatTurnIntervalSec(30, 0, 0).toFixed(2)}s > 下限 ⇒ speedAtCap 为 false）`,
     new Combat(lowP).playerStats().speedAtCap === false)
+  // ── 攻速曲线：**到顶等级**与「曲线常量单一来源」（2026-09-22 用户报「吃颗饼干就顶了」后把衰减压平）──
+  // ⚠️ 判断源码前必须 **stripComments**：Combat.js 第 2 行的注释就写着「基础 2.4s/回合」，
+  //    不剥注释的话 `/\b2\.4\b/` 会拿注释当真代码（首版就是这么误判的）。
+  const { stripComments } = await import('./lib/comments.mjs')
+  const combatCode = stripComments(combatSrc)
+  check('战斗口径', '攻速曲线常量单一来源（`caps.js` 定义衰减与基准；引擎里不得再出现 2.4 / 0.02 这类字面量）',
+    /COMBAT_SPEED_DECAY_PER_LEVEL/.test(rd('src/game/data/caps.js')) && /combatTurnIntervalSec/.test(combatCode)
+      && !/\b2\.4\b/.test(combatCode) && !/0\.02/.test(combatCode),
+    `当前衰减 ${COMBAT_SPEED_DECAY_PER_LEVEL}/级`)
+  check('战斗口径', `到顶等级 = L${combatSpeedCapLevel(0)}（无攻速装）· 带 0.15/0.3/0.6s 攻速装为 L${combatSpeedCapLevel(0.15)}/${combatSpeedCapLevel(0.3)}/${combatSpeedCapLevel(0.6)}`,
+    combatSpeedCapLevel(0) === 75 && combatSpeedCapLevel(0.15) === 66 && combatSpeedCapLevel(0.3) === 57 && combatSpeedCapLevel(0.6) === 38,
+    `实得 ${combatSpeedCapLevel(0)}/${combatSpeedCapLevel(0.15)}/${combatSpeedCapLevel(0.3)}/${combatSpeedCapLevel(0.6)}`)
+  check('战斗口径', '到顶边界：L74 未到顶、L75 刚好到顶（级数边界不能差一级）',
+    combatSpeedAtCap(74, 0) === false && combatSpeedAtCap(75, 0) === true,
+    `L74=${combatSpeedAtCap(74, 0)} L75=${combatSpeedAtCap(75, 0)}`)
+  check('战斗口径', '**满级仍是 1.2s 顶**（L120 间隔 == 地板 ⇒ 毕业时长标定与塔的墙不受影响）',
+    combatTurnIntervalSec(120, 0, 0) === COMBAT_SPEED_FLOOR_SEC && combatTurnIntervalSec(120, 0, 25) === COMBAT_SPEED_FLOOR_SEC)
+  // 用户报的那件事本身：单吃一颗 +10% 饼干**不该**在 L60 就顶满（旧曲线 0.02 时 L54 就顶）
+  check('战斗口径', '用户报的场景：单颗 +10% 饼干在 L60 仍有效（旧曲线 L54 起就顶满）、到 L74 仍有效',
+    combatTurnIntervalSec(60, 0, 10) < combatTurnIntervalSec(60, 0, 0) && combatTurnIntervalSec(74, 0, 10) < combatTurnIntervalSec(74, 0, 0),
+    `L60 ${combatTurnIntervalSec(60, 0, 0).toFixed(2)}→${combatTurnIntervalSec(60, 0, 10).toFixed(2)}s`)
+  // 前期几乎不动（改曲线不能顺手把 L1~L30 也改了）
+  check('战斗口径', '前期不受影响（L1 与 L30 的间隔与旧曲线偏差 <5%）',
+    Math.abs(combatTurnIntervalSec(1, 0, 0) - 2.38) < 0.05 && Math.abs(combatTurnIntervalSec(30, 0, 0) - 1.92) < 0.05,
+    `L1 ${combatTurnIntervalSec(1, 0, 0).toFixed(2)}s · L30 ${combatTurnIntervalSec(30, 0, 0).toFixed(2)}s`)
   check('战斗口径', '`combatSpeedAtCap()` 与引擎判定同源（同一个函数，不是两套阈值）',
     combatSpeedAtCap(80, 0) === true && combatSpeedAtCap(30, 0) === false && combatSpeedAtCap(50, 0.4) === true,
     `50 级 + 0.4s 攻速装 ⇒ ${combatSpeedAtCap(50, 0.4)}（应撞顶）`)

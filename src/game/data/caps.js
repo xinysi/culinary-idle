@@ -143,15 +143,41 @@ export function safeXpMultiplier(value) {
 //       奥义页给只加攻速的奥义挂提示，玩家不必自己发现「点了没变化」。
 export const COMBAT_SPEED_FLOOR_SEC = 1.2
 
+/**
+ * 每级流派等级的间隔衰减（秒/级）—— **唯一来源**。曲线：`间隔 = 2.4 − 衰减×等级 − 装备 speedBonus`。
+ * 🔴 2026-09-22 用户报「达到封顶所需的时间太短了（吃颗饼干就顶了）」后从 **0.02 压平到 0.016**：
+ *    · 旧值 0.02 ⇒ `2.4 − 0.02×60 = 1.2`，**L60 就顶**（挑战塔正是 L60 解锁 ⇒ 后半程攻速零成长）；
+ *      且 L54 之后**单吃一颗 +10% 的能量饼干就正好顶满**（带 0.15s 攻速装 L46、0.3s L39、0.6s L24）。
+ *    · 新值 0.016 ⇒ 到顶等级 `(2.4 − 1.2)/0.016 = **L75**`；L1~L30 几乎不变（L30 1.92s vs 旧 1.80s）、
+ *      L50 1.60s（旧 1.40s）、L60 1.44s（旧 1.20s，即**中期挂机吞吐降约 17%**）——这是「到顶推后」的必然代价。
+ *    · **满级（L120）仍是 1.2s 顶** ⇒ 毕业时长标定、塔的墙、248 敌人的 TTK 一个都不用重算
+ *      （`applyMaxBuild` 把等级拉到 120 ⇒ raw 早已在地板下）。
+ * ⚠️ 为什么**不**降地板（1.2 → 0.9）：那会把**全局挂机吞吐天花板**抬 ×1.33（每小时击杀/XP/金币/掉落），
+ *    而成长速度标定（战斗三技能 ~6 天、经验倍率档位、叠区阻尼）是前两轮刚校准的 —— 收益还集中在最不需要加速的后期。
+ * ⚠️ 这条曲线**不会**让「加速类内容」在后期复活（L75 之后依然顶满）：那是另一件事，
+ *    要么把超出上限的攻速折算成收益，要么承认攻速是前期加速轴（界面已有「已到上限」三处提示）。
+ * 实测依据：`scripts/sim/speed_floor_probe.mjs`（真实引擎；同层只换地板 ⇒ 胜率与回合数逐场不变、只有墙钟时间变，
+ * 说明攻速在本作里是**纯时钟**：双方同节奏出手，它改的是挂机吞吐而不是强弱）。
+ */
+export const COMBAT_SPEED_DECAY_PER_LEVEL = 0.016
+
+/** 对决回合间隔的基准（秒）：L1 的原始间隔 = 基准 − 衰减 */
+export const COMBAT_SPEED_BASE_SEC = 2.4
+
 /** 对决回合间隔（秒）：**唯一出口**（引擎公式与界面上限提示都走它，避免两套真相） */
 export function combatTurnIntervalSec(styleLevel = 1, eqSpeedBonus = 0, speedPct = 0) {
-  const raw = 2.4 - (Number(styleLevel) || 1) * 0.02 - (Number(eqSpeedBonus) || 0)
+  const raw = COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * COMBAT_SPEED_DECAY_PER_LEVEL - (Number(eqSpeedBonus) || 0)
   const pct = Number(speedPct) || 0
   return Math.max(COMBAT_SPEED_FLOOR_SEC, raw * (1 - pct / 100))
 }
 
 /** 加成前的原始间隔是否**已经**在地板以下（= 再加攻速也毫无效果，界面据此提示） */
 export function combatSpeedAtCap(styleLevel = 1, eqSpeedBonus = 0) {
-  return 2.4 - (Number(styleLevel) || 1) * 0.02 - (Number(eqSpeedBonus) || 0) <= COMBAT_SPEED_FLOOR_SEC
+  return COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * COMBAT_SPEED_DECAY_PER_LEVEL - (Number(eqSpeedBonus) || 0) <= COMBAT_SPEED_FLOOR_SEC
+}
+
+/** 到顶等级（原始间隔撞地板的等级）：界面/文档/守卫共用，避免各处各写一个 60/75 */
+export function combatSpeedCapLevel(eqSpeedBonus = 0) {
+  return Math.ceil((COMBAT_SPEED_BASE_SEC - COMBAT_SPEED_FLOOR_SEC - (Number(eqSpeedBonus) || 0)) / COMBAT_SPEED_DECAY_PER_LEVEL)
 }
 
