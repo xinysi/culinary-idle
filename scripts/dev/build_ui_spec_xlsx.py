@@ -558,7 +558,7 @@ rows9 = [
     ["CSS 三个基类", ".ui-paper（纸面：不规则帧 + 极柔投影）· .ui-ink（墨字三档层级）· .ui-seal（印泥容器）", "所有控件由这三个基类组合；变体只改尺寸与内边距"],
     ["命名与 manifest（沿用你现有约定）", "文件名：`<族>/<形态>_<状态>_<w>x<h>@2x_color.png` + `_mask.png`；`public/images/ui/manifest.json` 每条含 id / family / size / slice_px / mask / colour / css{border-image-slice,width,repeat}",
      "与你已生成的 45 个文件完全一致 ⇒ 生成脚本不用改，只把「形态名」换掉（plaque→brush_frame、paper_card→torn_paper_card、brass_tag→seal_badge…），并在 manifest 里**新增两个字段**：`form`（不规则方式）与 `pull`（true=可九宫格拉伸 / false=固定尺寸）"],
-    ["由此产生的复用结论", f"你已生成的 45 个文件里：可直接复用 {sum(1 for a in ART2 if '可直接复用' in (a[-1] or ''))} 组、需重出 {sum(1 for a in ART2 if '需重出' in (a[-1] or ''))} 组、新版新增 {sum(1 for a in ART2 if '新增' in (a[-1] or ''))} 组", "详见「素材清单」最后两列（逐条按磁盘上的真实文件名核对）"],
+    ["由此产生的复用结论", f"你已生成的 {len(EXISTING)} 个 png 里：✅ 可复用/保留 {sum(1 for a in ART2 if str(a[-1]).startswith('✅'))} 组 · 🔧 需重出 {sum(1 for a in ART2 if str(a[-1]).startswith('🔧'))} 组 · ➕ 新版新增 {sum(1 for a in ART2 if str(a[-1]).startswith('➕'))} 组 · 🟡 可选 {sum(1 for a in ART2 if str(a[-1]).startswith('🟡'))} 组 · ❌ 不再需要 {sum(1 for a in ART2 if str(a[-1]).startswith('❌'))} 组", "详见「素材清单」最后两列（逐条按磁盘上的真实文件名核对）"],
     ["九宫格用法", "border-image-slice: {N} fill; border-image-repeat: stretch —— {N} 取「素材清单」的撕边幅度 ×3（如 4px 撕边用 12）", "`fill` 必须有，否则中间会被清空；**不规则边必须落在 slice 区域内**才能保持不变形"],
     ["不可拉伸件用法", "background-image + background-size: 100% 100%（按实测尺寸出图，一张一个控件）", "徽章 3 档、勾 2 档、食印 6 枚、水印 3 枚 —— 这些本来就尺寸固定"],
     ["染色与皮肤", "换皮肤 = 改 --paper / --paper-lift / --ink / --copper / --vermilion / --amber 六个数", "素材出「白纸 + 透明线」，颜色全交给 token ⇒ 15 套皮肤 + 深色自动跟随"],
