@@ -256,6 +256,35 @@ NO_ASSET = sum(1 for (f, c) in V if f in ("表格", "日志行", "区块标题")
 GLASS_CTL = sum(a["glass"] for a in V.values())
 ALL_CTL = sum(a["n"] for a in V.values())
 
+# 体检结论（2026-09-23 实检 33 个 png：量尺寸/透明/长宽比 + 放大与实机尺寸各看一遍）
+INSPECT = {
+    "FRAME_CARD": "✅ 合格：手撕边清楚，裁到内容后缩到 214×331 仍成立",
+    "FRAME_PANEL": "✅ 合格：撕边比卡更明显，正是「大宣纸」要的效果",
+    "FRAME_MODAL": "✅ 合格：手撕纸 + 顶部朱红小印，位置对",
+    "FRAME_BTN": "🔧 改色：形态对（笔画粗细不均、有出锋），但线是**朱红**；规范要求按钮用 1px 铜线 —— 满屏红框会破「朱红面积 <2%」并与主按钮抢眼",
+    "FRAME_BTN_RED": "✅ 合格：朱红印泥块，边缘略毛；作为全站唯一大面积朱红正好",
+    "FRAME_INPUT": "✅ 合格：手绘方框，线头有锋，缩到 170×24 仍像铅笔随手框的",
+    "FRAME_BAR_SLOT": "✅ 合格：手绘双线槽；横向九宫格拉伸即可",
+    "FRAME_BAR_FILL": "✅ 合格：红烧汤汁渐变（朱红→琥珀），横向拉伸到 8~16px 高很自然",
+    "FRAME_TAB": "❌ 重出：现在是一根**细长双线**（内容 924×946 里有效笔画是一条横线，长宽比 ~30:1），当 75×29 的侧栏页签会变成一条发丝线。要的是「有签面的竹签片」或「素纸片 + 左侧朱红标记」",
+    "FRAME_TAB_ON": "❌ 重出：同上（红版细线）；选中态需要可见的片状底 + 朱红标记",
+    "SEAL_BOWL": "✅ 合格：印泥边缘晕开 + 白线稿碗，缩到 18px 仍一眼可辨 —— 正是「签名」该有的样子",
+    "SEAL_CHOP": "✅ 合格：长印，用于菜单签式页签正好",
+    "SEAL_SPOON": "✅ 合格",
+    "SEAL_POT": "✅ 合格",
+    "SEAL_TEAPOT": "✅ 合格",
+    "SEAL_STEAMER": "✅ 合格",
+    "BADGE_S/M/L": "❌ 重出：现在是**食物插画**（面团 / 包子 / 一碗面）。三个问题：① 13~22px 下完全不可辨；② 违反「不许把控件做成食物造型」；③ 彩色插画无法染色（15 皮肤与深色会崩）。插画本身很美 —— 建议留作「成就/空状态/图鉴大装饰」，徽章另出印泥块",
+    "CHECK_ON/OFF": "✅ 合格：手绘方框（四角不齐）+ 朱红手写勾，缩到 16px 仍清楚。小建议：选中态的**框**改铜线、只留勾为朱红，更守朱红面积纪律",
+    "LOCK_LINEWORK": "✅ 合格：线稿锁 + 匙孔，13px 下可辨",
+    "STEAM_LINE": "✅ 合格：手绘曲线，宽度自适应拉伸即可",
+    "LINE_CHOPSTICK": "✅ 合格：手绘墨线，叠两条即筷子双线",
+    "LINE_STROKE": "✅ 合格：三色手绘竖笔都有锋",
+    "WM_PLATE": "✅ 合格：线稿餐盘，6% 用时会隐约成形",
+    "WM_STEAMER": "✅ 合格：线稿蒸笼",
+    "WM_CHOPREST": "✅ 合格：线稿筷架",
+}
+
 # 用户已生成素材（public/images/ui/，45 个 png + manifest.json，命名 <形态>_<状态>_<w>x<h>@2x_{color,mask}.png）
 UI_DIR = os.path.join(ROOT, "public/images/ui")
 EXISTING = set()
@@ -338,9 +367,9 @@ for row in ART:
     ex = EXCL.get(frag[0], "")
     hit = sorted(f for f in EXISTING if frag[0] and frag[0] in f and (not ex or ex not in f)) if frag[0] else []
     col1 = (hit[0].replace("@2x_color.png", "").replace("@2x_mask.png", "") + "（color+mask 各 1）") if hit else "—（无对应文件）"
-    ART2.append(list(row) + [col1, frag[1] or "➕ 新增"])
+    ART2.append(list(row) + [col1, frag[1] or "➕ 新增", INSPECT.get(row[0], "—")])
 for _o in OBSOLETE:
-    ART2.append(["（旧素材处置）", _o[0], "旧方案遗留", "—", "—", "—", "—", "已存在（见左）", _o[1]])
+    ART2.append(["（旧素材处置）", _o[0], "旧方案遗留", "—", "—", "—", "—", "已存在（见左）", _o[1], "—"])
 
 ART_TOTAL = sum(int(__import__("re").search(r"(\d+)", str(a[4])).group(1)) for a in ART)
 ART_GROUPS = len(ART)
@@ -550,12 +579,16 @@ rows8 = [
 ]
 sheet("素材清单", "素材清单（丰富档 · 不规则单图；A 路线 0 素材 / B 路线约 31 张）",
       ["素材 ID", "素材名", "覆盖范围（实测）", "可拉伸性", "张数", "形态与要点", "备注",
-     "现有文件（public/images/ui/）", "复用结论（按磁盘上真实文件核对）"], ART2, max_width=62)
+     "现有文件（public/images/ui/）", "复用结论（按磁盘上真实文件核对）", "体检结论（2026-09-23 实检 33 个 png）"], ART2, max_width=62)
 sheet("路线取舍", "两条实现路线的取舍与纪律", ["项", "做法 / 数量", "说明"], rows8, max_width=70)
 
 rows9 = [
     ["交付形态", "**不规则单图（B）+ SVG 滤镜（A）混合**：帧与小件出图，动态装饰用 CSS/SVG", "比 v0（24 张位图）多 7 张，但换来「每一件都是手作」的观感"],
     ["CSS 三个基类", ".ui-paper（纸面：不规则帧 + 极柔投影）· .ui-ink（墨字三档层级）· .ui-seal（印泥容器）", "所有控件由这三个基类组合；变体只改尺寸与内边距"],
+    ["🔴 切图流水线（新素材必须做）", "新素材全是 **1024×1024 的原始出图**，不能直接进项目。三步：① 按 alpha>40 裁到内容包围盒；② 等比缩放到规范的目标 @2x 尺寸（表 4「导出尺寸」/「素材清单」目标尺寸列）；③ 四周补**透明安全边** ≥ 9-slice 边距（大件 24px、中件 12px）后导出",
+     "已实测：33 个 png 全部 1024²、均为 RGBA 透明底；内容包围盒长宽比与目标的比值见「素材体检」记录 —— 可九宫格拉伸的帧不必等比，但**不可拉伸的小件必须等比**（徽章/勾/锁/食印/水印）"],
+    ["⚠️ 素材目录里混进了别的文件", "`ui-paper-source/server-chain.pem`（一份 TLS 证书链）+ `_smoke.png`（冒烟测试图）不是素材，移出该目录、**不要入库**",
+     "证书链文件留在源码目录里既无意义也会引起安全审查（本仓库是公开的）"],
     ["命名与 manifest（沿用你现有约定）", "文件名：`<族>/<形态>_<状态>_<w>x<h>@2x_color.png` + `_mask.png`；`public/images/ui/manifest.json` 每条含 id / family / size / slice_px / mask / colour / css{border-image-slice,width,repeat}",
      "与你已生成的 45 个文件完全一致 ⇒ 生成脚本不用改，只把「形态名」换掉（plaque→brush_frame、paper_card→torn_paper_card、brass_tag→seal_badge…），并在 manifest 里**新增两个字段**：`form`（不规则方式）与 `pull`（true=可九宫格拉伸 / false=固定尺寸）"],
     ["由此产生的复用结论", f"你已生成的 {len(EXISTING)} 个 png 里：✅ 可复用/保留 {sum(1 for a in ART2 if str(a[-1]).startswith('✅'))} 组 · 🔧 需重出 {sum(1 for a in ART2 if str(a[-1]).startswith('🔧'))} 组 · ➕ 新版新增 {sum(1 for a in ART2 if str(a[-1]).startswith('➕'))} 组 · 🟡 可选 {sum(1 for a in ART2 if str(a[-1]).startswith('🟡'))} 组 · ❌ 不再需要 {sum(1 for a in ART2 if str(a[-1]).startswith('❌'))} 组", "详见「素材清单」最后两列（逐条按磁盘上的真实文件名核对）"],
