@@ -256,6 +256,51 @@ NO_ASSET = sum(1 for (f, c) in V if f in ("表格", "日志行", "区块标题")
 GLASS_CTL = sum(a["glass"] for a in V.values())
 ALL_CTL = sum(a["n"] for a in V.values())
 
+# 用户已生成素材（public/images/ui/，45 个 png + manifest.json，命名 <形态>_<状态>_<w>x<h>@2x_{color,mask}.png）
+UI_DIR = os.path.join(ROOT, "public/images/ui")
+EXISTING = set()
+if os.path.isdir(UI_DIR):
+    for dp, _dn, fn in os.walk(UI_DIR):
+        for f in fn:
+            if f.endswith(".png"):
+                EXISTING.add(f)
+
+# 新版素材 ID → (旧文件匹配片段, 复用结论)
+REUSE = {
+    "FRAME_CARD": ("paper_card", "🔧 需重出：现为规整圆角矩形 + 4px 深棕粗边；改成手撕纸（3.5~4px 撕边）且边线降到 1px 铜线"),
+    "FRAME_PANEL": ("lacquer_panel", "🔧 需重出：现在是漆器木牌；改成一整张大宣纸（撕边更明显）"),
+    "FRAME_MODAL": ("modal_frame", "🔧 需重出：加顶部朱红小印（印泥晕染边）"),
+    "FRAME_BTN": ("plaque_normal", "🔧 需重出：现在是黄铜厚边 + 平铺木纹（最土的一张）；改成毛笔一笔画成的方框"),
+    "FRAME_BTN_RED": ("lacquer_plaque", "🔧 需重出：朱漆木牌 → 印泥块（边缘毛糙外扩、内里实心）"),
+    "FRAME_INPUT": ("paper_slot", "🔧 需重出：改成手绘歪框（四边略歪、线头出锋）"),
+    "FRAME_BAR": ("copper_groove", "🔧 部分复用：bar_fill 的汤汁色可留；槽改成上下两根手绘墨线"),
+    "FRAME_TAB": ("tab_on", "🔧 需重出：改成竹签剪影（两端斜切不齐 + 竹节），另出常态一张"),
+    "SEAL_BOWL": ("", "➕ 新增：6 枚食印是本风格的签名，旧素材里没有"),
+    "SEAL_CHOP": ("", "➕ 新增"),
+    "SEAL_SPOON": ("", "➕ 新增"),
+    "SEAL_POT": ("", "➕ 新增"),
+    "SEAL_TEAPOT": ("", "➕ 新增"),
+    "SEAL_STEAMER": ("", "➕ 新增"),
+    "BADGE_S/M/L": ("brass_tag", "🔧 需重出：铜牌 → 印泥块（形状不规则、边缘晕开），并补 13 / 18 / 22px 三档"),
+    "CHECK_ON/OFF": ("checkbox_tiny", "🔧 需重出：手绘方框（四角不齐）+ 朱红手写勾；沿用 16 / 22px 两档"),
+    "LOCK_LINEWORK": ("lock", "✅ 可直接复用：线稿锁本就是单色线稿（换成灰褐 + 匙孔更明显即可）"),
+    "STEAM_LINE": ("", "➕ 新增：一条手绘蒸气曲线（宽自适应）"),
+    "LINE_CHOPSTICK": ("bamboo_row", "🔧 转化：竹简行的横条改成「一条手绘墨线」，用时叠两条当筷子双线"),
+    "LINE_STROKE": ("", "➕ 新增：三段手绘竖笔（红/铜/琥珀），也可用 CSS 边框代替"),
+    "WM_PLATE": ("", "➕ 新增：餐盘水印（6% 不透明度使用）"),
+    "WM_STEAMER": ("", "➕ 新增：蒸笼水印"),
+    "WM_CHOPREST": ("", "➕ 新增：筷架水印"),
+}
+# 旧素材里新版不再需要的
+OBSOLETE = [
+    ("parts/nail_16x16 · parts/corner_48x48", "❌ 不再需要：新方案没有铜钉与包角（那是木牌器物语言）"),
+    ("tex/wood_tile · tex/brass_tile · tex/bamboo_tile", "❌ 不再需要：新方案不贴纹理，纸面是素色（只有纸纹可选保留）"),
+    ("tex/paper_tile", "🟡 可选保留：若想要一点纸纤维质感，保留它并以 6% 叠加"),
+    ("common/disabled_veil", "✅ 保留：禁用蒙层通用，不受风格变化影响"),
+    ("icon-btn/icon_chip_tiny", "✅ 基本可复用：小方片形态与新版「小方印泥块」接近，改成印泥毛边即可"),
+    ("parts/arrow · parts/check", "✅ 保留：手绘箭头与勾本来就是线稿，符合新方向"),
+]
+
 ART = [
     # 可九宫格拉伸的不规则帧（一张覆盖该族所有尺寸）
     ["FRAME_CARD", "手撕宣纸卡帧", "卡片（117 变体）", "可拉伸", "1 张", "撕边 3.5~4px；四边毛糙、四角不齐；纸面极淡纤维。**白纸 + 透明边**，颜色交由 CSS", "覆盖 214×331 到 1148×802 全部卡片尺寸"],
@@ -285,10 +330,23 @@ ART = [
 ]
 
 # 素材张数（从清单算，避免手写数字漂移）
+ART2 = []
+for row in ART:
+    frag = REUSE.get(row[0], ("", ""))
+    # ⚠️ 片段要能排除同族里更具体的文件：'plaque_normal' 会同时命中 'lacquer_plaque_normal'
+    EXCL = {"plaque_normal": "lacquer"}
+    ex = EXCL.get(frag[0], "")
+    hit = sorted(f for f in EXISTING if frag[0] and frag[0] in f and (not ex or ex not in f)) if frag[0] else []
+    col1 = (hit[0].replace("@2x_color.png", "").replace("@2x_mask.png", "") + "（color+mask 各 1）") if hit else "—（无对应文件）"
+    ART2.append(list(row) + [col1, frag[1] or "➕ 新增"])
+for _o in OBSOLETE:
+    ART2.append(["（旧素材处置）", _o[0], "旧方案遗留", "—", "—", "—", "—", "已存在（见左）", _o[1]])
+
 ART_TOTAL = sum(int(__import__("re").search(r"(\d+)", str(a[4])).group(1)) for a in ART)
 ART_GROUPS = len(ART)
 ART_PULL = sum(1 for a in ART if a[3] == "可拉伸")
 ART_FIXED = ART_GROUPS - ART_PULL
+
 
 # ────────────────────────── 建表 ──────────────────────────
 wb = Workbook()
@@ -491,12 +549,16 @@ rows8 = [
     ["验收", "拼一屏核对：朱红 <2% · 同屏美食元素 ≤2 类 · 撕边幅度按尺寸递减 · 各排卡片高度齐整", "样张：docs/ui-mockup/风格样张-丰富档-不规则元素-两路线.png"],
 ]
 sheet("素材清单", "素材清单（丰富档 · 不规则单图；A 路线 0 素材 / B 路线约 31 张）",
-      ["素材 ID", "素材名", "覆盖范围（实测）", "可拉伸性", "张数", "形态与要点", "备注"], ART, max_width=62)
+      ["素材 ID", "素材名", "覆盖范围（实测）", "可拉伸性", "张数", "形态与要点", "备注",
+     "现有文件（public/images/ui/）", "复用结论（按磁盘上真实文件核对）"], ART2, max_width=62)
 sheet("路线取舍", "两条实现路线的取舍与纪律", ["项", "做法 / 数量", "说明"], rows8, max_width=70)
 
 rows9 = [
     ["交付形态", "**不规则单图（B）+ SVG 滤镜（A）混合**：帧与小件出图，动态装饰用 CSS/SVG", "比 v0（24 张位图）多 7 张，但换来「每一件都是手作」的观感"],
     ["CSS 三个基类", ".ui-paper（纸面：不规则帧 + 极柔投影）· .ui-ink（墨字三档层级）· .ui-seal（印泥容器）", "所有控件由这三个基类组合；变体只改尺寸与内边距"],
+    ["命名与 manifest（沿用你现有约定）", "文件名：`<族>/<形态>_<状态>_<w>x<h>@2x_color.png` + `_mask.png`；`public/images/ui/manifest.json` 每条含 id / family / size / slice_px / mask / colour / css{border-image-slice,width,repeat}",
+     "与你已生成的 45 个文件完全一致 ⇒ 生成脚本不用改，只把「形态名」换掉（plaque→brush_frame、paper_card→torn_paper_card、brass_tag→seal_badge…），并在 manifest 里**新增两个字段**：`form`（不规则方式）与 `pull`（true=可九宫格拉伸 / false=固定尺寸）"],
+    ["由此产生的复用结论", f"你已生成的 45 个文件里：可直接复用 {sum(1 for a in ART2 if '可直接复用' in (a[-1] or ''))} 组、需重出 {sum(1 for a in ART2 if '需重出' in (a[-1] or ''))} 组、新版新增 {sum(1 for a in ART2 if '新增' in (a[-1] or ''))} 组", "详见「素材清单」最后两列（逐条按磁盘上的真实文件名核对）"],
     ["九宫格用法", "border-image-slice: {N} fill; border-image-repeat: stretch —— {N} 取「素材清单」的撕边幅度 ×3（如 4px 撕边用 12）", "`fill` 必须有，否则中间会被清空；**不规则边必须落在 slice 区域内**才能保持不变形"],
     ["不可拉伸件用法", "background-image + background-size: 100% 100%（按实测尺寸出图，一张一个控件）", "徽章 3 档、勾 2 档、食印 6 枚、水印 3 枚 —— 这些本来就尺寸固定"],
     ["染色与皮肤", "换皮肤 = 改 --paper / --paper-lift / --ink / --copper / --vermilion / --amber 六个数", "素材出「白纸 + 透明线」，颜色全交给 token ⇒ 15 套皮肤 + 深色自动跟随"],
