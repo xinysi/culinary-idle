@@ -162,10 +162,11 @@ function mechText(b) {
   if (b.crit && b.crit > 0.04) ms.push(`暴击 ${Math.round(b.crit * 100)}%`)
   // ⚠️ 不再展示敌人的 `speedMs`：引擎只用**玩家**的攻速驱动回合，敌人的 speedMs 不参与结算
   //    （2026-09-22 实测确认）——展示一个不生效的数值等于虚假承诺。
-  // 战斗深度 v1：补上「对我方哪个状态有抗性」——它是选风格时的关键信息，文案走 combatTuning 的出口
-  const rt = resistText(b)
-  if (rt) ms.push(rt)
   return ms.join('、') || '—'
+}
+/** 抗性文案（战斗深度 v1）——单独一行展示，见模板处的注释（区域对手没有 mechanic，不能挂在机制行上） */
+function resistOf(b) {
+  return resistText(b)
 }
 // 初次进页时先选中当前区域的第一个对手（watch 只在「变化」时触发，首次不会触发）
 onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0]))
@@ -307,6 +308,10 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
               <div><span>命中 / 闪避</span><span class="mono">{{ Math.round(selected.acc) }} / {{ Math.round(selected.eva) }}</span></div>
               <div><span>暴击</span><span class="mono">{{ (selected.crit * 100).toFixed(1) }}%</span></div>
               <div v-if="selected.mechanic"><span>机制</span><span class="dim">{{ mechText(selected) }}</span></div>
+              <!-- 战斗深度 v1：抗性**单独一行**，不能塞进上面那条 `v-if="selected.mechanic"` 里 ——
+                   区域对手的 mechanic 恒为 null（机制只有首领有），而区域才是玩家练级的常打目标
+                   ⇒ 塞进去等于「最需要看抗性的那 220 个敌人反而看不到」。文案走 combatTuning 的出口。 -->
+              <div v-if="resistOf(selected)"><span>抗性</span><span class="dim">{{ resistOf(selected) }}</span></div>
             </div>
             <h4>💧 掉落</h4>
             <!-- 概率走全局难度系数，与引擎里 dropChance(d.chance) 同源；若直接传原始 drops 会「写 30% 实际 6%」 -->

@@ -2946,6 +2946,10 @@ console.log('══ C59. 战斗深度 v1 ══')
       /STATUS_INFO/.test(arena) && /resistText/.test(arena) && !/割伤|破防/.test(arena.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')), 'CombatArena.vue')
     check('战斗深度', '对手详情（对决页 · 首领图鉴）都展示抗性，且文案来自同一个出口',
       /resistText/.test(cv) && /resistText/.test(logv), 'CombatView.vue + LogView.vue')
+    // 🔴 抗性行**不许挂在 `v-if="selected.mechanic"` 门里**：区域对手的 mechanic 恒为 null（机制只有首领有），
+    //    而区域才是练级的常打目标 ⇒ 挂进去等于「最需要看抗性的 220 个敌人反而看不到」。
+    check('战斗深度', '对决页的抗性行是独立一行（不挂在「机制」那行的 mechanic 门里）',
+      /v-if="resistOf\(selected\)"/.test(cv), 'CombatView.vue 里找不到独立的抗性行')
     // 冻结数据：combat.js 不得反向依赖本模块（数据层只被读、不去读别人的开关）
     const raw = fs.readFileSync(new URL('../../src/game/data/combat.js', import.meta.url), 'utf8')
     check('战斗深度', '冻结的敌人数据层不反向 import combatTuning（只被读取，不去读开关）',
