@@ -10,7 +10,7 @@ import { EventBus } from '../core/EventBus.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
 import { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap, COMBAT_RESPAWN_SEC } from '../data/caps.js' // 攻速地板常量单一来源
 import { tunerOver } from '../data/tuner.js'
-import { combatXpPerSkill, xpKillBaseline } from '../data/combatXpCurve.js' // 经验口径（按伤害）单一来源
+import { combatXpPerSkill, hitXpFor } from '../data/combatXpCurve.js' // 经验口径（按伤害 + 开局爬坡）单一来源
 import { scaledEnemy } from '../data/enemyScaling.js' // 血量分档（读取点系数，冻结数据不动）
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
 // 战斗深度 v1（2026-09-26）：命中/闪避的可堆形态 + 玩家对敌人的状态 + 敌人抗性
@@ -428,7 +428,7 @@ export class Combat {
     const effDmg = Math.min(dmg, this.opponentHp)
     this.damageDealt = (this.damageDealt ?? 0) + effDmg
     this.opponentHp = Math.max(0, this.opponentHp - dmg)
-    getSkillInstance(this.styleSkillId)?.addXp(4) // 每次命中 +4（与受击经验对齐）
+    getSkillInstance(this.styleSkillId)?.addXp(hitXpFor(this.player.combatLevel)) // 每次命中（基准 4；开局爬坡见 combatXpCurve）
     this.logLine(`${crit ? '💥 暴击！' : '⚔️'} 对 ${o.name} 造成 ${dmg} 伤害${advantage ? '（克制 +15%）' : ''}`)
 
     // 战斗深度 v1：命中后按风格尝试给敌人挂状态（对手已被打死则不挂 —— 否则日志会出现「先击杀再挂状态」）
@@ -505,14 +505,14 @@ export class Combat {
         this.logLine(`💢 ${o.name} 越级重击！（${Math.round(heavyPct(o.level, this.player.combatLevel) * 100)}% 你的血量上限 · 本场只触发一次）`, 'warn')
         this.damagePlayer(hd, '💢 越级重击')
         if (!this.inFight) return
-        getSkillInstance('heatControl')?.addXp(4)
-        getSkillInstance('tasteAcumen')?.addXp(2)
+        getSkillInstance('heatControl')?.addXp(hitXpFor(this.player.combatLevel))
+        getSkillInstance('tasteAcumen')?.addXp(Math.max(1, Math.round(hitXpFor(this.player.combatLevel) / 2)))
         return // 本回合不再叠加普通伤害（重击就是这一回合的那一下）
       }
     }
     this.damagePlayer(dmg, `${crit ? '💥 对方暴击！' : '🩸'} 受到 ${dmg} 伤害`)
-    getSkillInstance('heatControl')?.addXp(4) // 每次受击 +4（防御经验，与命中对齐）
-    getSkillInstance('tasteAcumen')?.addXp(2) // 品鉴力：每次受击 +2（生命值 经验，Melvor 式）
+    getSkillInstance('heatControl')?.addXp(hitXpFor(this.player.combatLevel)) // 每次受击（基准 4，与命中对齐）
+    getSkillInstance('tasteAcumen')?.addXp(Math.max(1, Math.round(hitXpFor(this.player.combatLevel) / 2))) // 品鉴力：受击的一半（Melvor 式）
   }
 
   damagePlayer(dmg, label) {
@@ -594,7 +594,7 @@ export class Combat {
     //    ① 同等级打赢一场的 XP 与改前**一模一样**（成长标定不动）；
     //    ② 血量翻倍 ⇒ 打出的伤害翻倍 ⇒ 经验跟着翻倍（所以 (c) 加血不亏经验）；
     //    ③ 溢出伤害与「自杀式刷级」都不占便宜（败场仍按 30%）。
-    const xpEach = combatXpPerSkill(o.level, this.damageDealt, o.hp, true)
+    const xpEach = combatXpPerSkill(o.level, this.damageDealt, o.hp, true, this.player.combatLevel)
     getSkillInstance(this.styleSkillId)?.addXp(xpEach)
     getSkillInstance('tasteAcumen')?.addXp(xpEach)
     getSkillInstance('heatControl')?.addXp(xpEach)
@@ -640,7 +640,7 @@ export class Combat {
     // 但不鼓励「自杀式刷级」——没打完就打折，且败场在区域/首领里还要掉装备）
     const o = this.opponent
     if (o) {
-      const lostXp = combatXpPerSkill(o.level, this.damageDealt, o.hp, false)
+      const lostXp = combatXpPerSkill(o.level, this.damageDealt, o.hp, false, this.player.combatLevel)
       getSkillInstance(this.styleSkillId)?.addXp(lostXp)
       getSkillInstance('tasteAcumen')?.addXp(lostXp)
       getSkillInstance('heatControl')?.addXp(lostXp)

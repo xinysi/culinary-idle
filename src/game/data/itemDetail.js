@@ -38,23 +38,38 @@ const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasi
 const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
   goodsTag: '货签', miningGear: '采掘器具',
-  papermaking: '造纸', instrument: '乐器', soapmaking: '制皂', exchequer: '钱庄', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavor: '调味', heatControl: '火候', tasteAcumen: '品鉴力' }
+  papermaking: '造纸', instrument: '乐器', soapmaking: '制皂', exchequer: '钱庄', preservation: '食材保鲜', exploration: '美食探索', spiritSummoning: '食灵召唤', gastronomy: '美食知识', knife: '刀工', plating: '摆盘', flavorArtistry: '调味艺术', heatControl: '火候', tasteAcumen: '品鉴力' }
+// ⚠️ 上一行 2026-09-26 修：原写 `flavor: '调味'` —— 那是**流派** id（见下一行的 STYLE_LABEL），
+//    而技能 id 是 `flavorArtistry` ⇒ 食灵效果文案落到 `SKILL_LABEL[k] ?? k` 的兜底，页面印出
+//    「flavorArtistry经验 +7%」（用户⑯ 那类英文裸露）。守卫现在按**全量技能 id + 类别 id** 扫描（派生，不手抄）。
 const STYLE_LABEL = { knife: '刀工', plating: '摆盘', flavor: '调味' }
 
 // 属性数字统一保留两位小数（仅展示层格式化，不改底层数据/计算）
 export const fmtStat = (n) => Number(n ?? 0).toFixed(2)
 
-function spiritEffectText(sp) {
-  const e = sp.effect ?? {}
+/**
+ * 食灵效果文案**唯一出口**（2026-09-26 用户⑫：「文案描述与实际能力有没有差错和歧义」）。
+ * 🔴 查实的缺陷：这里与 `SpiritView.vue` 各写了一份（同一件事两份口径），而**符号约定只有一处写对**：
+ *    数据里 `loseHpPerTurnPct` 是**负数**（如 -3），`SpiritView` 写 `每回合损失 ${-e.loseHpPerTurnPct}%`
+ *    ⇒ 显示「损失 3%」；此处写 `${e.loseHpPerTurnPct}` ⇒ 图鉴/物品详情里显示「每回合损失 **-3%**」（双重否定）。
+ *    现两者都调 `spiritEffectParts()`：符号只在**这一处**取反，页面不再各写一份。
+ */
+export function spiritEffectParts(sp) {
+  const e = sp?.effect ?? {}
   const parts = []
   if (e.xpPct) for (const [k, v] of Object.entries(e.xpPct)) parts.push(`${SKILL_LABEL[k] ?? k}经验 +${v}%`)
   if (e.dmgPct) parts.push(`全对决伤害 +${e.dmgPct}%`)
   if (e.styleDmgPct) for (const [k, v] of Object.entries(e.styleDmgPct)) parts.push(`${STYLE_LABEL[k] ?? k}流派伤害 +${v}%`)
   if (e.healPerTurnPct) parts.push(`每回合回复 ${e.healPerTurnPct}% 最大品鉴值`)
-  if (e.loseHpPerTurnPct) parts.push(`每回合损失 ${e.loseHpPerTurnPct}% 最大品鉴值`)
+  // ⚠️ 数据存的是负数 ⇒ 这里取反才是「损失 N%」；写成 `${e.loseHpPerTurnPct}` 会得到「损失 -3%」
+  if (e.loseHpPerTurnPct) parts.push(`每回合损失 ${-e.loseHpPerTurnPct}% 最大品鉴值`)
   if (e.fishingAccPct) parts.push(`垂钓成功率 +${e.fishingAccPct}%`)
   if (e.farmYieldBonus) parts.push(`农耕收获 +${e.farmYieldBonus}`)
-  return parts.join('，') || '无效果'
+  return parts
+}
+
+function spiritEffectText(sp) {
+  return spiritEffectParts(sp).join('，') || '无效果'
 }
 
 /** 物品详细作用行：[[label, value], ...] */

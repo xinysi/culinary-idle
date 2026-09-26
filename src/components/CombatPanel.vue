@@ -102,6 +102,24 @@ const combatAojis = computed(() => {
 })
 const combatAojiOn = computed(() => combatAojis.value.filter((a) => a.on).length)
 const aojisOf = (cat) => combatAojis.value.filter((a) => a.category === cat)
+
+// ② 品鉴点常显（2026-09-26 用户要求）：数字与「奥义续航」同一出口（store 的 `aojiUpkeep()`），
+//    不在组件里重算 —— 否则又是「页面写能撑 10 分钟、实际 3 分钟熄火」。
+const keepLeftText = computed(() => {
+  const s = aojiKeep.value.secondsLeft
+  if (s == null) return ''
+  if (s >= 3600) return (s / 3600).toFixed(1) + ' 小时'
+  if (s >= 60) return Math.floor(s / 60) + ' 分'
+  return s + ' 秒'
+})
+
+// ③ 直接开关奥义（2026-09-26 用户要求「对标美食奥义页面功能代码」）：
+//    与 `GastronomyView.toggle()` 逐行同构（同一个 store 出口 + 同一条日志文案），
+//    免得同一个动作在两处产生两种日志措辞。
+function toggleAoji(id) {
+  const on = player.toggleAoji(id)
+  ui.pushLog(on ? `激活奥义：${AOJIS.find((a) => a.id === id)?.name}` : `关闭奥义：${AOJIS.find((a) => a.id === id)?.name}`, 'info')
+}
 /** 去「美食知识」页开关奥义。⚠️ 先 setActiveSkill 再 setView —— 只 setView 会跳到「当前正在练的那个技能」（RelatedPages 踩过） */
 function goGastronomy() {
   player.setActiveSkill('gastronomy')
@@ -213,25 +231,37 @@ function buffText() {
       </div>
       <div class="combo-divider"></div>
       <!-- 美食奥义栏（2026-09-26 用户要求）：**只放战斗相关**（攻击 13 / 防御 12），采集类不在这里出现。
-           只读参考 + 跳转，开关仍在「美食知识」页（同一件事只留一个操作入口）。 -->
+           2026-09-26 追加：① 表头显示**当前品鉴点**（与「奥义续航」同一个出口 `aojiUpkeep()`）；
+           ② 点一行即可**直接开启/关闭**（对标美食知识页的同名代码 `player.toggleAoji` + `ui.pushLog`）。 -->
       <div class="combo-aoji">
-        <h3>美食奥义 <span class="dim combo-sub">战斗相关 {{ combatAojis.length }} 条 · 已开 {{ combatAojiOn }}</span></h3>
+        <h3>
+          美食奥义
+          <span class="dim combo-sub">战斗相关 {{ combatAojis.length }} 条 · 已开 {{ combatAojiOn }}</span>
+          <span class="dim combo-sub aoji-points" :class="{ 'is-low': aojiKeep.low }">
+            🌀 品鉴点 <b class="mono">{{ aojiKeep.points.toLocaleString() }}</b>
+            <template v-if="aojiKeep.active.length">· -{{ aojiKeep.costPerSec }}/秒</template>
+            <template v-if="aojiKeep.secondsLeft != null">（约撑 {{ keepLeftText }}）</template>
+          </span>
+        </h3>
         <div class="aoji-cols">
           <div v-for="cat in COMBAT_CATEGORIES" :key="cat" class="aoji-col">
             <h4 class="attr-col-head">{{ cat }}</h4>
-            <div
+            <button
               v-for="a in aojisOf(cat)" :key="a.id"
-              class="aoji-row" :class="{ on: a.on }" :title="`${a.desc}（消耗 ${a.costPerSec} 品鉴点/秒）`"
+              type="button"
+              class="aoji-row" :class="{ on: a.on }"
+              :title="`${a.desc}（消耗 ${a.costPerSec} 品鉴点/秒）\n点击${a.on ? '关闭' : '开启'}`"
+              @click="toggleAoji(a.id)"
             >
               <span class="aoji-name">{{ a.on ? '🟢' : '·' }} {{ a.name }}</span>
-              <span v-if="a.on" class="dim aoji-desc">{{ a.desc }}</span>
               <span class="dim mono aoji-cost">-{{ a.costPerSec }}</span>
-            </div>
+              <span v-if="a.on" class="dim aoji-desc">{{ a.desc }}</span>
+            </button>
           </div>
         </div>
         <p class="dim aoji-note">
-          悬停看效果 · 单位「品鉴点/秒」，<b>耗尽会全部熄灭</b>（见右侧「奥义续航」）
-          <button class="btn btn-sm" @click="goGastronomy()">去美食知识开启 ↗</button>
+          点一行即可开启/关闭（单位「品鉴点/秒」）· <b>耗尽会全部熄灭</b>
+          <button class="btn btn-sm" @click="goGastronomy()">去美食知识 ↗</button>
         </p>
       </div>
     </div>

@@ -162,6 +162,9 @@ export const ACHIEVEMENTS = [
   { id: 'branchAll', name: '连锁帝国', category: '特殊', desc: '四家分店全部开业并雇满店长', title: '连锁帝国', reward: { gold: 30000, items: { mysterySpice: 2 } }, check: (p) => ['east', 'west', 'south', 'north'].every((id) => p.branches?.[id]?.manager) },
   { id: 'michelin1', name: '初登榜单', category: '特殊', desc: '餐厅获得米其林一星', reward: { gold: 4000, items: { mysterySpice: 1 } }, check: (p) => (p.michelin?.best ?? 0) >= 1 },
   { id: 'michelin3', name: '三星食府', category: '特殊', desc: '餐厅获得米其林三星', title: '三星食府', reward: { gold: 30000, items: { mysterySpice: 2, energyBiscuit: 1 } }, check: (p) => (p.michelin?.best ?? 0) >= 3 },
+  // 2026-09-26 用户⑮「评级三星封顶」扩到五星后补的两条（否则三星之后评级系统没有终点）
+  { id: 'michelin4', name: '四星名店', category: '特殊', desc: '餐厅获得米其林四星', reward: { gold: 60000, items: { mysterySpice: 3, energyBiscuit: 2 } }, check: (p) => (p.michelin?.best ?? 0) >= 4 },
+  { id: 'michelin5', name: '五星殿堂', category: '特殊', desc: '餐厅获得米其林五星（六维基本做满）', title: '五星殿堂', reward: { gold: 150000, items: { mysterySpice: 5, energyBiscuit: 3 } }, check: (p) => (p.michelin?.best ?? 0) >= 5 },
   { id: 'flavor5', name: '初尝搭配', category: '收集', desc: '点亮 5 条风味搭配', reward: { gold: 1500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= 5 },
   { id: 'flavorAll', name: '风味百科', category: '收集', desc: '点亮全部风味搭配', title: '风味百科', reward: { gold: 18000, items: { mysterySpice: 3 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= FLAVOR_PAIRS.length },
   { id: 'gearContest3', name: '初登赛场', category: '特殊', desc: '厨具大赛累计参赛 3 届', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.gearContestRuns ?? 0) >= 3 },

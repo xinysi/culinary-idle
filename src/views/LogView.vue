@@ -59,8 +59,8 @@ watch(
   },
   { immediate: true },
 )
-// 跳转到独立页面（任务中心 / 成就与称号）
-function goPage(v) { ui.setView(v) }
+// 跳转到独立页面（任务中心 / 成就与称号）—— 2026-09-26 用户⑲ 后本页不再自带跳转按钮
+// （四个 ↗ 已删，改用全站统一的「相关页面」跳转条）⇒ goPage 随之删除，避免留一个没有调用方的死函数。
 
 const TYPE_LABELS = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 // 一级分类（type 大类）；二级分类 = 该大类下的 category 细分（动态生成）
@@ -302,19 +302,19 @@ const seasonPaged = computed(() => {
     <header class="skill-head">
       <div>
         <h2>📖 图鉴</h2>
-        <p class="dim">美食图鉴 · 配方手册 · 卡牌对战 · 故事（任务、成就与称号已独立成页，见上方跳转按钮）</p>
+        <p class="dim">美食图鉴 · 配方手册 · 转生（任务 / 成就与称号 / 故事 / 卡牌对战已独立成页，见「相关页面」跳转条）</p>
       </div>
     </header>
 
     <div class="card">
-      <!-- 任务/成就/称号已独立成页（2026-09-11），这里只留跳转按钮；其余仍是本页页签 -->
+      <!-- 2026-09-26 用户⑲：本页原先在页签栏里塞了四个「去别的页」的跳转按钮（📋 任务中心 / 🏅 成就与称号 /
+           📜 故事与传闻 / 🎴 卡牌对战 ↗）——那不是页签、只是出口，混在一起既乱又让「图鉴」这一排看不出层次。
+           现只留本页真正的三个大页签，跳转交给全站统一的「相关页面」跳转条（每个功能页都有）。
+           同时把「转生」从图鉴下的**子页签**提为大类，与图鉴 / 配方手册平级（它本来就不是「图鉴的一种」）。 -->
       <div class="region-tabs">
-        <button class="btn btn-sm" title="独立页面" @click="goPage('quests')">📋 任务中心 ↗</button>
-        <button class="btn btn-sm" title="独立页面" @click="goPage('achievements')">🏅 成就与称号 ↗</button>
-        <button class="btn btn-sm" title="独立页面" @click="goPage('story')">📜 故事与传闻 ↗</button>
-        <button class="btn btn-sm" title="独立页面" @click="goPage('cards')">🎴 卡牌对战 ↗</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'log' }" @click="tab = 'log'">图鉴（{{ player.collectionPct }}%）</button>
         <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'recipes' }" @click="tab = 'recipes'">配方手册</button>
+        <button class="btn btn-sm" :class="{ 'btn-primary': tab === 'prestige' }" @click="tab = 'prestige'">转生（{{ player.stats.prestiges ?? 0 }} 次）</button>
       </div>
 
       <!-- ── 图鉴（§6.2：分类展示全部物品 + 未获得标记 + 悬浮详情；首领/赛季图鉴）── -->
@@ -323,7 +323,6 @@ const seasonPaged = computed(() => {
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'items' }" @click="sub = 'items'">物品（{{ player.collectionPct }}%）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'boss' }" @click="sub = 'boss'">首领（{{ player.stats.bosses.length }}/{{ COMBAT_BOSSES.length }}）</button>
           <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'season' }" @click="sub = 'season'">赛季（{{ SEASONS.filter((s) => seasonClaimed(s) > 0).length }}/{{ SEASONS.length }}）</button>
-          <button class="btn btn-sm" :class="{ 'btn-primary': sub === 'prestige' }" @click="sub = 'prestige'">转生（{{ player.stats.prestiges ?? 0 }} 次）</button>
         </div>
 
         <!-- 物品图鉴 -->
@@ -451,22 +450,26 @@ const seasonPaged = computed(() => {
           <Pagination v-if="SEASONS.length > PAGE.season" :current="Math.min(seasonPage, seasonPages)" :pages="seasonPages" @update:current="(p) => seasonPage = p" />
         </template>
 
-        <!-- 转生说明（§3：100 级转生 → 突破 120 级，事无巨细） -->
-        <template v-else-if="sub === 'prestige'">
-          <div class="prestige-list">
-            <div class="dim prestige-count">转生（轮回）详解 · {{ prestigeItems.length }} 条</div>
-            <div v-for="item in prestigeItems" :key="item.t" class="prestige-item">
-              <span class="prestige-dot"></span>
-              <div class="prestige-body">
-                <strong class="prestige-title">{{ item.t }}</strong>
-                <div class="prestige-desc" v-html="item.d"></div>
-                <div v-if="item.tags?.length" class="prestige-tags">
-                  <span v-for="tg in item.tags" :key="tg" class="prestige-tag">{{ tg }}</span>
-                </div>
+        <!-- 转生说明（§3：100 级转生 → 突破 120 级，事无巨细）
+             ⚠️ 2026-09-26：转生已提为**与图鉴/配方手册平级的大类**（用户⑲）⇒ 条件从
+             `sub === 'prestige'`（图鉴下的子页签）改成 `tab === 'prestige'`，并且它必须写在
+             `tab === 'log'` 那个 template **之外**（否则永远命中不到）。 -->
+      </template>
+
+      <template v-else-if="tab === 'prestige'">
+        <div class="prestige-list">
+          <div class="dim prestige-count">转生（轮回）详解 · {{ prestigeItems.length }} 条</div>
+          <div v-for="item in prestigeItems" :key="item.t" class="prestige-item">
+            <span class="prestige-dot"></span>
+            <div class="prestige-body">
+              <strong class="prestige-title">{{ item.t }}</strong>
+              <div class="prestige-desc" v-html="item.d"></div>
+              <div v-if="item.tags?.length" class="prestige-tags">
+                <span v-for="tg in item.tags" :key="tg" class="prestige-tag">{{ tg }}</span>
               </div>
             </div>
           </div>
-        </template>
+        </div>
       </template>
 
       <!-- 卡牌对战（§13）：图鉴页直属分类（2026-09-06 重构排版）-->

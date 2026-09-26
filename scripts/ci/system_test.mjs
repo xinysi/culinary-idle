@@ -157,7 +157,7 @@ import { CraftsmithingSkill } from '../../src/game/skills/CraftsmithingSkill.js'
 import { SpiritSummoningSkill } from '../../src/game/skills/SpiritSummoningSkill.js'
 import { ExplorationSkill } from '../../src/game/skills/ExplorationSkill.js'
 import { computeOfflineProgress } from '../../src/game/core/OfflineProgress.js'
-import { totalXpForLevel, xpProgress } from '../../src/game/core/Experience.js'
+import { totalXpForLevel, xpProgress, xpRequiredForLevelUp } from '../../src/game/core/Experience.js'
 import { migrateGearMods, GEAR_MODS_MAX } from '../../src/game/data/gearMods.js' // C39 词条按装备 id 存
 import { NEWBIE_STEPS, NEWBIE_TOTAL, rewardText } from '../../src/game/data/newbieChain.js' // C40 新手目标链
 import { initCelebrations } from '../../src/game/core/celebrations.js' // C41 大反馈演出
@@ -7491,7 +7491,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 //   ⑤ 灼烧日志缺伤害数字；⑥ 饼干加成会被「之后用的酱料」顺带延长；⑦ 任何未消费的 buff 键都会静默无效。
 {
   const fsMod = await import('node:fs')
-  const { COMBAT_SPEED_FLOOR_SEC, COMBAT_SPEED_DECAY_PER_LEVEL, combatTurnIntervalSec, combatSpeedAtCap, combatSpeedCapLevel } =
+  const { COMBAT_SPEED_FLOOR_SEC, COMBAT_SPEED_DECAY_PER_LEVEL, COMBAT_SPEED_GEAR_GAP_SHARE, combatTurnIntervalSec, combatSpeedAtCap, combatSpeedCapLevel, gearSpeedEffective } =
     await import('../../src/game/data/caps.js')
   const { Combat } = await import('../../src/game/combat/Combat.js')
   const { ITEMS } = await import('../../src/game/data/items.js')
@@ -7565,8 +7565,10 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /COMBAT_SPEED_DECAY_PER_LEVEL/.test(rd('src/game/data/caps.js')) && /combatTurnIntervalSec/.test(combatCode)
       && !/\b2\.4\b/.test(combatCode) && !/0\.02/.test(combatCode),
     `当前衰减 ${COMBAT_SPEED_DECAY_PER_LEVEL}/级`)
-  check('战斗口径', `到顶等级 = L${combatSpeedCapLevel(0)}（无攻速装）· 带 0.15/0.3/0.6s 攻速装为 L${combatSpeedCapLevel(0.15)}/${combatSpeedCapLevel(0.3)}/${combatSpeedCapLevel(0.6)}`,
-    combatSpeedCapLevel(0) === 75 && combatSpeedCapLevel(0.15) === 66 && combatSpeedCapLevel(0.3) === 57 && combatSpeedCapLevel(0.6) === 38,
+  // 🔴 2026-09-26 用户①「硬下限依然会通过装备很快到达」⇒ 装备攻速改成**软上限**
+  //    （最多关掉「等级曲线 → 地板」剩余距离的一半）⇒ 到顶等级**与装备无关**，一律 L75。
+  check('战斗口径', `到顶等级 = L${combatSpeedCapLevel(0)}，且**带攻速装也是同一级**（装备不再是撞地板的原因；改前是 75/66/57/38）`,
+    combatSpeedCapLevel(0) === 75 && combatSpeedCapLevel(0.15) === 75 && combatSpeedCapLevel(0.3) === 75 && combatSpeedCapLevel(0.6) === 75,
     `实得 ${combatSpeedCapLevel(0)}/${combatSpeedCapLevel(0.15)}/${combatSpeedCapLevel(0.3)}/${combatSpeedCapLevel(0.6)}`)
   check('战斗口径', '到顶边界：L74 未到顶、L75 刚好到顶（级数边界不能差一级）',
     combatSpeedAtCap(74, 0) === false && combatSpeedAtCap(75, 0) === true,
@@ -7582,8 +7584,28 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     Math.abs(combatTurnIntervalSec(1, 0, 0) - 2.38) < 0.05 && Math.abs(combatTurnIntervalSec(30, 0, 0) - 1.92) < 0.05,
     `L1 ${combatTurnIntervalSec(1, 0, 0).toFixed(2)}s · L30 ${combatTurnIntervalSec(30, 0, 0).toFixed(2)}s`)
   check('战斗口径', '`combatSpeedAtCap()` 与引擎判定同源（同一个函数，不是两套阈值）',
-    combatSpeedAtCap(80, 0) === true && combatSpeedAtCap(30, 0) === false && combatSpeedAtCap(50, 0.4) === true,
-    `50 级 + 0.4s 攻速装 ⇒ ${combatSpeedAtCap(50, 0.4)}（应撞顶）`)
+    combatSpeedAtCap(80, 0) === true && combatSpeedAtCap(30, 0) === false && combatSpeedAtCap(50, 0.6) === false,
+    `30 级 ⇒ ${combatSpeedAtCap(30, 0)}（未撞顶）· 50 级 + 0.6s 装 ⇒ ${combatSpeedAtCap(50, 0.6)}（**不再**因装备撞顶）`)
+  // 装备软上限的三条不变量：低等级足额 · 永不越界 · 单调（多穿一件不会更慢）
+  {
+    check('战斗口径', `装备软上限常数在 [0,1] 内（现 ${COMBAT_SPEED_GEAR_GAP_SHARE}）`,
+      COMBAT_SPEED_GEAR_GAP_SHARE >= 0 && COMBAT_SPEED_GEAR_GAP_SHARE <= 1)
+    check('战斗口径', '低等级装备**足额（或仅差一丝）生效**：L1 剩余距离 1.184s ⇒ 0.6s 装实得 ≥98%（不是一上来就打折）',
+      gearSpeedEffective(1, 0.6) >= 0.6 * 0.98 && Math.abs(gearSpeedEffective(1, 0.15) - 0.15) < 1e-9,
+      `L1：0.6→${gearSpeedEffective(1, 0.6).toFixed(3)}（上限 ${(1.184 * COMBAT_SPEED_GEAR_GAP_SHARE).toFixed(3)}）· 0.15→${gearSpeedEffective(1, 0.15).toFixed(3)}`)
+    check('战斗口径', '高等级装备**吃不掉最后一半**（L60：0.6s 装实得 0.12s；改前是全额 0.6s ⇒ 直接把间隔压到地板）',
+      Math.abs(gearSpeedEffective(60, 0.6) - 0.12) < 1e-9 && combatTurnIntervalSec(60, 0.6) > COMBAT_SPEED_FLOOR_SEC,
+      `L60：实得 ${gearSpeedEffective(60, 0.6).toFixed(3)}s · 间隔 ${combatTurnIntervalSec(60, 0.6).toFixed(2)}s`)
+    check('战斗口径', '装备实得**永不超过剩余距离的一半**（枚举 1~120 级 × 含非法输入）',
+      [0, 0.15, 0.3, 0.6, 1.2, -1, NaN].every((g) =>
+        Array.from({ length: 120 }, (_, i) => i + 1).every((lv) =>
+          gearSpeedEffective(lv, g) <= Math.max(0, 2.4 - lv * COMBAT_SPEED_DECAY_PER_LEVEL - COMBAT_SPEED_FLOOR_SEC) * COMBAT_SPEED_GEAR_GAP_SHARE + 1e-9)),
+      '装备不能把间隔压到地板以下')
+    check('战斗口径', '间隔随装备单调不增（穿得越多不会反而更慢）',
+      [1, 20, 50, 74].every((lv) => combatTurnIntervalSec(lv, 0.6) <= combatTurnIntervalSec(lv, 0.3) + 1e-9 && combatTurnIntervalSec(lv, 0.3) <= combatTurnIntervalSec(lv, 0) + 1e-9))
+    check('战斗口径', '引擎里没有第二份装备折扣（`gearSpeedEffective` 只在 caps.js）',
+      !/gearSpeedEffective/.test(combatCode) && /gearSpeedEffective/.test(rd('src/game/data/caps.js')))
+  }
   check('战斗口径', '回合间隔公式是唯一出口（同参数下与引擎 speedMs 一致）',
     new Combat(lowP).playerStats().speedMs === Math.floor(combatTurnIntervalSec(30, 0, 0) * 1000))
   // 界面侧接线（撞顶提示的三处：属性面板 / 奥义页 / 饼干按钮）
@@ -7734,14 +7756,37 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // (a) 经验口径：同等级击杀 == 旧口径（成长标定不动）；加血后成比例上升（不亏经验）
   // ⚠️ 必须用**写死的冻结基线**比对，不能拿 `xpKillBaseline()` 当参照 —— 那是自比自：
   //    把曲线整体 ×1.3 时两边一起变、比值恒为 1 ⇒ 首版反例验证时就抓不住（假绿）。
-  const XP_PINS = { 1: 10, 20: 374, 40: 1108, 60: 3303, 100: 87520 } // 改动前实测值（2026-09-22）
-  const pinsBad = Object.entries(XP_PINS).filter(([lv, xp]) => {
+  // 🔴 2026-09-26 用户 ⑦ 之后分两段钉（**这是有意改数值，不是回归**）：
+  //    · L20 起**仍是旧基线**——那是「战斗三技能 ~6 天」标定与塔/秘境 XP 口径的锚点，一个字节没动；
+  //    · L1~L19 是**新加的开局爬坡**后的实测值（改前 L1 只有 10，要 318 场才到 2 级）。
+  const XP_PINS_LATE = { 20: 374, 40: 1108, 60: 3303, 100: 87520 } // 改动前实测值（2026-09-22）
+  const XP_PINS_EARLY = { 1: 416, 2: 715, 5: 1133, 10: 1080, 15: 846 } // 开局爬坡后实测值（2026-09-26）
+  const pinsBad = Object.entries({ ...XP_PINS_LATE, ...XP_PINS_EARLY }).filter(([lv, xp]) => {
     const l = Number(lv)
     const hp = expectedEnemyHpAt(l)
     return combatXpPerSkill(l, hp, hp, true) !== xp
   })
-  check('敌人节奏', '经验口径与**改动前的击杀经验**逐级一致（冻结基线 L1=10 / L20=374 / L40=1108 / L60=3303 / L100=87520 ⇒ 成长速度标定不动）',
+  check('敌人节奏', '经验口径分两段：**L20 起 == 改动前基线**（L20=374 / L40=1108 / L60=3303 / L100=87520 ⇒ 成长标定不动）· L1~L15 是开局爬坡后的实测值',
     pinsBad.length === 0, pinsBad.map(([lv, xp]) => `L${lv} 期望 ${xp} 实得 ${combatXpPerSkill(Number(lv), expectedEnemyHpAt(Number(lv)), expectedEnemyHpAt(Number(lv)), true)}`).join(', '))
+  // 开局爬坡本身的三条不变量（同一批：用户 ⑦「1 级打 1 级敌人要多久到 2 级」）
+  {
+    const { earlyCombatXpMult, hitXpFor, EARLY_XP_TOP_LEVEL, EARLY_XP_BOOST_A, HIT_XP_BASE } = await import('../../src/game/data/combatXpCurve.js')
+    check('敌人节奏', `开局爬坡：≥L${EARLY_XP_TOP_LEVEL} 恒为 ×1（大后期标定不受影响）`,
+      earlyCombatXpMult(20) === 1 && earlyCombatXpMult(60) === 1 && earlyCombatXpMult(120) === 1 && earlyCombatXpMult(999) === 1)
+    check('敌人节奏', '开局爬坡单调递减且连续（2~19 级逐级下降，不存在「某一级突然更难」的断崖）',
+      Array.from({ length: 18 }, (_, i) => i + 2).every((lv) => earlyCombatXpMult(lv) < earlyCombatXpMult(lv - 1) && earlyCombatXpMult(lv) / earlyCombatXpMult(lv - 1) > 0.7))
+    check('敌人节奏', `非法/缺失等级按 ×1 处理（不惩罚）：null/undefined/''/0/-5/NaN`,
+      [null, undefined, '', 0, -5, NaN].every((v) => earlyCombatXpMult(v) === 1))
+    check('敌人节奏', `命中经验**同乘区**（L1 应为 ${Math.round(HIT_XP_BASE * (1 + EARLY_XP_BOOST_A))}，L20 回到基准 ${HIT_XP_BASE}）——只提击杀那一侧等于没修`,
+      hitXpFor(1) === Math.round(HIT_XP_BASE * (1 + EARLY_XP_BOOST_A)) && hitXpFor(20) === HIT_XP_BASE && hitXpFor(60) === HIT_XP_BASE)
+    check('敌人节奏', '引擎的命中/受击经验走同一个出口（`Combat.js` 里不得再出现裸字面量 `addXp(4)` / `addXp(2)`）',
+      !/addXp\(4\)/.test(stripComments(rd('src/game/combat/Combat.js'))) && !/addXp\(2\)/.test(stripComments(rd('src/game/combat/Combat.js'))) && /hitXpFor/.test(rd('src/game/combat/Combat.js')))
+    // 用户 ⑦ 的那条数：真新档打 1 级敌人**十几场**到 2 级（改前 318 场）
+    const need = xpRequiredForLevelUp(1)
+    const perFight = combatXpPerSkill(1, 36, 36, true, 1) + hitXpFor(1) * 5 // 1 级对手 36 血、约 5~7 次命中
+    check('敌人节奏', `开局不再是劝退线：L1→L2 从改前的 300+ 场降到 <25 场（按 36 血对手 + 命中经验估）`,
+      need / perFight < 25, `约 ${(need / perFight).toFixed(1)} 场（需要 ${need} 经验 / 每场约 ${perFight}）`)
+  }
   check('敌人节奏', '溢出伤害不计经验（`creditableDamage` 夹在怪物血量内）',
     creditableDamage(50, 99999, 300) === Math.min(300, expectedEnemyHpAt(50) * XP_DAMAGE_CAP_MULT))
   check('敌人节奏', `塔/秘境这类「为难度设计的血量」被封顶（≤ 期望血量 ×${XP_DAMAGE_CAP_MULT}）⇒ 深塔不会变成唯一练级点`,

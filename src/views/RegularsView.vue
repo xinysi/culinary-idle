@@ -182,7 +182,10 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'michelin
           <span class="regular-icon">{{ r.def.icon }}</span>
           <div>
             <strong>{{ r.def.name }}</strong>
-            <div class="dim regular-sub">偏好：{{ r.def.category }}（需 {{ r.def.minTier }} 档以上）· 招待 +{{ r.def.gold }} 金币</div>
+            <!-- 🔴 2026-09-26 用户⑯：这一行原先直接打 `r.def.category`（**物品类别 id**）⇒ 页面上会把
+                 烘焙那一类的内部 id 原样露出来，而同一页上方那张表用的是 `catLabel()` —— 同一件事两种口径。
+                 现统一走 `catLabel()`。（⚠️ 注释里也别把那个 id 原样写出来：e2e-text 的英文裸露扫描会扫到注释。） -->
+            <div class="dim regular-sub">偏好：{{ catLabel(r.def.category) }}（需 {{ r.def.minTier }} 档以上）· 招待 +{{ r.def.gold }} 金币</div>
           </div>
         </div>
 

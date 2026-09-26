@@ -29,6 +29,7 @@ import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
 import { guideEntryForView } from './game/data/guide.js'
+import { getSkillDef } from './game/data/skills.js' // 技能页「指南」按钮的数据源（2026-09-26 用户⑪统一位置）
 import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
 import { initTelemetry } from './game/dev/telemetry.js'
 
@@ -138,9 +139,26 @@ const EffectsView = lazyView(() => import('./views/EffectsView.vue'))
 const ui = useUiStore()
 const player = usePlayerStore()
 
-// 功能页「指南」（2026-09-21）：只在「当前页在攻略总览里有条目」时显示按钮 ——
-// 技能页有自己的指南按钮（SkillView），顶栏主页（商店/厨藏/装备…）不在攻略条目里，自然都是 null。
+// 页面「指南」（2026-09-21 立功能页版；2026-09-26 用户⑪起**技能页也走这里**）：
+// 原先技能页/副业页在标题旁有一个 📖 指南，功能页却在顶栏有个 📘 指南 —— 同一个东西两个位置
+// （用户报「功能的指南位置好像跟技能和副业的指南位置不一样」）。现统一到**顶栏这一枚**：
+// 技能页渲染 `skillGuides` 的条目、功能页渲染攻略总览里对本页的条目，按钮位置与样子完全一致。
 const featureGuideEntry = computed(() => guideEntryForView(ui.activeView, player))
+/** 技能页（含副业）的指南：只在「技能页」这一种视图下生效 */
+const skillGuideEntry = computed(() => (ui.activeView === 'skill' ? getSkillDef(player.activeSkill) : null))
+/** 顶栏指南按钮的数据源：技能页优先，其次功能页条目；都没有就不显示按钮 */
+const pageGuide = computed(() =>
+  skillGuideEntry.value
+    ? { kind: 'skill', id: player.activeSkill, name: skillGuideEntry.value.name }
+    : featureGuideEntry.value
+      ? { kind: 'feature', name: featureGuideEntry.value.name }
+      : null,
+)
+function openPageGuide() {
+  if (!pageGuide.value) return
+  if (pageGuide.value.kind === 'skill') ui.toggleSkillGuide(pageGuide.value.id)
+  else ui.toggleFeatureGuide(true)
+}
 
 // 底部状态条：装备槽位名称（与右侧状态栏一致）
 const SLOT_NAMES = {
@@ -556,12 +574,12 @@ onMounted(() => {
             <button class="top-nav-btn top-nav-icon" title="统计" :class="{ active: ui.activeView === 'stats' }" @click="ui.setView('stats')">📊<span class="nav-btn-text">统计</span></button>
             <button class="top-nav-btn top-nav-icon" title="图鉴" :class="{ active: ui.activeView === 'log' }" @click="ui.openLogTab('log')">📖<span class="nav-btn-text">图鉴</span></button>
             <button class="top-nav-btn top-nav-icon" title="攻略" :class="{ active: ui.activeView === 'guide' }" @click="ui.setView('guide')">🗺️<span class="nav-btn-text">攻略</span></button>
-            <!-- 功能页「指南」（2026-09-21）：只在当前页有攻略条目时出现，说明与攻略总览同一份数据 -->
+            <!-- 页面「指南」（2026-09-21 立；2026-09-26 用户⑪：**技能页也并入这一枚**，不再各处放一个） -->
             <button
-              v-if="featureGuideEntry"
+              v-if="pageGuide"
               class="top-nav-btn top-nav-icon top-nav-guide"
-              :title="`本页指南：${featureGuideEntry.name}`"
-              @click="ui.toggleFeatureGuide(true)"
+              :title="`本页指南：${pageGuide.name}`"
+              @click="openPageGuide()"
             >📘<span class="nav-btn-text">指南</span></button>
             <span class="top-nav-sep"></span>
             <!-- 顶栏 ⚡（状态抽屉入口）已于 2026-09-20 删除：那六块整体移到底部胶囊弹出的面板里 -->

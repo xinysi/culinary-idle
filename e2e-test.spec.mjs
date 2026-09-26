@@ -1528,11 +1528,17 @@ test.describe('游戏全流程', () => {
     }, v)
     const btn = page.locator('.top-nav-guide')
 
-    // ① 技能页：技能页标题旁自带 📖 指南 ⇒ 顶栏不重复出现
+    // ① 技能页：**同一个顶栏按钮**，但渲染的是 skillGuides 的内容（2026-09-26 用户⑪统一位置：
+    //    原先技能页是标题旁的内嵌 📖、功能页是顶栏 📘 ⇒ 两处并存，现只留顶栏这一枚）
     await setView('skill')
+    await page.waitForTimeout(300)
+    await expect(page.locator('.skill-guide-btn')).toHaveCount(0)
+    await expect(btn).toBeVisible()
+    await expect(btn).toContainText('指南')
+    await btn.click()
+    await expect(page.locator('.skill-guide-modal')).toBeVisible()
+    await page.locator('.skill-guide-modal .modal-head .btn').first().click() // 关掉，别影响后续断言
     await page.waitForTimeout(250)
-    await expect(page.locator('.skill-guide-btn').first()).toBeVisible()
-    await expect(btn).toHaveCount(0)
     // ② 攻略页自己 / 无条目的页 ⇒ 没有指南按钮（2026-09-22：厨藏/装备**已纳入**，见 ③b）
     for (const v of ['guide']) {
       await setView(v)

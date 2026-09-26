@@ -176,10 +176,37 @@ export const COMBAT_SPEED_DECAY_PER_LEVEL = 0.016
 /** 对决回合间隔的基准（秒）：L1 的原始间隔 = 基准 − 衰减 */
 export const COMBAT_SPEED_BASE_SEC = 2.4
 
+/**
+ * 装备攻速最多能吃掉「等级曲线到地板之间剩余的多少比例」—— 2026-09-26 用户①「硬下限依然会通过装备很快到达」。
+ * 改前装备速度是**秒数直减**：`2.4 − 0.016×等级 − 装备秒数` ⇒ 一套 0.6s 攻速装让到顶等级从 **L75 塌到 L38**
+ *   （0.15/0.3/0.6s 分别 L66/L57/L38）—— 也就是说「把攻速顶满」主要不是练出来的，而是**穿出来的**，
+ *   等级轴的最后一截（L38~L75）对装备党等于不存在。
+ * 现改成「装备最多关掉剩余距离的一半」：`剩余 = 等级曲线 − 地板`，`装备实得 = min(装备秒数, 剩余 × 0.5)`。
+ *   效果（0.6s 全套口径）：L1 1.79s（几乎不变）· L20 1.64s · L38 1.50s（改前已被地板吃掉）·
+ *   L50 1.40s · L60 1.32s · **L75 起 = 地板 1.2s**。
+ *   ⇒ **到顶等级回到「只由等级决定」（L75，与不带攻速装一致）**，装备仍然有用但**递减**（越接近地板越少）。
+ * ⚠️ 语义上这是「装备不能成为你撞地板的原因」：地板是等级里程碑，不是装备里程碑。
+ * ⚠️ 想调强弱只动这一个数：0 = 装备攻速完全无效，1 = 回到旧的直减（守卫有断言钉住「≤1 且 ≥0」）。
+ */
+export const COMBAT_SPEED_GEAR_GAP_SHARE = 0.5
+
+/** 等级曲线给出的**原始间隔**（不含装备与百分比加成）：装备折扣按它算，避免公式各处抄一遍 */
+function rawIntervalByLevel(styleLevel, decay) {
+  return COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * decay
+}
+
+/** 装备攻速实际生效的秒数（软上限：最多关掉「等级曲线 → 地板」剩余距离的 `COMBAT_SPEED_GEAR_GAP_SHARE`） */
+export function gearSpeedEffective(styleLevel = 1, eqSpeedBonus = 0) {
+  const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
+  const floor = tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC)
+  const gap = Math.max(0, rawIntervalByLevel(styleLevel, decay) - floor)
+  return Math.min(Math.max(0, Number(eqSpeedBonus) || 0), gap * COMBAT_SPEED_GEAR_GAP_SHARE)
+}
+
 /** 对决回合间隔（秒）：**唯一出口**（引擎公式与界面上限提示都走它，避免两套真相） */
 export function combatTurnIntervalSec(styleLevel = 1, eqSpeedBonus = 0, speedPct = 0) {
   const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
-  const raw = COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * decay - (Number(eqSpeedBonus) || 0)
+  const raw = rawIntervalByLevel(styleLevel, decay) - gearSpeedEffective(styleLevel, eqSpeedBonus)
   const pct = Number(speedPct) || 0
   return Math.max(tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC), raw * (1 - pct / 100))
 }
@@ -188,11 +215,18 @@ export function combatTurnIntervalSec(styleLevel = 1, eqSpeedBonus = 0, speedPct
 export function combatSpeedAtCap(styleLevel = 1, eqSpeedBonus = 0) {
   const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
   const floor = tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC)
-  return COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * decay - (Number(eqSpeedBonus) || 0) <= floor
+  return rawIntervalByLevel(styleLevel, decay) - gearSpeedEffective(styleLevel, eqSpeedBonus) <= floor
 }
 
-/** 到顶等级（原始间隔撞地板的等级）：界面/文档/守卫共用，避免各处各写一个 60/75 */
+/**
+ * 到顶等级（等级曲线撞地板的等级）：界面/文档/守卫共用，避免各处各写一个 60/75。
+ * ⚠️ 2026-09-26 起**与装备无关**了（`eqSpeedBonus` 只作兼容保留）：装备按「剩余距离的一半」软封顶，
+ *    永远吃不掉最后那一半 ⇒ 谁也变不出更早的到顶等级。改前带 0.6s 装能到 L38，现在一律 L75。
+ */
 export function combatSpeedCapLevel(eqSpeedBonus = 0) {
-  return Math.ceil((COMBAT_SPEED_BASE_SEC - tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC) - (Number(eqSpeedBonus) || 0)) / tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05))
+  const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
+  const floor = tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC)
+  void eqSpeedBonus
+  return Math.ceil((COMBAT_SPEED_BASE_SEC - floor) / decay)
 }
 

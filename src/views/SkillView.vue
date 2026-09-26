@@ -93,12 +93,9 @@ function planToggle() {
         <h2>
           {{ activeDef?.name }}
           <span v-if="prestiges > 0" class="badge badge-on">{{ prestiges }} 转</span>
-          <!-- 指南按钮（2026-09-19）：页顶那框说明文字已收进这个弹窗 -->
-          <button
-            class="btn btn-sm skill-guide-btn"
-            title="这一页是干什么的 / 有哪些机制"
-            @click="ui.toggleSkillGuide(activeDef?.id)"
-          >📖 指南</button>
+          <!-- 2026-09-26 用户⑪：原先这里有个内嵌的 📖 指南 按钮，而功能页的指南在**顶栏** ——
+               同一个东西两个位置。现统一到顶栏那一枚（`App.vue` 的 `.top-nav-guide`，
+               技能页也走它、渲染 skillGuides 的内容），这里不再重复。 -->
         </h2>
         <p class="dim">{{ activeDef?.desc }}</p>
       </div>

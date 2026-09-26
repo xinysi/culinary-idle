@@ -7,8 +7,7 @@ import Pagination from '../components/Pagination.vue'
 import { SPIRITS, SPIRIT_SLOTS, SPIRIT_TIER } from '../game/data/spiritTiers.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
-import { getSkillDef } from '../game/data/skills.js'
-import { STYLE_INFO } from '../game/data/combat.js'
+import { spiritEffectParts } from '../game/data/itemDetail.js' // 食灵效果文案唯一出口（2026-09-26 用户⑫）
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -40,31 +39,16 @@ function toggle(spiritId) {
   const ok = player.setSpiritActive(spiritId, !isActive(spiritId))
   if (!ok) ui.pushLog(isActive(spiritId) ? '出战位已满（最多 2 个）' : '切换失败', 'warn')
 }
+// 效果文案（2026-09-26 用户⑫）：**唯一出口在 `itemDetail.spiritEffectParts()`**。
+// 本页原先自己抄了两份（`effectText` 字符串版 + `effectParts` 数组版，逐行同构），而图鉴侧还有第三份
+// ——三份里只有本页把 `loseHpPerTurnPct` 的负号取反了（数据存的是 -3）⇒ 图鉴里显示「每回合损失 -3%」。
+// 现统一调那个出口，本页不再保留任何一份副本。
 function effectText(spirit) {
-  const e = spirit.effect
-  const parts = []
-  if (e.xpPct) for (const [k, v] of Object.entries(e.xpPct)) parts.push(`${getSkillDef(k)?.name ?? k}经验 +${v}%`)
-  if (e.dmgPct) parts.push(`全对决伤害 +${e.dmgPct}%`)
-  if (e.styleDmgPct) for (const [k, v] of Object.entries(e.styleDmgPct)) parts.push(`${STYLE_INFO[k]?.name ?? k}流派伤害 +${v}%`)
-  if (e.healPerTurnPct) parts.push(`每回合回复 ${e.healPerTurnPct}% 最大品鉴值`)
-  if (e.loseHpPerTurnPct) parts.push(`每回合损失 ${-e.loseHpPerTurnPct}% 最大品鉴值`)
-  if (e.fishingAccPct) parts.push(`垂钓成功率 +${e.fishingAccPct}%`)
-  if (e.farmYieldBonus) parts.push(`农耕收获 +${e.farmYieldBonus}`)
-  return parts.join('，')
+  return spiritEffectParts(spirit).join('，')
 }
-
-// 逐条效果（供卡片 chip 展示，类似契约材料）
+/** 逐条效果（供卡片 chip 展示，类似契约材料） */
 function effectParts(spirit) {
-  const e = spirit.effect
-  const parts = []
-  if (e.xpPct) for (const [k, v] of Object.entries(e.xpPct)) parts.push(`${getSkillDef(k)?.name ?? k}经验 +${v}%`)
-  if (e.dmgPct) parts.push(`全对决伤害 +${e.dmgPct}%`)
-  if (e.styleDmgPct) for (const [k, v] of Object.entries(e.styleDmgPct)) parts.push(`${STYLE_INFO[k]?.name ?? k}流派伤害 +${v}%`)
-  if (e.healPerTurnPct) parts.push(`每回合回复 ${e.healPerTurnPct}% 最大品鉴值`)
-  if (e.loseHpPerTurnPct) parts.push(`每回合损失 ${-e.loseHpPerTurnPct}% 最大品鉴值`)
-  if (e.fishingAccPct) parts.push(`垂钓成功率 +${e.fishingAccPct}%`)
-  if (e.farmYieldBonus) parts.push(`农耕收获 +${e.farmYieldBonus}`)
-  return parts
+  return spiritEffectParts(spirit)
 }
 
 // 食灵阶级编号（1~5）

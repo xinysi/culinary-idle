@@ -42,7 +42,7 @@ const PATTERNS = [
   // （当天在塔页说明与战斗面板各写了一次）。静态守卫只扫数据模块，模板文本扫不到 ⇒ 这里补上运行时那一半。
   { name: 'markdown 粗体残留', re: /\*\*[^*\n]{1,40}\*\*/ },
   // 英文标识符裸露（2026-09-13 用户报「很多页面出现 tier」后立）：内部字段名不该出现在界面上
-  { name: '英文标识符裸露', re: /(tier|minTier|tierReq|reqLevel|itemId|itemQty|pct|undefined|NaN|foraging|fishing|hunting|excavation|cooking|baking|brewing|preserving|spiceMixing|craftsmithing)/ },
+  { name: '英文标识符裸露', re: /(tier|minTier|tierReq|reqLevel|itemId|itemQty|pct|undefined|NaN|foraging|fishing|hunting|excavation|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|flavorArtistry|pickled|seasoning|seafood)/ },
 ]
 
 /** 页内扫描（真函数，序列化后传进浏览器） */

@@ -435,7 +435,9 @@ const recipeNoun = '配方'
           <div v-for="it in spoilList" :key="it.id" class="spoil-item">
             <ItemImg :item-id="it.id" size="sm" />
             <span class="spoil-name">{{ it.name }}</span>
-            <span class="dim spoil-cat">{{ it.category }}</span>
+            <!-- 2026-09-26 用户⑯：这一行原先是裸插值的类别 id（`it.category`）⇒ 保鲜预览弹窗里会露出
+                 meat / seafood 这类英文，而同一页的配方卡走的是 `recipeCategory()` 的映射。现统一过映射。 -->
+            <span class="dim spoil-cat">{{ CATEGORY_LABEL[it.category] ?? it.category }}</span>
             <span class="dim spoil-note">{{ Math.round(it.spoilMs / 3600000) }}h 腐坏</span>
           </div>
         </div>

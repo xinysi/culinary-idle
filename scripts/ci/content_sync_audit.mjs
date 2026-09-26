@@ -216,6 +216,10 @@ const sidebarSrc = read('src/components/Sidebar.vue')
   if (!/featureGuide: false/.test(uiSrc) || !/toggleFeatureGuide\(/.test(uiSrc)) wireMiss.push('ui.js 状态/动作')
   if (!/v-html="entry\.desc"/.test(read('src/components/FeatureGuideModal.vue'))) wireMiss.push('弹窗未用 v-html 渲染富文本 desc')
   check('攻略：功能页「指南」按钮接线齐备（按钮 / 弹窗 / 状态 / v-html）', wireMiss.length === 0, `缺: ${wireMiss.join('、')}`)
+  // 2026-09-26 用户⑪：技能页/副业页的指南**并入顶栏那一枚**（原先技能页标题旁还有一个内嵌 📖 指南）
+  check('攻略：技能页「指南」并入顶栏同一枚（位置与功能页一致，不再各处一个）',
+    !/skill-guide-btn/.test(read('src/views/SkillView.vue')) && /skillGuideEntry/.test(appSrc2) && /toggleSkillGuide/.test(appSrc2),
+    '技能页又冒出内嵌指南按钮，或顶栏没有路由到 skillGuides')
 
   const miss = required.filter((k) => !ovText.includes(k))
   check(`攻略：总览覆盖全部功能关键词（${required.length} 个）`, miss.length === 0, `未覆盖: ${miss.join(',')}`)
@@ -402,6 +406,9 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
 //      ⚠️ 第二轮才补上这条：宴会/常客/餐厅/同业榜的 `tier ≥ N`、`最低 tier` 全是**模板静态文本**，
 //      只扫字符串字面量会漏（用户就是先在宴会上看到的）。
 {
+  // ⚠️ 这份清单是**手抄**的（历史上的 tier/reqLevel 那批）。2026-09-26 试过改成「全量技能 id + 类别 id 派生」，
+  //    结果被 `'铜-weapon-copperKnife'` 这类**数据主键**（含中文因此被当成面向玩家的串）打出一片假阳性 ——
+  //    「哪些 id 会漏到界面上」不是能靠词表猜的，改成**两处精确的覆盖断言**（见下面两条 check）更可靠。
   const IDS = /\b(tier|minTier|tierReq|reqLevel|itemId|itemName|itemQty|qty|pct|skillId|defId|slotId|amount|exp|foraging|fishing|hunting|excavation|woodcutting|mining|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|opp\(\))\b/
   /** 剔除模板串插值（花括号配对计数）与 Vue 插值 */
   function stripInterp(str) {
@@ -469,6 +476,61 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     }
   }
   check(`文本：面向玩家的中文里无英文标识符裸露（字符串字面量 + 模板文本，共扫 ${scanned} 条；插值不计）`, bad.length === 0, bad.slice(0, 6).join('; '))
+
+  // ── 物品**类别 id** 不许直接进模板（2026-09-26 用户⑯：「宴会里还有类似 baking 的英文」）──
+  // 真凶在常客页：同一张页面里，表格用 `catLabel(r.category)`、卡片却写 `{{ r.def.category }}`
+  // ⇒ 露出「偏好：baking（需 3 档以上）」。判据：模板里**裸插值某个 `.category` / `.cat` 字段**即 FAIL
+  // （要走 `catLabel()` / `CATEGORY_LABEL[...]` 这类映射；传参、当 key 用不算）。
+  {
+    const rawCat = []
+    // 允许清单：这些 `.category` / `.cat` **不是物品类别 id**（分别是攻略条目类别 / 成就类别 /
+    // 奥义类别（本来就是中文的攻击·防御·采集）/ 小游戏商店里手写的中文分组名）
+    const ALLOW_RAW_CAT = new Set([
+      'FeatureGuideModal.vue|entry.category',
+      'AchievementsView.vue|r.a.category',
+      'GastronomyView.vue|a.category',
+      'GameShopView.vue|g.cat',
+    ])
+    for (const f of walkSrc()) {
+      if (!f.endsWith('.vue')) continue
+      // 注释不算（项目里注释常举例字段名；JS 的 // 行与模板的 <!-- --> 都剥掉）
+      const src = read(f)
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .split('\n')
+        .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+        .join('\n')
+      const re = /\{\{\s*[\w.?[\]'"]*\.(?:category|cat)\s*\}\}/g
+      let m
+      while ((m = re.exec(src))) {
+        const key = `${f.split('/').pop()}|${m[0].replace(/[{}\s]/g, '')}`
+        if (ALLOW_RAW_CAT.has(key)) continue
+        rawCat.push(`${f.split('/').pop()}: ${m[0].trim()}`)
+      }
+    }
+    check('文本：模板里没有裸插值物品类别 id（必须过 catLabel/CATEGORY_LABEL）', rawCat.length === 0, rawCat.slice(0, 6).join('; '))
+  }
+
+  // ── 标签表必须**覆盖全部 id**（2026-09-26 用户⑯ 抓到的真缺陷就是这个）──
+  // `SKILL_LABEL` 漏了 `flavorArtistry`（还留着一个 stale 的 `flavor`——那是流派 id）⇒ 食灵效果文案
+  // 落到 `?? k` 兜底，页面上印出「flavorArtistry经验 +7%」。类别同理：`CATEGORY_LABEL` 少一个键，
+  // 图鉴/商店/制作页任意一处 `CATEGORY_LABEL[c] ?? c` 都会露英文。
+  {
+    const { SKILL_DEFS } = await import('../../src/game/data/skills.js')
+    const { CATEGORY_LABEL } = await import('../../src/game/data/itemDetail.js')
+    const detailSrc = read('src/game/data/itemDetail.js')
+    const labelBlock = detailSrc
+      .slice(detailSrc.indexOf('const SKILL_LABEL = {'), detailSrc.indexOf('const STYLE_LABEL'))
+      .replace(/\/\/.*$/gm, '') // 剥注释：注释里常举例写出键名（本项目已有两次被自己的注释打回）
+    const labelKeys = [...labelBlock.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*:/g)].map((m) => m[1])
+    const missSkill = Object.keys(SKILL_DEFS).filter((id) => !labelKeys.includes(id))
+    const stale = labelKeys.filter((k) => !(k in SKILL_DEFS))
+    check('文本：技能中文表覆盖全部技能 id（缺一个就会在界面上露英文 id）', missSkill.length === 0 && stale.length === 0,
+      `缺: ${missSkill.join(', ') || '无'} · 多余(stale): ${stale.join(', ') || '无'}`)
+    const usedCats = new Set()
+    for (const it of Object.values(ITEMS)) if (it.category) usedCats.add(it.category)
+    const missCat = [...usedCats].filter((c) => !(c in CATEGORY_LABEL))
+    check(`文本：物品类别中文表覆盖全部在用类别（${usedCats.size} 类）`, missCat.length === 0, `缺: ${missCat.join(', ') || '无'}`)
+  }
 }
 
 // ── 跳转目标必须是已注册视图（2026-09-13 全量走查发现：山海食经「去收集」调了 `setView('farming')`，

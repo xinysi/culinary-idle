@@ -21,6 +21,10 @@ export function featureGroups(player) {
       { icon: '📬', name: '信箱', view: 'mail', badge: () => player.mailUnclaimedCount() },
       { icon: '📈', name: '行情', view: 'market' },
       { icon: '❓', name: '奇遇图鉴', view: 'encounters' },
+      // 2026-09-26 用户⑱：「节庆」按日期走（月初开市 / 月末夜市），本质是**看今天**的事 ⇒ 归「今日」；
+      // 「系统日志」是排查用的运行记录，也是「上线顺手看一眼」⇒ 同组。
+      { icon: '🌗', name: '节庆', view: 'festival' },
+      { icon: '🗂', name: '系统日志', view: 'logs' },
     ],
   },
   {
@@ -31,6 +35,10 @@ export function featureGroups(player) {
       { icon: '🛒', name: '商店', view: 'shop' },
       { icon: '🍽️', name: '珍馐阁', view: 'deluxe' },
       { icon: '🧪', name: '炼金', view: 'alchemy' },
+      // 2026-09-26 用户⑭：交易所与供应商本质是**买进卖出**（一买一卖、签长约进货），与「采买与转化」同义；
+      // 原先归在餐厅经营里（那组当时 12 格、最挤），移出后两组都更好扫。
+      { icon: '💹', name: '交易所', view: 'exchange', unlock: (p) => p.exchangeUnlocked() },
+      { icon: '📦', name: '供应商', view: 'suppliers' },
     ],
   },
   {
@@ -60,6 +68,12 @@ export function featureGroups(player) {
       { icon: '📜', name: '菜系研究', view: 'schools' },
       { icon: '📖', name: '山海食经', view: 'shanhai' },
       { icon: '🛡️', name: '装备总览', view: 'gear' },
+      // 2026-09-26 用户⑱：这四格原先自成一栏「成长与信仰」，但它们的共同点其实是**长线养成研究**
+      // （食灵、师徒、道途、守护神都是「投进去慢慢长」）⇒ 与研究/收集同栏，左栏少一个只有 5 格的组。
+      { icon: '✨', name: '食灵物语', view: 'spiritStories' },
+      { icon: '♻️', name: '传承', view: 'legacy' },
+      { icon: '🛤️', name: '厨神之路', view: 'dao', badge: () => (player.daoPoints() > 0 ? player.daoPoints() : 0) },
+      { icon: '🏛', name: '信仰', view: 'patrons' },
     ],
   },
   {
@@ -70,10 +84,8 @@ export function featureGroups(player) {
       { icon: '⭐', name: '评级', view: 'michelin', unlock: (p) => p.michelinUnlocked() },
       { icon: '👨‍🍳', name: '班底', view: 'staff' },
       { icon: '🏬', name: '分店', view: 'branches', unlock: (p) => p.branchUnlocked() },
-      { icon: '💹', name: '交易所', view: 'exchange', unlock: (p) => p.exchangeUnlocked() },
       { icon: '🥂', name: '宴会', view: 'banquet' },
       { icon: '🚚', name: '外卖', view: 'takeout' },
-      { icon: '📦', name: '供应商', view: 'suppliers' },
       { icon: '👋', name: '常客', view: 'regulars' },
       { icon: '🍻', name: '厨友', view: 'friends', badge: () => player.friendsVisitableCount() },
       { icon: '🏪', name: '同业榜', view: 'rivals' },
@@ -92,6 +104,8 @@ export function featureGroups(player) {
       { icon: '🃏', name: '名厨', view: 'chefChallenge' },
       { icon: '🏯', name: '食神秘境', view: 'realm' },
       { icon: '🎮', name: '小游戏', view: 'minigames' },
+      // 2026-09-26 用户⑱：卡牌对战是「3v3 打一把」的休闲玩法 ⇒ 归挑战与休闲（原先在记录与回顾）
+      { icon: '🎴', name: '卡牌对战', view: 'cards' },
     ],
   },
   {
@@ -102,25 +116,11 @@ export function featureGroups(player) {
       { icon: '🏁', name: '里程碑', view: 'milestones' },
       { icon: '📰', name: '年鉴', view: 'chronicle' },
       { icon: '📜', name: '故事', view: 'story' },
-      { icon: '🎴', name: '卡牌对战', view: 'cards' },
       { icon: '📅', name: '赛季回顾', view: 'seasonReview' },
       { icon: '🎖', name: '荣誉殿堂', view: 'honor' },
       // 简写「成就称号」：4 列后瓦片只有 54px，「成就与称号」（5 字）会换行；全称仍用在页面标题与跳转文案里
       { icon: '🥇', name: '成就称号', view: 'achievements' },
       { icon: '🎟️', name: '图鉴兑换', view: 'codexExchange' },
-      { icon: '🗂', name: '系统日志', view: 'logs' },
-    ],
-  },
-  {
-    id: 'grow',
-    icon: '🌱',
-    name: '成长与信仰',
-    items: [
-      { icon: '✨', name: '食灵物语', view: 'spiritStories' },
-      { icon: '♻️', name: '传承', view: 'legacy' },
-      { icon: '🛤️', name: '厨神之路', view: 'dao', badge: () => (player.daoPoints() > 0 ? player.daoPoints() : 0) },
-      { icon: '🏛', name: '信仰', view: 'patrons' },
-      { icon: '🌗', name: '节庆', view: 'festival' },
     ],
   },
 ]

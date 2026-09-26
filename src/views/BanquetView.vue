@@ -12,6 +12,13 @@ import ProgressBar from '../components/ProgressBar.vue'
 const player = usePlayerStore()
 const ui = useUiStore()
 
+// 类别展示名（2026-09-26 用户⑯「宴会里还有类似 baking 的英文」）：宴席订单里的 `cat` 是**物品类别 id**
+// （'主菜' 这类本来就是中文，但 'baking' 就是英文）⇒ 页面上任何显示点都必须过这个映射，
+// 不许直接 `{{ order.cat }}`（本页原先三处里有两处是裸的，只有徽章那行过了映射）。
+function catLabel(c) {
+  return CATEGORY_LABEL[c] ?? c
+}
+
 const order = computed(() => player.banquetState().order)
 const offer = computed(() => player.banquetOffer())
 const ready = computed(() => player.banquetReady())
@@ -93,7 +100,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
       </div>
       <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
         <b>可承办类别</b>（每次委托随机指定其中一类，交付该类别、上表门槛档位以上的料理即可）：
-        <span v-for="c in BANQUET_CATS" :key="c" class="badge" style="margin-right: 4px">{{ CATEGORY_LABEL[c] ?? c }}</span>
+        <span v-for="c in BANQUET_CATS" :key="c" class="badge" style="margin-right: 4px">{{ catLabel(c) }}</span>
         份数 = 桌数 × {{ PORTIONS_PER_TABLE }}（每位客人 {{ PORTIONS_PER_TABLE }} 份）。奖励金币还会随<b>对决等级</b>上浮
         （每级 +2%），所以高档席面在中后期才真正划算；超时自动作废、放弃无惩罚。
       </p>
@@ -108,7 +115,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
     <!-- 进行中的订单 -->
     <div v-if="order" class="card banquet-live">
       <div class="banquet-head">
-        <h3>{{ order.tierName }} · {{ order.cat }} ×{{ order.need }}</h3>
+        <h3>{{ order.tierName }} · {{ catLabel(order.cat) }} ×{{ order.need }}</h3>
         <span class="dim mono">剩余 {{ fmtMs(remain) }}</span>
       </div>
       <ProgressBar :progress="progress" />
@@ -133,7 +140,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'takeout'
         <h3>今日席面：{{ offer.tierName }}</h3>
         <span class="dim mono">限时 {{ offer.hours }} 小时</span>
       </div>
-      <div class="dim banquet-sub">要求：{{ offer.cat }} ×{{ offer.need }} 份（需 {{ offer.minTier }} 档以上，每桌 {{ PORTIONS_PER_TABLE }} 份）</div>
+      <div class="dim banquet-sub">要求：{{ catLabel(offer.cat) }} ×{{ offer.need }} 份（需 {{ offer.minTier }} 档以上，每桌 {{ PORTIONS_PER_TABLE }} 份）</div>
       <div class="dim banquet-sub">
         奖励：{{ offer.gold.toLocaleString() }} 金币<template v-if="offer.spice"> + 神秘调料 ×{{ offer.spice }}</template> + 餐厅好感 60
       </div>

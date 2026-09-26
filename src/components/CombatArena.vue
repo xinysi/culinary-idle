@@ -318,7 +318,13 @@ watch(
   letter-spacing: 1px;
 }
 .arena-items {
+  /* 2026-09-26 用户：神秘调料与能量补给**各占一行**太浪费纵向空间 ⇒ 并成一行（窄屏仍会自动折行）。
+     `.item-actions` 的默认是纵向叠放（料理/酱料那类多行场景要的），战斗屏这两味只有两枚按钮。 */
+  flex-direction: row;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
 }
 .arena-foot {
   display: flex;

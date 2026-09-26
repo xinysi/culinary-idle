@@ -83,8 +83,42 @@ export function creditableDamage(level, damage, oppMaxHp) {
 /**
  * 一场战斗结算给**单个技能**的经验（三技能各拿一份，与旧口径一致）
  * @param win 胜场 100%；败场 30%（保留项目原有设计，也给「自杀式刷级」一个抑制度）
+ * @param playerLevel 玩家自己的对决等级（不给则按敌等级算，保持旧调用兼容）
  */
-export function combatXpPerSkill(level, damage, oppMaxHp, win) {
+export function combatXpPerSkill(level, damage, oppMaxHp, win, playerLevel = level) {
   const credited = creditableDamage(level, damage, oppMaxHp)
-  return Math.floor(credited * xpPerDamage(level) * (win ? 1 : 0.3))
+  return Math.floor(credited * xpPerDamage(level) * earlyCombatXpMult(playerLevel) * (win ? 1 : 0.3))
+}
+
+// ── 开局爬坡（2026-09-26 用户 ⑦：「1 级打 1 级敌人多久到 2 级，是不是所需时间过长」）────────
+// 🔴 **实测出来的问题**：`xpKillBaseline` 这条曲线是**按大后期标定**的（L99 一场 64,449 经验、
+//    升一级约 4,655 场——那是设计口径），但它在低等级**掉得太慢**（L1 只有 10 经验），
+//    而经验需求是 RS 形状 ×221 的指数（**L1→L2 就要 18,365**）⇒ 两头对不上：
+//    实测真新档（铜刀 + 2 份饭）打新手厨房的 1 级敌人：**约 318 场 / 2.6 小时**才到 2 级，
+//    而同一时间采摘早就 2 级了（1.1 分钟）—— 差两个数量级。
+//    参照 Melvor Idle：L2 需 83 经验、杂鱼 5~20 经验/只 ⇒ **5~15 只**。
+// 🔴 **所以这条爬坡只治「开局」，大后期一个字节不动**：
+//      `1 + A·e^{-(等级-1)/τ}`，A=40、τ=5 ⇒ L1 ×41 → L5 ×19 → L10 ×7.6 → L20 ×1.9 → L30 ×1.12 → L40 ×1.01。
+//    选**指数衰减**而不是「L20 之前 ×N、之后 ×1」的硬台阶：后者会在 L20 处制造一个
+//    「突然慢 30%」的断崖（玩家能感觉到「这一级怎么变难了」）。这里 L40 只残余 1%，对
+//    「战斗三技能 ~6 天」那套标定（大后期占绝对多数）的影响可忽略，而开局从 2.6 小时 → 几分钟。
+// ⚠️ 只压/提**系统给的基准**，与难度系数那套同一纪律：不改 `xpKillBaseline`（它是冻结基线，
+//    守卫逐级钉着），而是在**读取点**乘。命中经验（`hitXpFor`）也走同一个乘区 ——
+//    开局阶段「每次命中 +4」比击杀奖励占比更大（实测 L1 一场 58 经验里 44 来自命中），
+//    只提击杀那一侧等于没修。
+export const EARLY_XP_TOP_LEVEL = 20
+/** L1 处的额外倍率（总倍率 = 1 + A） */
+export const EARLY_XP_BOOST_A = 40
+/** 衰减尺度（级）：越大则爬坡拖得越长 */
+export const EARLY_XP_BOOST_TAU = 5
+/** 开局经验倍率：≥20 级恒为 1（非法/缺失输入按 1 处理，不惩罚） */
+export function earlyCombatXpMult(level) {
+  const lv = Number(level)
+  if (!Number.isFinite(lv) || lv <= 0 || lv >= EARLY_XP_TOP_LEVEL) return 1
+  return 1 + EARLY_XP_BOOST_A * Math.exp(-(lv - 1) / EARLY_XP_BOOST_TAU)
+}
+/** 每次**命中**给风格技能的经验（原写死 4）—— 唯一出口，与击杀经验同乘区 */
+export const HIT_XP_BASE = 4
+export function hitXpFor(playerLevel) {
+  return Math.max(1, Math.round(HIT_XP_BASE * earlyCombatXpMult(playerLevel)))
 }

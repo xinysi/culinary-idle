@@ -685,6 +685,17 @@ html[data-theme='dark'] .mobile-skills {
   -webkit-backdrop-filter: none;
 }
 
+/* 🔴 战斗屏里的浮层（战备/自动进食弹窗）过长时必须压在**后面的卡片**之上（2026-09-26 用户报）。
+   根因不是弹窗自己的 z-index 太小：`.card` 的 `backdrop-filter` **本身会造层叠上下文**
+   ⇒ `.combat-loadout` 的 z-index 40 被困在战斗屏内部，而它后面的兄弟卡片（装备槽 / 组合框）
+   按 DOM 顺序后画 ⇒ 弹窗超出战斗屏的那一截就被盖住了（实测量化：1440 下弹窗高 558px，
+   取样点 y=544~673 命中 `.card.equipment-slots`，不是弹窗自己）。
+   打开弹窗时把**整张战斗屏**抬到兄弟节点之上即可（`:has()` 项目里已有先例）。 */
+.combat-arena:has(.loadout-pop) {
+  position: relative;
+  z-index: 45;
+}
+
 .card h3 {
   font-size: 13px;
   color: var(--text-dim);
@@ -1555,31 +1566,54 @@ h2 {
   border-left: 1px dashed rgba(var(--ink-rgb), 0.35);
 }
 /* 美食奥义栏：攻击/防御两列，每行「图标+名称（+已开时的效果）+ 消耗」 */
+/* 美食奥义栏：攻击/防御两列，每行「图标+名称（+已开时的效果）+ 消耗」；**点一行即可开关**（2026-09-26）
+   ⚠️ 这些规则从全局 `.aoji-row` **收窄到 `.combo-aoji` 之内**：右栏状态面板的「奥义」卡片
+   （`StatusPanel` 的 `.aoji-side .aoji-row`）用的是同一组类名，行变成了 <button> 后
+   背景/边框/光标那几项会连带改到它身上。 */
 .combo-aoji .combo-sub { font-size: 12px; }
+.combo-aoji h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+/* ② 品鉴点常显（与「奥义续航」同一个出口）：见低时转警告色 */
+.combo-aoji .aoji-points { color: var(--text-dim); }
+.combo-aoji .aoji-points.is-low { color: var(--warn-strong); }
 .aoji-cols {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px 12px;
 }
 .aoji-col { display: flex; flex-direction: column; gap: 2px; }
-.aoji-row {
+.combo-aoji .aoji-row {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font-family: inherit;
   font-size: 12px;
   line-height: 1.45;
-  padding: 1px 4px;
-  border-radius: 4px;
+  text-align: left;
   color: var(--text-dim);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
 }
-.aoji-row.on {
+.combo-aoji .aoji-row:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+.combo-aoji .aoji-row.on {
   color: var(--text);
   background: rgba(var(--tint-rgb), 0.12);
+  border-color: rgba(var(--tint-rgb), 0.45);
 }
-.aoji-row .aoji-name { flex: 0 0 auto; white-space: nowrap; }
-.aoji-row .aoji-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.aoji-row .aoji-cost { flex: 0 0 auto; margin-left: auto; }
-.aoji-note { margin: 6px 0 0; font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.combo-aoji .aoji-row .aoji-name { flex: 0 0 auto; white-space: nowrap; }
+/* 已开的那一行把效果说明**折到第二行**（`flex-basis: 100%`）：
+   列宽只有 ~116px，原先与名字挤在同一行 ⇒ 只剩「⬆」半个字形（实拍确认过），不如换行给足宽度。 */
+.combo-aoji .aoji-row .aoji-desc { flex: 1 1 100%; min-width: 0; white-space: normal; }
+.combo-aoji .aoji-row .aoji-cost { flex: 0 0 auto; margin-left: auto; }
+.combo-aoji .aoji-note { margin: 6px 0 0; font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .combo-left .style-row {
   flex-direction: column;
   align-items: stretch;
@@ -1587,6 +1621,17 @@ h2 {
 .combo-left .style-btn {
   max-width: none;
   width: 100%;
+  /* ④ 排版（2026-09-26 用户报「文字排版需要优化」）：`<button>` 默认 `text-align: center`，
+     三行文字（名称/描述/克制）逐行居中 ⇒ 换行后参差错落（实拍：描述首行缩进、次行居中）。
+     统一左对齐 + 行高，并把「克制 X · 伤害 +N%」拆成可换行的两项。 */
+  text-align: left;
+  line-height: 1.5;
+}
+.combo-left .style-btn .style-adv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  margin-top: 2px;
 }
 /* 战斗框常驻：待机提示 */
 .combat-idle {

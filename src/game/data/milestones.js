@@ -42,7 +42,7 @@ export const MILESTONES = [
   { id: 'm_regularAll', group: '经营', icon: '📖', name: '12 位常客满好感', target: REGULARS.length, unit: '位', hint: '每日招待 1 次', value: (p) => Object.values(p.regulars ?? {}).filter((r) => (r?.serves ?? 0) >= 25).length },
   { id: 'm_guildMax', group: '经营', icon: '🤝', name: '公会点数 10000', target: 10000, unit: '点', hint: '每日任务累积', value: (p) => p.guild?.points ?? 0 },
   // ── 长线 ──
-  { id: 'm_achievementAll', group: '长线', icon: '🏅', name: '成就全清', get target() { return ALL_ACHIEVEMENTS.length }, unit: '项', hint: '全部 262 项成就', value: (p) => (p.achievements ?? []).length },
+  { id: 'm_achievementAll', group: '长线', icon: '🏅', name: '成就全清', get target() { return ALL_ACHIEVEMENTS.length }, unit: '项', hint: '全部 264 项成就', value: (p) => (p.achievements ?? []).length },
   { id: 'm_endingame', group: '长线', icon: '👑', name: '毕业：禁忌食神', target: 1, unit: '', hint: 'L100 首领', value: (p) => ((p.stats?.bosses ?? []).includes('禁忌食神') ? 1 : 0) },
 ]
 

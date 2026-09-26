@@ -17,6 +17,8 @@ const signLadder = computed(() => player.sidelineLadderTotal('michelinScore'))
 const state = computed(() => player.michelin ?? { score: 0, stars: 0, best: 0 })
 const current = computed(() => starFromScore(review.value.score))
 const next = computed(() => nextStar(current.value.star))
+/** 星等上限（页头那排星图标按它渲染；2026-09-26 扩到五星时这里必须跟着走） */
+const MAX_STARS = MICHELIN_STARS[MICHELIN_STARS.length - 1].star
 const progress = computed(() => {
   if (!next.value) return 1
   const lo = current.value.min
@@ -67,7 +69,9 @@ const RELATED = [{ view: 'branches', label: '🏬 分店' }, { view: 'rivals', l
       <div class="card michelin-hero">
         <div class="michelin-left">
           <div class="michelin-stars">
-            <span v-for="n in 3" :key="n" :class="{ on: current.star >= n }">★</span>
+            <!-- ⚠️ 星数**从数据表派生**（2026-09-26 扩到五星）：原先写死 `v-for="n in 3"`，
+                 扩星后四星/五星永远只显示三颗星（页面上「五星」而图标只有三颗）。 -->
+            <span v-for="n in MAX_STARS" :key="n" :class="{ on: current.star >= n }">★</span>
           </div>
           <div class="michelin-name">{{ current.name }}<span class="dim"> · 当前 {{ fmt(review.score) }} 分</span></div>
           <div class="dim michelin-hint">

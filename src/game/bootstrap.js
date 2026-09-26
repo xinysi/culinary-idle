@@ -11,6 +11,7 @@ import { SaveManager, SAVE_VERSION, SAVE_PREFIX } from './core/SaveManager.js'
 import { computeOfflineProgress, formatDuration, DEFAULT_MAX_OFFLINE_MS } from './core/OfflineProgress.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from './skills/registry.js'
 import { itemName } from './data/items.js'
+import { MICHELIN_STARS } from './data/michelin.js' // 星级名称单一来源（2026-09-26 扩到五星）
 import { getSkillDef } from './data/skills.js'
 import { Combat, setCombatInstance } from './combat/Combat.js'
 import { applyItemBalance } from './data/itemBalance.js'
@@ -525,7 +526,9 @@ export function registerGameEvents() {
 
   // 米其林评级（2026-09-10）
   EventBus.on('michelin:review', ({ stars, prev, score }) => {
-    const names = ['未入榜', '一星', '二星', '三星']
+    // ⚠️ 星名**从数据表取**（`MICHELIN_STARS`）：这里原先手抄了一份 4 项数组，
+    //   2026-09-26 扩到五星时就会漏掉四星/五星（页面上写「四星」、日志写「4 星」）。
+    const names = MICHELIN_STARS.map((s) => s.name)
     ui.pushLog(`⭐ 米其林评审：${score} 分 → ${names[stars] ?? stars} 星` + (stars > prev ? '（升级！）' : '（降级）'), stars > prev ? 'levelup' : 'warn')
     if (stars > prev && stars > 0) player.recordChronicle?.('michelin:' + stars, 'michelin', `餐厅获评米其林${names[stars]}`)
   })
