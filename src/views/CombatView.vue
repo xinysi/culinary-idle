@@ -9,7 +9,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_ADVANTAGE, COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
 import { scaledEnemy, enemyScalingText } from '../game/data/enemyScaling.js'
-import { resistText } from '../game/data/combatTuning.js' // 战斗深度 v1：抗性文案的唯一出口
+import { resistText, heavyText } from '../game/data/combatTuning.js' // 战斗深度 v1：抗性 / 越级风险的文案出口
 import CombatPanel from '../components/CombatPanel.vue'
 import DropList from '../components/DropList.vue'
 import CombatLog from '../components/CombatLog.vue'
@@ -168,6 +168,10 @@ function mechText(b) {
 function resistOf(b) {
   return resistText(b)
 }
+/** 越级风险提示（战斗深度 v1 第 ④ 件）—— 同等级返回 null ⇒ 那一行不出现；文案走 combatTuning 的出口 */
+function heavyRisk(b) {
+  return b ? heavyText(b.level, player.combatLevel) : null
+}
 // 初次进页时先选中当前区域的第一个对手（watch 只在「变化」时触发，首次不会触发）
 onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0]))
 </script>
@@ -312,6 +316,9 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
                    区域对手的 mechanic 恒为 null（机制只有首领有），而区域才是玩家练级的常打目标
                    ⇒ 塞进去等于「最需要看抗性的那 220 个敌人反而看不到」。文案走 combatTuning 的出口。 -->
               <div v-if="resistOf(selected)"><span>抗性</span><span class="dim">{{ resistOf(selected) }}</span></div>
+              <!-- 越级风险（第 ④ 件）：同等级时为 null ⇒ 这行不出现。它**必须在开打前**看得到，
+                   否则「越级会被秒」就成了没有预告的惩罚（Melvor 的公平性正是「最大伤害是已知数」）。 -->
+              <div v-if="heavyRisk(selected)"><span>越级风险</span><span class="warn-text">{{ heavyRisk(selected) }}</span></div>
             </div>
             <h4>💧 掉落</h4>
             <!-- 概率走全局难度系数，与引擎里 dropChance(d.chance) 同源；若直接传原始 drops 会「写 30% 实际 6%」 -->

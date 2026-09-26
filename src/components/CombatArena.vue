@@ -15,7 +15,7 @@ import { chefImage, chefEmoji } from '../game/data/chefImage.js'
 import { ref } from 'vue'
 import { sfx } from '../game/core/sound.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_ACC, BISCUIT_SPEED_PCT } from '../game/data/biscuitUse.js'
-import { STATUS_INFO, resistText } from '../game/data/combatTuning.js' // 战斗深度 v1：状态与抗性的唯一出口
+import { STATUS_INFO, resistText, heavyText } from '../game/data/combatTuning.js' // 战斗深度 v1：状态与抗性的唯一出口
 import ProgressBar from './ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -44,6 +44,9 @@ const battleFrame = computed(() => {
     // ⚠️ 都走 `combatTuning.js` 的出口，**不许在这里手写状态名/抗性文案**（显示与结算同源）
     enemyStatus: combat?.enemyStatusLeft?.() ?? { bleed: 0, dBreak: 0, burn: 0 },
     foeResist: combat?.inFight ? resistText(combat?.opponent) : '',
+    // 越级风险（第 ④ 件）：同等级时 heavyText 返回 null ⇒ 这行不出现。战斗中也要看得到 ——
+    // 否则「打一半突然被重击打死」就成了没有解释的失败
+    foeHeavy: combat?.inFight && combat?.opponent ? heavyText(combat.opponent.level, player.combatLevel) : null,
   }
 })
 
@@ -135,6 +138,7 @@ watch(
         <div class="hp-bar opp"><div class="hp-fill opp" :style="{ width: Math.max(0, battleFrame.opponentHp / battleFrame.opponentHpMax * 100) + '%' }"></div></div>
         <!-- 战斗深度 v1：对手身上的状态（玩家施加的）与它的抗性。两者都来自 combatTuning.js 的出口 -->
         <div v-if="battleFrame.foeResist" class="foe-resist">🔸 {{ battleFrame.foeResist }}</div>
+        <div v-if="battleFrame.foeHeavy" class="foe-heavy">💢 {{ battleFrame.foeHeavy }}</div>
         <div v-if="Object.values(battleFrame.enemyStatus).some((v) => v > 0)" class="foe-status">
           <span
             v-for="(left, id) in battleFrame.enemyStatus" :key="id"
@@ -261,6 +265,13 @@ watch(
   white-space: nowrap;
 }
 /* 战斗深度 v1：对手的抗性一行 + 我方施加的状态徽章（都在对手立绘下方，宽 100% 不撑破对峙格） */
+.foe-heavy {
+  width: 100%;
+  font-size: 12px;
+  color: var(--warn-strong);
+  text-align: center;
+  line-height: 1.3;
+}
 .foe-resist {
   width: 100%;
   font-size: 12px;

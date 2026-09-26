@@ -19,6 +19,7 @@ import {
   COMBAT_DEPTH_V1, ACC_GEAR_DIV, EVA_GEAR_DIV, ACC_GEAR_CAP, EVA_GEAR_CAP,
   STYLE_STATUS, STATUS_INFO, STATUS_TURNS,
   statusTriggerChance, dotDamage, brokenDef, resistedStatusOf,
+  heavyPct, heavyChance, heavyDamage,
 } from '../data/combatTuning.js'
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
@@ -88,6 +89,7 @@ export class Combat {
     // 战斗深度 v1：**敌人身上**的状态剩余回合（此前敌人不吃任何状态）
     this.enemyStatus = { bleed: 0, dBreak: 0, burn: 0 }
     this.statusApplied = 0 // 本场成功施加状态的次数（统计/守卫用）
+    this.heavyFired = false // 本场是否已经打出过越级重击（一次/场，防连续两次直接秒杀）
   }
 
   get styleId() {
@@ -223,6 +225,7 @@ export class Combat {
     this.result = null
     this.enemyStatus = { bleed: 0, dBreak: 0, burn: 0 } // 敌人身上的状态（每场清零；首领的免疫在施加时判定）
     this.statusApplied = 0
+    this.heavyFired = false
     this.logLine(`⚔️ 对决开始：${o.name}（等级 ${o.level}，${o.styleName}）`)
     EventBus.emit('combat:start', { opponent: o.name })
     return true
@@ -488,6 +491,24 @@ export class Combat {
     if (o.mechanic?.poison && Math.random() < 0.5) {
       this.poisonTurns = 3
       this.logLine('☠️ 黑暗料理王：你中毒了（治疗效果减半）！', 'warn')
+    }
+    // 越级重击（战斗深度 v1 第 ④ 件，2026-09-26）：按**等级差**派生 —— 同等级恒为 0
+    //   ⇒ 同等级战斗一个字节不变；只有「越级」才有被一击打残/秒的风险（Melvor 的「最大伤害」逻辑）
+    //   冷却：一次重击后本场不再触发（避免连续两次直接秒杀，玩家至少能退）
+    //   ⚠️ `hch > 0` 短路不可省：先掷再判会**白吃一个 Math.random()**，把后面的命中/暴击随机序列整体
+    //    挪一位 ⇒ 「同等级零影响」就只剩概率上的零影响、不再逐次一致（实测 p10/p90 会漂 ~0.2s）
+    const hch = heavyChance(o.level, this.player.combatLevel)
+    if (!this.heavyFired && hch > 0 && Math.random() < hch) {
+      const hd = heavyDamage(p.maxHp, o.level, this.player.combatLevel, defensePct)
+      if (hd > 0) {
+        this.heavyFired = true
+        this.logLine(`💢 ${o.name} 越级重击！（${Math.round(heavyPct(o.level, this.player.combatLevel) * 100)}% 你的血量上限 · 本场只触发一次）`, 'warn')
+        this.damagePlayer(hd, '💢 越级重击')
+        if (!this.inFight) return
+        getSkillInstance('heatControl')?.addXp(4)
+        getSkillInstance('tasteAcumen')?.addXp(2)
+        return // 本回合不再叠加普通伤害（重击就是这一回合的那一下）
+      }
     }
     this.damagePlayer(dmg, `${crit ? '💥 对方暴击！' : '🩸'} 受到 ${dmg} 伤害`)
     getSkillInstance('heatControl')?.addXp(4) // 每次受击 +4（防御经验，与命中对齐）

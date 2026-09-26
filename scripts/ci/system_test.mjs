@@ -2964,6 +2964,115 @@ console.log('══ C59. 战斗深度 v1 ══')
   }
 }
 
+// ── C60. 越级重击（2026-09-26 第二批：补上体检里的「续航墙」）──
+// 问题（实测）：自动进食按**上限的 50%** 触发且免费，而敌人每回合只打掉你上限的 ~2.5%
+//   ⇒ 没有任何敌人能一击打死你（连首领 `instantKill` 的上限也是 hp×0.8）⇒ L60 满配能 100%
+//   打赢 **L860** 的敌人（Δ+800）。对照 Melvor：怪的「单次最大伤害」是显式数值，`max hit ≥ 当前血量`
+//   就秒杀，自动进食在受伤之后才触发、救不回来 —— 那才是它的难度来源。
+// 处置：按**等级差**派生的重击，`gap ≤ 1.15` 时**恒为 0** ⇒ **同等级战斗一个字节不变**。
+console.log('══ C60. 越级重击 ══')
+{
+  const T = await import('../../src/game/data/combatTuning.js')
+  const { levelGap, heavyPct, heavyChance, heavyDamage, HEAVY_GAP_FREE, HEAVY_PCT_CAP, HEAVY_CHANCE_CAP } = T
+
+  // A. 同等级与以下：恒为 0（这是「不破坏既有标定」的全部依据）
+  const free = []
+  for (const [e, pl] of [[1, 1], [60, 60], [120, 120], [69, 60], [60, 120], [1, 120]]) {
+    if (heavyPct(e, pl) !== 0 || heavyChance(e, pl) !== 0) free.push(`L${e}/L${pl}`)
+  }
+  check('越级重击', `同等级及以下的对手**恒不触发**（gap ≤ ${HEAVY_GAP_FREE} ⇒ 0）—— TTK／成长标定不受影响`,
+    free.length === 0, free.join(',') || '6 组全为 0（含 61 打 60、120 打 60 这类不越级的）')
+
+  // B. 单调 + 封顶 + 非法输入
+  const pcts = [1.2, 1.5, 2, 3, 4, 5, 10].map((g) => heavyPct(g * 60, 60))
+  const mono = pcts.every((v, i) => i === 0 || v >= pcts[i - 1])
+  check('越级重击', '重击幅度随等级差**单调不减**且封顶（不会越级越多反而越轻）',
+    mono && pcts[pcts.length - 1] === HEAVY_PCT_CAP, `${pcts.map((v) => Math.round(v * 100) + '%').join(' → ')}`)
+  check('越级重击', '非法输入不炸也不误伤（敌人等级 0/负、玩家等级 0/NaN ⇒ 按 1 或不触发）',
+    heavyPct(0, 60) === 0 && heavyPct(-5, 60) === 0 && heavyPct(60, 0) > 0 && Number.isFinite(heavyPct(60, NaN)),
+    `0/60=${heavyPct(0, 60)} · -5/60=${heavyPct(-5, 60)} · 60/0=${heavyPct(60, 0).toFixed(2)}`)
+
+  // C. 致命线：gap 到 4 倍等级时，重击应当 ≥ 血量上限（这才是「有风险」）
+  const lethalGap = (() => { for (let g = 1.2; g < 8; g += 0.05) if (heavyPct(60 * g, 60) >= 1) return g; return null })()
+  check('越级重击', '越级约 4 倍等级时重击足以一击致命（否则「越级有风险」只是话术）',
+    lethalGap !== null && lethalGap <= 4.2, `致命线 gap ≈ ${lethalGap?.toFixed(2)}（L60 打 ${Math.round(60 * (lethalGap ?? 0))}）`)
+
+  // D. 受击减免能减它（玩家有明确反制手段；且与属性面板那一行同一个值）
+  const full = heavyDamage(1000, 300, 60, 0)
+  const halved = heavyDamage(1000, 300, 60, 50)
+  check('越级重击', '「受击减免」能减重击（面板那一行的同一个值 ⇒ 玩家的反制是有效的）',
+    halved === Math.floor(full * 0.5) && halved < full, `0% 时 ${full} → 50% 时 ${halved}`)
+
+  // E. 引擎接线：真的会在对手攻击里触发，且**一次/场**
+  {
+    const engineSrc = fs.readFileSync(new URL('../../src/game/combat/Combat.js', import.meta.url), 'utf8')
+    const atkBody = engineSrc.slice(engineSrc.indexOf('  opponentAttack('), engineSrc.indexOf('  damagePlayer('))
+    check('越级重击', '引擎在对手攻击里调用它（调用点在 opponentAttack 内，且带「概率 0 就不掷」的短路）',
+      /heavyChance\(/.test(atkBody) && /this\.heavyFired/.test(atkBody) && /hch > 0 && Math\.random\(\)/.test(atkBody),
+      'opponentAttack 里找不到调用，或缺了 `hch > 0` 短路（会白吃一个随机数 ⇒ 同等级不再逐次一致）')
+    // 行为：造一个「巨大等级差」的战斗，重击必须真的打出来
+    const p = freshPlayer()
+    for (const id of ['tasteAcumen', 'heatControl', 'knife', 'plating', 'flavorArtistry']) p.skills[id].level = 20
+    const cb = new Combat(p)
+    setCombatInstance(cb)
+    // 行为：造一个「巨大等级差 + 打不死玩家」的局面，用**固定随机序列**让掷骰确定性
+    //   ⚠️ 首版让玩家正常挨打 ⇒ 第一回合就被秒（L20 打 L400），整场只有**一次**掷骰机会
+    //   ⇒ 「12 场都该触发」是错的期望（实测 1/12，那正是 65% 不触发的正常结果）。
+    //   现在把敌人攻击设成 0（重击按**玩家血量上限**算、与敌人攻击无关）⇒ 玩家能活很多回合；
+    //   再用 withRandom 把掷骰钉死 ⇒ 完全确定。
+    const far = { ...scaledEnemy(opp(400, 'C60越级敌', 'plating')), atk: 0, hp: 999999 } // gap = 20
+    const runOne = () => {
+      p.setCombat({ hp: p.maxHp, flavorEnergy: 100 })
+      cb.respawnUntil = 0
+      cb.start(far)
+      let t = 0
+      while (cb.inFight && t < 300) { cb.resolveTurn(); t++ }
+      return cb
+    }
+    let fired = 0
+    withRandom([0], () => { runOne(); if (cb.heavyFired) fired++ }) // 0 < 0.35 ⇒ 必中
+    check('越级重击', '真实引擎：巨大等级差下**掷中即触发**（掷骰钉死 ⇒ 确定性，不靠运气）',
+      fired === 1, `${fired}/1 场触发（此局面重击 ≥100% 上限 ⇒ 一击必杀，日志应有「越级重击！」）`)
+    // 概率必须封顶（直接用纯函数断言 ⇒ 确定性）
+    //   ⚠️ 首版用「钉一个大随机数 ⇒ 应当不触发」来测这条 —— **那是假绿**：把 Math.random 钉成 0.99
+    //   会让**更前面**的命中判定先失败（`0.99 > hitChance`）⇒ 根本走不到重击那一步，看起来「没触发」。
+    const chances = [1.2, 1.5, 2, 3, 5, 10, 50].map((g) => heavyChance(g * 60, 60))
+    check('越级重击', `触发概率恒 ≤ 1 且封顶（${HEAVY_CHANCE_CAP}）—— 防「越级一多就每回合必中」`,
+      chances.every((v) => v <= 1) && chances[chances.length - 1] === HEAVY_CHANCE_CAP,
+      chances.map((v) => v.toFixed(2)).join(' → '))
+    // 一场只触发一次：**用一个非致命的等级差 + 每回合补满血**，让玩家能活过重击
+    //   （否则第一发就结束战斗 —— 首版就是这么假绿的：致命局里「只触发一次」与「守卫存在」无法区分）
+    //   ⚠️ 只数公告那一行：`damagePlayer(hd, '💢 越级重击')` 也会写一行带这四个字的日志，
+    //   首版把两行都数进去 ⇒ 误报「一场触发 2 次」（是测试计数错，不是引擎错）。
+    const near = { ...scaledEnemy(opp(60, 'C60近敌', 'plating')), atk: 0, hp: 999999 } // gap 3.0 ⇒ 重击 65% 上限
+    let announcements = 0
+    withRandom([0.01], () => { // 0.01 能过命中判定、也能过重击掷骰 ⇒ 每回合都该触发（若无守卫）
+      p.setCombat({ hp: p.maxHp, flavorEnergy: 100 })
+      cb.respawnUntil = 0
+      cb.start(near)
+      let t = 0
+      while (cb.inFight && t < 40) {
+        cb.resolveTurn()
+        t++
+        if (cb.inFight) p.setCombat({ hp: p.maxHp }) // 补满血 ⇒ 能反复承受这次重击（132 伤害 / 上限 200）
+        announcements = Math.max(announcements, cb.log.filter((l) => /越级重击！/.test(l.text)).length)
+      }
+    })
+    check('越级重击', '一场只触发一次（防「连续两次直接秒杀、玩家连退都来不及」）',
+      announcements === 1, `连打 40 回合（每回合补满血，若去掉守卫就该每回合都触发）公告累计 ${announcements} 次`)
+  }
+
+  // F. 显示同源：详情页那行与引擎用同一个出口
+  {
+    const cv = fs.readFileSync(new URL('../../src/views/CombatView.vue', import.meta.url), 'utf8')
+    const arena = fs.readFileSync(new URL('../../src/components/CombatArena.vue', import.meta.url), 'utf8')
+    check('越级重击', '对决页与战斗屏都展示越级风险，且走 combatTuning 的出口（不手写文案）',
+      /heavyText/.test(cv) && /heavyText/.test(arena) &&
+      !/越级风险：/.test(cv.replace(/<!--[\s\S]*?-->/g, '')) && !/越级风险：/.test(arena.replace(/<!--[\s\S]*?-->/g, '')),
+      'CombatView.vue + CombatArena.vue')
+  }
+}
+
 console.log('══ X. 觅珍抽卡 ══')
 {
   const p = freshPlayer()

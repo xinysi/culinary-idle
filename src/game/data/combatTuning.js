@@ -109,3 +109,61 @@ export function resistText(enemy) {
   if (!sid) return ''
   return enemy.isBoss ? `免疫「${STATUS_INFO[sid].name}」` : `对「${STATUS_INFO[sid].name}」有抗性`
 }
+
+// ── ④ 越级重击（2026-09-26 第二批：补上「续航墙」）────────────────────────────
+// 问题（实测）：自动进食按**上限的 50%** 触发且免费，而敌人每回合只打掉你上限的 ~2.5%
+//   ⇒ **没有任何敌人能一击打死你**（连首领的 `instantKill` 上限也是 `hp×0.8`，从满血打不死）
+//   ⇒ 实测 L60 的满配玩家能 100% 打赢 **L860** 的敌人（Δ+800），到 Δ+1000 才崩。
+// 对照 Melvor：怪的「单次最大伤害」是**显式数值**，`max hit ≥ 当前血量` 就秒杀，
+//   自动进食在受伤之后才触发、救不回来 —— 那才是它的难度来源（公平性来自**信息 + 玩家选择**，不是机制温柔）。
+// 处置：按**等级差**派生的重击 —— `gap = 敌人等级 / 玩家等级`，`gap ≤ 1` 时**恒为 0**。
+//   ⇒ **同等级战斗一个字节不变**（TTK／成长标定／塔的第一段全都不动），只有「越级」才产生风险。
+//   ⇒ 塔的对手等级 = 玩家级 + ⌊(层−1)/4⌋ 且封顶 140，gap 最多 ~2.3 ⇒ 塔那边只是「更硬一点」，
+//     塔的墙仍由 `g` 提供（本批复测确认墙位没动）。
+export const HEAVY_GAP_FREE = 1.15 // 越级不足 15% 不触发（61 级打 60 级这种不算越级）
+export const HEAVY_PCT_SLOPE = 0.35 // 每 1.0 倍等级差 → +35% 玩家血量上限
+export const HEAVY_PCT_CAP = 1.4 // 上限 140% 玩家血量上限（⇒ 越级约 4 倍等级就会被一击秒）
+export const HEAVY_CHANCE_SLOPE = 0.12 // 每 1.0 倍等级差 → +12% 概率
+export const HEAVY_CHANCE_CAP = 0.35
+
+/** 等级差（敌人等级 ÷ 玩家等级；玩家等级 0/非法时按 1 算） */
+export function levelGap(enemyLevel, playerLevel) {
+  const p = Math.max(1, Number(playerLevel) || 1)
+  return Math.max(0, Number(enemyLevel) || 0) / p
+}
+
+/** 越级重击：一次能打掉「玩家血量上限」的百分比（0 = 不触发这类攻击） */
+export function heavyPct(enemyLevel, playerLevel) {
+  if (!COMBAT_DEPTH_V1) return 0
+  const over = levelGap(enemyLevel, playerLevel) - HEAVY_GAP_FREE
+  if (over <= 0) return 0
+  return Math.min(HEAVY_PCT_CAP, over * HEAVY_PCT_SLOPE)
+}
+
+/** 每次敌人攻击触发越级重击的概率 */
+export function heavyChance(enemyLevel, playerLevel) {
+  if (!COMBAT_DEPTH_V1) return 0
+  const over = levelGap(enemyLevel, playerLevel) - HEAVY_GAP_FREE
+  if (over <= 0) return 0
+  return Math.min(HEAVY_CHANCE_CAP, over * HEAVY_CHANCE_SLOPE)
+}
+
+/**
+ * 越级重击的伤害（按**玩家血量上限**的百分比算，不吃防御的饱和减伤 —— 否则高防玩家又把它吃干）
+ * ⚠️ 但**吃「受击减免」**（奥义「铜墙铁壁」等，属性面板那一行的同一个值）⇒ 玩家有明确的反制手段。
+ */
+export function heavyDamage(playerMaxHp, enemyLevel, playerLevel, damageTakenPct = 0) {
+  const pct = heavyPct(enemyLevel, playerLevel)
+  if (pct <= 0) return 0
+  const raw = Math.floor((Number(playerMaxHp) || 0) * pct)
+  return Math.max(1, Math.floor(raw * (1 - (Number(damageTakenPct) || 0) / 100)))
+}
+
+/** 给界面用的越级风险提示（对手详情/战斗屏共用；null = 无风险 ⇒ 不显示这一行） */
+export function heavyText(enemyLevel, playerLevel) {
+  const pct = heavyPct(enemyLevel, playerLevel)
+  if (pct <= 0) return null
+  const c = heavyChance(enemyLevel, playerLevel)
+  const lethal = pct >= 1 ? '（可一击致命）' : ''
+  return `越级风险：${Math.round(c * 100)}% 概率打出重击，最高 ${Math.round(pct * 100)}% 你的血量上限${lethal}`
+}
