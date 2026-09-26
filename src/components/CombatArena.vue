@@ -45,8 +45,11 @@ const battleFrame = computed(() => {
     enemyStatus: combat?.enemyStatusLeft?.() ?? { bleed: 0, dBreak: 0, burn: 0 },
     foeResist: combat?.inFight ? resistText(combat?.opponent) : '',
     // 越级风险（第 ④ 件）：同等级时 heavyText 返回 null ⇒ 这行不出现。战斗中也要看得到 ——
-    // 否则「打一半突然被重击打死」就成了没有解释的失败
-    foeHeavy: combat?.inFight && combat?.opponent ? heavyText(combat.opponent.level, player.combatLevel) : null,
+    // 否则「打一半突然被重击打死」就成了没有解释的失败。**要传自己的血量上限与受击减免**，
+    // 「对你是一击致命」那句才与结算同源。
+    foeHeavy: combat?.inFight && combat?.opponent
+      ? heavyText(combat.opponent.level, player.combatLevel, player.maxHp, Math.round(combat.playerStats?.().damageTakenPct ?? 0))
+      : null,
   }
 })
 

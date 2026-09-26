@@ -151,19 +151,43 @@ export function heavyChance(enemyLevel, playerLevel) {
 /**
  * 越级重击的伤害（按**玩家血量上限**的百分比算，不吃防御的饱和减伤 —— 否则高防玩家又把它吃干）
  * ⚠️ 但**吃「受击减免」**（奥义「铜墙铁壁」等，属性面板那一行的同一个值）⇒ 玩家有明确的反制手段。
+ * 🔴 **`pct ≥ 1` 必须显式判成「必死的一击」**（用 `maxHp + 1` 而不是 `floor(maxHp × pct)`）：
+ *    首版直接 `floor(maxHp × pct)`，而 4 倍等级时 `pct = 0.9975` ⇒ `floor(600 × 0.9975) = 598`，
+ *    血量上限 600 ⇒ **永远差 2 点打不到 0**。症状：设计上是「一击致命」，实测变成「打剩 0.25% 血、
+ *    然后靠有没有饭 + 下回合补刀决定生死」（致死率仅 31%）。致命线落在 gap 4.007、而我按 4.0 宣传，
+ *    差的那 0.007 就是这 2 点血。
  */
 export function heavyDamage(playerMaxHp, enemyLevel, playerLevel, damageTakenPct = 0) {
   const pct = heavyPct(enemyLevel, playerLevel)
   if (pct <= 0) return 0
-  const raw = Math.floor((Number(playerMaxHp) || 0) * pct)
+  const maxHp = Math.max(0, Number(playerMaxHp) || 0)
+  const raw = pct >= 1 ? maxHp + 1 : Math.max(1, Math.floor(maxHp * pct))
   return Math.max(1, Math.floor(raw * (1 - (Number(damageTakenPct) || 0) / 100)))
 }
 
-/** 给界面用的越级风险提示（对手详情/战斗屏共用；null = 无风险 ⇒ 不显示这一行） */
-export function heavyText(enemyLevel, playerLevel) {
+/** 这一击对**你当前配置**（含受击减免）是否致命 —— 显示与结算走同一个出口，别各判各的 */
+export function isHeavyLethal(playerMaxHp, enemyLevel, playerLevel, damageTakenPct = 0) {
+  const maxHp = Math.max(0, Number(playerMaxHp) || 0)
+  return maxHp > 0 && heavyDamage(maxHp, enemyLevel, playerLevel, damageTakenPct) >= maxHp
+}
+
+/**
+ * 给界面用的越级风险提示（对手详情/战斗屏共用；null = 无风险 ⇒ 不显示这一行）
+ * ⚠️ 「一击致命」那句要传**你自己的血量上限与受击减免** —— 同一个人打同一个怪，
+ *    带不带「铜墙铁壁」结论是不一样的；文案与结算必须同源（首版写死按 pct ≥ 1 显示，
+ *    而结算实际是 pct > 1 才必死，同一件事两个口径）。
+ * ⚠️ 直接给**伤害点数**而不是只给百分比：4 倍等级时 pct = 99.75%，取整后是 `上限 − 2`，
+ *    只说「100% 你的血量上限」会让人以为必死，实际会剩 2 点血活下来（差 2 点就是生死差别）。
+ */
+export function heavyText(enemyLevel, playerLevel, playerMaxHp = 0, damageTakenPct = 0) {
   const pct = heavyPct(enemyLevel, playerLevel)
   if (pct <= 0) return null
   const c = heavyChance(enemyLevel, playerLevel)
-  const lethal = pct >= 1 ? '（可一击致命）' : ''
-  return `越级风险：${Math.round(c * 100)}% 概率打出重击，最高 ${Math.round(pct * 100)}% 你的血量上限${lethal}`
+  const maxHp = Math.max(0, Number(playerMaxHp) || 0)
+  const dmg = heavyDamage(maxHp, enemyLevel, playerLevel, damageTakenPct)
+  const lethal = isHeavyLethal(maxHp, enemyLevel, playerLevel, damageTakenPct) ? '，对你是一击致命' : ''
+  const detail = maxHp > 0
+    ? `最高 ${dmg} 点（你血量上限 ${maxHp}）`
+    : `最高 ${Math.round(pct * 100)}% 你的血量上限`
+  return `越级风险：${Math.round(c * 100)}% 概率打出重击，${detail}${lethal}`
 }

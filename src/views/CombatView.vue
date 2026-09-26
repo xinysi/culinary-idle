@@ -168,9 +168,15 @@ function mechText(b) {
 function resistOf(b) {
   return resistText(b)
 }
-/** 越级风险提示（战斗深度 v1 第 ④ 件）—— 同等级返回 null ⇒ 那一行不出现；文案走 combatTuning 的出口 */
+/** 越级风险提示（战斗深度 v1 第 ④ 件）—— 同等级返回 null ⇒ 那一行不出现；文案走 combatTuning 的出口。
+ *  ⚠️ 必须把自己的**血量上限与受击减免**传进去：同一个人打同一个怪，带不带「铜墙铁壁」结论不一样，
+ *  而「对你是一击致命」那句要与结算同源（首版按 pct ≥ 1 写死，而结算实际要 pct > 1 才必死）。 */
 function heavyRisk(b) {
-  return b ? heavyText(b.level, player.combatLevel) : null
+  return b ? heavyText(b.level, player.combatLevel, player.maxHp, takenPct()) : null
+}
+/** 受击减免（%）：与属性面板「受击减免」那一行同一个来源（奥义等的受伤乘区） */
+function takenPct() {
+  return Math.round(player.gastronomyEffects?.()?.defensePct ?? 0)
 }
 // 初次进页时先选中当前区域的第一个对手（watch 只在「变化」时触发，首次不会触发）
 onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0]))

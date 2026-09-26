@@ -2973,7 +2973,7 @@ console.log('══ C59. 战斗深度 v1 ══')
 console.log('══ C60. 越级重击 ══')
 {
   const T = await import('../../src/game/data/combatTuning.js')
-  const { levelGap, heavyPct, heavyChance, heavyDamage, HEAVY_GAP_FREE, HEAVY_PCT_CAP, HEAVY_CHANCE_CAP } = T
+  const { levelGap, heavyPct, heavyChance, heavyDamage, heavyText, isHeavyLethal, HEAVY_GAP_FREE, HEAVY_PCT_CAP, HEAVY_CHANCE_CAP } = T
 
   // A. 同等级与以下：恒为 0（这是「不破坏既有标定」的全部依据）
   const free = []
@@ -2992,10 +2992,36 @@ console.log('══ C60. 越级重击 ══')
     heavyPct(0, 60) === 0 && heavyPct(-5, 60) === 0 && heavyPct(60, 0) > 0 && Number.isFinite(heavyPct(60, NaN)),
     `0/60=${heavyPct(0, 60)} · -5/60=${heavyPct(-5, 60)} · 60/0=${heavyPct(60, 0).toFixed(2)}`)
 
-  // C. 致命线：gap 到 4 倍等级时，重击应当 ≥ 血量上限（这才是「有风险」）
-  const lethalGap = (() => { for (let g = 1.2; g < 8; g += 0.05) if (heavyPct(60 * g, 60) >= 1) return g; return null })()
+  // D. 致命线：gap 到 4 倍等级时，重击应当 ≥ 血量上限（这才是「有风险」）
+  const lethalGap = (() => { for (let g = 1.2; g < 8; g += 0.005) if (heavyPct(60 * g, 60) >= 1) return g; return null })()
   check('越级重击', '越级约 4 倍等级时重击足以一击致命（否则「越级有风险」只是话术）',
-    lethalGap !== null && lethalGap <= 4.2, `致命线 gap ≈ ${lethalGap?.toFixed(2)}（L60 打 ${Math.round(60 * (lethalGap ?? 0))}）`)
+    lethalGap !== null && lethalGap <= 4.1, `致命线 gap ≈ ${lethalGap?.toFixed(3)}（L60 打 ${Math.round(60 * (lethalGap ?? 0))}）`)
+  // 🔴 致命性必须**真的致命**：首版 `floor(上限 × pct)`，4 倍等级时 pct=0.9975 ⇒ `floor(600×0.9975)=598`，
+  //    而上限 600 ⇒ **永远差 2 点打不到 0** —— 设计上是「一击致命」，实测变成「打剩 0.25% 血、
+  //    再靠有没有饭 + 下回合补刀决定生死」。致命线落在 gap 4.007、我按 4.0 宣传，差的 0.007 就是那 2 点血。
+  {
+    const maxHp = 600
+    const at = (gap) => heavyDamage(maxHp, gap * 60, 60, 0)
+    const lt = (gap) => isHeavyLethal(maxHp, gap * 60, 60, 0)
+    const g5 = 5.0
+    check('越级重击', 'pct ≥ 1 时伤害**严格大于**血量上限（从满血一击必死，不再受取整余数影响）',
+      at(g5) > maxHp && lt(g5) === true, `gap ${g5}：伤害 ${at(g5)} vs 上限 ${maxHp}`)
+    check('越级重击', 'pct < 1 时**不**判为致命（濒死 ≠ 必死 —— 文案不能替结算下重话）',
+      !lt(4.0) && at(4.0) < maxHp, `gap 4.0：伤害 ${at(4.0)} vs 上限 ${maxHp} ⇒ isHeavyLethal=${lt(4.0)}`)
+    // 文案与结算同源：文案说「对你是一击致命」时，结算必须真的能一击打死满血玩家
+    let mismatch = []
+    for (const gap of [2, 3, 4, 4.5, 5, 8]) {
+      const t = heavyText(gap * 60, 60, maxHp, 0) ?? ''
+      const saysLethal = /一击致命/.test(t)
+      if (saysLethal !== lt(gap)) mismatch.push(`gap ${gap}: 文案=${saysLethal} 结算=${lt(gap)}`)
+    }
+    check('越级重击', '「对你是一击致命」这句与结算**逐格同源**（文案说致命 ⇒ 结算真的打得死满血）',
+      mismatch.length === 0, mismatch.join(' | ') || '6 档全一致')
+    // 受击减免让「致命」变回「不致命」⇒ 文案也要跟着变（否则玩家白堆减伤）
+    const t50 = heavyText(5 * 60, 60, maxHp, 50) ?? ''
+    check('越级重击', '堆了受击减免后，文案不再说「一击致命」（同一个人、同一个怪，结论随配置变）',
+      !/一击致命/.test(t50) && !isHeavyLethal(maxHp, 5 * 60, 60, 50), `减伤 50% 时文案「${t50}」`)
+  }
 
   // D. 受击减免能减它（玩家有明确反制手段；且与属性面板那一行同一个值）
   const full = heavyDamage(1000, 300, 60, 0)
@@ -3071,6 +3097,54 @@ console.log('══ C60. 越级重击 ══')
       !/越级风险：/.test(cv.replace(/<!--[\s\S]*?-->/g, '')) && !/越级风险：/.test(arena.replace(/<!--[\s\S]*?-->/g, '')),
       'CombatView.vue + CombatArena.vue')
   }
+}
+
+console.log('══ C61. 美食奥义栏（对决组合框第三栏）══')
+{
+  // 2026-09-26 用户要求：「给对决风格组合框再加一栏：美食奥义，只放战斗相关的美食奥义」
+  const { AOJIS } = await import('../../src/game/data/aojis.js')
+  const COMBAT_EFFECT_KEYS = ['dmgPct', 'styleDmgPct', 'defensePct', 'speedPct', 'maxHpBonus', 'healPct']
+  const byEffect = AOJIS.filter((a) => Object.keys(a.effect ?? {}).some((k) => COMBAT_EFFECT_KEYS.includes(k)))
+  const byCategory = AOJIS.filter((a) => ['攻击', '防御'].includes(a.category))
+  // 组件按 category 过滤；这条断言保证「按分类筛」与「按效果字段筛」**永远等价**（新增奥义时分类写错立刻 FAIL）
+  check('美食奥义栏', `按 category（攻击/防御）筛 == 按战斗效果字段筛（各 ${byCategory.length} / ${byEffect.length} 条）`,
+    byCategory.length === byEffect.length && byCategory.every((a) => byEffect.includes(a)),
+    `分类筛 ${byCategory.length} · 效果筛 ${byEffect.length} · 只被分类选中的 ${byCategory.filter((a) => !byEffect.includes(a)).map((a) => a.id).join(',') || '无'}`)
+  const nonCombat = AOJIS.filter((a) => !byEffect.includes(a))
+  check('美食奥义栏', `非战斗奥义（采集类 ${nonCombat.length} 条）**不得**出现在这一栏里`,
+    nonCombat.every((a) => !['攻击', '防御'].includes(a.category)),
+    nonCombat.map((a) => `${a.id}:${a.category}`).join(' · '))
+
+  const panel = fs.readFileSync(new URL('../../src/components/CombatPanel.vue', import.meta.url), 'utf8')
+  const tmpl = panel.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
+  // 🔴 上面那条比的是**数据**；下面这条比的是**组件里的过滤白名单** —— 反例验证 ①② 证明了只比数据是假绿：
+  //    把组件里的 COMBAT_CATEGORIES 改成 ['攻击']（漏 12 条防御）或把 filter 换成 `() => true`（塞进采集类），
+  //    数据侧断言照样全绿。所以组件那一份必须单独钉：白名单**等于**数据算出来的分类集合，且过滤表达式真的用它。
+  const compCats = (panel.match(/const COMBAT_CATEGORIES = \[([^\]]*)\]/)?.[1] ?? '')
+    .split(',').map((s) => s.trim().replace(/['"]/g, '')).filter(Boolean).sort()
+  const dataCats = [...new Set(byEffect.map((a) => a.category))].sort()
+  check('美食奥义栏', `组件里的分类白名单 == 数据算出来的战斗分类集合（${JSON.stringify(compCats)}）`,
+    compCats.length > 0 && JSON.stringify(compCats) === JSON.stringify(dataCats),
+    `组件 ${JSON.stringify(compCats)} vs 数据 ${JSON.stringify(dataCats)}`)
+  check('美食奥义栏', '过滤表达式真的按分类白名单过滤（防「换成恒真 / 换别的字段」）',
+    /AOJIS\.filter\(\(a\) => COMBAT_CATEGORIES\.includes\(a\.category\)\)/.test(panel),
+    'CombatPanel.vue 里的 AOJIS.filter 不再按 COMBAT_CATEGORIES 过滤')
+  check('美食奥义栏', '栏标题与「战斗相关 N 条」副标题都在（数量是**算出来的**，不是手写死的）',
+    /combatAojis\.length/.test(tmpl) && /战斗相关/.test(tmpl), 'CombatPanel.vue')
+  check('美食奥义栏', '效果文案取自奥义数据（desc），不在模板里手写',
+    /a\.desc/.test(tmpl) && !/伤害 \+10%/.test(tmpl), 'CombatPanel.vue')
+  // 只读 + 跳转：奥义开关归「美食知识」页 ⇒ 这里不许出现第二个开关入口（项目规矩：同一件事只留一个操作入口）
+  check('美食奥义栏', '这一栏是**只读参考**（不写 gastronomy.active，只跳转）—— 防第二个开关入口',
+    !/gastronomy\.active\s*=/.test(tmpl) && !/gastronomy\.active\.(push|splice)/.test(tmpl) && /goGastronomy/.test(tmpl),
+    'CombatPanel.vue 里出现了对 gastronomy.active 的写操作')
+  check('美食奥义栏', '跳「美食知识」带 skill 子目标（先 setActiveSkill 再 setView —— 只 setView 会跳到当前在练的技能页）',
+    /setActiveSkill\('gastronomy'\)[\s\S]{0,90}setView\('skill'\)/.test(panel), 'goGastronomy 的实现顺序')
+  // 布局：组合框要真有第三栏（grid 五列：左 1fr / 虚线 / 属性 1.4fr / 虚线 / 奥义）
+  const css61 = fs.readFileSync(new URL('../../src/styles/main.css', import.meta.url), 'utf8')
+  check('美食奥义栏', '组合框是 5 列网格，且窄屏仍降级为单列',
+    /\.combat-combo\s*\{[^}]*grid-template-columns:\s*1fr 1px 1\.4fr 1px [\d.]+fr/.test(css61) &&
+    /@media \(max-width: 720px\)\s*\{[\s\S]{0,200}\.combat-combo\s*\{[^}]*grid-template-columns:\s*1fr/.test(css61),
+    'main.css 的 .combat-combo')
 }
 
 console.log('══ X. 觅珍抽卡 ══')

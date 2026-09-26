@@ -1542,10 +1542,10 @@ h2 {
   gap: 10px;
 }
 
-/* 组合框：左对决风格 / 中间虚线 / 右属性面板 */
+/* 组合框：左对决风格 / 虚线 / 属性面板 / 虚线 / 美食奥义（2026-09-26 用户要求加第三栏） */
 .combat-combo {
   display: grid;
-  grid-template-columns: 1fr 1px 1.4fr;
+  grid-template-columns: 1fr 1px 1.4fr 1px 1.15fr;
   gap: 16px;
   align-items: start;
 }
@@ -1554,6 +1554,32 @@ h2 {
   align-self: stretch;
   border-left: 1px dashed rgba(var(--ink-rgb), 0.35);
 }
+/* 美食奥义栏：攻击/防御两列，每行「图标+名称（+已开时的效果）+ 消耗」 */
+.combo-aoji .combo-sub { font-size: 12px; }
+.aoji-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.aoji-col { display: flex; flex-direction: column; gap: 2px; }
+.aoji-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--text-dim);
+}
+.aoji-row.on {
+  color: var(--text);
+  background: rgba(var(--tint-rgb), 0.12);
+}
+.aoji-row .aoji-name { flex: 0 0 auto; white-space: nowrap; }
+.aoji-row .aoji-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aoji-row .aoji-cost { flex: 0 0 auto; margin-left: auto; }
+.aoji-note { margin: 6px 0 0; font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .combo-left .style-row {
   flex-direction: column;
   align-items: stretch;
@@ -4531,8 +4557,9 @@ html[data-theme='dark'] .head-strips {
 
 /* ── 移动端细节（2026-09-06 媒体查询）：竖屏下组合框/战斗框单列、弹窗全宽、导航紧凑 ── */
 @media (max-width: 719px) {
-  .combat-combo { flex-direction: column; }
+  /* 组合框在窄屏是 grid 单列（见上一条 720px 查询），这里只收掉虚线与奥义两列 */
   .combat-combo .combo-divider { display: none; }
+  .aoji-cols { grid-template-columns: 1fr; }
   .battle-split { flex-direction: column; }
   .battle-split .battle-divider { display: none; }
   .battle-right { max-height: 30vh; }

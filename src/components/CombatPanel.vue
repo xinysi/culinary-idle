@@ -7,6 +7,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
+import { AOJIS } from '../game/data/aojis.js' // 美食奥义栏（只列战斗相关）
 import { bindTip } from '../composables/useFixedTooltip.js'
 import CombatArena from './CombatArena.vue'
 import CombatLoadout from './CombatLoadout.vue'
@@ -86,6 +87,25 @@ const spiritCombat = computed(() => {
 
 function setStyle(style) {
   player.setCombatStyle(style)
+}
+
+// ── 美食奥义栏（2026-09-26 用户要求：「组合框再加一栏：美食奥义，只放战斗相关的」）──
+// 只列**战斗相关**的奥义：`category` 为「攻击 / 防御」的那些；「采集」那 7 条（产量/经验）不在对决页出现
+// （实测两边**完全等价**：攻击 13 + 防御 12 = 25 条战斗类，采集 7 条，无一条分类与效果字段打架；守卫有断言）。
+// ⚠️ 这一栏是**只读参考 + 跳转**，不做开关 —— 按项目规矩「同一件事只留一个操作入口」，
+//    奥义的开启/关闭归「美食知识」页（`SkillView` 的 `gastronomy`），这里再放一套按钮就成了第二个入口。
+const COMBAT_CATEGORIES = ['攻击', '防御']
+const combatAojis = computed(() => {
+  ui.loopTick // 跟着全局 tick 刷新「已开」状态（与奥义续航同一节拍）
+  const active = player.gastronomy?.active ?? []
+  return AOJIS.filter((a) => COMBAT_CATEGORIES.includes(a.category)).map((a) => ({ ...a, on: active.includes(a.id) }))
+})
+const combatAojiOn = computed(() => combatAojis.value.filter((a) => a.on).length)
+const aojisOf = (cat) => combatAojis.value.filter((a) => a.category === cat)
+/** 去「美食知识」页开关奥义。⚠️ 先 setActiveSkill 再 setView —— 只 setView 会跳到「当前正在练的那个技能」（RelatedPages 踩过） */
+function goGastronomy() {
+  player.setActiveSkill('gastronomy')
+  ui.setView('skill')
 }
 function buffText() {
   const b = combat.buffs ?? {}
@@ -190,6 +210,29 @@ function buffText() {
         <p v-if="combat?.buffTurnsLeft?.() > 0" class="dim">增益 {{ combat.buffTurnsLeft() }} 回合：{{ buffText() }}</p>
         <p v-if="combat?.drunkTurns > 0" class="dim warn-text">🥴 醉酒中（命中 -15%）：{{ combat.drunkTurns }} 回合</p>
         <p v-if="player.combat.style === 'plating'" class="dim">🎨 装饰食材：<span class="mono">{{ player.inventory.garnish ?? 0 }}</span>（每次攻击消耗 1 个，杂货铺有售）</p>
+      </div>
+      <div class="combo-divider"></div>
+      <!-- 美食奥义栏（2026-09-26 用户要求）：**只放战斗相关**（攻击 13 / 防御 12），采集类不在这里出现。
+           只读参考 + 跳转，开关仍在「美食知识」页（同一件事只留一个操作入口）。 -->
+      <div class="combo-aoji">
+        <h3>美食奥义 <span class="dim combo-sub">战斗相关 {{ combatAojis.length }} 条 · 已开 {{ combatAojiOn }}</span></h3>
+        <div class="aoji-cols">
+          <div v-for="cat in COMBAT_CATEGORIES" :key="cat" class="aoji-col">
+            <h4 class="attr-col-head">{{ cat }}</h4>
+            <div
+              v-for="a in aojisOf(cat)" :key="a.id"
+              class="aoji-row" :class="{ on: a.on }" :title="`${a.desc}（消耗 ${a.costPerSec} 品鉴点/秒）`"
+            >
+              <span class="aoji-name">{{ a.on ? '🟢' : '·' }} {{ a.name }}</span>
+              <span v-if="a.on" class="dim aoji-desc">{{ a.desc }}</span>
+              <span class="dim mono aoji-cost">-{{ a.costPerSec }}</span>
+            </div>
+          </div>
+        </div>
+        <p class="dim aoji-note">
+          悬停看效果 · 单位「品鉴点/秒」，<b>耗尽会全部熄灭</b>（见右侧「奥义续航」）
+          <button class="btn btn-sm" @click="goGastronomy()">去美食知识开启 ↗</button>
+        </p>
       </div>
     </div>
   </div>

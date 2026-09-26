@@ -82,7 +82,7 @@ const CASES = [
   {
     name: '⑨ 详情页手写文案（显示不再走唯一出口）',
     rel: 'src/views/CombatView.vue',
-    from: '  return b ? heavyText(b.level, player.combatLevel) : null',
+    from: '  return b ? heavyText(b.level, player.combatLevel, player.maxHp, takenPct()) : null',
     to: "  return b ? `越级风险：可能被打死` : null",
     expect: '不手写文案',
   },
