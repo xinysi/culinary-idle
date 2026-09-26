@@ -11,6 +11,7 @@ import { getItem, itemName } from '../game/data/items.js'
 import { ITEMS } from '../game/data/items.js'
 import { COMBAT_BOSSES } from '../game/data/combat.js'
 import { scaledEnemy } from '../game/data/enemyScaling.js' // 首领图鉴的血量必须与战斗同源（(c) 血量分档）
+import { resistText } from '../game/data/combatTuning.js' // 战斗深度 v1：抗性文案的唯一出口
 import { SEASONS } from '../game/data/seasons.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
@@ -144,6 +145,9 @@ function mechText(b) {
     if (k === 'slowEvery') ms.push(`每 ${v} 回合降攻速`)
     else if (MECH_LABEL[k]) ms.push(MECH_LABEL[k])
   }
+  // 战斗深度 v1：首领图鉴也要写清它抗哪个状态（选风格的关键信息；文案走 combatTuning 出口）
+  const rt = resistText(b)
+  if (rt) ms.push(rt)
   if (b.crit) ms.push(`暴击 ${Math.round(b.crit * 100)}%`)
   if (b.eva) ms.push(`闪避 ${b.eva}`)
   // 敌速不作为标签：见上（引擎不结算）

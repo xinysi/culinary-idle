@@ -26,7 +26,8 @@ import { HIVE_MEDIA, greenhouseHoneyChance } from './greenhouse.js'
 import { SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { CARAVAN_LOSS_FLOOR } from './caravan.js'
 import { PRIME_CATALYST_TIME, PRIME_MIN_LEVEL, PRIME_BASE_CHANCE, PRIME_MAX_CHANCE } from './primeCrop.js'
-import { BISCUIT_TASTE_RATE } from './biscuitUse.js'
+import { BISCUIT_HEAL_PCT, BISCUIT_ACC, BISCUIT_SPEED_PCT } from './biscuitUse.js'
+import { STATUS_INFO } from './combatTuning.js' // 战斗深度 v1：对手身上的状态文案（唯一出口）
 import { EXPEDITIONS, expeditionTier, expeditionYieldMult, expeditionRareBonus } from './expeditions.js'
 import { SCHOOLS } from './schools.js'
 import { getPatron } from './patrons.js'
@@ -1038,7 +1039,22 @@ export const EFFECT_ROWS = [
       const cb = c?.combat
       if (!cb?.inFight) return off('当前不在战斗中')
       if (!cb.biscuitSpeedPct && !(cb.biscuitCooldown > 0)) return off('本场战斗还没有使用能量饼干')
-      return { on: true, text: `命中 +8、攻速 +10%、品鉴值回复 ${BISCUIT_TASTE_RATE}%（冷却剩 ${cb.biscuitCooldown ?? 0} 回合）` }
+      // ⚠️ 2026-09-26 修：这里原先写「品鉴值回复 ${BISCUIT_TASTE_RATE}%」——那是**另一个常量**
+      //    （用途 B「1 块兑 10 品鉴点」），而战斗内实际回的是 `最大品鉴值 × BISCUIT_HEAL_PCT`（25%）。
+      //    显示 10%、结算 25%，正是本项目最忌的「显示与结算不同源」。现在两处读同一个常量。
+      return { on: true, text: `命中 +${BISCUIT_ACC}、攻速 +${BISCUIT_SPEED_PCT}%、品鉴值回复 ${Math.round(BISCUIT_HEAL_PCT * 100)}%（冷却剩 ${cb.biscuitCooldown ?? 0} 回合）` }
+    },
+  },
+  {
+    // 战斗深度 v1（2026-09-26）：**玩家施加给对手**的状态。此前 7 条战斗内状态全部打在玩家身上，
+    // 敌人不吃任何东西 ⇒ 战斗只有单方面挨打。这条让「我给对手挂了什么」也进效果总览。
+    id: 'fightFoeStatus', group: 'combat', icon: '🎯', name: '对手身上的状态（我方施加）', kind: 'debuff', src: '你的攻击命中后按当前风格施加', view: 'skill:knife',
+    read: (p, c) => {
+      const cb = c?.combat
+      if (!cb?.inFight) return off('当前不在战斗中（这类状态只在战斗内存在）')
+      const list = Object.entries(cb.enemyStatus ?? {}).filter(([, v]) => v > 0)
+      if (!list.length) return off('还没给对手挂上状态（命中后会按当前风格尝试施加）')
+      return { on: true, text: list.map(([id, v]) => `${STATUS_INFO[id].icon} ${STATUS_INFO[id].name}（剩 ${v} 回合）`).join(' · ') }
     },
   },
   {

@@ -35,7 +35,8 @@ import { fileURLToPath } from 'node:url'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from '../../src/game/skills/registry.js'
-import { Combat } from '../../src/game/combat/Combat.js'
+import { scaledEnemy } from '../../src/game/data/enemyScaling.js' // C59：与战斗同源的血量分档出口
+import { Combat, setCombatInstance } from '../../src/game/combat/Combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel, masteryXpMultiplier, masteryXpMultiplierRaw, MASTERY_XP_BONUS_SCALE, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
 import { XP_STACK_DAMPING, dampXpStack, LOW_TARGET_GAP, LOW_TARGET_XP_MULT, lowTargetRefLevel, targetLevelXpMult } from '../../src/game/core/growthRate.js'
@@ -2771,6 +2772,192 @@ console.log('══ C58. 浅色主题对比度 ══')
   }
   check('浅色对比度', `15 皮肤 × 5 对（muted/text-dim/gold-strong/primary-strong 压各自底色）全部 ≥4.5`,
     bad.length === 0, bad.slice(0, 5).join(' | '))
+}
+
+// ── C59. 战斗深度 v1（2026-09-26 用户「开始优化，改加新东西还是要加」）──
+// 起因是三处体检结论：① 命中/闪避**不可堆**（命中率随等级从 70% 退化到 45%，装备只能给 +22，
+// 且越级战里唯一瓶颈就是命中 —— 实测 +223% 伤害加成只值 ×1.01）；② 敌人**不吃任何状态**
+// （7 条状态全打在玩家身上）；③ 除风格三角外**没有相性维度**。
+// 新增三件（全部走读取点，冻结的 248 个敌人一字未改）：
+//   ① 命中/闪避 = `(等级项) × (1 + 装备项 / DIV)` —— **装备为 0 时逐值等于旧公式**，堆装备才有意义
+//   ② 风格三态：刀工→割伤 · 摆盘→破防 · 调味→灼烧（玩家第一次能对敌人施加东西）
+//   ③ 敌人抗性：**被克方抵抗克制方的状态**（普通减半 / 首领免疫）⇒ 用克制风格拿伤害就别想要状态
+console.log('══ C59. 战斗深度 v1 ══')
+{
+  const T = await import('../../src/game/data/combatTuning.js')
+  const { STATUS_INFO, STYLE_STATUS, COMBAT_DEPTH_V1, ACC_GEAR_DIV, EVA_GEAR_DIV } = T
+
+  // A. 常量与形状
+  check('战斗深度', '总开关为 true（上线态；关掉只能是临时 A/B，不许留在仓库里）', COMBAT_DEPTH_V1 === true, `COMBAT_DEPTH_V1=${COMBAT_DEPTH_V1}`)
+  check('战斗深度', '两个坡度除数都是正数（防除零/防写成负数把装备变成负收益）',
+    ACC_GEAR_DIV > 0 && EVA_GEAR_DIV > 0, `ACC=${ACC_GEAR_DIV} EVA=${EVA_GEAR_DIV}`)
+  // 🔴 上限必须有：装备命中是**加法属性**，词条+宝石+强化能堆到几百。首版没有上限 ⇒ 堆满命中命中率 90%
+  //    （旧加法形态同配置 76%）—— 杠杆过头。这条钉住「堆到极限也不会失控」。
+  const { ACC_GEAR_CAP, EVA_GEAR_CAP } = T
+  check('战斗深度', '两个装备项上限都是正数且小于「堆满值」（防上限形同虚设）',
+    ACC_GEAR_CAP > 0 && EVA_GEAR_CAP > 0 && ACC_GEAR_CAP <= 200 && EVA_GEAR_CAP <= 200,
+    `ACC=${ACC_GEAR_CAP} EVA=${EVA_GEAR_CAP}`)
+  const styleIds = ['knife', 'plating', 'flavor']
+  check('战斗深度', '三种风格各有一个状态，且都在 STATUS_INFO 里登记（id/name/icon/desc 齐备）',
+    styleIds.every((s) => STYLE_STATUS[s] && STATUS_INFO[STYLE_STATUS[s]]?.name && STATUS_INFO[STYLE_STATUS[s]]?.icon && STATUS_INFO[STYLE_STATUS[s]]?.desc),
+    styleIds.map((s) => `${s}→${STYLE_STATUS[s]}`).join(' '))
+  const stArr = styleIds.map((s) => STYLE_STATUS[s])
+  check('战斗深度', '三个状态互不相同（防「三个风格其实是同一个状态」）', new Set(stArr).size === 3, stArr.join(','))
+
+  // B. 抗性表（3×3 穷举：每个敌人风格唯一对应一个被抗状态，且恰好是被它克的那个风格的状态）
+  const resistRows = styleIds.map((foe) => {
+    const counter = Object.entries(STYLE_ADVANTAGE).find(([, beaten]) => beaten === foe)?.[0]
+    return { foe, counter, expect: STYLE_STATUS[counter], got: T.resistedStatusOf(foe) }
+  })
+  check('战斗深度', '抗性表：敌人抵抗的 = 「克制它的那个风格」的状态（3 种风格逐个核对）',
+    resistRows.every((r) => r.got === r.expect),
+    resistRows.map((r) => `${r.foe}←${r.counter} 抗${r.got}`).join(' · '))
+  check('战斗深度', '抗性倍率：普通对手减半、首领免疫，且首领一定低于普通（防写反）',
+    T.RESIST_MULT === 0.5 && T.BOSS_RESIST_MULT === 0 && T.BOSS_RESIST_MULT < T.RESIST_MULT,
+    `普通 ${T.RESIST_MULT} / 首领 ${T.BOSS_RESIST_MULT}`)
+
+  // C. 触发率：随等级单调上升 + 封顶 + 被抗减半 + 首领免疫为 0
+  const at = (lv, enemy, style) => T.statusTriggerChance(lv, enemy, style)
+  const plain = { style: 'flavor' } // 调味流敌 ⇒ 抗「破防」，不抗刀工的「割伤」
+  const res = { style: 'plating' } // 摆盘流敌 ⇒ 抗刀工的「割伤」
+  // 上限必须**在等级范围内真的咬得住**（首版把上限设成 0.55，而满级 120 只到 0.484 ⇒ 上限是死代码）
+  check('战斗深度', '触发率随等级上升、且**满级真的触到上限**（防上限成为死代码）',
+    at(1, plain, 'knife') < at(100, plain, 'knife') && at(120, plain, 'knife') === T.STATUS_TRIGGER_MAX,
+    `L1 ${at(1, plain, 'knife')} · L100 ${at(100, plain, 'knife')} · L120 ${at(120, plain, 'knife')} · 上限 ${T.STATUS_TRIGGER_MAX}`)
+  // 减半要拿**未封顶的基准值**比（L100 还没到上限，所以 0.44/2=0.22 才对）
+  const baseAt100 = Math.min(T.STATUS_TRIGGER_MAX, T.STATUS_TRIGGER_BASE + 100 * T.STATUS_TRIGGER_PER_LEVEL)
+  check('战斗深度', '被抗时触发率恰好减半；首领为 0（免疫）',
+    Math.abs(at(100, res, 'knife') - baseAt100 * 0.5) < 1e-9 && at(100, { ...res, isBoss: true }, 'knife') === 0,
+    `基准 ${baseAt100} → 被抗 ${at(100, res, 'knife')} · 首领 ${at(100, { ...res, isBoss: true }, 'knife')}`)
+  check('战斗深度', '未知风格 / 空对手返回 0（防「undefined 也能挂状态」）',
+    at(100, null, 'knife') === 0 && at(100, plain, 'nope') === 0)
+
+  // D. 形态等价（**这条是全批最重要的一条**）：装备为 0 时不能改变既有标定
+  {
+    const p = freshPlayer()
+    for (const id of ['tasteAcumen', 'heatControl', 'knife', 'plating', 'flavorArtistry']) p.skills[id].level = 60
+    p.equipment = Object.fromEntries(['weapon', 'offhand', 'helmet', 'body', 'legs', 'boots', 'amulet', 'ring'].map((s) => [s, null]))
+    p.gearMods = {}; p.gemSockets = {}; p.upgrades = {}
+    const cb = new Combat(p)
+    cb.buffs = { atk: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0 }
+    const ps = cb.playerStats()
+    check('战斗深度', '裸装时命中与**旧公式**逐值相等（10 + 风格等级）⇒ 早期标定不受影响',
+      ps.accuracy === 10 + 60, `实到 ${ps.accuracy} · 旧式 ${10 + 60}`)
+    check('战斗深度', '裸装时闪避与旧公式逐值相等（5 + 火候×0.5）',
+      ps.evasion === Math.floor(5 + 60 * 0.5), `实到 ${ps.evasion} · 旧式 ${Math.floor(5 + 60 * 0.5)}`)
+    // 有装备命中时必须**严格更高**（否则「可堆」是假的），且等于旧式 ×(1+g/DIV)
+    const gearId = Object.values(ITEMS).find((i) => i.type === 'equipment' && i.slot === 'weapon' && (i.stats?.accuracy ?? 0) > 0)?.id
+    if (gearId) {
+      p.equipment.weapon = gearId
+      const g = ITEMS[gearId].stats.accuracy
+      const ps2 = cb.playerStats()
+      const want = Math.floor((10 + 60) * (1 + g / ACC_GEAR_DIV))
+      check('战斗深度', '装备命中 > 0 时命中按乘区提高（堆命中真的有感）',
+        ps2.accuracy === want && ps2.accuracy > ps.accuracy, `${ps.accuracy} → ${ps2.accuracy}（期望 ${want}，装备 +${g}）`)
+    } else {
+      check('战斗深度', '存在带命中的武器（否则「堆命中」无从谈起）', false, '全库找不到带 accuracy 的武器')
+    }
+    // 封顶：把**词条**给一个 10000 的命中（走 equippedStats 的加法路径），命中不得超过
+    // `(等级项) × (1 + CAP/DIV)` —— 防「堆满命中把命中率推到 90%」
+    if (gearId) {
+      p.equipment.weapon = gearId
+      p.gearMods[gearId] = { itemId: gearId, mods: [{ stat: 'accuracy', value: 10000 }] }
+      const capped = cb.playerStats().accuracy
+      const ceiling = Math.floor((10 + 60) * (1 + ACC_GEAR_CAP / ACC_GEAR_DIV))
+      check('战斗深度', `装备命中堆到 10000 时仍被封顶（≤${ceiling}，不会失控）`,
+        capped === ceiling, `实到 ${capped} · 上限 ${ceiling}`)
+      p.gearMods = {}
+      p.equipment.weapon = null
+    }
+  }
+
+  // E. 行为（真实引擎）：挂状态 / DoT 掉血 / 破防降防 / 到期恢复 / 刷新不叠加 / 击杀当回合不挂
+  {
+    const p = freshPlayer()
+    for (const id of ['tasteAcumen', 'heatControl', 'knife', 'plating', 'flavorArtistry']) p.skills[id].level = 60
+    const cb = new Combat(p)
+    setCombatInstance(cb)
+    p.inventory.garnish = 99999
+    const e = scaledEnemy(opp(60, 'C59敌', 'flavor')) // 调味流敌 ⇒ 不抗「割伤」
+    const hitAlways = () => {
+      p.combat.style = 'knife'
+      p.setCombat({ hp: p.maxHp, flavorEnergy: 100 })
+      cb.respawnUntil = 0
+      cb.start(e)
+    }
+    // 用「直接调用 tryApplyStatus」把随机性拿掉，只验证结算是否正确
+    hitAlways()
+    let applied = 0
+    for (let i = 0; i < 400 && applied === 0; i++) if (cb.tryApplyStatus(e)) applied++
+    check('战斗深度', '真实引擎：命中后能对敌人施加状态（割伤）', applied === 1 && cb.enemyStatus.bleed === T.STATUS_TURNS,
+      `enemyStatus=${JSON.stringify(cb.enemyStatus)}`)
+    // 刷新不叠加（**必须先把状态预置好再掷**：首版只连掷两次、靠随机决定，注入「叠加」缺陷时
+    // 第二次有 65% 概率没触发 ⇒ 守卫恒真 = 假绿。反例验证 ⑥ 抓出来的）
+    cb.enemyStatus.bleed = T.STATUS_TURNS
+    let again = 0
+    for (let i = 0; i < 400 && again === 0; i++) if (cb.tryApplyStatus(e)) again++
+    check('战斗深度', '重复施加是**刷新回合数**、不是叠加（防「高频攻击把 DoT 叠成无限」）',
+      cb.enemyStatus.bleed === T.STATUS_TURNS && again === 1,
+      `预置 ${T.STATUS_TURNS} ⇒ 再施加一次后 ${cb.enemyStatus.bleed}（叠加则会翻倍）`)
+    // DoT：跑一回合，敌人掉血恰好 = dotDamage(攻击)
+    const before = cb.opponentHp
+    const atk = cb.playerStats().attack
+    cb.settleEnemyStatus()
+    const dealt = before - cb.opponentHp
+    check('战斗深度', '割伤每回合按玩家攻击派生掉血（且计入 damageDealt ⇒ 经验口径一致）',
+      dealt >= T.dotDamage(atk) && cb.damageDealt > 0, `掉 ${dealt}（dotDamage=${T.dotDamage(atk)}）· damageDealt=${cb.damageDealt}`)
+    // 破防：降防 → 到期恢复
+    hitAlways()
+    cb.enemyStatus.dBreak = T.STATUS_TURNS
+    check('战斗深度', '破防生效时敌人防御下降（引擎与界面同源出口 enemyDef）',
+      cb.enemyDef() < e.def && cb.enemyDef() === T.brokenDef(e.def), `base ${e.def} → ${cb.enemyDef()}`)
+    cb.enemyStatus.dBreak = 0
+    check('战斗深度', '破防到期后防御回到原值（不是永久减益）', cb.enemyDef() === e.def, `${cb.enemyDef()} vs ${e.def}`)
+    // 首领免疫
+    const boss = COMBAT_BOSSES.find((b) => b.style === 'plating')
+    if (boss) {
+      hitAlways()
+      const b2 = scaledEnemy(boss)
+      let n = 0
+      for (let i = 0; i < 400; i++) if (cb.tryApplyStatus(b2)) n++
+      check('战斗深度', `首领免疫状态（${boss.name}）`, n === 0, `400 次尝试施加 ${n} 次`)
+    }
+  }
+
+    // F. 显示同源 + 冻结数据零改动
+  {
+    // 🔴 **调用点断言**：上面那些 `tryApplyStatus` 是**直接调函数**，证明不了「引擎真的会调它」——
+    //    反例验证 ⑦ 把调用点改成 `if (false && ...)`，守卫依然全绿（典型的「只测函数、不测接线」）。
+    //    所以这里静态钉住调用点在 `playerAttack` 内、在命中分支之后、且带 `opponentHp > 0` 门。
+    const engineSrc = fs.readFileSync(new URL('../../src/game/combat/Combat.js', import.meta.url), 'utf8')
+    const atkBody = engineSrc.slice(engineSrc.indexOf('  playerAttack('), engineSrc.indexOf('  opponentAttack('))
+    check('战斗深度', '引擎真的会在命中后调用施加逻辑（调用点在 playerAttack 内，且对手未死才挂）',
+      /if \(COMBAT_DEPTH_V1 && this\.opponentHp > 0\) this\.tryApplyStatus\(o\)/.test(atkBody),
+      atkBody.includes('tryApplyStatus') ? '调用点存在但门条件不符' : 'playerAttack 里根本没有调用点')
+    check('战斗深度', '敌人状态在每回合被结算（settleEnemyStatus 在 resolveTurn 里被调用）',
+      /this\.settleEnemyStatus\(\)/.test(engineSrc.slice(engineSrc.indexOf('  resolveTurn()'), engineSrc.indexOf('  maybeAutoEat()'))),
+      'resolveTurn 里没有结算调用')
+  }
+  {
+    const arena = fs.readFileSync(new URL('../../src/components/CombatArena.vue', import.meta.url), 'utf8')
+    const logv = fs.readFileSync(new URL('../../src/views/LogView.vue', import.meta.url), 'utf8')
+    const cv = fs.readFileSync(new URL('../../src/views/CombatView.vue', import.meta.url), 'utf8')
+    check('战斗深度', '战斗屏调 combatTuning 的出口（STATUS_INFO/resistText），不手写状态名',
+      /STATUS_INFO/.test(arena) && /resistText/.test(arena) && !/割伤|破防/.test(arena.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')), 'CombatArena.vue')
+    check('战斗深度', '对手详情（对决页 · 首领图鉴）都展示抗性，且文案来自同一个出口',
+      /resistText/.test(cv) && /resistText/.test(logv), 'CombatView.vue + LogView.vue')
+    // 冻结数据：combat.js 不得反向依赖本模块（数据层只被读、不去读别人的开关）
+    const raw = fs.readFileSync(new URL('../../src/game/data/combat.js', import.meta.url), 'utf8')
+    check('战斗深度', '冻结的敌人数据层不反向 import combatTuning（只被读取，不去读开关）',
+      !/combatTuning/.test(raw), 'src/game/data/combat.js')
+    // 敌人基线：248 个敌人的 acc+eva 合计与 hp 合计（**本批只动读取点，数据一个字节没动**）
+    // hp 合计 87906 与 AGENTS 里那条既有冻结基线同源，互为交叉验证
+    const allE = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
+    const sumAccEva = allE.reduce((a, o) => a + o.acc + o.eva, 0)
+    const sumHp = allE.reduce((a, o) => a + o.hp, 0)
+    check('战斗深度', `248 个敌人的 acc+eva 合计与 hp 合计仍是冻结基线（${sumAccEva} / ${sumHp}）`,
+      sumAccEva === 53030.5 && sumHp === 87906, `实到 ${sumAccEva} / ${sumHp}`)
+  }
 }
 
 console.log('══ X. 觅珍抽卡 ══')

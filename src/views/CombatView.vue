@@ -9,6 +9,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
 import { STYLE_ADVANTAGE, COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
 import { scaledEnemy, enemyScalingText } from '../game/data/enemyScaling.js'
+import { resistText } from '../game/data/combatTuning.js' // 战斗深度 v1：抗性文案的唯一出口
 import CombatPanel from '../components/CombatPanel.vue'
 import DropList from '../components/DropList.vue'
 import CombatLog from '../components/CombatLog.vue'
@@ -161,6 +162,9 @@ function mechText(b) {
   if (b.crit && b.crit > 0.04) ms.push(`暴击 ${Math.round(b.crit * 100)}%`)
   // ⚠️ 不再展示敌人的 `speedMs`：引擎只用**玩家**的攻速驱动回合，敌人的 speedMs 不参与结算
   //    （2026-09-22 实测确认）——展示一个不生效的数值等于虚假承诺。
+  // 战斗深度 v1：补上「对我方哪个状态有抗性」——它是选风格时的关键信息，文案走 combatTuning 的出口
+  const rt = resistText(b)
+  if (rt) ms.push(rt)
   return ms.join('、') || '—'
 }
 // 初次进页时先选中当前区域的第一个对手（watch 只在「变化」时触发，首次不会触发）

@@ -15,6 +15,7 @@ import { chefImage, chefEmoji } from '../game/data/chefImage.js'
 import { ref } from 'vue'
 import { sfx } from '../game/core/sound.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_ACC, BISCUIT_SPEED_PCT } from '../game/data/biscuitUse.js'
+import { STATUS_INFO, resistText } from '../game/data/combatTuning.js' // 战斗深度 v1：状态与抗性的唯一出口
 import ProgressBar from './ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -39,6 +40,10 @@ const battleFrame = computed(() => {
     turnSpeedMs: combat?.inFight ? Math.max(1, combat.playerStats().speedMs) : 0,
     turnSpeedSec: combat?.inFight ? (combat.playerStats().speedMs / 1000).toFixed(1) : '0.0',
     log: combat?.log ?? [],
+    // 战斗深度 v1（2026-09-26）：对手身上的状态 + 对手的抗性。
+    // ⚠️ 都走 `combatTuning.js` 的出口，**不许在这里手写状态名/抗性文案**（显示与结算同源）
+    enemyStatus: combat?.enemyStatusLeft?.() ?? { bleed: 0, dBreak: 0, burn: 0 },
+    foeResist: combat?.inFight ? resistText(combat?.opponent) : '',
   }
 })
 
@@ -128,6 +133,15 @@ watch(
         <strong class="arena-name">{{ battleFrame.opponentName || '未选择对手' }}</strong>
         <span class="mono arena-hp">{{ Math.round(battleFrame.opponentHp) }} / {{ Math.round(battleFrame.opponentHpMax) }}</span>
         <div class="hp-bar opp"><div class="hp-fill opp" :style="{ width: Math.max(0, battleFrame.opponentHp / battleFrame.opponentHpMax * 100) + '%' }"></div></div>
+        <!-- 战斗深度 v1：对手身上的状态（玩家施加的）与它的抗性。两者都来自 combatTuning.js 的出口 -->
+        <div v-if="battleFrame.foeResist" class="foe-resist">🔸 {{ battleFrame.foeResist }}</div>
+        <div v-if="Object.values(battleFrame.enemyStatus).some((v) => v > 0)" class="foe-status">
+          <span
+            v-for="(left, id) in battleFrame.enemyStatus" :key="id"
+            v-show="left > 0" class="foe-status-chip" :title="STATUS_INFO[id].desc">
+            {{ STATUS_INFO[id].icon }} {{ STATUS_INFO[id].name }} {{ left }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -244,6 +258,30 @@ watch(
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 战斗深度 v1：对手的抗性一行 + 我方施加的状态徽章（都在对手立绘下方，宽 100% 不撑破对峙格） */
+.foe-resist {
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+.foe-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  width: 100%;
+}
+.foe-status-chip {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(var(--tint-rgb), 0.14);
+  border: 1px dashed rgba(var(--tint-rgb), 0.4);
+  color: var(--text);
   white-space: nowrap;
 }
 .arena-side.empty {

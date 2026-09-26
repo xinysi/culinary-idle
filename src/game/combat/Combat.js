@@ -13,6 +13,13 @@ import { tunerOver } from '../data/tuner.js'
 import { combatXpPerSkill, xpKillBaseline } from '../data/combatXpCurve.js' // 经验口径（按伤害）单一来源
 import { scaledEnemy } from '../data/enemyScaling.js' // 血量分档（读取点系数，冻结数据不动）
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
+// 战斗深度 v1（2026-09-26）：命中/闪避的可堆形态 + 玩家对敌人的状态 + 敌人抗性
+// ⚠️ 三个机制的**全部常量**都在那个模块里，这里只调它的出口函数，不写字面量（守卫会扫）
+import {
+  COMBAT_DEPTH_V1, ACC_GEAR_DIV, EVA_GEAR_DIV, ACC_GEAR_CAP, EVA_GEAR_CAP,
+  STYLE_STATUS, STATUS_INFO, STATUS_TURNS,
+  statusTriggerChance, dotDamage, brokenDef, resistedStatusOf,
+} from '../data/combatTuning.js'
 
 const FOOD_COOLDOWN_TURNS = 3 // §4.5 料理冷却 3 回合
 const DRUNK_TURNS = 5 // 醉酒 负面效果 持续 5 回合
@@ -37,6 +44,18 @@ export function setCombatInstance(c) {
 }
 export function getCombat() {
   return instance
+}
+
+/**
+ * 命中/闪避的「等级项 + 装备项」合成（战斗深度 v1 的 ①）
+ *   · 开（默认）：`等级项 × (1 + min(装备, CAP) / DIV)` —— 装备为 0 时与旧公式**逐值相等**，堆装备才有意义
+ *     上限不可省：装备命中是加法属性，词条+宝石+强化能把它堆到几百，不封顶会把命中率推到 90%（见 combatTuning 注释）
+ *   · 关（回退）：`等级项 + 装备` —— **与 2026-09-26 之前的旧公式逐值相等**，所以它是一个**真回退**开关
+ */
+function accTerm(levelPart, gearValue, div, cap) {
+  const g = Number(gearValue) || 0
+  if (!COMBAT_DEPTH_V1) return levelPart + g
+  return g === 0 ? levelPart : levelPart * (1 + Math.min(g, cap) / div)
 }
 
 export class Combat {
@@ -66,6 +85,9 @@ export class Combat {
     this.damageDealt = 0 // 本场对敌人造成的**有效伤害**（经验口径用，2026-09-22）
     this.respawnUntil = 0 // 击杀后的重生间隔（(b)，仅胜利时设置）
     this.result = null // win | lose
+    // 战斗深度 v1：**敌人身上**的状态剩余回合（此前敌人不吃任何状态）
+    this.enemyStatus = { bleed: 0, dBreak: 0, burn: 0 }
+    this.statusApplied = 0 // 本场成功施加状态的次数（统计/守卫用）
   }
 
   get styleId() {
@@ -106,9 +128,13 @@ export class Combat {
       hp: this.player.combat.hp,
       maxHp: this.player.maxHp, // 唯一口径：外面那一层 % 已在 store 的 getter 里乘过
       attack: (sl * 3 + eq.attack + this.buffs.atk) * (1 + atkPct / 100),
-      accuracy: Math.max(1, Math.floor((10 + sl + eq.accuracy + this.buffs.accuracy) * (1 - drunkPenalty) * (1 + (realm?.accuracyPct ?? 0) / 100))),
+      // ⚠️ 战斗深度 v1：命中/闪避改成 `等级项 × (1 + 装备项 / DIV)`（装备为 0 时**逐值等于旧公式**
+      //    `10 + sl + eq.accuracy`）。为什么必须改：敌人闪避是 `4 + 1.5×等级`，而玩家命中只 +1/级
+      //    ⇒ 命中率从 L1 的 70% 退化到 L120 的 45%，且装备只能给 +22（**玩家没有杆杆可拉**）。
+      //    平面加成（酱料/饼干的 +命中）留在括号里，避免被等级稀释成 0。
+      accuracy: Math.max(1, Math.floor(accTerm(10 + sl + this.buffs.accuracy, eq.accuracy, ACC_GEAR_DIV, ACC_GEAR_CAP) * (1 - drunkPenalty) * (1 + (realm?.accuracyPct ?? 0) / 100))),
       defense: (heat + eq.defense + this.buffs.defense) * (1 + defPct / 100),
-      evasion: Math.floor((5 + heat * 0.5 + eq.evasion + this.buffs.evasion) * (1 + (realm?.evasionPct ?? 0) / 100)),
+      evasion: Math.floor(accTerm(5 + heat * 0.5 + this.buffs.evasion, eq.evasion, EVA_GEAR_DIV, EVA_GEAR_CAP) * (1 + (realm?.evasionPct ?? 0) / 100)),
       critChance: Math.min(0.05 + (Number(eq.critChance) || 0) + this.buffs.critChance + (realm?.critChance ?? 0) + (dao.critPct ?? 0) / 100, 0.8),
       speedMs: Math.floor(combatTurnIntervalSec(sl, speedBonus, speedPct) * 1000 * (this.slowTurns > 0 ? 1.5 : 1)),
       speedAtCap: atCap, // 已在地板上 ⇒ 一切「攻速 +%」当前都是零效果（界面据此提示，别再让玩家白花品鉴点）
@@ -195,6 +221,8 @@ export class Combat {
     this.biscuitTurns = 0
     this.buffDelta = { item: {}, biscuit: {} }
     this.result = null
+    this.enemyStatus = { bleed: 0, dBreak: 0, burn: 0 } // 敌人身上的状态（每场清零；首领的免疫在施加时判定）
+    this.statusApplied = 0
     this.logLine(`⚔️ 对决开始：${o.name}（等级 ${o.level}，${o.styleName}）`)
     EventBus.emit('combat:start', { opponent: o.name })
     return true
@@ -285,6 +313,10 @@ export class Combat {
       this.logLine('🍰 甜品女王恢复 ' + heal + ' 生命值', 'dim')
     }
 
+    // 战斗深度 v1：**敌人身上**的状态结算（与玩家侧 burn/poison 同口径：先扣回合数再算伤害）
+    // 三个状态里 bleed/burn 是 DoT（按玩家攻击派生），dBreak 只改防御（在 playerAttack 里读）
+    this.settleEnemyStatus()
+
     // 分子料理博士：每回合随机变换风格（克制关系动态变化）
     if (o.mechanic?.randomStyle) {
       const styles = ['knife', 'plating', 'flavor']
@@ -371,7 +403,9 @@ export class Combat {
     // 克制加成（§3.3）
     const advantage = STYLE_ADVANTAGE[style] === this.oppStyle
     const typeBonus = advantage ? 1.15 : 1
-    const reduction = o.def / (o.def + 100)
+    // 破防（战斗深度 v1）：敌人防御下降后，减伤公式按**下降后的值**算 —— 引擎与界面同源（`enemyDef()`）
+    const oDef = this.enemyDef()
+    const reduction = oDef / (oDef + 100)
     // 伤害加成：食灵（§3.3.6 dmgPct/styleDmgPct）+ 奥义（§3.4.1 dmgPct/styleDmgPct）
     const seff = this.player.spiritEffects?.() ?? {}
     const gEff = this.player.gastronomyEffects?.() ?? {}
@@ -393,6 +427,9 @@ export class Combat {
     this.opponentHp = Math.max(0, this.opponentHp - dmg)
     getSkillInstance(this.styleSkillId)?.addXp(4) // 每次命中 +4（与受击经验对齐）
     this.logLine(`${crit ? '💥 暴击！' : '⚔️'} 对 ${o.name} 造成 ${dmg} 伤害${advantage ? '（克制 +15%）' : ''}`)
+
+    // 战斗深度 v1：命中后按风格尝试给敌人挂状态（对手已被打死则不挂 —— 否则日志会出现「先击杀再挂状态」）
+    if (COMBAT_DEPTH_V1 && this.opponentHp > 0) this.tryApplyStatus(o)
 
     // 面条之王：每 5 回合降攻速
     if (o.mechanic?.slowEvery && this.turnCount % o.mechanic.slowEvery === 0) {
@@ -463,6 +500,64 @@ export class Combat {
     this.player.setCombat({ hp })
     this.logLine(`${label}（生命值 ${old} → ${hp}）`)
     if (hp <= 0) this.lose()
+  }
+
+  // ── 战斗深度 v1：玩家 → 敌人的状态（2026-09-26）────────────────────────────
+  // 此前敌人**不吃任何状态**（7 条状态全打在玩家身上）⇒ 战斗只有单方面挨打。现在三种风格各带一个状态。
+
+  /** 敌人身上的状态剩余回合（界面读它画徽章） */
+  enemyStatusLeft() {
+    return { ...this.enemyStatus }
+  }
+
+  /** 敌人当前的**有效防御**（破防后下降）。引擎与界面读同一个出口，避免「卡片写 90 防、打起来按 72 算」 */
+  enemyDef() {
+    const base = this.opponent?.def ?? 0
+    return COMBAT_DEPTH_V1 && this.enemyStatus.dBreak > 0 ? brokenDef(base) : base
+  }
+
+  /** 对敌人造成伤害（DoT 与普攻共用；保持「按伤害给经验」的口径 —— DoT 伤害也算 `damageDealt`） */
+  damageEnemy(dmg, label) {
+    if (!this.opponent || this.opponentHp <= 0) return
+    const effDmg = Math.min(dmg, this.opponentHp)
+    this.damageDealt = (this.damageDealt ?? 0) + effDmg
+    this.opponentHp = Math.max(0, this.opponentHp - dmg)
+    this.logLine(`${label}（对手生命值 ${this.opponentHp + effDmg} → ${this.opponentHp}）`)
+    if (this.opponentHp <= 0) this.win()
+  }
+
+  /** 每回合结算敌人身上的状态（先扣回合数、再算 DoT；重复施加是**刷新回合数**而不是叠加） */
+  settleEnemyStatus() {
+    if (!COMBAT_DEPTH_V1 || !this.enemyStatus) return
+    const p = this.playerStats()
+    for (const id of ['bleed', 'burn']) {
+      if (this.enemyStatus[id] > 0) {
+        this.enemyStatus[id]--
+        const dmg = dotDamage(p.attack)
+        this.damageEnemy(dmg, `${STATUS_INFO[id].icon} ${STATUS_INFO[id].name}`)
+        if (!this.inFight) return
+      }
+    }
+    if (this.enemyStatus.dBreak > 0) this.enemyStatus.dBreak--
+  }
+
+  /**
+   * 命中后按当前风格尝试施加状态（战斗深度 v1 的 ②③）
+   * 触发率 = `statusTriggerChance()`（已含敌人抗性：被克方减半 / 首领免疫）
+   * @returns {boolean} 是否施加成功（守卫与统计用）
+   */
+  tryApplyStatus(o) {
+    if (!COMBAT_DEPTH_V1) return false
+    const statusId = STYLE_STATUS[this.styleId]
+    if (!statusId) return false
+    const p = statusTriggerChance(this.styleLevel, o, this.styleId)
+    if (p <= 0 || Math.random() >= p) return false
+    this.enemyStatus[statusId] = STATUS_TURNS // 刷新而不是叠加（避免高频攻击把 DoT 叠成无限）
+    this.statusApplied++
+    const info = STATUS_INFO[statusId]
+    const extra = statusId === 'dBreak' ? `（对手防御 ${o.def} → ${this.enemyDef()}）` : `（每回合 ${dotDamage(this.playerStats().attack)}）`
+    this.logLine(`${info.icon} 施加「${info.name}」给 ${o.name}${extra}`, 'warn')
+    return true
   }
 
   /** 胜利：金币 + 技能经验 + 掉落（§4.4） */
