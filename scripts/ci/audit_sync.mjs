@@ -205,6 +205,37 @@ const check = (name, cond, detail = '') => {
   check('里程碑：文案里的总量数字与数据一致', miss.length === 0, `缺/过期: ${miss.join(', ')}`)
 }
 
+// ── README 版本行里的「数据规模」数字与数据一致（2026-09-26 立）─────────────
+// 为什么单独立这条：v2.23.0 给效果登记表加了 `fightFoeStatus`（103 → **104** 行），
+// 而 README 版本行里的「效果登记表 103 条」**连着两版没人发现** —— 这类漂移没有任何守卫在看，
+// 只能靠人肉对着数据数一遍（项目里已经因为同样的原因错过一次「小游戏 27/28」）。
+// 判据是「README 写的 == 数据里数的」，只钉**能从一个权威导出直接数出来**的项；
+// 数不出来的（如「2427 件物品」，取决于图鉴口径）不在这里钉，免得守卫本身写错。
+{
+  const readme = fs.readFileSync(`${ROOT}README.md`, 'utf8')
+  const versionLine = readme.split('\n').find((l) => l.includes('当前版本：')) ?? ''
+  const { EFFECT_ROWS } = await import('../../src/game/data/activeEffects.js')
+  const { SKILL_DEFS } = await import('../../src/game/data/skills.js')
+  const { SKINS } = await import('../../src/game/data/skins.js')
+  const { allTitleNames } = await import('../../src/game/data/titles.js')
+  const items = [
+    ['效果登记表', EFFECT_ROWS.length, /效果登记表\s*(\d+)\s*条/],
+    ['技能', Object.keys(SKILL_DEFS).length, /\*\*(\d+)\s*技能\*\*/],
+    ['首领', COMBAT_BOSSES.length, /(\d+)\s*首领/],
+    ['赛季', SEASONS.length, /(\d+)\s*赛季/],
+    ['成就', ALL_ACHIEVEMENTS.length, /\*\*(\d+)\s*成就\*\*/],
+    ['称号', allTitleNames().length, /\*\*(\d+)\s*称号\*\*/],
+    ['皮肤', SKINS.length, /\*\*(\d+)\s*皮肤\*\*/],
+  ]
+  const drift = []
+  for (const [label, actual, re] of items) {
+    const m = versionLine.match(re)
+    if (!m) drift.push(`${label} 未在版本行里出现`)
+    else if (Number(m[1]) !== actual) drift.push(`${label}：README 写 ${m[1]}，实际 ${actual}`)
+  }
+  check('README：版本行的数据规模数字与数据一致（技能/首领/赛季/成就/称号/皮肤/效果登记表）', drift.length === 0, drift.join('; '))
+}
+
 // ── 发布面守卫（2026-09-21 立）：本地内部资料**不得进入仓库** ────────────────
 // 本仓库是公开的（在线游玩与 Releases 都靠它），而项目里有一部分资料只在本地保留、不随仓库发布
 // （清单见 `.gitignore` 末段）。这条守卫的作用：万一以后被 `git add -A` 误带进来，CI 立刻点名。
