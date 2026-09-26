@@ -219,7 +219,7 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
         <template v-for="(entry, ei) in buyListPaged" :key="entry.itemId ?? entry.action ?? 'pad-' + ei">
           <div v-if="!entry._pad" class="gather-card shop-card" :class="{ locked: !canAffordBuy(entry), affordable: canAffordBuy(entry) }">
           <div class="gather-card-head">
-            <img v-if="entry.itemId && itemImage(entry.itemId)" :src="itemImage(entry.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+            <img v-if="entry.itemId && itemImage(entry.itemId)" :src="itemImage(entry.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
             <strong>{{ shopItemName(entry.itemId) }}</strong>
           </div>
           <div class="gather-card-row"><span class="dim">{{ entry.desc ?? CATEGORY_LABEL[getItem(entry.itemId)?.category] ?? getItem(entry.itemId)?.category }}</span></div>

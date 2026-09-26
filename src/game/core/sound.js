@@ -78,8 +78,62 @@ function tone(freq, dur, type = 'sine', gain = 0.12, when = 0, music = false) {
   }
 }
 
-export const sfx = {
-  click: () => tone(620, 0.05, 'square', 0.05),
+// ── 真实音效文件层（2026-09-25，用户给了 click 实拍音频后加）────────────────
+// 与 BGM 同一套「真实音频优先、合成回落」：public/audio/sfx/{name}.mp3 存在则用
+// HTMLAudioElement 播（音量跟 sfxVol），文件缺失/解码失败/自动播放被拒时回落到合成函数。
+// 加新音效文件：mp3 放进 public/audio/sfx/，在 SFX_FILES 登记一行；删掉文件自动回落合成。
+// ⚠️ 路径是**相对路径**（同 bgmUrl 口径）——Electron file:// 下根绝对路径会解析到磁盘根（前科）。
+const SFX_BASE = 'audio/sfx/'
+const SFX_FILES = {
+  click: 'click.mp3', // 用户提供的实拍点击音（button-click-calm-close-gentle）
+  coin: 'coin.mp3', // 金币入账（2026-09-25 用户挑选，5 件一批）
+  levelup: 'levelup.mp3', // 升级
+  error: 'error.mp3', // 不可操作
+  open: 'open.mp3', // 开箱 / 领档
+  unlock: 'unlock.mp3', // 成就 / 天赋解锁
+}
+const sfxFileEls = {} // name -> HTMLAudioElement | null（error 后记 null，本会话不再尝试该文件）
+
+function sfxFileEl(name) {
+  const file = SFX_FILES[name]
+  if (!file || typeof window === 'undefined') return null
+  if (!(name in sfxFileEls)) {
+    try {
+      const el = new Audio(SFX_BASE + file)
+      el.preload = 'auto'
+      el.addEventListener('error', () => { sfxFileEls[name] = null }) // 404/解码失败 → 永久回落合成
+      sfxFileEls[name] = el
+    } catch {
+      sfxFileEls[name] = null
+    }
+  }
+  return sfxFileEls[name]
+}
+
+/** 有真实文件就用文件播（音量即时跟 sfxVol），否则/失败时跑合成兜底。
+ *  入口先查同名冷却期（SFX_COOLDOWN）：批处理事件风暴在冷却内合并成一声。 */
+function playWithFile(name, synth) {
+  const now = performance.now()
+  const cd = SFX_COOLDOWN[name] ?? SFX_COOLDOWN_DEFAULT
+  if (now - (sfxLastAt[name] ?? -1e9) < cd) return
+  sfxLastAt[name] = now
+  const el = sfxFileEl(name)
+  if (el) {
+    try {
+      el.volume = sfxVol
+      el.currentTime = 0 // 快速连点：每次都从头播
+      const p = el.play()
+      if (p && p.catch) p.catch(() => { try { synth() } catch { /* noop */ } }) // 非手势调用被 autoplay 拒 → 回落
+      return
+    } catch {
+      /* 落到合成 */
+    }
+  }
+  synth()
+}
+
+const synthSfx = {
+  click: () => playWithFile('click', () => tone(620, 0.05, 'square', 0.05)),
   craft: () => { tone(520, 0.08, 'triangle', 0.1); tone(780, 0.1, 'triangle', 0.09, 0.06) },
   craftFail: () => tone(200, 0.16, 'sawtooth', 0.07),
   collect: () => tone(880, 0.06, 'sine', 0.08),
@@ -105,6 +159,25 @@ export const sfx = {
   tick: () => tone(1320, 0.04, 'square', 0.05), // 计时到 / 刷新
   offline: () => { tone(523, 0.14, 'sine', 0.09); tone(392, 0.2, 'sine', 0.08, 0.12) }, // 离线结算
 }
+
+/** 导出层：全部音效统一走「冷却节流 → 真实文件 → 合成回落」一条线（外部 API 与旧版完全一致） */
+export const sfx = {}
+for (const [name, synth] of Object.entries(synthSfx)) {
+  sfx[name] = () => playWithFile(name, synth)
+}
+
+// ── 按名称节流 + 导出（2026-09-25，用户问「音效太频繁触发怎么办」）──────────
+// 批处理会让同名音效在几十毫秒内触发几十次（例：一次做 999 份 → skill:action×999 → craft×999），
+// 连响就是机关枪。这里按名称给冷却期：**冷却内的触发直接跳过**（合并成一声，不排队不堆叠）。
+// 真实文件与合成走同一条节流线（playWithFile 里先查冷却再播）。表可按音效单独调，没写的用默认。
+const SFX_COOLDOWN = {
+  click: 60, tab: 60, tick: 120, hit: 150, // 高频轻音：冷却短，保留连点手感
+  craft: 250, collect: 200, coin: 200, warn: 300, error: 350,
+  levelup: 600, win: 400, lose: 400, reward: 300, open: 300, unlock: 400,
+  prestige: 1200, boss: 800, offline: 800, // 低频大事件：冷却长，防连发糊脸
+}
+const SFX_COOLDOWN_DEFAULT = 120
+const sfxLastAt = {} // name -> 上次实际出声的时刻（performance.now()）
 
 // ── 真实音频 BGM（2026-09-17）────────────────────────────────
 // 用 HTMLAudioElement 播 public/audio/bgm/*.mp3；循环、交叉淡入淡出（1.2s）。

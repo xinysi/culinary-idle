@@ -137,15 +137,13 @@ function scrollToSection(label) {
                   v-if="l.type === 'gold'"
                   :src="'images/coin.png'"
                   class="loot-img"
-                  alt=""
-                />
+                  alt="" loading="lazy" decoding="async" />
                 <img
                   v-else-if="l.type === 'item' && itemImage(l.itemId)"
                   :src="itemImage(l.itemId)"
                   class="loot-img"
                   @error="$event.target.style.display = 'none'"
-                  alt=""
-                />
+                  alt="" loading="lazy" decoding="async" />
                 <span class="mono loot-text">{{ lootLine(l) }}</span>
               </div>
             </div>

@@ -268,12 +268,17 @@ const KNOWN_GHOST_RECIPE_IDS = new Set(['al36', 'al37', 'al1918', 'al1919', 'al1
 // ── 6. 物品图片齐备（2026-09-10 新增）──
 // 起因：图鉴里 16 个物品长期没有图片（旱芹/烟熏腊肉/薄荷凉茶…），但游戏用 @error 静默隐藏破图，
 // 没有任何检查会发现。这里对每个物品解析出图片路径并确认文件存在。
+// 种子（2026-09-25）：专属图 seed/{中文名}.png 渐进配图中，缺失时运行时回落通用 _seed.png
+// ⇒ 审计同样接受「专属图或占位图至少一个存在」。
 {
   const noImg = []
+  const seedFallbackExists = fsSync.existsSync('public/images/items/seed/_seed.png')
   for (const it of items) {
     const u = itemImage(it.id)
     if (!u) { noImg.push(`${it.id}(无图路径)`); continue }
-    if (!fsSync.existsSync('public/' + decodeURIComponent(u))) noImg.push(`${it.name}[${it.id}]`)
+    if (fsSync.existsSync('public/' + decodeURIComponent(u))) continue
+    if (it.type === 'seed' && seedFallbackExists) continue
+    noImg.push(`${it.name}[${it.id}]`)
   }
   check(`图片：全部 ${items.length} 件物品均能找到图片文件`, noImg.length === 0, `缺图: ${noImg.slice(0, 8).join('、')}`)
 }

@@ -285,14 +285,54 @@ INSPECT = {
     "WM_CHOPREST": "🟡 形状偏横（897×567，比例 1.58）⇒ 规范侧改：目标尺寸由 96×96 改为 **96×60**",
 }
 
-# 用户已生成素材（public/images/ui/，45 个 png + manifest.json，命名 <形态>_<状态>_<w>x<h>@2x_{color,mask}.png）
-UI_DIR = os.path.join(ROOT, "public/images/ui")
+# 用户已生成素材（45 个 png + manifest.json，命名 <形态>_<状态>_<w>x<h>@2x_{color,mask}.png）
+# ⚠️ 2026-09-26 这批素材**零引用**（三套被否的换肤风格里的一套），已从仓库移到
+#    `wuguan/unused-images/images/ui/`（那边是本地素材区，不入仓库）—— 所以这里的路径也跟着改。
+#    搬回去的话记得把这一行改回 `public/images/ui`（见 wuguan/unused-images/README.md）。
+UI_DIR = os.path.join(ROOT, "wuguan/unused-images/images/ui")
 EXISTING = set()
 if os.path.isdir(UI_DIR):
     for dp, _dn, fn in os.walk(UI_DIR):
         for f in fn:
             if f.endswith(".png"):
                 EXISTING.add(f)
+
+# ── 流水线产物（docs/ui-assets/ui2，故意不放 public/ 免得进构建包）：唯一来源是 manifest.json + build_ui_assets.py 的改色表 ──
+# 🔴 这一节**不许手抄数字**：尺寸/slice/宽度/清理记录全部从产物读，
+#    否则「表里写 12px、实际是 31.8px」这种「文档与实现不一致」会立刻复发。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import build_ui_assets as BUA  # noqa: E402  （只读它的常量，模块里没有副作用）
+
+MANIFEST_PATH = os.path.join(ROOT, "docs/ui-assets/ui2/manifest.json")
+MANIFEST = json.load(open(MANIFEST_PATH, encoding="utf-8")) if os.path.isfile(MANIFEST_PATH) else []
+RECOLOR = {name: target for (name, _fam, _st, _cs, _pull, target) in BUA.ITEMS}
+COLOR_NAME = {BUA.VERMILION: "朱红 #A6371F", BUA.COPPER: "铜线 #C9AE86",
+              BUA.AMBER: "琥珀 #E08A3C", BUA.INK: "墨 #2B2622", None: "不改（原色）"}
+
+
+def paste_css(m):
+    """给出一条**能直接粘进源码**的 CSS 声明（与 manifest 里那份逐字一致）。"""
+    css = "; ".join(f"{k}: {v}" for k, v in m["css"].items() if k != "note")
+    if m["slice_px"]:
+        return f"border-image-source: url({m['colour']}); {css}"
+    return f"background-image: url({m['colour']}); {css}"
+
+ASSET_ROWS = []
+for m in MANIFEST:
+    usage = ("九宫格 fill" if m["slice_px"] else
+             ("整条拉伸" if m["pull"] else "固定尺寸"))
+    w = m["css"]["border-image-width"] if m["slice_px"] else m["css"].get("background-size", "")
+    ASSET_ROWS.append([
+        m["id"], f"{m['family']} / {m['state']}", usage,
+        f"{m['css_size'][0]}×{m['css_size'][1]}",
+        f"{m['export_size'][0]}×{m['export_size'][1]}",
+        (f"{m['slice_px']}px（四边）" if m["slice_px"] else "—"),
+        (f"{w}（纵向 横向）" if m["slice_px"] else w),
+        ("；".join(m.get("center_cleaned") or []) or "—"),
+        COLOR_NAME.get(RECOLOR.get(m["id"]), "不改（原色）"),
+        m["colour"],
+        paste_css(m),
+    ])
 
 # 新版素材 ID → (旧文件匹配片段, 复用结论)
 REUSE = {
@@ -410,10 +450,14 @@ rows1 = [
     ["量测规模", f"实测控件 {ALL_CTL} 个 → 收敛为 {n_ctl} 个「族|类名」变体、{n_pf} 个「页面×族」组合"],
     ["量测视口", f"{INV['meta']['viewport']['width']}×{INV['meta']['viewport']['height']}（桌面端；窄屏规则见「交付与切片」）"],
     ["🔴 素材口径", f"**丰富档 + 不规则单图**：{ART_GROUPS} 组素材 ⇒ 出图 {ART_TOTAL} 张（其中 {ART_PULL} 组是可九宫格拉伸的帧，覆盖该族全部尺寸）；另有 A 路线（SVG 滤镜）可做到 0 位图。详见「素材清单」「路线取舍」"],
+    ["🔴 素材现状", (f"**已切好、备用中（未启用）：{len(MANIFEST)} 个**（`docs/ui-assets/ui2/`，约 1.6MB，含 `manifest.json`）—— "
+                 f"逐条的导出尺寸 / 9-slice / 边框宽 / 中心清理记录 / 可直接粘贴的 CSS 见「素材产出（manifest）」表。"
+                 f"原始出图在 `ui-paper-source/`；v0 那批（`public/images/ui/`）已被取代。") if MANIFEST
+     else "尚未跑流水线（`python scripts/dev/build_ui_assets.py`）"],
     ["🔴 避免的坑", "控件尺寸一律沿用现测尺寸（表 4「实测尺寸」列）。尺寸一改，e2e-layout 的 103 页扫描立刻红"],
     ["🔴 染色约束", "素材一律出「白纸 + 透明线」（灰度/alpha），颜色交给 token ⇒ 15 套皮肤 + 深色模式自动跟随；只有朱红印泥块允许本色"],
     ["", ""],
-    ["分表导航", "风格总纲（定调）· Token 映射（接线）· 控件族规范（226 行：专属尺寸 + 材质要点 + **完整出图提示词**）· 页面×控件（930 行）· 提示词模板 · 素材清单（31 组）· 路线取舍 · SVG 资产清单 · 交付与切片"],
+    ["分表导航", "风格总纲（定调）· Token 映射（接线）· 控件族规范（226 行：专属尺寸 + 材质要点 + **完整出图提示词**）· 页面×控件（930 行）· 提示词模板 · 素材清单（31 组）· **素材产出（manifest：已切好的 32 个）** · 路线取舍 · 交付与切片"],
     ["本表怎么用", "① 读风格总纲定调 → ② 按 Token 映射改 main.css（浅深两套）→ ③ 写 .ui-paper/.ui-ink/.ui-seal 三个基类 → ④ 照「控件族规范」逐族替换 → ⑤ 用「页面×控件」核对每页用到哪些、各多大 → ⑥ 按「交付与切片」的 6 步顺序接入，每步跑守卫"],
     ["生成脚本", "scripts/dev/build_ui_spec_xlsx.py（底表 ui_inventory.mjs 可随时重跑，改版后量测自动更新）"],
     ["校验", "openpyxl audit + scan + validate 全过（本表无公式 ⇒ 不需要 recalc）"],
@@ -579,7 +623,14 @@ rows8 = [
 ]
 sheet("素材清单", "素材清单（丰富档 · 不规则单图；A 路线 0 素材 / B 路线约 31 张）",
       ["素材 ID", "素材名", "覆盖范围（实测）", "可拉伸性", "张数", "形态与要点", "备注",
-     "现有文件（public/images/ui/）", "复用结论（按磁盘上真实文件核对）", "体检结论（2026-09-23 实检 33 个 png）"], ART2, max_width=62)
+     "现有文件（public/images/ui/）", "复用结论（按磁盘上真实文件核对）",
+     "出图复检结论（2026-09-23，驱动了第二轮重出）"], ART2, max_width=62)
+if MANIFEST:
+    sheet("素材产出（manifest）",
+          f"素材产出 · {len(MANIFEST)} 个已切好的素材（docs/ui-assets/ui2，逐字来自 manifest.json）",
+          ["素材 ID", "族 / 形态", "用法", "目标 CSS 尺寸", "导出尺寸 @2x", "9-slice 边距",
+           "border-image-width", "中心区清理（本轮）", "改色", "导出路径", "可直接粘贴的 CSS"],
+          ASSET_ROWS, max_width=58)
 sheet("路线取舍", "两条实现路线的取舍与纪律", ["项", "做法 / 数量", "说明"], rows8, max_width=70)
 
 rows9 = [
@@ -587,19 +638,38 @@ rows9 = [
     ["CSS 三个基类", ".ui-paper（纸面：不规则帧 + 极柔投影）· .ui-ink（墨字三档层级）· .ui-seal（印泥容器）", "所有控件由这三个基类组合；变体只改尺寸与内边距"],
     ["🔴 色值统一（复检发现）", "印泥/选中/勾/筷子线用的是**纯红 #c0~#d0 0000**，而主按钮是 #a02810；两者并排会明显「一个塑料红、一个砖红」⇒ 统一压到 **朱红 #A6371F**（印泥可略深 #9E2B25）；铜线统一 **#C9AE86**、墨统一 **#2B2622**",
      "改色比重画省事：出图时改色值，或用脚本批量替换色相（素材是纯色块，替换安全）；复检脚本 `scripts/dev/recheck_ui_assets.py` 会打印每张的主色，改完再跑一遍即可核对"],
-    ["🔴 切图流水线（新素材必须做）", "新素材全是 **1024×1024 的原始出图**，不能直接进项目。三步：① 按 alpha>40 裁到内容包围盒；② 等比缩放到规范的目标 @2x 尺寸（表 4「导出尺寸」/「素材清单」目标尺寸列）；③ 四周补**透明安全边** ≥ 9-slice 边距（大件 24px、中件 12px）后导出",
-     "已实测：33 个 png 全部 1024²、均为 RGBA 透明底；内容包围盒长宽比与目标的比值见「素材体检」记录 —— 可九宫格拉伸的帧不必等比，但**不可拉伸的小件必须等比**（徽章/勾/锁/食印/水印）"],
+    ["🔴 切图流水线（已跑通，未启用）", "`python scripts/dev/build_ui_assets.py` —— 改色 → 按 alpha>40 裁到内容 → 缩放到最长边 ≤512 → 量撕边/线厚定 9-slice → **清中心区装饰** → 导出 `docs/ui-assets/ui2/<族>/<形态>_<状态>_<w>x<h>@2x_{color,mask}.png` + `manifest.json`。32 组全部产出（约 1.6MB，**故意不放 public/**，免得进每个构建包）",
+     "产物在「素材产出（manifest）」表里逐条列出（尺寸/slice/宽度/清理记录/CSS 全部来自产物本身，不是手抄）"],
+    ["🔴 边框宽必须**按轴**换算", "`border-image-width` 写两个值 = 纵向 横向，各自 = `slice_px × 该轴显示缩放`（如卡片 512×281→214×331 是 x0.42 / y1.18 ⇒ `31.8px 11.3px`）",
+     "第一版四边用同一个数、还多除了 2 ⇒ 撕边被压到自然尺寸的 1/5，渲染出来是「一张没有边的白纸」、铜线几乎看不见（实机截图才发现）"],
+    ["🔴 中心区不许有装饰", "`fill` 会把**中心区整片**当背景铺满控件 ⇒ 画在中心区的朱印/水印/蒸气曲线会被拉伸并挪到控件中部。装饰一律拆成独立小件（SEAL_* / WM_* / STEAM_LINE）用 CSS 摆",
+     "实测代价：弹窗朱印 89×91、面板蒸气曲线 228×23、卡片筷子水印 62×60 全部落在 fill 区 ⇒ 弹窗正中一大块红。流水线现在会自动挑同材质干净补丁镜像平铺补上（羽化 3px、迭代 4 轮），并把清理记录写进 manifest 的 `center_cleaned`"],
+    ["🔴 但「整条贯通」的纹样不算装饰", "木牌中间那两道槽线沿宽度贯通，拉长/压扁后仍是同样的直线 ⇒ 必须放过（判据：某一行 ≥80% 的列都有弱对比纹样）",
+     "第一版没区分，木牌被补掉一段槽线、还留一块颜色不同的补丁（实机截图可见）"],
+    ["🔴 笔刷类不能九宫格", "`FRAME_BAR_FILL` 是一笔「左朱红→右琥珀」的**笔刷**（还有一道高光）⇒ 整条拉伸 `background-size:100% 100%`",
+     "九宫格会把渐变揉成一团；细线类（短边 <64px：槽/筷子线/竖笔/蒸气）同理"],
+    ["✅ 切边守卫", "`python scripts/dev/check_slice_safety.py --strict` —— 逐张断言「中心区内没有任何装饰」，违规即 exit 1 并打印 bbox 与所需 slice",
+     "反例已验证：`python scripts/dev/verify_slice_guard.py` 会往弹窗素材中心画一块朱红 → 守卫必须 FAIL 并点名 FRAME_MODAL（跑完自动逐字节还原）"],
     ["⚠️ 素材目录里混进了别的文件", "`ui-paper-source/server-chain.pem`（一份 TLS 证书链）+ `_smoke.png`（冒烟测试图）不是素材，移出该目录、**不要入库**",
      "证书链文件留在源码目录里既无意义也会引起安全审查（本仓库是公开的）"],
-    ["命名与 manifest（沿用你现有约定）", "文件名：`<族>/<形态>_<状态>_<w>x<h>@2x_color.png` + `_mask.png`；`public/images/ui/manifest.json` 每条含 id / family / size / slice_px / mask / colour / css{border-image-slice,width,repeat}",
-     "与你已生成的 45 个文件完全一致 ⇒ 生成脚本不用改，只把「形态名」换掉（plaque→brush_frame、paper_card→torn_paper_card、brass_tag→seal_badge…），并在 manifest 里**新增两个字段**：`form`（不规则方式）与 `pull`（true=可九宫格拉伸 / false=固定尺寸）"],
+    ["命名与 manifest", "文件名：`<族>/<形态>_<状态>_<w>x<h>@2x_color.png` + `_mask.png`；每条含 id / family / state / pull / form / css_size / export_size / slice_px / src_metrics / center_cleaned / mask / colour / css",
+     "与你 v0 生成的 45 个文件同一套命名 ⇒ 接入侧不用改；新增两个字段 `form`（不规则方式）与 `pull`（true=可九宫格拉伸 / false=固定尺寸）"],
     ["由此产生的复用结论", f"你已生成的 {len(EXISTING)} 个 png 里：✅ 可复用/保留 {sum(1 for a in ART2 if str(a[-1]).startswith('✅'))} 组 · 🔧 需重出 {sum(1 for a in ART2 if str(a[-1]).startswith('🔧'))} 组 · ➕ 新版新增 {sum(1 for a in ART2 if str(a[-1]).startswith('➕'))} 组 · 🟡 可选 {sum(1 for a in ART2 if str(a[-1]).startswith('🟡'))} 组 · ❌ 不再需要 {sum(1 for a in ART2 if str(a[-1]).startswith('❌'))} 组", "详见「素材清单」最后两列（逐条按磁盘上的真实文件名核对）"],
-    ["九宫格用法", "border-image-slice: {N} fill; border-image-repeat: stretch —— {N} 取「素材清单」的撕边幅度 ×3（如 4px 撕边用 12）", "`fill` 必须有，否则中间会被清空；**不规则边必须落在 slice 区域内**才能保持不变形"],
-    ["不可拉伸件用法", "background-image + background-size: 100% 100%（按实测尺寸出图，一张一个控件）", "徽章 3 档、勾 2 档、食印 6 枚、水印 3 枚 —— 这些本来就尺寸固定"],
-    ["染色与皮肤", "换皮肤 = 改 --paper / --paper-lift / --ink / --copper / --vermilion / --amber 六个数", "素材出「白纸 + 透明线」，颜色全交给 token ⇒ 15 套皮肤 + 深色自动跟随"],
-    ["深色模式", "墨底纸字：--paper #1C1A17 / --paper-lift #26231F / --ink #F2EDE4 / --copper #D8BE93", "朱红在深色下提亮到 #B8452C，否则暗底上发闷"],
+    ["九宫格用法（实测定型）", "**只加 `border-image-*`，绝不动 `border-width`**：绘制区由 `border-image-width` 决定、布局只认 `border-width` ⇒ 内容盒一个像素不缩（103 页布局守卫才可能全绿）。边距按家族给：卡片 11 / 面板 14 / 弹窗 12 / 按钮 6 / 输入框 5px",
+     "⚠️ `border-width: 0` + `border-image-width: 11px` **画不出来**（边框宽为 0 时不绘制边框图，探针实测）⇒ 保留原有 1px 边框，纸面会盖住它。"],
+    ["染色与皮肤（实测定型）", "**不新增 token**：小件走 `mask-image` 只取形状，颜色用现有 `--primary` / `--btn-primary-bg` / `--ink-rgb` ⇒ 15 套皮肤 + 深色自动跟随，`system_test` C20 皮肤组一行未改",
+     "皮肤是 `<html>` 上的**行内变量**，优先级压过 `:root` 与深色块；新增 token 会牵动 C20 的「浅深两版键齐备」断言，能不加就不加"],
+    ["深色模式（实测定型）", "**必须出第二套位图**（`_dark.png`，只给纸面族）：按**饱和度**分流重映射 —— 低饱和=纸→深纸 #241a13，中饱和=线→暖金 (216,180,120)。CSS 里 `html[data-theme='dark']` 换 `--ui-card` 等变量",
+     "纸是亮的、铜线比纸暗；深色下要反过来。只按亮度乘系数会把线一起压暗 ⇒ 线在深纸上消失。印泥/徽章/勾/进度填充**不出**深色版（语义色，深色下继续朱红才对）"],
+    ["九宫格硬规则", "`fill` 必须有（否则中间被清空）；**不规则边必须落在 slice 区域内**才不变形；中心区不许有装饰（会被拉伸挪到控件中部）",
+     "第一条由 `border-image-slice: {N} fill` 保证；第三条由 `scripts/dev/check_slice_safety.py --strict` 守着"],
+    ["不可拉伸件用法", "元素盒子设为该件的 css_size（文件就是它的 @2x），`background-image` + `background-size: 100% 100%`", "徽章 3 档、勾 2 档、食印 6 枚、水印 3 枚 —— 这些本来就尺寸固定（与 v0 manifest 同一写法）"],
     ["窄屏（390px）", "控件尺寸不变；卡片网格 5 → 2 列；左栏改抽屉；**撕边幅度减半、水印与蒸气隐藏**", "小屏上撕边最容易变噪点"],
     ["接入顺序（6 步）", "① 落 token → ② 三个基类 + 九宫格接上帧 → ③ 页签与按钮 → ④ 徽章/进度/输入/复选 → ⑤ 卡片与面板（含水印）→ ⑥ 弹窗、筷子双线、竖笔", "每步跑一次守卫，别攒到最后"],
+    ["⚠️ 本规范当前状态（2026-09-23）", ("**已试装过一版，用户看完实机后判定「太丑、深色更丑」⇒ 整层还原**："
+        "`src/styles/main.css` 已从改动前备份**逐字节恢复**（5767 行、无换肤层）；`e2e-test` 的宝石选择框 `radius` 断言也回到 `'8px'`。"
+        f"**本表因此是「未启用的设计稿」**：{len(MANIFEST)} 组素材（含 6 张深色版）与切图流水线都保留在磁盘上备用，但**代码里没有这一层**。"),
+     "风格被否两次（v0「中国风金属/木牌」、v1「新中式纸白食印」）⇒ 下次换方向别从这两套入手，且**先出小范围样张**再谈全站接入"],
     ["每步必跑的守卫", "css_output_audit.mjs（构建期 CSS 压缩会改写规则）· e2e-layout.spec.mjs（裁切/竖排）· e2e-dark.spec.mjs（5 皮肤 × 浅深对比度）· e2e-text.spec.mjs（标记裸露）", "四条里任何一条红都别继续下一步"],
     ["禁止事项", "① 破例用规整矩形 ② 条撕边加到小件上 ③ 朱红面积 >2% ④ 素材烘死墨色 ⑤ 新增圆角/字阶档位 ⑥ 用 emoji 当图标 ⑦ 改控件尺寸", "第 ⑦ 条：尺寸一改，e2e-layout 的 103 页扫描立刻红"],
     ["验收 1 · 观感", "整屏朱红 <2% · 同屏美食元素 ≤2 类 · 撕边幅度按尺寸递减 · 各排卡片高度齐整", "拼一屏真实页面看"],

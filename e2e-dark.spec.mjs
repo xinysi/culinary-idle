@@ -184,6 +184,12 @@ function scanPage({ exempt, theme, skin, allowed = [] }) {
     const svgText = typeof SVGElement !== 'undefined' && el instanceof SVGElement && el.tagName.toLowerCase() === 'text'
     const fgc = parse(svgText ? (cs.fill !== 'none' ? cs.fill : cs.color) : cs.color)
     if (!fgc) continue
+    // 🔴 完全透明的字色 ⇒ 跳过（**假失败**，2026-09-24 修）：
+    //    本项目有**渐变文字**（`background: linear-gradient(...); -webkit-background-clip: text; color: transparent`，
+    //    如 `.stats-num` 的流光数字）。它的 `color` 是 rgba(0,0,0,0)，按它算对比度恒得 **1:1**
+    //    —— 实测 15 套皮肤 × 浅色各报一次 `div.stats-num.mono` / `span.stats-num.mono`（30 条全是假的）。
+    //    真可读性由渐变本身决定，这里不判（要判得单写「渐变两端色都达标」的断言）。
+    if (fgc.a === 0) continue
     const bg = effBg(el)
     const fg = fgc.a < 1 ? blend(fgc, bg) : fgc
     const L1 = lum(fg.r, fg.g, fg.b), L2 = lum(bg.r, bg.g, bg.b)
@@ -333,9 +339,7 @@ test.describe('深色模式配色体检', () => {
         })
         await page.waitForTimeout(300)
         {
-          const rfg = skinTheme === 'light'
-            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
-            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          const rfg = await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
           scannedTotal += rfg.scanned
           for (const b of rfg.bad) bad.push({ page: `skin-${skinTheme}:${skin}/featureGuide`, ...b })
         }
@@ -350,9 +354,7 @@ test.describe('深色模式配色体检', () => {
         })
         await page.waitForTimeout(320)
         {
-          const rodds = skinTheme === 'light'
-            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
-            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          const rodds = await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
           scannedTotal += rodds.scanned
           for (const b of rodds.bad) bad.push({ page: `skin-${skinTheme}:${skin}/mijianOdds`, ...b })
         }
@@ -369,9 +371,7 @@ test.describe('深色模式配色体检', () => {
             document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').setView(vv)
           }, v)
           await page.waitForTimeout(240)
-          const r = skinTheme === 'light'
-            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
-            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
           scannedTotal += r.scanned
           for (const b of r.bad) bad.push({ page: `skin-${skinTheme}:${skin}/${v}`, ...b })
         }
@@ -380,9 +380,7 @@ test.describe('深色模式配色体检', () => {
         for (const sec of DOCK_SECS.slice(1)) {
           await openStatusDrawer(page, sec)
           await page.waitForTimeout(200)
-          const r2 = skinTheme === 'light'
-            ? await page.evaluate(scanOrange, { skin, exempt: EXEMPT, allowed: SKIN_ALLOWED.get(skin) ?? [] })
-            : await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
+          const r2 = await page.evaluate(scanPage, { exempt: EXEMPT, theme: skinTheme, skin, allowed: SKIN_ALLOWED.get(skin) ?? [] })
           scannedTotal += r2.scanned
           for (const b of r2.bad) bad.push({ page: `skin-${skinTheme}:${skin}/dock-${sec}`, ...b })
         }
@@ -412,6 +410,33 @@ test.describe('深色模式配色体检', () => {
       document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').settings.skin = 'classic'
     })
     await page.waitForTimeout(250)
+    // 2026-09-23：给餐厅页造一份**有人**的存档 —— 新档菜单是空的、订单要等 25~45 分钟才来，于是
+    //   「食客在座 / 评论家雅座 / 料理不足 / 米其林星」这四个态**从来没被扫到过**。实测代价：这类小字
+    //   在浅色皮肤下只有 3.8:1（`--gold` / `--warn-strong` 被当成 11px 正文用），而深色下都正常 ——
+    //   正是「守卫看不见的状态里藏着的缺陷」。现在让真实 tick 生成订单与评论家，再逐页扫。
+    await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      const pl = pinia._s.get('player')
+      pl.restaurant.level = 10
+      pl.restaurant.menu = ['whiteBread', 'roastPotato', 'vegSalad', 'pumpkinPie']
+      pl.restaurant.decor = ['decor_124', 'decor_149', 'decor_175', 'decor_200', 'decor_224', 'decor_249', 'decor_274', 'decor_299']
+      for (const id of ['whiteBread', 'roastPotato', 'vegSalad', 'pumpkinPie']) pl.inventory[id] = 6
+      pl.inventory.whiteBread = 0 // 造一张「料理不足」的桌子
+      pl.orders = { list: [], nextAt: Date.now() - 1000 }
+      pl.critic = { order: null, nextAt: Date.now() - 1000 }
+      pl.michelin.stars = 2
+    })
+    for (let i = 0; i < 3; i++) { // 走真实 makeOrder 凑满 3 单（不必等 25 分钟）
+      await page.evaluate(() => {
+        document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player').orders.nextAt = Date.now() - 1000
+      })
+      await page.waitForTimeout(1500)
+    }
+    await page.evaluate(() => {
+      const pl = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('player')
+      if (pl.orders.list[0]) { pl.orders.list[0].itemId = 'whiteBread'; pl.orders.list[0].qty = 3 }
+    })
+    await page.waitForTimeout(300)
     for (const v of VIEWS) {
       await page.evaluate((vv) => {
         const el = document.querySelector('#app')
@@ -489,10 +514,75 @@ test.describe('深色模式配色体检', () => {
       for (const b of r.bad) bad.push({ page: 'skill:' + sid, ...b })
     }
     console.log(`  页面/弹窗/页签/技能页 · 扫描元素合计 ${scannedTotal}`)
-    if (bad.length) console.log('深色问题明细：\n' + bad.slice(0, 25).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''}`).join('\n'))
+    if (bad.length) console.log('深色问题明细：\n' + bad.slice(0, 400).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''} ${b.ratio ?? ''}`).join('\n'))
     // 自检：扫描量太小说明页面/数据没渲染出来（守卫本身失效）
     expect(scannedTotal, '扫描元素过少，体检可能没跑起来').toBeGreaterThan(2000)
     expect(bad, `深色模式存在 ${bad.length} 处问题`).toEqual([])
     expect(errors.length, `控制台错误 ${errors.length} 条`).toBe(0)
+  })
+
+  // 游客 / 试玩态（2026-09-24）：新增的第三个权限角色带来了**三个只有这个状态才渲染的元素**
+  //（启动页「免建档试玩」入口 / 顶栏「试玩中」徽章 / 存档面板「试玩会话」横幅）。
+  // 上面所有扫描进的都是普通会话 ⇒ 这三处一次都不会被量到 —— 正是本项目踩过多次的
+  //「守卫看不见的状态里藏着缺陷」（`dropModal` 漏声明、餐厅四个稀有态 都是同类）。这里专门进游客态逐色扫一遍。
+  test('游客 / 试玩态：入口、顶栏徽章、存档面板横幅在浅深两色下都达标', async ({ page }) => {
+    const errors = []
+    page.on('pageerror', (e) => errors.push(String(e)))
+    await page.goto('http://localhost:5173')
+    await page.waitForTimeout(700)
+    // 启动页：入口必须在（这是通往游客态的唯一路径）
+    await expect(page.locator('.splash-guest-btn')).toBeVisible()
+    await page.locator('.splash-guest-btn').click()
+    await expect(page.locator('.top-nav-guest')).toBeVisible()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    const bad = []
+    let scannedTotal = 0
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((th) => {
+        const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+        pinia._s.get('player').settings.skin = 'classic'
+        document.documentElement.dataset.theme = th
+      }, theme)
+      await page.waitForTimeout(300)
+      for (const v of ['skill', 'restaurant', 'stats', 'inventory']) {
+        await page.evaluate((vv) => {
+          document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').setView(vv)
+        }, v)
+        await page.waitForTimeout(260)
+        const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme, skin: 'classic' })
+        scannedTotal += r.scanned
+        for (const b of r.bad) bad.push({ page: `guest:${theme}:${v}`, ...b })
+      }
+      // 存档面板：横幅 + 一排禁用按钮（禁用态的字色同样要够看）
+      await page.evaluate(() => {
+        document.querySelector('#app').__vue_app__.config.globalProperties.$pinia._s.get('ui').toggleSavePanel(true)
+      })
+      await page.waitForTimeout(400)
+      await expect(page.locator('.guest-notice')).toBeVisible()
+      const r = await page.evaluate(scanPage, { exempt: EXEMPT, theme, skin: 'classic' })
+      scannedTotal += r.scanned
+      for (const b of r.bad) bad.push({ page: `guest:${theme}:savePanel`, ...b })
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(200)
+    }
+    expect(scannedTotal, '游客态扫描元素过少，体检可能没跑起来').toBeGreaterThan(500)
+    // 🔴 本 test **只对「游客态新增的元素」负责**：`.top-nav-guest`（徽章）/ `.guest-notice`（横幅）/
+    //    `.splash-guest-btn`（启动页入口）/ `.slot-card`（游客态下整排禁用按钮）/**`.sv-*`（存档面板排版重做后的新类名）**。
+    //    ⚠️ 2026-09-25 补 `sv-`：存档面板重做后全量换了类名（`sv-slot/sv-ghost/…`），而这份豁免清单还是按旧类名写的
+    //    ⇒ 新元素会被归进下面的「浅色既有问题」桶里**只打印不失败**（假绿）。凡重做某个面板的类名，都要回来加一条。
+    //    其余条目是**浅色主题的既有问题**，与本轮改动无关 —— 之所以会冒出来，是因为本 test 是
+    //    全套守卫里**第一次用 scanPage 扫浅色主题**：皮肤切片在 `skinTheme === 'light'` 时走的是
+    //    `scanOrange`（只查「残留品牌橙」），对比度根本不量。实测检出的既有问题（经典皮肤/浅色）：
+    //      技能页 `.btn-primary` 白字压浅色主色底 2.86 · `.era-name` 3.30 · `sidebar-tab.active` 3.82 ·
+    //      `best-flag` 4.47 · `span.mono` 4.09（阈值 4.5）—— 均已记录，待单独排期处理，不在本 test 范围。
+    const GUEST_ONLY = /top-nav-guest|guest-notice|splash-guest-btn|slot-card|sv-/
+    const mine = bad.filter((b) => GUEST_ONLY.test(String(b.sel)))
+    const others = bad.filter((b) => !GUEST_ONLY.test(String(b.sel)))
+    if (mine.length) console.log('游客态问题明细：\n' + mine.slice(0, 25).map((b) => `  [${b.page}] ${b.kind} ${b.sel} ${b.detail ?? ''} ${b.ratio ?? ''}`).join('\n'))
+    if (others.length) console.log(`（另有 ${others.length} 处**浅色既有**问题不在本 test 范围：` + others.slice(0, 8).map((b) => `${b.sel} ${b.ratio}`).join(' · ') + '）')
+    expect(mine, `游客态新增元素存在 ${mine.length} 处问题`).toEqual([])
+    expect(errors.length, `游客态控制台错误 ${errors.length} 条`).toBe(0)
   })
 })

@@ -1,3 +1,4 @@
+import { tunerOver } from '../data/tuner.js'
 // 成长速度总闸（2026-09-21）——**乘法叠区的阻尼**，全局唯一出口。
 //
 // 起因（用户实测提问）：「采摘一直采苹果就能很快把技能等级拉到几十级，这个速度会不会太快了？
@@ -28,7 +29,7 @@ export const XP_STACK_DAMPING = 0.75
 export function dampXpStack(stack) {
   const p = Number(stack)
   if (!Number.isFinite(p) || p <= 1) return 1
-  return 1 + (p - 1) * XP_STACK_DAMPING
+  return 1 + (p - 1) * tunerOver('xpDamping', XP_STACK_DAMPING, 0, 1)
 }
 
 // ── 低目标经验衰减（2026-09-22 用户要求）────────────────────────────────────────
@@ -83,12 +84,12 @@ export function isLowTarget(skillLevel, targetLevel, topTargetLevel = null) {
   if (!Number.isFinite(lv)) return false
   const ref = lowTargetRefLevel(skillLevel, topTargetLevel)
   if (!Number.isFinite(ref)) return false
-  return lv <= ref - LOW_TARGET_GAP
+  return lv <= ref - tunerOver('lowTargetGap', LOW_TARGET_GAP, 1, 20)
 }
 
 /** 低目标衰减系数：`isLowTarget` ? `LOW_TARGET_XP_MULT` : 1 */
 export function targetLevelXpMult(skillLevel, targetLevel, topTargetLevel = null) {
-  return isLowTarget(skillLevel, targetLevel, topTargetLevel) ? LOW_TARGET_XP_MULT : 1
+  return isLowTarget(skillLevel, targetLevel, topTargetLevel) ? tunerOver('lowTargetMult', LOW_TARGET_XP_MULT, 0, 1) : 1
 }
 
 /** 规则说明（**唯一文案出口**：界面与指南都读它，别再手写「低 5 级」「减半」） */

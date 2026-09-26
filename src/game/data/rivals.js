@@ -29,7 +29,9 @@ export const RIVAL_SHOPS = [
 ]
 
 /** 稳定哈希（同输入同输出，跨端一致） */
-export function hash32(str) {
+import { localAligned } from '../core/clockKeys.js'
+
+function hash32(str) {
   let h = 2166136261
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i)
@@ -38,10 +40,10 @@ export function hash32(str) {
   return (h >>> 0) / 4294967296
 }
 
-/** 当前月份序号（epoch 月，30 天为一月；从 2026-01 起算） */
+/** 当前「月」序号（30 天为一期；从 2026-01 起算，**相位走本地时间轴** ⇒ 换榜落在本地午夜） */
 export function monthIndexOf(now = Date.now()) {
   const EPOCH = Date.UTC(2026, 0, 1)
-  return Math.max(0, Math.floor((now - EPOCH) / (30 * 86400_000)))
+  return Math.max(0, Math.floor((localAligned(now) - EPOCH) / (30 * 86400_000)))
 }
 
 /** 本月上场对手（轮换 5 家，分数按月份成长） */

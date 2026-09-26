@@ -1,3 +1,4 @@
+import { tunerOver } from './tuner.js'
 // 全局难度系数 —— 「所有概率获得」的唯一缩放出口（2026-09-21 用户要求：按钮材向、整体大幅下调，金币除外）
 //
 // 🔴 为什么用系数而不是改数据值
@@ -72,16 +73,19 @@ export function scaleChance(raw, mult, floor) {
 }
 
 /** 对决掉落概率（对手 / 首领共用） */
-export const dropChance = (raw) => scaleChance(raw, DIFFICULTY.drop, CHANCE_FLOOR.drop)
+export const dropChance = (raw) => scaleChance(raw, tunerOver('diffDrop', DIFFICULTY.drop, CHANCE_FLOOR.drop, DIFFICULTY.drop), CHANCE_FLOOR.drop)
 
 /** 制作类技能成功率（`ProductionSkill.successChance()` 是唯一出口） */
-export const craftSuccessChance = (raw) => scaleChance(raw, DIFFICULTY.craft, CHANCE_FLOOR.craft)
+export const craftSuccessChance = (raw) => scaleChance(raw, tunerOver('diffCraft', DIFFICULTY.craft, CHANCE_FLOOR.craft, DIFFICULTY.craft), CHANCE_FLOOR.craft)
 
 /** 美食探索·成功率 */
-export const exploreSuccessChance = (raw) => scaleChance(raw, DIFFICULTY.explore, CHANCE_FLOOR.explore)
+export const exploreSuccessChance = (raw) => scaleChance(raw, tunerOver('diffExplore', DIFFICULTY.explore, CHANCE_FLOOR.explore, DIFFICULTY.explore), CHANCE_FLOOR.explore)
 
-/** 美食探索·**物品**战利品概率（金币条目不要传进来） */
-export const exploreLootChance = (raw) => scaleChance(raw, DIFFICULTY.exploreLoot, CHANCE_FLOOR.exploreLoot)
+/** 美食探索·**物品**战利品概率（金币条目不要传进来）
+ *  ⚠️ key 与 `TunerPanel.vue` 的 ROWS **必须逐字一致（含大小写）** —— `tunerOver` 按名字查表，查不到就
+ *  静默返回基线（首版这里写成 `diffExploreloot`、面板写 `diffExploreLoot` ⇒ 该滑杆在游戏内空转）。
+ *  C9b 有「面板每个 key 都有读取点 / 每个读取点都被面板暴露」双向断言兜底。 */
+export const exploreLootChance = (raw) => scaleChance(raw, tunerOver('diffExploreLoot', DIFFICULTY.exploreLoot, CHANCE_FLOOR.exploreLoot, DIFFICULTY.exploreLoot), CHANCE_FLOOR.exploreLoot)
 
 /**
  * 其它功能页的概率型产出（÷2）。已接线的系统：
@@ -102,14 +106,15 @@ export const exploreLootChance = (raw) => scaleChance(raw, DIFFICULTY.exploreLoo
  *   · 命中/暴击/枯萎/敌人机制 —— 战斗与天气机制
  *   · 小游戏内部随机与游戏币掉落 —— 玩法难度，且游戏币不是金币
  */
-export const otherChance = (raw) => scaleChance(raw, DIFFICULTY.other, CHANCE_FLOOR.other)
+export const otherChance = (raw) => scaleChance(raw, tunerOver('diffOther', DIFFICULTY.other, CHANCE_FLOOR.other, DIFFICULTY.other), CHANCE_FLOOR.other)
 
 /**
  * 采集线附产概率（采摘木材 / 挖掘铜·铁·化石 / 种子 / 狩猎野鸡蛋）。
  * 🔴 **只传常量基准值**；玩家练出来的加成（如 `daoEffects.seedChancePct`）要在外面**加回去**，
  *    即 `gatherExtraChance(SEED_CHANCE) + daoPct / 100` —— 别把加成一并压掉。
+ * ⚠️ key 必须与面板 ROWS 逐字一致（含大小写）——见上面 `exploreLootChance` 那条注释。
  */
-export const gatherExtraChance = (raw) => scaleChance(raw, DIFFICULTY.gatherExtra, CHANCE_FLOOR.gatherExtra)
+export const gatherExtraChance = (raw) => scaleChance(raw, tunerOver('diffGatherExtra', DIFFICULTY.gatherExtra, CHANCE_FLOOR.gatherExtra, DIFFICULTY.gatherExtra), CHANCE_FLOOR.gatherExtra)
 
 /** 供效果总览 / 调试面板展示「当前难度」用 */
 export function difficultyReport() {

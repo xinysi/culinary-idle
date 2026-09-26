@@ -23,6 +23,7 @@ export const ENEMY_HP_BANDS = [
 ]
 
 /** 该等级敌人的血量倍率 */
+import { tunerOver } from './tuner.js'
 export function enemyHpMult(level) {
   const lv = Number(level) || 1
   for (const b of ENEMY_HP_BANDS) if (lv <= b.maxLevel) return b.mult
@@ -41,8 +42,9 @@ export function scaledEnemy(opponent) {
   if (!opponent) return opponent
   if (opponent.__scaled) return opponent
   const m = enemyHpMult(opponent.level)
-  if (m === 1) return { ...opponent, __scaled: true, hpMult: 1 }
-  return { ...opponent, __scaled: true, hp: Math.max(1, Math.round((opponent.hp ?? 1) * m)), baseHp: opponent.hp, hpMult: m }
+  const t = tunerOver('enemyHp', 1, 0.25, 4) // 运营调参：全局敌人血量倍率（会话内存，基线 1）
+  if (m === 1 && t === 1) return { ...opponent, __scaled: true, hpMult: 1 }
+  return { ...opponent, __scaled: true, hp: Math.max(1, Math.round((opponent.hp ?? 1) * m * t)), baseHp: opponent.hp, hpMult: m * t }
 }
 
 /** 分档说明（界面/文档共用，避免各处手抄倍率） */

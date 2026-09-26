@@ -119,7 +119,7 @@ const candidates = computed(() =>
       <p v-if="!candidates.length" class="dim">背包中没有符合本月主题的料理——去烹饪或制作一些吧！</p>
       <div class="fest-grid">
         <div v-for="c in candidates" :key="c.id" class="fest-item" :class="{ none: player.inventory[c.id] <= 0 }">
-          <img v-if="itemImage(c.id)" :src="itemImage(c.id)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+          <img v-if="itemImage(c.id)" :src="itemImage(c.id)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
           <span class="fest-name">{{ c.item.name }}</span>
           <span class="dim mono">×{{ c.qty }}</span>
           <span class="dim mono">预估 {{ c.score }} 分</span>

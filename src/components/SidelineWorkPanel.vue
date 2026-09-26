@@ -41,10 +41,12 @@ const rows = computed(() => {
       const itemId = d.craftedFrom.itemId
       const it = getItem(itemId)
       const lv = WOODWORK_ITEMS_DEF.find((x) => x.id === itemId)?.level ?? 1
+      // 木柴堆（woodPile）的材料是基础「木材」而非木器 ⇒ 行名用装潢自己的名字，别显示成「木材」
+      const isRawWood = itemId === 'wood'
       return {
         itemId,
         decorId: d.id,
-        name: it?.name ?? itemId,
+        name: isRawWood ? d.name.replace('🪚 ', '') : (it?.name ?? itemId),
         level: lv,
         amount: d.effect,
         owned: owned.has(d.id),

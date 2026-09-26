@@ -244,7 +244,7 @@ function typeLabel(id) {
                 <div class="gacha-front-sub mono">+{{ r.gold.toLocaleString() }}</div>
               </template>
               <template v-else>
-                <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="gacha-img" @error="$event.target.style.display = 'none'" alt="" />
+                <img v-if="itemImage(r.id)" :src="itemImage(r.id)" class="gacha-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
                 <div class="gacha-front-name">{{ getItem(r.id)?.name }}</div>
                 <div class="gacha-front-sub mono">{{ typeLabel(r.id) }}</div>
               </template>
@@ -353,11 +353,11 @@ function typeLabel(id) {
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 /* 每池主题色（顶部渐变细条 + 选中态渐变底/边框/光晕） */
-.pool-mini.pool-material { --pc1: 22, 160, 133; --pc2: 13, 127, 102; } /* 素材：翡翠绿 */
-.pool-mini.pool-food { --pc1: 230, 92, 0; --pc2: 249, 212, 35; } /* 美食：橙黄 */
-.pool-mini.pool-gear { --pc1: 83, 105, 118; --pc2: 61, 79, 92; } /* 厨具：钢蓝灰 */
-.pool-mini.pool-mix { --pc1: 142, 68, 173; --pc2: 98, 94, 177; } /* 混池：紫 */
-.pool-mini.pool-limited { --pc1: 74, 44, 20; --pc2: 122, 80, 36; } /* 限时：黑金 */
+.pool-mini.pool-material { --pc1: 22, 160, 133; --pc2: 13, 127, 102; --pct1: 13, 107, 86; --pct2: 13, 107, 86; } /* 素材：翡翠绿（--pct* = 浅色下当文字用的深档）*/
+.pool-mini.pool-food { --pc1: 230, 92, 0; --pc2: 249, 212, 35; --pct1: 170, 62, 0; --pct2: 150, 96, 0; } /* 美食：橙黄 */
+.pool-mini.pool-gear { --pc1: 83, 105, 118; --pc2: 61, 79, 92; --pct1: 58, 76, 88; --pct2: 58, 76, 88; } /* 厨具：钢蓝灰 */
+.pool-mini.pool-mix { --pc1: 142, 68, 173; --pc2: 98, 94, 177; --pct1: 112, 46, 140; --pct2: 88, 74, 165; } /* 混池：紫 */
+.pool-mini.pool-limited { --pc1: 74, 44, 20; --pc2: 122, 80, 36; --pct1: 74, 44, 20; --pct2: 100, 62, 24; } /* 限时：黑金 */
 .pool-mini::before {
   content: '';
   position: absolute;
@@ -377,8 +377,10 @@ function typeLabel(id) {
   transform: translateY(-4px);
 }
 .pool-mini-icon { font-size: 24px; }
-.pool-mini-name { font-size: 13px; font-weight: 700; color: rgb(var(--pc1)); }
-.pool-mini-price { font-size: 12px; color: rgba(var(--pc1), 0.7); }
+.pool-mini-name { font-size: 13px; font-weight: 700; color: rgb(var(--pct1, var(--pc1))); }
+/* 浅色：价格用「浅色专用的深档」`--pct2`（原来是 70% 的 pc1 压在浅彩底上，实测 2.19~3.15）。
+   深色另有 main.css 的 `html[data-theme='dark'] .pool-mini-price` 覆盖，不受影响。 */
+.pool-mini-price { font-size: 12px; color: rgb(var(--pct2, var(--pc2))); }
 
 /* ── 卡池展示横幅：轮播（两端渐隐）+ 池名徽章 + 保底徽章 ── */
 .pool-banner {
@@ -486,7 +488,10 @@ function typeLabel(id) {
   padding: 8px 14px;
   box-shadow: 0 4px 14px rgba(var(--tsh1, 150, 110, 70), 0.18);
 }
-.mijian-view .season-pts-card .dim { color: rgba(var(--tsh1, 150, 110, 70), 0.9); }
+/* 浅色：`--tsh1` 是**池主题亮色**（如橙黄 217,138,43），`.dim` 小字压浅彩玻璃卡实测 2.82~2.85；
+   改用池色的深档 `--pct1`（深色另有 main.css 的 html[data-theme='dark'] 覆盖）。
+   ⚠️ 选择器要窄到 `.season-pts-card`：写成 `.mijian-view .dim` 会把「概率说明」弹窗里几十处 .dim 一起改坏。 */
+.mijian-view .season-pts-card .dim { color: rgb(var(--pct1, 13, 107, 86)); }
 .mijian-view .season-pts-card strong {
   color: var(--tth, #7a4a10); /* 浅色底上用主题深彩色，保证可读 */
   font-size: 1.2em;
@@ -708,7 +713,12 @@ function typeLabel(id) {
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
   border: none; border-radius: 12px;
-  background: linear-gradient(135deg, rgb(187, 210, 197), rgb(83, 105, 118));
+  /* 🔴 原先写死 linear-gradient(135deg, rgb(187,210,197), rgb(83,105,118)) + 白字：
+     浅色那一端 (187,210,197) 压白字实测 **1.03:1**（几乎看不见），而且写死色值不跟皮肤。
+     改用主色的深档→最深档渐变：白字压 `--primary-strong` 实测 5.18~9.81，15 套皮肤全过。 */
+  /* 先给不透明兜底色（体检的底色模型只读 background-color，渐变得另算；同时也是渐变失效时的兜底）*/
+  background-color: var(--primary-strong);
+  background-image: linear-gradient(135deg, var(--primary-strong), var(--primary-deep));
 
   box-shadow: 0 3px 10px rgba(83, 105, 118, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;

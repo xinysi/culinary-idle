@@ -66,7 +66,8 @@ function skipGuide() {
 .newbie-count {
   font-size: 12px;
   font-weight: 700;
-  color: var(--primary-strong);
+  /* 浅色：25%~14% 主色淡彩底上的字用最深档（实测 4.27~4.44，差一点点）*/
+  color: var(--primary-deep);
   background: rgba(var(--primary-tint-rgb), 0.14);
   border-radius: 6px;
   padding: 1px 6px;
@@ -89,8 +90,9 @@ function skipGuide() {
 /* 奖励预览：常驻显示「完成能拿什么」——放置类留人的第一根胡萝卜 */
 .newbie-reward {
   font-size: 12px;
-  color: var(--gold);
-  background: var(--gold-glow); /* 已定义的金色淡底（不引入新 token） */
+  /* 浅色：`--gold` 压 12% 金光底实测只有 3.78 ⇒ 用金色深档（本篇最多的一类，165 处）*/
+  color: var(--gold-strong);
+  background: var(--gold-glow);
   border: 1px solid var(--gold);
   border-radius: 999px;
   padding: 1px 8px;

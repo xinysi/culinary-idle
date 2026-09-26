@@ -35,7 +35,7 @@ function openEquip() {
     </h3>
     <div class="eq-slots">
       <div v-for="e in equipped" :key="e.slot" class="eq-slot" :class="{ empty: !e.id }" :title="`${e.label}：${e.name}`" @click="openEquip()">
-        <img v-if="e.img" class="eq-icon" :src="e.img" alt="" @error="$event.target.style.display = 'none'" />
+        <img v-if="e.img" class="eq-icon" :src="e.img" alt="" @error="$event.target.style.display = 'none'" loading="lazy" decoding="async" />
         <span v-else class="eq-icon eq-icon--empty">空</span>
         <span class="eq-slot-label">{{ e.label }}</span>
         <span class="eq-slot-name">{{ e.name }}</span>

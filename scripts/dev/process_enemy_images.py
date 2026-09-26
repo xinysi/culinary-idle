@@ -12,7 +12,11 @@
   实测根因**两条**：① 256 源图在 DPR≥1.5 的屏幕上不够用（176×1.5 = 264 > 256）；② CSS 里的
   `image-rendering: pixelated` 在**降采样**时是最近邻 —— 512→176 会丢掉 2/3 的像素，变成锯齿。
   ⇒ 源图 512 + **不要**给立绘加 pixelated（`system_test` C51 有断言钉住这两条）。
-文件名沿用原名（`enemy_<regionId>_<两位序>.png` / `boss_<key>.png`），与生成器给出的名字清单一一对应。
+文件名沿用原名（`enemy_<regionId>_<两位序>.webp` / `boss_<key>.webp`），与生成器给出的名字清单一一对应。
+
+⚠️ **输出格式是 WebP（q92），不是 PNG**（2026-09-25 图片瘦身）：248 张 512×512 从 31.7MB 压到 6.5MB，
+分辨率一点没降（卡片显示 140~176px，战斗屏 176px）。档位口径唯一出口 = `scripts/dev/image_quality.py`；
+游戏侧读图路径在 `src/game/data/enemyImage.js`（`.webp`），两边必须一致，否则图出了不显示。
 
 用法：
   python scripts/dev/process_enemy_images.py --src D:\\plays\\lmew_art\\enemies-1024 --out public/images/enemies
@@ -20,6 +24,9 @@
 """
 import argparse, importlib.util, os, sys
 from PIL import Image
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from image_quality import PORTRAIT_Q, save_webp  # noqa: E402  档位唯一出口
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
@@ -47,7 +54,7 @@ def main():
     done, skipped, failed = 0, 0, []
     for f in files:
         size = args.size or (256 if f.startswith(('boss_', 'chef_')) else 128)
-        dst = os.path.join(args.out, f)
+        dst = os.path.join(args.out, os.path.splitext(f)[0] + '.webp')
         try:
             sq, side, dropped = m.build(os.path.join(args.src, f))
             if sq is None:
@@ -56,7 +63,7 @@ def main():
             m.OUT_SIZE = size
             out = m.downsample(sq, args.resample)
             if not args.dry_run:
-                out.save(dst, optimize=True)
+                save_webp(out, dst, PORTRAIT_Q)
             done += 1
             if done % 40 == 0:
                 print(f'  …{done}/{len(files)}')

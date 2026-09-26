@@ -365,7 +365,7 @@ const seasonPaged = computed(() => {
               @click="detailItem = id"
             >
               <div class="item-cell-head">
-                <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+                <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
                 <span class="item-cell-name">{{ getItem(id)?.name }}<span v-if="!player.collected[id]" class="lock-flag" title="尚未获得">🔒</span></span>
               </div>
               <div class="item-cell-sub">

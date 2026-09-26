@@ -7,7 +7,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { RESTAURANT_DECOR, DECOR_CATEGORIES, RESTAURANT_DECOR_BY_ID, DECOR_TOTAL } from '../game/data/restaurantDecor.js'
+import { RESTAURANT_DECOR, DECOR_CATEGORIES, RESTAURANT_DECOR_BY_ID, DECOR_TOTAL, decorPerK as perK, nextDecorPick } from '../game/data/restaurantDecor.js'
 import { CRAFTED_DECOR } from '../game/data/woodworking.js'
 import { getItem } from '../game/data/items.js'
 import Pagination from '../components/Pagination.vue'
@@ -35,14 +35,6 @@ const decorTotalBonus = computed(() => {
   for (const id of player.restaurant.decor ?? []) s += RESTAURANT_DECOR_BY_ID[id]?.effect ?? 0
   return +s.toFixed(1)
 })
-/** 每 1 万金币买到的加成%（越小越划算），用于性价比排序 */
-function perK(id) {
-  const d = RESTAURANT_DECOR_BY_ID[id]
-  if (!d || !d.price) return 0
-  // 保留 2 位小数（2026-09-21 用户：「数值没有控制小数」）——原先是 3 位，300 件装潢全是「2.973%/万金」这种读着累
-  return +((d.effect / d.price) * 10000).toFixed(2)
-}
-
 const decorList = computed(() => {
   let arr = activeCat.value === 'all' ? RESTAURANT_DECOR : RESTAURANT_DECOR.filter((d) => d.category === activeCat.value)
   if (onlyUnowned.value) arr = arr.filter((d) => !owned.value.has(d.id))
@@ -61,11 +53,8 @@ const pagedDecor = computed(() => {
 function setCat(c) { activeCat.value = c; page.value = 1 }
 function setSort(s) { sort.value = s; page.value = 1 }
 
-/** 下一件最值得买的（未购置里性价比最高且买得起的一件） */
-const nextBest = computed(() => {
-  const pool = RESTAURANT_DECOR.filter((d) => !owned.value.has(d.id)).sort((a, b) => perK(b.id) - perK(a.id))
-  return pool.find((d) => player.gold >= d.price) ?? pool[0] ?? null
-})
+/** 下一件最值得买的 —— 口径在 restaurantDecor.js 的 `nextDecorPick`（餐厅页也调它，别各写一遍） */
+const nextBest = computed(() => nextDecorPick(player.restaurant.decor ?? [], player.gold))
 
 function ownCount(cat) {
   return (player.restaurant.decor ?? []).filter((id) => {

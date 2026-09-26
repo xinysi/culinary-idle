@@ -217,7 +217,7 @@ function selectEra(label) {
             :class="{ locked: !isUnlocked(t.itemId), selected: isSelected(t.itemId) && !skillClosed }"
           >
             <div class="gather-card-head">
-              <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <div>
                 <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>

@@ -27,11 +27,21 @@ function startNew() {
   ui.toggleStartSlotModal(false)
 }
 
-// ── 开发者入口（隐蔽）───────────────────────────────────────────────
+// 「试玩」两个字的说明改挂悬浮提示（按钮太窄放不下，游戏内另有顶栏徽章与存档面板横幅在讲）
+const GUEST_TIP = '免建档试玩：不占存档位、不写入任何本地数据，刷新页面即清空'
+
+/** 游客 / 试玩（2026-09-24）：免建档进游戏，**不占存档位、不写任何存档**，刷新即清空。
+ *  给「想先看看再决定」的人和答辩/演示场景用——他们不该覆盖已有进度。 */
+function startGuest() {
+  startGame({ guest: true })
+  ui.toggleStartSlotModal(false)
+}
+
+// ── 内部入口（隐蔽：开发者 / 运营调参员共用）───────────────────────────────────────────────
 // 标题连点 5 下（2 秒内）→ 打开开发者登录挡板。**只在含开发者模式的构建里生效**：
 // 生产构建下 `DEV_PANEL_ENABLED` 是静态 false，这段判断会被整块消掉、点了也没反应。
 // 工具提示同样只在开发构建里出现（用「不在构建里」而不是「藏起来」来实现不可见）。
-const devHint = DEV_PANEL_ENABLED ? '开发者入口：连点 5 下（或 Ctrl+Shift+D）' : undefined
+const devHint = DEV_PANEL_ENABLED ? '内部入口（开发者 / 运营调参）：连点 5 下（或 Ctrl+Shift+D）' : undefined
 let taps = 0
 let lastTap = 0
 function tapTitle() {
@@ -52,11 +62,16 @@ function tapTitle() {
     <!-- 柔和渐变遮罩：让标题自然浮现（无边框、无毛玻璃） -->
     <div class="splash-overlay"></div>
     <div class="splash-content">
-      <!-- 开发者入口（隐蔽）：标题连点 5 下。不放可见按钮——演示时不会被随手点开，
+      <!-- 内部入口（隐蔽）：标题连点 5 下。不放可见按钮——演示时不会被随手点开，
            也避免老师/玩家把它当成游戏功能。热键 Ctrl+Shift+D 与 `?dev=1` 是另外两个入口。 -->
       <h1 class="splash-title" :title="devHint" @click="tapTitle()">美食放置：食灵山海</h1>
       <p class="splash-sub">— 挂机美食主题放置游戏 —</p>
       <button class="splash-start-btn" @click="ui.toggleStartSlotModal(true)">开始游戏</button>
+      <!-- 游客入口（2026-09-24）：与「开始游戏」并列，但走的是**只读会话**——不建档、不写档。
+           放在这里而不是藏起来：答辩评委 / 在线访客点开就能玩，不会动到任何存档位。
+           （2026-09-25 用户：「只要试玩两个字」——原先的「🧪 免建档试玩 + 不存档·刷新即清空」说明行去掉，
+             改成两字药丸；说明改挂 `title` 悬浮提示，游戏内还有顶栏「试玩中」徽章 + 存档面板横幅两处在讲。） -->
+      <button class="splash-guest-btn" :title="GUEST_TIP" @click="startGuest()">试玩</button>
     </div>
 
     <!-- 选择存档弹窗 -->
@@ -163,32 +178,58 @@ function tapTitle() {
     0 0 16px rgba(255, 255, 255, 0.95);
 }
 
+/* ── 磨砂玻璃按钮（2026-09-25 用户：「开始游戏按钮改成磨砂透明背景，试玩按钮样式同步、大小调小」）──
+   改前是**不透明主色渐变**（橘红实心）。底色透明之后，字色不能再靠实心底兜底 ⇒ 必须跟主题走：
+   浅色壁纸（白天蓝天 + 米白柔光）用深墨字；夜景壁纸（压暗层）翻白字 —— 深色那套按本项目约定写在
+   main.css 的 `html[data-theme='dark'] .splash-*` 一组里，与 .splash-bg/.splash-title 放在一起。
+   ⚠️ 玻璃配方**只写这一处**（两枚按钮共用同一段选择器列表）：改一处两枚一起变，不会出现主/次按钮材质漂移。
+   ⚠️ backdrop-filter 在本项目被大面积清过（面板压在滚动内容上会「整块面板晃」）；启动页**不滚动**，
+   是少数可以安全用模糊的地方（原实心按钮本来就带 blur(8px)）。别把这段配方抄到游戏内的面板/卡片上。 */
+.splash-start-btn,
+.splash-guest-btn {
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(var(--glass-rgb), 0.30), rgba(var(--glass-rgb), 0.13));
+  border: 1px solid rgba(var(--glass-rgb), 0.6);
+  backdrop-filter: blur(16px) saturate(1.35);
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  box-shadow: 0 10px 26px rgba(93, 42, 16, 0.2), inset 0 1px 0 rgba(var(--glass-rgb), 0.55);
+  color: #40211a; /* 与 .splash-title 同一支深墨，浅色下玻璃是亮的 */
+  text-shadow: 0 1px 0 rgba(var(--glass-rgb), 0.45);
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.splash-start-btn:hover,
+.splash-guest-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, rgba(var(--glass-rgb), 0.44), rgba(var(--glass-rgb), 0.22));
+  border-color: rgba(var(--glass-rgb), 0.78);
+  box-shadow: 0 14px 32px rgba(93, 42, 16, 0.28), inset 0 1px 0 rgba(var(--glass-rgb), 0.68);
+}
+
+/* 主按钮的**尺寸**只在这一段（别把 padding/字号并进上面的共用配方，否则试玩按钮会跟着变大） */
 .splash-start-btn {
   font-size: 20px;
   font-weight: 600;
   letter-spacing: 4px;
   padding: 14px 48px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  cursor: pointer;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(var(--primary-tint-rgb), 0.96), rgba(160, 52, 24, 0.96));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 6px 20px rgba(120, 55, 25, 0.35);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
   margin-top: 10px;
-}
-
-.splash-start-btn:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(180deg, rgba(232, 105, 68, 0.98), rgba(178, 62, 30, 0.98));
-  box-shadow: 0 10px 30px rgba(120, 55, 25, 0.45);
 }
 
 .start-slot-modal {
   width: min(520px, 94vw);
+}
+
+/* 试玩入口：**同一块玻璃、降一档尺寸**（2026-09-25 用户「只要试玩两个字」）。
+   两字药丸：字号比主按钮小一档、字距同步收窄，内外边距按「两字」定，视觉重量明确低于主按钮。
+   ⚠️ 别再加说明行/图标——上一版就是被「🧪 + 免建档试玩 + 不存档·刷新即清空」撑成和主按钮同宽的。 */
+.splash-guest-btn {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  padding: 7px 22px;
+  border-radius: 999px;
+  margin-top: 2px;
+  text-indent: 4px; /* letter-spacing 会在末字后留一格，这里补回来让「试玩」视觉居中 */
 }
 
 .start-slot-modal .slot-info {

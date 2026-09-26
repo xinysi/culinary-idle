@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList, safeXpMultiplier } from '../game/data/caps.js'
+import { tunerOver } from '../game/data/tuner.js'
 import { STACK_MAX, effectiveStackCap } from '../game/data/stackRules.js'
 import { BANK_TAB_COUNT, DEFAULT_BANK_TABS, sanitizeBankTabs, sanitizeItemTabs, sanitizeTabIndex } from '../game/data/bankTabs.js'
 import { TOOL_MAX_LEVEL, nextToolCost, toolTimeFactor } from '../game/data/farmTools.js'
@@ -96,6 +97,7 @@ import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exc
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
 import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
 import { CELLAR_SLOT_VALUE_BASE } from '../game/data/caps.js'
+import { todayKey, weekNum } from '../game/core/clockKeys.js' // 日历口径单一出口（2026-09-26）
 import {
   SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
   SIDELINE_PRODUCTS, SIDELINE_LADDERS, LADDER_TIERS, ladderTierOf, ladderNextOf, ladderTotalOf,
@@ -4878,14 +4880,14 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ── 名厨挑战（2026-09-10）：每周一位名厨，固定流派，战胜给大奖 ──
-    /** 本周名厨 */
+    /** 本周名厨（周序号走 `clockKeys.weekNum` 单一出口 = **本地周一**换周） */
     chefOfWeek() {
-      return chefForWeek(Math.floor(Date.now() / (7 * 24 * 3600_000)))
+      return chefForWeek(weekNum())
     },
     /** 本周是否已战胜该名厨 */
     chefClearedThisWeek() {
       const c = this.chefChallenge ?? {}
-      const week = Math.floor(Date.now() / (7 * 24 * 3600_000))
+      const week = weekNum()
       return c.week === week && (c.cleared ?? []).includes(this.chefOfWeek().id)
     },
     /** 开始挑战（标记当前名厨，由视图生成对手） */
@@ -4907,7 +4909,7 @@ export const usePlayerStore = defineStore('player', {
       if (!def) return null
       if (opponentName && opponentName !== `${def.icon} ${def.name}`) return null
       if (result !== 'win') { this.chefChallenge.current = null; return { passed: false, name: def.name } }
-      const week = Math.floor(Date.now() / (7 * 24 * 3600_000))
+      const week = weekNum()
       if (this.chefChallenge.week !== week) { this.chefChallenge.week = week; this.chefChallenge.cleared = [] }
       const reward = chefReward(def, this.combatLevel)
       this.gainGold(reward.gold)
@@ -4979,9 +4981,9 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ── 每日/周常任务（2026-09-06 长线日活钩子）──
-    /** 当前日期序号（YYYYMMDD 数值），周序号（epoch 天数 / 7） */
+    /** 当前日期序号（YYYYMMDD 数值），周序号（**本地周一**距纪元的天数 —— 走 clockKeys 单一出口） */
     _dayNum() { return Number((this.todayKey ?? _todayStr()).replace(/-/g, '')) },
-    _weekNum() { return Math.floor(Date.now() / 86400000 / 7) },
+    _weekNum() { return weekNum() },
     /** 跨日/跨周自动刷新任务（tick 周期检查调用，轻量） */
     ensureDailyTasks() {
       const today = this.todayKey ?? _todayStr()
@@ -5464,7 +5466,7 @@ export const usePlayerStore = defineStore('player', {
       const biscuit = safeCap(this.offlineBonusH, 0, OFFLINE_CAP.biscuitMaxHours)
       const dao = Math.min(OFFLINE_CAP.daoMaxHours, Number(this.daoEffects?.()?.offlineHours) || 0)
       const shanhai = Math.min(OFFLINE_CAP.shanhaiMaxHours, Number(this.shanhaiEffects?.()?.offlineH) || 0)
-      return OFFLINE_CAP.baseHours + biscuit + dao + shanhai
+      return tunerOver('offlineHours', OFFLINE_CAP.baseHours + biscuit + dao + shanhai, 0.25, 72)
     },
     /** 已点亮节点的效果合计：{ offlineH, flatYield: { skillId: n }, caps } */
     shanhaiEffects() {
@@ -5979,7 +5981,7 @@ export const usePlayerStore = defineStore('player', {
       const st = rule ? mj.pity[poolId] : null
       const results = []
       let boosted = false
-      let goldBack = 0 // 返金档（材料/食物/混池，固定 35% 池价）
+      let goldBack = 0 // 返金档（材料/食物/混池，固定 20% 池价 —— 口径在 mijianDraws.refundOf，别在这里写数）
       for (let i = 0; i < count; i++) {
         if (st) { st.rare += 1; st.myth += 1 }
         const r = pickItem(poolId, Math.random, st?.rare ?? 0, st?.myth ?? 0)

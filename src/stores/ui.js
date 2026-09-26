@@ -30,6 +30,7 @@ export const useUiStore = defineStore('ui', {
   state: () => ({
     log: [], // { id, ts, message, kind: info|gain|levelup|offline|warn }
     phase: 'splash', // splash(启动界面) | game(游戏主界面)
+    guest: false, // 游客 / 试玩会话（2026-09-24）：不写档、不占存档位；仅内存，刷新即回普通会话
     showStartSlotModal: false, // 启动界面选存档弹窗
     rightPanelOpen: true,
     activeView: 'skill', // 取值见 VIEW_KEYS（与 App.vue 的分派链对应）
@@ -56,6 +57,7 @@ export const useUiStore = defineStore('ui', {
     // 生产构建下 DevPanel 的 import 会被静态替换掉（见 App.vue 的 DEV_PANEL_ENABLED 分支）。
     devGate: false, // 登录挡板（启动页连点标题 / Ctrl+Shift+D / ?dev=1 都打开它）
     showDevPanel: false, // 面板本体
+    showTunerPanel: false, // 运营调参页（2026-09-25 第四角色「运营调参员」的页面）
   }),
 
   actions: {

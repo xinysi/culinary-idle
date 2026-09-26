@@ -1,3 +1,4 @@
+import { tunerOver } from './tuner.js'
 // 上限常量（**单一来源**，2026-09-13 立）
 // 起因：审计发现「背包 100 / 仓库 500 / 冷库 100 / 离线上限 12h」等数值在 17+ 处各自写字面量，
 // 任何一处调整都会漏掉别处（典型：商店说「上限 100」而读档夹取、山海食经发放在别处各写一遍）。
@@ -177,18 +178,21 @@ export const COMBAT_SPEED_BASE_SEC = 2.4
 
 /** 对决回合间隔（秒）：**唯一出口**（引擎公式与界面上限提示都走它，避免两套真相） */
 export function combatTurnIntervalSec(styleLevel = 1, eqSpeedBonus = 0, speedPct = 0) {
-  const raw = COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * COMBAT_SPEED_DECAY_PER_LEVEL - (Number(eqSpeedBonus) || 0)
+  const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
+  const raw = COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * decay - (Number(eqSpeedBonus) || 0)
   const pct = Number(speedPct) || 0
-  return Math.max(COMBAT_SPEED_FLOOR_SEC, raw * (1 - pct / 100))
+  return Math.max(tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC), raw * (1 - pct / 100))
 }
 
 /** 加成前的原始间隔是否**已经**在地板以下（= 再加攻速也毫无效果，界面据此提示） */
 export function combatSpeedAtCap(styleLevel = 1, eqSpeedBonus = 0) {
-  return COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * COMBAT_SPEED_DECAY_PER_LEVEL - (Number(eqSpeedBonus) || 0) <= COMBAT_SPEED_FLOOR_SEC
+  const decay = tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05)
+  const floor = tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC)
+  return COMBAT_SPEED_BASE_SEC - (Number(styleLevel) || 1) * decay - (Number(eqSpeedBonus) || 0) <= floor
 }
 
 /** 到顶等级（原始间隔撞地板的等级）：界面/文档/守卫共用，避免各处各写一个 60/75 */
 export function combatSpeedCapLevel(eqSpeedBonus = 0) {
-  return Math.ceil((COMBAT_SPEED_BASE_SEC - COMBAT_SPEED_FLOOR_SEC - (Number(eqSpeedBonus) || 0)) / COMBAT_SPEED_DECAY_PER_LEVEL)
+  return Math.ceil((COMBAT_SPEED_BASE_SEC - tunerOver('speedFloor', COMBAT_SPEED_FLOOR_SEC, 0.4, COMBAT_SPEED_BASE_SEC) - (Number(eqSpeedBonus) || 0)) / tunerOver('atkSpeedDecay', COMBAT_SPEED_DECAY_PER_LEVEL, 0.004, 0.05))
 }
 

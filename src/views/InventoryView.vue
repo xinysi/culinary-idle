@@ -2,7 +2,7 @@
 // 厨藏页（2026-09-19 由 `InventoryModal` 升级为独立页面；2026-09-20 **存储合一**）——
 // 只有一个存储（`player.inventory`），没有仓库、没有入仓/出仓。版式参考梅尔沃的仓库界面：
 // 顶部分类标签 + 搜索/排序，中间**高密度格子**，右侧选中物品详情与来源；**点了物品才出操作**。
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
@@ -11,6 +11,7 @@ import { itemImage } from '../game/data/itemImage.js'
 import { shortCount as shortQty } from '../game/data/stackRules.js'
 import { sfx } from '../game/core/sound.js'
 import ItemDetailModal from '../components/ItemDetailModal.vue'
+import SpoilCountdown from '../components/SpoilCountdown.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -82,7 +83,6 @@ const catTabsShown = computed(() => {
 })
 
 const selected = ref(null) // 选中的 itemId（格子高亮 + 右侧详情 + 操作）
-const hoverId = ref(null)  // 悬停中的格子：数量药丸由「x.xx万」切换成**精确数字**（2026-09-20 用户要求）
 const detailItem = ref(null) // 「?」按钮打开的详情弹窗（详细作用 / 可用于制作 / 获取来源），复用图鉴的 ItemDetailModal
 const qty = ref(1)
 const sortBy = ref('value') // 排序：value 价值 / name 名称 / type 类型 / qty 数量
@@ -112,12 +112,17 @@ const sellTotal = computed(() => unitPrice.value * Math.max(1, Math.min(qty.valu
 const usableKind = computed(() => (selected.value ? player.usableOf?.(selected.value) : null))
 
 /** 格子上的数量：< 1 万显示**精确数字**，≥ 1 万显示「x.xx万 / x.xx亿 / x.xx万亿」
- *  （悬停时换成精确数字，见模板的 hoverId）。梅尔沃式槽位（2026-09-20 用户给图）：38.91万。
+ *  （悬停时换成精确数字 —— 见模板里的 `.qty-brief`/`.qty-full` **纯 CSS** 切换）。
+ *  梅尔沃式槽位（2026-09-20 用户给图）：38.91万。
  *  设置里关掉「数量缩写」后恒显示精确数字（见右侧「设置」页签）。
  *  ⚠️ 2026-09-22 上限抬到 100 亿后，格式化**统一走 `stackRules.shortCount`**——
- *     旧实现只到「万」，会写出「1000000.00万」；以后别在这里重写一份。 */
-function qtyLabel(id, total) {
-  if (hoverId.value === id || player.settings?.invShortQty === false) return total.toLocaleString()
+ *     旧实现只到「万」，会写出「1000000.00万」；以后别在这里重写一份。
+ *  🔴 2026-09-26 性能修复：原先悬停切数字走的是**响应式 `hoverId`**，而它会让整个组件重渲染
+ *     ⇒ 满背包（2267 格）时**鼠标划过一格要 29.3ms**（60fps 预算只有 16.7ms）＝ 每划一下掉 2 帧。
+ *     现在两份文案都渲染、由 CSS `:hover` 决定显示哪个 ⇒ **悬停不再触发任何 JS/重渲染**
+ *     （实测 29.3ms → 0.1ms，p50），也避免了 `v-memo` 那种「依赖表漏一项就静默不更新」的维护陷阱。
+ */
+function qtyLabel(total) {
   return shortQty(total)
 }
 /** 双击格子（设置里可关）：可用消耗品直接使用、装备直接穿戴，其它物品打开详情弹窗 */
@@ -225,10 +230,20 @@ function setQtyFromSlider(v) {
   qty.value = Math.max(1, Math.min(m, Math.round(m <= 1 ? 1 : Math.exp(t * Math.log(m)))))
 }
 // 腐坏倒计时（2026-09-21 用户：「会腐坏的食材应该显示腐坏倒计时」）：
-// 原来只报「12h 后腐坏」（取整小时、还是静态值）。现在按 `ui.loopTick` 每秒重算，
-// 走「12 小时 30 分后腐坏」这种会自己往下跳的文案（格式见 `itemDetail.js` 的 `spoilCountdown`）。
+// 原来只报「12h 后腐坏」（取整小时、还是静态值）。现在走「12 小时 30 分后腐坏」这种会自己往下跳的文案
+//（格式见 `itemDetail.js` 的 `spoilCountdown`）。
+// 🔴 2026-09-26 修性能：原实现挂在 `ui.loopTick` 上，而那是**每秒 10 次**的引擎节拍 ⇒
+//    有腐坏物品时**整列（2267 格）每秒重渲染 10 次**，实测单次 35.3ms（max 46.5ms）⇒ 一秒烧掉
+//    约 353ms 主线程（35%），静置不动也一直掉帧。而文案粒度是**分钟**（「12 小时 30 分后」），
+//    跟 10Hz 节拍重算毫无意义 ⇒ 改成独立的 30 秒慢节拍（文案最多晚 30 秒，肉眼无从分辨，
+//    重渲染频率从 10Hz 降到 1/30Hz）。
+// ⚠️ 别再改回 `ui.loopTick`；也别把这个 interval 缩短到秒级——那等于把刚修掉的问题装回去。
+const slowTick = ref(0)
+let slowTimer = null
+onMounted(() => { slowTimer = setInterval(() => { slowTick.value++ }, 30_000) })
+onBeforeUnmount(() => { if (slowTimer) clearInterval(slowTimer) })
 const spoilTick = computed(() => {
-  ui.loopTick
+  slowTick.value
   return Date.now()
 })
 function spoilLeft(id) {
@@ -329,7 +344,7 @@ function doSellCommon() {
                 @dragleave="dragOverTab = null"
                 @drop.prevent="dropOnTab(t.i)"
               >
-                <img v-if="t.icon && itemImage(t.icon)" :src="itemImage(t.icon)" class="inv-tab-icon" alt="" />
+                <img v-if="t.icon && itemImage(t.icon)" :src="itemImage(t.icon)" class="inv-tab-icon" alt="" loading="lazy" decoding="async" />
                 <span v-else class="inv-tab-seq">{{ t.i === 0 ? '🧺' : t.i }}</span>
                 <span class="inv-tab-name">{{ t.name }}</span>
                 <span class="inv-tab-count mono">{{ t.count }}</span>
@@ -341,7 +356,7 @@ function doSellCommon() {
           <div v-if="dragId" class="inv-drag-hint">
             🗂 把「{{ getItem(dragId)?.name }}」拖到上方面板页签即可归类 · 第 1 块「🧺」= 移出面板
           </div>
-          <div class="item-grid inv-grid">
+          <div class="item-grid inv-grid" :class="{ 'inv-grid--full-qty': player.settings?.invShortQty === false }">
             <div
               v-for="e in list"
               :key="e.id"
@@ -353,12 +368,12 @@ function doSellCommon() {
               @dragend="dragEnd"
               @click="onSlotClick(e.id)"
               @dblclick="dblClick(e.id)"
-              @mouseenter="hoverId = e.id"
-              @mouseleave="hoverId = null"
             >
-              <img v-if="itemImage(e.id)" :src="itemImage(e.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(e.id)" :src="itemImage(e.id)" class="item-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <span v-if="spoilLeft(e.id)" class="spoil-note" :title="spoilLeft(e.id)">⚠</span>
-              <span class="inv-cell-qty mono">{{ qtyLabel(e.id, e.total) }}</span>
+              <span class="inv-cell-qty mono">
+                <span class="qty-brief">{{ qtyLabel(e.total) }}</span><span class="qty-full">{{ e.total.toLocaleString() }}</span>
+              </span>
             </div>
             <p v-if="!list.length" class="dim" style="grid-column: 1 / -1">
               {{ searchQ || catFilter !== 'all' || tabFilter !== 0 ? '这一面板/分类/关键词下没有物品（可把物品拖到其它面板页签）' : '厨藏空空如也' }}
@@ -435,13 +450,16 @@ function doSellCommon() {
 
           <template v-else-if="selected">
             <div class="bd-head">
-              <img v-if="itemImage(selected)" :src="itemImage(selected)" class="bd-icon" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(selected)" :src="itemImage(selected)" class="bd-icon" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <div class="bd-head-main">
                 <div class="bd-name">{{ getItem(selected)?.name }}</div>
                 <div class="bd-tags">
                   <span v-if="getItem(selected)?.tier" class="badge">{{ getItem(selected)?.tier }} 档</span>
                   <span v-if="getItem(selected)?.quality" class="badge">{{ getItem(selected)?.quality }}</span>
-                  <span v-if="spoilLeft(selected)" class="badge warn-text" :title="`保鲜时长 ${spoilBase(selected)}；超时后会腐坏并从背包消失`">⏳ {{ spoilLeft(selected) }}</span>
+                  <!-- 详情面板这一行要**秒级实时**（守卫 e2e-test 有「倒计时应在走」的断言）⇒ 用独立小组件，
+                       它自己的 1 秒节拍只重渲染它自己，不会带着 2267 个格子一起重渲染。
+                       ⚠️ `v-if` 判的是「有没有腐坏计时」这个**非节拍**状态，不是文案本身。 -->
+                  <span v-if="player.spoilage[selected]" class="badge warn-text" :title="`保鲜时长 ${spoilBase(selected)}；超时后会腐坏并从背包消失`">⏳ <SpoilCountdown :item-id="selected" /></span>
                   <span v-else-if="spoilBase(selected)" class="badge" :title="`保鲜时长 ${spoilBase(selected)}；放入厨藏后开始倒计时，冷库可续时`">🥶 保鲜 {{ spoilBase(selected) }}</span>
                 </div>
               </div>
@@ -639,7 +657,9 @@ function doSellCommon() {
 .bd-tab--on {
   border-color: var(--primary);
   background: rgba(var(--primary-tint-rgb), 0.14);
-  color: var(--primary);
+  /* 浅色：14% 主色淡彩底上的小字用最深档（`--primary` 实测 3.13，阈值 4.5）。
+     深色由 main.css 的 `html[data-theme='dark'] .bd-tab--on` 覆盖。 */
+  color: var(--primary-deep);
 }
 .bd-hint { font-size: 12px; margin: 4px 0 6px; }
 /* 设置页的开关行 */
@@ -814,6 +834,26 @@ function doSellCommon() {
      两个主题都成立 ⇒ 底用 `--scrim-rgb`（浅/深色下都是深调）、字用 `--glass-rgb`（两主题都是浅色）。 */
   color: rgb(var(--glass-rgb));
   background: rgba(var(--scrim-rgb), 0.82);
+}
+/* 数量药丸的两份文案：默认显示缩写，**悬停该格**时换成精确数字（2026-09-20 用户要求）。
+   🔴 必须用纯 CSS 切：旧实现走响应式 `hoverId`，满背包（2267 格）时每划过一格要重渲染 29.3ms
+   ⇒ 每划一下掉 2 帧（实测）。纯 CSS 切换 = 悬停零 JS、零重渲染。
+   ⚠️ 两份文案都渲染在 DOM 里（每格多一个 span），这是「不重渲染」换来的代价；别把它改回 JS 条件渲染。
+   设置里关掉「数量缩写」时，由容器类 `.inv-grid--full-qty` 恒显精确数字。 */
+.inv-slot .qty-full {
+  display: none;
+}
+.inv-slot:hover .qty-brief {
+  display: none;
+}
+.inv-slot:hover .qty-full {
+  display: inline;
+}
+.inv-grid--full-qty .qty-brief {
+  display: none;
+}
+.inv-grid--full-qty .qty-full {
+  display: inline;
 }
 .inv-grid .item-img {
   width: 100%;

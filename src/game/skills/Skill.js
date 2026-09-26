@@ -9,9 +9,16 @@
 import { EventBus } from '../core/EventBus.js'
 import { getSkillDef } from '../data/skills.js'
 import { dampXpStack, targetLevelXpMult, isLowTarget } from '../core/growthRate.js'
+import { tunerOver } from '../data/tuner.js'
 
 export const MAX_LEVEL = 100
 export const PRESTIGE_MAX_LEVEL = 120
+
+/** 等级上限的**唯一口径**（2026-09-25 抽出）：转生过（prestiges>0）→ 120，否则 100。
+ *  技能实例的 maxLevel getter、开发者面板「🩺 体检」的等级越界检查都从这里取，别各写一遍三元。 */
+export function levelCapFor(prestiges = 0) {
+  return prestiges > 0 ? PRESTIGE_MAX_LEVEL : MAX_LEVEL
+}
 // 导出供「效果总览」按同一口径展示（此前 activeEffects 里又硬写了一遍 0.2，属于两处真相）
 export const PRESTIGE_XP_BONUS = 0.2 // 每次转生 +20% 经验（2026-09 调高：100→120 曲线偏肝，提升转生收益）
 // 数值平衡：卡片经验统一缩放系数。采集目标/制作配方/作物等「卡片」给予的经验统一放大，
@@ -51,9 +58,9 @@ export class Skill {
     return this.player.skills[this.id]?.prestiges ?? 0
   }
 
-  /** 当前等级上限：转生过 → 120，否则 99 */
+  /** 当前等级上限（口径在下面的 levelCapFor；转生过 → 120，否则 100） */
   get maxLevel() {
-    return this.prestiges > 0 ? PRESTIGE_MAX_LEVEL : MAX_LEVEL
+    return levelCapFor(this.prestiges)
   }
 
   /** 加卡片经验：采集/制作/作物等「卡片」给予的经验，统一乘以 CARD_XP_SCALE 后走 addXp；
@@ -71,7 +78,7 @@ export class Skill {
     // 乘在这里（而非让各调用点自己乘）⇒ 采集/制作/探索/农耕/副业/离线全部同源，且加成的日志数字
     // （返回的 expGained）与实际到账一致。规则与常数见 core/growthRate.js。
     const lowMult = targetLevelXpMult(this.level, targetLevel, this.topTargetLevel)
-    return this.addXp(b * CARD_XP_SCALE * lowMult, mult > 0 ? mult : 1)
+    return this.addXp(b * CARD_XP_SCALE * lowMult * tunerOver('cardXpScale', 1, 0.1, 10), mult > 0 ? mult : 1)
   }
 
   /** 该技能「最高可用目标/配方等级」——低目标衰减的参照系（`lowTargetRefLevel` 会与技能等级取小）。
@@ -104,6 +111,7 @@ export class Skill {
    *  mult：卡片精通经验倍数（2026-09 独立成长线）——与『设置经验倍率』取较大、不叠乘（设置倍率只作用于非精通部分） */
   addXp(amount, mult = 1) {
     if (!(amount > 0)) return 0
+    amount = amount * tunerOver('globalXp', 1, 0, 20) // 运营调参：全局经验倍率（会话内存，基线 1）
     const prevExp = Math.floor(this.exp)
 
     // 食灵经验加成（%）
@@ -126,7 +134,7 @@ export class Skill {
     const patronFx = this.player.patronEffects?.() ?? {}
     const patronPct = (patronFx.xpPct ?? 0) + (patronFx.xpSkills?.[this.id] ?? 0)
     // 转生加成（每层 +20%）
-    const prestigeMult = 1 + this.prestiges * PRESTIGE_XP_BONUS
+    const prestigeMult = 1 + this.prestiges * tunerOver('prestigeXpBonus', PRESTIGE_XP_BONUS, 0, 1)
     // 增益剂经验倍率（§3.4.2）
     const tonicMult = this.player.getXpMultiplier?.() ?? 1
     // 设置里的全局经验倍率（档位唯一口径在 caps.js 的 XP_MULTIPLIER_OPTIONS，现为 1/2/3/5）

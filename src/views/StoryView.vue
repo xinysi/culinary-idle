@@ -2,7 +2,7 @@
 // 故事与传闻（2026-09-12 从「图鉴」页抽出为独立页）— 主线章节 / 传闻 / 轶事 三块。
 // 抽出原因：这三块在原页签里占了 122 行模板 + 123 行脚本，且与「图鉴」的物品浏览是两种完全不同的任务。
 // 纯读取层（STORY / TALES / tales_ext + player 进度），不改动任何剧情数据；样式全部复用全局类。
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { STORY, storyReqCur } from '../game/data/story.js'
 import { TALES, QUIRK_CAT_DEFS, quirkCategoryStats } from '../game/data/tales.js'
@@ -117,9 +117,38 @@ const quirkPaged = computed(() => {
   return arr
 })
 // 传闻：系列快速跳转
-function scrollToTalesSeries(series) {
-  const el = document.getElementById('tales-series-' + series)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+// 🔴 2026-09-26 改成**分页**：原先 506 张传闻卡一次性渲染（实测 4637 个 DOM、单次长任务 133~149ms），
+//    同页的「轶事」页签早就分页了（24/页，见 QUIRK_PAGE），传闻这边漏了。
+//    做法与轶事一致：把所有系列**扁平化成一条**（每条带上自己的系列名，系列首条额外带组头信息），
+//    再按 24 条一页切；原来的「系列跳转」按钮改为**跳到该系列首条所在页**（不再是滚动锚点）。
+const TALE_PAGE = 24
+const talePage = ref(1)
+// 切页签时页码归位（与轶事页签的做法一致：换分类回到第 1 页）
+watch(storyCat, () => { talePage.value = 1 })
+const talesFlat = computed(() => {
+  const out = []
+  for (const g of talesBySeries.value) {
+    g.tales.forEach((t, i) => out.push({ t, series: g.series, head: i === 0 ? { unlocked: g.unlocked, total: g.total } : null }))
+  }
+  return out
+})
+const talePages = computed(() => Math.max(1, Math.ceil(talesFlat.value.length / TALE_PAGE)))
+const talePaged = computed(() => {
+  const p = Math.min(talePage.value, talePages.value)
+  const arr = talesFlat.value.slice((p - 1) * TALE_PAGE, p * TALE_PAGE).map((x) => ({ ...x }))
+  // 分页会把系列从中间切断：本页第一条若不是系列首条，就补一个组头 —— 否则玩家看到的是
+  // 「几张不知道该归属哪个系列的卡」（实测第一页开头正是这种情况）。
+  if (arr.length && !arr[0].head) {
+    const g = talesBySeries.value.find((x) => x.series === arr[0].series)
+    if (g) arr[0].head = { unlocked: g.unlocked, total: g.total }
+  }
+  while (arr.length < TALE_PAGE) arr.push({ _pad: true }) // 补满一页：所有页等高，翻页按钮不跳位（与轶事同款）
+  return arr
+})
+/** 系列跳转 = 跳到该系列首条所在的页（分页后锚点已不存在） */
+function goTalesSeries(series) {
+  const i = talesFlat.value.findIndex((x) => x.series === series)
+  if (i >= 0) talePage.value = Math.floor(i / TALE_PAGE) + 1
 }
 
 onMounted(() => {
@@ -186,32 +215,35 @@ onMounted(() => {
       <div class="card placeholder"><p class="dim">传说终成现实：你，就是新一代厨神。</p></div>
     </template>
 
-    <!-- 传闻 → 按「系列」分组 -->
+    <!-- 传闻 → 按「系列」分组 + 分页（系列名作为组头穿插在页内） -->
     <template v-else-if="storyCat === 'tales'">
       <h3 style="margin-top: 14px">传闻：{{ talesUnlocked }}/{{ allTales.length }}</h3>
-      <!-- 分类快速跳转：按系列定位 -->
+      <!-- 分类快速跳转：按系列定位（分页后 = 跳到该系列首条所在的页） -->
       <div class="quick-nav" style="margin: 8px 0 4px">
         <span class="dim" style="font-size: 12px">系列跳转：</span>
-        <button v-for="group in talesBySeries" :key="group.series" class="btn btn-sm" @click="scrollToTalesSeries(group.series)">{{ group.series }}</button>
+        <button v-for="group in talesBySeries" :key="group.series" class="btn btn-sm" @click="goTalesSeries(group.series)">{{ group.series }}</button>
       </div>
-      <template v-for="group in talesBySeries" :key="group.series">
-        <h4 :id="'tales-series-' + group.series" style="margin-top: 14px; margin-bottom: 6px; color: var(--accent, #d95a38)">{{ group.series }} · {{ group.unlocked }}/{{ group.total }}</h4>
-        <div class="gather-grid">
-          <div
-            v-for="t in group.tales"
-            :key="t.id"
-            class="gather-card"
-            style="opacity: 1"
-          >
-            <div class="gather-card-head"><strong>{{ t.title }}</strong></div>
-            <div class="gather-card-row"><span>进度</span><span class="dim mono">{{ taleProgress(t) }}/{{ t.unlock.need }}</span></div>
-            <div v-if="!taleUnlocked(t)" class="gather-card-need">{{ t.unlock.needText }}</div>
-            <ProgressBar :progress="taleProgress(t) / t.unlock.need" />
-            <div v-if="taleUnlocked(t)" class="dim" style="font-size: 12px">{{ t.body }}</div>
-            <div v-else-if="t.unlock.flavor" class="dim" style="font-size: 12px">{{ t.unlock.flavor }}</div>
-          </div>
-        </div>
-      </template>
+      <div class="gather-grid">
+        <template v-for="(row, ri) in talePaged" :key="row._pad ? 'pad-' + ri : row.t.id">
+          <div v-if="row._pad" class="pager-spacer"></div>
+          <template v-else>
+            <h4
+              v-if="row.head"
+              class="tales-series-head"
+              style="grid-column: 1 / -1; margin: 10px 0 0; color: var(--accent, #d95a38)"
+            >{{ row.series }} · {{ row.head.unlocked }}/{{ row.head.total }}</h4>
+            <div class="gather-card" style="opacity: 1">
+              <div class="gather-card-head"><strong>{{ row.t.title }}</strong></div>
+              <div class="gather-card-row"><span>进度</span><span class="dim mono">{{ taleProgress(row.t) }}/{{ row.t.unlock.need }}</span></div>
+              <div v-if="!taleUnlocked(row.t)" class="gather-card-need">{{ row.t.unlock.needText }}</div>
+              <ProgressBar :progress="taleProgress(row.t) / row.t.unlock.need" />
+              <div v-if="taleUnlocked(row.t)" class="dim" style="font-size: 12px">{{ row.t.body }}</div>
+              <div v-else-if="row.t.unlock.flavor" class="dim" style="font-size: 12px">{{ row.t.unlock.flavor }}</div>
+            </div>
+          </template>
+        </template>
+      </div>
+      <Pagination v-if="talesFlat.length > TALE_PAGE" :current="Math.min(talePage, talePages)" :pages="talePages" @update:current="(p) => talePage = p" />
     </template>
 
     <!-- 轶事 → 大类（采集/制作/对决/辅助）→ 子子类（技能/战斗/食灵…）两级 -->

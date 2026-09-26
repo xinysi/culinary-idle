@@ -217,8 +217,6 @@ function badge(id) {
   display: flex;
   flex-direction: column;
   background: rgba(var(--panel-rgb), 0.97);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   border-radius: 12px;
   /* ⚠️ 只留外阴影，**不要** `inset 0 1px 0 rgba(var(--glass-rgb), …)` 这种白色内高光：
@@ -226,6 +224,10 @@ function badge(id) {
      而深色主题里 `.card` 的那条是被专门覆盖掉的 —— 新容器别自己又加回来。 */
   box-shadow: 0 8px 28px rgba(var(--scrim-rgb), 0.28);
   overflow: hidden;
+  scrollbar-gutter: stable;   /* 滚动条出现/消失时不让内容宽度跳 */
+  /* ⚠️ 这里**不要**加 backdrop-filter：底色已经是不透明的（0.94+），模糊看不出差别，
+     却会让滚动时整块面板跟着背景重采样 —— 就是「面板里所有元素跟着滚」的成因
+     （2026-09-23 用户报右面板；项目里带动态进度条的卡片早有同样处置）。 */
 }
 .dock-panel-head {
   display: flex;
@@ -245,6 +247,7 @@ function badge(id) {
 .dock-panel-body {
   overflow-y: auto;
   padding: 10px 12px;
+  scrollbar-gutter: stable;   /* 滚动条出现/消失时不顶动内容宽度（宽度一跳，整块就像在晃） */
 }
 .dock-task {
   display: flex;

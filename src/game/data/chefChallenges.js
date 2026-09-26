@@ -1,3 +1,5 @@
+import { weekNum as weekNumOf } from '../core/clockKeys.js'
+
 // 名厨挑战（2026-09-10 新增）— 每周一位「名厨」（按周确定性轮换），固定流派、等级随玩家上浮；
 // 战胜即通过（每周一次），通过给金币 + 调料 + 专属称号。与竞技场（镜像 PVP）、试炼（限制条件）互补。
 // 设计约束：对手由 opp() 动态生成（与试炼塔/秘境同模式），不触碰 COMBAT_REGIONS/BOSS 铁律数据。
@@ -24,7 +26,8 @@ export function getChef(id) {
 }
 
 /** 本周名厨（按 epoch 周确定性轮换） */
-export function chefForWeek(weekNum = Math.floor(Date.now() / (7 * 24 * 3600_000))) {
+/** 本周名厨的轮换序号：默认走 clockKeys 单一出口（**本地周一**换周） */
+export function chefForWeek(weekNum = weekNumOf()) {
   return CHEFS[((weekNum % CHEFS.length) + CHEFS.length) % CHEFS.length]
 }
 

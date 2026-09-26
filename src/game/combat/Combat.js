@@ -9,6 +9,7 @@ import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
 import { BISCUIT_HEAL_PCT, BISCUIT_BUFF_TURNS, BISCUIT_ACC, BISCUIT_SPEED_PCT, BISCUIT_COOLDOWN_TURNS } from '../data/biscuitUse.js'
 import { COMBAT_SPEED_FLOOR_SEC, combatTurnIntervalSec, combatSpeedAtCap, COMBAT_RESPAWN_SEC } from '../data/caps.js' // 攻速地板常量单一来源
+import { tunerOver } from '../data/tuner.js'
 import { combatXpPerSkill, xpKillBaseline } from '../data/combatXpCurve.js' // 经验口径（按伤害）单一来源
 import { scaledEnemy } from '../data/enemyScaling.js' // 血量分档（读取点系数，冻结数据不动）
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
@@ -485,7 +486,7 @@ export class Combat {
     const xpTaste = xpEach
     const xpHeat = xpEach
     // 击杀后的重生间隔（(b)：只惩罚一击秒杀，长战斗几乎无感）
-    this.respawnUntil = performance.now() + COMBAT_RESPAWN_SEC * 1000
+    this.respawnUntil = performance.now() + tunerOver('respawnSec', COMBAT_RESPAWN_SEC, 0, 10) * 1000
     const drops = []
     for (const d of o.drops ?? []) {
       // 概率走全局难度系数（÷5，下限 1%）；`DropList.vue` 显示的是**同一个函数**的结果，两边不会差

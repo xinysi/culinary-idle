@@ -38,19 +38,27 @@ export const NEWBIE_STEPS = [
   {
     id: 'n03', label: '③ 做一道菜（烹饪 / 烘焙）', where: '技能页 · 烹饪', view: 'skill',
     find: { key: '烹饪', expect: 'sidebar' },
-    reward: { gold: 150, items: { roastPotato: 2 } },
+    // 🔴 **武器必须在这一步给**（2026-09-26 实测后从 n04 前移）：本链第 ④ 步是「赢下第一场对决」，
+    //    而**空手打第一场是打不过的** —— 真新档（100 金 / 0 物品 / 无装备）打「灶台学徒」实测
+    //    胜率 **0%**（400 场 0 胜）、单场 13 回合 ≈32 秒；只带 ③ 原本那 2 份烤土豆也只有 **49%**
+    //    （抛硬币，且单场 55 秒）。把铜刀提前到这一步后：同一场 **100%**、10 回合 ≈25 秒
+    //    ⇒ ④ 才真的是「教你打赢」，而不是抽奖。
+    //    ⚠️ 别改回去。要动这里的顺序/奖励，先跑 `scripts/sim/first_fight.mjs`（常驻实测工具）：
+    //    「先对决、再装备」在**数值上**不成立，链头原本担心的「靠运气或锻造凑装备」由**任务直接发这把刀**解决
+    //    —— 既不靠运气也不靠肝。
+    reward: { gold: 150, items: { roastPotato: 2, copperKnife: 1 } },
     check: (p) => Object.keys(p.storyProgress ?? {}).some((k) => k.startsWith('craft:')),
   },
-  // ⚠️ 顺序：**先对决、再装备**。第一件装备的现实来源就是区域 1 对手的掉落（铜刀/铜锅/铜砧板，各 3%），
-  // 反过来排等于让玩家先靠运气或锻造凑出装备才能打第一场对决（2026-09-18 准备模拟器时发现）。
+  // ⚠️ 顺序仍是**先对决、再装备**（④ 打赢 → ⑤ 穿上）。第一件装备的**后续**来源是区域 1 对手的掉落
+  //    （铜刀/铜锅/铜砧板，各 3%）；但**第一把刀**由 ③ 直接发（理由见上面 n03 的注释）。
   {
     id: 'n04', label: '④ 赢得第一场料理对决', where: '技能页 · 对决', view: 'skill',
     find: { key: '对决', expect: 'sidebar' },
-    reward: { gold: 150, items: { copperKnife: 1 } }, // 奖励 = 下一步要用的工具
+    reward: { gold: 200, items: { roastPotato: 2 } }, // = 下一场的干粮（武器已在 ③ 发过，重复发没有意义）
     check: (p) => (p.stats?.combatWins ?? 0) > 0,
   },
   {
-    id: 'n05', label: '⑤ 穿上第一件装备（对决掉落或这把铜刀）', where: '顶栏 · ⚔️装备', view: 'skill',
+    id: 'n05', label: '⑤ 穿上第一件装备（铜刀，或对决掉落）', where: '顶栏 · ⚔️装备', view: 'skill',
     find: { key: '装备', expect: 'topnav' },
     reward: { gold: 200, items: { apple: 5 } },
     check: (p) => Object.values(p.equipment ?? {}).filter(Boolean).length >= 1,

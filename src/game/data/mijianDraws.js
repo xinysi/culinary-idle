@@ -1,12 +1,13 @@
 // 觅珍抽卡（2026-09-06 立；2026-09-22 按用户完整规格重写概率核心）
 //
 // 规格来源（2026-09-22 用户给的「通用前置规则 + 池子总览表 + 保底状态机」）：
-//   · 分支：40% 返金（**固定 35% 抽卡成本**）｜25% 低档物品｜35% 正常抽取（固定权重，不再价值加权）
+//   · 分支：40% 返金（**固定 20% 抽卡成本**，2026-09-26 由 35% 下调）｜25% 低档物品｜35% 正常抽取（固定权重，不再价值加权）
 //   · 双保底：稀有及以上保底 + 神话累计保底，**两套计数相互独立**；神话优先于稀有
 //   · 软保底：稀有保底前 10 抽内，稀有+ 概率线性提升（材料/食物池无装备分支 ⇒ 无保底）
 //   · 只要扣了金币，无论结果（返金/低档/正常）都计入保底计数
 //   · 保底产出**不走进分支 roll**（不会同时返金/给低档）
 // 纯新增获取来源（不动任何物品数值）；图鉴三查见 itemSources.js 的「觅珍」来源。
+import { tunerOver } from './tuner.js'
 import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
 import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
@@ -16,16 +17,44 @@ const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
 
 // ── 概率常量（⚠️ 必须在 MIJIAN_POOLS **之前**：池描述要引用它们，写在后面会 TDZ 报错）──
 
-/** 三档分支（材料/食物/混池共用）：40% 返金 · 25% 低档 · 35% 正常 */
+/** 三档分支（材料/食物池用）：40% 返金 · 25% 低档 · 35% 正常 */
 export const BRANCH = { gold: 0.4, cheap: 0.25, normal: 0.35 }
+/** 混池专用分支（2026-09-25 用户拍板「混池调低」）：65% 返金 · 25% 低档 · 10% 正常。
+ *  🔴 为什么混池要单独一份：混池的「正常」分支是**纯装备**（按品质权重 roll），价值远高于
+ *  材料/食物的正常分支（均匀抽）⇒ 用材料/食物那套 35% 正常分支时回收率冲到 51.3%。
+ *  正常分支降到 10% 后（当时返金 35%）实测 ≈33.6%；返金再降到 20%（2026-09-26）后 **28.0%**。
+ *  ⚠️ 副作用（设计上接受）：混池基础稀有+ 从 2.0% 降到 ≈1.0%，长期稀有+ 主要由双保底（50/300）兜底。
+ *  💡 还想再低：`branchOf` 已把这个「正常分支」开成调参键 `mixNormal`（调到 6% ⇒ 回收率 ≈24.7%），
+ *     它在**保底触发前**生效（保底产出不走进分支）。公示表与池描述由 `poolOdds()`/`poolDesc()` 自动跟随。 */
+export const MIX_BRANCH = { gold: 0.65, cheap: 0.25, normal: 0.1 }
 export const BRANCH_POOLS = ['material', 'food', 'mix']
-/** 返金比例：**固定**抽卡成本的 35%（规格「返金固定 35% 抽卡成本」） */
-export const REFUND_PCT = 0.35
-/** 返金额 = 池价 × 35%，**向下取整**（材料 21 / 食物 38 / 混池 28）。
- *  ⚠️ 金币引擎是整数：`gainGold` 里 `Math.floor(amount * (1+加成))` ⇒ 110 × 35% = 38.5 实际只会到账 38。
- *     所以**出口就按整数算**，公示与结算同源（否则页面上写 38.5、玩家拿到 38，正属本项目最忌的那类不一致）。 */
+/** 唯一出口：任何要读「某池三档分支」的地方（pickItem/poolDesc/poolOdds/守卫）都调它，别直接挑常量 */
+export function branchOf(poolId) {
+  if (poolId !== 'mix') return BRANCH
+  // 运营调参：只放开「正常分支」一个自由度，返金档按 1 − 低档 − 正常 派生（三者恒等于 1）
+  const normal = tunerOver('mixNormal', MIX_BRANCH.normal, 0, 1 - MIX_BRANCH.cheap)
+  if (normal === MIX_BRANCH.normal) return MIX_BRANCH
+  return { gold: 1 - MIX_BRANCH.cheap - normal, cheap: MIX_BRANCH.cheap, normal }
+}
+/** 返金比例：**固定**抽卡成本的 20%（2026-09-26 由 35% 下调 —— 用户「不能让觅珍回收率太大，不然还是能刷钱」）。
+ *  🔴 **别把回收率当「抽卡值不值」来写文案**（2026-09-26 用户订正：「抽卡本来就是付出和赌」）：
+ *  玩家买到的是**物品本身与那一把的概率**，返金只是**垫底结果**，不是回本承诺。回收率这条数**唯一的作用**
+ *  是当**套利上限**：只要 <100%，就不存在「金币 → 抽卡 → 再卖 → 金币」的闭环。
+ *  🔴 为什么下调：**返金档是回收率的唯一大杠杆** ——「低档物品」是池内价值最低 20% 的成员，
+ *  按半价折算对回收的贡献 ≈ 0（实测 0.0~0.2 金/抽），所以回收率 = 返金档 + 正常分支两块。
+ *  35% 时实测：混池 **37.8%** / 食物 23.2% / 材料 22.6%（厨具 15.0 / 限时 11.3 无返金档，不受影响）。
+ *  降到 20% 后：混池 **28.0%** / 食物 17.2% / 材料 16.5% ⇒ **五池全部 ≤30%**（30% 是给套利线留的余量）。
+ *  ⚠️ 结构没变：金币**仍是最高频的垫底结果**（材料/食物 40%、混池 65% 的抽次），只是单次金额变小 ——
+ *     这正是规格「超高概率的金币、中概率的 1 档」要的形态。
+ *  ⚠️ 已排除的旁路（不必再查）：交易所收购价最高 2.4× 价值（倍率 1.6 × 货签 +50%），但 `exchangeSell`
+ *     只收当期 6 种**食材类目**货，抽卡产物是装备/材料/熟食 ⇒ 卖不到交易所；券无早期来源（塔 L60+ / 山海 / 道途 / 秘境）。 */
+export const REFUND_PCT = 0.20
+/** 返金额 = 池价 × 20%，**向下取整**（材料 12 / 食物 22 / 混池 16）。
+ *  ⚠️ 金币引擎是整数：`gainGold` 里 `Math.floor(amount * (1+加成))` ⇒ 110 × 20% = 22 恰好整数，
+ *     但**出口一律按整数算**（不管基线是不是整数），公示与结算同源
+ *     （否则页面上写 38.5、玩家拿到 38，正属本项目最忌的那类不一致）。 */
 export function refundOf(price) {
-  return Math.floor((Number(price) || 0) * REFUND_PCT)
+  return Math.floor((Number(price) || 0) * tunerOver('refundPct', REFUND_PCT, 0, 1))
 }
 
 // 装备稀有度权重（**导出**：公示面板与守卫都读这一份，别在别处重抄）
@@ -61,7 +90,11 @@ export const PITY_RULES = {
 }
 export const PITY_POOLS = Object.keys(PITY_RULES)
 export function pityRuleOf(poolId) {
-  return PITY_RULES[poolId] ?? null
+  const r = PITY_RULES[poolId]
+  if (!r) return null
+  // 运营调参：只放开「稀有保底抽数」；上限夹在神话保底之前（否则稀有保底永不触发）
+  const rare = tunerOver(poolId === 'mix' ? 'mixPity' : 'gearPity', r.rare, 5, Math.max(10, r.myth - 1))
+  return rare === r.rare ? r : { ...r, rare }
 }
 /** 软保底窗口：保底前 10 抽线性提升（厨具/限时第 30 抽起，混池第 40 抽起 = 各自 rare - 10） */
 export const SOFT_WINDOW = 10
@@ -87,7 +120,7 @@ export function softRareP(poolId, rareCount) {
   if (!(rareCount >= start) || rareCount >= rule.rare) return null
   const base = rareUpShare(baseTableOf(poolId))
   const t = (rareCount - start + 1) / SOFT_WINDOW
-  return base + (SOFT_MAX_P - base) * t
+  return base + (tunerOver('softMaxP', SOFT_MAX_P, 0, 1) - base) * t
 }
 
 // 素材/食物池加权幂次（保留给非抽卡的价值加权用法；抽卡已改固定权重）
@@ -113,7 +146,8 @@ export function poolDesc(poolId) {
     const p = (x) => Math.round(x * 100)
     const rule = pityRuleOf(poolId)
     const tail = rule ? `；${rule.rare} 抽稀有保底 / ${rule.myth} 抽神话保底` : '（无装备保底）'
-    return `${p(BRANCH.gold)}% 返 ${refundOf(def.price)} 金 · ${p(BRANCH.cheap)}% ${lowTxt} · ${p(BRANCH.normal)}% 正常抽取（${midTxt}）${tail}`
+    const br = branchOf(poolId)
+    return `${p(br.gold)}% 返 ${refundOf(def.price)} 金 · ${p(br.cheap)}% ${lowTxt} · ${p(br.normal)}% 正常抽取（${midTxt}）${tail}`
   }
   if (poolId === 'gear') {
     const rule = PITY_RULES.gear
@@ -288,11 +322,12 @@ export function pickItem(poolId, rng = Math.random, rareCount = 0, mythCount = 0
   // ③ 分支 roll
   if (BRANCH_POOLS.includes(poolId)) {
     const def = MIJIAN_POOLS.find((p) => p.id === poolId)
+    const br = branchOf(poolId)
     const roll = rng()
-    if (roll < BRANCH.gold) {
+    if (roll < br.gold) {
       return { gold: refundOf(def?.price), guaranteed: null, isRareUp: false, softP, boosted: false }
     }
-    if (roll < BRANCH.gold + BRANCH.cheap) {
+    if (roll < br.gold + br.cheap) {
       const item = uniformPick(cheapTier(poolId), rng)
       return { item, cheap: true, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
     }
@@ -310,7 +345,7 @@ export function pickItem(poolId, rng = Math.random, rareCount = 0, mythCount = 0
     return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
   }
   if (poolId === 'limited') {
-    if (rng() < LIMITED_GEAR_PCT) {
+    if (rng() < tunerOver('limitedGearPct', LIMITED_GEAR_PCT, 0, 1)) {
       const item = pickEquipBranch('limited', rng, rareCount)
       return { item, guaranteed: null, isRareUp: isRareUpItem(item), softP, boosted: false }
     }
@@ -380,14 +415,15 @@ export function poolOdds(poolId) {
     soft: null,
   }
   if (BRANCH_POOLS.includes(poolId)) {
-    out.branch = { gold: pct(BRANCH.gold), cheap: pct(BRANCH.cheap), normal: pct(BRANCH.normal) }
+    const br = branchOf(poolId)
+    out.branch = { gold: pct(br.gold), cheap: pct(br.cheap), normal: pct(br.normal) }
     out.refund = { pct: pct(REFUND_PCT), amount: refundOf(def?.price) }
     out.cheapCount = cheapTier(poolId).length
   }
   if (poolId === 'mix') {
     out.quality = QUALITY_WEIGHT
     out.rarePct = GEAR_RARE_PCT
-    out.gearShare = BRANCH.normal // 正常分支整支都是装备
+    out.gearShare = branchOf(poolId).normal // 正常分支整支都是装备（混池 2026-09-25 起 10%）
   } else if (poolId === 'gear') {
     out.quality = QUALITY_WEIGHT
     out.rarePct = GEAR_RARE_PCT
@@ -395,9 +431,10 @@ export function poolOdds(poolId) {
   } else if (poolId === 'limited') {
     out.quality = LIMITED_QUALITY_WEIGHT
     out.rarePct = LIMITED_RARE_PCT
-    out.gearShare = LIMITED_GEAR_PCT
-    out.gearPct = pct(LIMITED_GEAR_PCT) // 80
-    out.foodPct = pct(1 - LIMITED_GEAR_PCT) // 20
+    const lg = tunerOver('limitedGearPct', LIMITED_GEAR_PCT, 0, 1)
+    out.gearShare = lg
+    out.gearPct = pct(lg)
+    out.foodPct = pct(1 - lg)
   }
   if (out.quality) {
     const table = out.quality

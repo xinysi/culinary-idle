@@ -36,15 +36,29 @@ export const WOODWORK_ITEMS_DEF = [
  *   抬到 **2~11（合计 +65）** —— 于是手工在装潢总乘区里从 **4% 升到 ~24%**，10 件就能顶商店 300 件的三成，
  *   且单件（2%~11%）明显强于商店最贵的那件（1.3%）。要再调只改这一个系数即可整体平移。
  */
-export const CRAFTED_DECOR = WOODWORK_ITEMS_DEF.map((it) => ({
-  id: `decor_hand_${it.id}`,
-  name: `🪚 ${it.name}`,
-  category: 'handmade', // 不进商店的 category 页签（DECOR_CATEGORIES 里没有它）
-  price: null, // 不可金币购买：只能用手工品做
-  effect: Math.round((2 + (it.level - 1) * 0.1) * 10) / 10,
-  craftedFrom: { itemId: it.id, qty: 1 },
-  wood: it.wood,
-}))
+export const CRAFTED_DECOR = [
+  // 木柴堆（2026-09-25 用户拍板）：**直接吃「木材」×10** 的手工装潢 —— 给采摘附产（50%）的
+  // 无限木材一个**限流消耗口**（每档一次、全场效果最低，不会变成刷钱管线）。
+  // ⚠️ 放在数组最前（effect 1.5 < 木碗架 2.0），保住「手工装潢效果严格递增」的守卫不变量；
+  // 它不是木器（woodPile 不进 WOODWORK_ITEMS_DEF），是唯一一条吃基础木材的手工装潢。
+  {
+    id: 'decor_hand_woodPile',
+    name: '🪚 木柴堆',
+    category: 'handmade',
+    price: null,
+    effect: 1.5,
+    craftedFrom: { itemId: 'wood', qty: 10 },
+  },
+  ...WOODWORK_ITEMS_DEF.map((it) => ({
+    id: `decor_hand_${it.id}`,
+    name: `🪚 ${it.name}`,
+    category: 'handmade', // 不进商店的 category 页签（DECOR_CATEGORIES 里没有它）
+    price: null, // 不可金币购买：只能用手工品做
+    effect: Math.round((2 + (it.level - 1) * 0.1) * 10) / 10,
+    craftedFrom: { itemId: it.id, qty: 1 },
+    wood: it.wood,
+  })),
+]
 
 /** 木工物品（合并进 ITEMS） */
 export const WOODWORKING_ITEMS = WOODWORK_ITEMS_DEF.map((it) => ({

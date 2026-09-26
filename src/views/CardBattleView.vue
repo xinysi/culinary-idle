@@ -141,7 +141,7 @@ function doCardBattle() {
             <span class="cb-type">{{ getItem(id)?.type === 'food' ? '🍽 料理' : '⚒ 装备' }}</span>
             <span class="cb-power">⚔ {{ cardStrengthText(id) }}</span>
           </div>
-          <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-card-img" @error="$event.target.style.display = 'none'" alt="" />
+          <img v-if="itemImage(id)" :src="itemImage(id)" class="item-img item-card-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
           <div class="item-card-name">{{ getItem(id)?.name }}</div>
           <div class="dim">{{ CATEGORY_LABEL[getItem(id)?.category] ?? getItem(id)?.category ?? '' }}</div>
           <div class="mono dim">T{{ getItem(id)?.tier }}</div>

@@ -157,8 +157,7 @@ const ringName = (t) => RING_NAME[t - 1] ?? `第 ${t} 环`
             class="sh-panel-icon"
             :src="panelIcon"
             alt=""
-            @error="$event.target.style.visibility = 'hidden'"
-          />
+            @error="$event.target.style.visibility = 'hidden'" loading="lazy" decoding="async" />
           <span v-else class="sh-panel-icon">{{ pickedState.icon }}</span>
           <div class="sh-panel-title">
             <strong>{{ pickedState.name }}</strong>

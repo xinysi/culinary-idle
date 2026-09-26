@@ -1,3 +1,4 @@
+import { tunerOver } from './tuner.js'
 // 制作材料成本的全局系数（2026-09-21）——**唯一出口**
 //
 // 起因（用户要求）：「砍一点，然后增加所需材料数量」——提高配方所需材料数量，让「挂机收原料」
@@ -30,7 +31,7 @@ export const MATERIAL_COST_MULT = 2
 export function materialQty(raw) {
   const n = Number(raw)
   if (!Number.isFinite(n) || n <= 0) return 0
-  return Math.max(1, Math.round(n * MATERIAL_COST_MULT))
+  return Math.max(1, Math.round(n * tunerOver('materialCost', MATERIAL_COST_MULT, 1, 8)))
 }
 
 /** 生效材料表 `{ itemId: qty }`（纯函数：**不改动传进来的配方对象**，返回值每次都是新对象） */

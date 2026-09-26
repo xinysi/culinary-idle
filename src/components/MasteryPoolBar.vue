@@ -118,7 +118,7 @@ function doSpend() {
 }
 .mp-pct {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-strong); /* 2026-09-26：主色当文字压在浅底上 3.72 < 4.5，改用深档（5.19）*/
 }
 .mp-bar {
   height: 8px;

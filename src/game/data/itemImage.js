@@ -35,8 +35,9 @@ export function itemImage(id) {
   if (!it) return null
   // 显式指定图片（如保鲜/增益剂复用旧图）
   if (it.image) return assetUrl(it.image)
-  // 所有种子统一使用 🌱 占位图（原 15 张真实种子图也一并替换，保持视觉统一）
-  if (it.type === 'seed') return 'images/items/seed/_seed.png'
+  // 种子：专属图优先（public/images/items/seed/{中文名}.png），缺失时由 ItemImg 的
+  // @error 回落到通用 🌱 占位图 _seed.png —— 渐进配图，没配完图前不破相。
+  if (it.type === 'seed') return assetUrl(`images/items/seed/${encodeURIComponent(it.name)}.png`)
   const dir = TYPE_DIR[it.type]
   if (!dir) return null
   // 食灵名称带「·采耕Ⅰ」等后缀，图片文件名用基础名（去掉 · 后缀），否则匹配不到实际图片

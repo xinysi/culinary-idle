@@ -30,13 +30,15 @@ const devFiles = [
   'src/game/dev/devFlag.js',
   'src/game/dev/devAuth.js',
   'src/game/dev/devTools.js',
+  'src/game/dev/devProbe.js',
   'src/game/dev/saveInspector.js',
   'src/game/dev/telemetry.js',
   'src/game/dev/hash.js',
   'src/components/DevPanel.vue',
+  'src/components/TunerPanel.vue',
   'src/components/DevEntry.vue',
 ]
-check('A1. 开发者模块齐备（8 个文件）', devFiles.every((f) => fs.existsSync(path.join(ROOT, f))), devFiles.filter((f) => !fs.existsSync(path.join(ROOT, f))).join(','))
+check('A1. 开发者模块齐备（10 个文件）', devFiles.every((f) => fs.existsSync(path.join(ROOT, f))), devFiles.filter((f) => !fs.existsSync(path.join(ROOT, f))).join(','))
 const allSrc = devFiles.map((f) => read(f)).join('\n') + read('src/App.vue') + read('src/components/SplashScreen.vue')
 for (const m of MARKERS) {
   check(`A2. 源码里含标记「${m}」`, allSrc.includes(m))
@@ -51,8 +53,14 @@ const appSrc = stripCommentsSafe(read('src/App.vue'))
 check('B2. App.vue 用 DEV_PANEL_ENABLED 三元门控 DevEntry 的动态 import（否则面板代码会一直打进产物）',
   /DEV_PANEL_ENABLED\s*\?\s*defineAsyncComponent\(\(\)\s*=>\s*import\(/.test(appSrc.replace(/\s+/g, ' ')) ||
   /DEV_PANEL_ENABLED \? defineAsyncComponent\(\(\) => import\(/.test(appSrc.replace(/\s+/g, ' ')))
-check('B3. 面板挂在**根级**（不能放进 .app-layout，否则启动页阶段不渲染）',
-  /<\/div>\s*\n\s*<!-- 开发者入口与面板[\s\S]{0,400}?<DevEntry v-if="DevEntry" \/>/.test(read('src/App.vue')))
+check('B3. 入口与页面挂在**根级**（整页接管：覆盖在游戏/启动页之上，不嵌进游戏壳）',
+  /<\/div>\s*\n\s*<!-- 内部入口与两个页面[\s\S]{0,400}?<DevEntry v-if="DevEntry" \/>/.test(read('src/App.vue')))
+check('B6. App.vue 不得引用 DevPanel（页面代码只能经 DevEntry 进入，随 DevEntry 一起被构建剥离）',
+  !/DevPanel/.test(read('src/App.vue')), 'App.vue 出现 DevPanel 引用会让面板代码进主包/产物')
+check('B7. DevEntry 根级挂载页面本体（ui.showDevPanel 整页接管）',
+  /<DevPanel v-if="ui\.showDevPanel" \/>/.test(read('src/components/DevEntry.vue')))
+check('B8. TunerPanel 只被 DevEntry 引用（运营调参页与面板同批剥离，App.vue 不得出现）',
+  /<TunerPanel v-if="ui\.showTunerPanel" \/>/.test(read('src/components/DevEntry.vue')) && !/TunerPanel/.test(read('src/App.vue')))
 check('B4. 启动页入口用连点标题（不放可见按钮）',
   /@click="tapTitle\(\)"/.test(read('src/components/SplashScreen.vue')) && !/dev-entry-btn/.test(allSrc))
 check('B5. 已登录不重复问口令（统一走 requestDevEntry）',
@@ -62,7 +70,7 @@ check('B5. 已登录不重复问口令（统一走 requestDevEntry）',
 console.log('\n── C. 冻结数据：面板只改存档，不改 src/game/data/* ──')
 // 「固定数据铁律」的那几层：面板只能读它们来填列表，**不能写**
 const DATA_WRITE = /^\s*(ITEMS|SEASONS|COMBAT_REGIONS|COMBAT_BOSSES|AOJIS|SPIRITS|SPIRIT_TIERS|EXPLORATION_TARGETS_ALL|SHANHAI_NODES|DAO_NODES|INSIGHT_NODES|ALL_ACHIEVEMENTS)\s*(\[[^\]]*\]\s*=|\.\s*(push|splice|sort|pop|shift|unshift)\()/m
-for (const f of ['src/game/dev/devTools.js', 'src/game/dev/saveInspector.js', 'src/game/dev/telemetry.js', 'src/components/DevPanel.vue']) {
+for (const f of ['src/game/dev/devTools.js', 'src/game/dev/devProbe.js', 'src/game/dev/saveInspector.js', 'src/game/dev/telemetry.js', 'src/components/DevPanel.vue', 'src/components/TunerPanel.vue']) {
   const s = stripCommentsSafe(read(f))
   check(`C1. ${path.basename(f)} 不写冻结数据（无「对数据数组赋值/push」）`, !DATA_WRITE.test(s))
 }

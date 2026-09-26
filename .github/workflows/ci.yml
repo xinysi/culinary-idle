@@ -89,7 +89,7 @@ jobs:
       # 布局守卫（2026-09-18 立）：全页面扫描「控件被 overflow 裁掉而点不到」（炼金页固定行高
       # 把「融合」按钮切出卡外过）与「文字被挤成逐字竖排」（窄屏强排多列 + 宽表不横滑过）。
       # 1440px 与 390px 各扫一轮，故单独一步、超时放宽。
-      - name: E2E（流程 9 项 + 深色配色体检 + 标签裸露扫描 + 皮肤与音频 + 布局守卫 + 交互守卫）
+      - name: E2E（流程 + 深色配色体检 + 标签裸露扫描 + 皮肤与音频 + 布局守卫 + 交互守卫 + 小游戏烟雾 + 控件主题化 + 角色权限）
         run: |
           npm run dev &
           for i in $(seq 1 30); do
@@ -106,3 +106,12 @@ jobs:
           # （玩家报「对决，敌人的掉落看不到了」= CombatView 漏声明 dropModal）。
           # 页面清单含全部 38 个技能页 —— 对决的 6 个 combat 技能此前从未被任何扫描覆盖。
           npx playwright test e2e-interact.spec.mjs
+          # 小游戏逐局烟雾（2026-09-25 立）：27 款逐款进大厅 / 开局 / 跑 2 秒抓运行期报错。
+          npx playwright test e2e-minigame.spec.mjs
+          # 控件主题化守卫（2026-09-25 立）：全站 input/select/textarea 三遍（浅/深/窄屏）
+          # 抓「裸浏览器控件」白岛（制作数量弹窗是裸滑块那次的回归防线）。
+          npx playwright test e2e-controls.spec.mjs
+          # 角色权限守卫（2026-09-25 立）：四档角色（试玩 / 玩家 / 运营调参员 / 开发者）逐身份登录，
+          # 断「只能拿到自己那一页」——调参员开不出开发者页、调参页里没有任何存档类控件。
+          npx playwright test e2e-roles.spec.mjs
+

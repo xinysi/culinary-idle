@@ -12,7 +12,7 @@
   --card: #fffdf9;
   --border: #dcc6b1;
   --good: #57a861;
-  --good-strong: #3a7f45;
+  --good-strong: #326e3b;
   --good-soft: #e2f0e2;
   --warn: #e08c0e;
   --warn-strong: #bf7200;
@@ -31,7 +31,8 @@
   --sidebar-bg: #f5e6d5;
   --bg-soft: #fffaf4;
   --gold: #a8780b;
-  --muted: #7a6f68;
+  --gold-strong: #8a6209; /* 金色深档：浅色下压在金光底上的文字（实测 3.78 → 4.5+）*/
+  --muted: #6e645c; /* 2026-09-26：原 #7a6f68 压在卡片底(#f0eae2)上实测 4.09 < 4.5；压深到 4.83（DOM 对比度审计 light_dom_contrast.mjs）*/
   --lock-bg: #f0eae2;
   --scrollbar: #d2b294;
   --mono: 'Roboto Mono', Consolas, 'Courier New', monospace;
@@ -141,6 +142,40 @@ body {
   line-height: 1.5;
 }
 
+/* ── 表单控件全局基线（2026-09-25）──
+   起因：QuantityModal 是裸浏览器控件（用户报「样式没有适配」）⇒ 全页排查发现 25 select /
+   11 number / 5 range 散落在各页「主题容器（.settings-body/.bgm-vol/.bd-qty）之外」。
+   这里用 **:where()（零优先级）** 只兜底没有自己样式的控件：任何已有主题规则
+   （.dev-input/.qty-input/.settings-body …）优先级都更高，零覆盖风险。
+   ⚠️ 只设 background-**color**（绝不能用 background 简写——会重置容器们画的
+   background-image，深色段 4738 的 !important 简写就是前科）；**不动 appearance**——
+   原生下拉箭头/滑块由 UA 绘制，随下面 color-scheme 自动深浅，箭头样式不必每容器自画。
+   深色由 token 自动跟随；range/checkbox 的 accent 走 --primary（15 皮肤各自带色）。
+   守卫：e2e-controls.spec.mjs（深色白岛 / 浅色纯白裸控件 / 原生 accent，三遍扫描）。 */
+:where(input[type='range']),
+:where(input[type='checkbox']),
+:where(input[type='radio']) {
+  accent-color: var(--primary);
+}
+:where(select),
+:where(input:not([type='checkbox']):not([type='range']):not([type='radio']):not([type='file']):not([type='submit']):not([type='button'])),
+:where(textarea) {
+  background-color: rgba(var(--panel-rgb), 0.9);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 .mono {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
@@ -204,6 +239,25 @@ body {
 }
 
 /* 主按钮区与右侧固定组之间的弹性空间：翻页导致按钮数量变化时，右组位置不动 */
+/* 游客 / 试玩徽章（2026-09-24）：常驻在顶栏第一格，明确当前是「只读会话」。
+   不进 .top-nav-main（那个容器会横向滚动，徽章会被滚走）；配色走 warn 语义底，两套主题都有定义。 */
+.top-nav-guest {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--warn-strong);
+  background: var(--warn-soft);
+  /* ⚠️ 文字用 `--bad-strong`：`--warn-strong`（浅色 #bf7200）压 `--warn-soft` 实测 3.3:1，
+     12px 小字不达标（与 SavePanel 的横幅同一个坑，AGENTS 记过）。 */
+  color: var(--bad-strong);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
 /* 主按钮区（2026-09-11 从 .top-nav 拆出）：自己横向滚动兜底，右侧组不再被一起推走 */
 .top-nav-main {
   display: flex;
@@ -668,16 +722,18 @@ h2 {
   cursor: not-allowed;
 }
 
+/* 🔴 浅色（基础规则）：底色用**不透明的主色深档**。
+   原先 `rgba(--primary-tint, .78)` 是「淡橙底 + 白字」，15 套皮肤实测 2.66~4.37 —— **全不达标**
+   （白字压 `--primary-strong` 是 5.18~9.81，见 scripts/dev/_light_contrast_audit.mjs）。
+   顺带去掉了 backdrop-filter：底色已经不透明，模糊只是白付合成代价（与 2026-09-23 那轮清模糊同口径）。 */
 .btn-primary {
-  background: rgba(var(--primary-tint-rgb), 0.78);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--primary-strong);
   border-color: rgba(var(--glass-rgb), 0.5);
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-strong);
+  background: var(--primary-deep);
   color: #fff;
 }
 
@@ -710,7 +766,8 @@ h2 {
 .badge {
   display: inline-block;
   background: var(--primary-soft);
-  color: var(--primary-strong);
+  /* 浅色：#primary-soft 是浅色彩底，压在上面的字用最深档才够（实测 4.13~4.27）*/
+  color: var(--primary-deep);
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 12px;
@@ -823,7 +880,9 @@ h2 {
   font-family: var(--mono);
   font-size: 15px;
   font-weight: 700;
-  color: var(--gold);
+  /* ⚠️ 用 gold-strong 而不是 gold：压在金光底(rgba 212,168,62,.16)上实测 3.42 < 4.5；
+     该 token 的注释写明就是为「浅色下压在金光底上的文字」造的（深色块另有亮金值）*/
+  color: var(--gold-strong);
   background: rgba(212, 168, 62, 0.16);
   border: 1px solid rgba(212, 168, 62, 0.4);
   border-radius: 6px;
@@ -873,10 +932,13 @@ h2 {
   border-color: rgba(var(--primary-tint-rgb), 0.45);
 }
 
+/* 浅色：底色是本皮肤主色的 25% 淡彩，文字必须用**最深档** `--primary-deep`
+   （用 `--primary-strong` 实测琥珀/姜黄/樱花三套只有 3.89~4.42，不达标）。
+   深色下由 `html[data-theme='dark'] .sidebar-tab.active` 改回 `--on-primary-tint-2`，不受影响。 */
 .sidebar-tab.active {
   background: rgba(var(--primary-tint-rgb), 0.25);
   border-color: rgba(var(--primary-tint-rgb), 0.55);
-  color: var(--primary-strong);
+  color: var(--primary-deep);
 }
 
 .skill-nav {
@@ -962,10 +1024,11 @@ h2 {
   transform: translateY(-2px);
 }
 
+/* 浅色：同 .sidebar-tab.active（深色另有覆盖），实测「🧩功能」磁贴 3.82 → 4.5+ */
 .feature-tile.active {
   background: rgba(var(--primary-tint-rgb), 0.25);
   border-color: rgba(var(--primary-tint-rgb), 0.55);
-  color: var(--primary-strong);
+  color: var(--primary-deep);
 }
 
 .feature-tile .feature-icon {
@@ -1460,6 +1523,12 @@ h2 {
   padding: 8px 12px;
   max-width: 220px;
 }
+
+/* 🔴 主色底（btn-primary）里的 `.dim` 一律改浅色（2026-09-24）：
+   `--text-dim` 是给**浅色面板**标定的深棕，压在主色底（中间调）上实测只有 **1.32:1**。
+   原先只有 `.style-btn` 这一类做了处理，于是「攻略的阶段标签」「按钮里的计数」等在浅色下糊成一片。
+   白 86% 压主色深档实测 5.6:1，深浅两主题都成立（深色的 btn-primary 也是中间调主色底）。 */
+.btn-primary .dim { color: rgba(255, 255, 255, 0.95); }
 
 /* 选中风格（btn-primary 主色底）时，描述用白色高对比，保证可读 */
 .style-btn.btn-primary .dim {
@@ -1974,7 +2043,9 @@ h2 {
 .era-name {
   white-space: nowrap;
   font-weight: 600;
-  color: var(--primary);
+  /* 浅色：底是 10% 主色淡彩，`--primary` 压上去实测 3.17~3.99（阈值 4.5）⇒ 用最深档；
+     深色由下方 `html[data-theme='dark'] .era-name` 覆盖为 `--on-primary-tint`，不受影响。 */
+  color: var(--primary-deep);
   background: rgba(var(--primary-rgb), 0.1);
   border-radius: 6px;
   padding: 1px 7px;
@@ -2016,10 +2087,14 @@ html[data-theme='dark'] .era-name {
   border-color: var(--border);
 }
 
-.gather-card.locked .gather-card-head strong,
+.gather-card.locked .gather-card-head strong {
+  color: var(--muted);
+}
+/* 未解锁卡的行文本原为 --muted：浅色下实测 4.09（阈值 4.5，12px 小字）⇒ 用 --text-dim。
+   未解锁的区分由锁角标与上面那一行承担，不靠把元信息压到看不清（2026-09-24）。 */
 .gather-card.locked .gather-card-row,
 .gather-card.locked .gather-card-row .mono {
-  color: var(--muted);
+  color: var(--text-dim);
 }
 
 /* 未解锁目标：锁角标 */
@@ -2053,7 +2128,7 @@ html[data-theme='dark'] .era-name {
   gap: 6px;
   min-width: 0;
   font-size: 12px;
-  color: var(--dim);
+  color: var(--text-dim); /* 原为 var(--dim) —— 该 token 全项目未定义，声明静默失效、颜色一直是继承来的（2026-09-24 修）*/
 }
 
 /* 行内文字允许收缩/换行，避免长值把卡片撑宽导致被主区域 overflow 裁剪 */
@@ -2209,7 +2284,7 @@ html[data-theme='dark'] .era-name {
 }
 .loot-text {
   font-size: 12px;
-  color: var(--dim);
+  color: var(--text-dim); /* 原为 var(--dim) —— 该 token 全项目未定义，声明静默失效、颜色一直是继承来的（2026-09-24 修）*/
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -2434,6 +2509,7 @@ html[data-theme='dark'] .era-name {
   max-height: 86vh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(40, 20, 10, 0.35);
+  scrollbar-gutter: stable;   /* 弹窗内滚动条出现时不顶动内容宽度 */
 }
 
 .modal-head {
@@ -3271,7 +3347,7 @@ html[data-theme='dark'] .era-name {
 
 .gather-card.shop-card .gather-card-row {
   font-size: 12px;
-  color: var(--dim);
+  color: var(--text-dim); /* 原为 var(--dim) —— 该 token 全项目未定义，声明静默失效、颜色一直是继承来的（2026-09-24 修）*/
 }
 
 .gather-card.shop-card .btn {
@@ -4385,7 +4461,7 @@ html[data-theme='dark'] .head-strips {
 .spirit-cell.selected { border: 2px solid var(--primary); box-shadow: 0 2px 6px rgba(var(--tint-deep-rgb), 0.16); }
 /* 未拥有标识 */
 /* ⚠️ 2026-09-18 修：这里原先是写死的棕 `#8a6a4a`（**不跟主题**）——深色下对比度只有 **2.95:1**（WCAG AA 要求 4.5），
-   「未拥有」三个字在深色里几乎看不清。改用既有的语义色 `--muted`（浅 `#7a6f68` / 深 `#bfa98f` ⇒ 深色 6.5:1）。
+   「未拥有」三个字在深色里几乎看不清。改用既有的语义色 `--muted`（浅 `#6e645c` / 深 `#bda173` ⇒ 深色 6.5:1）。
    它是**食灵阁**（`skill:spiritSummoning`）与美食知识页上的锁标，此前没被发现是因为这两个技能页从没进过扫描清单。 */
 .badge.badge-locked { background: rgba(var(--tint-rgb), 0.14); color: var(--muted); border: 1px dashed rgba(var(--tint-rgb), 0.4); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
 /* 翻页按钮固定在底部（不随内容移动） */
@@ -4477,8 +4553,8 @@ html[data-theme='dark'] {
   --primary: #e0704a;
   --primary-strong: #ff8a5e;
   --primary-soft: #3a241a;
-  --text: #f2e6d7;
-  --text-dim: #cfbaa5;
+  --text: #e8d3a0;
+  --text-dim: #cdb185;
   --bg: #1a120c;
   --card: #241a13;
   --border: rgba(232, 180, 95, 0.26);        /* 暖金描边（2026-09-10 用户要求：深色下统一金色边框） */
@@ -4500,7 +4576,7 @@ html[data-theme='dark'] {
   --good-rgb: 111, 191, 122;          /* = --good #6fbf7a */
   --warn-rgb: 240, 160, 51;           /* = --warn #f0a033 */
   --bad-rgb: 255, 106, 94;            /* = --bad #ff6a5e */
-  --muted: #bfa98f;
+  --muted: #bda173;
   --lock-bg: #2e2118;
   /* 调色板三元组·深色版（未列出的 token 沿用 :root，即两主题同值） */
   --primary-rgb: 224, 112, 74;
@@ -4525,7 +4601,7 @@ html[data-theme='dark'] .alchemy-card, html[data-theme='dark'] .eq-modal,
 html[data-theme='dark'] .gather-section, html[data-theme='dark'] .story-chapter, html[data-theme='dark'] .status-line,
 html[data-theme='dark'] .stat-line, html[data-theme='dark'] .quick-item {
   background: rgba(var(--panel-soft-rgb), 0.92);
-  color: #ecdcc8;
+  color: var(--text);
 }
 
 /* ── 按钮与页签（高特异度覆盖 .btn/.btn-sm/.region-tabs/.quick-nav）── */
@@ -4533,7 +4609,7 @@ html[data-theme='dark'] .btn, html[data-theme='dark'] .btn-sm, html[data-theme='
 html[data-theme='dark'] .btn-danger, html[data-theme='dark'] .region-tabs .btn, html[data-theme='dark'] .quick-nav .btn {
   background: rgba(56, 41, 30, 0.95);
   border-color: var(--border-strong);
-  color: #eadfca;
+  color: var(--text-dim);
 }
 html[data-theme='dark'] .btn-primary { background: rgba(var(--primary-rgb), 0.92); color: #fff; }
 html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92); color: #ffe9e4; }
@@ -4546,11 +4622,16 @@ html[data-theme='dark'] .app-main { background-color: rgba(var(--panel-rgb), 0.8
 html[data-theme='dark'] .top-nav { background: none; border-bottom-color: rgba(255, 236, 214, 0.12); }
 /* 窄屏「⋯」浮层在深色下也要有底（否则浮层内按钮悬空在壁纸上） */
 html[data-theme='dark'] .top-nav-right { background: rgba(32, 24, 18, 0.95); border-color: rgba(255, 236, 214, 0.16); }
-html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6); color: #e6d8c5; }
+html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6); color: var(--text-dim); }
 html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active {
   background: rgba(var(--primary-rgb), 0.34); color: var(--on-primary-tint-3); border-color: rgba(var(--primary-rgb), 0.7);
 }
-html[data-theme='dark'] .app-layout { background-image: url('../../public/images/bg-start-night.jpg'); }
+/* 深色壁纸：在夜景图之上压一层中性加深（2026-09-23 材质层第 ④ 步：把最底层推到近黑，
+   金边与羊皮纸字才有地方「跳出来」。中性黑叠加 = 不改皮肤色，任何皮肤都成立）。 */
+html[data-theme='dark'] .app-layout {
+  background-image: linear-gradient(rgba(16, 9, 5, .20), rgba(10, 6, 4, .34)),
+    url('../../public/images/bg-start-night.jpg');
+}
   html[data-theme='dark'] .main-scroll { background: none; }
 /* 深色主题换夜景版壁纸（2026-09-10）：主内容区 + 启动页都用 bg-start-night.jpg */
 /* 深色下主区不再自带图/压暗层（并入 .main-scroll 的羽化渐变，避免接缝出现第二道台阶） */
@@ -4565,24 +4646,49 @@ html[data-theme='dark'] .splash-overlay {
     rgba(var(--shadow-rgb), 0.45) 100%);
 }
 html[data-theme='dark'] .splash-title { color: #fff; text-shadow: 0 4px 18px rgba(var(--shadow-rgb), 0.75); }
-html[data-theme='dark'] .splash-sub { color: #ffe8d0; font-weight: 600; text-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.7); }
+html[data-theme='dark'] .splash-sub { color: var(--text); font-weight: 600; text-shadow: 0 2px 10px rgba(var(--shadow-rgb), 0.7); }
+/* 启动页两枚按钮换成磨砂玻璃之后（2026-09-25）：夜景壁纸之下**白玻璃会变成一块亮斑**
+   （实测：白 0.10 压在暖调夜景上，白字对比度只有 ~3:1）⇒ 深色下改用「暗玻璃 + 白字」，
+   与 .splash-title 的白字深色投影同一语言，也沿用夜景那层压暗用的 `--shadow-rgb`。
+   描边压到 0.22，在本项目那条「深色里白描边 ≥0.25 算过亮」的线以下。
+   （浅色那套配方在 SplashScreen.vue，两枚按钮共用一个选择器列表、只此一处出口。） */
+html[data-theme='dark'] .splash-start-btn,
+html[data-theme='dark'] .splash-guest-btn {
+  background: linear-gradient(180deg, rgba(var(--shadow-rgb), 0.44), rgba(var(--shadow-rgb), 0.3));
+  border-color: rgba(var(--glass-rgb), 0.22);
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(var(--shadow-rgb), 0.85);
+  box-shadow: 0 10px 26px rgba(var(--shadow-rgb), 0.45), inset 0 1px 0 rgba(var(--glass-rgb), 0.18);
+}
+html[data-theme='dark'] .splash-start-btn:hover,
+html[data-theme='dark'] .splash-guest-btn:hover {
+  background: linear-gradient(180deg, rgba(var(--shadow-rgb), 0.56), rgba(var(--shadow-rgb), 0.4));
+  border-color: rgba(var(--glass-rgb), 0.3);
+}
 /* （2026-09-11 重构后已废弃：深色侧栏不再用羽化渐变，面板底由 .app-sidebar/.app-status 的 background-color 提供） */
 
 /* ── 内部构件 ── */
-html[data-theme='dark'] .gather-section-title { background: rgba(56, 41, 30, 0.7); color: #ecdcc8; border-color: var(--border); }
+html[data-theme='dark'] .gather-section-title { background: rgba(56, 41, 30, 0.7); color: var(--text); border-color: var(--border); }
 html[data-theme='dark'] .item-cell { background: rgba(var(--panel-soft-rgb), 0.6); }
 html[data-theme='dark'] .ing { background: rgba(46, 32, 23, 0.7); color: #e0d0bc; border-color: var(--border); }
 html[data-theme='dark'] .spoil-item, html[data-theme='dark'] .log-card { background: rgba(var(--panel-soft-rgb), 0.6); }
-html[data-theme='dark'] .target-table th, html[data-theme='dark'] .target-table td { border-color: var(--border); color: #e2d3c0; }
+html[data-theme='dark'] .target-table th, html[data-theme='dark'] .target-table td { border-color: var(--border); color: var(--text-dim); }
 html[data-theme='dark'] .stat-num, html[data-theme='dark'] .stat-label { color: inherit; }
 
 /* ── 文字可读性 ── */
-html[data-theme='dark'] h2, html[data-theme='dark'] h3, html[data-theme='dark'] h4, html[data-theme='dark'] strong { color: #f6ead9; }
+html[data-theme='dark'] h2, html[data-theme='dark'] h3, html[data-theme='dark'] h4, html[data-theme='dark'] strong { color: var(--text); }
 html[data-theme='dark'] .dim { color: var(--text-dim); }
-html[data-theme='dark'] .mono { color: #f0e0c8; }
+html[data-theme='dark'] .mono { color: var(--text-dim); }
 html[data-theme='dark'] .battle-log { color: #d9c9b6; }
 html[data-theme='dark'] .log-list li { border-color: var(--border); }
 html[data-theme='dark'] .badge, html[data-theme='dark'] .badge-on { border-color: var(--border-strong); }
+/* 2026-09-24：浅色下这两处（同色相淡彩底上的字）改用了 --primary-deep（浅色专用深档），
+   深色必须改回原来的 token —— 否则深色里它们会变成 #7a2f16 深褐，压在深色底上等于消失。 */
+html[data-theme='dark'] .badge { color: var(--on-primary-tint-2); }
+/* 深色：`--primary-strong` 在「番茄」皮肤下压 14% 主色底只有 4.37（阈值 4.5）⇒ 用
+   「深色下主色淡彩底上的文字色」token（与 .badge / .era-name 同一口径）。*/
+html[data-theme='dark'] .newbie-count { color: var(--on-primary-tint-2); }
+html[data-theme='dark'] .bd-tab--on { color: var(--on-primary-tint-4); }
 /* 2026-09-18 修：`.badge-tier` 是 `--primary` 文字压在 `rgba(--primary-tint-rgb, 0.18)` 上，
    深色下实测 **4.26:1**（AA 要求 4.5，差一点）。深色改用既有的「淡彩底上的文字」token
    `--on-primary-tint-2`（#ffb08a，皮肤侧按主色推导）⇒ 8.2:1。浅色不受影响（仍用 --primary）。 */
@@ -4594,11 +4700,11 @@ html[data-theme='dark'] select,
 html[data-theme='dark'] textarea,
 html[data-theme='dark'] .plot-select {
   background: rgba(52, 38, 28, 0.95);
-  color: #f2e6d7;
+  color: var(--text);
   border-color: var(--border);
 }
 html[data-theme='dark'] input[type='range'] { accent-color: var(--primary); }
-html[data-theme='dark'] select option { background: #241a13; color: #f2e6d7; }
+html[data-theme='dark'] select option { background: #241a13; color: var(--text); }
 html[data-theme='dark'] input::placeholder { color: #b09478; }
 
 html[data-theme='dark'] .bag-detail,
@@ -4614,19 +4720,19 @@ html[data-theme='dark'] .cold-grid .item-cell,
 html[data-theme='dark'] .bag-grid .item-cell,
 html[data-theme='dark'] .item-grid .item-cell {
   background: rgba(var(--panel-soft-rgb), 0.92);
-  color: #ecdcc8;
+  color: var(--text);
 }
 html[data-theme='dark'] .spirit-cell {
   background: rgba(46, 32, 23, 0.78);
   border-color: var(--border);
-  color: #e8dccb;
+  color: var(--text-dim);
 }
 html[data-theme='dark'] .spirit-cell.locked { background: rgba(30, 22, 16, 0.6); }
 html[data-theme='dark'] .spirit-cell.active { background: rgba(var(--primary-rgb), 0.24); border-color: rgba(var(--primary-rgb), 0.7); }
 html[data-theme='dark'] .progress-bar, html[data-theme='dark'] .progress-bar-bg { background: rgba(52, 38, 28, 0.7); }
 html[data-theme='dark'] .progress-bar-fill { background-image: linear-gradient(90deg, var(--primary), var(--primary-strong)); }
 html[data-theme='dark'] .menu-list .opp-row { background: rgba(var(--panel-soft-rgb), 0.9); }
-html[data-theme='dark'] .search-input, html[data-theme='dark'] .search-bar { background: rgba(52, 38, 28, 0.95); color: #f2e6d7; }
+html[data-theme='dark'] .search-input, html[data-theme='dark'] .search-bar { background: rgba(52, 38, 28, 0.95); color: var(--text); }
 html[data-theme='dark'] .pagination, html[data-theme='dark'] .pager-spacer { color: inherit; }
 html[data-theme='dark'] .tab-bar, html[data-theme='dark'] .status-tab { background: rgba(var(--panel-soft-rgb), 0.6); }
 
@@ -4636,20 +4742,21 @@ html[data-theme='dark'] .btn-sm,
 html[data-theme='dark'] .btn-primary,
 html[data-theme='dark'] .btn-danger,
 html[data-theme='dark'] .region-tabs .btn,
-html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !important; color: #eadfca !important; border-color: var(--border-strong) !important; }
+html[data-theme='dark'] .quick-nav .btn { background: rgba(56, 41, 30, 0.95) !important; color: var(--text-dim) !important; border-color: var(--border-strong) !important; }
 html[data-theme='dark'] .btn-primary { background: rgba(var(--primary-rgb), 0.92) !important; color: #fff !important; }
 html[data-theme='dark'] .btn-danger { background: rgba(190, 66, 56, 0.92) !important; color: #ffe9e4 !important; }
-html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6) !important; color: #e6d8c5 !important; }
+html[data-theme='dark'] .top-nav-btn, html[data-theme='dark'] .skill-item { background: rgba(46, 32, 23, 0.6) !important; color: var(--text-dim) !important; }
 html[data-theme='dark'] .top-nav-btn.active, html[data-theme='dark'] .skill-item.active { background: rgba(var(--primary-rgb), 0.34) !important; color: var(--on-primary-tint-3) !important; }
-html[data-theme='dark'] .card, html[data-theme='dark'] .modal, html[data-theme='dark'] .gather-card { background: rgba(var(--panel-soft-rgb), 0.92) !important; color: #ecdcc8 !important; }
-html[data-theme='dark'] .bag-detail, html[data-theme='dark'] .cold-pane, html[data-theme='dark'] .spirit-cell { background: rgba(var(--panel-soft-rgb), 0.9) !important; color: #ecdcc8 !important; }
-html[data-theme='dark'] .plot-select, html[data-theme='dark'] input, html[data-theme='dark'] select { background: rgba(52, 38, 28, 0.95) !important; color: #f2e6d7 !important; }
+html[data-theme='dark'] .card, html[data-theme='dark'] .modal, html[data-theme='dark'] .gather-card { background: rgba(var(--panel-soft-rgb), 0.92) !important; color: var(--text) !important; }
+html[data-theme='dark'] .bag-detail, html[data-theme='dark'] .cold-pane, html[data-theme='dark'] .spirit-cell { background: rgba(var(--panel-soft-rgb), 0.9) !important; color: var(--text) !important; }
+html[data-theme='dark'] .plot-select, html[data-theme='dark'] input, html[data-theme='dark'] select { background: rgba(52, 38, 28, 0.95) !important; color: var(--text) !important; }
 
 /* ── 深色主题 v5（2026-09-06）：补全遗漏变量（--bg-soft 等一律清零）+ 剩余白块 ── */
 html[data-theme='dark'] {
   --bg-soft: #2c1f16;
   --info: #6fa8dc;
   --gold: #e0b64f;
+  --gold-strong: #f0cd85; /* 深色：压金光底要用亮金 */
   --sidebar-bg: #241a13;
   --scrollbar: #6b4f3a;
   --lock-bg: #2e2118;
@@ -4666,7 +4773,7 @@ html[data-theme='dark'] .gather-section-header,
 html[data-theme='dark'] .stats-col,
 html[data-theme='dark'] .menu-list {
   background: rgba(44, 31, 22, 0.85) !important;
-  color: #e8dccb !important;
+  color: var(--text-dim) !important;
   border-color: var(--border) !important;
 }
 html[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #6b4f3a; }
@@ -4690,8 +4797,10 @@ html[data-theme='dark'] .menu-list .opp-row { background: rgba(44, 31, 22, 0.85)
 .app-sidebar { position: relative; z-index: 1; }
 
 /* ── 觅珍页暗色覆盖（组件 :global 规则迁移至此，html[data-theme=dark] 全局写法）── */
-html[data-theme='dark'] .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: var(--border); color: #e8dccb; }
+html[data-theme='dark'] .pool-mini { background: rgba(44, 31, 22, 0.85); border-color: var(--border); color: var(--text-dim); }
 html[data-theme='dark'] .pool-mini-name { color: rgb(var(--pc2)); }
+/* 与 MijianView 的浅色规则配对：深色下顶部统计卡的 .dim 用池色原值（浅色用的是深一档 --pct1）*/
+html[data-theme='dark'] .mijian-view .season-pts-card .dim { color: rgba(var(--pc1), 0.9); }
 html[data-theme='dark'] .pool-mini-price { color: rgba(var(--pc2), 0.65); }
 html[data-theme='dark'] .pool-mini.active {
   background: linear-gradient(135deg, rgba(var(--pc1), 0.28), rgba(var(--pc2), 0.32)), #3a2a18;
@@ -4725,8 +4834,8 @@ html[data-theme='dark'] .gacha-sim .sim-btn {
 }
 html[data-theme='dark'] .mijian-carousel { background: rgba(40, 29, 21, 0.96); }
 html[data-theme='dark'] .mijian-bg-track img { opacity: 0.85; }
-html[data-theme='dark'] .gacha-front { background: #2a1d15; color: #f2e6d7; border-color: rgba(var(--tsh1, 77, 58, 43), 0.5); }
-html[data-theme='dark'] .gacha-front-sub { color: #bfa98f; }
+html[data-theme='dark'] .gacha-front { background: #2a1d15; color: var(--text); border-color: rgba(var(--tsh1, 77, 58, 43), 0.5); }
+html[data-theme='dark'] .gacha-front-sub { color: var(--muted); }
 html[data-theme='dark'] .gacha-back { background: linear-gradient(150deg, var(--tlo1, #7a4a30), var(--tlo2, #3a2418)); }
 
 /* 制作队列暗色（2026-09-06） */
@@ -4843,7 +4952,7 @@ html[data-theme='dark'] .cb-first-bonus { color: #8fd39a; }
   border: 1px solid var(--border); border-radius: 8px;
   background: rgba(var(--panel-rgb), 0.9); color: var(--text);
 }
-html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: #f2e6d7; border-color: var(--border); }
+html[data-theme='dark'] .cb-filter-input { background: rgba(44, 31, 22, 0.85); color: var(--text); border-color: var(--border); }
 
 /* 顶部导航单行（2026-09-06）：隐藏自身横向滚动条 */
 .top-nav::-webkit-scrollbar { display: none; }
@@ -5023,7 +5132,7 @@ html[data-scale='110'] .spirit-wall { grid-template-columns: repeat(6, minmax(0,
 .mg-info-card ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
 .mg-info-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .mg-info-row:first-of-type { margin-top: 0; }
-html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
+html[data-theme='dark'] .mg-entry { background: rgba(44, 31, 22, 0.8); color: var(--text); border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-entry-on { background: rgba(var(--primary-rgb), 0.25); color: var(--on-primary-tint-2); border-color: var(--primary); }
 
 /* ── 折叠对照卡（2026-09-12 立）：放在页头下方，默认收起 ── */
@@ -5075,7 +5184,7 @@ html[data-theme='dark'] .mg-entry-on { background: rgba(var(--primary-rgb), 0.25
 .mg-wall-best { font-size: 12px; color: var(--primary-deep); }
 .mg-wall-plays { font-size: 11px; }
 .mg-wall-note { margin: 10px 0 0; font-size: 12px; line-height: 1.6; }
-html[data-theme='dark'] .mg-wall-item { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
+html[data-theme='dark'] .mg-wall-item { background: rgba(44, 31, 22, 0.8); color: var(--text); border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-wall-on { background: rgba(var(--primary-rgb), 0.25); border-color: var(--primary); }
 html[data-theme='dark'] .mg-wall-best { color: var(--on-primary-tint-2); }
 
@@ -5160,13 +5269,13 @@ html[data-theme='dark'] .mg-shell .gs-card, html[data-theme='dark'] .mg-shell .h
   background: rgba(38, 29, 22, 0.88);
   border-color: rgba(var(--tint-warm-rgb), 0.28);
 }
-html[data-theme='dark'] .mg-shell .gs-note { background: rgba(var(--amber-strong-rgb), 0.14); border-color: rgba(var(--amber-rgb), 0.4); color: #ecd9bd; }
+html[data-theme='dark'] .mg-shell .gs-note { background: rgba(var(--amber-strong-rgb), 0.14); border-color: rgba(var(--amber-rgb), 0.4); color: var(--text-dim); }
 html[data-theme='dark'] .mg-shell .g2048-board2 { background: rgba(88, 62, 44, 0.5); border-color: rgba(var(--tint-warm-rgb), 0.35); }
 html[data-theme='dark'] .mg-shell .pz-cell, html[data-theme='dark'] .mg-shell .mf-cell,
 html[data-theme='dark'] .mg-shell .mm-frontface, html[data-theme='dark'] .mg-shell .mm-backface {
   background: rgba(64, 50, 38, 0.92);
   border-color: rgba(var(--tint-warm-rgb), 0.25);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .g2048-slot { background: rgba(255, 251, 244, 0.12); border-color: rgba(var(--tint-warm-rgb), 0.2); }
 html[data-theme='dark'] .mg-shell .pz-cell.empty { background: transparent; border-color: transparent; }
@@ -5176,10 +5285,10 @@ html[data-theme='dark'] .mg-shell .hz-track {
   background: linear-gradient(90deg, #4a3a2c, #5c4936 30%, #5c4936 70%, #4a3a2c);
   box-shadow: inset 0 1px 4px rgba(var(--shadow-rgb), 0.45);
 }
-html[data-theme='dark'] .mg-shell .tv-opt { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.3); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .tv-opt { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.3); color: var(--text); }
 html[data-theme='dark'] .mg-shell .g2048-cell2 {
   background: rgba(84, 68, 52, 0.95) !important;
-  color: #f2e6d7 !important;
+  color: var(--text) !important;
 }
 html[data-theme='dark'] .mg-shell .g2048-cell2.v8 { background: #3a4a2c !important; }
 html[data-theme='dark'] .mg-shell .g2048-cell2.v16 { background: #43542e !important; }
@@ -5196,7 +5305,7 @@ html[data-theme='dark'] .mg-shell .pz-info-box, html[data-theme='dark'] .mg-shel
 html[data-theme='dark'] .mg-shell .mm-info-box {
   background: rgba(44, 35, 28, 0.96);
   border-color: rgba(var(--tint-warm-rgb), 0.4);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .hz-info-row, html[data-theme='dark'] .mg-shell .tv-info-row,
 html[data-theme='dark'] .mg-shell .g2048-info-row, html[data-theme='dark'] .mg-shell .fs-info-row,
@@ -5218,7 +5327,7 @@ html[data-theme='dark'] .mg-shell .g2048-info-close, html[data-theme='dark'] .mg
 html[data-theme='dark'] .mg-shell .pz-info-close, html[data-theme='dark'] .mg-shell .mf-info-close,
 html[data-theme='dark'] .mg-shell .mm-info-close {
   background: rgba(var(--tint-warm-rgb), 0.18);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .gs-buy:disabled { background: rgba(var(--panel-raised-rgb), 0.85); color: #8a7a66; }
 html[data-theme='dark'] .mg-shell .fs-tier { background: rgba(70, 54, 40, 0.8); color: #eeb17a; }
@@ -5232,7 +5341,7 @@ html[data-theme='dark'] .mg-shell .tv-opt.tv-wrong { background: rgba(217, 75, 6
 html[data-theme='dark'] .mg-shell .g2048-key {
   background: rgba(var(--panel-raised-rgb), 0.9);
   border-color: rgba(var(--tint-warm-rgb), 0.35);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .fs-progress {
   background: rgba(var(--amber-rgb), 0.18);
@@ -5267,13 +5376,13 @@ html[data-theme='dark'] .mg-shell .m3-cell {
 html[data-theme='dark'] .mg-shell .sn-key, html[data-theme='dark'] .mg-shell .pm-key {
   background: rgba(var(--panel-raised-rgb), 0.9);
   border-color: rgba(var(--tint-warm-rgb), 0.35);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .sn-info-box, html[data-theme='dark'] .mg-shell .pm-info-box,
 html[data-theme='dark'] .mg-shell .m3-info-box {
   background: rgba(44, 35, 28, 0.96);
   border-color: rgba(var(--tint-warm-rgb), 0.4);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .sn-info-row, html[data-theme='dark'] .mg-shell .pm-info-row,
 html[data-theme='dark'] .mg-shell .m3-info-row {
@@ -5289,7 +5398,7 @@ html[data-theme='dark'] .mg-shell .m3-info-rule {
 html[data-theme='dark'] .mg-shell .sn-info-close, html[data-theme='dark'] .mg-shell .pm-info-close,
 html[data-theme='dark'] .mg-shell .m3-info-close {
   background: rgba(var(--tint-warm-rgb), 0.18);
-  color: #f2e6d7;
+  color: var(--text);
 }
 
 /* ── 笨鸟先飞 深色适配（2026-09-08）── */
@@ -5307,7 +5416,7 @@ html[data-theme='dark'] .mg-shell .fb-canvas { border-color: rgba(var(--tint-war
 html[data-theme='dark'] .mg-shell .fb-info-box {
   background: rgba(44, 35, 28, 0.96);
   border-color: rgba(var(--tint-warm-rgb), 0.4);
-  color: #f2e6d7;
+  color: var(--text);
 }
 html[data-theme='dark'] .mg-shell .fb-info-row {
   background: rgba(var(--panel-hi-rgb), 0.9);
@@ -5320,7 +5429,7 @@ html[data-theme='dark'] .mg-shell .fb-info-rule {
 }
 html[data-theme='dark'] .mg-shell .fb-info-close {
   background: rgba(var(--tint-warm-rgb), 0.18);
-  color: #f2e6d7;
+  color: var(--text);
 }
 
 /* ── 选鸟按钮 深色适配（2026-09-08）── */
@@ -5338,10 +5447,10 @@ html[data-theme='dark'] .mg-shell .m10-mode.on { background: rgba(var(--primary-
 html[data-theme='dark'] .mg-shell .m10-board { border-color: rgba(201, 132, 43, 0.85); }
 html[data-theme='dark'] .mg-shell .m10-cell { background: rgba(244, 238, 226, 0.92); color: #26201a; }
 html[data-theme='dark'] .mg-shell .m10-cell.locked { background: rgba(120, 112, 98, 0.5); color: #a49a86; }
-html[data-theme='dark'] .mg-shell .m10-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .m10-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .m10-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .m10-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
 
 /* ── 商店头像框扩展（2026-09-09）：翡翠 / 皇紫 ── */
 .avatar-frame-jade { border: 3px solid #4f9e58 !important; box-shadow: 0 0 12px rgba(79, 158, 88, 0.65) !important; }
@@ -5370,7 +5479,7 @@ html[data-theme='dark'] .mg-shell .m10-info-close { background: rgba(var(--tint-
 .gather-card.title-equipped { border-color: var(--gold) !important; box-shadow: 0 0 12px rgba(168, 120, 11, 0.45); }
 .title-eq-badge { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(var(--amber-rgb), 0.25); color: var(--primary-strong); }
 .gather-card:not(.locked) { cursor: pointer; }
-html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: #f2e6d7; border-color: var(--border-strong); }
+html[data-theme='dark'] .mg-page-btn { background: rgba(44, 31, 22, 0.8); color: var(--text); border-color: var(--border-strong); }
 html[data-theme='dark'] .mg-entry-sep { background: rgba(var(--glass-rgb), 0.18); }
 
 /* ── 水果合成 深色适配（2026-09-09）── */
@@ -5381,10 +5490,10 @@ html[data-theme='dark'] .mg-shell .fm-mode, html[data-theme='dark'] .mg-shell .f
 }
 html[data-theme='dark'] .mg-shell .fm-mode.on { background: rgba(var(--primary-rgb), 0.3); border-color: rgba(var(--primary-rgb), 0.8); color: var(--on-primary-tint); }
 html[data-theme='dark'] .mg-shell .fm-canvas { border-color: rgba(var(--tint-warm-rgb), 0.35); }
-html[data-theme='dark'] .mg-shell .fm-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fm-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .fm-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .fm-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .fm-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fm-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
 
 /* ── 果了个果 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .gg-mode, html[data-theme='dark'] .mg-shell .gg-chip {
@@ -5396,10 +5505,10 @@ html[data-theme='dark'] .mg-shell .gg-mode.on { background: rgba(var(--primary-r
 html[data-theme='dark'] .mg-shell .gg-stage { background: rgba(38, 29, 22, 0.88); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .gg-slot { background: rgba(255, 251, 244, 0.08); border-color: rgba(var(--tint-warm-rgb), 0.25); }
 html[data-theme='dark'] .mg-shell .gg-card { background: rgba(244, 238, 226, 0.94); border-color: rgba(var(--tint-warm-rgb), 0.3); }
-html[data-theme='dark'] .mg-shell .gg-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .gg-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .gg-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .gg-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .gg-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .gg-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
 
 /* ── 垂钓渔翁 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .fh-mode, html[data-theme='dark'] .mg-shell .fh-chip {
@@ -5409,12 +5518,12 @@ html[data-theme='dark'] .mg-shell .fh-mode, html[data-theme='dark'] .mg-shell .f
 }
 html[data-theme='dark'] .mg-shell .fh-mode.on { background: rgba(var(--primary-rgb), 0.3); border-color: rgba(var(--primary-rgb), 0.8); color: var(--on-primary-tint); }
 html[data-theme='dark'] .mg-shell .fh-canvas { border-color: rgba(var(--tint-warm-rgb), 0.35); }
-html[data-theme='dark'] .mg-shell .fh-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fh-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .fh-caught-item { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.3); }
-html[data-theme='dark'] .mg-shell .fh-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fh-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .fh-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .fh-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .fh-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fh-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
 
 /* ── 切菜大师/打地鼠/摆盘/接汤/传菜/方块/扫雷/滑冰 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .sk-mode, html[data-theme='dark'] .mg-shell .wk-mode, html[data-theme='dark'] .mg-shell .sl-mode, html[data-theme='dark'] .mg-shell .pp-mode, html[data-theme='dark'] .mg-shell .dn-mode, html[data-theme='dark'] .mg-shell .tt-mode, html[data-theme='dark'] .mg-shell .ms-mode, html[data-theme='dark'] .mg-shell .ic-mode,
@@ -5425,7 +5534,7 @@ html[data-theme='dark'] .mg-shell .sk-stage, html[data-theme='dark'] .mg-shell .
 html[data-theme='dark'] .mg-shell .sl-stage, html[data-theme='dark'] .mg-shell .pp-stage, html[data-theme='dark'] .mg-shell .dn-stage, html[data-theme='dark'] .mg-shell .ms-stage { background: rgba(38, 29, 22, 0.88); }
 html[data-theme='dark'] .mg-shell .ic-stage { background: linear-gradient(135deg, rgba(38, 58, 74, 0.82), rgba(26, 42, 56, 0.78)); }
 html[data-theme='dark'] .mg-shell .sl-tile, html[data-theme='dark'] .mg-shell .pp-cell, html[data-theme='dark'] .mg-shell .ms-cell, html[data-theme='dark'] .mg-shell .dn-cust,
-html[data-theme='dark'] .mg-shell .dn-order, html[data-theme='dark'] .mg-shell .dn-slot, html[data-theme='dark'] .mg-shell .sl-preview-cell { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.25); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .dn-order, html[data-theme='dark'] .mg-shell .dn-slot, html[data-theme='dark'] .mg-shell .sl-preview-cell { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.25); color: var(--text); }
 html[data-theme='dark'] .mg-shell .ms-cell.open { background: rgba(48, 38, 30, 0.9); border-color: rgba(var(--tint-warm-rgb), 0.18); }
 html[data-theme='dark'] .mg-shell .ms-cell.flag { background: rgba(110, 60, 60, 0.85); }
 html[data-theme='dark'] .mg-shell .ms-cell.boom { background: rgba(180, 70, 60, 0.9); }
@@ -5450,14 +5559,14 @@ html[data-theme='dark'] .mg-shell .ic-tile.rock { background: linear-gradient(13
 html[data-theme='dark'] .mg-shell .ic-tile.hole { background: rgba(18, 30, 40, 0.75); border-color: rgba(12, 22, 30, 0.85); }
 html[data-theme='dark'] .mg-shell .ic-order { color: #ff9a7a; }
 html[data-theme='dark'] .mg-shell .ic-dir { background: linear-gradient(135deg, #5f93b5, #3d7089); }
-html[data-theme='dark'] .mg-shell .sk-info-box, html[data-theme='dark'] .mg-shell .wk-info-box, html[data-theme='dark'] .mg-shell .sl-info-box, html[data-theme='dark'] .mg-shell .pp-info-box, html[data-theme='dark'] .mg-shell .dn-info-box, html[data-theme='dark'] .mg-shell .tt-info-box, html[data-theme='dark'] .mg-shell .ms-info-box, html[data-theme='dark'] .mg-shell .ic-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .sk-info-box, html[data-theme='dark'] .mg-shell .wk-info-box, html[data-theme='dark'] .mg-shell .sl-info-box, html[data-theme='dark'] .mg-shell .pp-info-box, html[data-theme='dark'] .mg-shell .dn-info-box, html[data-theme='dark'] .mg-shell .tt-info-box, html[data-theme='dark'] .mg-shell .ms-info-box, html[data-theme='dark'] .mg-shell .ic-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .sk-info-row, html[data-theme='dark'] .mg-shell .wk-info-row, html[data-theme='dark'] .mg-shell .sl-info-row, html[data-theme='dark'] .mg-shell .pp-info-row, html[data-theme='dark'] .mg-shell .dn-info-row, html[data-theme='dark'] .mg-shell .tt-info-row, html[data-theme='dark'] .mg-shell .ms-info-row, html[data-theme='dark'] .mg-shell .ic-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .sk-info-rule, html[data-theme='dark'] .mg-shell .wk-info-rule, html[data-theme='dark'] .mg-shell .sl-info-rule, html[data-theme='dark'] .mg-shell .pp-info-rule, html[data-theme='dark'] .mg-shell .dn-info-rule, html[data-theme='dark'] .mg-shell .tt-info-rule, html[data-theme='dark'] .mg-shell .ms-info-rule, html[data-theme='dark'] .mg-shell .ic-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .sk-info-close, html[data-theme='dark'] .mg-shell .wk-info-close, html[data-theme='dark'] .mg-shell .sl-info-close, html[data-theme='dark'] .mg-shell .pp-info-close, html[data-theme='dark'] .mg-shell .dn-info-close, html[data-theme='dark'] .mg-shell .tt-info-close, html[data-theme='dark'] .mg-shell .ms-info-close, html[data-theme='dark'] .mg-shell .ic-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
-html[data-theme='dark'] .mg-shell .sk-result, html[data-theme='dark'] .mg-shell .wk-result, html[data-theme='dark'] .mg-shell .sl-result, html[data-theme='dark'] .mg-shell .pp-result, html[data-theme='dark'] .mg-shell .dn-result, html[data-theme='dark'] .mg-shell .tt-result, html[data-theme='dark'] .mg-shell .ms-result, html[data-theme='dark'] .mg-shell .ic-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .sk-info-close, html[data-theme='dark'] .mg-shell .wk-info-close, html[data-theme='dark'] .mg-shell .sl-info-close, html[data-theme='dark'] .mg-shell .pp-info-close, html[data-theme='dark'] .mg-shell .dn-info-close, html[data-theme='dark'] .mg-shell .tt-info-close, html[data-theme='dark'] .mg-shell .ms-info-close, html[data-theme='dark'] .mg-shell .ic-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
+html[data-theme='dark'] .mg-shell .sk-result, html[data-theme='dark'] .mg-shell .wk-result, html[data-theme='dark'] .mg-shell .sl-result, html[data-theme='dark'] .mg-shell .pp-result, html[data-theme='dark'] .mg-shell .dn-result, html[data-theme='dark'] .mg-shell .tt-result, html[data-theme='dark'] .mg-shell .ms-result, html[data-theme='dark'] .mg-shell .ic-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 
 /* ── 12 款老游戏结算卡深色适配（2026-09-09）── */
-html[data-theme='dark'] .mg-shell .fm-result, html[data-theme='dark'] .mg-shell .tv-result, html[data-theme='dark'] .mg-shell .g2048-result, html[data-theme='dark'] .mg-shell .fs-result, html[data-theme='dark'] .mg-shell .pz-result, html[data-theme='dark'] .mg-shell .mf-result, html[data-theme='dark'] .mg-shell .mm-result, html[data-theme='dark'] .mg-shell .sn-result, html[data-theme='dark'] .mg-shell .pm-result, html[data-theme='dark'] .mg-shell .m3-result, html[data-theme='dark'] .mg-shell .fb-result, html[data-theme='dark'] .mg-shell .m10-result, html[data-theme='dark'] .mg-shell .gg-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .fm-result, html[data-theme='dark'] .mg-shell .tv-result, html[data-theme='dark'] .mg-shell .g2048-result, html[data-theme='dark'] .mg-shell .fs-result, html[data-theme='dark'] .mg-shell .pz-result, html[data-theme='dark'] .mg-shell .mf-result, html[data-theme='dark'] .mg-shell .mm-result, html[data-theme='dark'] .mg-shell .sn-result, html[data-theme='dark'] .mg-shell .pm-result, html[data-theme='dark'] .mg-shell .m3-result, html[data-theme='dark'] .mg-shell .fb-result, html[data-theme='dark'] .mg-shell .m10-result, html[data-theme='dark'] .mg-shell .gg-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 
 /* ── 汤圆冰壶 深色适配（2026-09-09）── */
 html[data-theme='dark'] .mg-shell .cu-mode, html[data-theme='dark'] .mg-shell .cu-chip { background: rgba(var(--panel-raised-rgb), 0.85); border-color: rgba(var(--tint-warm-rgb), 0.35); color: #d9c9b4; }
@@ -5465,24 +5574,24 @@ html[data-theme='dark'] .mg-shell .cu-mode.on { background: rgba(var(--primary-r
 html[data-theme='dark'] .mg-shell .cu-stage { background: rgba(38, 29, 22, 0.88); border-color: rgba(var(--tint-warm-rgb), 0.35); }
 html[data-theme='dark'] .mg-shell .cu-canvas { border-color: rgba(var(--tint-warm-rgb), 0.35); }
 
-html[data-theme='dark'] .mg-shell .cu-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .cu-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .cu-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .cu-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .cu-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
-html[data-theme='dark'] .mg-shell .cu-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .cu-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
+html[data-theme='dark'] .mg-shell .cu-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 
 /* ── 猜菜名/调味表/上菜顺序 深色适配（2026-09-10）── */
 html[data-theme='dark'] .mg-shell .gd-mode, html[data-theme='dark'] .mg-shell .su-mode, html[data-theme='dark'] .mg-shell .sv-mode,
 html[data-theme='dark'] .mg-shell .gd-chip, html[data-theme='dark'] .mg-shell .su-chip, html[data-theme='dark'] .mg-shell .sv-chip { background: rgba(var(--panel-raised-rgb), 0.85); border-color: rgba(var(--tint-warm-rgb), 0.35); color: #d9c9b4; }
 html[data-theme='dark'] .mg-shell .gd-mode.on, html[data-theme='dark'] .mg-shell .su-mode.on, html[data-theme='dark'] .mg-shell .sv-mode.on { background: rgba(var(--primary-rgb), 0.3); border-color: rgba(var(--primary-rgb), 0.8); color: var(--on-primary-tint); }
 html[data-theme='dark'] .mg-shell .gd-stage, html[data-theme='dark'] .mg-shell .su-stage, html[data-theme='dark'] .mg-shell .sv-stage { background: rgba(38, 29, 22, 0.88); border-color: rgba(var(--tint-warm-rgb), 0.35); }
-html[data-theme='dark'] .mg-shell .gd-slot, html[data-theme='dark'] .mg-shell .gd-char, html[data-theme='dark'] .mg-shell .su-cell, html[data-theme='dark'] .mg-shell .sv-tile { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.25); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .gd-slot, html[data-theme='dark'] .mg-shell .gd-char, html[data-theme='dark'] .mg-shell .su-cell, html[data-theme='dark'] .mg-shell .sv-tile { background: rgba(64, 50, 38, 0.92); border-color: rgba(var(--tint-warm-rgb), 0.25); color: var(--text); }
 html[data-theme='dark'] .mg-shell .su-cell.given { background: rgba(120, 92, 64, 0.6); color: #c9ab84; }
-html[data-theme='dark'] .mg-shell .gd-info-box, html[data-theme='dark'] .mg-shell .su-info-box, html[data-theme='dark'] .mg-shell .sv-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .gd-info-box, html[data-theme='dark'] .mg-shell .su-info-box, html[data-theme='dark'] .mg-shell .sv-info-box { background: rgba(44, 35, 28, 0.96); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 html[data-theme='dark'] .mg-shell .gd-info-row, html[data-theme='dark'] .mg-shell .su-info-row, html[data-theme='dark'] .mg-shell .sv-info-row { background: rgba(var(--panel-hi-rgb), 0.9); border-color: rgba(var(--tint-warm-rgb), 0.28); }
 html[data-theme='dark'] .mg-shell .gd-info-rule, html[data-theme='dark'] .mg-shell .su-info-rule, html[data-theme='dark'] .mg-shell .sv-info-rule { background: rgba(114, 184, 100, 0.12); border-color: rgba(114, 184, 100, 0.35); color: #cfe6c2; }
-html[data-theme='dark'] .mg-shell .gd-info-close, html[data-theme='dark'] .mg-shell .su-info-close, html[data-theme='dark'] .mg-shell .sv-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: #f2e6d7; }
-html[data-theme='dark'] .mg-shell .gd-result, html[data-theme='dark'] .mg-shell .su-result, html[data-theme='dark'] .mg-shell .sv-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: #f2e6d7; }
+html[data-theme='dark'] .mg-shell .gd-info-close, html[data-theme='dark'] .mg-shell .su-info-close, html[data-theme='dark'] .mg-shell .sv-info-close { background: rgba(var(--tint-warm-rgb), 0.18); color: var(--text); }
+html[data-theme='dark'] .mg-shell .gd-result, html[data-theme='dark'] .mg-shell .su-result, html[data-theme='dark'] .mg-shell .sv-result { background: rgba(44, 35, 28, 0.97); border-color: rgba(var(--tint-warm-rgb), 0.4); color: var(--text); }
 
 /* 食神秘境（2026-09-09 roguelike 局内模式） */
 .realm-card { margin-bottom: 12px; }
@@ -5613,7 +5722,7 @@ html[data-theme='dark'] .skill-item.active .skill-xp { color: var(--on-primary-t
 html[data-theme='dark'] .sidebar-tab,
 html[data-theme='dark'] .feature-tile,
 html[data-theme='dark'] .feature-group-label { background: rgba(var(--glass-rgb), 0.06); }
-html[data-theme='dark'] .sidebar-tab { color: #e6d8c5; }
+html[data-theme='dark'] .sidebar-tab { color: var(--text-dim); }
 html[data-theme='dark'] .sidebar-tab:hover,
 html[data-theme='dark'] .feature-tile:hover { background: rgba(var(--glass-rgb), 0.12); }
 html[data-theme='dark'] .sidebar-tab.active,
@@ -5764,4 +5873,172 @@ html[data-theme='dark'] .btn-primary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   深色 · 材质层（2026-09-23）— 学「暗黑哥特 UI 组件库」的深色配方
+   解决的问题：改前的深色是**平色面 + 半透明细金边** ⇒ 整片糊、没有厚度与层次。
+   从那份组件库里只取三样（都是它真正的骨架）：
+     ① **三段金**（主描边 / 高光 / 暗边全实色）—— 半透明单色边画不出金属厚度
+     ② **内阴影凹陷 + 竖渐变**：面有上下明暗才像「刻进石头」；凹槽（输入/进度）走「内阴影加深」
+     ③ **压在小字上的一层黑投影**：深色下把笔画从背景里拉出来
+   🔴 四条约束（都是本项目的既有规矩）：
+     · 只有深色：全部写在 html[data-theme='dark'] 下 ⇒ 浅色零影响
+     · **不动皮肤色**：15 套皮肤各自声明 `--primary/--card/--btn-primary-bg` 等，
+       所以这里**只加「中性」明暗叠加**（白 4~7% → 黑 20~26% 的竖渐变）与阴影，
+       **绝不写彩色底** —— 否则青瓷皮肤会被染成血红（那条「非原味皮肤不得残留品牌橙」的守卫就是这么来的）。
+     · **不用纯白高光**：e2e-dark 会判「白色边缘 / 白色光晕」（rgba(255,255,255,α≥.2) 直接 FAIL）与
+       「金色光晕过亮」（rgba(232,180,95,·) / rgba(240,196,118,·) α>0.35 FAIL）；
+       所以高光统一走暖色 rgba(255,220,150,α≤.15)，金光压在 α≤.30。
+     · 只碰 border-color / background-image / box-shadow / text-shadow 四类属性，
+       不动 width/padding/margin/字号 ⇒ 布局与 e2e-layout 结果不变；改完跑 css_output_audit.mjs
+       （构建期压缩会改写规则）。
+   ══════════════════════════════════════════════════════════════════════════════ */
+html[data-theme='dark'] {
+  /* ── 可调旋钮（2026-09-23 用户「金边太扎眼 / 背景纯黑有点丑」后收的一版）──
+   * 想自己调只改这一段：**金度**看 --edge-line*，**明暗力度**看 --shade-*，**暖冷**看那三个 rgb 的第一位。
+   * 下面是「参考作品的强度」。觉得扎眼/发黑就往回收，别去改下面的规则。 */
+  /* 金属三段金（亮金只留给 hover / 选中这些「要跳出来」的地方） */
+  --edge-gold: #c9962f;          /* 只在悬停 / 选中 / 主按钮上出现 */
+  --edge-gold-lt: #ffe08a;       /* 悬停高光 */
+  --edge-gold-dk: #6e4f21;       /* 常态交互件的暗金边 */
+  /* 🔴 面的描边：**不是实金**，是低透明度金 —— 实金 #c9962f 铺在每张卡片上会扎眼（用户反馈）。
+     想要更硬朗的金属感就往上调到 .6~.8；想要几乎看不见就压到 .2。 */
+  /* 🔴 **内容元素的描边就这一个值**（外壳那五个区域 2026-09-23 已按用户要求取消边框，见 ①）。
+   * 取值经过两轮实机反馈：
+   *   · .70 → 用户：「中间区域元素的外边框太刺眼、很锐利，100% 缩放下扎眼」（1px 线在 100% 下是**满强度**的）
+   *   · 所以回到低透明度 **.32**，并把金色调**压低饱和度**（214,168,70 → 186,150,74）：1px 线要像「面与面之间的分界」，
+   *     不要像描上去的一笔亮线。嫌太淡就往上加到 .45；想要更硬朗再加。
+   * ⚠️ 别再用「实金 #c9962f」或 ≥.7 的高透明 —— 那两档都被用户当场否过。 */
+  --edge-line: rgba(186, 150, 74, .32);
+  /* 石材两层：偏暖的深棕，**不用纯黑** —— 纯黑在暖色壁纸上会显得脏（用户反馈） */
+  --stone-ink: #14100a;
+  --stone-2: #17110b;
+  /* 明暗叠加：压在皮肤色之上、不改皮肤色本身。
+   * ⚠️ 力度是这套配方的成败：第一版太轻（看不出来），第二版太狠（变纯黑、被用户否）。
+   *    现在用**暖黑 + 中等力度**：上 .20 → 下 .36，色相带一点棕（28,16,9 / 12,7,4）。 */
+  --shade-panel: linear-gradient(180deg, rgba(28, 16, 9, .20), rgba(12, 7, 4, .36));
+  --shade-metal: linear-gradient(180deg, rgba(255, 240, 210, .07), rgba(28, 16, 9, .28));
+  --shade-well: linear-gradient(180deg, rgba(12, 7, 4, .36), rgba(12, 7, 4, .12));
+  /* 深度：内凹与投影也用暖黑，别用纯黑 */
+  --inset-depth: inset 0 0 24px rgba(10, 6, 4, .42);
+  --inset-well: inset 0 0 10px rgba(10, 6, 4, .55);
+  --edge-catch: inset 0 1px 0 rgba(255, 220, 150, .15);
+  --ring-thick: 0 0 0 1px var(--stone-2);
+  --drop-deep: 0 6px 16px rgba(0, 0, 0, .38);
+  --gold-halo: 0 0 12px rgba(201, 150, 47, .30);
+  --gold-halo-soft: 0 0 8px rgba(201, 150, 47, .22);
+  --text-ink: 0 1px 2px #000;
+}
+
+/* 🔴 这一层里的 background-image / border-color 带 !important，**是被逼的**：上面 4636~4677 那组
+   深色规则用的是 `background: … !important` 的**简写**（例如 `.card{background:rgba(...)!important}`），
+   简写会把 background-image 重置成 none；实测不加 !important 时 computed 就是 `none`（材质层完全不生效）。
+   只在这三处加，box-shadow / text-shadow 不加 —— 免得把「选中/悬停」这类状态自带的阴影顶掉。 */
+
+/* ── ① 面：卡片 / 内容卡 —— 近黑石面 + 描边 + 内凹（**卡片的内容边保留**）──
+ * 🔴 2026-09-23 用户要求：**左右面板 / 顶部 / 中间区域 / 底部这五个「外壳区域」的外边框全部取消**。
+ *    所以外壳那几条（sidebar / app-main / main-scroll / top-nav / dock / dock-panel）本段一律不画边，
+ *    只留「面」的明暗（--shade-panel）与内凹（--inset-depth）——那是材质不是边框。
+ *    ⚠️ 别把外边框又加回来：用户明确否掉了外壳描边。 */
+html[data-theme='dark'] .card,
+html[data-theme='dark'] .gather-card {
+  background-image: var(--shade-panel) !important;
+  border-color: var(--edge-line) !important;   /* 低透明金，不是实金（实金铺满每张卡片太扎眼） */
+  box-shadow: var(--inset-depth), var(--drop-deep);
+}
+/* 外壳区域：只铺面 + 内凹，**无描边、无外圈环** */
+html[data-theme='dark'] .sidebar.app-sidebar,
+html[data-theme='dark'] .main-scroll,
+html[data-theme='dark'] .app-main,
+html[data-theme='dark'] .dock-panel {
+  box-shadow: var(--inset-depth);
+}
+html[data-theme='dark'] .modal {
+  background-image: var(--shade-panel) !important;
+  border-color: var(--edge-line) !important;   /* 弹窗不是外壳，边框保留（去掉外圈暗环） */
+  box-shadow: var(--inset-depth), 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* ①b 已删：大面板的内圈细金与外边框（2026-09-23 用户要求外壳全部取消边框） */
+
+
+/* ── ② 交互件：金属竖渐变 + 顶面一道接光 + 暗金边；悬停换亮金边 + 金光 ── */
+html[data-theme='dark'] .btn,
+html[data-theme='dark'] .btn-sm,
+html[data-theme='dark'] .sidebar-tab,
+html[data-theme='dark'] .top-nav-btn,
+html[data-theme='dark'] .skill-item {
+  background-image: var(--shade-metal) !important;
+  border-color: var(--edge-gold-dk) !important;
+  box-shadow: var(--edge-catch), 0 2px 5px rgba(0, 0, 0, .55);
+  text-shadow: var(--text-ink);
+}
+html[data-theme='dark'] .btn:hover,
+html[data-theme='dark'] .btn-sm:hover,
+html[data-theme='dark'] .sidebar-tab:hover,
+html[data-theme='dark'] .top-nav-btn:hover {
+  border-color: var(--edge-gold-lt) !important;
+  box-shadow: var(--edge-catch), var(--gold-halo);
+}
+/* 主按钮与选中页签：底色仍归皮肤（--btn-primary-bg / --primary），这里只加金边与金光 */
+html[data-theme='dark'] .btn-primary,
+html[data-theme='dark'] .btn-primary:hover,
+html[data-theme='dark'] .sidebar-tab.active,
+html[data-theme='dark'] .top-nav-btn.active,
+html[data-theme='dark'] .skill-item.active {
+  background-image: var(--shade-metal) !important;
+  border-color: var(--edge-gold) !important;
+  box-shadow: var(--edge-catch), var(--gold-halo-soft);
+}
+
+/* ── ③ 凹槽：进度槽 / 输入 / 下拉 —— 中性加深 + 内阴影（像刻进去的石槽）── */
+html[data-theme='dark'] .progress-bar,
+html[data-theme='dark'] .hp-bar,
+html[data-theme='dark'] input:not([type='checkbox']):not([type='radio']),
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] .plot-select {
+  background-image: var(--shade-well) !important;
+  border-color: var(--edge-gold-dk) !important;
+  box-shadow: var(--inset-well);
+}
+html[data-theme='dark'] input:not([type='checkbox']):not([type='radio']):focus,
+html[data-theme='dark'] select:focus,
+html[data-theme='dark'] textarea:focus,
+html[data-theme='dark'] .plot-select:focus {
+  border-color: var(--edge-gold-lt) !important;
+  box-shadow: var(--inset-well), var(--gold-halo-soft);
+}
+
+/* ── ④ 压在图上的小字：一层黑投影把笔画拉出来（只给这些，不铺到正文）── */
+html[data-theme='dark'] .badge,
+html[data-theme='dark'] .effect-chip,
+html[data-theme='dark'] .btn,
+html[data-theme='dark'] .btn-sm,
+html[data-theme='dark'] .sidebar-tab,
+html[data-theme='dark'] .top-nav-btn {
+  text-shadow: var(--text-ink);
+}
+
+/* ── ⑤ 顶栏下缘：**取消**（2026-09-23 用户：五个区域的外边框全部取消）──
+ * 线来自两处：基类 `border-bottom: 1px solid rgba(150,105,78,.16)`（191 行）+ 深色覆写
+ * `border-bottom-color: rgba(255,236,214,.12)`（4546 行）—— 都是浅色主题留下的暖白发丝线，
+ * 深色下既看不见、又和「五个区域一律不画边」不一致。
+ * ⚠️ **只改 color，不动 border-width**：border-width 一改，内容盒就缩 1px（本项目铁律）。
+ * ⛔ **底栏同样不画线**：`.dock` 本身 border-width: 0，无需处理；而若给它画线，五个胶囊紧贴其顶边
+ *    会把线盖住，要露出来就得改 `position`/`border-top` —— 两者都是布局改动，实测会把 `.dock-panel`
+ *    （`position: absolute`，以 `.dock` 为定位参照）带偏。**不做。** */
+html[data-theme='dark'] .top-nav { border-bottom-color: transparent !important; }
+
+/* ── ⑥ 浮窗（tooltip / follow-tooltip）深色适配 ──
+ * 🔴 原规则把背景**写死成 #ffffff**（第 3186 行，还带注释「纯白不透明背景」），全文件没有深色覆盖
+ *    ⇒ 深色下每个提示浮窗都是一块白板：对决页悬停敌人、背包/图鉴悬停物品都是它。
+ *    这条是既有缺陷（不是这次加的），按材质层的石面重给它。 */
+html[data-theme='dark'] .tooltip {
+  background-color: #1b140d;
+  background-image: var(--shade-panel);
+  border-color: var(--edge-line);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(201, 150, 47, .14);
+  color: var(--text);
 }

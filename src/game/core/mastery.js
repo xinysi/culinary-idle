@@ -1,3 +1,4 @@
+import { tunerOver } from '../data/tuner.js'
 // 精通（mastery）系统 — 每个卡片独立的精通等级 0~100
 // 精通通过「获得次数」累加：每次触发该卡片产出/制作，该卡片精通次数 +1。
 // 精通升级所需次数（阶梯，2026-09-09 降速：总次数 7500 → 3750，正反馈更密）：1-25 每级 8 次；
@@ -135,7 +136,7 @@ export function masteryXpMultiplierRaw(level) {
  *  2026-09-21 起 = `1 + (原始 - 1) × MASTERY_XP_BONUS_SCALE`（默认 0.5 ⇒ 上界 ×2.5）。
  *  历史：2026-09-09 曾把原始上限从 ×20 降到 ×4；本轮是第二次降速。 */
 export function masteryXpMultiplier(level) {
-  return 1 + (masteryXpMultiplierRaw(level) - 1) * MASTERY_XP_BONUS_SCALE
+  return 1 + (masteryXpMultiplierRaw(level) - 1) * tunerOver('masteryScale', MASTERY_XP_BONUS_SCALE, 0, 1)
 }
 
 // ══════════════════════════════════════════════════════════════════════

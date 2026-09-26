@@ -279,7 +279,7 @@ function doReroll(slot) {
               :title="e.item?.name"
               @click="selectEquip(e.id)"
             >
-              <img v-if="itemImage(e.id)" class="equip-card-img" :src="itemImage(e.id)" alt="" @error="$event.target.style.display = 'none'" />
+              <img v-if="itemImage(e.id)" class="equip-card-img" :src="itemImage(e.id)" alt="" @error="$event.target.style.display = 'none'" loading="lazy" decoding="async" />
               <span class="equip-card-name">{{ e.item?.name }}</span>
               <span class="dim mono equip-card-qty">×{{ e.qty }}</span>
               <button class="btn btn-sm btn-primary" @click.stop="wearFromBag(e.id)">穿戴</button>

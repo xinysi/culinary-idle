@@ -1,0 +1,3589 @@
+[
+ {
+  "id": "BADGE_L",
+  "kind": "通用件",
+  "name": "大徽章",
+  "size": [
+   44,
+   44
+  ],
+  "css_size": [
+   22,
+   22
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "状态片 29 个 / 页签红点 42 个",
+  "file": "images/ui-food-pixel/BADGE_L@2x.png"
+ },
+ {
+  "id": "BADGE_M",
+  "kind": "通用件",
+  "name": "中徽章",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "徽章族中档（效果片 33 个）",
+  "file": "images/ui-food-pixel/BADGE_M@2x.png"
+ },
+ {
+  "id": "BADGE_S",
+  "kind": "通用件",
+  "name": "小徽章（印泥块）",
+  "size": [
+   28,
+   28
+  ],
+  "css_size": [
+   14,
+   14
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "徽章族 347 个 / 89 页（状态片、减半标签、最佳记录）",
+  "file": "images/ui-food-pixel/BADGE_S@2x.png"
+ },
+ {
+  "id": "CHECK_OFF_M",
+  "kind": "通用件",
+  "name": "复选框未选（大）",
+  "size": [
+   44,
+   44
+  ],
+  "css_size": [
+   22,
+   22
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "任务中心 / 设置页",
+  "file": "images/ui-food-pixel/CHECK_OFF_M@2x.png"
+ },
+ {
+  "id": "CHECK_OFF_S",
+  "kind": "通用件",
+  "name": "复选框未选（小）",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "复选框族 5 个 / 任务列表",
+  "file": "images/ui-food-pixel/CHECK_OFF_S@2x.png"
+ },
+ {
+  "id": "CHECK_ON_M",
+  "kind": "通用件",
+  "name": "复选框已选（大）",
+  "size": [
+   44,
+   44
+  ],
+  "css_size": [
+   22,
+   22
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "任务中心 / 设置页",
+  "file": "images/ui-food-pixel/CHECK_ON_M@2x.png"
+ },
+ {
+  "id": "CHECK_ON_S",
+  "kind": "通用件",
+  "name": "复选框已选（小）",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "复选框族 5 个 / 任务列表",
+  "file": "images/ui-food-pixel/CHECK_ON_S@2x.png"
+ },
+ {
+  "id": "CHEST_PIXEL",
+  "kind": "通用件",
+  "name": "宝箱",
+  "size": [
+   64,
+   64
+  ],
+  "css_size": [
+   32,
+   32
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "竞技场 5 连胜宝箱 / 签到 / 里程碑",
+  "file": "images/ui-food-pixel/CHEST_PIXEL@2x.png"
+ },
+ {
+  "id": "COIN_PIXEL",
+  "kind": "通用件",
+  "name": "游戏币",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏币 / 金币奖励（现在用 emoji）",
+  "file": "images/ui-food-pixel/COIN_PIXEL@2x.png"
+ },
+ {
+  "id": "FRAME_BAR_SLOT",
+  "kind": "通用件",
+  "name": "酱汁空槽",
+  "size": [
+   448,
+   36
+  ],
+  "css_size": [
+   224,
+   18
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "进度条族 161 个 / 61 页（血条/经验/精通/饱食）",
+  "file": "images/ui-food-pixel/FRAME_BAR_SLOT@2x.png"
+ },
+ {
+  "id": "FRAME_BAR_SLOT_dark",
+  "kind": "深色套",
+  "name": "酱汁空槽",
+  "size": [
+   448,
+   36
+  ],
+  "css_size": [
+   224,
+   18
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "进度条族 161 个 / 61 页（血条/经验/精通/饱食）",
+  "file": "images/ui-food-pixel/FRAME_BAR_SLOT_dark@2x.png"
+ },
+ {
+  "id": "FRAME_BTN",
+  "kind": "通用件",
+  "name": "小饼干按钮框",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "按钮族 840 个 + 图标按钮族 105 个 / 105 页全用",
+  "file": "images/ui-food-pixel/FRAME_BTN@2x.png"
+ },
+ {
+  "id": "FRAME_BTN_dark",
+  "kind": "深色套",
+  "name": "小饼干按钮框",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "按钮族 840 个 + 图标按钮族 105 个 / 105 页全用",
+  "file": "images/ui-food-pixel/FRAME_BTN_dark@2x.png"
+ },
+ {
+  "id": "FRAME_BTN_PRIMARY",
+  "kind": "通用件",
+  "name": "番茄酱主按钮框",
+  "size": [
+   240,
+   64
+  ],
+  "css_size": [
+   120,
+   32
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "主按钮族 173 个 / 85 页（全站最大面积的强调色）",
+  "file": "images/ui-food-pixel/FRAME_BTN_PRIMARY@2x.png"
+ },
+ {
+  "id": "FRAME_BTN_PRIMARY_dark",
+  "kind": "深色套",
+  "name": "番茄酱主按钮框",
+  "size": [
+   240,
+   64
+  ],
+  "css_size": [
+   120,
+   32
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "主按钮族 173 个 / 85 页（全站最大面积的强调色）",
+  "file": "images/ui-food-pixel/FRAME_BTN_PRIMARY_dark@2x.png"
+ },
+ {
+  "id": "FRAME_CARD",
+  "kind": "通用件",
+  "name": "饼干卡片框",
+  "size": [
+   480,
+   160
+  ],
+  "css_size": [
+   240,
+   80
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "卡片族 493 个 / 105 页全用",
+  "file": "images/ui-food-pixel/FRAME_CARD@2x.png"
+ },
+ {
+  "id": "FRAME_CARD_dark",
+  "kind": "深色套",
+  "name": "饼干卡片框",
+  "size": [
+   480,
+   160
+  ],
+  "css_size": [
+   240,
+   80
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "卡片族 493 个 / 105 页全用",
+  "file": "images/ui-food-pixel/FRAME_CARD_dark@2x.png"
+ },
+ {
+  "id": "FRAME_FOCUS",
+  "kind": "通用件",
+  "name": "聚焦小框",
+  "size": [
+   48,
+   32
+  ],
+  "css_size": [
+   24,
+   16
+  ],
+  "slice_px": 4,
+  "pull": true,
+  "usage": "输入框/徽章聚焦态（替代 box-shadow: 0 0 0 2px）",
+  "file": "images/ui-food-pixel/FRAME_FOCUS@2x.png"
+ },
+ {
+  "id": "FRAME_FOCUS_dark",
+  "kind": "深色套",
+  "name": "聚焦小框",
+  "size": [
+   48,
+   32
+  ],
+  "css_size": [
+   24,
+   16
+  ],
+  "slice_px": 4,
+  "pull": true,
+  "usage": "输入框/徽章聚焦态（替代 box-shadow: 0 0 0 2px）",
+  "file": "images/ui-food-pixel/FRAME_FOCUS_dark@2x.png"
+ },
+ {
+  "id": "FRAME_INPUT",
+  "kind": "通用件",
+  "name": "手擀面输入框框",
+  "size": [
+   360,
+   52
+  ],
+  "css_size": [
+   180,
+   26
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "输入框族 10 个 / 10 页；下拉族 10 个共用（箭头另出 ICON_ARROW）",
+  "file": "images/ui-food-pixel/FRAME_INPUT@2x.png"
+ },
+ {
+  "id": "FRAME_INPUT_dark",
+  "kind": "深色套",
+  "name": "手擀面输入框框",
+  "size": [
+   360,
+   52
+  ],
+  "css_size": [
+   180,
+   26
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "输入框族 10 个 / 10 页；下拉族 10 个共用（箭头另出 ICON_ARROW）",
+  "file": "images/ui-food-pixel/FRAME_INPUT_dark@2x.png"
+ },
+ {
+  "id": "FRAME_MODAL",
+  "kind": "通用件",
+  "name": "木砧板弹窗框",
+  "size": [
+   560,
+   400
+  ],
+  "css_size": [
+   280,
+   200
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "弹窗（唯一保留一层纸背透光的件）",
+  "file": "images/ui-food-pixel/FRAME_MODAL@2x.png"
+ },
+ {
+  "id": "FRAME_MODAL_dark",
+  "kind": "深色套",
+  "name": "木砧板弹窗框",
+  "size": [
+   560,
+   400
+  ],
+  "css_size": [
+   280,
+   200
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "弹窗（唯一保留一层纸背透光的件）",
+  "file": "images/ui-food-pixel/FRAME_MODAL_dark@2x.png"
+ },
+ {
+  "id": "FRAME_PANEL",
+  "kind": "通用件",
+  "name": "烤面包面板框",
+  "size": [
+   520,
+   120
+  ],
+  "css_size": [
+   260,
+   60
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "面板族 259 个 / 侧栏、主内容区、抽屉、底部胶囊",
+  "file": "images/ui-food-pixel/FRAME_PANEL@2x.png"
+ },
+ {
+  "id": "FRAME_PANEL_dark",
+  "kind": "深色套",
+  "name": "烤面包面板框",
+  "size": [
+   520,
+   120
+  ],
+  "css_size": [
+   260,
+   60
+  ],
+  "slice_px": 16,
+  "pull": true,
+  "usage": "面板族 259 个 / 侧栏、主内容区、抽屉、底部胶囊",
+  "file": "images/ui-food-pixel/FRAME_PANEL_dark@2x.png"
+ },
+ {
+  "id": "FRAME_PORTRAIT",
+  "kind": "通用件",
+  "name": "立绘相框",
+  "size": [
+   128,
+   128
+  ],
+  "css_size": [
+   64,
+   64
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "立绘位：区域 56 / 首领 64 / 战斗屏 64 / 竞技场 / 厨师卡",
+  "file": "images/ui-food-pixel/FRAME_PORTRAIT@2x.png"
+ },
+ {
+  "id": "FRAME_PORTRAIT_dark",
+  "kind": "深色套",
+  "name": "立绘相框",
+  "size": [
+   128,
+   128
+  ],
+  "css_size": [
+   64,
+   64
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "立绘位：区域 56 / 首领 64 / 战斗屏 64 / 竞技场 / 厨师卡",
+  "file": "images/ui-food-pixel/FRAME_PORTRAIT_dark@2x.png"
+ },
+ {
+  "id": "FRAME_TAB",
+  "kind": "通用件",
+  "name": "面皮页签框（常态）",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "页签族 840 个 / 105 页全用（7 个页签家族共用）",
+  "file": "images/ui-food-pixel/FRAME_TAB@2x.png"
+ },
+ {
+  "id": "FRAME_TAB_dark",
+  "kind": "深色套",
+  "name": "面皮页签框（常态）",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "页签族 840 个 / 105 页全用（7 个页签家族共用）",
+  "file": "images/ui-food-pixel/FRAME_TAB_dark@2x.png"
+ },
+ {
+  "id": "FRAME_TAB_ON",
+  "kind": "通用件",
+  "name": "番茄酱页签框（选中）",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "页签选中态（两种约定：.active 与 btn-primary）",
+  "file": "images/ui-food-pixel/FRAME_TAB_ON@2x.png"
+ },
+ {
+  "id": "FRAME_TAB_ON_dark",
+  "kind": "深色套",
+  "name": "番茄酱页签框（选中）",
+  "size": [
+   200,
+   48
+  ],
+  "css_size": [
+   100,
+   24
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "页签选中态（两种约定：.active 与 btn-primary）",
+  "file": "images/ui-food-pixel/FRAME_TAB_ON_dark@2x.png"
+ },
+ {
+  "id": "ICON_ACT_01",
+  "kind": "图标",
+  "name": "关闭",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_01@2x.png"
+ },
+ {
+  "id": "ICON_ACT_02",
+  "kind": "图标",
+  "name": "返回",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_02@2x.png"
+ },
+ {
+  "id": "ICON_ACT_03",
+  "kind": "图标",
+  "name": "设置",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_03@2x.png"
+ },
+ {
+  "id": "ICON_ACT_04",
+  "kind": "图标",
+  "name": "搜索",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_04@2x.png"
+ },
+ {
+  "id": "ICON_ACT_05",
+  "kind": "图标",
+  "name": "筛选",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_05@2x.png"
+ },
+ {
+  "id": "ICON_ACT_06",
+  "kind": "图标",
+  "name": "刷新",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_06@2x.png"
+ },
+ {
+  "id": "ICON_ACT_07",
+  "kind": "图标",
+  "name": "确认",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_07@2x.png"
+ },
+ {
+  "id": "ICON_ACT_08",
+  "kind": "图标",
+  "name": "取消",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_08@2x.png"
+ },
+ {
+  "id": "ICON_ACT_09",
+  "kind": "图标",
+  "name": "信息",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_09@2x.png"
+ },
+ {
+  "id": "ICON_ACT_10",
+  "kind": "图标",
+  "name": "警告",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_10@2x.png"
+ },
+ {
+  "id": "ICON_ACT_11",
+  "kind": "图标",
+  "name": "问号帮助",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_11@2x.png"
+ },
+ {
+  "id": "ICON_ACT_12",
+  "kind": "图标",
+  "name": "加号",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_12@2x.png"
+ },
+ {
+  "id": "ICON_ACT_13",
+  "kind": "图标",
+  "name": "减号",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_13@2x.png"
+ },
+ {
+  "id": "ICON_ACT_14",
+  "kind": "图标",
+  "name": "上移",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_14@2x.png"
+ },
+ {
+  "id": "ICON_ACT_15",
+  "kind": "图标",
+  "name": "下移",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_15@2x.png"
+ },
+ {
+  "id": "ICON_ACT_16",
+  "kind": "图标",
+  "name": "排序",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_16@2x.png"
+ },
+ {
+  "id": "ICON_ACT_17",
+  "kind": "图标",
+  "name": "展开",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_17@2x.png"
+ },
+ {
+  "id": "ICON_ACT_18",
+  "kind": "图标",
+  "name": "收起",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_18@2x.png"
+ },
+ {
+  "id": "ICON_ACT_19",
+  "kind": "图标",
+  "name": "复制",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_19@2x.png"
+ },
+ {
+  "id": "ICON_ACT_20",
+  "kind": "图标",
+  "name": "删除",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_20@2x.png"
+ },
+ {
+  "id": "ICON_ACT_21",
+  "kind": "图标",
+  "name": "锁定",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_21@2x.png"
+ },
+ {
+  "id": "ICON_ACT_22",
+  "kind": "图标",
+  "name": "已解锁",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_22@2x.png"
+ },
+ {
+  "id": "ICON_ACT_23",
+  "kind": "图标",
+  "name": "邮件已读",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_23@2x.png"
+ },
+ {
+  "id": "ICON_ACT_24",
+  "kind": "图标",
+  "name": "领取",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_24@2x.png"
+ },
+ {
+  "id": "ICON_ACT_25",
+  "kind": "图标",
+  "name": "播放",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_25@2x.png"
+ },
+ {
+  "id": "ICON_ACT_26",
+  "kind": "图标",
+  "name": "暂停",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_26@2x.png"
+ },
+ {
+  "id": "ICON_ACT_27",
+  "kind": "图标",
+  "name": "音量",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_27@2x.png"
+ },
+ {
+  "id": "ICON_ACT_28",
+  "kind": "图标",
+  "name": "太阳（浅色）",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_28@2x.png"
+ },
+ {
+  "id": "ICON_ACT_29",
+  "kind": "图标",
+  "name": "月亮（深色）",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_29@2x.png"
+ },
+ {
+  "id": "ICON_ACT_30",
+  "kind": "图标",
+  "name": "用户",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "通用动作",
+  "file": "images/ui-food-pixel/ICON_ACT_30@2x.png"
+ },
+ {
+  "id": "ICON_ARROW",
+  "kind": "通用件",
+  "name": "下拉箭头",
+  "size": [
+   24,
+   24
+  ],
+  "css_size": [
+   12,
+   12
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "下拉族 10 个 / 排序与筛选",
+  "file": "images/ui-food-pixel/ICON_ARROW@2x.png"
+ },
+ {
+  "id": "ICON_CLOSE",
+  "kind": "通用件",
+  "name": "关闭叉",
+  "size": [
+   24,
+   24
+  ],
+  "css_size": [
+   12,
+   12
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "弹窗 / 抽屉 / 提示条关闭",
+  "file": "images/ui-food-pixel/ICON_CLOSE@2x.png"
+ },
+ {
+  "id": "ICON_GAME_01",
+  "kind": "图标",
+  "name": "火候炉",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_01@2x.png"
+ },
+ {
+  "id": "ICON_GAME_02",
+  "kind": "图标",
+  "name": "讲堂",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_02@2x.png"
+ },
+ {
+  "id": "ICON_GAME_03",
+  "kind": "图标",
+  "name": "2048",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_03@2x.png"
+ },
+ {
+  "id": "ICON_GAME_04",
+  "kind": "图标",
+  "name": "大胃王",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_04@2x.png"
+ },
+ {
+  "id": "ICON_GAME_05",
+  "kind": "图标",
+  "name": "拼图",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_05@2x.png"
+ },
+ {
+  "id": "ICON_GAME_06",
+  "kind": "图标",
+  "name": "连连看",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_06@2x.png"
+ },
+ {
+  "id": "ICON_GAME_07",
+  "kind": "图标",
+  "name": "翻牌",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_07@2x.png"
+ },
+ {
+  "id": "ICON_GAME_08",
+  "kind": "图标",
+  "name": "贪吃蛇",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_08@2x.png"
+ },
+ {
+  "id": "ICON_GAME_09",
+  "kind": "图标",
+  "name": "吃豆人",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_09@2x.png"
+ },
+ {
+  "id": "ICON_GAME_10",
+  "kind": "图标",
+  "name": "消消乐",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_10@2x.png"
+ },
+ {
+  "id": "ICON_GAME_11",
+  "kind": "图标",
+  "name": "笨鸟先飞",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_11@2x.png"
+ },
+ {
+  "id": "ICON_GAME_12",
+  "kind": "图标",
+  "name": "凑凑消",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_12@2x.png"
+ },
+ {
+  "id": "ICON_GAME_13",
+  "kind": "图标",
+  "name": "水果合成",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_13@2x.png"
+ },
+ {
+  "id": "ICON_GAME_14",
+  "kind": "图标",
+  "name": "果了个果",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_14@2x.png"
+ },
+ {
+  "id": "ICON_GAME_15",
+  "kind": "图标",
+  "name": "垂钓渔翁",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_15@2x.png"
+ },
+ {
+  "id": "ICON_GAME_16",
+  "kind": "图标",
+  "name": "切菜大师",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_16@2x.png"
+ },
+ {
+  "id": "ICON_GAME_17",
+  "kind": "图标",
+  "name": "打地鼠",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_17@2x.png"
+ },
+ {
+  "id": "ICON_GAME_18",
+  "kind": "图标",
+  "name": "摆盘",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_18@2x.png"
+ },
+ {
+  "id": "ICON_GAME_19",
+  "kind": "图标",
+  "name": "接汤",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_19@2x.png"
+ },
+ {
+  "id": "ICON_GAME_20",
+  "kind": "图标",
+  "name": "传菜",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_20@2x.png"
+ },
+ {
+  "id": "ICON_GAME_21",
+  "kind": "图标",
+  "name": "方块",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_21@2x.png"
+ },
+ {
+  "id": "ICON_GAME_22",
+  "kind": "图标",
+  "name": "扫雷",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_22@2x.png"
+ },
+ {
+  "id": "ICON_GAME_23",
+  "kind": "图标",
+  "name": "滑冰",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_23@2x.png"
+ },
+ {
+  "id": "ICON_GAME_24",
+  "kind": "图标",
+  "name": "猜菜名",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_24@2x.png"
+ },
+ {
+  "id": "ICON_GAME_25",
+  "kind": "图标",
+  "name": "调味表",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_25@2x.png"
+ },
+ {
+  "id": "ICON_GAME_26",
+  "kind": "图标",
+  "name": "上菜顺序",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_26@2x.png"
+ },
+ {
+  "id": "ICON_GAME_27",
+  "kind": "图标",
+  "name": "汤圆冰壶",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "小游戏",
+  "file": "images/ui-food-pixel/ICON_GAME_27@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_01",
+  "kind": "图标",
+  "name": "今日",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_01@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_02",
+  "kind": "图标",
+  "name": "采买与转化",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_02@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_03",
+  "kind": "图标",
+  "name": "挂机产线",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_03@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_04",
+  "kind": "图标",
+  "name": "研究与收集",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_04@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_05",
+  "kind": "图标",
+  "name": "餐厅经营",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_05@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_06",
+  "kind": "图标",
+  "name": "挑战与休闲",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_06@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_07",
+  "kind": "图标",
+  "name": "记录与回顾",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_07@2x.png"
+ },
+ {
+  "id": "ICON_GROUP_08",
+  "kind": "图标",
+  "name": "成长与信仰",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能分组头",
+  "file": "images/ui-food-pixel/ICON_GROUP_08@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_01_foraging",
+  "kind": "图标",
+  "name": "采摘",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_01_foraging@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_02_fishing",
+  "kind": "图标",
+  "name": "垂钓",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_02_fishing@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_03_hunting",
+  "kind": "图标",
+  "name": "狩猎",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_03_hunting@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_04_excavation",
+  "kind": "图标",
+  "name": "挖掘",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_04_excavation@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_05_woodcutting",
+  "kind": "图标",
+  "name": "伐木",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_05_woodcutting@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_06_mining",
+  "kind": "图标",
+  "name": "采矿",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_06_mining@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_07_farming",
+  "kind": "图标",
+  "name": "农耕",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_07_farming@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_08_cooking",
+  "kind": "图标",
+  "name": "烹饪",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_08_cooking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_09_baking",
+  "kind": "图标",
+  "name": "烘焙",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_09_baking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_10_preserving",
+  "kind": "图标",
+  "name": "腌制",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_10_preserving@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_11_brewing",
+  "kind": "图标",
+  "name": "调酒",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_11_brewing@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_12_spiceMixing",
+  "kind": "图标",
+  "name": "调料调配",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_12_spiceMixing@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_13_craftsmithing",
+  "kind": "图标",
+  "name": "厨具锻造",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_13_craftsmithing@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_14_knife",
+  "kind": "图标",
+  "name": "刀工",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_14_knife@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_15_heatControl",
+  "kind": "图标",
+  "name": "火候掌控",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_15_heatControl@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_16_flavorArtistry",
+  "kind": "图标",
+  "name": "调味艺术",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_16_flavorArtistry@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_17_plating",
+  "kind": "图标",
+  "name": "摆盘技巧",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_17_plating@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_18_tasteAcumen",
+  "kind": "图标",
+  "name": "品鉴力",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_18_tasteAcumen@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_19_spiritSummoning",
+  "kind": "图标",
+  "name": "食灵召唤",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_19_spiritSummoning@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_20_gastronomy",
+  "kind": "图标",
+  "name": "美食知识",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_20_gastronomy@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_21_preservation",
+  "kind": "图标",
+  "name": "食材保鲜",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_21_preservation@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_22_exploration",
+  "kind": "图标",
+  "name": "美食探索",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_22_exploration@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_23_woodworking",
+  "kind": "图标",
+  "name": "木工",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_23_woodworking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_24_pottery",
+  "kind": "图标",
+  "name": "陶艺",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_24_pottery@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_25_weaving",
+  "kind": "图标",
+  "name": "编织",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_25_weaving@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_26_embroidery",
+  "kind": "图标",
+  "name": "刺绣",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_26_embroidery@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_27_candles",
+  "kind": "图标",
+  "name": "蜡烛制作",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_27_candles@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_28_fletching",
+  "kind": "图标",
+  "name": "制箭",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_28_fletching@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_29_netmaking",
+  "kind": "图标",
+  "name": "制网",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_29_netmaking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_30_incense",
+  "kind": "图标",
+  "name": "香道",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_30_incense@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_31_festivalGoods",
+  "kind": "图标",
+  "name": "年货",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_31_festivalGoods@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_32_jadecraft",
+  "kind": "图标",
+  "name": "玉作",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_32_jadecraft@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_33_goodsTag",
+  "kind": "图标",
+  "name": "货签",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_33_goodsTag@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_34_miningGear",
+  "kind": "图标",
+  "name": "采掘器具",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_34_miningGear@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_35_papermaking",
+  "kind": "图标",
+  "name": "造纸",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_35_papermaking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_36_instrument",
+  "kind": "图标",
+  "name": "乐器",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_36_instrument@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_37_soapmaking",
+  "kind": "图标",
+  "name": "制皂",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_37_soapmaking@2x.png"
+ },
+ {
+  "id": "ICON_SKILL_38_exchequer",
+  "kind": "图标",
+  "name": "钱庄",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "技能",
+  "file": "images/ui-food-pixel/ICON_SKILL_38_exchequer@2x.png"
+ },
+ {
+  "id": "ICON_TILE_01_today",
+  "kind": "图标",
+  "name": "今日待办",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_01_today@2x.png"
+ },
+ {
+  "id": "ICON_TILE_02_effects",
+  "kind": "图标",
+  "name": "效果总览",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_02_effects@2x.png"
+ },
+ {
+  "id": "ICON_TILE_03_weather",
+  "kind": "图标",
+  "name": "天气运势",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_03_weather@2x.png"
+ },
+ {
+  "id": "ICON_TILE_04_mascot",
+  "kind": "图标",
+  "name": "吉祥物",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_04_mascot@2x.png"
+ },
+ {
+  "id": "ICON_TILE_05_quests",
+  "kind": "图标",
+  "name": "任务中心",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_05_quests@2x.png"
+ },
+ {
+  "id": "ICON_TILE_06_mail",
+  "kind": "图标",
+  "name": "信箱",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_06_mail@2x.png"
+ },
+ {
+  "id": "ICON_TILE_07_market",
+  "kind": "图标",
+  "name": "行情",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_07_market@2x.png"
+ },
+ {
+  "id": "ICON_TILE_08_encounters",
+  "kind": "图标",
+  "name": "奇遇图鉴",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_08_encounters@2x.png"
+ },
+ {
+  "id": "ICON_TILE_09_shop",
+  "kind": "图标",
+  "name": "商店",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_09_shop@2x.png"
+ },
+ {
+  "id": "ICON_TILE_10_deluxe",
+  "kind": "图标",
+  "name": "珍馐阁",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_10_deluxe@2x.png"
+ },
+ {
+  "id": "ICON_TILE_11_alchemy",
+  "kind": "图标",
+  "name": "炼金",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_11_alchemy@2x.png"
+ },
+ {
+  "id": "ICON_TILE_12_expedition",
+  "kind": "图标",
+  "name": "采集队",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_12_expedition@2x.png"
+ },
+ {
+  "id": "ICON_TILE_13_regions",
+  "kind": "图标",
+  "name": "产地",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_13_regions@2x.png"
+ },
+ {
+  "id": "ICON_TILE_14_caravan",
+  "kind": "图标",
+  "name": "商队线",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_14_caravan@2x.png"
+ },
+ {
+  "id": "ICON_TILE_15_automation",
+  "kind": "图标",
+  "name": "自动化",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_15_automation@2x.png"
+ },
+ {
+  "id": "ICON_TILE_16_cellar",
+  "kind": "图标",
+  "name": "地窖",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_16_cellar@2x.png"
+ },
+ {
+  "id": "ICON_TILE_17_ranch",
+  "kind": "图标",
+  "name": "牧场",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_17_ranch@2x.png"
+ },
+ {
+  "id": "ICON_TILE_18_mycoField",
+  "kind": "图标",
+  "name": "灵圃菌房",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_18_mycoField@2x.png"
+ },
+ {
+  "id": "ICON_TILE_19_greenhouse",
+  "kind": "图标",
+  "name": "温室蜂场",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_19_greenhouse@2x.png"
+ },
+ {
+  "id": "ICON_TILE_20_kitchenNotes",
+  "kind": "图标",
+  "name": "厨房笔记",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_20_kitchenNotes@2x.png"
+ },
+ {
+  "id": "ICON_TILE_21_flavorBook",
+  "kind": "图标",
+  "name": "风味册",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_21_flavorBook@2x.png"
+ },
+ {
+  "id": "ICON_TILE_22_schools",
+  "kind": "图标",
+  "name": "菜系研究",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_22_schools@2x.png"
+ },
+ {
+  "id": "ICON_TILE_23_shanhai",
+  "kind": "图标",
+  "name": "山海食经",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_23_shanhai@2x.png"
+ },
+ {
+  "id": "ICON_TILE_24_gear",
+  "kind": "图标",
+  "name": "装备总览",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_24_gear@2x.png"
+ },
+ {
+  "id": "ICON_TILE_25_michelin",
+  "kind": "图标",
+  "name": "评级",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_25_michelin@2x.png"
+ },
+ {
+  "id": "ICON_TILE_26_staff",
+  "kind": "图标",
+  "name": "班底",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_26_staff@2x.png"
+ },
+ {
+  "id": "ICON_TILE_27_branches",
+  "kind": "图标",
+  "name": "分店",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_27_branches@2x.png"
+ },
+ {
+  "id": "ICON_TILE_28_exchange",
+  "kind": "图标",
+  "name": "交易所",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_28_exchange@2x.png"
+ },
+ {
+  "id": "ICON_TILE_29_banquet",
+  "kind": "图标",
+  "name": "宴会",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_29_banquet@2x.png"
+ },
+ {
+  "id": "ICON_TILE_30_takeout",
+  "kind": "图标",
+  "name": "外卖",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_30_takeout@2x.png"
+ },
+ {
+  "id": "ICON_TILE_31_suppliers",
+  "kind": "图标",
+  "name": "供应商",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_31_suppliers@2x.png"
+ },
+ {
+  "id": "ICON_TILE_32_regulars",
+  "kind": "图标",
+  "name": "常客",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_32_regulars@2x.png"
+ },
+ {
+  "id": "ICON_TILE_33_friends",
+  "kind": "图标",
+  "name": "厨友",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_33_friends@2x.png"
+ },
+ {
+  "id": "ICON_TILE_34_rivals",
+  "kind": "图标",
+  "name": "同业榜",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_34_rivals@2x.png"
+ },
+ {
+  "id": "ICON_TILE_35_setMeals",
+  "kind": "图标",
+  "name": "套餐定食",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_35_setMeals@2x.png"
+ },
+ {
+  "id": "ICON_TILE_36_decor",
+  "kind": "图标",
+  "name": "餐厅装潢",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_36_decor@2x.png"
+ },
+ {
+  "id": "ICON_TILE_37_trials",
+  "kind": "图标",
+  "name": "厨神试炼",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_37_trials@2x.png"
+ },
+ {
+  "id": "ICON_TILE_38_gearContest",
+  "kind": "图标",
+  "name": "厨具赛",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_38_gearContest@2x.png"
+ },
+ {
+  "id": "ICON_TILE_39_chefChallenge",
+  "kind": "图标",
+  "name": "名厨",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_39_chefChallenge@2x.png"
+ },
+ {
+  "id": "ICON_TILE_40_realm",
+  "kind": "图标",
+  "name": "食神秘境",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_40_realm@2x.png"
+ },
+ {
+  "id": "ICON_TILE_41_minigames",
+  "kind": "图标",
+  "name": "小游戏",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_41_minigames@2x.png"
+ },
+ {
+  "id": "ICON_TILE_42_milestones",
+  "kind": "图标",
+  "name": "里程碑",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_42_milestones@2x.png"
+ },
+ {
+  "id": "ICON_TILE_43_chronicle",
+  "kind": "图标",
+  "name": "年鉴",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_43_chronicle@2x.png"
+ },
+ {
+  "id": "ICON_TILE_44_story",
+  "kind": "图标",
+  "name": "故事",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_44_story@2x.png"
+ },
+ {
+  "id": "ICON_TILE_45_cards",
+  "kind": "图标",
+  "name": "卡牌对战",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_45_cards@2x.png"
+ },
+ {
+  "id": "ICON_TILE_46_seasonReview",
+  "kind": "图标",
+  "name": "赛季回顾",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_46_seasonReview@2x.png"
+ },
+ {
+  "id": "ICON_TILE_47_honor",
+  "kind": "图标",
+  "name": "荣誉殿堂",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_47_honor@2x.png"
+ },
+ {
+  "id": "ICON_TILE_48_achievements",
+  "kind": "图标",
+  "name": "成就称号",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_48_achievements@2x.png"
+ },
+ {
+  "id": "ICON_TILE_49_codexExchange",
+  "kind": "图标",
+  "name": "图鉴兑换",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_49_codexExchange@2x.png"
+ },
+ {
+  "id": "ICON_TILE_50_logs",
+  "kind": "图标",
+  "name": "系统日志",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_50_logs@2x.png"
+ },
+ {
+  "id": "ICON_TILE_51_spiritStories",
+  "kind": "图标",
+  "name": "食灵物语",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_51_spiritStories@2x.png"
+ },
+ {
+  "id": "ICON_TILE_52_legacy",
+  "kind": "图标",
+  "name": "传承",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_52_legacy@2x.png"
+ },
+ {
+  "id": "ICON_TILE_53_dao",
+  "kind": "图标",
+  "name": "厨神之路",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_53_dao@2x.png"
+ },
+ {
+  "id": "ICON_TILE_54_patrons",
+  "kind": "图标",
+  "name": "信仰",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_54_patrons@2x.png"
+ },
+ {
+  "id": "ICON_TILE_55_festival",
+  "kind": "图标",
+  "name": "节庆",
+  "size": [
+   108,
+   108
+  ],
+  "css_size": [
+   54,
+   54
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "功能磁贴",
+  "file": "images/ui-food-pixel/ICON_TILE_55_festival@2x.png"
+ },
+ {
+  "id": "ITEM_SLOT",
+  "kind": "通用件",
+  "name": "物品格底板",
+  "size": [
+   104,
+   104
+  ],
+  "css_size": [
+   52,
+   52
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "物品图底板 79 个 / 48 页；物品图本身是已有的 32/64px 精灵",
+  "file": "images/ui-food-pixel/ITEM_SLOT@2x.png"
+ },
+ {
+  "id": "ITEM_SLOT_dark",
+  "kind": "深色套",
+  "name": "物品格底板",
+  "size": [
+   104,
+   104
+  ],
+  "css_size": [
+   52,
+   52
+  ],
+  "slice_px": 8,
+  "pull": true,
+  "usage": "物品图底板 79 个 / 48 页；物品图本身是已有的 32/64px 精灵",
+  "file": "images/ui-food-pixel/ITEM_SLOT_dark@2x.png"
+ },
+ {
+  "id": "LETTER_PIXEL",
+  "kind": "通用件",
+  "name": "信封",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "信箱 / 厨友访问",
+  "file": "images/ui-food-pixel/LETTER_PIXEL@2x.png"
+ },
+ {
+  "id": "LINE_ROW",
+  "kind": "通用件",
+  "name": "行分隔线",
+  "size": [
+   256,
+   4
+  ],
+  "css_size": [
+   128,
+   2
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "表格族 33 个 / 25 页；日志行",
+  "file": "images/ui-food-pixel/LINE_ROW@2x.png"
+ },
+ {
+  "id": "LINE_STROKE_AMBER",
+  "kind": "通用件",
+  "name": "竖笔·蛋黄",
+  "size": [
+   4,
+   48
+  ],
+  "css_size": [
+   2,
+   24
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "日志级别 / 次级标题",
+  "file": "images/ui-food-pixel/LINE_STROKE_AMBER@2x.png"
+ },
+ {
+  "id": "LINE_STROKE_RED",
+  "kind": "通用件",
+  "name": "竖笔·番茄",
+  "size": [
+   4,
+   48
+  ],
+  "css_size": [
+   2,
+   24
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "区块标题族 218 个 / 73 页（左侧竖标）",
+  "file": "images/ui-food-pixel/LINE_STROKE_RED@2x.png"
+ },
+ {
+  "id": "LINE_STROKE_TOAST",
+  "kind": "通用件",
+  "name": "竖笔·烤棕",
+  "size": [
+   4,
+   48
+  ],
+  "css_size": [
+   2,
+   24
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "中性分隔",
+  "file": "images/ui-food-pixel/LINE_STROKE_TOAST@2x.png"
+ },
+ {
+  "id": "LOCK_PIXEL",
+  "kind": "通用件",
+  "name": "像素锁",
+  "size": [
+   28,
+   28
+  ],
+  "css_size": [
+   14,
+   14
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "锁定态（未解锁技能/皮肤/内容）",
+  "file": "images/ui-food-pixel/LOCK_PIXEL@2x.png"
+ },
+ {
+  "id": "MEDAL_L",
+  "kind": "通用件",
+  "name": "大勋章",
+  "size": [
+   96,
+   96
+  ],
+  "css_size": [
+   48,
+   48
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "赛季 / 成就 / 称号 / 里程碑（262 成就 + 122 称号 + 40 赛季共用一张）",
+  "file": "images/ui-food-pixel/MEDAL_L@2x.png"
+ },
+ {
+  "id": "SCROLL_THUMB",
+  "kind": "通用件",
+  "name": "滚动条滑块",
+  "size": [
+   16,
+   64
+  ],
+  "css_size": [
+   8,
+   32
+  ],
+  "slice_px": 4,
+  "pull": true,
+  "usage": "全站自定义滚动条（侧栏/主滚动/抽屉）",
+  "file": "images/ui-food-pixel/SCROLL_THUMB@2x.png"
+ },
+ {
+  "id": "SCROLL_THUMB_dark",
+  "kind": "深色套",
+  "name": "滚动条滑块",
+  "size": [
+   16,
+   64
+  ],
+  "css_size": [
+   8,
+   32
+  ],
+  "slice_px": 4,
+  "pull": true,
+  "usage": "全站自定义滚动条（侧栏/主滚动/抽屉）",
+  "file": "images/ui-food-pixel/SCROLL_THUMB_dark@2x.png"
+ },
+ {
+  "id": "SEAL_BOWL",
+  "kind": "通用件",
+  "name": "食印·碗",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "采集类主按钮 / 标题左印",
+  "file": "images/ui-food-pixel/SEAL_BOWL@2x.png"
+ },
+ {
+  "id": "SEAL_CHOP",
+  "kind": "通用件",
+  "name": "食印·筷（长印）",
+  "size": [
+   32,
+   40
+  ],
+  "css_size": [
+   16,
+   20
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "页签选中 / 菜单签（比例 0.8，勿改成方印）",
+  "file": "images/ui-food-pixel/SEAL_CHOP@2x.png"
+ },
+ {
+  "id": "SEAL_POT",
+  "kind": "通用件",
+  "name": "食印·锅",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "烹饪 / 对决 / 塔",
+  "file": "images/ui-food-pixel/SEAL_POT@2x.png"
+ },
+ {
+  "id": "SEAL_SPOON",
+  "kind": "通用件",
+  "name": "食印·勺",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "制作 / 副业类",
+  "file": "images/ui-food-pixel/SEAL_SPOON@2x.png"
+ },
+ {
+  "id": "SEAL_STEAMER",
+  "kind": "通用件",
+  "name": "食印·蒸笼",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "烘焙 / 保鲜",
+  "file": "images/ui-food-pixel/SEAL_STEAMER@2x.png"
+ },
+ {
+  "id": "SEAL_TEAPOT",
+  "kind": "通用件",
+  "name": "食印·茶壶",
+  "size": [
+   36,
+   36
+  ],
+  "css_size": [
+   18,
+   18
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "酒肆 / 饮品 / 灶君",
+  "file": "images/ui-food-pixel/SEAL_TEAPOT@2x.png"
+ },
+ {
+  "id": "STEAM_CURVE",
+  "kind": "通用件",
+  "name": "蒸气曲线",
+  "size": [
+   256,
+   16
+  ],
+  "css_size": [
+   128,
+   8
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "面板顶部 / 弹窗台头 / 表格上方",
+  "file": "images/ui-food-pixel/STEAM_CURVE@2x.png"
+ },
+ {
+  "id": "TEX_SHINE",
+  "kind": "通用件",
+  "name": "流光平铺",
+  "size": [
+   32,
+   32
+  ],
+  "css_size": [
+   16,
+   16
+  ],
+  "slice_px": 0,
+  "pull": true,
+  "usage": "重要数值/标题的流光（沿用现有 stats-num 的两层机制）",
+  "file": "images/ui-food-pixel/TEX_SHINE@2x.png"
+ },
+ {
+  "id": "TICKET_PIXEL",
+  "kind": "通用件",
+  "name": "抽卡券",
+  "size": [
+   48,
+   48
+  ],
+  "css_size": [
+   24,
+   24
+  ],
+  "slice_px": 0,
+  "pull": false,
+  "usage": "觅珍抽卡券 / 赛季券（现在用 emoji）",
+  "file": "images/ui-food-pixel/TICKET_PIXEL@2x.png"
+ }
+]

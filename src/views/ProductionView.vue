@@ -245,9 +245,9 @@ function need(itemId, qty) {
 function canAfford(recipe) {
   return props.instance.canCraft(recipe)
 }
-/** 材料能支撑的最大制作次数（上限 50）——用量走 `effIngredients`（与扣料同源） */
+/** 材料能支撑的最大制作次数（上限 999，2026-09-25 用户要求放宽）——用量走 `effIngredients`（与扣料同源） */
 function maxCraft(recipe) {
-  let n = 50
+  let n = 999
   for (const [itemId, qty] of Object.entries(effIngredients(recipe))) {
     n = Math.min(n, Math.floor((player.inventory[itemId] ?? 0) / qty))
   }

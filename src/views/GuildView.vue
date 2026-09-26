@@ -81,7 +81,7 @@ function taskProgress(task) {
         <div v-for="(s, si) in GUILD_SHOP" :key="s.itemId" class="season-tier-card guild-shop-card" :style="{ animationDelay: (si * 0.06) + 's' }" :class="player.guild.points >= s.price ? 'buyable' : 'poor'">
           <div class="season-tier-head">
             <div class="item-label">
-              <img v-if="itemImage(s.itemId)" :src="itemImage(s.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(s.itemId)" :src="itemImage(s.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <div class="guild-shop-name" style="margin:0">{{ getItem(s.itemId)?.name ?? s.itemId }}</div>
             </div>
           </div>

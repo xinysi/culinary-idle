@@ -3,6 +3,7 @@
 // 赛季任务（复用主线任务 objective 种类）+ 赛季点数 + 奖励档位。
 // 进度按赛季 id 持久化（player.seasons[id]），限定装备赛季结束后仍保留。
 // 共 20 个赛季：id/名称/限定装备/任务目标物品全局唯一（season_check.mjs 校验）。
+import { localAligned } from '../core/clockKeys.js' // 相位锚点（本地午夜）单一出口
 
 export const SEASONS = [
   // 1. 盛夏果味季
@@ -519,10 +520,11 @@ for (const s of SEASONS) {
   }
 }
 
-/** 当前活跃赛季（按时间轮换，全部赛季时长求和取模） */
+/** 当前活跃赛季（按时间轮换，全部赛季时长求和取模；**相位 = 本地午夜锚点**） */
 export function activeSeasonId() {
   const total = SEASONS.reduce((s, x) => s + SEASON_MS(x.durationDays), 0)
-  let t = Date.now() % total
+  // 相位走**本地时间轴**（clockKeys.localAligned）⇒ 赛季边界落在本地午夜，与每日/每周同口径
+  let t = localAligned() % total
   for (const s of SEASONS) {
     const d = SEASON_MS(s.durationDays)
     if (t < d) return s.id
@@ -548,11 +550,12 @@ export function seasonRemainingMs(id) {
   const s = getSeason(id)
   if (!s) return 0
   const total = SEASONS.reduce((acc, x) => acc + SEASON_MS(x.durationDays), 0)
-  const cycleStart = Math.floor(Date.now() / total) * total
+  const now = localAligned() // 与 activeSeasonId 同一相位口径（两处必须一致，否则剩余时长会错一个周期）
+  const cycleStart = Math.floor(now / total) * total
   let acc = 0
   for (const x of SEASONS) {
     const d = SEASON_MS(x.durationDays)
-    if (x.id === id) return cycleStart + acc + d - Date.now()
+    if (x.id === id) return cycleStart + acc + d - now
     acc += d
   }
   return 0

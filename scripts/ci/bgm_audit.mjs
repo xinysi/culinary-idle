@@ -172,5 +172,20 @@ check('K. BGM 胶囊的高度也取自 --dock-pill-h（与功能胶囊等高）'
 check('K. BGM 胶囊没有靠竖 padding 撑高（那是「比旁边高一截」的成因）',
   !!bgmPillRule && !/padding\s*:\s*\d+px\s+\d+px\s*;/.test(bgmPillRule[1]) && !/padding\s*:\s*\d+px\s+\d+px\s+\d+px\s+\d+px\s*;/.test(bgmPillRule[1]), bgmPillRule ? bgmPillRule[1].trim().slice(0, 80) : '')
 
+/* ── L. 音效文件层（2026-09-25）：sound.js 的 SFX_FILES 登记的真实音效必须真实存在 ──
+   与 BGM 同一类「文件 + 清单」风险：登记了文件但文件没进目录 → 运行时静默回落合成（不报错但没效果）。
+   这里从 sound.js 抽 SFX_FILES 的相对路径，逐个确认 public/audio/sfx/ 下存在且非空（>1KB，防 0 字节占位）。 */
+{
+  const soundSrc = fs.readFileSync(path.join(ROOT, 'src/game/core/sound.js'), 'utf8')
+  const filesBlock = soundSrc.match(/const SFX_FILES = \{([\s\S]*?)\}/)
+  const entries = filesBlock ? [...filesBlock[1].matchAll(/['"]?([\w-]+)['"]?:\s*['"]([\w./-]+\.mp3)['"]/g)] : []
+  check('L. SFX_FILES 登记了至少一条真实音效（文件层存在）', entries.length > 0)
+  for (const [, name, file] of entries) {
+    const p = path.join(ROOT, 'public/audio/sfx', file)
+    const ok = fs.existsSync(p) && fs.statSync(p).size > 1024
+    check(`L. 音效文件存在且非空：${name} → audio/sfx/${file}`, ok)
+  }
+}
+
 console.log(fail ? `\nBGM 审计：FAIL（${fail} 项）` : `\nBGM 审计：PASS（${BGM_TRACKS.length} 首，音频 ${onDisk.length} 个文件）`)
 process.exit(fail ? 1 : 0)

@@ -114,6 +114,11 @@ function startNextOpponent() {
 function regionUnlocked(r) {
   return combatLevel.value >= r.reqLevel
 }
+/** 空手警告里的「去锻造铜刀」：跳到厨具锻造页（与 EquipmentView 的 goToSkill 同一做法） */
+function goCraftKnife() {
+  player.setActiveSkill('craftsmithing')
+  ui.setView('skill')
+}
 /** 单个对手是否够等级打（扩充对手等级高于区域门槛，卡片上要能一眼看出） */
 function oppUnlocked(o) {
   return combatLevel.value >= o.level
@@ -210,6 +215,16 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
               ⚖️ 低等级对手血量已上调（{{ enemyScalingText() }}）⇒ 同等级一场约 8~12 秒；
               击杀后有 <b>1.5 秒重生间隔</b>（一击秒杀因此不再划算）；对决经验改为<b>按造成的伤害</b>结算
               （打得多、拿得多，溢出伤害不计）。
+            </p>
+            <!-- 🔴 空手警告（2026-09-26 实测后加）：真新档（100 金 / 0 物品 / 无装备）打第一个敌人
+                 「灶台学徒」胜率 **0%**（400 场 0 胜、单场 13 回合 ≈32 秒），而穿上 L1 唯一可穿的
+                 「铜刀」后同一场是 **86~100%**、10 回合。也就是说「第一场必败」的唯一原因是没武器 ——
+                 这种事必须在**开打前**告诉玩家，否则就是「点进去、输 30 秒、不知道为什么」。 -->
+            <p v-if="!player.equipment?.weapon" class="dim pick-note unarmed-warn">
+              ⚠️ <b>你还没装备武器</b>：空手 + 没带够料理打对决必败（实测「灶台学徒」胜率 1%、一场 32 秒；
+              带 2 份烤土豆也才 45%）。先弄一把刀再来 ——
+              <button class="btn btn-sm" @click="goCraftKnife()">🔨 去锻造铜刀</button>
+              （松木×4 + 铜矿×4；也可以完成新手目标 ③，会直接送一把）—— 穿上它同一场 100%、单场只要 25 秒
             </p>
             <div class="monster-cards">
               <div
@@ -408,6 +423,20 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
 .monster-card-btn { margin-top: 5px; width: 100%; }
 .pick-tabs { display: inline-flex; gap: 4px; margin-left: 8px; }
 .pick-note { font-size: 12px; margin: 4px 0 8px; }
+/* 空手警告：必须比普通说明显眼（它是「点进去就输 30 秒」的前置提示）。
+   ⚠️ 颜色走 token（`--warn-soft`/`--warn-strong`）而不是硬编码 —— 深色皮肤由 main.css 的深色块给第二套，
+   否则深色下就是一坨奶白底压琥珀字（本项目记过的那类不可读组合）。 */
+.unarmed-warn {
+  background: var(--warn-soft);
+  /* ⚠️ 文字用 `--bad-strong`（不是 `--warn-strong`）：后者压 `--warn-soft` 实测只有 3.3:1，
+     12px 小字不达标 —— 与 `.top-nav-guest` 同口径，AGENTS 记过这个组合。 */
+  color: var(--bad-strong);
+  border-left: 3px solid var(--warn-strong);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.unarmed-warn .btn { margin: 0 2px; }
 @media (max-width: 720px) {
   /* 窄屏：卡片两列（名字短、不再逐字竖排） */
   .monster-cards { grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); }

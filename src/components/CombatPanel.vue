@@ -215,7 +215,7 @@ function buffText() {
   margin: 0;
   padding-bottom: 2px;
   border-bottom: 1px dashed rgba(var(--ink-rgb), 0.35);
-  color: var(--primary);
+  color: var(--primary-strong); /* 主色当文字压在浅底上 3.72 < 4.5 → 深档（2026-09-26）*/
 }
 .attr-cols .stat {
   display: flex;

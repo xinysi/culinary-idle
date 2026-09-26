@@ -147,8 +147,7 @@ function onAvatarPick(e) {
         :class="frameCls"
         alt="头像"
         title="点击更换头像"
-        @click="openAvatarPicker"
-      />
+        @click="openAvatarPicker" loading="lazy" decoding="async" />
       <div v-else class="avatar" :class="frameCls" title="点击更换头像" @click="openAvatarPicker">食</div>
       <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatarPick" />
       <div class="sidebar-identity">

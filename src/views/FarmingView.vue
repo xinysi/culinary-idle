@@ -219,7 +219,7 @@ function seedName(seedId) {
             </div>
             <template v-else>
               <div class="plot-title item-label">
-                <img v-if="itemImage(instance.plotCrop(i - 1)?.itemId)" :src="itemImage(instance.plotCrop(i - 1)?.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+                <img v-if="itemImage(instance.plotCrop(i - 1)?.itemId)" :src="itemImage(instance.plotCrop(i - 1)?.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
                 {{ getItem(instance.plotCrop(i - 1)?.itemId)?.name }}
                 <span v-if="instance.plotAt(i - 1).fertilizer" class="badge" style="background: var(--good-soft); color: var(--good-strong); font-size: 12px">
                   {{ instance.plotAt(i - 1).fertilizer === 'richCompost' ? '🌿 肥沃堆肥' : '🌱 堆肥' }}
@@ -279,7 +279,7 @@ function seedName(seedId) {
             @click="pickSeed(c.seedId)"
           >
             <div class="item-cell-head">
-              <img v-if="itemImage(c.seedId)" :src="itemImage(c.seedId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(c.seedId)" :src="itemImage(c.seedId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <span class="item-cell-name">{{ getItem(c.seedId)?.name }}</span>
             </div>
             <div class="dim item-cell-sub">

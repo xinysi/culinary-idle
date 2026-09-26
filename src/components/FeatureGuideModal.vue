@@ -69,7 +69,8 @@ function openFull() {
   padding: 1px 8px;
   border-radius: 999px;
   background: rgba(var(--primary-tint-rgb), 0.12);
-  color: var(--primary);
+  /* 浅色：12% 主色淡彩底上的字（实测 2.29~4.42）⇒ 最深档；深色有自己的覆盖（--on-primary-tint-4）*/
+  color: var(--primary-deep);
   font-size: 11px;
 }
 /* 深色下 `--primary` 当小字对比度不足（与 .sg-bold 同一原因）→ 用淡彩底文字 token */

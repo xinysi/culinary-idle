@@ -1360,7 +1360,7 @@ console.log('══ E. 离线进度 ══')
     check('名厨', `名单 ${CHEFS.length} 位且流派合法`, CHEFS.length === 10 && CHEFS.every((c) => ['knife', 'plating', 'flavor'].includes(c.style) && c.levelOffset > 0))
     check('名厨', '按周确定性轮换', chefForWeek(0).id === CHEFS[0].id && chefForWeek(CHEFS.length).id === CHEFS[0].id && chefForWeek(1).id === CHEFS[1].id)
     const pb = freshPlayer()
-    const def = chefForWeek(Math.floor(Date.now() / (7 * 24 * 3600_000)))
+    const def = chefForWeek(clockWeekNum())   // ⚠️ 测试自己也别重抄周算法：走单一出口（2026-09-26）
     const o = chefOpponent(def, 10)
     check('名厨', '对手等级 = 玩家等级 + 偏移', o.level === 10 + def.levelOffset && o.isChef === true && o.style === def.style)
     check('名厨', '对手等级封顶 99', chefOpponent(def, 99).level === 99)
@@ -2635,7 +2635,144 @@ console.log('══ W. 限时窗口活动 ══')
   pg.marketBoost = orig
 }
 
-// ── X. 觅珍抽卡（2026-09-06）──────────────────────
+import { weekNum as clockWeekNum } from '../../src/game/core/clockKeys.js'
+// ── C56. 日历口径单一出口（2026-09-26 用户「一起做」：日/周重置口径不统一）──
+// 背景：审计发现同一天里并存**四种**周算法、两种锚点 —— 每日按本地午夜，而周常/厨具赛/名厨是
+// `floor(Date.now()/7天)`（锚在**周四 00:00 UTC**）、美食讲堂问答又是「UTC + 元旦」那一套；
+// 赛季与宿敌是 Unix 纪元锚点。玩家看到的边界互相错开（周任务在周四早八点换）。
+// 现统一为「一切边界落在**本地午夜**」，出口 = `src/game/core/clockKeys.js`。
+console.log('══ C56. 日历口径单一出口 ══')
+{
+  const { todayKey, weekNum, weekKey, weekStart, localAligned } = await import('../../src/game/core/clockKeys.js')
+  // ① 行为：周序号只在**本地周一 00:00** 变，周内稳定
+  const mon = weekStart(Date.now())
+  const before = mon.getTime() - 1
+  const t1 = mon.getTime()
+  const t2 = mon.getTime() + 6.9 * 86400000
+  const t3 = mon.getTime() + 7 * 86400000
+  check('日历', 'weekNum 只在本地周一 00:00 变（周一前一毫秒 vs 周一零时换周、周内稳定、下周一再换）',
+    weekNum(before) !== weekNum(t1) && weekNum(t1) === weekNum(t2) && weekNum(t2) !== weekNum(t3),
+    `${weekNum(before)} → ${weekNum(t1)} → ${weekNum(t3)}`)
+  check('日历', 'weekKey = 本周一的本地日期（YYYY-MM-DD）且与 weekNum 同源',
+    /^\d{4}-\d{2}-\d{2}$/.test(weekKey(Date.now())) && weekNum(Date.now()) === Math.floor(weekStart(Date.now()).getTime() / 86400000))
+  check('日历', 'todayKey 是本地日期（与 Date 的本地分量一致，不是 UTC）', (() => {
+    const d = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    return todayKey(d.getTime()) === `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  })())
+  check('日历', 'localAligned 把时间轴平移到本地（= now + 时区偏移，东八区 +8h）', (() => {
+    const now = Date.now()
+    const off = -new Date(now).getTimezoneOffset() * 60000
+    return localAligned(now) === now + off
+  })())
+  // ② 唯一出口：src 里不许再出现「按 7 天取模 / 604800000 / 元旦 UTC 锚点」的周算法（clockKeys 自己除外）
+  const WEEK_PATTERNS = [
+    /7 \* 24 \* 3600_000/,           // 旧的 epoch 周（周常/厨具赛/名厨三处）
+    /604800000/,                     // Trivia 的第四种
+    /Date\.UTC\(\s*now\.getFullYear\(\),\s*0,\s*1\s*\)/, // 「元旦 UTC」锚点
+  ]
+  const ALLOW = ['clockKeys.js']     // 出口自身
+  const bad = []
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = `${dir}/${e.name}`
+      if (e.isDirectory()) { walk(full); continue }
+      if (!/\.(js|mjs|vue)$/.test(e.name) || ALLOW.some((a) => full.endsWith(a))) continue
+      const src = fs.readFileSync(full, 'utf8')
+      for (const re of WEEK_PATTERNS) if (re.test(src)) bad.push(`${full.replace(/.*\/src\//, 'src/')} ← ${re}`)
+    }
+  }
+  walk(new URL('../../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+  check('日历', '全站没有第二份「周」算法（唯一出口 = clockKeys.js；含 epoch 周与元旦 UTC 锚点两种写法）',
+    bad.length === 0, bad.slice(0, 4).join(' | '))
+  // ③ 接线：玩家/厨具赛/名厨/讲堂四处必须与出口同一个值
+  const { usePlayerStore: UPS } = await import('../../src/stores/player.js')
+  const { createPinia: CP, setActivePinia: SAP } = await import('pinia')
+  SAP(CP())
+  const pp = UPS(); pp.newGame()
+  const { contestWeek } = await import('../../src/game/data/gearContest.js')
+  check('日历', '玩家 _weekNum / 厨具赛 contestWeek / 出口 weekNum 三处同值（同源）',
+    pp._weekNum() === weekNum() && contestWeek() === weekNum(),
+    `player=${pp._weekNum()} gear=${contestWeek()} clock=${weekNum()}`)
+  // ④ 赛季相位与「剩余时长」必须同源（两处口径不一致会整整错一个周期）
+  const { activeSeasonId, seasonRemainingMs } = await import('../../src/game/data/seasons.js')
+  const sid = activeSeasonId()
+  const left = seasonRemainingMs(sid)
+  check('日历', '赛季剩余时长在 (0, 总周期] 内且与活跃赛季自洽（相位同源）',
+    left > 0 && left <= 90 * 86400000, `${sid} 剩 ${(left / 86400000).toFixed(2)} 天`)
+}
+
+// ── C57. 小游戏触屏操控（2026-09-26 用户「一起做」复审：检查清单那条其实是**过期项**）──
+// 清单 §10.5 原写「canvas 类小游戏（贪吃蛇/2048/方块）依赖方向键，窄屏触屏操控方案未设计——待拍板」。
+// 逐款实测核对后：**七款依赖键盘的小游戏全都已经有屏幕按键**（蛇/2048/吃豆/冰道是四向、方块还带旋转/软降/直落、
+// 跳跳鸟有点击 flap、水果合成是 pointerdown 拖放）⇒ 那条只需改成「已具备 + 加守卫防回退」，不是待办。
+// 本守卫按「键盘动作 ↔ 屏幕按键」成对断言：谁把屏幕按键删了（只留键盘），这里立刻 FAIL。
+console.log('══ C57. 小游戏触屏操控 ══')
+{
+  const TOUCH = {
+    'SnakeView.vue': [/'ArrowLeft'/, /'ArrowRight'/, /'ArrowUp'/, /'ArrowDown'/],
+    'Kitchen2048View.vue': [/move\('left'\)/, /move\('right'\)/, /move\('up'\)/, /move\('down'\)/],
+    'PacmanView.vue': [/'ArrowLeft'/, /'ArrowRight'/, /'ArrowUp'/, /'ArrowDown'/],
+    'IceSlideView.vue': [/move\(0\)/, /move\(1\)/, /move\(2\)/, /move\(3\)/],
+    'TetrisView.vue': [/tryMove\(-1/, /tryMove\(1/, /tryRotate\(/, /softDropOnce\(|hardDrop\(/],
+    'FlappyBirdView.vue': [/flap\(\)/],
+    'FruitMergeView.vue': [/@pointerdown="onPointerDown"/],
+  }
+  const missing = []
+  for (const [file, patterns] of Object.entries(TOUCH)) {
+    const src = fs.readFileSync(new URL(`../../src/views/minigames/${file}`, import.meta.url), 'utf8')
+    for (const re of patterns) if (!re.test(src)) missing.push(`${file} 少了 ${re}`)
+  }
+  check('小游戏触屏', '每款依赖键盘的小游戏都保留着屏幕按键（蛇/2048/吃豆/冰道/方块/跳跳鸟/水果合成）',
+    missing.length === 0, missing.slice(0, 4).join(' | '))
+}
+// ── C58. 浅色主题对比度（2026-09-26 用户「一起做」：那条「29 处不达标、从未被守卫量过」）──
+// 先量后改：写了个**按真实 DOM 算有效背景**的审计（`scripts/dev/light_dom_contrast.mjs`，
+// 沿祖先链把半透明底逐层合成、排除 emoji/渐变文字/渐变底三类假阳性）⇒ 实测 classic 浅色 **28 处**
+// 不达标（与记忆里的「29 处」吻合），根因只有**三对 token**：
+//   ① `.player-gold` 的 `--gold` 压金光底 3.42（14 处）⇒ 改用 `--gold-strong`（该 token 本就是为此造的）4.79
+//   ② `--muted` 压卡片底 4.09（8 处）⇒ 浅色 `--muted` #7a6f68→#6e645c（4.83）+ 皮肤浅色的 mix 权重 0.38→0.30
+//   ③ 主色当文字 `--primary` 压浅底 3.72（6 处：`.mp-pct`/`.bgm-tbtn--play`/`.arena-vs`/`.loadout-chip-name`/`.attr-col-head`）
+//      ⇒ 一律改用 `--primary-strong`（5.19）
+// 改后 classic / sakura / amber 三皮肤浅色实测 **0 处**。
+// 本守卫**不需要浏览器**：直接拿 15 皮肤的浅色调色板算那几对（改了 token 或权重立刻 FAIL）。
+console.log('══ C58. 浅色主题对比度 ══')
+{
+  const css = fs.readFileSync(new URL('../../src/styles/main.css', import.meta.url), 'utf8')
+  const pick = (name) => {
+    const m = css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`))
+    return m ? m[1] : null
+  }
+  const { skinVars, SKINS } = await import('../../src/game/data/skins.js')
+  const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]) }
+  const ratio = (a, b) => { const l1 = lum(hex2rgb(a)), l2 = lum(hex2rgb(b)); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) }
+  // 底色锚点取自实测（classic 浅色：卡片 --panel-raise #f0eae2 / 页面 --bg #fffbf4 / 金光底 / 粉底）
+  const SURF = { card: '#f0eae2', page: '#fffbf4', goldChip: '#f8efd9', pinkChip: '#fae4da' }
+  const base = { '--muted': pick('muted'), '--text-dim': pick('text-dim'), '--gold-strong': pick('gold-strong'), '--primary-strong': pick('primary-strong') }
+  check('浅色对比度', `根 token 齐全（muted/text-dim/gold-strong/primary-strong 都能解析到）`,
+    Object.values(base).every((v) => v), JSON.stringify(base))
+  const bad = []
+  for (const s of SKINS) {
+    const v = { ...base, ...(skinVars(s.id, 'light') ?? {}) }
+    const hexOf = (x) => (typeof x === 'string' && /^#[0-9a-fA-F]{6}$/.test(x.trim()) ? x.trim() : null)
+    const pairs = [
+      ['muted × 卡片底', hexOf(v['--muted']), SURF.card, 4.5],
+      ['muted × 粉底', hexOf(v['--muted']), SURF.pinkChip, 4.5],
+      ['text-dim × 卡片底', hexOf(v['--text-dim']), SURF.card, 4.5],
+      ['gold-strong × 金光底', hexOf(v['--gold-strong']), SURF.goldChip, 4.5],
+      ['primary-strong × 页面底', hexOf(v['--primary-strong']), SURF.page, 4.5],
+    ]
+    for (const [label, fg, bg, need] of pairs) {
+      if (!fg) { bad.push(`${s.id}: ${label} 取不到色值`); continue }
+      const r = ratio(fg, bg)
+      if (r < need) bad.push(`${s.id}: ${label} ${r.toFixed(2)} < ${need}`)
+    }
+  }
+  check('浅色对比度', `15 皮肤 × 5 对（muted/text-dim/gold-strong/primary-strong 压各自底色）全部 ≥4.5`,
+    bad.length === 0, bad.slice(0, 5).join(' | '))
+}
+
 console.log('══ X. 觅珍抽卡 ══')
 {
   const p = freshPlayer()
@@ -2697,12 +2834,43 @@ console.log('══ X. 觅珍抽卡 ══')
     const g = rate('gear'), m = rate('mix'), l = rate('limited')
     check('觅珍', '厨具池基础稀有+ 爆率 = 品质权重本身 4%（种子 50k 样本实测 4.010%）', near(g, 0.0401), `g=${(g * 100).toFixed(3)}%`)
     check('觅珍', '限时池基础稀有+ 爆率 = 80% × 1.5% = 1.2%（种子 50k 样本实测 1.152%）', near(l, 0.01152), `l=${(l * 100).toFixed(3)}%`)
-    // ⚠️ 混池比 35% × 4% = 1.4% 略高：低档分支（池内价值最低 20% 的**固定集合**）里也可能有低阶稀有装备 ——
+    // ⚠️ 混池基础稀有+ 的构成：正常分支（10%）× 4% + 低档分支（25%）里的低阶稀有装备 ——
     //    这是规格「低档物品 = 价值最低 20% 的固定集合」的必然结果（公示表的装备列只描述正常分支）。
-    //    真实值 **2.014%**（种子 50k、在**游戏真实池状态**下实测）。
-    //    ⚠️ 拿裸 import 的模块去量会得到 1.59% —— 池子按 value 筛，而 `applyValueBalance()` 会改 value 并清缓存，
+    //    2026-09-25 混池正常分支 35%→10% 后，真实值 **0.866%**（种子 50k、在**游戏真实池状态**下实测；
+    //    低档分支贡献 ≈0.47%——价值平衡会移动低档集合的构成，权重/价值一改这里就要重新钉）。
+    //    ⚠️ 拿裸 import 的模块去量会得到不同值 —— 池子按 value 筛，而 `applyValueBalance()` 会改 value 并清缓存，
     //    没跑平衡前的那份池子成员不同（见「浏览器侧验证坑」那条同类教训）。
-    check('觅珍', '混池基础稀有+ 爆率 = 2.014%（正常分支 1.4% + 低档分支里的低阶稀有装备；种子 50k 实测）', near(m, 0.02014), `m=${(m * 100).toFixed(3)}%`)
+    check('觅珍', '混池基础稀有+ 爆率 = 0.866%（正常分支 0.4% + 低档分支里的低阶稀有装备 ≈0.47%；种子 50k 实测）', near(m, 0.00866), `m=${(m * 100).toFixed(3)}%`)
+    // 🔴 回收率上限（2026-09-26 新增）：回收率 = (金币返还 + 物品价值×0.5) ÷ 池价。
+    //    为什么要钉：这条数**唯一的作用是当套利上限** —— 只要 <100%，就不存在「金币 → 抽卡 → 再卖 → 金币」的闭环。
+    //    ⚠️ 它**不是「抽卡值不值」的度量**（2026-09-26 用户订正：「抽卡本来就是付出和赌」）：玩家买的是物品与
+    //    那一把的概率，返金只是垫底结果。所以断言写的是「≤30%」这条线，不是「必须落在某区间」。
+    //    而它**只能靠测量**得到（低档分支对回收的贡献 ≈0，正常分支的价值取决于池成员 value ⇒
+    //    任何池成员 / 分支权重 / 返金比例的改动都会移动它，静态读常量看不出来）。
+    //    35%→20% 之前：混池 37.8%（顶破旧标定带 30~40% 的上沿）、食物 23.2%、材料 22.6%；
+    //    之后五池全部 ≤30%（厨具 15.0 / 限时 11.3 无返金档，本来就不受影响）。
+    //    种子定值断言 ⇒ 谁把返金或分支调回去，这一条立刻点名（±0.5pp 只吸收池成员变动的位移）。
+    const recycle = (poolId, n = 50000) => {
+      const rng = lcg(20260922)
+      const def = MIJIAN_POOLS.find((x) => x.id === poolId)
+      let back = 0
+      for (let i = 0; i < n; i++) {
+        const r = pk(poolId, rng, 0)
+        if (r?.gold) back += r.gold
+        else if (r?.item) back += (r.item.value ?? 0) * 0.5
+      }
+      return back / n / (def?.price || 1)
+    }
+    //    ⚠️ 本断言量的是 **CI 环境**的值（这段之前**还没有** applyValueBalance，池成员按原始 value 筛）；
+    //    线上启动时跑过平衡（bootstrap.js），同口径实测 **材料 16.5 / 食物 17.2 / 厨具 15.0 / 混池 28.0 / 限时 11.3**
+    //    （scripts/sim/mijian_economy.mjs）。两边差 ≤0.6pp，且都 <30% —— **判据是 30% 这条线**，定值只是"改动立刻可见"。
+    //    若哪天在更早的位置加了 applyValueBalance（或重排段落），这几个数会整体挪 0.5pp 左右 ⇒ 按实测重新钉。
+    const RECYCLE = { material: 0.1654, food: 0.1721, gear: 0.1552, mix: 0.2772, limited: 0.1116 }
+    for (const [pid, exp] of Object.entries(RECYCLE)) {
+      const r = recycle(pid)
+      check('觅珍', `回收率：${pid} = ${(exp * 100).toFixed(1)}%（种子 50k 定值 ±0.5pp，且必须 ≤30%）`,
+        Math.abs(r - exp) <= 0.005 && r <= 0.30, `实测 ${(r * 100).toFixed(2)}%`)
+    }
     // 普通池确定性：绝不产出超过价值上限的珍品（金币档不算物品，跳过）
     let capped = true
     for (let i = 0; i < 200; i++) {
@@ -2717,14 +2885,22 @@ console.log('══ X. 觅珍抽卡 ══')
   // ── 分支 / 双保底 / 软保底 / 公示表（2026-09-22 用户给的完整规格）──
   {
     const MJ = await import('../../src/game/data/mijianDraws.js')
-    const { BRANCH, BRANCH_POOLS, REFUND_PCT, refundOf, cheapTier, poolItems, pickItem } = MJ
-    // ① 三档分支与固定返金（规格「通用前置规则 #5」+「池子总览表」）
-    check('觅珍', '三档分支 = 40% 返金 / 25% 低档 / 35% 正常（三者相加 == 100%）',
+    const { BRANCH, MIX_BRANCH, branchOf, BRANCH_POOLS, REFUND_PCT, refundOf, cheapTier, poolItems, pickItem } = MJ
+    // ② 三档分支与固定返金（规格「通用前置规则 #5」+「池子总览表」）
+    //    2026-09-25 用户拍板「混池调低」：混池正常分支=纯装备（高价值）把回收率顶到 51.3%，
+    //    单独改为 65/25/10（当时返金 35% ⇒ 回收率 ≈33.6%）；材料/食物仍 40/25/35。
+    //    2026-09-26 用户「不能让觅珍回收率太大，不然还是能刷钱」⇒ 只下调返金档 35% → 20%
+    //    （低档物品对回收的贡献 ≈0，所以返金档是回收率的唯一大杠杆），五池回收率全部 ≤30%。
+    check('觅珍', '三档分支 = 材料/食物 40% 返金 / 25% 低档 / 35% 正常；混池专用 65/25/10（各自相加 == 100%）',
       BRANCH.gold === 0.4 && BRANCH.cheap === 0.25 && BRANCH.normal === 0.35 &&
-      Math.abs(BRANCH.gold + BRANCH.cheap + BRANCH.normal - 1) < 1e-9, JSON.stringify(BRANCH))
+      MIX_BRANCH.gold === 0.65 && MIX_BRANCH.cheap === 0.25 && MIX_BRANCH.normal === 0.1 &&
+      branchOf('material') === BRANCH && branchOf('food') === BRANCH && branchOf('mix') === MIX_BRANCH &&
+      Math.abs(BRANCH.gold + BRANCH.cheap + BRANCH.normal - 1) < 1e-9 &&
+      Math.abs(MIX_BRANCH.gold + MIX_BRANCH.cheap + MIX_BRANCH.normal - 1) < 1e-9,
+      `BRANCH=${JSON.stringify(BRANCH)} MIX=${JSON.stringify(MIX_BRANCH)}`)
     check('觅珍', '分支池 = 材料/食物/混池（装备池不返金、每抽必出装备）', BRANCH_POOLS.join(',') === 'material,food,mix', BRANCH_POOLS.join(','))
-    check('觅珍', '返金固定 35% 抽卡成本、**按整数落地**：材料 21 / 食物 38 / 混池 28（金币引擎会 floor）',
-      REFUND_PCT === 0.35 && refundOf(60) === 21 && refundOf(110) === 38 && refundOf(80) === 28 &&
+    check('觅珍', '返金固定 20% 抽卡成本、**按整数落地**：材料 12 / 食物 22 / 混池 16（金币引擎会 floor）',
+      REFUND_PCT === 0.2 && refundOf(60) === 12 && refundOf(110) === 22 && refundOf(80) === 16 &&
       Number.isInteger(refundOf(110)),
       `${refundOf(60)} / ${refundOf(110)} / ${refundOf(80)}`)
     check('觅珍', '低档物品 = 池内价值最低的 20%（按件取整，至少 1 件；判据并列安全）', (() => {
@@ -2772,7 +2948,7 @@ console.log('══ X. 觅珍抽卡 ══')
     check('觅珍', '行为：材料池 4000 抽里 返金≈40% / 低档≈25% / 物品≈35%（各 ±5%）',
       Math.abs(pr(gold) - 0.4) < 0.05 && Math.abs(pr(cheap) - 0.25) < 0.05 && Math.abs(pr(item) - 0.35) < 0.05,
       `返金 ${(pr(gold) * 100).toFixed(1)}% / 低档 ${(pr(cheap) * 100).toFixed(1)}% / 物品 ${(pr(item) * 100).toFixed(1)}%`)
-    check('觅珍', '行为：返金金额恒为 21 金（固定 35% 池价，不是区间）', goldSum === gold * 21, `sum=${goldSum} n=${gold}`)
+    check('觅珍', '行为：返金金额恒为 12 金（固定 20% 池价，不是区间）', goldSum === gold * 12, `sum=${goldSum} n=${gold}`)
     check('觅珍', '行为：材料/食物池各 1000 抽不出任何装备（无装备分支）', (() => {
       for (const id of ['material', 'food']) {
         for (let i = 0; i < 1000; i++) {
@@ -2808,16 +2984,16 @@ console.log('══ X. 觅珍抽卡 ══')
     const odds = MJ.allPoolOdds()
     const find = (id) => odds.find((o) => o.id === id)
     const pctOf = (id, q) => find(id).final.find((f) => f.raw === q)?.pct
-    check('觅珍', `公示表：混池 普通装备 ${pctOf('mix', '普通')}% / 稀有 ${pctOf('mix', '稀有')}% / 神话 ${pctOf('mix', '神话')}%（= 35% × 品质权重）`,
-      pctOf('mix', '普通') === 28.7 && pctOf('mix', '稀有') === 0.945 && pctOf('mix', '神话') === 0.0175)
+    check('觅珍', `公示表：混池 普通装备 ${pctOf('mix', '普通')}% / 稀有 ${pctOf('mix', '稀有')}% / 神话 ${pctOf('mix', '神话')}%（= 10% × 品质权重，2026-09-25 混池调低）`,
+      pctOf('mix', '普通') === 8.2 && pctOf('mix', '稀有') === 0.27 && pctOf('mix', '神话') === 0.005)
     check('觅珍', `公示表：限时池 普通装备 ${pctOf('limited', '普通')}% / 稀有 ${pctOf('limited', '稀有')}% / 神话 ${pctOf('limited', '神话')}%（= 80% × 品质权重）`,
       pctOf('limited', '普通') === 72 && pctOf('limited', '稀有') === 0.96 && pctOf('limited', '神话') === 0.008)
     check('觅珍', `公示表：厨具池 = 品质权重本身（${pctOf('gear', '普通')}% / ${pctOf('gear', '稀有')}%）`,
       pctOf('gear', '普通') === 82 && pctOf('gear', '稀有') === 2.7)
     check('觅珍', '公示表：材料/食物池没有装备行（无装备分支）',
       find('material').final.length === 0 && find('food').final.length === 0)
-    check('觅珍', '公示表：各池 final 之和 == 装备分支占比（混池 35% / 厨具 100% / 限时 80%）',
-      Math.abs(find('mix').final.reduce((a, f) => a + f.pct, 0) - 35) < 0.02 &&
+    check('觅珍', '公示表：各池 final 之和 == 装备分支占比（混池 10% / 厨具 100% / 限时 80%）',
+      Math.abs(find('mix').final.reduce((a, f) => a + f.pct, 0) - 10) < 0.02 &&
       Math.abs(find('gear').final.reduce((a, f) => a + f.pct, 0) - 100) < 0.02 &&
       Math.abs(find('limited').final.reduce((a, f) => a + f.pct, 0) - 80) < 0.02,
       `mix=${find('mix').final.reduce((a, f) => a + f.pct, 0).toFixed(3)} gear=${find('gear').final.reduce((a, f) => a + f.pct, 0).toFixed(3)} lim=${find('limited').final.reduce((a, f) => a + f.pct, 0).toFixed(3)}`)
@@ -2842,6 +3018,214 @@ console.log('══ X. 觅珍抽卡 ══')
   const { itemSources: src } = await import('../../src/game/data/itemSources.js')
   check('觅珍', '图鉴来源含觅珍（厨具池）', src('copperKnife').some((s) => s.includes('觅珍·厨具池')), JSON.stringify(src('copperKnife').slice(0, 3)))
   check('觅珍', '图鉴来源含觅珍（材料池）', src('apple').some((s) => s.includes('觅珍·材料池')))
+}
+
+// ── C9b. 运营调参层（2026-09-25 第四角色「运营调参员」）──
+// 红线：默认零影响（覆盖为空时与基线逐字节等价）；覆盖只在会话内存（CI 本进程用完必须复位）；
+// 难度类夹取上限 = 基线（「只能更难或复原」，保住 difficulty「永不抬高」叙事）。
+{
+  const T = await import('../../src/game/data/tuner.js')
+  const D = await import('../../src/game/data/difficulty.js')
+  const MC = await import('../../src/game/data/materialCost.js')
+  const GR = await import('../../src/game/core/growthRate.js')
+  T.tunerResetAll()
+  try {
+    // ① 默认零影响：覆盖为空时，所有读取点与基线等价
+    check('调参', '默认零影响：掉落/材料/阻尼/低目标/精通全部等于基线',
+      D.dropChance(0.1) === D.scaleChance(0.1, 0.2, 0.01) &&
+      MC.materialQty(3) === Math.max(1, Math.round(3 * 2)) &&
+      GR.dampXpStack(5) === 1 + (5 - 1) * 0.75 &&
+      GR.targetLevelXpMult(30, 20, 40) === 0.5)
+    // ② 覆盖生效：把对决掉落从 0.2 调到 0.1（更难）
+    T.tunerSet('diffDrop', 0.1)
+    check('调参', '覆盖生效：diffDrop=0.1 时 dropChance 随之减半',
+      Math.abs(D.dropChance(0.5) - 0.05) < 1e-9, `dropChance(0.5)=${D.dropChance(0.5)}`)
+    // ③ 夹取：难度类不能比基线简单（上限 = 基线）
+    T.tunerSet('diffDrop', 0.5)
+    check('调参', '夹取：diffDrop=0.5（> 基线 0.2）被夹回基线，掉落不会比原数据更简单',
+      Math.abs(D.dropChance(0.5) - 0.1) < 1e-9, `dropChance(0.5)=${D.dropChance(0.5)}`)
+    // ④ 材料成本覆盖
+    T.tunerSet('materialCost', 4)
+    check('调参', '覆盖生效：materialCost=4 时单件用量 ×4', MC.materialQty(3) === 12, `qty=${MC.materialQty(3)}`)
+    // ⑤ 阻尼覆盖：0 = 关掉叠区阻尼
+    T.tunerSet('xpDamping', 0)
+    check('调参', '覆盖生效：xpDamping=0 时叠区无阻尼（damp(5)=1）', GR.dampXpStack(5) === 1, `damp=${GR.dampXpStack(5)}`)
+    // ⑥ 复位：resetAll 后回到基线
+    T.tunerResetAll()
+    check('调参', '复位：resetAll 后全部回基线',
+      D.dropChance(0.5) === 0.1 && MC.materialQty(3) === 6 && GR.dampXpStack(5) === 4)
+    // ⑦ 低目标衰减覆盖
+    T.tunerSet('lowTargetMult', 1)
+    check('调参', '覆盖生效：lowTargetMult=1 = 关掉低目标衰减', GR.targetLevelXpMult(30, 20, 40) === 1)
+  } finally {
+    T.tunerResetAll() // 🔴 必须复位：后续区块与其它守卫都跑在「无覆盖」基线上
+  }
+  check('调参', '复位确认：finally 后覆盖为空', T.tunerActiveKeys().length === 0)
+  // ── 扩充旋钮（战斗节奏 / 全局经验 / 离线上限）──
+  {
+    const ES = await import('../../src/game/data/enemyScaling.js')
+    const CAPS = await import('../../src/game/data/caps.js')
+    T.tunerResetAll()
+    try {
+      // 敌人血量倍率：L30 基础 100 → 分档 ×1.8 = 180；override 0.5 → 90
+      T.tunerSet('enemyHp', 0.5)
+      check('调参', 'enemyHp=0.5：L30 敌人 100 血 → 分档 ×1.8 再 ×0.5 = 90',
+        ES.scaledEnemy({ level: 30, hp: 100 }).hp === 90, `hp=${ES.scaledEnemy({ level: 30, hp: 100 }).hp}`)
+      T.tunerResetKey('enemyHp')
+      check('调参', 'enemyHp 复原：回到分档值 180', ES.scaledEnemy({ level: 30, hp: 100 }).hp === 180)
+      // 攻速衰减：0.008 → L40 间隔 2.4−0.32=2.08；到顶等级 ceil(1.2/0.008)=150
+      T.tunerSet('atkSpeedDecay', 0.008)
+      check('调参', 'atkSpeedDecay=0.008：L40 间隔 2.08、到顶等级 150',
+        Math.abs(CAPS.combatTurnIntervalSec(40) - 2.08) < 1e-9 && CAPS.combatSpeedCapLevel() === 150,
+        `iv=${CAPS.combatTurnIntervalSec(40)} cap=${CAPS.combatSpeedCapLevel()}`)
+      T.tunerResetKey('atkSpeedDecay')
+      // 离线上限：override 直接给定小时数
+      const pf = freshPlayer()
+      T.tunerSet('offlineHours', 48)
+      check('调参', 'offlineHours=48：离线上限覆盖为 48h（基线不含加成 ' + CAPS.OFFLINE_CAP.baseHours + 'h）',
+        pf.offlineMaxHours() === 48, `h=${pf.offlineMaxHours()}`)
+      T.tunerResetAll()
+      // 全局经验倍率：cooking 实例 addXp ×3
+      const inst2 = getSkillInstance('cooking')
+      const lv = inst2.level
+      const e0 = inst2.exp
+      inst2.addXp(500)
+      const d0 = inst2.exp - e0
+      T.tunerSet('globalXp', 3)
+      const e1 = inst2.exp
+      inst2.addXp(500)
+      const d1 = inst2.exp - e1
+      T.tunerResetAll()
+      check('调参', 'globalXp=3：addXp 实得经验 ×3（未升级前线性段）',
+        Math.abs(d1 - d0 * 3) < 0.5 && d0 === 500, `d0=${d0} d1=${d1} lv=${lv}`)
+    } finally {
+      T.tunerResetAll()
+    }
+  }
+  // ── 扩展旋钮 2（2026-09-25 第二批：抽卡经济 / 转生加成 / 卡片经验 / 低目标判定 / 攻速地板）──
+  {
+    const MJ = await import('../../src/game/data/mijianDraws.js')
+    const GR2 = await import('../../src/game/core/growthRate.js')
+    const CAPS2 = await import('../../src/game/data/caps.js')
+    T.tunerResetAll()
+    try {
+      // 低目标判定差：Lv30 做 Lv26 —— 默认差 5 ⇒ 不算低目标；调到 2 ⇒ 算
+      check('调参', 'lowTargetGap：默认 5 级时 Lv26 不算低目标，覆盖为 2 后算',
+        GR2.isLowTarget(30, 26, 40) === false && (T.tunerSet('lowTargetGap', 2), GR2.isLowTarget(30, 26, 40) === true))
+      T.tunerResetKey('lowTargetGap')
+      // 攻速地板：L100 原始 0.8s —— 默认地板 1.2 抬回 1.2；地板 0.5 时放行到 0.8
+      check('调参', 'speedFloor：L100 默认被 1.2s 地板钉住，地板改 0.5 后放行到 0.8s',
+        Math.abs(CAPS2.combatTurnIntervalSec(100) - 1.2) < 1e-9 && (T.tunerSet('speedFloor', 0.5), Math.abs(CAPS2.combatTurnIntervalSec(100) - 0.8) < 1e-9))
+      T.tunerResetKey('speedFloor')
+      // 返金比例：混池 80 价 × 20% = 16；改 10% ⇒ 8
+      check('调参', 'refundPct：混池返金 16 → 10% 时 8 金（整数落地）',
+        MJ.refundOf(80) === 16 && (T.tunerSet('refundPct', 0.1), MJ.refundOf(80) === 8))
+      T.tunerResetKey('refundPct')
+      // 混池正常分支：派生返金档，三者恒为 1
+      T.tunerSet('mixNormal', 0.3)
+      const mb = MJ.branchOf('mix')
+      check('调参', 'mixNormal=0.3：返金档派生为 0.45（1 − 0.25 低档 − 0.3 正常，三者相加 = 1）',
+        Math.abs(mb.normal - 0.3) < 1e-9 && Math.abs(mb.gold - 0.45) < 1e-9 && Math.abs(mb.gold + mb.cheap + mb.normal - 1) < 1e-9)
+      T.tunerResetKey('mixNormal')
+      check('调参', 'mixNormal 复位：回到基线 65/25/10', MJ.branchOf('mix').normal === 0.1 && MJ.branchOf('mix').gold === 0.65)
+      // 保底抽数：厨具 40 → 10；混池 50 → 20（且夹在神话保底之前）
+      check('调参', 'gearPity/mixPity：厨具 40→10、混池 50→20（夹取上限 = 神话保底 − 1）',
+        MJ.pityRuleOf('gear').rare === 40 && MJ.pityRuleOf('mix').rare === 50 &&
+        (T.tunerSet('gearPity', 10), T.tunerSet('mixPity', 20), MJ.pityRuleOf('gear').rare === 10 && MJ.pityRuleOf('mix').rare === 20))
+      T.tunerSet('gearPity', 9999)
+      check('调参', '保底抽数夹取：9999 被夹到神话保底 − 1（200−1=199，稀有保底不会永不触发）', MJ.pityRuleOf('gear').rare === 199, `rare=${MJ.pityRuleOf('gear').rare}`)
+      T.tunerResetAll()
+      // 软保底上限：混池第 49 抽的概率应随 SOFT_MAX_P 下降
+      const soft49a = MJ.softRareP('mix', 49)
+      T.tunerSet('softMaxP', 0.3)
+      const soft49b = MJ.softRareP('mix', 49)
+      check('调参', 'softMaxP：第 49 抽软保底概率随上限下降（0.9 → 0.3 时变小）', soft49b < soft49a, `${soft49a?.toFixed(3)} → ${soft49b?.toFixed(3)}`)
+      T.tunerResetAll()
+      // 限时池装备率：公示与结算同源
+      const limA = MJ.allPoolOdds().find((o) => o.id === 'limited').gearPct
+      T.tunerSet('limitedGearPct', 0.5)
+      const limB = MJ.allPoolOdds().find((o) => o.id === 'limited').gearPct
+      check('调参', 'limitedGearPct：限时池装备率公示值 80 → 50（与结算同一出口）', limA === 80 && limB === 50, `${limA} → ${limB}`)
+      T.tunerResetAll()
+      // 卡片经验整体缩放：addCardXp 实得经验按倍率变化
+      const ck2 = getSkillInstance('cooking')
+      const e2a = ck2.exp
+      ck2.addCardXp(100, 1, 1)
+      const d2a = ck2.exp - e2a
+      T.tunerSet('cardXpScale', 2)
+      const e2b = ck2.exp
+      ck2.addCardXp(100, 1, 1)
+      const d2b = ck2.exp - e2b
+      check('调参', 'cardXpScale：卡片经验 ×2 后同额经验实得翻倍', Math.abs(d2b - d2a * 2) < 0.5 && d2a > 0, `${d2a} → ${d2b}`)
+      T.tunerResetAll()
+      // 转生加成：每层 +20% → +50% 时同额经验按阻尼乘积比值放大
+      const ck3 = getSkillInstance('cooking')
+      ck3.player.skills[ck3.id].prestiges = 1
+      const e3a = ck3.exp
+      ck3.addXp(1000)
+      const d3a = ck3.exp - e3a
+      T.tunerSet('prestigeXpBonus', 0.5)
+      const e3b = ck3.exp
+      ck3.addXp(1000)
+      const d3b = ck3.exp - e3b
+      const want = (1 + 0.5 * 0.75) / (1 + 0.2 * 0.75) // dampXpStack(1.5)/dampXpStack(1.2)
+      check('调参', 'prestigeXpBonus：每层 +20%→+50% 后同额经验放大（经阻尼乘积，比值 = damp(1.5)/damp(1.2)）',
+        Math.abs(d3b / d3a - want) < 0.02, `比值 ${(d3b / d3a).toFixed(3)} vs 期望 ${want.toFixed(3)}`)
+      ck3.player.skills[ck3.id].prestiges = 0
+    } finally {
+      T.tunerResetAll()
+    }
+  }
+  // ── 旋钮 ↔ 读取点一致性（2026-09-25 立）────────────────────────────────────────────
+  // 🔴 起因：首版有**两个滑杆在游戏内空转** —— 面板 ROWS 写 `diffExploreLoot` / `diffGatherExtra`，
+  //    读取点写 `diffExploreloot` / `diffGatherextra`（只差首字母大小写）。`tunerOver` 是**按名字查表**，
+  //    查不到名字就静默返回基线 ⇒ 拖滑杆只有面板自己变、引擎一点没动，而「零副作用校验」与上面全部 C9b
+  //    断言照样全绿（**又是「显示与结算不一致」，这次发生在调参工具自己身上**）。
+  //    两条静态断言把「面板 → 读取点」两个方向钉死，再加一条行为断言确认那两个旋钮真的接到了引擎。
+  {
+    const fs2 = await import('node:fs')
+    const panel = fs2.readFileSync(new URL('../../src/components/TunerPanel.vue', import.meta.url), 'utf8')
+    const rowsBlock = panel.slice(panel.indexOf('const ROWS = ['), panel.indexOf('const GROUPS = ['))
+    const rowKeys = [...rowsBlock.matchAll(/key: '([A-Za-z]+)'/g)].map((m) => m[1])
+    const readKeys = new Set()
+    const { stripComments } = await import('./lib/comments.mjs')
+    const walk = (dir) => {
+      for (const e of fs2.readdirSync(dir, { withFileTypes: true })) {
+        const p = dir + '/' + e.name
+        if (e.isDirectory()) { walk(p); continue }
+        // 🔴 排除面板自身：它在「影响链 / 零副作用校验」里也调 tunerOver 给自己的预览取数
+        //    （见 `tunerOver('globalXp', 1, 0, 20)`）—— 算进来正好会让「面板自己变、引擎没动」假绿。
+        if (p === 'src/components/TunerPanel.vue') continue
+        if (!/\.(js|vue|mjs)$/.test(e.name)) continue
+        // 剥注释：`tuner.js` 的用法注释里就写着 `tunerOver('key', …)`，不剥会扫出一个不存在的「隐藏旋钮 key」
+        const code = stripComments(fs2.readFileSync(p, 'utf8'))
+        // 第一个实参可能是字面量、也可能是三元（`mijianDraws.js`：`poolId === 'mix' ? 'mixPity' : 'gearPity'`）
+        // ⇒ 取「第一个逗号前」的实参文本，抽出其中**所有**引号标识符；先把 `=== 'xxx'` 这种比较字面量剔掉，
+        //   否则 `'mix'`（池名）会被当成一个旋钮名扫进来（首版就是这么多出一条「未暴露：mix」的假失败）。
+        for (const call of code.matchAll(/tunerOver\(([^,;)]*)/g)) {
+          const arg = call[1].replace(/[=!]==?\s*'[A-Za-z]+'/g, '')
+          for (const k of arg.matchAll(/'([A-Za-z]+)'/g)) readKeys.add(k[1])
+        }
+      }
+    }
+    walk('src')
+    const dead = rowKeys.filter((k) => !readKeys.has(k))
+    check('调参', `旋钮接线：面板 ${rowKeys.length} 个 key 都有读取点（没有空转滑杆）`, dead.length === 0, `空转：${dead.join('/') || '—'}`)
+    const hidden = [...readKeys].filter((k) => !rowKeys.includes(k))
+    check('调参', `旋钮接线：${readKeys.size} 个读取点都由面板暴露（没有只能改代码的隐藏旋钮）`, hidden.length === 0, `未暴露：${hidden.join('/') || '—'}`)
+    // 行为断言：那两个**曾经空转**的旋钮现在真的改到引擎（两条都落在「减半」桶上）
+    T.tunerResetAll()
+    const lootBase = D.exploreLootChance(0.4)
+    const extraBase = D.gatherExtraChance(0.4)
+    T.tunerSet('diffExploreLoot', 0.01)
+    T.tunerSet('diffGatherExtra', 0.005)
+    const lootTuned = D.exploreLootChance(0.4)
+    const extraTuned = D.gatherExtraChance(0.4)
+    T.tunerResetAll()
+    check('调参', '行为：diffExploreLoot / diffGatherExtra 真的改到引擎（曾因大小写不匹配而空转）',
+      lootTuned < lootBase && extraTuned < extraBase && D.exploreLootChance(0.4) === lootBase && D.gatherExtraChance(0.4) === extraBase,
+      `探索战利品 ${lootBase}→${lootTuned} · 采集附产 ${extraBase}→${extraTuned}`)
+  }
 }
 
 // ── C10. 一键入包（2026-09-06）──
@@ -5220,12 +5604,13 @@ console.log('══ C32. 副业·木工 ══')
   const cBad = []
   for (const d of CRAFTED_DECOR) {
     if (!RESTAURANT_DECOR_BY_ID[d.id]) cBad.push(`${d.id}: 未并入 RESTAURANT_DECOR_BY_ID`)
-    if (!d.craftedFrom || !woodIds.has(d.craftedFrom.itemId)) cBad.push(`${d.id}: craftedFrom 指向的不是木器`)
+    const dsrc = d.craftedFrom?.itemId
+    if (!d.craftedFrom || (dsrc !== 'wood' && !woodIds.has(dsrc))) cBad.push(`${d.id}: craftedFrom 指向的不是木器/木材`)
     if (d.price != null) cBad.push(`${d.id}: 手工装潢不该有金币价`)
     if (!(d.effect > 0)) cBad.push(`${d.id}: effect 非正`)
   }
   const effects = CRAFTED_DECOR.map((d) => d.effect)
-  check('副业·木工', `手工装潢 ${CRAFTED_DECOR.length} 件：并入装潢索引、来源为木器、无金币价、效果为正`, CRAFTED_DECOR.length === 10 && cBad.length === 0, cBad.slice(0, 4).join('; '))
+  check('副业·木工', `手工装潢 ${CRAFTED_DECOR.length} 件：并入装潢索引、来源为木器或基础木材、无金币价、效果为正`, CRAFTED_DECOR.length === 11 && cBad.length === 0, cBad.slice(0, 4).join('; '))
   check('副业·木工', '手工装潢效果严格递增（等级越高越强，无倒挂）', effects.every((v, i) => i === 0 || v > effects[i - 1]), effects.join(','))
   check('副业·木工', `装潢总数 = 商店 ${RESTAURANT_DECOR.length} + 手工 ${CRAFTED_DECOR.length}（分母用 DECOR_TOTAL，避免做满后显示 305/300）`,
     DECOR_TOTAL === RESTAURANT_DECOR.length + CRAFTED_DECOR.length && RESTAURANT_DECOR.length === 300)
@@ -5237,7 +5622,7 @@ console.log('══ C32. 副业·木工 ══')
     p0.craftDecor(CRAFTED_DECOR[0].id) === 'denied' && !(p0.restaurant.decor ?? []).includes(CRAFTED_DECOR[0].id))
   check('副业·木工', '非法目标（非手工装潢 id）返回 bad，不会白拿',
     p.craftDecor('decor_1') === 'bad' && p.craftDecor('不存在的id') === 'bad')
-  const target = CRAFTED_DECOR[0]
+  const target = CRAFTED_DECOR.find((d) => d.craftedFrom.itemId === 'bowlRack')
   // ⚠️ 新档菜单是空的 → 时收恒为 0，乘多少装饰都还是 0。要验证「装潢真的抬了收入」，
   //    必须先挂一道菜（这也是既有装潢测试的做法）。
   p.restaurant.menu = ['roastPotato']
@@ -5250,6 +5635,16 @@ console.log('══ C32. 副业·木工 ══')
     `${res} 木器余 ${p.inventory[target.craftedFrom.itemId]} 收入 ${before.toFixed(1)}→${after.toFixed(1)}`)
   check('副业·木工', '重复制作返回 owned 且不再扣木器（幂等，不重复计数）',
     p.craftDecor(target.id) === 'owned' && p.inventory[target.craftedFrom.itemId] === 1)
+  // 木柴堆（2026-09-25 用户拍板）：唯一一条**直接吃基础木材 ×10** 的手工装潢 —— 木材的限流消耗口
+  const pw = freshPlayer({ woodworking: 1 })
+  pw.inventory.wood = 10
+  pw.restaurant.menu = ['roastPotato']
+  const wBefore = pw.restaurantHourlyIncome
+  const wRes = pw.craftDecor('decor_hand_woodPile')
+  check('副业·木工', '木柴堆：木材×10 可直接做成手工装潢（消耗 10 木材、收入上升、重复返回 owned）',
+    wRes === 'ok' && (pw.inventory.wood ?? 0) === 0 && (pw.restaurant.decor ?? []).includes('decor_hand_woodPile') &&
+    pw.restaurantHourlyIncome > wBefore && pw.craftDecor('decor_hand_woodPile') === 'owned',
+    `${wRes} wood余${pw.inventory.wood ?? 0} 收入 ${wBefore.toFixed(1)}→${pw.restaurantHourlyIncome.toFixed(1)}`)
 
   // ⑩ 存档往返：手工装潢随 restaurant.decor 一起存下来
   const saved = p.serialize()
@@ -6229,6 +6624,25 @@ console.log('══ C40. 新手目标链 ══')
   // 每个长线步的 label 必须写明是长线（免得玩家以为「马上就差这一步」）
   check('新手链', '长线步的文案里带「长线」标注',
     longIdx.every((i) => NEWBIE_STEPS[i].label.includes('长线')))
+  // ②c 🔴 武器必须在「赢得第一场对决」**之前**发（2026-09-26 实测后立的守卫）
+  //     为什么：空手打第一场是**必败**的 —— 真新档打「灶台学徒」实测胜率 **0%**（400 场 0 胜），
+  //     而只带 2 份烤土豆（原 n03 奖励口径）也只有 **49%**（抛硬币、单场 55 秒）。把铜刀提前到 n03 后
+  //     同一场 **100%**。谁把它挪回「赢了才发」，开局第一步就会重新变成抽奖 —— 这条断言就是拦这个。
+  {
+    const i03 = NEWBIE_STEPS.findIndex((s) => s.id === 'n03')
+    const i04 = NEWBIE_STEPS.findIndex((s) => s.id === 'n04')
+    const knife = NEWBIE_STEPS[i03]?.reward?.items?.copperKnife
+    check('新手链', '武器在第 ③ 步就发（必须早于 ④「赢得第一场对决」；空手首战实测 0% 胜）',
+      !!knife && i03 >= 0 && i04 >= 0 && i03 < i04, `n03 铜刀=${knife ?? '无'} · 位置 ${i03} < ${i04}`)
+    check('新手链', '首战前至少给 2 份回血料理（③+④ 合计，与实测口径一致）', (() => {
+      const heal = ['roastPotato']
+      const n = NEWBIE_STEPS.slice(0, Math.max(0, i04) + 1)
+        .flatMap((s) => Object.entries(s.reward?.items ?? {}))
+        .filter(([id]) => heal.includes(id))
+        .reduce((a, [, q]) => a + q, 0)
+      return n >= 2
+    })())
+  }
   check('新手链', `奖励总额有上限（实测 ${totalGold.toLocaleString()} 金币 ≤ 20,000）`, totalGold <= 20000, `totalGold=${totalGold}`)
 
   // ③ 判定不许抛错（含极端空状态）
@@ -6461,8 +6875,47 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     names.join(' / '))
   // ⑤ 深层对手确实更强（否则「深度」是假的）
   const lo = towerFloor(100, 100), hi = towerFloor(1000, 100)
-  check('塔深层', '对手属性随层数增长（hp/atk 线性、def 封顶后仍不降）',
+  check('塔深层', '对手属性随层数增长（hp/atk 爬坡、def 封顶后仍不降）',
     hi.hp > lo.hp && hi.atk > lo.atk && hi.def >= lo.def, `F100 hp${Math.round(lo.hp)} → F1000 hp${Math.round(hi.hp)}`)
+  // ⑥ 🔴 **两段爬坡：陡尾段必须真的更陡**（2026-09-26 重标定，用户「后期还有挑战吗」）
+  //    为什么必须钉：塔的难度全在 `g` 这一条曲线上，而它是**纯函数**、改一个数字就能让深层重新变成
+  //    「零挑战走廊」（前科：单一斜率 0.012 时满配的 50% 深度在 F1520，F400~F1500 全是 100% 胜）。
+  //    静态断言只能钉形状（真正的墙要用 sim 量，见 battleTower.js 里的复测命令与 AGENTS 塔节）。
+  const gOf = (f) => {
+    const t = towerFloor(f, 120)
+    return t.hp / (12 + t.level * 6) // 反解 g（hp = (12 + level×6) × g）
+  }
+  const gNear = (f) => gOf(f + 4) - gOf(f) // 相邻 4 层的 g 增量（= 该段斜率×4）
+  const kShallow = gNear(100), kDeep = gNear(1000)
+  check('塔深层', 'hp/atk 爬坡是两段且陡尾段更陡（F~100 段平缓、F~1000 段明显更陡）',
+    kDeep > kShallow * 1.3, `F100 段 +${kShallow.toFixed(3)}/4层 vs F1000 段 +${kDeep.toFixed(3)}/4层`)
+  check('塔深层', '第一段（≤F250）与设计口径一致（L60 主战场：F250 的 g 仍在 3.9~4.1）',
+    Math.abs(gOf(250) - 3.988) < 0.05, `F250 g=${gOf(250).toFixed(3)}`)
+  check('塔深层', '深层对手量级（F1000 的 hp ≥ F400 的 2.4 倍：把「零挑战走廊」压回设计深度）',
+    towerFloor(1000, 120).hp >= towerFloor(400, 120).hp * 2.4,
+    `F400 hp${towerFloor(400, 120).hp} → F1000 hp${towerFloor(1000, 120).hp}（×${(towerFloor(1000, 120).hp / towerFloor(400, 120).hp).toFixed(2)}）`)
+  // ⑦ 🔴 **券的总产出：三档设计深度下必须 ≥3600**（2026-09-26 重标定后补的补偿守卫）
+  //    为什么：`towerFloor` 改两段后可达深度回退（标准 F1520→F1050 · 精英 ~984→560 · 极限 ~717→360）
+  //    ⇒ 券总产出一度掉到 **1913（−58%）**，而券是「后期稀缺的真货币」（塔节 ② 的设计说明）。
+  //    补偿方式 = 每 25 层 / 每 100 层的**发放量翻倍**（`towerMilestone`）⇒ **3820**。
+  //    这条守卫拦两件事：① 谁把发放量改回去；② 谁将来又动 `towerFloor` 的斜率却没重算券。
+  //    ⚠️ 深度 F1050/F560/F360 是 **sim 实测值**（`tower_sim --tier-id`），不是代码常量 ——
+  //    哪天真的重标定使深度变化，按新实测重钉这三个数（改数字，不要放宽 ≥3600 这条线）。
+  {
+    const TICKET_DEPTHS = [['标准', 1050, 1], ['精英', 560, 1.5], ['极限', 360, 2]]
+    const per = TICKET_DEPTHS.map(([name, to, mult]) => {
+      let t = 0
+      for (let f = 10; f <= to; f += 10) t += towerMilestone(f, mult)?.tickets ?? 0
+      return `${name} ${t}`
+    })
+    const ticketTotal = TICKET_DEPTHS.reduce((sum, [, to, mult]) => {
+      let t = 0
+      for (let f = 10; f <= to; f += 10) t += towerMilestone(f, mult)?.tickets ?? 0
+      return sum + t
+    }, 0)
+    check('塔深层', `三档设计深度下的券总产出 ≥3600（实测 ${ticketTotal}；深度 F1050/F560/F360 为 sim 实测值）`,
+      ticketTotal >= 3600, `${per.join(' · ')} ⇒ 合计 ${ticketTotal}`)
+  }
 }
 
 // ══════════ C45：食神秘境的「档位」（2026-09-19 参照 Rocky Idle 的 Runs 立）══════════
@@ -7599,23 +8052,27 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // ③c 敌人立绘（2026-09-21）：248 张图必须**在磁盘上真实存在**且是 RGBA、尺寸对。
   //     起因：`<img>` 的 @error 会静默隐藏破图（图鉴/卡片都不会报错），只有查文件才发现缺图/坏图。
   //     与「山海食经 400/400 节点图标」同一条纪律：数据里的 imgKey ↔ 磁盘文件必须一一对应。
-  check('对决页', '248 个敌人立绘都在磁盘上且是 512×512 RGBA', (() => {
+  check('对决页', '248 个敌人立绘都在磁盘上且是 512×512 带透明的 WebP', (() => {
     const enemies = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
     const noKey = enemies.filter((o) => !o.imgKey)
     if (noKey.length) return { ok: false, why: `${noKey.length} 个敌人没有 imgKey` }
     const bad = []
     for (const o of enemies) {
-      const rel = `images/enemies/${o.imgKey}.png`
+      const rel = `images/enemies/${o.imgKey}.webp`
       const abs = new URL(`../../public/${rel}`, import.meta.url)
       if (!fs.existsSync(fileURLToPath(abs))) { bad.push(`${o.name} 缺 ${rel}`); continue }
       const buf = fs.readFileSync(abs)
-      // PNG 头里直接读宽高与色彩类型（0=灰度 2=RGB 3=调色板 4=灰度+alpha 6=RGBA）
-      const sig = buf.slice(0, 8).toString('hex')
-      if (sig !== '89504e470d0a1a0a') { bad.push(`${o.name} 不是 PNG`); continue }
-      const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20), colorType = buf[25]
+      // WebP 头（2026-09-25 从 PNG 换过来）：RIFF....WEBP 之后第一个 chunk 是 'VP8X'（扩展格式）。
+      //   VP8X 载荷从第 20 字节起：1 字节 flags（bit4 = 0x10 表示有 alpha 通道）+ 3 字节保留 +
+      //   3 字节「画布宽 − 1」（小端）+ 3 字节「画布高 − 1」。
+      //   ⚠️ 必须走 VP8X 而不是 VP8：只有 VP8X 才带 alpha 标志位，而我们这些立绘是**透明背景**
+      //   （丢了 alpha 会在深色卡上显示成一块实心方块）。实测 PIL q92 + RGBA 输出的正是 VP8X/ALPH 结构。
+      if (buf.slice(0, 4).toString('ascii') !== 'RIFF' || buf.slice(8, 12).toString('ascii') !== 'WEBP') { bad.push(`${o.name} 不是 WebP`); continue }
+      if (buf.slice(12, 16).toString('ascii') !== 'VP8X') { bad.push(`${o.name} 不是扩展 WebP（无 VP8X，多半丢了 alpha 通道）`); continue }
+      const w = buf.readUIntLE(24, 3) + 1, h = buf.readUIntLE(27, 3) + 1
       const want = 512 // 2026-09-21 第三轮定稿 512：卡片立绘 140~168、战斗屏 176 在 DPR 2 下也原生清晰
       // ⚠️ 别退回 256：256 源图在 DPR≥1.5 的屏幕上不够用，就是用户报的「主角/敌人/卡片都糊糊的」
-      if (colorType !== 6) bad.push(`${o.name} 不是 RGBA(colorType=${colorType})`)
+      if (!(buf[20] & 0x10)) bad.push(`${o.name} 没有 alpha 通道`)
       else if (w !== want || h !== want) bad.push(`${o.name} 尺寸 ${w}×${h}（应为 ${want}）`)
     }
     return { ok: bad.length === 0, why: bad.slice(0, 6).join('；') + (bad.length > 6 ? ` …共 ${bad.length} 处` : '') }
@@ -7623,7 +8080,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const enemies = [...COMBAT_REGIONS.flatMap((r) => r.opponents), ...COMBAT_BOSSES]
     const bad = []
     for (const o of enemies) {
-      const abs = new URL(`../../public/images/enemies/${o.imgKey}.png`, import.meta.url)
+      const abs = new URL(`../../public/images/enemies/${o.imgKey}.webp`, import.meta.url)
       if (o.imgKey && !fs.existsSync(fileURLToPath(abs))) bad.push(o.name)
     }
     return bad.slice(0, 6).join('、')
@@ -8138,6 +8595,117 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       /export const LOW_TARGET_NOTE/.test(c54('game/core/growthRate.js')) &&
       ['views/GatheringView.vue', 'views/ProductionView.vue', 'views/ExplorationView.vue', 'views/FarmingView.vue']
         .every((f) => c54(f).includes('LOW_TARGET_NOTE')))
+  }
+}
+
+// ══════════ C55：游客 / 试玩角色（2026-09-24，学校要求「三个以上权限角色」）══════════
+// 角色矩阵：**游客 < 玩家 < 开发者**。游客 = 免建档试玩：不占存档位、**对本机零写入**、无导出、
+// 无开发者面板。写入口的闸门放在 `SaveManager.readOnly`（唯一出口），因为写路径有 6 个 ——
+// 散在各处判断必然漏一个（本项目「唯一出口」纪律）。
+{
+  const { readFileSync } = await import('node:fs')
+  const c55 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
+  const smSrc = c55('game/core/SaveManager.js')
+  const boot = c55('game/bootstrap.js')
+
+  // ── A. 唯一出口：闸门在 SaveManager，写入口全部过它 ──
+  check('游客角色', 'SaveManager 有只读闸门（readOnly + _writable 单一判据）',
+    /this\.readOnly\s*=\s*false/.test(smSrc) && /_writable\(\)\s*\{[\s\S]{0,90}return\s+!this\.readOnly/.test(smSrc))
+  check('游客角色', '🔴 写入口全部过闸门：saveSlot / clearSlot / restoreSnapshot / exportToFile / _snapshotBefore（save 与 clear 走前两者）',
+    ['saveSlot(', 'clearSlot(', 'restoreSnapshot(', 'exportToFile(', '_snapshotBefore(']
+      .every((fn) => {
+        const i = smSrc.indexOf(`  ${fn}`)
+        return i >= 0 && smSrc.slice(i, i + 300).includes('_writable()')
+      }))
+  check('游客角色', '闸门只挡写、不挡读（load / listSlots / listSnapshots 不带闸门 —— 游客是「读了也不写」）',
+    !/  loadSlot\(slot\)\s*\{[\s\S]{0,80}_writable/.test(smSrc) && !/  listSlots\(\)\s*\{[\s\S]{0,80}_writable/.test(smSrc))
+
+  // ── B. 启动流程：进游客置位、回普通会话复位 ──
+  check('游客角色', 'startGame 支持 guest 且**两态都置位**（进游客打开只读、回普通会话必须关掉，否则残留）',
+    /saveManager\.readOnly\s*=\s*guest/.test(boot) && /ui\.guest\s*=\s*guest/.test(boot))
+  check('游客角色', '游客走空白档起步（不读任何存档位）',
+    /if \(guest\) \{[\s\S]{0,220}player\.\$reset\(\)[\s\S]{0,120}player\.newGame\(\)/.test(boot))
+  check('游客角色', 'saveNow 有只读短路（自动存档 / 切后台 / 关页同一条路径）',
+    /if \(saveManager\.readOnly\) return/.test(boot))
+  check('游客角色', '对外暴露 isGuestSession()（UI 与守卫都读它，不各自判断 readOnly）',
+    /export function isGuestSession\(\)/.test(boot) && /return saveManager\.readOnly === true/.test(boot))
+
+  // ── C. 全局偏好键与埋点：最容易漏出去的两条写路径 ──
+  const app = c55('App.vue')
+  // 写法是 `if (v && !ui.guest) localStorage.setItem(THEME_KEY, v)` —— 判据在 setItem **之前**，
+  // 所以断言要抓「整行」，不能写成 `setItem(KEY...)` 之后再找 `!`（第一版就是这么写错的）。
+  // 2026-09-25 补 BGM_KEY（启动页 BGM 的开关偏好，同属「这台机器的正式玩家」的偏好）：
+  // 🔴 这个键**多一个坑**——它的 watcher 还必须判 `ui.phase === 'game'`，因为启动页阶段 settings 是默认值
+  //    （bgmEnabled 默认 false），不加就会每次打开启动页都写下 '0'（既污染偏好又违反「启动页零写入」）。
+  const globalPrefWrites = app.match(/[^\n]*localStorage\.setItem\((THEME_KEY|SKIN_KEY|BGM_KEY)[^\n]*/g) || []
+  check('游客角色', '🔴 主题 / 皮肤 / 启动页 BGM 三个全局偏好键都不再写（进游戏时这些 watcher 一定会触发一次）',
+    globalPrefWrites.length === 3 && globalPrefWrites.every((l) => l.includes('!ui.guest')),
+    globalPrefWrites.map((l) => l.trim().slice(0, 90)).join(' ｜ ') || '一个都没抓到（等于三处都不判游客）')
+  const bgmWrite = (app.match(/[^\n]*localStorage\.setItem\(BGM_KEY[^\n]*/) ?? [''])[0]
+  check('游客角色', '启动页 BGM 的偏好键只在游戏阶段写（否则启动页每开一次就写一个 0）',
+    bgmWrite.includes("ui.phase === 'game'") && bgmWrite.includes('!ui.guest'),
+    bgmWrite.trim().slice(0, 110) || '没抓到 BGM_KEY 的写入行')
+  check('游客角色', '埋点（开发构建）在游客会话下不落盘', /if \(isGuest\(\)\) return/.test(c55('game/dev/telemetry.js')))
+
+  // ── D. 界面三处接线：入口 / 徽章 / 面板禁用 ──
+  const splash = c55('components/SplashScreen.vue')
+  check('游客角色', '启动页有「免建档试玩」入口且走 startGame({ guest: true })',
+    /splash-guest-btn/.test(splash) && /startGame\(\{ guest: true \}\)/.test(splash))
+  check('游客角色', '顶栏有「试玩中」徽章（玩家随时知道自己处于哪个角色）',
+    /top-nav-guest/.test(app) && /top-nav-guest/.test(c55('styles/main.css')))
+  const savePanel = c55('components/SavePanel.vue')
+  // 🔴 断言必须**逐个按钮**检查，不能数「出现次数 ≥ N」：第一版写 `>= 6`（实际 7 处），
+  //    于是删掉任意一处（反例 ⑥）仍然通过 —— 典型的「断言太弱 = 假绿」。现在抓出存档面板里
+  //    每一个 `<button>` 标签，要求**全部**带 `:disabled="ui.guest"`。
+  // ⚠️ 锚点是**类名**：2026-09-25 存档面板排版重做（`.slot-grid` → `.sv-list`）时这条断言立刻 FAIL
+  //    （抓到 0 个按钮）—— 这正是 `>= 6` 那条下限在起作用，别把它删掉。以后重做该面板记得回来改锚点。
+  // 取值区间到 `.sv-foot`（面板底部那行「当前会话」）为止，不再依赖结尾缩进。
+  const slotGrid = (savePanel.match(/<div class="sv-list">[\s\S]*?<p class="sv-foot">/) ?? [''])[0]
+  const gridBtns = slotGrid.match(/<button[\s\S]*?>/g) ?? []
+  check('游客角色', '存档面板：横幅 + 面板里**每一个**写按钮都 disabled（不做静默失效）',
+    /guest-notice/.test(savePanel) && gridBtns.length >= 6 && gridBtns.every((b) => b.includes(':disabled="ui.guest"')),
+    `抓到 ${gridBtns.length} 个按钮，缺 disabled 的：${gridBtns.filter((b) => !b.includes(':disabled="ui.guest"')).map((b) => b.slice(0, 50)).join(' ｜ ') || '（无）'}`)
+  check('游客角色', '开发者面板在游客会话下被拒（统一入口 requestDevEntry 一处判断）',
+    /if \(ui\.guest\)/.test(c55('game/dev/devFlag.js')))
+
+  // ── E. 行为断言：真实 SaveManager + localStorage 桩 ──
+  {
+    const { SaveManager } = await import('../../src/game/core/SaveManager.js')
+    const store = new Map()
+    globalThis.localStorage = {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, String(v)),
+      removeItem: (k) => store.delete(k),
+      get length() { return store.size },
+      key: (i) => [...store.keys()][i] ?? null,
+    }
+    const sm = new SaveManager({ slot: 0 })
+    const dump = { schemaVersion: 1, savedAt: 1, player: { gold: 7 } }
+    const fingerprint = () => [...store.keys()].sort().join('|') + '#' + store.size
+
+    sm.readOnly = false
+    sm.saveSlot(1, dump)              // 先造一份既有存档（用来验「读得到」与「不会被游客清掉」）
+    const withData = fingerprint()
+    sm.readOnly = true
+
+    sm.save(dump)
+    sm.saveSlot(0, dump)
+    sm.saveSlot(1, dump)
+    sm.clear()
+    sm.clearSlot(1)
+    sm.restoreSnapshot(1, 0)
+    const exported = sm.exportToFile(dump)
+    check('游客角色', '行为：只读下写入口全不生效（存档/快照/清档/回滚一字未动）',
+      fingerprint() === withData && exported === false, `${withData} → ${fingerprint()}`)
+    check('游客角色', '行为：只读下仍能读档（游客能进游戏，只是不落盘）', sm.loadSlot(1)?.player?.gold === 7)
+    check('游客角色', '行为：只读下 clear() 也不会删掉既有档（游客不能间接破坏他人进度）',
+      store.has(sm.keyFor(1)))
+    // 🔴 反例对照：同一个桩、同一族调用，只读关掉后必须**真的写进去** —— 否则上面那条是恒真的假绿
+    sm.readOnly = false
+    sm.saveSlot(2, dump)
+    check('游客角色', '行为（对照）：只读关掉后同样的调用会写 ⇒ 上面的断言不是恒真',
+      store.has(sm.keyFor(2)))
+    delete globalThis.localStorage
   }
 }
 

@@ -46,7 +46,7 @@ export const rgbOf = (hex) => { const c = hex2rgb(hex); return `${c.r}, ${c.g}, 
 
 // 中性色锚点（取自原味皮肤，保证推导结果落在熟悉的明度区间）
 const L = { paper: '#ffffff', ink: '#241812', inkSoft: '#3c2c25', gray: '#5c534d', tint: '#6f6259', warm: '#d2c0a0', deep: '#5d4037', scrim: '#1e140c' }
-const D = { base: '#140d09', surf: '#1f1610', surf2: '#241a13', raised: '#342821', hi: '#42342a', text: '#f2e6d7', textDim: '#cfbaa5', muted: '#bfa98f', tint: '#8a7a66' }
+const D = { base: '#140d09', surf: '#1f1610', surf2: '#241a13', raised: '#342821', hi: '#42342a', text: '#e8d3a0', textDim: '#cdb185', muted: '#bda173', tint: '#8a7a66' }
 
 /** 浅色版：无论主色是什么色相，中性面都按主色微调（底色带一丝主色 → 整屏统一） */
 function buildLight(p) {
@@ -87,7 +87,7 @@ function buildLight(p) {
     '--scrollbar': mix(L.paper, p, 0.45),
     '--text': text,
     '--text-dim': mix(L.inkSoft, p, 0.38),
-    '--muted': mix(L.gray, p, 0.38),
+    '--muted': mix(L.gray, p, 0.30), // 2026-09-26：0.38 时浅色下压在卡片底上 <4.5（DOM 对比度审计）
     '--panel-rgb': rgbOf(mix(L.paper, p, 0.02)),
     '--panel-soft-rgb': rgbOf(mix(L.paper, p, 0.035)),
     // 浅色玻璃面（行/卡片的高光底）：原先是各 .vue 里写死的 `rgba(255,255,255,0.6)`，

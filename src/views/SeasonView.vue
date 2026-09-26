@@ -114,7 +114,7 @@ function doClaim(i, ev) {
       </div>
       <div class="skill-head-right">
         <div class="season-pts-card">
-          <img src="../../public/images/icon-season-pts.png" alt="" class="season-pts-icon" />
+          <img src="../../public/images/icon-season-pts.png" alt="" class="season-pts-icon" loading="lazy" decoding="async" />
           <div class="season-pts-text">
             <span class="season-pts-label">赛季点数</span>
             <span class="season-pts-num mono">{{ state.points }}</span>

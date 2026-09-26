@@ -1,6 +1,8 @@
 // 厨具大赛（2026-09-10 新增）— 每周一届：用当前全身装备的"厨具评分"参赛，按分数取档位名次并发奖。
 // 设计约束：只读取既有装备数据（物品数值 / 词条 / 宝石 / 强化等级），不改动任何装备数值。
 
+import { weekNum } from '../core/clockKeys.js'
+
 /** 解锁条件：对决达到该等级（先要有装备基础） */
 export const GEAR_CONTEST_UNLOCK_LEVEL = 20
 
@@ -28,9 +30,9 @@ export function rankFromScore(score) {
   return GEAR_RANKS.find((r) => score >= r.min) ?? GEAR_RANKS[GEAR_RANKS.length - 1]
 }
 
-/** 本周届次编号（epoch 周，确定性） */
+/** 本周届次编号（走 `clockKeys.weekNum` 单一出口 = **本地周一**换周，不再是 epoch 周四） */
 export function contestWeek(nowMs = Date.now()) {
-  return Math.floor(nowMs / (7 * 24 * 3600_000))
+  return weekNum(nowMs)
 }
 
 /** 本届主题（按届次确定性轮换，仅作展示） */

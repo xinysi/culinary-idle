@@ -23,8 +23,7 @@ defineProps({
           class="drop-icon"
           :src="itemImage(d.itemId)"
           alt=""
-          @error="$event.target.style.display = 'none'"
-        />
+          @error="$event.target.style.display = 'none'" loading="lazy" decoding="async" />
         <span class="drop-name">{{ getItem(d.itemId)?.name ?? d.itemId }}</span>
         <span v-if="d.qty > 1" class="dim mono drop-qty">×{{ d.qty }}</span>
         <span class="dim mono drop-pct">{{ (dropChance(d.chance) * 100).toFixed(1) }}%</span>

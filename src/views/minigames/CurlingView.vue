@@ -553,7 +553,12 @@ onUnmounted(() => stopLoop())
 .cu-spark { position: absolute; font-size: 22px; color: var(--gold); animation: cuSpark 1.1s ease-out forwards; }
 @keyframes cuSpark { from { transform: translate(0, 0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1.4); opacity: 0; } }
 .cu-info-mask { position: fixed; inset: 0; z-index: 300; background: rgba(var(--scrim-rgb), 0.45); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.cu-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(var(--panel-rgb), 0.94); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35); }
+.cu-info-box { width: min(620px, 92vw); max-height: 76vh; overflow: auto; background: rgba(var(--panel-rgb), 0.94); border: 1px solid rgba(var(--tint-rgb), 0.35); border-radius: 16px; padding: 16px 18px; backdrop-filter: blur(12px); box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
+  scrollbar-gutter: stable;   /* 滚动条出现/消失时不让内容宽度跳 */
+  /* ⚠️ 这里**不要**加 backdrop-filter：底色已经是不透明的（0.94+），模糊看不出差别，
+     却会让滚动时整块面板跟着背景重采样 —— 就是「面板里所有元素跟着滚」的成因
+     （2026-09-23 用户报右面板；项目里带动态进度条的卡片早有同样处置）。 */
+}
 .cu-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .cu-info-close { cursor: pointer; border: none; background: rgba(var(--tint-rgb), 0.15); border-radius: 999px; width: 30px; height: 30px; font-weight: 700; color: var(--text); }
 .cu-info-list { display: flex; flex-direction: column; gap: 8px; }

@@ -16,6 +16,9 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // 桌面版**不受浏览器的自动播放限制**：允许启动页一进去就有音乐（不需要用户先点一下）。
+      // 网页版做不到这一点（见 App.vue 里启动页 BGM 的注释）：浏览器要求先有用户手势，任何网站都绕不过。
+      autoplayPolicy: 'no-user-gesture-required',
     },
   })
   win.loadFile(path.join(__dirname, 'dist', 'index.html'))

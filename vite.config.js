@@ -29,7 +29,7 @@ function stripDevPanelChunks() {
       if (devPanelEnabled) return // 明确要带面板的构建：不动
       const assets = path.resolve(outDir, 'assets')
       if (!fs.existsSync(assets)) return
-      const orphans = fs.readdirSync(assets).filter((f) => /^(DevEntry|DevPanel)-.*\.js$/.test(f))
+      const orphans = fs.readdirSync(assets).filter((f) => /^(DevEntry|DevPanel|TunerPanel)-.*\.js$/.test(f))
       if (!orphans.length) return
       const entries = fs.readdirSync(assets).filter((f) => f.endsWith('.js') && !orphans.includes(f))
       const entryText = entries.map((f) => fs.readFileSync(path.join(assets, f), 'utf8')).join('\n')

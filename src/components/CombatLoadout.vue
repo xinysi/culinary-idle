@@ -102,7 +102,7 @@ function useItem(kind, id) {
           :title="`选「${f.item.name}」为自动进食的料理（回血 ${f.item.heal}）`"
           @click="pickAuto(f.id)"
         >
-          <img v-if="itemImage(f.id)" class="pop-row-img" :src="itemImage(f.id)" alt="" @error="$event.target.style.display = 'none'" />
+          <img v-if="itemImage(f.id)" class="pop-row-img" :src="itemImage(f.id)" alt="" @error="$event.target.style.display = 'none'" loading="lazy" decoding="async" />
           <span class="pop-row-name">{{ f.item.name }}</span>
           <span class="mono dim">+{{ f.item.heal }}</span>
           <span class="mono dim">×{{ f.qty }}</span>
@@ -136,6 +136,12 @@ function useItem(kind, id) {
 }
 /* 🔒 胶囊宽度必须恒定（同 BGM 胶囊的教训）：名字与数量都定宽 ——
    不然每吃一次料理 `×N` 从 12 变 11，回合进度条会跟着肉眼可见地抖一下。 */
+/* 🔴 战备整棵子树抬到同页其它卡片之上（2026-09-23 用户报「弹出来的框会被下面的框遮挡」）。
+   实测在 390 / 700 / 900 / 1024 / 1440 五个宽度下都没有复现（弹窗内取样点最顶层都是自己），
+   但 `.combat-page-side` 是 `position: sticky`（**定位元素**，且 DOM 在左栏之后）——
+   一旦某个皮肤/缩放下祖先链里出现层叠上下文，`.loadout-pop` 的 z-index: 30 就会被困在里边，
+   表现正好是「被下面的框盖住」。给根元素一个明确的 z-index，这条就不依赖运行环境了。 */
+.combat-loadout { position: relative; z-index: 40; }
 .loadout-chip {
   display: inline-flex;
   align-items: center;
@@ -170,7 +176,7 @@ function useItem(kind, id) {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-  color: var(--primary);
+  color: var(--primary-strong); /* 同 .arena-vs：主色当文字不达标 → 深档（2026-09-26）*/
 }
 .loadout-chip-qty {
   flex: 0 0 auto;
@@ -208,11 +214,13 @@ function useItem(kind, id) {
   padding: 10px;
   text-align: left;
   background: rgba(var(--panel-soft-rgb), 0.98);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 6px 20px rgba(var(--scrim-rgb), 0.35);
+  scrollbar-gutter: stable;   /* 滚动条出现/消失时不让内容宽度跳 */
+  /* ⚠️ 这里**不要**加 backdrop-filter：底色已经是不透明的（0.94+），模糊看不出差别，
+     却会让滚动时整块面板跟着背景重采样 —— 就是「面板里所有元素跟着滚」的成因
+     （2026-09-23 用户报右面板；项目里带动态进度条的卡片早有同样处置）。 */
 }
 .pop-head {
   display: flex;

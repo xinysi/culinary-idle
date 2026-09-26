@@ -335,5 +335,21 @@ export const RESTAURANT_DECOR = [
 // 于是既有「商店 300 件」的计数与分类页签一行都不用改（手工装潢走 DecorView 的独立分区）。
 export const RESTAURANT_DECOR_BY_ID = Object.fromEntries([...RESTAURANT_DECOR, ...CRAFTED_DECOR].map((d) => [d.id, d]))
 
+/** 每 1 万金币买到的加成%（越小越划算）。装潢页的「按性价比排序」与两处的「下一件推荐」共用这一份口径。
+ *  保留 2 位小数（2026-09-21 用户：「数值没有控制小数」）——3 位时 300 件全是「2.973%/万金」读着累。 */
+export function decorPerK(id) {
+  const d = RESTAURANT_DECOR_BY_ID[id]
+  if (!d || !d.price) return 0
+  return +((d.effect / d.price) * 10000).toFixed(2)
+}
+
+/** 下一件最值得买的（未购置里性价比最高、且当前买得起的一件；全买不起时给性价比最高的那件）。
+ *  ⚠️ 唯一出口：装潢页的「下一件推荐」与餐厅页装潢卡片的提示都调它，别各写一遍排序。 */
+export function nextDecorPick(ownedIds, gold = 0) {
+  const owned = new Set(ownedIds ?? [])
+  const pool = RESTAURANT_DECOR.filter((d) => !owned.has(d.id)).sort((a, b) => decorPerK(b.id) - decorPerK(a.id))
+  return pool.find((d) => gold >= d.price) ?? pool[0] ?? null
+}
+
 /** 装潢总数（商店货 + 手工）：页头/进度分母用这个，别用 RESTAURANT_DECOR.length */
 export const DECOR_TOTAL = RESTAURANT_DECOR.length + CRAFTED_DECOR.length

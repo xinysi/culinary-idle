@@ -7,7 +7,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { GameEngine } from './core/GameEngine.js'
 import { EventBus } from './core/EventBus.js'
-import { SaveManager, SAVE_VERSION } from './core/SaveManager.js'
+import { SaveManager, SAVE_VERSION, SAVE_PREFIX } from './core/SaveManager.js'
 import { computeOfflineProgress, formatDuration, DEFAULT_MAX_OFFLINE_MS } from './core/OfflineProgress.js'
 import { createSkillInstances, getSkillInstance, getAllSkillInstances } from './skills/registry.js'
 import { itemName } from './data/items.js'
@@ -125,6 +125,20 @@ export function registerGameEvents() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') saveNow()
   })
+
+  // 🔴 多标签页防回档提醒（2026-09-25）：两个标签页玩同一个存档位时，各自的内存态互不同步，
+  //    谁后存档谁覆盖 —— 另一页的进度会静默回档（实测：B +222 金币被 A 的后一次保存抹掉）。
+  //    localStorage 的 storage 事件**只在另一个标签页触发**，正好用来感知这件事。
+  //    最小缓解：提醒一次，不动保存逻辑（自动「合并/接管」属于设计变更，不做隐式决定）。
+  //    ⚠️ 守卫（continuity_test 等）在 node 里垫了 document 却没有 window —— 必须判存在再挂。
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    let multitabWarned = false
+    window.addEventListener('storage', (e) => {
+      if (multitabWarned || !e.key || !e.key.startsWith(`${SAVE_PREFIX}.save.`) || !e.newValue) return
+      multitabWarned = true
+      ui.pushLog('⚠️ 检测到另一个标签页在玩同一个存档位：两边各自保存会互相覆盖（后保存的赢）。请只保留一个标签页，以免进度回档。', 'warn')
+    })
+  }
 
   // 事件 → 日志（技能动作 / 升级 / 弹药不足）
   EventBus.on('skill:action', (e) => {
@@ -535,13 +549,29 @@ export function registerGameEvents() {
 }
 
 // ── 进入游戏（由启动界面选择存档后调用）──────────
-export function startGame({ slot, newGame = false } = {}) {
+/**
+ * `startGame({ guest: true })` = **游客 / 试玩会话**（2026-09-24 新增，第三个权限角色）：
+ * 免建档进游戏、**不占存档位、不写任何存档数据**，刷新页面即清空。
+ * 用途：答辩评委 / 在线访客 / 想先看看再决定的人 —— 他们点开游戏不该占用 3 个存档位，
+ * 更不该覆盖已有进度（本项目历史上真出过「启动阶段写档覆盖玩家存档」的事故，见 AGENTS 存档机制）。
+ * 实现：把 `saveManager.readOnly` 置位 ⇒ SaveManager 里 6 个写入口全部拒绝，
+ * 因此自动存档 / 手动存档 / 快照 / 删档 / 导出**一处都不用单独判断**。
+ */
+export function startGame({ slot, newGame = false, guest = false } = {}) {
   const player = usePlayerStore()
   const ui = useUiStore()
   let loaded = false
 
+  // 0. 权限闸门：游客会话打开只读，其余会话确保关掉（回到普通会话时不能残留）
+  saveManager.readOnly = guest
+  ui.guest = guest
+
   // 1. 加载存档 / 新游戏
-  if (newGame) {
+  if (guest) {
+    // 游客：一律从空白档起步（内存里），不读任何存档位
+    player.$reset()
+    player.newGame()
+  } else if (newGame) {
     saveManager.slot = slot ?? 0
     player.$reset()
     player.newGame()
@@ -583,6 +613,8 @@ export function startGame({ slot, newGame = false } = {}) {
   saveManager.saveSlot(saveManager.slot, buildSaveData())
   if (report) {
     ui.openOfflineReport(report) // 离线结算详情弹窗（2026-09-06）
+  } else if (guest) {
+    ui.pushLog('🧪 试玩模式：本次进度不会保存（刷新即清空）。想长期玩请回启动页选一个存档位', 'warn')
   } else {
     if (loaded) ui.pushLog('欢迎回来，存档已加载', 'info')
     else ui.pushLog('新游戏开始：选择采摘目标开始挂机', 'info')
@@ -624,8 +656,14 @@ export function currentSlot() {
   return saveManager.slot
 }
 
+/** 当前是否为**游客 / 试玩会话**（不写档）。UI 侧用它决定「存档面板是否可用」等。 */
+export function isGuestSession() {
+  return saveManager.readOnly === true
+}
+
 export function saveNow() {
   if (!gameRunning) return // 未进入游戏（启动界面阶段）不写档，防止覆盖已有存档
+  if (saveManager.readOnly) return // 游客会话：一律不写（SaveManager 也会拦，这里是显式短路）
   saveManager.save(buildSaveData())
 }
 

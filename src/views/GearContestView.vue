@@ -1,5 +1,6 @@
 <script setup>
 // 厨具大赛（2026-09-10 新增）— 每周一届，用全身装备评分参赛取名次。
+import { nextWeekStartMs } from '../game/core/clockKeys.js'
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -18,7 +19,8 @@ const done = computed(() => player.gearContestDoneThisWeek())
 const liveRank = computed(() => rankFromScore(live.value.score))
 const week = computed(() => contestWeek())
 const theme = computed(() => themeOfWeek(week.value))
-const nextWeek = computed(() => 7 * 24 * 3600_000 - (Date.now() % (7 * 24 * 3600_000)))
+// 距换周倒计时（**本地周一 00:00**，走 clockKeys 同源；别再写 7天取模）
+const nextWeek = computed(() => nextWeekStartMs() - Date.now())
 
 function fmt(n) {
   return Math.round(n).toLocaleString()

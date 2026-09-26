@@ -7,6 +7,12 @@
 // ⚠️ 不进存档：`serialize()` 里没有它，所以它不会污染存档、也不会被读档覆盖。
 import { EventBus } from '../core/EventBus.js'
 import { DEV_PANEL_ENABLED } from './devFlag.js'
+import { useUiStore } from '../../stores/ui.js'
+
+/** 当前是不是游客 / 试玩会话（读 ui store；埋点只在开发构建里跑，取不到 store 时按「非游客」处理） */
+function isGuest() {
+  try { return useUiStore().guest === true } catch { return false }
+}
 
 const KEY = 'culinary-idle.dev.telemetry'
 const VERSION = 1
@@ -45,6 +51,10 @@ export function readTelemetry() {
 }
 
 function persist() {
+  // 🔴 游客 / 试玩会话不写埋点（2026-09-24）：权限矩阵里「游客」既无开发者面板、也就不该往本机落任何数据。
+  //    代价为零 —— 真人用户测试走的是**正式存档**（漏斗本来就是按存档记的），游客态不需要埋点。
+  //    这一条同时让「游客会话对 localStorage 零写入」成为可断言的不变量（守卫 C55 直接量）。
+  if (isGuest()) return
   try { localStorage.setItem(KEY, JSON.stringify(cache)) } catch { /* 满/隐私模式：忽略 */ }
 }
 

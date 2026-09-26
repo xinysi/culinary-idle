@@ -13,6 +13,19 @@ const SNAPSHOT_MIN_INTERVAL_MS = 5 * 60_000
 export class SaveManager {
   constructor({ slot = 0 } = {}) {
     this._slot = slot
+    /**
+     * 只读模式（游客 / 试玩会话，2026-09-24）：**一切写入一律拒绝**（存档、自动快照、清档、快照回滚、导出文件）。
+     * 🔴 闸门放在这里而不是各个调用方：写入口有 6 个（`save` / `saveSlot` / `clear` / `clearSlot` /
+     *    `restoreSnapshot` / `exportToFile`），分散判断必然漏一个 —— 本项目「唯一出口」纪律。
+     * 读路径（load / listSlots / listSnapshots）不受影响：游客本来就是「读了也不写」。
+     * 由 `bootstrap.startGame({ guest: true })` 置位；刷新页面即回到普通会话。
+     */
+    this.readOnly = false
+  }
+
+  /** 只读模式下拒绝写入；返回 true 表示「可以写」 */
+  _writable() {
+    return !this.readOnly
   }
 
   get slot() {
@@ -33,6 +46,7 @@ export class SaveManager {
 
   // ── 自动快照：写档前备份旧档（轮换 3 份，5 分钟节流）──
   _snapshotBefore(slot) {
+    if (!this._writable()) return
     try {
       const raw = localStorage.getItem(this.keyFor(slot))
       if (!raw) return
@@ -67,6 +81,7 @@ export class SaveManager {
 
   /** 从快照回滚到指定存档位（覆盖当前档） */
   restoreSnapshot(slot, idx) {
+    if (!this._writable()) return false
     try {
       const raw = localStorage.getItem(this.snapshotKeyFor(slot, idx))
       if (!raw) return false
@@ -104,6 +119,7 @@ export class SaveManager {
   }
 
   saveSlot(slot, data) {
+    if (!this._writable()) return false // 游客会话：静默不写（不抛错——上层是自动存档链路）
     try {
       this._snapshotBefore(slot)
       localStorage.setItem(this.keyFor(slot), JSON.stringify(data))
@@ -114,6 +130,7 @@ export class SaveManager {
   }
 
   clearSlot(slot) {
+    if (!this._writable()) return false // 游客会话：不许删档
     localStorage.removeItem(this.keyFor(slot))
   }
 
@@ -125,8 +142,9 @@ export class SaveManager {
     })
   }
 
-  /** 导出存档为 存档文件 文件下载 */
+  /** 导出存档为 存档文件 文件下载（游客会话禁止导出） */
   exportToFile(data, filename = `culinary-idle-slot${this._slot}-${Date.now()}.json`) {
+    if (!this._writable()) return false
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

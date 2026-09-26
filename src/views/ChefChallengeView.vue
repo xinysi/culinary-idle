@@ -1,6 +1,7 @@
 <script setup>
 // 名厨挑战（2026-09-10 新增）— 每周一位名厨（按周确定性轮换），固定流派、等级随你对决等级上浮；战胜即拿大奖（每周一次）。
 // 对手由 chefOpponent()（opp() 动态生成）产出，与试炼塔/秘境同模式；不触碰对决铁律数据。
+import { weekNum as weekNumOf, nextWeekStartMs } from '../game/core/clockKeys.js'
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -15,7 +16,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 const combat = getCombat()
 
-const weekNum = Math.floor(Date.now() / (7 * 24 * 3600_000))
+const weekNum = weekNumOf()
 const chef = computed(() => chefForWeek(weekNum))
 const cleared = computed(() => player.chefClearedThisWeek())
 const active = computed(() => player.chefChallenge?.current === chef.value.id)
@@ -23,8 +24,8 @@ const oppLevel = computed(() => Math.max(1, Math.min(99, player.combatLevel + (c
 const reward = computed(() => chefReward(chef.value, player.combatLevel))
 const wins = computed(() => player.stats?.chefWins ?? 0)
 
-// 下周刷新倒计时（按 epoch 周整点）
-const nextWeekMs = computed(() => (weekNum + 1) * 7 * 24 * 3600_000 - Date.now())
+// 下周刷新倒计时（**本地周一 00:00**，与 weekNum 同源 —— 别再写「按 epoch 周整点」）
+const nextWeekMs = computed(() => nextWeekStartMs() - Date.now())
 const nextWeekText = computed(() => {
   const ms = Math.max(0, nextWeekMs.value)
   const d = Math.floor(ms / 86400_000)

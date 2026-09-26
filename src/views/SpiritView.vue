@@ -139,7 +139,7 @@ function selectSpirit(id) { selectedId.value = id }
           <div class="spirit-wall">
             <template v-for="(sp, si) in spiritPaged" :key="sp.id ?? 'pad-' + si">
             <div v-if="!sp._pad" class="spirit-cell" :class="{ locked: !isOwned(sp.id), active: isActive(sp.id), selected: selectedId === sp.id }" @click="selectSpirit(sp.id)">
-              <img v-if="itemImage(sp.id)" :src="itemImage(sp.id)" class="item-img spirit-cell-img" @error="$event.target.style.display = 'none'" alt="" />
+              <img v-if="itemImage(sp.id)" :src="itemImage(sp.id)" class="item-img spirit-cell-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <div class="spirit-cell-name">{{ sp.name }}</div>
               <div class="spirit-cell-badges">
                 <span class="badge badge-tier">{{ tierLabel(sp) }}</span>
@@ -154,7 +154,7 @@ function selectSpirit(id) { selectedId.value = id }
         </div>
         <div v-if="selectedSpirit" class="spirit-detail-panel" :class="{ active: isActive(selectedSpirit.id) }">
           <div class="spirit-detail-img">
-            <img v-if="itemImage(selectedSpirit.id)" :src="itemImage(selectedSpirit.id)" class="item-img spirit-detail-bigimg" @error="$event.target.style.display = 'none'" alt="" />
+            <img v-if="itemImage(selectedSpirit.id)" :src="itemImage(selectedSpirit.id)" class="item-img spirit-detail-bigimg" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
           </div>
           <div class="spirit-detail-name">
             <span class="item-card-name">{{ selectedSpirit.name }}</span>

@@ -108,8 +108,7 @@ watch(
       <div class="arena-side">
         <img
           v-if="picOk(mePicture)" :src="mePicture" class="arena-portrait arena-portrait--pic" alt=""
-          @error="picError(mePicture)"
-        />
+          @error="picError(mePicture)" loading="lazy" decoding="async" />
         <div v-else class="arena-portrait">{{ meEmoji }}</div>
         <strong class="arena-name">你</strong>
         <span class="mono arena-hp">{{ Math.round(battleFrame.playerHp) }} / {{ Math.round(battleFrame.playerHpMax) }}</span>
@@ -124,8 +123,7 @@ watch(
         <img
           v-if="picOk(foePicture)" :src="foePicture" class="arena-portrait arena-portrait--pic"
           :class="{ 'arena-portrait--mirror': foeMirrored }" alt=""
-          @error="picError(foePicture)"
-        />
+          @error="picError(foePicture)" loading="lazy" decoding="async" />
         <div v-else class="arena-portrait">{{ foeEmoji }}</div>
         <strong class="arena-name">{{ battleFrame.opponentName || '未选择对手' }}</strong>
         <span class="mono arena-hp">{{ Math.round(battleFrame.opponentHp) }} / {{ Math.round(battleFrame.opponentHpMax) }}</span>
@@ -264,7 +262,7 @@ watch(
 .arena-vs {
   font-weight: 700;
   font-size: 15px;
-  color: var(--primary);
+  color: var(--primary-strong); /* 主色当文字压在浅底上 3.72 < 4.5 → 深档（2026-09-26）*/
   letter-spacing: 1px;
 }
 .arena-items {

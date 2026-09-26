@@ -102,7 +102,7 @@ const shownUses = computed(() => (showAllUses.value ? uses.value : uses.value.sl
       </header>
 
       <div class="item-detail-body">
-        <img v-if="itemImage(innerId)" :src="itemImage(innerId)" class="item-img item-img-lg" @error="$event.target.style.display = 'none'" alt="" />
+        <img v-if="itemImage(innerId)" :src="itemImage(innerId)" class="item-img item-img-lg" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
         <h4>详细作用</h4>
         <table class="target-table item-detail-table">
           <tbody>

@@ -6,6 +6,7 @@ import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { assetUrl } from '../../game/data/itemImage.js'
 import { getItem, ITEMS } from '../../game/data/items.js'
+import { weekKey as weekKeyOf } from '../../game/core/clockKeys.js' // 周键单一出口（2026-09-26）
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -140,11 +141,10 @@ function settle() {
   mg2.week = weekKey()
 }
 
+// 周键走 `clockKeys` 单一出口（本地周一换周）。2026-09-26 之前这里是**第四种算法**
+// （`UTC + 元旦锚点`），与周常任务/厨具赛/名厨那三处都不一致 —— 现在全站只有一份。
 function weekKey() {
-  const now = new Date()
-  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-  const week = Math.floor((d.getTime() - Date.UTC(now.getFullYear(), 0, 1)) / 604800000)
-  return `${now.getFullYear()}-W${week}`
+  return weekKeyOf()
 }
 const mg = computed(() => player.minigames.trivia)
 const EXCHANGES = [
@@ -299,8 +299,11 @@ resetRound()
   border: 1px solid rgba(var(--tint-rgb), 0.35);
   border-radius: 16px;
   padding: 16px 18px;
-  backdrop-filter: blur(12px);
   box-shadow: 0 14px 40px rgba(var(--deep-soft-rgb), 0.35);
+  scrollbar-gutter: stable;   /* 滚动条出现/消失时不让内容宽度跳 */
+  /* ⚠️ 这里**不要**加 backdrop-filter：底色已经是不透明的（0.94+），模糊看不出差别，
+     却会让滚动时整块面板跟着背景重采样 —— 就是「面板里所有元素跟着滚」的成因
+     （2026-09-23 用户报右面板；项目里带动态进度条的卡片早有同样处置）。 */
 }
 .tv-info-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 15px; }
 .tv-info-close {

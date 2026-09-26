@@ -201,7 +201,9 @@ test.describe('游戏全流程', () => {
     })
     expect(cards.n, '区域卡片应有立绘 img').toBeGreaterThan(1)
     expect(cards.loaded, `有 ${cards.n - cards.loaded} 张立绘没解码出来（src 例：${cards.src}）`).toBe(cards.n)
-    expect(cards.src, '立绘必须是**相对路径**（exe 下 file:// 用绝对路径会 404）').toMatch(/^images\/enemies\/enemy_[A-Za-z]+_\d\d\.png$/)
+    // ⚠️ 扩展名是 `.webp`（2026-09-25 图片瘦身：248 张立绘 31.7MB → 6.5MB，分辨率一点没降）。
+    //    这条断言的本意是「必须是**相对路径**」（exe 下 file:// 用绝对路径会 404），扩展名只是顺带钉住。
+    expect(cards.src, '立绘必须是**相对路径**（exe 下 file:// 用绝对路径会 404）').toMatch(/^images\/enemies\/enemy_[A-Za-z]+_\d\d\.webp$/)
     // ② 首领分类也一样
     await page.locator('.pick-tabs .btn').nth(1).click()
     await page.waitForTimeout(500)
@@ -341,15 +343,19 @@ test.describe('游戏全流程', () => {
     expect(sellGeo.main, `主按钮没跟着数量变：${JSON.stringify(sellGeo)}`).toBe(`出售 ${sellGeo.num} 个`)
     expect(sellGeo.total, `合计 ≠ 单价 × 数量：${JSON.stringify(sellGeo)}`).toBe(sellGeo.price * sellGeo.num)
     // 数量药丸：≥1 万显示「x.xx万」、<1 万显示精确数字（悬停时万级换成精确数字）
+    // ⚠️ 必须用 **innerText**（只算渲染出来的文字），不能用 textContent：
+    //    2026-09-26 起药丸里**同时存在**「缩写」与「精确」两份文案，由 CSS `:hover` 决定显示哪个
+    //    （这样悬停不再触发任何 JS/重渲染，修掉了满背包「每划一格掉 2 帧」）——
+    //    textContent 会把两份拼成「3.89万38,910」，实测就是这么 FAIL 的。
     const pill = await page.evaluate(() => {
-      const pills = [...document.querySelectorAll('.inv-grid .inv-cell-qty')].map((p) => p.textContent.trim())
+      const pills = [...document.querySelectorAll('.inv-grid .inv-cell-qty')].map((p) => p.innerText.trim())
       return { 万级: pills.find((t) => t.includes('万')) ?? '', 精确: pills.find((t) => /^[\d,]+$/.test(t) && Number(t.replace(/,/g, '')) < 10000) ?? '' }
     })
     expect(pill.万级, `≥1 万应显示「x.xx万」：${JSON.stringify(pill)}`).toMatch(/^\d+\.\d\d万$/)
     expect(pill.精确, `<1 万应显示精确数字：${JSON.stringify(pill)}`).toMatch(/^[\d,]+$/)
-    // ⚠️ 定位「万级格子」必须**先取下标**再用 `.nth()`：悬停后文案就从「x.xx万」变成精确数字了，
+    // ⚠️ 定位「万级格子」必须**先取下标**再用 `.nth()`：悬停后可见文案就从「x.xx万」变成精确数字了，
     //    用 `hasText:'万'` 的定位器会在悬停那一刻失效 → 后续 innerText 永远等不到（实测踩过）。
-    const wanIdx = await page.evaluate(() => [...document.querySelectorAll('.inv-grid .inv-cell-qty')].findIndex((p) => p.textContent.includes('万')))
+    const wanIdx = await page.evaluate(() => [...document.querySelectorAll('.inv-grid .inv-cell-qty')].findIndex((p) => p.innerText.includes('万')))
     expect(wanIdx, '应有 ≥1 万的物品用于验证「x.xx万」').toBeGreaterThanOrEqual(0)
     const wanCell = page.locator('.inv-grid .item-cell').nth(wanIdx)
     const beforeHover = await wanCell.locator('.inv-cell-qty').innerText()
@@ -1137,12 +1143,13 @@ test.describe('游戏全流程', () => {
       }, [k, v])
 
     // ① 数量缩写：关 → 精确数字；开 → 「x.xx万」
+    // ⚠️ 同样必须用 innerText：药丸里两份文案共存（CSS 决定显示哪个），textContent 会拼在一起
     await setFlag('invShortQty', false)
     await page.waitForTimeout(300)
-    const full = await page.evaluate(() => [...document.querySelectorAll('.inv-cell-qty')].map((x) => x.textContent.trim()).find((t) => t.includes(',')))
+    const full = await page.evaluate(() => [...document.querySelectorAll('.inv-cell-qty')].map((x) => x.innerText.trim()).find((t) => t.includes(',')))
     await setFlag('invShortQty', true)
     await page.waitForTimeout(300)
-    const short = await page.evaluate(() => [...document.querySelectorAll('.inv-cell-qty')].map((x) => x.textContent.trim()).find((t) => t.includes('万')))
+    const short = await page.evaluate(() => [...document.querySelectorAll('.inv-cell-qty')].map((x) => x.innerText.trim()).find((t) => t.includes('万')))
     expect(full, '关掉「数量缩写」后应显示精确数字（如 12,345）').toMatch(/^[\d,]+$/)
     expect(short, '开着「数量缩写」时应出现「x.xx万」').toMatch(/万$/)
 
@@ -1832,5 +1839,96 @@ test.describe('游戏全流程', () => {
     for (const k of keys) {
       expect(afterSwitch[k], `换选装备后 ${k} 尺寸变了：${before[k]} → ${afterSwitch[k]}`).toBe(before[k])
     }
+  })
+
+  // 竞技场状态必须**按存档位分键**（2026-09-26 修「切档 → 榜单/已挑战跨档污染」）：
+  // 之前是一个全局键 `culinary-idle.arena.state` ⇒ 在 A 档打完的人，到 B 档还显示「已挑战」。
+  // 这条行为断言钉住两件事：① 写的是带 `.0` 后缀的键；② **不再写**那个无后缀的全局键。
+  test('竞技场状态按存档位分键（不再写全局键）', async ({ page }) => {
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+    await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      pinia._s.get('ui').setView('arena')
+    })
+    await page.waitForTimeout(900)
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.includes('arena.state')))
+    expect(keys.length, `竞技场状态键一个都没写：${JSON.stringify(keys)}`).toBeGreaterThan(0)
+    expect(keys.some((k) => /\.\d+$/.test(k)), `竞技场状态键没带存档位后缀：${JSON.stringify(keys)}`).toBe(true)
+    expect(keys, `还在写无后缀的全局键（会跨档污染）：${JSON.stringify(keys)}`).not.toContain('culinary-idle.arena.state')
+  })
+
+  // Esc 关闭最上层弹窗（2026-09-26 补；实现是 App.vue 里**一处**全局监听，模拟「点最上层遮罩」，
+  // 走的是与鼠标完全相同的关闭路径 —— 所以这条断言同时守住「Esc 与点遮罩行为一致」）。
+  test('Esc 关闭最上层弹窗（与点遮罩同路径）', async ({ page }) => {
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+
+    // ① 设置弹窗：开 → Esc → 关
+    await page.locator('.top-nav-btn[title="设置"]').click()
+    await expect(page.locator('.settings-modal')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.settings-modal')).toHaveCount(0)
+    await expect(page.locator('.modal-backdrop')).toHaveCount(0)
+
+    // ② 存档弹窗同样（换一个组件，确认不是只有某一个弹窗响应）
+    await page.locator('.top-nav-btn[title="存档"]').click()
+    await expect(page.locator('.save-modal')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.save-modal')).toHaveCount(0)
+
+    // ③ 没有弹窗时按 Esc 不应报错（页面还活着）
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.app-layout')).toBeVisible()
+  })
+
+  // 断网期间加载失败的图片：**回网后要自愈**（2026-09-26 补；此前只有视图 chunk 有兜底，图片一直空着）。
+  // 手法：用 route 把图片请求全部 abort，制造「加载失败」→ 断言确实挂了 → 解除拦截并派发 online →
+  //      断言图片自然宽度回到 >0（即真的重新拉到了），且失败的隐藏痕迹被复位。
+  test('断网加载失败的图片，回网后自愈（不需要整页刷新）', async ({ page }) => {
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+
+    // ① 拦掉所有图片（模拟断网），然后进厨藏页触发一批图片请求
+    //    ⚠️ 先给背包塞点东西：新档背包是空的 ⇒ 厨藏页一个 `<img>` 都不会渲染（第一版就是这么假失败的）
+    await page.route('**/images/**', (route) => route.abort())
+    await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      const player = pinia._s.get('player')
+      for (const id of ['apple', 'potato', 'carrot', 'rice', 'wheat']) player.gainItem(id, 5)
+      pinia._s.get('ui').setView('inventory')
+    })
+    await page.waitForTimeout(1500)
+    const broken = await page.evaluate(() => {
+      const imgs = [...document.images]
+      return { total: imgs.length, dead: imgs.filter((i) => i.complete && i.naturalWidth === 0).length }
+    })
+    expect(broken.dead, `没有制造出失败图片（total=${broken.total}）`).toBeGreaterThan(0)
+
+    // ② 恢复网络：解除拦截 + 派发 online（= 浏览器回网时真实发生的事件）
+    await page.unroute('**/images/**')
+    await page.evaluate(() => window.dispatchEvent(new Event('online')))
+    await page.waitForTimeout(1500)
+
+    // ③ 原来挂掉的图必须重新加载出来（naturalWidth > 0）
+    const after = await page.evaluate(() => {
+      const imgs = [...document.images]
+      const loaded = imgs.filter((i) => i.naturalWidth > 0)
+      const hiddenStill = imgs.filter((i) => i.style.display === 'none' && i.naturalWidth > 0)
+      return { loadedVisible: loaded.length, hiddenButLoaded: hiddenStill.length, total: imgs.length }
+    })
+    expect(after.loadedVisible, `回网后仍没有图片加载成功（total=${after.total}）`).toBeGreaterThan(0)
+    // ⚠️ 这条是「改了但没生效」的防线：ItemImg 失败时会给图 `display:none`，
+    //    重试若不复位这个痕迹，src 换了、图还是看不见（本项目的经典坑）。
+    expect(after.hiddenButLoaded, `有 ${after.hiddenButLoaded} 张图已加载成功却还挂着 display:none`).toBe(0)
   })
 })

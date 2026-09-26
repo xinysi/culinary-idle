@@ -217,7 +217,7 @@ function cycleMode() {
 .bgm-tbtn:hover { background: rgba(var(--primary-rgb), 0.10); }
 /* ⏸ / ▶ 的字形宽度不同（实测 13px 字号下 25px vs 23.2px）⇒ 播放态与暂停态整个胶囊会差 1.8px。
    定宽到「宽的那一档」并居中，两种状态宽度完全一致（播放态观感不变）。 */
-.bgm-tbtn--play { color: var(--primary); font-size: 13px; flex: 0 0 auto; width: 25px; padding-left: 0; padding-right: 0; }
+.bgm-tbtn--play { color: var(--primary-strong); /* 主色当文字在浅底上不达标 → 深档（2026-09-26）*/ font-size: 13px; flex: 0 0 auto; width: 25px; padding-left: 0; padding-right: 0; }
 .bgm-open {
   border: none;
   background: transparent;

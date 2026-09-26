@@ -10,6 +10,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import CombatPanel from '../components/CombatPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import { EventBus } from '../game/core/EventBus.js'
+import { saveManager } from '../game/bootstrap.js' // 竞技场状态键要带存档位（跨档残留修复，2026-09-26）
 import { scaledEnemy } from '../game/data/enemyScaling.js'
 import { generateArenaOpponents } from '../game/data/arena.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
@@ -81,18 +82,41 @@ const battleFrame = computed(() => {
 
 const REFRESH_MS = 5 * 60 * 1000 // 每 5 分钟刷新
 // 竞技场状态持久化到 localStorage：切页/页面刷新都不重置倒计时与「已挑战」，到期才刷新榜单
-const ARENA_KEY = 'culinary-idle.arena.state'
+//
+// 🔴 **2026-09-26 修：键必须带存档位**（检查清单 §10.3「切存档位 → 竞技场状态跨档残留」坐实的那条）。
+//    原先是一个**全局键** `culinary-idle.arena.state` ⇒ 换档后对手榜单 /「已挑战」/连胜**跨档污染**
+//    （在 A 档打过的人，到 B 档仍显示「已挑战」）。现为 `culinary-idle.arena.state.<slot>`。
+//    ⚠️ **玩法规格一个字节没动**（5 分钟刷新 / 对手等级 ≤ 玩家对决等级 / 打过不可重复 / 每 5 连胜开箱）——
+//       改的只是「存哪儿」。旧全局键做**一次性迁移**（谁先读到就认领给当前档、随即删除，防止它继续污染别的档）。
+const ARENA_KEY_BASE = 'culinary-idle.arena.state'
+function arenaKey(slot = saveManager.slot) {
+  return `${ARENA_KEY_BASE}.${slot}`
+}
 function loadArenaState() {
-  try { return JSON.parse(localStorage.getItem(ARENA_KEY) || 'null') } catch { return null }
+  const key = arenaKey()
+  try {
+    const mine = JSON.parse(localStorage.getItem(key) || 'null')
+    if (mine) return mine
+    const legacy = JSON.parse(localStorage.getItem(ARENA_KEY_BASE) || 'null')
+    if (legacy) {
+      localStorage.setItem(key, JSON.stringify(legacy))
+      localStorage.removeItem(ARENA_KEY_BASE)
+      return legacy
+    }
+    return null
+  } catch { return null }
 }
 function saveArenaState(st) {
-  localStorage.setItem(ARENA_KEY, JSON.stringify(st))
+  localStorage.setItem(arenaKey(), JSON.stringify(st))
 }
 // 榜单缓存（模块级）：刷新周期内切页/刷新回来榜单不变
+// ⚠️ 缓存同样要认存档位：换档后必须失效，否则「缓存还没到期」会让新档看到旧档的榜单（同类残留）。
 let cachedArena = null
+let cachedSlot = null
 function getOpponents() {
   const now = Date.now()
   const base = player.combatLevel
+  if (cachedSlot !== saveManager.slot) { cachedArena = null; cachedSlot = saveManager.slot }
   if (cachedArena && cachedArena.until > now) {
     // 校验缓存对手等级是否超当前对决等级（旧规则残留数据）：超限则强制重新生成
     if (cachedArena.opponents.some((o) => o.level > base)) return regenerateArena(now, base)

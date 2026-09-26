@@ -15,6 +15,7 @@ import { EXPEDITIONS } from '../data/expeditions.js'
 import { SPIRITS } from '../data/spiritTiers.js'
 import { MAX_LEVEL } from '../skills/Skill.js'
 import { CAP_MAX } from '../data/caps.js'
+import { activeSeasonId } from '../data/seasons.js'
 
 /** 满档数量：物品给这么多，够开所有配方 */
 const STOCK = 999
@@ -120,6 +121,61 @@ export function clearLocks(player) {
   player.pausedSkills = {}
   player.closedIdleTasks = {}
   return '已恢复全部暂停/关闭的挂机任务'
+}
+
+/* ── 运行中可操作项扩充（2026-09-25，用户反馈「不够全面」）────────────── */
+
+/** 制作队列快进：等价游戏商店「制作加速器」的真实路径（材料不足自动暂停不浪费） */
+export function boostQueues(player, minutes = 60) {
+  const m = Math.max(1, Math.floor(Number(minutes) || 60))
+  const n = player.boostCraftQueues(m)
+  return `全部制作队列快进 ${m} 分钟（完成 ${n} 份产物）`
+}
+
+/** 跳塔层：同步抬 best（best 只升不降，与游戏规则一致）；领奖状态不动 */
+export function setTowerFloor(player, floor) {
+  const f = Math.max(1, Math.floor(Number(floor) || 1))
+  player.tower.floor = f
+  player.tower.best = Math.max(player.tower.best ?? 0, f)
+  return `挑战塔当前层 = ${f}（best ${player.tower.best}，已领奖层不回退）`
+}
+
+/** 餐厅等级（1~10） */
+export function setRestaurantLevel(player, lv) {
+  const v = Math.max(1, Math.min(10, Math.floor(Number(lv) || 1)))
+  player.restaurant.level = v
+  return `餐厅等级 = ${v}`
+}
+
+/** 重置新手引导（重走一遍引导链，测引导/看漏斗用） */
+export function resetNewbie(player) {
+  player.guide = { step: 0, done: false, claimed: [], startedAt: 0, trace: [] }
+  return '新手引导已重置（刷新后从头引导）'
+}
+
+/** 清觅珍保底计数（测试双保底/软保底用；{} 会被 migratePity 归一成全零） */
+export function clearMijianPity(player) {
+  if (!player.mijian) player.mijian = { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: {}, history: [] }
+  player.mijian.pity = {}
+  return '觅珍双保底计数已清零'
+}
+
+/** 重置竞技场榜单（状态按**存档位**分键：`culinary-idle.arena.state.<slot>`，2026-09-26 起） */
+export function resetArenaState(slot = 0) {
+  try {
+    localStorage.removeItem(`culinary-idle.arena.state.${slot}`)
+    localStorage.removeItem('culinary-idle.arena.state') // 旧版全局键（还没被迁移认领时也一并清）
+  } catch { /* 非浏览器环境忽略 */ }
+  return `竞技场榜单/挑战记录已重置（第 ${slot + 1} 档，下次进入重新生成）`
+}
+
+/** 当前活跃赛季 +点数（默认 +1120 = 十档总需求，测「积分兑换扣费」全档可领） */
+export function addSeasonPoints(player, n = 1120) {
+  const pts = Math.floor(Number(n) || 0)
+  const s = (player.seasons ?? {})[activeSeasonId?.() ?? '']
+  if (!s) return '当前无活跃赛季（或赛季数据未初始化）'
+  s.points = (s.points ?? 0) + pts
+  return `赛季点数 +${pts}（现 ${s.points}）`
 }
 
 export { STOCK, MAX_LEVEL }

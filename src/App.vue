@@ -1,7 +1,7 @@
 <script setup>
 // 三栏布局 — 需求文档 §9.1：顶部功能导航 + 左侧技能导航 + 中央主区域 + 右侧面板
 // 视图懒加载（defineAsyncComponent）：代码分割，减小主包体积
-import { onMounted, onUnmounted, computed, ref, defineAsyncComponent, watch, nextTick } from 'vue'
+import { onMounted, onUnmounted, computed, ref, defineAsyncComponent, watch, nextTick, h } from 'vue'
 import SplashScreen from './components/SplashScreen.vue'
 import Sidebar from './components/Sidebar.vue'
 import BgmPlayer from './components/BgmPlayer.vue'
@@ -38,76 +38,102 @@ import { initTelemetry } from './game/dev/telemetry.js'
 // 要临时给打包版留入口：`VITE_DEV_PANEL=1 npm run build`。
 const DevEntry = DEV_PANEL_ENABLED ? defineAsyncComponent(() => import('./components/DevEntry.vue')) : null
 
+// 视图懒加载统一包装（2026-09-25）：视图 chunk 是**按需加载**的，断网/服务器重启时首次进入
+// 某个没去过的页会加载失败。🔴 Chromium 的 module map 会**缓存加载失败的模块**——同一会话里
+// 任何同 URL 重试（Vue 的 retry、切走再切回重挂载）都**不会再发请求**，唯一自愈手段是整页刷新
+// （换查询串可以绕开缓存，但会破坏 Vite 的静态分包，不可取）。
+// 所以这里不做重试，而是把「静默空白」换成一张可交互的兜底卡：手动「↻ 重新加载」；
+// 断网导致的失败且用户**正停在这个失败页**时，回网那一刻自动刷新（不干扰在别处操作的玩家）。
+const ViewLoadError = {
+  setup() {
+    onMounted(() => {
+      if (navigator.onLine === false) {
+        window.addEventListener('online', () => window.location.reload(), { once: true })
+      }
+    })
+    return () => h('div', {
+      style: 'margin:20px;padding:16px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:flex-start;font-size:13px;',
+    }, [
+      h('b', { style: 'color:var(--accent-strong)' }, '📡 这个页面没能加载出来'),
+      h('span', '可能刚断网，或资源正在更新。恢复网络后点下面按钮重载（进度已自动保存，重载后会结算离线收益）。'),
+      h('button', { class: 'btn btn-sm', onClick: () => window.location.reload() }, '↻ 重新加载'),
+    ])
+  },
+}
+function lazyView(loader) {
+  return defineAsyncComponent({ loader, errorComponent: ViewLoadError })
+}
+
 // 2026-09-19：厨藏/装备由弹窗升级为独立页面（厨藏的「厨藏」与「仓库」同屏合一）
-const InventoryView = defineAsyncComponent(() => import('./views/InventoryView.vue'))
-const EquipmentView = defineAsyncComponent(() => import('./views/EquipmentView.vue'))
-const SkillView = defineAsyncComponent(() => import('./views/SkillView.vue'))
-const DaoView = defineAsyncComponent(() => import('./views/DaoView.vue'))
-const ShanhaiView = defineAsyncComponent(() => import('./views/ShanhaiView.vue'))
-const ShopView = defineAsyncComponent(() => import('./views/ShopView.vue'))
-const ZhenXiuView = defineAsyncComponent(() => import('./views/ZhenXiuView.vue'))
-const StatsView = defineAsyncComponent(() => import('./views/StatsView.vue'))
-const AlchemyView = defineAsyncComponent(() => import('./views/AlchemyView.vue'))
-const LogView = defineAsyncComponent(() => import('./views/LogView.vue'))
-const RestaurantView = defineAsyncComponent(() => import('./views/RestaurantView.vue'))
-const GuildView = defineAsyncComponent(() => import('./views/GuildView.vue'))
-const SeasonView = defineAsyncComponent(() => import('./views/SeasonView.vue'))
-const ArenaView = defineAsyncComponent(() => import('./views/ArenaView.vue'))
-const GuideView = defineAsyncComponent(() => import('./views/GuideView.vue'))
-const TowerView = defineAsyncComponent(() => import('./views/TowerView.vue'))
-const FestView = defineAsyncComponent(() => import('./views/FestView.vue'))
-const MijianView = defineAsyncComponent(() => import('./views/MijianView.vue'))
-const MinigamesView = defineAsyncComponent(() => import('./views/MinigamesView.vue'))
-const ExpeditionView = defineAsyncComponent(() => import('./views/ExpeditionView.vue'))
-const KitchenNotesView = defineAsyncComponent(() => import('./views/KitchenNotesView.vue'))
-const CellarView = defineAsyncComponent(() => import('./views/CellarView.vue'))
-const RegularsView = defineAsyncComponent(() => import('./views/RegularsView.vue'))
-const SpiritStoriesView = defineAsyncComponent(() => import('./views/SpiritStoriesView.vue'))
-const AutomationView = defineAsyncComponent(() => import('./views/AutomationView.vue'))
-const RanchView = defineAsyncComponent(() => import('./views/RanchView.vue'))
-const BranchesView = defineAsyncComponent(() => import('./views/BranchesView.vue'))
-const ExchangeView = defineAsyncComponent(() => import('./views/ExchangeView.vue'))
-const TrialsView = defineAsyncComponent(() => import('./views/TrialsView.vue'))
-const MichelinView = defineAsyncComponent(() => import('./views/MichelinView.vue'))
-const FlavorBookView = defineAsyncComponent(() => import('./views/FlavorBookView.vue'))
-const GearContestView = defineAsyncComponent(() => import('./views/GearContestView.vue'))
-const FestivalView = defineAsyncComponent(() => import('./views/FestivalView.vue'))
-const SchoolsView = defineAsyncComponent(() => import('./views/SchoolsView.vue'))
-const StaffView = defineAsyncComponent(() => import('./views/StaffView.vue'))
-const RegionsView = defineAsyncComponent(() => import('./views/RegionsView.vue'))
-const LegacyView = defineAsyncComponent(() => import('./views/LegacyView.vue'))
-const PatronsView = defineAsyncComponent(() => import('./views/PatronsView.vue'))
-const MilestonesView = defineAsyncComponent(() => import('./views/MilestonesView.vue'))
-const ChronicleView = defineAsyncComponent(() => import('./views/ChronicleView.vue'))
-const WeatherView = defineAsyncComponent(() => import('./views/WeatherView.vue'))
-const MascotView = defineAsyncComponent(() => import('./views/MascotView.vue'))
-const BanquetView = defineAsyncComponent(() => import('./views/BanquetView.vue'))
-const TakeoutView = defineAsyncComponent(() => import('./views/TakeoutView.vue'))
-const SuppliersView = defineAsyncComponent(() => import('./views/SuppliersView.vue'))
-const ChefChallengeView = defineAsyncComponent(() => import('./views/ChefChallengeView.vue'))
-const SeasonReviewView = defineAsyncComponent(() => import('./views/SeasonReviewView.vue'))
-const HonorView = defineAsyncComponent(() => import('./views/HonorView.vue'))
-const CodexExchangeView = defineAsyncComponent(() => import('./views/CodexExchangeView.vue'))
-const SetMealView = defineAsyncComponent(() => import('./views/SetMealView.vue'))
-const RivalsView = defineAsyncComponent(() => import('./views/RivalsView.vue'))
-const GearView = defineAsyncComponent(() => import('./views/GearView.vue'))
-const QuestsView = defineAsyncComponent(() => import('./views/QuestsView.vue'))
-const AchievementsView = defineAsyncComponent(() => import('./views/AchievementsView.vue'))
-const MysticRealmView = defineAsyncComponent(() => import('./views/MysticRealmView.vue'))
-const DecorView = defineAsyncComponent(() => import('./views/DecorView.vue'))
-const MailView = defineAsyncComponent(() => import('./views/MailView.vue'))
-const LogsView = defineAsyncComponent(() => import('./views/LogsView.vue'))
-const MarketView = defineAsyncComponent(() => import('./views/MarketView.vue'))
-const FriendsView = defineAsyncComponent(() => import('./views/FriendsView.vue'))
-const TodayView = defineAsyncComponent(() => import('./views/TodayView.vue'))
-const StoryView = defineAsyncComponent(() => import('./views/StoryView.vue'))
-const CardBattleView = defineAsyncComponent(() => import('./views/CardBattleView.vue'))
-const EncountersView = defineAsyncComponent(() => import('./views/EncountersView.vue'))
+const InventoryView = lazyView(() => import('./views/InventoryView.vue'))
+const EquipmentView = lazyView(() => import('./views/EquipmentView.vue'))
+const SkillView = lazyView(() => import('./views/SkillView.vue'))
+const DaoView = lazyView(() => import('./views/DaoView.vue'))
+const ShanhaiView = lazyView(() => import('./views/ShanhaiView.vue'))
+const ShopView = lazyView(() => import('./views/ShopView.vue'))
+const ZhenXiuView = lazyView(() => import('./views/ZhenXiuView.vue'))
+const StatsView = lazyView(() => import('./views/StatsView.vue'))
+const AlchemyView = lazyView(() => import('./views/AlchemyView.vue'))
+const LogView = lazyView(() => import('./views/LogView.vue'))
+const RestaurantView = lazyView(() => import('./views/RestaurantView.vue'))
+const GuildView = lazyView(() => import('./views/GuildView.vue'))
+const SeasonView = lazyView(() => import('./views/SeasonView.vue'))
+const ArenaView = lazyView(() => import('./views/ArenaView.vue'))
+const GuideView = lazyView(() => import('./views/GuideView.vue'))
+const TowerView = lazyView(() => import('./views/TowerView.vue'))
+const FestView = lazyView(() => import('./views/FestView.vue'))
+const MijianView = lazyView(() => import('./views/MijianView.vue'))
+const MinigamesView = lazyView(() => import('./views/MinigamesView.vue'))
+const ExpeditionView = lazyView(() => import('./views/ExpeditionView.vue'))
+const KitchenNotesView = lazyView(() => import('./views/KitchenNotesView.vue'))
+const CellarView = lazyView(() => import('./views/CellarView.vue'))
+const RegularsView = lazyView(() => import('./views/RegularsView.vue'))
+const SpiritStoriesView = lazyView(() => import('./views/SpiritStoriesView.vue'))
+const AutomationView = lazyView(() => import('./views/AutomationView.vue'))
+const RanchView = lazyView(() => import('./views/RanchView.vue'))
+const BranchesView = lazyView(() => import('./views/BranchesView.vue'))
+const ExchangeView = lazyView(() => import('./views/ExchangeView.vue'))
+const TrialsView = lazyView(() => import('./views/TrialsView.vue'))
+const MichelinView = lazyView(() => import('./views/MichelinView.vue'))
+const FlavorBookView = lazyView(() => import('./views/FlavorBookView.vue'))
+const GearContestView = lazyView(() => import('./views/GearContestView.vue'))
+const FestivalView = lazyView(() => import('./views/FestivalView.vue'))
+const SchoolsView = lazyView(() => import('./views/SchoolsView.vue'))
+const StaffView = lazyView(() => import('./views/StaffView.vue'))
+const RegionsView = lazyView(() => import('./views/RegionsView.vue'))
+const LegacyView = lazyView(() => import('./views/LegacyView.vue'))
+const PatronsView = lazyView(() => import('./views/PatronsView.vue'))
+const MilestonesView = lazyView(() => import('./views/MilestonesView.vue'))
+const ChronicleView = lazyView(() => import('./views/ChronicleView.vue'))
+const WeatherView = lazyView(() => import('./views/WeatherView.vue'))
+const MascotView = lazyView(() => import('./views/MascotView.vue'))
+const BanquetView = lazyView(() => import('./views/BanquetView.vue'))
+const TakeoutView = lazyView(() => import('./views/TakeoutView.vue'))
+const SuppliersView = lazyView(() => import('./views/SuppliersView.vue'))
+const ChefChallengeView = lazyView(() => import('./views/ChefChallengeView.vue'))
+const SeasonReviewView = lazyView(() => import('./views/SeasonReviewView.vue'))
+const HonorView = lazyView(() => import('./views/HonorView.vue'))
+const CodexExchangeView = lazyView(() => import('./views/CodexExchangeView.vue'))
+const SetMealView = lazyView(() => import('./views/SetMealView.vue'))
+const RivalsView = lazyView(() => import('./views/RivalsView.vue'))
+const GearView = lazyView(() => import('./views/GearView.vue'))
+const QuestsView = lazyView(() => import('./views/QuestsView.vue'))
+const AchievementsView = lazyView(() => import('./views/AchievementsView.vue'))
+const MysticRealmView = lazyView(() => import('./views/MysticRealmView.vue'))
+const DecorView = lazyView(() => import('./views/DecorView.vue'))
+const MailView = lazyView(() => import('./views/MailView.vue'))
+const LogsView = lazyView(() => import('./views/LogsView.vue'))
+const MarketView = lazyView(() => import('./views/MarketView.vue'))
+const FriendsView = lazyView(() => import('./views/FriendsView.vue'))
+const TodayView = lazyView(() => import('./views/TodayView.vue'))
+const StoryView = lazyView(() => import('./views/StoryView.vue'))
+const CardBattleView = lazyView(() => import('./views/CardBattleView.vue'))
+const EncountersView = lazyView(() => import('./views/EncountersView.vue'))
 // 挂机产线四套（2026-09-14）
-const CaravanView = defineAsyncComponent(() => import('./views/CaravanView.vue'))
-const MycoFieldView = defineAsyncComponent(() => import('./views/MycoFieldView.vue'))
-const GreenhouseView = defineAsyncComponent(() => import('./views/GreenhouseView.vue'))
-const EffectsView = defineAsyncComponent(() => import('./views/EffectsView.vue'))
+const CaravanView = lazyView(() => import('./views/CaravanView.vue'))
+const MycoFieldView = lazyView(() => import('./views/MycoFieldView.vue'))
+const GreenhouseView = lazyView(() => import('./views/GreenhouseView.vue'))
+const EffectsView = lazyView(() => import('./views/EffectsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -219,9 +245,48 @@ function bgmScene() {
   return ambient
 }
 
+/**
+ * 启动页 BGM（2026-09-25 用户要求「启动页加入一首默认 BGM，加入游戏后关闭、别和游戏 BGM 冲突」）：
+ * 曲库里本来就有一首给启动页写的 `title`（「山海晨光」· 晨雾山间），此前因为没有 **任何** 场景会去放它而
+ * 从没响过（`syncBgm` 里 `phase !== 'game'` 直接 stop）。现在启动页放它，进游戏交给场景曲。
+ * 🔴 三条约束（改这里之前先读）：
+ *   ① **同一个出口**：仍然只经 `syncBgm()` 调 `bgm.play()`（`bgm_audit` 的 F 组断言「组件/别处不许直接调」），
+ *      切曲走引擎的 1.2s 交叉淡化 ⇒ 不会出现「启动页那首还在放、场景曲又起了」的叠音
+ *      （e2e-audio-skin 用 `bgm.playingCount()` 盯着这条）。
+ *   ② **浏览器自动播放策略**：网页版首次访问**一定不能自动出声**（浏览器要求先有用户手势，任何站点都绕不过）。
+ *      做法是「**先试再说**」：进启动页就发起播放 —— 桌面版（`lmewexe/main.js` 设了 `autoplayPolicy: 'no-user-gesture-required'`）、
+ *      已获得媒体授权（Chrome 的 MEI：这个站点看过带声音的媒体）的浏览器、以及玩家自己的宽松设置都会**直接出声**；
+ *      被拦时 `playReal` 的 `.play()` promise 失败（已 catch，不报错），再靠一次性手势监听重试 —— 同一条曲子走
+ *      「暂停中 → 继续」分支，不会重头开始。点「试玩」会在同一次点击里直接进游戏，所以手势那条路**延后 220ms** 再播放，
+ *      否则会先起个音再被掐掉（一小段杂音，实测过）。
+ *   ③ **不能拿 `player.settings.bgmEnabled` 当开关**：启动页还没读档，那是默认值（false）⇒「默认有 BGM」永远不成立。
+ *      改用全局偏好键（与主题/皮肤同一套做法）：玩家在游戏里**关过**才写 '0'，键不存在 = 放。
+ */
+const BGM_KEY = 'culinary-idle.bgm'
+const splashAudioArmed = ref(false)
+/** 启动页该放哪首：玩家关过 BGM 就返回 null（静音），否则用 title 场景曲 */
+function splashBgmTrack() {
+  try { return localStorage.getItem(BGM_KEY) === '0' ? null : bgmTrackOfScene('title') } catch { return null }
+}
+/** 首次用户交互后重试一次（一次性）；延后一拍让本次点击的处理函数先跑（见上面 ②） */
+function armSplashAudio() {
+  if (splashAudioArmed.value) return
+  splashAudioArmed.value = true
+  window.removeEventListener('pointerdown', armSplashAudio)
+  window.removeEventListener('keydown', armSplashAudio)
+  setTimeout(() => { if (ui.phase !== 'game') syncBgm() }, 220)
+}
+
 /** BGM 曲目：手动选曲优先，否则跟随场景；用户按了暂停就只更新「该放哪首」不出声（未开启 BGM 直接停） */
 function syncBgm() {
-  if (ui.phase !== 'game' || !player.settings?.bgmEnabled) {
+  if (ui.phase !== 'game') {
+    // 启动页：默认放「山海晨光」。**不等手势，先发起** —— 允许的浏览器立刻出声，被拦也只是静默失败（见上面 ②）
+    const t = splashBgmTrack()
+    if (t) bgm.play(t)
+    else bgm.stop()
+    return
+  }
+  if (!player.settings?.bgmEnabled) {
     bgm.stop()
     return
   }
@@ -253,14 +318,53 @@ onMounted(() => {
   syncAudioSettings()
   bgm.setMode(getBgmMode(player.settings?.bgmMode).id) // 播放模式（单曲循环/顺序/随机）
   bgm.onEnded(onBgmEnded) // 顺序/随机模式下「放完了接下一首」
+  // 启动页 BGM：等第一次用户交互（浏览器自动播放策略），见 syncBgm 的注释 ②
+  window.addEventListener('pointerdown', armSplashAudio, { passive: true })
+  window.addEventListener('keydown', armSplashAudio)
   // 跨午夜刷新「当天日期」，让签到能签到/红点自动点亮（每分钟核对一次，日期变化才触发重算）
   const t = setInterval(() => { player.refreshToday() }, 60_000)
   refreshTodayTimer = t
 
-  // ── 开发者面板入口（仅含开发者模式的构建）──────────────────────────────
+  // ── Esc 关闭最上层弹窗（2026-09-26 补；此前全站弹窗都没有 Esc）────────────────
+  // 为什么用「模拟点遮罩」而不是给每个弹窗挂 keydown：全站 24 个文件都有 `.modal-backdrop`，
+  // 且绝大多数本来就支持「点外面关闭」（`@click.self`）⇒ **一处实现覆盖全站**，行为还与鼠标一致
+  // （ESC 与点遮罩走同一条关闭路径 = 不会出现「Esc 能关但点外面不能关」这类不一致）。
+  // 只处理**最上层**那一个（`querySelectorAll` 的最后一个）；不支持点遮罩关闭的弹窗（如离线报告）
+  // 自然也不响应 Esc —— 与鼠标行为一致，不是漏。
+  escClose = (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return
+    const backs = document.querySelectorAll('.modal-backdrop')
+    if (!backs.length) return
+    const top = backs[backs.length - 1]
+    // ⚠️ 只发给「点在自己身上才算关闭」的那种遮罩：直接派发 click，target 就是遮罩本身
+    top.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+  window.addEventListener('keydown', escClose)
+  // ── 网络恢复时重试「没加载出来的图片」（2026-09-26 补：此前断网期间加载失败的图会一直空着，
+  //    只有整页刷新才自愈；而视图 chunk 那条已有兜底卡 + 回网自动刷新，图片这条一直缺）──
+  // 判据：`complete && naturalWidth === 0` = 请求已失败（**没发起过**的懒加载图 `complete` 是 false，跳过）。
+  // ⚠️ 重试时要**同时复位 `ItemImg` 的失败痕迹**（它在 @error 里把图 `display:none` 了、种子图还会打
+  //    `data-fb` 标记）—— 不复位的话 src 换了、图却还是看不见（本项目「改了但没生效」的老坑）。
+  // ⚠️ 加一次性 cache-buster（`?r=<ts>`）：光重设同一个 URL，浏览器可能直接用失败缓存，不发新请求。
+  retryBrokenImages = () => {
+    const stamp = Date.now()
+    let n = 0
+    for (const img of document.images) {
+      if (!img.complete || img.naturalWidth > 0) continue   // 没加载过 / 已经好了
+      const raw = img.getAttribute('src') || ''
+      if (!raw) continue
+      img.style.display = ''                                 // 复位 ItemImg 的隐藏
+      delete img.dataset.fb                                  // 复位种子图的回落标记
+      img.src = raw.includes('?') ? `${raw}&r=${stamp}` : `${raw}?r=${stamp}`
+      n++
+    }
+    if (n) ui.pushLog(`📡 网络恢复：重试了 ${n} 张没加载出来的图片`, 'info')
+  }
+  window.addEventListener('online', retryBrokenImages)
+  // ── 内部入口（开发者 / 运营调参员；仅含开发者模式的构建）────────────────
   if (DEV_PANEL_ENABLED) {
     initTelemetry(player) // 本地埋点：只写本机、不进存档、不联网
-    // Ctrl + Shift + D：任意阶段都能唤出开发者入口（按下去只开「登录挡板」，不直接开面板）
+    // Ctrl + Shift + D：任意阶段都能唤出内部入口（按下去只开「登录挡板」，不直接开页面）
     devHotkey = (e) => {
       if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
         e.preventDefault()
@@ -282,18 +386,31 @@ onUnmounted(() => {
   clearInterval(refreshTodayTimer)
   bgm.onEnded(null)
   if (devHotkey) window.removeEventListener('keydown', devHotkey)
+  if (escClose) window.removeEventListener('keydown', escClose)
+  if (retryBrokenImages) window.removeEventListener('online', retryBrokenImages)
 })
 // 主题切换实时生效（设置面板修改 settings.theme），并写入全局键供启动页复用
+// ⚠️ 游客 / 试玩会话（2026-09-24）：**一个字节都不写**——全局偏好键属于「这台机器的正式玩家」，
+//    游客无权改动（最小权限）。样式该切还切，只是不落盘。判据同 `bootstrap.isGuestSession()`。
 watch(() => player.settings?.theme, (v) => {
-  try { if (v) localStorage.setItem(THEME_KEY, v) } catch { /* 隐私模式下忽略 */ }
+  try { if (v && !ui.guest) localStorage.setItem(THEME_KEY, v) } catch { /* 隐私模式下忽略 */ }
   applyTheme()
   applySkin() // 皮肤分浅/深两版主色 → 主题变了要重算
 })
 
 // v2.1：皮肤偏好同样另存全局键（供启动界面），并在设置/阶段变化时重写行内样式
+// ⚠️ 同上一处：游客会话不写全局偏好键。注意**进游戏时这个 watcher 一定会触发一次**
+//（`ui.phase` 从 splash 变 game）——不判 guest 的话，「零写入」这条不变量永远不成立（实测抓过）。
 watch(() => [player.settings?.skin, ui.phase], () => {
-  try { if (player.settings?.skin) localStorage.setItem(SKIN_KEY, player.settings.skin) } catch { /* 隐私模式下忽略 */ }
+  try { if (player.settings?.skin && !ui.guest) localStorage.setItem(SKIN_KEY, player.settings.skin) } catch { /* 隐私模式下忽略 */ }
   applySkin()
+})
+// 启动页 BGM 的开关偏好（2026-09-25）：游戏里**关过** BGM 就写 '0'，启动页据此不再出声。
+// ⚠️ `ui.phase === 'game'` 这个条件不能省：启动页阶段 settings 是默认值（bgmEnabled 默认 false），
+//    不加就会在每次打开启动页时写下 '0'（既污染偏好，又违反「启动页阶段零写入」）。
+//    同主题/皮肤两处：游客会话不许写全局偏好键。
+watch(() => player.settings?.bgmEnabled, (v) => {
+  try { if (ui.phase === 'game' && !ui.guest) localStorage.setItem(BGM_KEY, v ? '1' : '0') } catch { /* 隐私模式下忽略 */ }
 })
 // v2.1：音量与开关变化时即时生效（BGM 关掉就停、开了就按当前场景起）
 // v2.15：加入「手动选曲 / 当前功能页 / 当前技能」三个依赖——否则在播放器里点一首、或切到制作页，
@@ -319,6 +436,10 @@ watch(
 let refreshTodayTimer = null
 // 开发者热键（Ctrl+Shift+D）的监听句柄：只在含开发者模式的构建里被赋值
 let devHotkey = null
+// Esc 关闭最上层弹窗的监听句柄（全站一处实现，见 onMounted 注释）
+let escClose = null
+// 回网重试失败图片的监听句柄
+let retryBrokenImages = null
 let disposeCelebrations = null
 
 // 进入游戏主界面后初始化"回到顶部"按钮显示状态（main-scroll 此时才渲染）
@@ -411,6 +532,9 @@ onMounted(() => {
       <main class="app-main">
         <!-- 顶部功能导航：主功能按页翻页（左对齐弹性区），翻页控件+功能组固定贴右不动 -->
         <nav class="top-nav">
+          <!-- 游客 / 试玩徽章（2026-09-24）：常驻可见，点一下说明「为什么不保存」。
+               放在顶栏第一格：玩家随时知道自己处于哪个权限角色，比事后再解释有用。 -->
+          <button v-if="ui.guest" class="top-nav-guest" title="试玩会话：不占存档位、不保存进度。想长期玩请刷新页面后选择存档位" @click="ui.pushLog('🧪 试玩模式：不占存档位、不保存进度（刷新即清空）。要长期玩请刷新页面 → 选择存档位', 'warn')">🧪 试玩中</button>
           <!-- 主按钮区：自己横向滚动，不与右侧组抢宽度（2026-09-11 拆开——此前共用一个滚动容器，
                窄屏下右侧组会被一起推出可视区，连签到/设置都点不到） -->
           <div class="top-nav-main">
@@ -584,7 +708,7 @@ onMounted(() => {
     </nav>
   </div>
 
-  <!-- 开发者入口与面板（2026-09-18）：**必须挂在根级**，不能放进上面那个 `v-else` 的 .app-layout ——
+  <!-- 内部入口与两个页面（2026-09-18，2026-09-25 改名）：**必须挂在根级**，不能放进上面那个 `v-else` 的 .app-layout ——
        面板要在「启动页」和「游戏内」两个阶段都能用（启动页阶段要在那里管存档/看数据）。
        `DevEntry` 在不含开发者模式的构建里是 null，其动态 import 会被打包器整块丢弃。 -->
   <DevEntry v-if="DevEntry" />

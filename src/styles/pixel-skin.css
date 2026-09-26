@@ -1,0 +1,1390 @@
+/* 像素美食 UI · 接入层（**自动生成**，别手改；改 scripts/dev/stage_pixel_skin.py）
+ *
+ * 启用：在 src/styles/main.css 末尾加一行  @import './pixel-skin.css';
+ * 回退：删掉那一行即可 —— 这一层不修改 main.css 的任何既有规则，也不动布局。
+ *
+ * 三条硬规则（§11.3，都是踩出来的）：
+ *   ① 只加 border-image-*，绝不动 border-width（内容盒一个像素不缩、换行不变）
+ *   ② 换肤一律去圆角（border-radius: 0），否则圆角会把 border-image 的角切掉
+ *   ③ image-rendering: pixelated 只在本层开；**立绘不加**（512px 立绘开了会碎）
+ */
+
+:root {
+  /* 页面底色：15 套皮肤各给一份（底纹不用位图，见 docs/ui-pixel/底纹_CSS片段.md） */
+  --page: #FBF3E4;
+}
+html[data-theme='dark'] {
+  --page: #1C1410;
+}
+
+/* 页面底纹：几乎全平 + 每 64px 五个 1×1 像素点。没有接缝，换皮肤底色自动跟着变。
+ * 这是 BG_TILE 的替代（不出位图），理由见 docs/ui-pixel/底纹_CSS片段.md */
+.bg-grain,
+.app-layout,
+.app-body {
+  background-color: var(--page);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='7' y='13' width='1' height='1' fill='%23D89868'/>%3Crect x='41' y='5' width='1' height='1' fill='%23D89868'/>%3Crect x='23' y='37' width='1' height='1' fill='%23D89868'/>%3Crect x='55' y='29' width='1' height='1' fill='%23D89868'/>%3Crect x='14' y='53' width='1' height='1' fill='%23D89868'/>%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 64px 64px;
+}
+
+html[data-theme='dark'] .bg-grain, html[data-theme='dark'] .app-layout, html[data-theme='dark'] .app-body {
+  background-color: var(--page);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='7' y='13' width='1' height='1' fill='%236B5433'/>%3Crect x='41' y='5' width='1' height='1' fill='%236B5433'/>%3Crect x='23' y='37' width='1' height='1' fill='%236B5433'/>%3Crect x='55' y='29' width='1' height='1' fill='%236B5433'/>%3Crect x='14' y='53' width='1' height='1' fill='%236B5433'/>%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 64px 64px;
+}
+
+
+/* 进度填充：底色走 --bar-color，上面叠一层 CSS 横纹（TEX_BAR_FILL 的替代，不出位图）
+ * —— 血条红 / 经验绿 / 精通紫各自都能透出来，不会像不透明位图那样盖成同一种棕。
+ * 理由与复现见 docs/ui-pixel/底纹_CSS片段.md */
+.progress-bar-fill,
+.mastery-bar-fill {
+  background-color: var(--bar-color, #D82818);
+  background-image: repeating-linear-gradient(to bottom,
+    rgba(255,255,255,0.50) 0, rgba(255,255,255,0.50) 1px,
+    rgba(255,255,255,0.00) 1px, rgba(255,255,255,0.00) 3px,
+    rgba(0,0,0,0.25) 3px, rgba(0,0,0,0.25) 4px,
+    rgba(255,255,255,0.00) 4px, rgba(255,255,255,0.00) 5px);
+  background-size: 4px 4px;
+}
+
+
+
+/* ── 内层一律不挂帧（防回归）────────────────────────────────────────────
+ * 小件是**内容**不是容器：让撕边框包住它们，一页会堆到 3 层、看着像一摞纸板。
+ * 这条用「帧元素的后代」表达，比逐个列类名耐维护 —— 以后新增控件也不会再套进去。
+ * 门槛（node scripts/dev/audit_pixel_skin_stack.mjs）：挂帧元素 ≤60 · 嵌套 ≈0 · 无旧阴影残留。 */
+:is(.main-scroll, .sidebar, .card, .gather-card, .dock-panel)
+  :is(.skill-icon, .item-img, .progress-bar, .mastery-bar, .bar, .ui-check,
+      .badge, .effect-chip, .loadout-chip, .status-chip, .inv-bartop) {
+  border-image: none;
+}
+
+
+.card, .gather-card {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_CARD@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .card, html[data-theme='dark'] .gather-card {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_CARD_dark@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.sidebar.app-sidebar, .main-scroll {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_PANEL@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .sidebar.app-sidebar, html[data-theme='dark'] .main-scroll {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_PANEL_dark@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.panel-box, .dialog {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_MODAL@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .panel-box, html[data-theme='dark'] .dialog {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_MODAL_dark@2x.png') 16 fill / 8px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.btn, .btn-sm {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_BTN@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .btn, html[data-theme='dark'] .btn-sm {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_BTN_dark@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.btn-primary, .style-btn {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_BTN_PRIMARY@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .btn-primary, html[data-theme='dark'] .style-btn {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_BTN_PRIMARY_dark@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.sidebar-tab, .top-nav-btn {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_TAB@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .sidebar-tab, html[data-theme='dark'] .top-nav-btn {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_TAB_dark@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.sidebar-tab.active, .top-nav-btn.active {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_TAB_ON@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .sidebar-tab.active, html[data-theme='dark'] .top-nav-btn.active {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_TAB_ON_dark@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.plot-select, .cellar-qty, .ex-input, .gv-search {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_INPUT@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+html[data-theme='dark'] .plot-select, html[data-theme='dark'] .cellar-qty, html[data-theme='dark'] .ex-input, html[data-theme='dark'] .gv-search {
+  /* 只碰 border-image-*：绘制区由 border-image-width 定，布局仍只认 border-width */
+  border-style: solid;
+  /* 🔴 第四个值用 round，**不能用 stretch**：九宫格的边带中段只有一根轴被缩放，
+   * 而这张帧的撕边是整条边分布的 ⇒ 拉到 848px 宽时右上角会被拉成一大片斜纹
+   * （240px 参考尺寸看不出来，按实机尺寸拼才暴露）。round 让碎边重复出现、看着
+   * 是刻意的；repeat 也能平铺但末端会被截断。2026-09-23 验收抓出。 */
+  border-image: url('../../public/images/ui-food-pixel/FRAME_INPUT_dark@2x.png') 8 fill / 4px round;
+  border-radius: 0;
+  image-rendering: pixelated;
+  /* ↓ 撤旧轮廓：三条都是「叠出来的丑」的来源（2026-09-23 用户指出「明显堆叠」）
+   * border-color 透明：border-width 保持不动（布局一个像素不变），只让那 1px 旧直线消失
+   * box-shadow 关掉：旧柔影 + 新撕边 = 双重轮廓，看着糊
+   * background 清掉：元素自带的半透明白底会铺满整个 border box，从撕边的透明缺口里
+   *   透出一圈「方角光晕」（像一张方纸垫在撕纸下面）；面改由素材的 fill 出 */
+  border-color: transparent;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: none;
+}
+
+.ui-check {
+  background-image: url('../../public/images/ui-food-pixel/CHECK_OFF_S@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+.badge {
+  background-image: url('../../public/images/ui-food-pixel/BADGE_M@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+.best-flag, .xp-low-chip {
+  background-image: url('../../public/images/ui-food-pixel/BADGE_S@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+.effect-chip {
+  background-image: url('../../public/images/ui-food-pixel/BADGE_L@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+.medal {
+  background-image: url('../../public/images/ui-food-pixel/MEDAL_L@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  image-rendering: pixelated;
+}
+
+/* 图标（158 个）按 data-icon 挂，逐个用属性选择器，避免 158 条类名 */
+[data-icon='ICON_TILE_01_today'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_01_today@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_02_effects'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_02_effects@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_03_weather'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_03_weather@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_04_mascot'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_04_mascot@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_05_quests'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_05_quests@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_06_mail'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_06_mail@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_07_market'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_07_market@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_08_encounters'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_08_encounters@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_09_shop'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_09_shop@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_10_deluxe'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_10_deluxe@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_11_alchemy'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_11_alchemy@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_12_expedition'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_12_expedition@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_13_regions'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_13_regions@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_14_caravan'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_14_caravan@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_15_automation'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_15_automation@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_16_cellar'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_16_cellar@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_17_ranch'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_17_ranch@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_18_mycoField'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_18_mycoField@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_19_greenhouse'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_19_greenhouse@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_20_kitchenNotes'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_20_kitchenNotes@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_21_flavorBook'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_21_flavorBook@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_22_schools'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_22_schools@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_23_shanhai'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_23_shanhai@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_24_gear'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_24_gear@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_25_michelin'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_25_michelin@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_26_staff'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_26_staff@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_27_branches'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_27_branches@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_28_exchange'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_28_exchange@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_29_banquet'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_29_banquet@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_30_takeout'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_30_takeout@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_31_suppliers'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_31_suppliers@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_32_regulars'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_32_regulars@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_33_friends'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_33_friends@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_34_rivals'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_34_rivals@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_35_setMeals'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_35_setMeals@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_36_decor'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_36_decor@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_37_trials'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_37_trials@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_38_gearContest'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_38_gearContest@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_39_chefChallenge'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_39_chefChallenge@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_40_realm'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_40_realm@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_41_minigames'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_41_minigames@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_42_milestones'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_42_milestones@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_43_chronicle'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_43_chronicle@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_44_story'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_44_story@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_45_cards'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_45_cards@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_46_seasonReview'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_46_seasonReview@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_47_honor'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_47_honor@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_48_achievements'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_48_achievements@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_49_codexExchange'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_49_codexExchange@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_50_logs'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_50_logs@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_51_spiritStories'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_51_spiritStories@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_52_legacy'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_52_legacy@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_53_dao'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_53_dao@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_54_patrons'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_54_patrons@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_TILE_55_festival'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_TILE_55_festival@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_01'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_01@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_02'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_02@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_03'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_03@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_04'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_04@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_05'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_05@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_06'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_06@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_07'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_07@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GROUP_08'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GROUP_08@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_01_foraging'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_01_foraging@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_02_fishing'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_02_fishing@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_03_hunting'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_03_hunting@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_04_excavation'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_04_excavation@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_05_woodcutting'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_05_woodcutting@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_06_mining'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_06_mining@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_07_farming'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_07_farming@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_08_cooking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_08_cooking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_09_baking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_09_baking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_10_preserving'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_10_preserving@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_11_brewing'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_11_brewing@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_12_spiceMixing'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_12_spiceMixing@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_13_craftsmithing'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_13_craftsmithing@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_14_knife'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_14_knife@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_15_heatControl'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_15_heatControl@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_16_flavorArtistry'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_16_flavorArtistry@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_17_plating'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_17_plating@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_18_tasteAcumen'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_18_tasteAcumen@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_19_spiritSummoning'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_19_spiritSummoning@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_20_gastronomy'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_20_gastronomy@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_21_preservation'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_21_preservation@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_22_exploration'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_22_exploration@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_23_woodworking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_23_woodworking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_24_pottery'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_24_pottery@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_25_weaving'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_25_weaving@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_26_embroidery'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_26_embroidery@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_27_candles'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_27_candles@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_28_fletching'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_28_fletching@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_29_netmaking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_29_netmaking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_30_incense'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_30_incense@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_31_festivalGoods'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_31_festivalGoods@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_32_jadecraft'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_32_jadecraft@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_33_goodsTag'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_33_goodsTag@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_34_miningGear'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_34_miningGear@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_35_papermaking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_35_papermaking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_36_instrument'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_36_instrument@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_37_soapmaking'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_37_soapmaking@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_SKILL_38_exchequer'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_SKILL_38_exchequer@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_01'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_01@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_02'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_02@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_03'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_03@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_04'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_04@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_05'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_05@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_06'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_06@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_07'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_07@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_08'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_08@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_09'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_09@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_10'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_10@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_11'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_11@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_12'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_12@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_13'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_13@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_14'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_14@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_15'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_15@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_16'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_16@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_17'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_17@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_18'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_18@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_19'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_19@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_20'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_20@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_21'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_21@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_22'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_22@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_23'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_23@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_24'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_24@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_25'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_25@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_26'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_26@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_GAME_27'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_GAME_27@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_01'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_01@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_02'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_02@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_03'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_03@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_04'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_04@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_05'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_05@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_06'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_06@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_07'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_07@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_08'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_08@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_09'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_09@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_10'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_10@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_11'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_11@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_12'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_12@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_13'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_13@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_14'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_14@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_15'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_15@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_16'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_16@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_17'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_17@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_18'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_18@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_19'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_19@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_20'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_20@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_21'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_21@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_22'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_22@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_23'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_23@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_24'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_24@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_25'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_25@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_26'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_26@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_27'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_27@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_28'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_28@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_29'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_29@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+[data-icon='ICON_ACT_30'] {
+  background-image: url('../../public/images/ui-food-pixel/ICON_ACT_30@2x.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
