@@ -421,7 +421,8 @@ export const usePlayerStore = defineStore('player', {
         for (const [k, v] of Object.entries(item.stats)) {
           const nv = Number(v)
           // 防某个装备字段缺失/非数字导致 NaN 传染到属性面板
-          sum[k] = (sum[k] ?? 0) + (Number.isFinite(nv) ? nv : 0) * mult
+          // 美食探索专属装备的百分点是固定承诺：强化不得把两套 +5%/+10% 抬高。
+          sum[k] = (sum[k] ?? 0) + (Number.isFinite(nv) ? nv : 0) * (k === 'exploreSuccessPP' ? 1 : mult)
         }
       }
       // 词条：按装备 id 取（同一件装备无论穿在哪个槽位，词条都是它自己那套）
@@ -445,6 +446,8 @@ export const usePlayerStore = defineStore('player', {
         if (gemMul !== 1) for (const k of Object.keys(gb)) gb[k] = gb[k] * gemMul
         for (const [k, v] of Object.entries(gb)) sum[k] = (sum[k] ?? 0) + v
       }
+      // 两套探索装备混搭可达到原始 +12.5pp，玩家看到的汇总必须与探索的 +10pp 上限一致。
+      sum.exploreSuccessPP = Math.min(10, Math.max(0, sum.exploreSuccessPP ?? 0))
       return sum
     },
     inventoryCount(s) {

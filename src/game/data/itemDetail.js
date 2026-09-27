@@ -33,7 +33,7 @@ export const CATEGORY_LABEL = {
   '木器': '木器', // 副业·木工配方的分类（`ProductionView` 用它做配方卡标签）
 }
 export const SLOT_LABEL = { weapon: '武器', offhand: '副手', body: '身体', helmet: '头盔', amulet: '饰品1', ring: '饰品2', legs: '腿部', boots: '脚部' }
-const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击率', hpBonus: '品鉴值加成', speedBonus: '攻速提升' }
+export const STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击率', hpBonus: '品鉴值加成', speedBonus: '攻速提升', exploreSuccessPP: '美食探索成功率' }
 const BUFF_LABEL = { atk: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', speed: '攻速', duration: '持续' }
 const SKILL_LABEL = { foraging: '采摘', fishing: '垂钓', hunting: '狩猎', excavation: '挖掘', woodcutting: '伐木', mining: '采矿', farming: '农耕', cooking: '烹饪', baking: '烘焙', preserving: '腌制', brewing: '调酒', spiceMixing: '调料调配', craftsmithing: '厨具锻造', woodworking: '木工', pottery: '陶艺', weaving: '编织', embroidery: '刺绣', candles: '蜡烛制作',
   fletching: '制箭', netmaking: '制网', incense: '香道', festivalGoods: '年货', jadecraft: '玉作',
@@ -108,7 +108,8 @@ export function itemDetailLines(id) {
     lines.push(['对决增益', '随机获得 攻击/命中/防御/暴击 之一：攻击+8、命中+10、防御+6、暴击+10%、攻击+5·命中+5（持续 10 回合）'])
   }
   if (it.drunk) lines.push(['醉酒', '准确率 -15%（5 回合）'])
-  if (it.stats) lines.push(['装备属性', Object.entries(it.stats).map(([k, v]) => `${STAT_LABEL[k] ?? k} ${fmtStat(v)}`).join('、')])
+  if (it.stats) lines.push(['装备属性', Object.entries(it.stats).map(([k, v]) =>
+    k === 'exploreSuccessPP' ? `${STAT_LABEL[k]} +${fmtStat(v)}%` : `${STAT_LABEL[k] ?? k} ${fmtStat(v)}`).join('、')])
   // 宝石（2026-09-09）：可作为宝石镶嵌的矿物
   const gem = gemDef(id)
   if (gem) lines.push(['宝石镶嵌', `${gem.desc}（镶入装备插槽后生效）`])

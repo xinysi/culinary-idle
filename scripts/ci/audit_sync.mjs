@@ -236,6 +236,29 @@ const check = (name, cond, detail = '') => {
   check('README：版本行的数据规模数字与数据一致（技能/首领/赛季/成就/称号/皮肤/效果登记表）', drift.length === 0, drift.join('; '))
 }
 
+// ── 游戏内攻略的总量数字同样不能飘（2026-09-27 立，v2.28.1）──────────────────
+// 起因：延续性审计时顺手对照，发现 `guide.js` 的攻略概述里写着「成就（262）与称号（122）」，
+// 而实际是 **264 / 123** —— README 那行有守卫盯着（上一块），游戏内这一份**没有**，于是它先飘了。
+// 判据同 README：从展示文案里抠出数字，与实际数据比（**不是**拿数据自比自）。
+{
+  const { GUIDE_OVERVIEW } = await import('../../src/game/data/guide.js')
+  const { EXPLORATION_TARGETS_ALL } = await import('../../src/game/data/explorationTargets.js')
+  const { allTitleNames } = await import('../../src/game/data/titles.js')
+  const overview = GUIDE_OVERVIEW.flatMap((c) => c.items ?? []).map((e) => `${e.name}｜${e.desc ?? ''}`).join('\n')
+  const pats = [
+    ['成就', ALL_ACHIEVEMENTS.length, /成就（(\d+)）/],
+    ['称号', allTitleNames().length, /称号（(\d+)）/],
+    ['探索目标', EXPLORATION_TARGETS_ALL.length, /美食探索（(\d+)\s*目标）/],
+  ]
+  const bad = []
+  for (const [label, actual, re] of pats) {
+    const m = overview.match(re)
+    if (!m) bad.push(`${label} 未在攻略概述里出现（或格式变了）`)
+    else if (Number(m[1]) !== actual) bad.push(`${label}：攻略写 ${m[1]}，实际 ${actual}`)
+  }
+  check('攻略：概述里的总量数字（成就/称号/探索目标）与数据一致', bad.length === 0, bad.join('; '))
+}
+
 // ── 发布面守卫（2026-09-21 立）：本地内部资料**不得进入仓库** ────────────────
 // 本仓库是公开的（在线游玩与 Releases 都靠它），而项目里有一部分资料只在本地保留、不随仓库发布
 // （清单见 `.gitignore` 末段）。这条守卫的作用：万一以后被 `git add -A` 误带进来，CI 立刻点名。

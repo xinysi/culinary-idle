@@ -9541,6 +9541,28 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     check('探索改版', '行为：穿第一套 +5pp、第二套 +10pp（装备加成在 90% 上限之外相加）',
       Math.abs(set1 - before - 0.025 * 2) < 1e-6 && Math.abs(set2 - before - 0.05 * 2) < 1e-6,
       `${(before * 100).toFixed(1)}% → ${(set1 * 100).toFixed(1)}% → ${(set2 * 100).toFixed(1)}%`)
+    p2.upgrades.exploreGearRelicLantern = 10
+    p2.upgrades.exploreGearRelicBoots = 10
+    // 🔴 强化免疫必须**单件**测：拿两件（5+5）测的话，强化放大成 20pp 也会被下面的 +10pp 上限夹住
+    // ⇒ 断言照样绿（假绿）。只用一件时 5pp vs 10pp 才分得开。
+    p2.equipment.body = null
+    p2.equipment.boots = null
+    p2.equipment.offhand = 'exploreGearRelicLantern'
+    p2.upgrades.exploreGearRelicLantern = 10 // 满强化 ×2（若被放大 ⇒ 10pp）
+    check('探索改版', '强化不放大专属成功率：单件顶级装备满强化仍然只加 5pp',
+      Math.abs(p2.equippedStats.exploreSuccessPP - 5) < 1e-9 &&
+      Math.abs(ex2.successChance(t2) - (before + 0.05)) < 1e-6,
+      `汇总 ${p2.equippedStats.exploreSuccessPP}pp`)
+    p2.equipment.body = 'exploreGearFlavorCloak'
+    p2.equipment.boots = 'exploreGearRelicBoots'
+    check('探索改版', '两套混穿（原始 12.5pp）汇总与结算都封在 10pp，面板与实际成功率同源',
+      Math.abs(p2.equippedStats.exploreSuccessPP - 10) < 1e-9 && Math.abs(ex2.successChance(t2) - set2) < 1e-9)
+    const { itemDetailLines } = await import('../../src/game/data/itemDetail.js')
+    const detail = itemDetailLines('exploreGearRelicLantern').flat().join(' ')
+    const equip = rdSrc('src/views/EquipmentView.vue')
+    check('探索改版', '图鉴和装备页均显示中文「美食探索成功率 +5.00%」，不漏内部属性键',
+      detail.includes('美食探索成功率 +5.00%') && !detail.includes('exploreSuccessPP') &&
+      /exploreSuccessPP/.test(equip) && /STAT_LABEL/.test(equip))
   }
 
   // ⑨ 离线与在线同源
@@ -9554,6 +9576,37 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const expect = Math.floor(3600e3 / ex3.intervalMs(t3))
     check('探索改版', '离线走同一个 intervalMs / successChance 出口（间隔随精通缩短也被离线吃到）',
       off != null && off.actions === expect, `actions=${off?.actions} 期望=${expect}`)
+    const last = ex3.targets.find((x) => EB.exploreBandOf(x.reqLevel) === 10)
+    p3.setSkillState('exploration', { level: 99, exp: totalXpForLevel(99) })
+    p3.setSkillTarget('exploration', last.id)
+    const preview = ex3.computeOffline(3600e3, 1)
+    const before = ex3.mastery[last.id] ?? 0
+    const poolBefore = p3.skills.exploration.masteryPool ?? 0
+    const report = settleOffline(p3, { pushLog() {} }, 3600e3)
+    check('探索改版', '离线 0% 卡片：纯计算不改存档，结算按尝试次数增长卡片精通与技能精通池',
+      preview?.exp === 0 && preview?.masteryAttempts > 0 &&
+      (ex3.mastery[last.id] ?? 0) > before && (p3.skills.exploration.masteryPool ?? 0) > poolBefore &&
+      report?.reports?.some(({ inst }) => inst.id === 'exploration'),
+      `${last.name}: ${before}→${ex3.mastery[last.id] ?? 0} 次，池 ${poolBefore}→${p3.skills.exploration.masteryPool ?? 0}`)
+    const bonus = p3.masteryPoolBonus('exploration')
+    check('探索改版', '探索离线精通结算仍走 addMastery 的广度/池唯一出口',
+      bonus && /player\.addMastery\(inst\.id, inst\.currentTarget\.id, r\.masteryAttempts\)/.test(rdSrc('src/game/bootstrap.js')))
+    const large = ex3.computeOffline(200_000 * ex3.intervalMs(last), 1)
+    const countGear = (items) =>
+      Object.entries(items ?? {}).filter(([id]) => id.startsWith('exploreGear')).reduce((n, [, q]) => n + q, 0)
+    const gearQty = countGear(large?.items)
+    check('探索改版', '离线段整体不与在线口径脱节：装备总件数 == round(成功次数 × 0.01%)',
+      large && gearQty === Math.round(Math.round(large.actions * ex3.successChance(last)) * EG.EXPLORE_GEAR_DROP_CHANCE),
+      `合计 ${gearQty} 件`)
+    // 🔴 必须挑「期望总件数是零头」的规模：ok×0.01% ≈ 0.6 件时，先取整总数 ⇒ 掉 1 件；
+    //    逐件写 round(0.6/4)=0 ⇒ 一件都不掉（0 件）。拿 12 件那种整数规模测，两种写法结果相同 ⇒ 假绿。
+    const rateNow = ex3.successChance(last)
+    const wantActions = Math.round(6000 / rateNow)
+    const small = ex3.computeOffline(wantActions * ex3.intervalMs(last), 1)
+    const smallOk = Math.round((small?.actions ?? 0) * rateNow)
+    check('探索改版', '离线 0.01% 装备先取整「总件数」再分配（期望 0.6 件 ⇒ 掉 1 件，逐件四舍五入会掉 0 件）',
+      countGear(small?.items) === 1 && Math.abs(smallOk * EG.EXPLORE_GEAR_DROP_CHANCE - 0.6) < 0.05,
+      `成功 ${smallOk} 次 · 期望总件数 ${(smallOk * EG.EXPLORE_GEAR_DROP_CHANCE).toFixed(2)} · 实掉 ${countGear(small?.items)} 件`)
   }
 
   // ⑩ 显示同源 + 展示与其它技能一致

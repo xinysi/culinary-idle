@@ -44,10 +44,9 @@ export class ExplorationSkill extends Skill {
     return masteryLevelProgress(this.mastery?.[target?.id] ?? 0)
   }
 
-  /** 专属装备带来的成功率增量（0~0.10）：四件的 `exploreSuccessPP` 合计 ÷100 */
+  /** 与装备面板共用汇总口径：强化不放大专属属性，混搭也只计最多 +10pp。 */
   gearSuccessPP() {
-    const sum = this.player.equippedStats?.exploreSuccessPP ?? 0
-    return Math.max(0, Number(sum) || 0) / 100
+    return (this.player.equippedStats?.exploreSuccessPP ?? 0) / 100
   }
 
   /**
@@ -223,15 +222,15 @@ export class ExplorationSkill extends Skill {
       const qty = Math.round(expected * doubleFactor)
       if (qty > 0) items[entry.itemId] = (items[entry.itemId] ?? 0) + qty
     }
-    // 专属装备同样按期望给（0.01% × 成功次数，通常四舍五入为 0，但口径必须与在线一致）
-    const gearExpected = ok * EXPLORE_GEAR_DROP_CHANCE
-    if (gearExpected > 0) {
-      const per = gearExpected / EXPLORE_GEAR_ITEMS.length
-      for (const g of EXPLORE_GEAR_ITEMS) {
-        const qty = Math.round(per)
-        if (qty > 0) items[g.id] = (items[g.id] ?? 0) + qty
-      }
+    // 先按 0.01% 算**总件数**，再按稳定次序分给四件；不能逐件 round(期望/4)，
+    // 否则期望刚过 0.5 件/件时会在一次离线结算中凭空给出四件。
+    const gearTotal = Math.round(ok * EXPLORE_GEAR_DROP_CHANCE)
+    for (let n = 0; n < gearTotal; n++) {
+      const gear = EXPLORE_GEAR_ITEMS[n % EXPLORE_GEAR_ITEMS.length]
+      items[gear.id] = (items[gear.id] ?? 0) + 1
     }
-    return { actions, exp, xpMult, items, gold: Math.round(gold) }
+    // 离线同样按每次尝试积累精通（包括失败）；由 settleOffline 在结算时调用 addMastery，
+    // 与在线共享其精通池、广度和存档出口。不能在纯计算阶段直接写入玩家状态。
+    return { actions, exp, xpMult, items, gold: Math.round(gold), masteryAttempts: actions }
   }
 }

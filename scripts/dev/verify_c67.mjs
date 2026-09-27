@@ -9,9 +9,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
 const P = (rel) => join(root, rel)
 function inject(rel, from, to) {
   const orig = readFileSync(P(rel), 'utf8')
-  const n = orig.split(from).length - 1
-  if (n !== 1) throw new Error(`${rel} 锚点匹配 ${n} 次（期望 1）：${from.slice(0, 60)}`)
-  writeFileSync(P(rel), orig.replace(from, to), 'utf8')
+  // ⚠️ 换行符兼容：`bootstrap.js` 是 CRLF，而其它文件是 LF。多行锚点若照抄 LF，
+  // 匹配数是 0 ⇒ 脚本「注入失败」被跳过（看着像通过）。这里按文件实际换行折叠一次。
+  const norm = (s) => (orig.includes('\r\n') ? s.replace(/\r?\n/g, '\r\n') : s.replace(/\r?\n/g, '\n'))
+  const f = norm(from)
+  const t = norm(to)
+  const n = orig.split(f).length - 1
+  if (n !== 1) throw new Error(`${rel} 锚点匹配 ${n} 次（期望 1）：${f.slice(0, 60)}`)
+  writeFileSync(P(rel), orig.replace(f, t), 'utf8')
 }
 
 const CASES = [
@@ -70,6 +75,34 @@ const CASES = [
     from: '      { id: \'exploreGearFlavorCloak\', name: \'寻味旅披\', slot: \'body\', exploreSuccessPP: 2.5, tier: 6 },',
     to: '',
     expect: '+5pp / +10pp',
+  },
+  {
+    name: '⑨ 强化开始放大专属成功率（单件满强化变成 10pp，破坏「第二套才 +10%」的承诺）',
+    rel: 'src/stores/player.js',
+    from: "* (k === 'exploreSuccessPP' ? 1 : mult)",
+    to: '* mult',
+    expect: '强化不放大专属成功率',
+  },
+  {
+    name: '⑩ 混搭上限被去掉（两套混穿 12.5pp，装备面板显示的值与实际结算不一致）',
+    rel: 'src/stores/player.js',
+    from: 'sum.exploreSuccessPP = Math.min(10, Math.max(0, sum.exploreSuccessPP ?? 0))',
+    to: 'sum.exploreSuccessPP = Math.max(0, sum.exploreSuccessPP ?? 0)',
+    expect: '封在 10pp',
+  },
+  {
+    name: '⑪ 离线不再按尝试次数结算精通（末段 0% 卡片挂机一夜精通纹丝不动 = 死卡）',
+    rel: 'src/game/bootstrap.js',
+    from: "    if (inst.id === 'exploration' && r.masteryAttempts > 0 && inst.currentTarget?.id) {\n      player.addMastery(inst.id, inst.currentTarget.id, r.masteryAttempts)\n    }\n",
+    to: '',
+    expect: '结算按尝试次数增长卡片精通',
+  },
+  {
+    name: '⑫ 离线装备掉率改成逐件四舍五入（期望 0.6 件时一件都不掉，与在线掷骰口径脱节）',
+    rel: 'src/game/skills/ExplorationSkill.js',
+    from: "    const gearTotal = Math.round(ok * EXPLORE_GEAR_DROP_CHANCE)\n    for (let n = 0; n < gearTotal; n++) {\n      const gear = EXPLORE_GEAR_ITEMS[n % EXPLORE_GEAR_ITEMS.length]\n      items[gear.id] = (items[gear.id] ?? 0) + 1\n    }",
+    to: "    for (const gear of EXPLORE_GEAR_ITEMS) {\n      const q = Math.round((ok * EXPLORE_GEAR_DROP_CHANCE) / EXPLORE_GEAR_ITEMS.length)\n      if (q > 0) items[gear.id] = (items[gear.id] ?? 0) + q\n    }",
+    expect: '先取整「总件数」',
   },
 ]
 

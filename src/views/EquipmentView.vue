@@ -6,7 +6,7 @@ import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
-import { fmtStat } from '../game/data/itemDetail.js'
+import { fmtStat, STAT_LABEL } from '../game/data/itemDetail.js'
 import { fmtMod, REROLL_COST } from '../game/data/gearMods.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
 import { GEM_DEFS, gemDef, socketCountOf } from '../game/data/gems.js'
@@ -16,7 +16,7 @@ const player = usePlayerStore()
 const ui = useUiStore()
 
 const SLOT_NAMES = { weapon: '武器', helmet: '头盔', body: '身体', legs: '腿部', boots: '脚部', offhand: '副手', amulet: '饰品1', ring: '饰品2' }
-const EQ_STAT_LABEL = { attack: '攻击', accuracy: '命中', defense: '防御', evasion: '闪避', critChance: '暴击', hpBonus: '生命值', speedBonus: '攻速' }
+const EQ_STAT_LABEL = { ...STAT_LABEL, critChance: '暴击', hpBonus: '生命值', speedBonus: '攻速' }
 
 // 背包可穿戴 + 分类筛选
 const backpackCat = ref('all')
@@ -40,10 +40,10 @@ const equippedStats = computed(() => player.equippedStats)
 const wornCount = computed(() => Object.values(player.equipment).filter(Boolean).length)
 const totalUpgrades = computed(() => Object.values(player.upgrades ?? {}).reduce((a, b) => a + (b ?? 0), 0))
 const statEntries = computed(() =>
-  ['attack', 'accuracy', 'defense', 'evasion', 'critChance', 'hpBonus', 'speedBonus']
-    .map((k) => ({ label: EQ_STAT_LABEL[k], value: equippedStats.value[k] ?? 0 }))
+  ['attack', 'accuracy', 'defense', 'evasion', 'critChance', 'hpBonus', 'speedBonus', 'exploreSuccessPP']
+    .map((k) => ({ key: k, label: EQ_STAT_LABEL[k], value: equippedStats.value[k] ?? 0 }))
     .filter((s) => s.value)
-    .map((s) => ({ ...s, value: fmtStat(s.value) }))
+    .map((s) => ({ ...s, value: s.key === 'exploreSuccessPP' ? `+${fmtStat(s.value)}%` : fmtStat(s.value) }))
 )
 // 套装效果（2026-09-09）：同套穿戴 2/4/6 件叠加
 const activeSets = computed(() => equipSetBonuses(player.equipment).active)
@@ -111,7 +111,10 @@ function goToSkill(id) {
 function itemDetailLines(id) {
   const it = getItem(id)
   if (!it?.stats) return []
-  return Object.entries(it.stats).map(([k, v]) => ({ label: EQ_STAT_LABEL[k] ?? k, value: fmtStat(v) }))
+  return Object.entries(it.stats).map(([k, v]) => ({
+    label: EQ_STAT_LABEL[k] ?? k,
+    value: k === 'exploreSuccessPP' ? `+${fmtStat(v)}%` : fmtStat(v),
+  }))
 }
 // 装备词条（2026-09-06；2026-09-18 起按**装备 id** 存）：同一件装备在哪都带着自己那套词条
 function modsFor(itemId) {
