@@ -29,6 +29,8 @@ import { getCombat } from './game/combat/Combat.js'
 import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
 import { guideEntryForView } from './game/data/guide.js'
+import { featureGroups, groupForView } from './game/data/featureGroups.js'
+import FeatureRail from './components/FeatureRail.vue'
 import { getSkillDef } from './game/data/skills.js' // 技能页「指南」按钮的数据源（2026-09-26 用户⑪统一位置）
 import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
 import { initTelemetry } from './game/dev/telemetry.js'
@@ -138,6 +140,32 @@ const EffectsView = lazyView(() => import('./views/EffectsView.vue'))
 
 const ui = useUiStore()
 const player = usePlayerStore()
+
+// ── 功能页的「大类工作区」（2026-09-27 用户⑳ 第二轮）──
+// 用户定案：「点击大类后，右边面板的**左边显示导航、右边显示详细内容**」（形态照开发者面板）。
+// 这里只做两件事：① 把 `.feature-rail` 插进主内容区；② **离开该大类就收起导航**。
+// 落地页（点大类时先跳本类第一页）在 `Sidebar.vue`，因为「哪些页可见」要跟着左栏磁贴的开关走。
+const railGroups = featureGroups(player)
+const railAvailable = ref(typeof window === 'undefined' ? true : window.innerWidth > 940)
+if (typeof window !== 'undefined') {
+  // 与 Sidebar 的 `isNarrow` 同一条断点：窄屏时侧栏本身是抽屉，主区再挂 168px 导航会把内容挤没
+  const mq = window.matchMedia('(max-width: 940px)')
+  const onMq = (e) => { railAvailable.value = !e.matches }
+  railAvailable.value = !mq.matches
+  mq.addEventListener?.('change', onMq)
+}
+/**
+ * 导航栏此刻显不显示。⚠️ `shanhai`（山海食经）例外：那一页是整屏画布（`.main-scroll--bleed`
+ * 把它变成无内边距的 flex 列、内容撑满中区），再分掉 168px 会把画布挤变形。
+ */
+const catRailOn = computed(() =>
+  !!ui.featureCat && railAvailable.value && ui.activeView !== 'shanhai')
+// 换到不属于本大类的页面（技能页 / 图鉴 / 餐厅…）就自动收起 —— 否则导航栏会一直占着位置，
+// 且按钮上的「当前所在大类」高亮与实际内容对不上。判据与左栏同一个 `groupForView`。
+watch(() => ui.activeView, (v) => {
+  if (!ui.featureCat) return
+  if (groupForView(railGroups, v)?.id !== ui.featureCat) ui.closeFeatureCat()
+})
 
 // 页面「指南」（2026-09-21 立功能页版；2026-09-26 用户⑪起**技能页也走这里**）：
 // 原先技能页/副业页在标题旁有一个 📖 指南，功能页却在顶栏有个 📘 指南 —— 同一个东西两个位置
@@ -602,7 +630,11 @@ onMounted(() => {
         </nav>
 
         <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
-        <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll" :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai' }">
+        <!-- 2026-09-27 用户⑳ 第二轮：开了大类时，这里是「左导航 + 右内容」两栏
+             （`FeatureRail` = 导航栏，紧随其后的就是原有的页面分派链，内容区一个字没动） -->
+        <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll"
+             :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai', 'main-scroll--rail': catRailOn }">
+          <FeatureRail v-if="catRailOn" />
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />

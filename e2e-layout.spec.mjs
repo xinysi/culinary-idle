@@ -270,3 +270,62 @@ for (const vp of VIEWPORTS) {
     expect(sq, `以下文字被挤成逐字竖排：\n${sq.join('\n')}`).toEqual([])
   })
 }
+
+// ── 大类工作区（2026-09-27 用户⑳ 第二轮）下的排版：内容列被导航栏分掉 168px + 间距 ──────────
+// 为什么单列一条：「点大类 → 主区左导航 + 右内容」会让**内容列比平时窄约 182px**，
+// 而上面那条主扫描是 `setView` 直达的（不带导航栏）⇒ 它扫不到这种「只是变窄了」引发的挤压/裁切。
+// 做法：按大类逐个点开，再沿着导航栏把该类每一页都点一遍（与玩家真实路径一致）。
+const RAIL_CATS = ['今日', '采买与转化', '挂机产线', '研究与收集', '餐厅经营', '挑战与休闲', '记录与回顾']
+
+async function scanRail(page, viewport, cats) {
+  await enterGame(page, viewport)
+  const cut = []
+  const sq = []
+  const errs = []
+  page.on('pageerror', (e) => errs.push(e.message))
+  const consoleErrs = []
+  const NOISE = /Failed to load resource|net::ERR|favicon|ERR_ABORTED|\[vite\]/
+  page.on('console', (m) => { if (m.type() === 'error' && !NOISE.test(m.text())) consoleErrs.push(m.text().slice(0, 220)) })
+  await page.locator('.sidebar-tab', { hasText: '功能' }).click()
+  await page.waitForTimeout(200)
+  const showAll = page.locator('.feature-hidden button', { hasText: '显示全部' })
+  if (await showAll.count()) { await showAll.click(); await page.waitForTimeout(250) }
+  let n = 0
+  for (const cat of cats) {
+    await page.locator('.feature-cat', { hasText: cat }).first().click()
+    await page.waitForTimeout(320)
+    const rail = page.locator('.main-scroll > .feature-rail')
+    const names = (await rail.locator('.fr-item').allTextContents()).map((t) => t.replace(/[^一-龥]/g, ''))
+    for (let i = 0; i < names.length; i++) {
+      // 山海食经是**整屏画布页**，设计上就不挂导航栏（`--bleed` 下分掉 168px 会把画布挤变形）
+      // ⇒ 它在本轮跳过；它自己的排版由主扫描（`setView('shanhai')`）覆盖。
+      if (names[i].includes('山海食经')) continue
+      await page.locator('.main-scroll > .feature-rail .fr-item').nth(i).click()
+      await page.waitForTimeout(340)
+      await page.evaluate(expandAll)
+      await page.waitForTimeout(280)
+      const mark = consoleErrs.length
+      const r = await page.evaluate(scan, '.main-scroll')
+      const label = `${cat}/${names[i]}`
+      for (const x of r.cutControl) if (!x.clickable) cut.push(`${label} · 「${x.ctrl}」被裁 ${x.over}px（${x.box}）`)
+      for (const x of r.squeeze) sq.push(`${label} · 「${x.text}」被挤成 ${x.w}×${x.h}（逐字竖排）`)
+      for (const msg of consoleErrs.slice(mark)) errs.push(`${label} · 控制台错误：${msg}`)
+      n++
+    }
+  }
+  return { cut, sq, errs, n }
+}
+
+if (VIEWPORTS[0]) {
+  const vp = VIEWPORTS[0] // 只在 1440px 跑：窄屏根本不出现导航栏（那是抽屉 + 手风琴）
+  for (let i = 0; i < 2; i++) {
+    const mine = RAIL_CATS.filter((_, k) => k % 2 === i)
+    test(`布局守卫（1440px 大类工作区 ${i + 1}/2，${mine.length} 类）：带导航栏时无被裁控件/逐字竖排`, async ({ page }) => {
+      const { cut, sq, errs, n } = await scanRail(page, vp, mine)
+      expect(n, '这一轮一页都没扫到（空转）').toBeGreaterThan(5)
+      expect(cut, `以下控件被 overflow 裁掉且点不到：\n${cut.join('\n')}`).toEqual([])
+      expect(sq, `以下文字被挤成逐字竖排：\n${sq.join('\n')}`).toEqual([])
+      expect(errs, '页面抛错：' + errs.join(' / ')).toEqual([])
+    })
+  }
+}

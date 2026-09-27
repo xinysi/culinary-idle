@@ -100,37 +100,28 @@ function toggleAllGroups() {
   player.settings.sidebarOpen = allGroupsOpen.value ? [] : FEATURE_GROUPS.map((g) => g.id)
 }
 
-// ── 功能页：大类按钮 + 右侧导航面板（2026-09-27 用户⑳「各类只需要一个按钮，点击后右边面板显示该类的导航」）──
-// 宽屏：7 个**大类按钮**，点一下在右侧弹出该类的页面清单（`.feature-flyout`，Teleport 到 body
-//       以免被 `.feature-nav` 的 `overflow-y:auto` 裁掉）；点清单里的页 → 跳转并收起。
-// 窄屏（手机抽屉只有 ~239px）：**退回原来的手风琴 + 4 列磁贴** —— 抽屉里再弹一个右侧面板会溢出屏幕。
-const catOpen = ref(null) // 当前展开的大类 id（null = 都收起）
-const catAnchor = ref(null) // 触发按钮的位置（fixed 定位用）
+// ── 功能页：大类按钮 + 主区两侧工作区（2026-09-27 用户⑳）──
+// 用户原话：「各类只需要一个按钮，点击后右边面板显示该类的导航」；同日第二轮定为
+//   「点击大类后，右边面板的**左边显示导航、右边显示详细内容**」（形态照开发者面板）。
+// 宽屏：7 个**大类按钮**，点一下 → `ui.openFeatureCat(id)`，主内容区变成
+//       「`.feature-rail`（本类页面清单）+ 当前页」两栏（组件见 `components/FeatureRail.vue`）；
+//       若当前页不属于这一类，同时把**该类第一页**设为落地页（否则会出现「导航说在 A 类、内容还是旧的页」）。
+// 窄屏（手机抽屉只有 ~239px 宽）：**退回「手风琴 + 磁贴」** —— 抽屉里再挂一条 168px 的侧栏会把内容挤没。
 const isNarrow = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 940px)').matches)
 if (typeof window !== 'undefined') {
   const mq = window.matchMedia('(max-width: 940px)')
-  const onMq = (e) => { isNarrow.value = e.matches; if (e.matches) catOpen.value = null }
+  const onMq = (e) => { isNarrow.value = e.matches }
   mq.addEventListener?.('change', onMq)
 }
-const openCat = computed(() => FEATURE_GROUPS.find((g) => g.id === catOpen.value) ?? null)
 const catItems = (g) => g.items.filter((it) => tileVisible(it))
-function toggleCat(g, ev) {
-  if (catOpen.value === g.id) { catOpen.value = null; return }
-  const r = ev?.currentTarget?.getBoundingClientRect?.()
-  catAnchor.value = r ? { top: r.top, right: r.right } : null
-  catOpen.value = g.id
-}
-/** 面板的 fixed 定位：贴在大类按钮右侧，纵向夹在视口内（面板最高 60vh） */
-const flyoutStyle = computed(() => {
-  const a = catAnchor.value
-  if (!a) return {}
-  const maxH = Math.round(window.innerHeight * 0.6)
-  const top = Math.max(8, Math.min(a.top, window.innerHeight - maxH - 12))
-  return { left: `${Math.round(a.right + 6)}px`, top: `${Math.round(top)}px`, maxHeight: `${maxH}px` }
-})
-function pickFeature(it) {
-  catOpen.value = null
-  goFeature(it)
+/** 点大类：已在同一类里则收起（同一个按钮的开关语义），否则打开并把落地页切到本类第一页 */
+function toggleCat(g) {
+  if (ui.featureCat === g.id) { ui.closeFeatureCat(); return }
+  ui.openFeatureCat(g.id)
+  const items = catItems(g)
+  const inSameCat = items.some((it) => it.view === ui.activeView)
+  if (!inSameCat && items.length) goFeature(items[0])
+  else ui.toggleMobileSkills(false)
 }
 const hiddenFeatureCount = computed(() =>
   FEATURE_GROUPS.reduce((n, g) => n + g.items.filter((it) => !tileVisible(it)).length, 0))
@@ -245,8 +236,9 @@ function onAvatarPick(e) {
       <p class="dim side-note">副业把采集原料做成经营侧加成：木器可做成餐厅装潢。</p>
     </nav>
 
-    <!-- 功能页（2026-09-27 用户⑳「各类只需要一个按钮，点击后右边面板显示该类的导航」）：
-         宽屏 = **7 个大类按钮** + 右侧导航面板；窄屏（手机抽屉）退回手风琴 + 4 列磁贴。
+    <!-- 功能页（2026-09-27 用户⑳）：
+         宽屏 = **7 个大类按钮**（点开由主内容区的 `.feature-rail` 列出本类页面，右栏显示当前页）；
+         窄屏（手机抽屉）退回手风琴 + 4 列磁贴。
          磁贴网格的列数依据（3→4 列实测）见 main.css 的 `.feature-grid` 注释。 -->
     <nav v-show="sideTab === 'features'" class="feature-nav">
       <!-- 宽屏：大类按钮 -->
@@ -254,9 +246,9 @@ function onAvatarPick(e) {
         <button
           v-for="g in FEATURE_GROUPS" :key="g.id"
           class="feature-cat"
-          :class="{ open: catOpen === g.id, here: groupOfView(ui.activeView) === g.id }"
-          :aria-expanded="catOpen === g.id"
-          @click="toggleCat(g, $event)"
+          :class="{ open: ui.featureCat === g.id, here: groupOfView(ui.activeView) === g.id }"
+          :aria-expanded="ui.featureCat === g.id"
+          @click="toggleCat(g)"
         >
           <span class="fc-icon">{{ g.icon }}</span>
           <span class="fc-name">{{ g.name }}</span>
@@ -297,29 +289,8 @@ function onAvatarPick(e) {
       </div>
     </nav>
 
-    <!-- 大类导航面板（宽屏）：Teleport 到 body —— `.feature-nav` 是 `overflow-y:auto`，
-         留在里面会被裁掉；放 body 还顺带避开任何祖先的层叠/包含块。 -->
-    <Teleport to="body">
-      <div v-if="openCat && !isNarrow" class="ff-catcher" @click="catOpen = null"></div>
-      <div v-if="openCat && !isNarrow" class="feature-flyout" :style="flyoutStyle" role="dialog" :aria-label="openCat.name">
-        <div class="ff-head">
-          <span>{{ openCat.icon }} {{ openCat.name }}</span>
-          <span class="dim">{{ catItems(openCat).length }} 页</span>
-        </div>
-        <button
-          v-for="it in catItems(openCat)"
-          :key="it.view"
-          class="ff-item"
-          :class="{ active: ui.activeView === it.view }"
-          :title="it.badge?.() ? `${it.name}（${it.badge()} 封待领）` : it.name"
-          @click="pickFeature(it)"
-        >
-          <span class="ff-icon">{{ it.icon }}</span>
-          <span class="ff-name">{{ it.name }}</span>
-          <span v-if="it.badge?.()" class="ff-badge">{{ it.badge() > 99 ? '99+' : it.badge() }}</span>
-        </button>
-        <p v-if="!catItems(openCat).length" class="dim ff-empty">这一类暂时没有已解锁的页面</p>
-      </div>
-    </Teleport>
+    <!-- 大类导航**不在左栏里**：它由主内容区自己渲染（`components/FeatureRail.vue`，作为
+         `.main-scroll` 的第一个子元素）—— 用户⑳ 第二轮的定案是「右边面板的左边显示导航、右边显示内容」。
+         原先那套 Teleport 到 body 的 `.feature-flyout` 浮层已随之删除（同一件事只留一个入口）。 -->
   </aside>
 </template>

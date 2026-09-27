@@ -49,6 +49,10 @@ export const useUiStore = defineStore('ui', {
     // `plan` = 2026-09-27 用户⑩ 加的（挂机计划从技能页搬进底栏，不再是页面里的一整张卡）。
     // 同时只开一个（点另一个自动换）。非存档（与其它浮层一致，刷新后收起）。
     dockSection: null,
+    // 左栏「功能」大类的**工作区**（2026-09-27 用户⑳ 第二轮：「点击大类后，右边面板的左边显示导航、
+    // 右边显示详细内容」，形态照开发者面板）：非空时主内容区变成「左导航栏 + 右内容」两栏。
+    // 只记「打开了哪个大类」；**离开该类就自动收起**（判定在 App.vue 的 watch —— 需要 player 的解锁过滤）。
+    featureCat: null,
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）
@@ -97,6 +101,13 @@ export const useUiStore = defineStore('ui', {
     toggleDockSection(sec) {
       if (sec == null) this.dockSection = null
       else this.dockSection = this.dockSection === sec ? null : sec
+    },
+    /** 打开某个大类的导航工作区（2026-09-27 用户⑳ 第二轮）。落地页由调用方（Sidebar）决定 */
+    openFeatureCat(id) {
+      this.featureCat = id
+    },
+    closeFeatureCat() {
+      this.featureCat = null
     },
     toggleSignIn(open) {
       this.showSignIn = open ?? !this.showSignIn

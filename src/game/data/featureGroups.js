@@ -134,6 +134,16 @@ export function featureViewNames(player = null) {
   return m
 }
 
+/**
+ * 某个视图属于哪个大类（**唯一判据**：左栏的大类按钮与主内容区的导航栏都读它）。
+ * 2026-09-27 用户⑳ 第二轮用它做「换页后是否还在同一大类里」——不在就自动收起导航栏。
+ * ⚠️ 同样只读 `view`，不触发 `badge`/`unlock` 闭包。
+ * @param {Array} groups 调用方自己那份 `featureGroups(player)`（保持与它渲染的清单同源）
+ */
+export function groupForView(groups, view) {
+  return groups.find((g) => g.items.some((i) => i.view === view)) ?? null
+}
+
 /** `攻略总览`里的条目名与左栏磁贴名**不一定逐字相同**（2026-09-21 从内容同步审计搬来）：
  *  这里是「视图 id → 攻略关键词」的唯一映射，审计与页面内的「指南」按钮共用同一份。
  *  没列出的视图 = 磁贴名本身就是关键词。 */

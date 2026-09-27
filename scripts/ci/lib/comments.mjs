@@ -44,3 +44,14 @@ export function stripComments(src) {
   }
   return out
 }
+
+/**
+ * 剥掉 `.vue` 模板里的 `<!-- … -->` 注释（2026-09-27 补）。
+ * 为什么单独一条：`stripComments` 只管 **JS** 注释，模板注释会原样留下 ——
+ * 于是「这个组件里不该再出现 X」这类断言会被**注释里提一句 X** 打回（我先在 C64 上踩到：
+ * Sidebar 里写「原先那套浮层已删除」的说明，正好含 `.feature-flyout` 这个字样）。
+ * 用法：扫 `.vue` 的模板/整文件时先 `stripHtmlComments(stripComments(src))`。
+ */
+export function stripHtmlComments(src) {
+  return src.replace(/<!--[\s\S]*?-->/g, '')
+}

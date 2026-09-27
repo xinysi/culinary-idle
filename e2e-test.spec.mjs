@@ -82,8 +82,9 @@ test.describe('游戏全流程', () => {
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
     // 其余功能页在左侧栏「功能」页签下
-    // 🔴 2026-09-27 用户⑳ 改版：宽屏只剩 **7 个大类按钮**，页面清单在点开后的右侧浮层
-    //    （`.feature-flyout .ff-item`）里；窄屏才退回「手风琴 + 磁贴」。本用例在宽屏跑 ⇒ 走新路径。
+    // 🔴 2026-09-27 用户⑳ 两轮改版：宽屏只剩 **7 个大类按钮**；点开后页面清单出现在**主区的
+    //    `.feature-rail`**（左导航 + 右内容的两栏工作区，用户第二轮定的形态）；窄屏才退回
+    //    「手风琴 + 磁贴」。本用例在宽屏跑 ⇒ 走新路径。
     // ⚠️ 分组名以 `featureGroups.js` 为准（这里原先写的是「生产与采集 / 经营与挑战」——
     //    那是 2026-09-10 的老分组名，改版后一直没更新，只是当时按磁贴名查找、分组名用不上才没暴露）。
     const featureGroups = [
@@ -99,13 +100,18 @@ test.describe('游戏全流程', () => {
     // 2026-09-18 留存改进 ⑤：未解锁的功能页默认收起，本用例要点遍全部 ⇒ 先按「显示全部」
     const showAllBtn = page.locator('.feature-hidden button', { hasText: '显示全部' })
     if (await showAllBtn.count()) { await showAllBtn.click(); await page.waitForTimeout(300) }
-    /** 打开某大类（宽屏浮层）或全部展开（窄屏手风琴）后点某一页 */
+    /** 打开某大类（宽屏：主区导航栏）或全部展开（窄屏手风琴）后点某一页 */
     const openFeature = async (catName, pageName) => {
       const cat = page.locator('.feature-cat', { hasText: catName })
       if (await cat.count()) {
-        await cat.first().click({ timeout: 3000 })
-        await page.waitForTimeout(200)
-        await page.locator('.feature-flyout .ff-item', { hasText: pageName }).first().click({ timeout: 3000 })
+        // 宽屏两栏工作区：已在同一类里就直接点导航条目，否则先点大类按钮（会把落地页切到本类第一页）
+        const rail = page.locator('.main-scroll > .feature-rail')
+        const inRail = await rail.locator('.fr-item', { hasText: pageName }).count()
+        if (!inRail) {
+          await cat.first().click({ timeout: 3000 })
+          await page.waitForTimeout(220)
+        }
+        await page.locator('.main-scroll > .feature-rail .fr-item', { hasText: pageName }).first().click({ timeout: 3000 })
       } else {
         // 窄屏 / 回退布局：磁贴直达
         await page.locator('.feature-tile', { hasText: pageName }).first().click({ timeout: 3000 })
@@ -1905,6 +1911,58 @@ test.describe('游戏全流程', () => {
     // ③ 没有弹窗时按 Esc 不应报错（页面还活着）
     await page.keyboard.press('Escape')
     await expect(page.locator('.app-layout')).toBeVisible()
+  })
+
+  // 功能页「大类工作区」（2026-09-27 用户⑳ 第二轮）：「点大类 → 右面板左边是导航、右边是内容」。
+  // 这一条是**行为**断言：浮层那套已删，所以这里同时钉住「导航真的在主区（不是浮层）」与「它会自动收起」。
+  test('功能页：点大类 → 主区左侧出导航、右侧出内容；换到别的大类/技能页会自动收起', async ({ page }) => {
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+    // 未解锁的功能页默认收起 ⇒ 先「显示全部」，否则某个大类的清单可能恰好是空的
+    await page.locator('.sidebar-tab', { hasText: '功能' }).click()
+    await page.waitForTimeout(200)
+    const showAll = page.locator('.feature-hidden button', { hasText: '显示全部' })
+    if (await showAll.count()) { await showAll.click(); await page.waitForTimeout(250) }
+
+    // ① 点一个大类：主区必须是「左导航 + 右内容」两栏，导航在**滚动区里**（不是 body 上的浮层）
+    await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
+    await page.waitForTimeout(400)
+    const rail = page.locator('.main-scroll > .feature-rail')
+    await expect(rail).toHaveCount(1)
+    await expect(rail.locator('.fr-item', { hasText: '交易所' })).toHaveCount(1)
+    await expect(page.locator('.feature-flyout')).toHaveCount(0) // 浮层那套已删
+    // 两栏是并排的：导航栏的整体在内容列的左侧（拿同一行里的 x 比，别只断言「存在」）
+    const geo = await page.evaluate(() => {
+      const r = document.querySelector('.main-scroll > .feature-rail')?.getBoundingClientRect()
+      const c = document.querySelector('.main-scroll > .main-col-probe, .main-scroll > :not(.feature-rail)')?.getBoundingClientRect()
+      return r && c ? { railRight: Math.round(r.right), contentLeft: Math.round(c.left), railW: Math.round(r.width) } : null
+    })
+    expect(geo, '两栏的几何取不到').not.toBeNull()
+    expect(geo.contentLeft, `内容列没有落在导航栏右侧：${JSON.stringify(geo)}`).toBeGreaterThanOrEqual(geo.railRight - 1)
+
+    // ② 点导航里的另一页：内容换掉，但导航**还在**（这就是与浮层的本质区别）
+    await rail.locator('.fr-item', { hasText: '炼金' }).click()
+    await page.waitForTimeout(400)
+    await expect(rail).toHaveCount(1)
+    await expect(rail.locator('.fr-item.on')).toHaveText(/炼金/)
+
+    // ③ 换到**不属于本类**的页（技能页）⇒ 自动收起
+    await page.locator('.sidebar-tab', { hasText: '技能' }).click()
+    await page.locator('.skill-item', { hasText: '采摘' }).first().click()
+    await page.waitForTimeout(400)
+    await expect(page.locator('.feature-rail')).toHaveCount(0)
+
+    // ④ 同一大类里换页不会收起；点第二次大类按钮则收起（开关语义）
+    await page.locator('.sidebar-tab', { hasText: '功能' }).click()
+    await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
+    await page.waitForTimeout(350)
+    await expect(page.locator('.feature-rail')).toHaveCount(1)
+    await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
+    await page.waitForTimeout(300)
+    await expect(page.locator('.feature-rail')).toHaveCount(0)
   })
 
   // 断网期间加载失败的图片：**回网后要自愈**（2026-09-26 补；此前只有视图 chunk 有兜底，图片一直空着）。

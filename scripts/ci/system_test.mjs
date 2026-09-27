@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 // 「不许出现某某写法」的静态断言必须先剥注释：本项目踩过两次（`bgm_audit` 被「已删 🔊」那句注释
 // 弄成恒 FAIL）——注释里写「不要手写 3750」本身就会让 `/3750/` 命中，属于同一个坑。
-import { stripComments } from './lib/comments.mjs'
+import { stripComments, stripHtmlComments } from './lib/comments.mjs'
 import { otherChance } from '../../src/game/data/difficulty.js' // 轴比值守卫的分母也要走难度系数出口
 import { MIJIAN_POOLS, poolItems } from '../../src/game/data/mijianDraws.js'
 import { DAILY_POOL, WEEKLY_POOL, DAILY_BONUS } from '../../src/game/data/dailyTasks.js'
@@ -187,7 +187,7 @@ let fail = 0
  * C62~C64 三块共用它 —— 原先它们各自写 `rd(...)`，而 `rd` 是**别的块**里的局部常量，
  * 结果整块在运行到那一行时抛 `ReferenceError`（等于这几十条断言一条都没跑过）。
  */
-const rdSrc = (p) => stripComments(fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8'))
+const rdSrc = (p) => stripHtmlComments(stripComments(fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8')))
 
 function check(area, name, cond, detail = '') {
   if (cond) {
@@ -9271,18 +9271,51 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   }
 }
 
-// ══════════ C64：左栏「大类按钮 + 右侧导航面板」（2026-09-27 用户⑳）══════════
+// ══════════ C64：左栏「大类按钮」+ 主区「左导航 / 右内容」工作区（2026-09-27 用户⑳ 两轮）══════════
+// 第一轮做的是「点大类 → 右侧**浮层**列页面」；用户第二轮改口为
+// 「点击大类后，右边面板的**左边**显示导航、**右边**显示详细内容」（形态照开发者面板）⇒ 浮层整层撤掉。
 {
   const side = rdSrc('src/components/Sidebar.vue')
-  check('主导航', '功能页改成「大类按钮」为核心：`.feature-cat` + Teleport 出去的 `.feature-flyout`',
-    /class="feature-cat"/.test(side) && /feature-flyout/.test(side) && /<Teleport to="body">/.test(side))
-  check('主导航', '窄屏保留「手风琴 + 磁贴」回退（手机抽屉只有 239px，浮层会溢出屏幕）',
-    /isNarrow/.test(side) && /class="feature-group-label"/.test(side) && /class="feature-tile"/.test(side))
-  check('主导航', '浮层定位避开裁切（fixed + 视口夹取：`.feature-nav` 是 overflow-y:auto）',
-    /position: fixed/.test(rdSrc('src/styles/main.css').slice(rdSrc('src/styles/main.css').indexOf('.feature-flyout'))) &&
-      /Math.min\(a\.top, window\.innerHeight/.test(side))
-  check('主导航', '点页后面板自动收起（`pickFeature` 先清 catOpen 再跳转）',
-    /function pickFeature/.test(side) && /catOpen\.value = null[\s\S]{0,80}goFeature\(it\)/.test(side))
+  const app = rdSrc('src/App.vue')
+  const rail = rdSrc('src/components/FeatureRail.vue')
+  const css = rdSrc('src/styles/main.css')
+  check('主导航', '左上栏只留「大类按钮」这一层入口（`.feature-cat`），页面清单不再由它渲染',
+    /class="feature-cat"/.test(side) && !/feature-flyout/.test(side) && !/\.ff-item/.test(side))
+  check('主导航', '🔴 浮层那套已彻底移除（否则「浮层」与「主区导航」两套机制并存 = 同一件事两个入口）',
+    !/feature-flyout/.test(css) && !/ff-catcher/.test(css) && !/Teleport to="body"/.test(side) && !/flyoutStyle/.test(side))
+  check('主导航', '主区是「左导航 + 右内容」两栏：`.main-scroll--rail` + `FeatureRail` 挂在分派链之前',
+    // ⚠️ 判据要**连绑定一起钉**：只查 `main-scroll--rail` 这个词的话，把键改名成 `main-scroll--rail-x`
+    //    照样命中（反例验证 ② 抓到的假绿 —— 子串匹配骗过了它），改造型就等于没人守
+    /'main-scroll--rail':\s*catRailOn/.test(app) && /<FeatureRail v-if="catRailOn"/.test(app) &&
+      app.indexOf('<FeatureRail') < app.indexOf("<ShopView v-if=\"ui.activeView === 'shop'\""))
+  check('主导航', '导航栏按**当前大类**过滤、点条目走 `ui.setView`（不是自己渲染内容 —— 内容仍归 App.vue 的分派链）',
+    /ui\.featureCat/.test(rail) && /function pick\(it\)[\s\S]{0,120}ui\.setView\(it\.view\)/.test(rail) &&
+      !/<ShopView|<InventoryView|v-else-if/.test(rail))
+  check('主导航', '换到不属于本大类的页面时自动收起（判据是同一个 `groupForView`，与左栏同源）',
+    /groupForView\(railGroups, v\)\?\.id !== ui\.featureCat/.test(app) && /ui\.closeFeatureCat\(\)/.test(app))
+  check('主导航', '窄屏保留「手风琴 + 磁贴」回退，且两种形态由同一条 940px 断点分开',
+    /isNarrow/.test(side) && /class="feature-group-label"/.test(side) && /class="feature-tile"/.test(side) &&
+      /max-width: 940px/.test(side) && /max-width: 940px/.test(app) &&
+      /matchMedia\('\(max-width: 940px\)'\)/.test(side) && /matchMedia\('\(max-width: 940px\)'\)/.test(app))
+  check('主导航', '山海食经（整屏画布页）不挂导航栏（`--bleed` 下分掉 168px 会把画布挤变形）',
+    /ui\.activeView !== 'shanhai'/.test(app))
+  check('主导航', '导航栏宽度是单一来源（`--rail-w` token，组件用 var() 读）',
+    /--rail-w:\s*168px/.test(css) && /var\(--rail-w/.test(rail))
+  check('主导航', '内容列 `min-width: 0`（否则宽表会把两栏一起撑破）',
+    /\.main-scroll--rail > :not\(\.feature-rail\)\s*\{[^}]*min-width:\s*0/.test(css))
+  // 行为：store 上的开关语义（点第二次收起由 Sidebar 的 toggleCat 负责）
+  {
+    useUiStore()
+    const u = useUiStore()
+    u.closeFeatureCat()
+    check('主导航', '行为：store 默认收起 → `openFeatureCat(id)` 打开 → `closeFeatureCat()` 收起',
+      u.featureCat === null && (u.openFeatureCat('idle'), u.featureCat === 'idle') && (u.closeFeatureCat(), u.featureCat === null))
+    const { featureGroups: fg, groupForView } = await import('../../src/game/data/featureGroups.js')
+    const groups = fg(null)
+    check('主导航', '行为：`groupForView` 能把每个功能页反查回它的大类（导航栏「收起」判据靠它）',
+      groups.every((g) => g.items.every((it) => groupForView(groups, it.view)?.id === g.id)) &&
+        groupForView(groups, 'skill') === null && groupForView(groups, 'inventory') === null)
+  }
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
