@@ -23,6 +23,7 @@ import { CHALLENGES } from '../../src/game/data/weeklyChallenge.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES, STYLE_ADVANTAGE, opp } from '../../src/game/data/combat.js'
 import { GUILD_SHOP } from '../../src/game/data/guilds.js'
 import { sourceIds } from '../../src/game/data/itemSources.js'
+import { ITEM_LEVEL } from '../../src/game/data/combatLoot.js' // 材料等级优先查这张表（见 materialLevelOf）
 import { SELL_EXCLUDED_CATEGORIES } from '../../src/game/data/automation.js'
 import { EXCHANGE_POOL_CATEGORIES } from '../../src/game/data/exchange.js'
 import { INGREDIENT_POOL } from '../../src/game/data/gameShopPools.js'
@@ -137,7 +138,15 @@ const imgExists = (id) => {
 /** 某档木材的等级（C32 校验「木器配方吃的是同档木材」用） */
 const timberLevelOf = (id) => TIMBERS.find((t) => t.id === id)?.level ?? null
 /** 某物品的最低获取等级（C33 校验辅料不超纲用；解析「XX获得（LvN 解锁）」来源串，非数值断言） */
+/**
+ * 材料的「获取等级」：**优先查生成的物品等级表**（`combatLoot.ITEM_LEVEL`），查不到才退回解析来源串。
+ * ⚠️ 2026-09-27：图鉴来源串里的等级已从「表内原始等级」改成与配方卡一致的**生效等级**（原先 68 条对不上），
+ *   于是「把显示文案当数据用」的做法会让本守卫误判 —— 实测它先把 `preserving_ext_26` 读成生效 Lv90，
+ *   再拿它去卡一条 Lv81 的副业配方（原始表里那条是 85，本来不超纲）。
+ *   **显示文案不是数据源**：能查等级表就查等级表，解析不到才退而求其次。
+ */
 const materialLevelOf = (id) => {
+  if (ITEM_LEVEL[id] != null) return ITEM_LEVEL[id]
   const ms = itemSources(id).map((s) => s.match(/Lv(\d+)/)).filter(Boolean).map((m) => parseInt(m[1], 10))
   return ms.length ? Math.min(...ms) : null
 }
@@ -8349,7 +8358,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 // 本组断言把「修好的形状」钉住，防回退；同时校验新物品在 ITEMS / ITEM_LEVEL / 图鉴来源 / 图片 四处都齐备。
 {
   const { ITEMS } = await import('../../src/game/data/items.js')
-  const { ITEM_LEVEL } = await import('../../src/game/data/combatLoot.js')
+  const { ITEM_LEVEL: LV_TABLE } = await import('../../src/game/data/combatLoot.js')
   const { itemSources } = await import('../../src/game/data/itemSources.js')
   const { existsSync } = await import('node:fs')
   const NEW = [
@@ -8371,7 +8380,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     if (!it) { missing.push(`${id} 不在 ITEMS`); continue }
     if (it.name !== name) missing.push(`${id} 名称 ${it.name}≠${name}`)
     if (it.type !== 'ingredient' || !['root', 'fungus'].includes(it.category)) missing.push(`${id} 类目 ${it.category} 不是 root/fungus`)
-    if (ITEM_LEVEL[id] !== lv) missing.push(`${id} ITEM_LEVEL ${ITEM_LEVEL[id]}≠${lv}`)
+    if (LV_TABLE[id] !== lv) missing.push(`${id} ITEM_LEVEL ${LV_TABLE[id]}≠${lv}`)
     if (!existsSync(new URL(`../../public/images/items/food/${name}.png`, import.meta.url))) missing.push(`${id} 缺图片 ${name}.png`)
     const src = itemSources(id)
     if (!src.some((s) => s.includes('挖掘获得') && s.includes(`Lv${lv}`))) missing.push(`${id} 图鉴来源缺「挖掘获得（Lv${lv} 解锁）」`)
@@ -9359,8 +9368,49 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const bad = pools
       .map((p) => ({ id: p.id, r: Math.min(ratio(hex(p.lo1), hex('#ffffff')), ratio(hex(p.lo2), hex('#ffffff'))) }))
       .filter((x) => x.r < 4.5)
-    check('觅珍配色', `模拟按钮「深档 + 白字」在全部 ${pools.length} 个池都 ≥4.5:1（13px 粗体算正文）`,
+    check('觅珍配色', `模拟按钮「深档 + 白字」在全部 ${pools.length} 个池都 ≥4.5:1（13px 粗算正文）`,
       pools.length >= 5 && bad.length === 0, bad.map((x) => `${x.id} ${x.r.toFixed(2)}`).join(', '))
+  }
+}
+
+// ══════════ C66：新增制作内容必须进「被 import 的那张表」（2026-09-27 用户问「检查数据同步」）══════════
+// 起因：⑬ 加的 3 条腌制品只并进了**技能实例的入参**（`super(..., [...PRESERVING_RECIPES, ...PICKLE_RECIPES])`），
+// 而 `itemSources` / `valueBalance` / `itemBalance` / `recipeBalance` 都是直接 import `PRESERVING_RECIPES` 的
+// ⇒ 图鉴不写「腌制制作」来源、产物价值停在占位值、也不参与材料等级校验。
+// 顺着这条线还查出一处**既有**缺陷：图鉴来源串用的是**表内原始等级**，而配方卡用 `raiseRecipeLevels` 后的
+// **生效等级** —— 68 条对不上（腊肉炒饭：图鉴 Lv22 vs 卡片 Lv25；松露面包 70 vs 75）。
+// 这两条都由下面第一条断言兜住：**每条配方产物在来源串里都能找到「同技能 + 同等级」的那一条**。
+{
+  const { itemSources } = await import('../../src/game/data/itemSources.js')
+  const { PRESERVING_RECIPES } = await import('../../src/game/skills/PreservingSkill.js')
+  const NAME = { cooking: '烹饪制作', baking: '烘焙制作', preserving: '腌制制作', brewing: '调酒制作', spiceMixing: '调料调配', craftsmithing: '厨具锻造', preservation: '食材保鲜制作' }
+  const miss = []
+  const wrong = []
+  let total = 0
+  for (const inst of getAllSkillInstances()) {
+    if (!inst.recipes?.length || !NAME[inst.id]) continue
+    for (const r of inst.recipes) {
+      const out = r.output?.itemId
+      if (!out) continue
+      total++
+      const pool = (itemSources(out) ?? []).filter((x) => x.startsWith(NAME[inst.id]))
+      if (!pool.length) { miss.push(`${inst.id}/${r.name}`); continue }
+      if (!pool.some((x) => Number(x.match(/Lv(\d+)/)?.[1]) === r.reqLevel)) wrong.push(`${inst.id}/${r.name} 卡片 Lv${r.reqLevel} → ${pool.join('|')}`)
+    }
+  }
+  check('数据同步', `每条配方产物都在图鉴来源串里有「同技能 + 同等级」的那一条（核对 ${total} 条）`,
+    total > 1000 && miss.length === 0, `缺来源：${miss.slice(0, 5).join(', ')}`)
+  check('数据同步', '图鉴来源串的等级 == 配方卡的**生效**等级（原先用表内原始等级，68 条对不上）',
+    wrong.length === 0, wrong.slice(0, 5).join('; '))
+  // 新增的 3 条必须在**表本身**里（只在技能实例里 = 上面各种消费方都看不到）
+  check('数据同步', '新增腌制品并进了 `PRESERVING_RECIPES` 本身（不是只并进技能实例的入参）',
+    ['pickledMushroom', 'pickledLotusRoot', 'driedFungus'].every((id) => PRESERVING_RECIPES.some((r) => r.id === id)))
+  // 表内等级 == 生效等级（写低了 raiseRecipeLevels 会悄悄抬，两处各说一个数）
+  {
+    const pres = getAllSkillInstances().find((i) => i.id === 'preserving')
+    const drift = PRESERVING_RECIPES.filter((r) => pres.recipes.find((x) => x.id === r.id)?.reqLevel !== r.reqLevel)
+    check('数据同步', '保鲜表里的 `reqLevel` 就是生效等级（写低了会被 `raiseRecipeLevels` 抬走，图鉴与卡片会不一致）',
+      drift.length === 0, drift.map((r) => `${r.name} ${r.reqLevel}→${pres.recipes.find((x) => x.id === r.id)?.reqLevel}`).join(', '))
   }
 }
 

@@ -43,8 +43,16 @@ export const PRESERVING_RECIPES = [
   { id: 'almondRoast', name: '盐焗杏仁', category: '炒货', reqLevel: 67, xp: 550, successChance: 0.74, ingredients: { foraging_ext_20: 3, saltOre: 1 }, output: { itemId: 'almondRoast', qty: 1 } },
 ]
 
+// 2026-09-27 用户⑬「走小扩」：新增的 3 条腌制品**并入本表本身**，而不是只并进技能实例。
+// 🔴 为什么必须并在这里：`itemSources`（图鉴「获取来源」）· `valueBalance`（产物按配方等级定价）·
+//   `itemBalance` · `recipeBalance`（材料等级校验）**都是直接 import 这张表**的 ——
+//   只并进 `super(...)` 的入参里，它们就看不到新产品：图鉴不写「腌制制作」这条来源、
+//   价值停在 `pickles.js` 里的占位值、也不参与材料等级校验（用户问「保鲜预览里没看到新增的，检查数据同步」
+//   时顺着这条线查出来的）。**新增制作类内容一律并进「被 import 的那张表」**，别只改技能实例的入参。
+PRESERVING_RECIPES.push(...PICKLE_RECIPES)
+
 export class PreservingSkill extends ProductionSkill {
   constructor(player) {
-    super('preserving', player, raiseRecipeLevels([...PRESERVING_RECIPES, ...PICKLE_RECIPES, ...PRODUCTION_EXT.preserving, ...PRODUCTION_EXT2.preserving]))
+    super('preserving', player, raiseRecipeLevels([...PRESERVING_RECIPES, ...PRODUCTION_EXT.preserving, ...PRODUCTION_EXT2.preserving]))
   }
 }

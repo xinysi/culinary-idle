@@ -12,6 +12,7 @@ import { BREWING_RECIPES } from '../skills/BrewingSkill.js'
 import { SPICE_RECIPES } from '../skills/SpiceMixingSkill.js'
 import { SMITHING_SET_RECIPES } from './smithSetExt.js'
 import { PRESERVATION_RECIPES } from '../skills/PreservationSkill.js'
+import { raiseRecipeLevels, balanceRecipeLevels } from '../skills/recipeBalance.js'
 import { EXPLORATION_TARGETS_ALL } from './explorationTargets.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
@@ -95,24 +96,26 @@ for (const [skill] of [['excavation']]) {
 for (const c of CROPS) add(c.itemId, `农耕种植获得（Lv${c.reqLevel} 解锁）`)
 
 // 制作（基础 + 扩充）
+// 🔴 **等级必须过与技能同一个「配方等级校正」出口**（2026-09-27 修）：本模块原先直接读各表的**原始**
+//    `reqLevel`，而配方卡上显示的是 `raiseRecipeLevels` 之后的**生效**等级 —— 两者在 68 条上不一致
+//    （实测：腊肉炒饭 图鉴写「Lv22 可学」而卡片要求 Lv25；松露面包 70 vs 75）。玩家按图鉴练到 22 级
+//    却发现做不了。现按技能构造函数里的同一个拼法（基础 + 扩展1 + 扩展2 → 校正）取等级。
 const PROD = [
-  [COOKING_RECIPES, '烹饪制作'],
-  [BAKING_RECIPES, '烘焙制作'],
-  [PRESERVING_RECIPES, '腌制制作'],
-  [BREWING_RECIPES, '调酒制作'],
-  [SPICE_RECIPES, '调料调配'],
-  [SMITHING_SET_RECIPES, '厨具锻造'],
-  [PRESERVATION_RECIPES, '食材保鲜制作'],
+  ['烹饪制作', 'cooking', COOKING_RECIPES],
+  ['烘焙制作', 'baking', BAKING_RECIPES],
+  ['腌制制作', 'preserving', PRESERVING_RECIPES],
+  ['调酒制作', 'brewing', BREWING_RECIPES],
+  ['调料调配', 'spiceMixing', SPICE_RECIPES],
 ]
-for (const [arr, name] of PROD) for (const r of arr) add(r.output?.itemId, `${name}（Lv${r.reqLevel} 可学）`)
-for (const [skill, name] of [['cooking', '烹饪制作'], ['baking', '烘焙制作'], ['preserving', '腌制制作'], ['brewing', '调酒制作'], ['spiceMixing', '调料调配']]) {
-  for (const r of PRODUCTION_EXT[skill] ?? []) add(r.output?.itemId, `${name}（Lv${r.reqLevel} 可学）`)
+for (const [name, key, base] of PROD) {
+  const merged = raiseRecipeLevels([...base, ...(PRODUCTION_EXT[key] ?? []), ...(PRODUCTION_EXT2[key] ?? [])])
+  for (const r of merged) add(r.output?.itemId, `${name}（Lv${r.reqLevel} 可学）`)
 }
-for (const [skill, name] of [['cooking', '烹饪制作'], ['baking', '烘焙制作'], ['preserving', '腌制制作'], ['brewing', '调酒制作'], ['spiceMixing', '调料调配']]) {
-  for (const r of PRODUCTION_EXT2[skill] ?? []) add(r.output?.itemId, `${name}（Lv${r.reqLevel} 可学）`)
+for (const r of raiseRecipeLevels(SMITHING_SET_RECIPES)) add(r.output?.itemId, `厨具锻造（Lv${r.reqLevel} 可学）`)
+// 食材保鲜走的是另一条校正出口（`balanceRecipeLevels`，见 PreservationSkill 的构造函数），照抄同一条
+for (const r of balanceRecipeLevels([...PRESERVATION_RECIPES, ...PRESERVE_EXT, ...PRESERVE_EXT2])) {
+  add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
 }
-for (const r of PRESERVE_EXT) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
-for (const r of PRESERVE_EXT2) add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
 // 副业·木工（v2.9.0）：木器是**技能独占产物**（采集/商店/抽卡都拿不到，见 woodworking.js 的口径）
 // 材料串里的物品名（`materialText` 的回调；缺名回退 id）。
 // ⚠️ 必须在**下面第一条用到它的登记语句之前**声明：本模块是「加载即执行登记」的顶层代码，放后面会 TDZ 报错。

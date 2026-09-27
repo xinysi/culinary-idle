@@ -19,8 +19,11 @@ export const PICKLE_ITEMS = [
 ]
 
 /** 配方（与 `PreservingSkill.js` 里手写那批同格式）：3× 主料 + 盐，`reqLevel` 取在主料档位之上 */
+// ⚠️ `reqLevel` 必须写成**生效值**（= 主料获取等级 − 5，见 `recipeBalance.raiseRecipeLevels`）：
+//    写低了引擎会悄悄抬上去，于是「表内等级」与「生效等级」不一致 ⇒ 图鉴来源串与配方卡各说一个数。
 export const PICKLE_RECIPES = [
   { id: 'pickledMushroom', name: '腌蘑菇', category: '腌制品', reqLevel: 28, xp: 175, successChance: 0.81, ingredients: { mushroom: 3, saltOre: 1 }, output: { itemId: 'pickledMushroom', qty: 1 } },
   { id: 'pickledLotusRoot', name: '腌藕片', category: '腌制品', reqLevel: 36, xp: 240, successChance: 0.79, ingredients: { excavation_ext_07: 3, saltOre: 1 }, output: { itemId: 'pickledLotusRoot', qty: 1 } },
-  { id: 'driedFungus', name: '菌干', category: '腌制品', reqLevel: 52, xp: 370, successChance: 0.76, ingredients: { foraging_ext_22: 3, saltOre: 2 }, output: { itemId: 'driedFungus', qty: 1 } },
+  // 菌干：木耳（foraging_ext_22）获取等级 71 ⇒ 产物等级取 71 − 5 = **66**
+  { id: 'driedFungus', name: '菌干', category: '腌制品', reqLevel: 66, xp: 370, successChance: 0.76, ingredients: { foraging_ext_22: 3, saltOre: 2 }, output: { itemId: 'driedFungus', qty: 1 } },
 ]
