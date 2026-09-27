@@ -6,8 +6,6 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getSkillInstance } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
-import { getItem } from '../game/data/items.js'
-import { CROPS } from '../game/skills/FarmingSkill.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { MAX_LEVEL } from '../game/skills/Skill.js'
 import { carryFromLevel } from '../game/data/legacy.js'
@@ -59,31 +57,9 @@ function doPrestige() {
   }
 }
 
-// ── 挂机计划（2026-09-09）：按顺序挂机 → 条件满足自动换目标 → 全部完成自动暂停 ──
-const PLAN_SKILLS = ['foraging', 'fishing', 'hunting', 'excavation', 'mining', 'woodcutting', 'exploration', 'farming']
-const planOpen = ref(false)
-const planSkill = ref('foraging')
-const planTarget = ref(null)
-const planUntil = ref('mastery')
-const planValue = ref(100)
-const planTargets = computed(() => {
-  if (planSkill.value === 'farming') return CROPS.map((c) => ({ id: c.itemId, name: getItem(c.itemId)?.name ?? c.itemId, reqLevel: c.reqLevel }))
-  const inst = getSkillInstance(planSkill.value)
-  return (inst?.targets ?? []).map((t) => ({ id: t.itemId ?? t.id, name: getItem(t.itemId ?? t.id)?.name ?? t.itemId, reqLevel: t.reqLevel }))
-})
-function planLabel(step) {
-  const name = getItem(step.target)?.name ?? step.target
-  return `${getSkillDef(step.skill)?.name ?? step.skill} · ${name}（${step.until === 'level' ? `技能 Lv${step.value}` : `精通 ${step.value} 级`}后）`
-}
-function planAdd() {
-  const r = player.planAddStep(planSkill.value, planTarget.value, planUntil.value, planValue.value)
-  if (!r.ok) ui.pushLog(r.msg, 'warn')
-  else planTarget.value = null
-}
-function planToggle() {
-  const on = player.planToggle()
-  ui.pushLog(on ? '🗓 挂机计划已启用（从第 1 步开始）' : '挂机计划已停用', 'info')
-}
+// ── 挂机计划（2026-09-09；2026-09-27 用户⑩ 整块搬到 `PlanPanel.vue`，由底栏 🗓 胶囊弹出）──
+// 原先它是本页头部的一整张卡（用户反馈「有点占空间」）⇒ 现在技能页不再渲染它，
+// 连「对决类技能页不显示」那条模板条件也一并消失（底栏与技能页无关，天然成立）。
 </script>
 
 <template>
@@ -119,54 +95,6 @@ function planToggle() {
       </div>
     </header>
 
-    <!-- 战斗类技能不显示挂机计划（2026-09-19 用户要求：对决页别出现挂机计划的框）——
-         对决是打一场就结束的动作，没有「按顺序挂机换目标」这回事 -->
-    <div v-if="activeDef?.category !== 'combat'" class="card plan-card">
-      <div class="plan-head">
-        <h3>🗓 挂机计划</h3>
-        <!-- 空态把说明与提示并到同一行（用户 2026-09-19 反馈技能页上方堆得过多）；
-             有步骤时才另起一行显示步骤列表 -->
-        <span class="dim">
-          <template v-if="player.planState().steps.length">按顺序挂机：条件满足自动换目标，全部完成自动暂停</template>
-          <template v-else>还没有步骤——点「编辑」添加（支持采集 / 探索 / 农耕目标）</template>
-        </span>
-        <div class="plan-head-btns">
-          <button class="btn btn-sm" @click="planOpen = !planOpen">{{ planOpen ? '收起' : '编辑' }}</button>
-          <button class="btn btn-sm" :class="{ 'btn-primary': player.planState().active }" @click="planToggle()">
-            {{ player.planState().active ? '⏸ 停用' : '▶ 启用' }}
-          </button>
-          <button class="btn btn-sm" @click="player.planClear()">清空</button>
-        </div>
-      </div>
-      <div v-if="player.planState().steps.length" class="plan-steps">
-        <div
-          v-for="(s, i) in player.planState().steps"
-          :key="i"
-          class="gather-card-row plan-step"
-          :class="{ 'plan-cur': player.planState().active && player.planState().index === i }"
-        >
-          <span>{{ i + 1 }}. {{ planLabel(s) }}</span>
-          <button class="btn btn-sm" @click="player.planRemoveStep(i)">✕</button>
-        </div>
-      </div>
-      <!-- 空态提示已并入上面的 plan-head（省一行），这里不再重复 -->
-      <div v-if="planOpen" class="plan-add">
-        <select v-model="planSkill" @change="planTarget = null">
-          <option v-for="id in PLAN_SKILLS" :key="id" :value="id">{{ getSkillDef(id)?.name }}</option>
-        </select>
-        <select v-model="planTarget" style="flex: 1">
-          <option :value="null">选择目标</option>
-          <option v-for="t in planTargets" :key="t.id" :value="t.id">{{ t.name }}（Lv{{ t.reqLevel }}）</option>
-        </select>
-        <select v-model="planUntil">
-          <option value="mastery">精通满</option>
-          <option value="level">技能等级</option>
-        </select>
-        <input type="number" min="1" max="100" v-model.number="planValue" style="width: 80px" />
-        <button class="btn btn-sm btn-primary" @click="planAdd()">＋ 添加</button>
-      </div>
-    </div>
-
     <GatheringView v-if="instance?.type === 'gathering'" :instance="instance" />
     <FarmingView v-else-if="instance?.type === 'farming'" :instance="instance" />
     <ProductionView v-else-if="instance?.type === 'production'" :instance="instance" />
@@ -185,31 +113,4 @@ function planToggle() {
 </template>
 
 <style scoped>
-/* 挂机计划（2026-09-09） */
-/* 挂机计划卡：用户反馈「上下长度还是太长」⇒ 收薄内外边距、标题降一档、
-   步骤列表限高滚动（计划长了不再把下面的目标列表顶下去）。 */
-.plan-card { margin-bottom: 8px; padding: 6px 10px; }
-.plan-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.plan-head h3 { margin: 0; font-size: 14px; }
-.plan-head-btns { margin-left: auto; display: flex; gap: 6px; }
-.plan-steps { display: flex; flex-direction: column; gap: 4px; max-height: 128px; overflow-y: auto; }
-.plan-step.plan-cur { border: 1px dashed var(--primary); border-radius: 8px; padding: 2px 8px; background: var(--primary-soft); }
-.plan-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
-.plan-add select,
-.plan-add input {
-  height: 34px;
-  padding: 0 10px;
-  font-size: 13px;
-  color: var(--text);
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  min-width: 0;
-}
-.plan-add select { appearance: none; -webkit-appearance: none; padding-right: 26px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 14px) 14px, calc(100% - 9px) 14px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
-.plan-add input[type='number'] { width: 84px; text-align: center; cursor: text; }
-.plan-add select:focus-visible,
-.plan-add input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
-.plan-add .btn { height: 34px; display: inline-flex; align-items: center; }
 </style>

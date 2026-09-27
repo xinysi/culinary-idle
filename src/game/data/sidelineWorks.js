@@ -53,6 +53,12 @@ export function fmtAxisNum(v) {
 }
 
 export const SIDELINE_AXES = {
+  // 🔴 2026-09-27 用户⑧ 补进来的两条「**阶梯专属轴**」：它们只有量产阶梯贡献、**没有对应作品**
+  //   （木工阶梯→装潢加成、蜡烛阶梯→夜市倍率）⇒ `perItem: 0`。
+  //   补它们的理由：副业线奥义也能加这两条轴，而原先这两条轴的消费方只读 `sidelineLadderTotal`
+  //   （不含作品、也不含奥义）—— 结果会是「奥义买了没效果」。登记后消费方统一读 `sidelineEffectTotal`。
+  decorPct: { label: '装潢加成', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 0 },
+  nightMult: { label: '夜市倍率', amountLabel: (v) => `+${fmtAxisNum(v)}`, perItem: 0 },
   cellarValue: { label: '地窖单槽价值上限', amountLabel: (v) => `${fmtAxisNum(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 金币`, perItem: 1500 },
   tipPct: { label: '餐厅小费', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 2 },
   michelinScore: { label: '米其林评分', amountLabel: (v) => `+${fmtAxisNum(v)} 分`, perItem: 12 },

@@ -181,6 +181,14 @@ const bugs = [] // {sev, area, desc, repro, expected, actual, cause, fix}
 let pass = 0
 let fail = 0
 
+/**
+ * 读仓库根下的源文件（路径写全，如 `'src/views/SkillView.vue'`）。
+ * 「不许出现某某写法」类静态断言**必须先剥注释**（注释里举例说明本身就会让正则命中）；
+ * C62~C64 三块共用它 —— 原先它们各自写 `rd(...)`，而 `rd` 是**别的块**里的局部常量，
+ * 结果整块在运行到那一行时抛 `ReferenceError`（等于这几十条断言一条都没跑过）。
+ */
+const rdSrc = (p) => stripComments(fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8'))
+
 function check(area, name, cond, detail = '') {
   if (cond) {
     pass++
@@ -2498,7 +2506,7 @@ console.log('══ S. 内容扩充完整性 ══')
   for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'woodcutting', 'mining', 'cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'exploration']) insts[id] = getSkillInstance(id)
   // 各技能扩充后数量：与当前生成器产物一致（2026-09-16 实测量；v2.7.0 矿物拆出后 挖掘 83→42，新增伐木 20 / 采矿 43）
   check('扩充', '采集七技能目标数（142/76/73/49/20/43）', insts.foraging.targets.length === 142 && insts.fishing.targets.length === 76 && insts.hunting.targets.length === 73 && insts.excavation.targets.length === 49 && insts.woodcutting.targets.length === 20 && insts.mining.targets.length === 43, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
-  check('扩充', '制作五技能食谱数（294/97/90/127/97）', insts.cooking.recipes.length === 294 && insts.baking.recipes.length === 97 && insts.preserving.recipes.length === 90 && insts.brewing.recipes.length === 127 && insts.spiceMixing.recipes.length === 97, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
+  check('扩充', '制作五技能食谱数（294/97/93/127/97；腌制 90→93 见 pickles.js）', insts.cooking.recipes.length === 294 && insts.baking.recipes.length === 97 && insts.preserving.recipes.length === 93 && insts.brewing.recipes.length === 127 && insts.spiceMixing.recipes.length === 97, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 365 配方（20 品质套 + 独立矿套）', insts.craftsmithing.recipes.length === 365, `n=${insts.craftsmithing.recipes.length}`)
   // 18 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
   check('扩充', '食材保鲜 18 配方（入门 1 + 肥料 2 + 保鲜/增益剂 15）', insts.preservation.recipes.length === 18, `n=${insts.preservation.recipes.length}`)
@@ -2508,7 +2516,8 @@ console.log('══ S. 内容扩充完整性 ══')
       .filter((id) => !getSkillInstance(id).recipes.some((r) => r.reqLevel <= 1))
     check('扩充', '每个制作技能都有 Lv1 入口配方（不可再出现永久卡 1 级）', noEntry.length === 0, noEntry.join(','))
   }
-  check('扩充', '美食知识 32 奥义', AOJIS.length === 32, `n=${AOJIS.length}`)
+  // 2026-09-27 用户⑧：32 → 42（+10 条副业线，见 aojiSideline.js）
+  check('扩充', '美食知识 42 奥义（32 原有 + 10 副业线）', AOJIS.length === 42, `n=${AOJIS.length}`)
   check('扩充', '食灵 160 个', SPIRITS.length === 160, `n=${SPIRITS.length}`)
   check('扩充', '探索 200 目标', insts.exploration.targets.length === 200, `n=${insts.exploration.targets.length}`)
   check('扩充', '区域对手 22×10 / BOSS 28', COMBAT_REGIONS.every((r) => r.opponents.length === 22) && COMBAT_BOSSES.length === 28, `bosses=${COMBAT_BOSSES.length}`)
@@ -5704,7 +5713,11 @@ console.log('== C29. 新技能适配一致性 ==')
   check('适配', '图鉴装备页与装备页都提供「去采矿 + 去伐木」入口且指向正确技能', V('GearView.vue').includes("id: 'mining'") && V('GearView.vue').includes("id: 'woodcutting'") && V('EquipmentView.vue').includes("goToSkill('mining')") && V('EquipmentView.vue').includes("goToSkill('woodcutting')"))
 
   // ⑤ 派生清单全部含两个新技能（逐处静态校验，防回退成手抄清单）
-  check('适配', '挂机计划（SkillView.PLAN_SKILLS）含采矿与伐木', V('SkillView.vue').includes("'mining'") && V('SkillView.vue').includes("'woodcutting'"))
+  const rd2 = (f) => fs.readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8')
+  // 2026-09-27 用户⑩：挂机计划整块从 SkillView 搬到 （底栏 🗓 胶囊弹出）⇒ 断言跟着搬，
+  // 同时把「技能页不许再有计划卡」也钉住（搬回去等于把用户的要求撤掉）。
+  check('适配', '挂机计划（PlanPanel 的 PLAN_SKILLS）含采矿与伐木，且技能页不再有计划卡',
+    rd2('src/components/PlanPanel.vue').includes("'mining'") && rd2('src/components/PlanPanel.vue').includes("'woodcutting'") && !V('SkillView.vue').includes('plan-card'))
   // 2026-09-19：分段口径由「挖掘/采矿/伐木按类别、其余每 5 级」统一成 10 级「时代」（见 C48）。
   // 这条原先是「类别分组含木料标签」，现在改成查**同一意图**的两件事：每技能文案分支仍在、分组走单一实现。
   check('适配', '采集页含采矿/伐木的 id 分支，且分段走统一的 levelEras（不再是类别分组）',
@@ -8323,8 +8336,10 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   //    池卡默认**一行**：档位表与规则收进「详情」，不常驻占三行。
   check('精通池', '池卡默认收起成一行（档位表与规则由「详情」展开，不再常驻堆叠）',
     /expanded = ref\(false\)/.test(bar) && /v-if="expanded"/.test(bar) && /详情/.test(bar))
+  // 2026-09-27 用户⑩：计划卡整块搬去 `PlanPanel.vue` ⇒ 这条空态断言跟着换文件（判据不变：
+  // 提示并进标题行，下面不许再挂一个 `<p v-else>` 重复占一行）。
   check('精通池', '空态「挂机计划」的提示已并入标题行（不再多占一行）',
-    !/还没有步骤[\s\S]{0,300}?<p v-else/.test(readFileSync(new URL('../../src/views/SkillView.vue', import.meta.url), 'utf8')))
+    !/还没有步骤[\s\S]{0,300}?<p v-else/.test(readFileSync(new URL('../../src/components/PlanPanel.vue', import.meta.url), 'utf8')))
 }
 
 // ══════════ C50：后期等级带补档（2026-09-19，第 1 批「挖掘」7 件）══════════
@@ -8587,9 +8602,12 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   check('对决页', '对决页不再显示「食神秘境」入口卡',
     !view.includes('realm-card') && !view.includes('食神秘境'), '仍有秘境卡')
   const skillView = rd('views/SkillView.vue')
-  check('对决页', '战斗类技能下不显示「挂机计划」卡（v-if 判 category !== combat）',
-    skillView.includes("activeDef?.category !== 'combat'") && skillView.includes('plan-card'),
-    '挂机计划仍在战斗技能下显示')
+  // 2026-09-27 用户⑩：挂机计划整块搬到底栏胶囊（PlanPanel.vue）⇒ 这条断言改了判据：
+  // 不再是「技能页用 v-if 藏起来」，而是「**技能页里根本没有它**」（底栏与技能页无关，天然不会出现在对决页），
+  // 顺带要求 PlanPanel 确实挂在底栏（否则计划就成了没有入口的死功能）。
+  check('对决页', '「挂机计划」不在技能页（已搬到底栏胶囊；对决页因此天然不会再出现它）',
+    !skillView.includes('plan-card') && /PlanPanel/.test(rd('components/BottomDock.vue')),
+    '挂机计划又回到技能页，或底栏没有挂它')
 
   // ③e App.vue（2026-09-19 用户要求）：「两条常驻提示」从内容顶部移到中间列底栏；
   //     「中间底部状态条」直接去掉（它右侧那排装备槽已由 EquipmentSlots 承担）。
@@ -8677,8 +8695,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 // ══════════ C53：成长阻尼 + 材料成本系数（2026-09-21，用户「砍一点，然后增加所需材料数量」）══════════
 {
   const { readdirSync, readFileSync } = await import('node:fs')
-  const CAL_TOTAL = 7449 // 全部制作配方的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
-  const CAL_COUNT = 1246 // 同上：配方条数
+  const CAL_TOTAL = 7462 // 全部制作配方的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
+  const CAL_COUNT = 1249 // 同上：配方条数
   const c53 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
 
   // ── A. 成长阻尼：乘法叠区（转生 × 增益剂 × 精通或设置 × 对决补正 × 限时窗口）先相乘、再统一折减 ──
@@ -9126,6 +9144,145 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       store.has(sm.keyFor(2)))
     delete globalThis.localStorage
   }
+}
+
+// ══════════ C62：奥义等级门槛 + 副业线奥义（2026-09-27 用户⑧）══════════
+// 用户：「美食奥义或许要加入某技能等级要求才能解锁呢？还有美食奥义是否需要扩充？」
+// 答复＝两条都做：门槛走**规则模块**（不往冻结条目上加字段）、扩充走**手写扩展模块**（不动生成器产物）。
+{
+  const { AOJIS } = await import('../../src/game/data/aojis.js')
+  const { AOJI_GATE, aojiGateLevel, aojiUnlockedAt, aojiGateText } = await import('../../src/game/data/aojiGates.js')
+  const BOOT = ['sharpBlade', 'ironWall', 'harvestBlessing', 'swiftStep', 'ironStomach', 'feastMaster', 'oceanKnowledge', 'godPower', 'harvestMaster', 'combatScholar', 'tasteGuard', 'swiftProwess']
+  check('奥义门槛', '扩充后可玩性数据齐备：42 条（32 原有 + 10 副业线），id 唯一',
+    AOJIS.length === 42 && new Set(AOJIS.map((a) => a.id)).size === 42, `n=${AOJIS.length}`)
+  check('奥义门槛', '每条奥义都有门槛（入门 12 条 = Lv1 不设门槛，其余 ≥ Lv8）',
+    AOJIS.every((a) => BOOT.includes(a.id) ? aojiGateLevel(a.id) === 1 : aojiGateLevel(a.id) >= 8) && Object.keys(AOJI_GATE).length === 30,
+    `表内 ${Object.keys(AOJI_GATE).length} 条`)
+  check('奥义门槛', '门槛随强度递增（同批次内 cost 越大要求越高，且不超过等级上限 120）',
+    Math.max(...AOJIS.map((a) => aojiGateLevel(a.id))) <= 120 && AOJIS.filter((a) => a.id.startsWith('aoji2_')).every((a) => aojiGateLevel(a.id) >= 45))
+  // 行为：唯一生效点 toggleAoji
+  {
+    const gp = freshPlayer()
+    createSkillInstances(gp)
+    const setGas = (lv) => gp.setSkillState('gastronomy', { level: lv, exp: totalXpForLevel(lv) })
+    setGas(1)
+    const r1 = gp.toggleAoji('aoji2_berserk2')
+    check('奥义门槛', '行为：等级不足时 `toggleAoji` 返回**原因字符串**且不入激活表', typeof r1 === 'string' && /需美食知识 Lv81/.test(r1) && gp.gastronomy.active.length === 0, String(r1))
+    setGas(81)
+    check('奥义门槛', '行为：等级达标后同一条可正常开启', gp.toggleAoji('aoji2_berserk2') === true && gp.gastronomy.active.includes('aoji2_berserk2'))
+    check('奥义门槛', '行为：入门 12 条 Lv1 就能开（教程组不受门槛影响）', gp.toggleAoji('godPower') === true)
+    // 门槛**只挡开启**；直接写入的非法项由 drainAoji 收走（转生掉级的场景）
+    gp.gastronomy.active = ['aoji2_berserk2']
+    setGas(1)
+    gp.tastePoints = 9999
+    gp.drainAoji(1000)
+    check('奥义门槛', '行为：等级掉回去（转生）后，场上的不达标奥义被 `drainAoji` 收走',
+      gp.gastronomy.active.length === 0, `剩 ${gp.gastronomy.active.join(',') || '无'}`)
+  }
+  // 副业线：分类、效果键、轴合法性、真进轴
+  {
+    const { SIDELINE_AXES } = await import('../../src/game/data/sidelineWorks.js')
+    const side = AOJIS.filter((a) => a.category === '副业')
+    check('奥义门槛', '副业线 10 条：分类「副业」且效果只有 `sideline`（因此不会触发 C61 的「攻击/防御 ⟺ 战斗效果」断言）',
+      side.length === 10 && side.every((a) => Object.keys(a.effect).length === 1 && a.effect.sideline), `n=${side.length}`)
+    const badAxis = side.flatMap((a) => Object.keys(a.effect.sideline).filter((k) => !SIDELINE_AXES[k]))
+    check('奥义门槛', `副业线用的轴 id 全部在 SIDELINE_AXES 里（${Object.keys(SIDELINE_AXES).length} 条轴）`, badAxis.length === 0, badAxis.join(','))
+    // 🔴 「轴在表里」≠「有人读它」（2026-09-27 实测踩过）：`decorPct` / `nightMult` 原先的消费方读的是
+    //    `sidelineLadderTotal`（只有阶梯那一段），奥义接进合计出口也照样是**买了没效果**。
+    //    这条断言因此要求：每条被奥义使用的轴，在**引擎侧**真的有一处以字面量取出它
+    //    （显示层 activeEffects.js 不算——那里只是把数读出来给玩家看）。
+    {
+      const skillSrc = fs.readdirSync(new URL('../../src/game/skills/', import.meta.url))
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => stripComments(fs.readFileSync(new URL(`../../src/game/skills/${f}`, import.meta.url), 'utf8')))
+      const coreSrc = fs.readdirSync(new URL('../../src/game/core/', import.meta.url))
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => stripComments(fs.readFileSync(new URL(`../../src/game/core/${f}`, import.meta.url), 'utf8')))
+      const allSrc = [rdSrc('src/stores/player.js'), ...skillSrc, ...coreSrc].join('\n')
+      const unread = [...new Set(side.flatMap((a) => Object.keys(a.effect.sideline)))]
+        .filter((k) => !new RegExp(`sidelineEffectTotal\\??\\.?\\(\\s*'${k}'`).test(allSrc))
+      check('奥义门槛', '每条副业线奥义用的轴，引擎侧都有一处字面量读取（否则奥义是「买了没效果」的静默失效）',
+        unread.length === 0, unread.join(','))
+      const eff = rdSrc('src/game/data/activeEffects.js')
+      check('奥义门槛', '效果总览的副业行按三段（作品/阶梯/奥义）展示，不再用「合计 − 阶梯」倒推作品',
+        /sidelineSegs/.test(eff) && !/sidelineLadderTotal/.test(eff))
+    }
+    // 行为：开/关各一次，轴数值必须跟着动（显示与结算同源）
+    const sp = freshPlayer()
+    createSkillInstances(sp)
+    sp.setSkillState('gastronomy', { level: 60, exp: totalXpForLevel(60) })
+    const before = sp.sidelineEffectTotal('decorPct')
+    sp.toggleAoji('aojiSideline_woodcraft')
+    const mid = sp.sidelineEffectTotal('decorPct')
+    sp.toggleAoji('aojiSideline_woodcraft')
+    check('奥义门槛', '行为：副业线奥义真的进 `sidelineEffectTotal` 那条轴（开 +6 / 关回原值）',
+      mid === before + 6 && sp.sidelineEffectTotal('decorPct') === before, `${before} → ${mid} → ${sp.sidelineEffectTotal('decorPct')}`)
+    const { EFFECT_ROWS } = await import('../../src/game/data/activeEffects.js')
+    check('奥义门槛', '效果总览已登记副业线那一行（否则玩家为它付品鉴点却看不到效果）',
+      EFFECT_ROWS.some((r) => r.id === 'aojiSideline'))
+  }
+  // 展示面接线（门槛要看得见，才不是「点了没反应」）
+  const gast = rdSrc('src/views/GastronomyView.vue')
+  const cpanel = rdSrc('src/components/CombatPanel.vue')
+  check('奥义门槛', '两处界面都展示门槛并置灰（美食知识页卡片 / 对决页奥义栏），且都走同一个出口',
+    /aojiGateText|gateText/.test(gast) && /lockedGate/.test(gast) && /:disabled="lockedGate/.test(gast) &&
+      /aojiUnlockedAt/.test(cpanel) && /lockedAoji/.test(cpanel) && /aojiGateText/.test(cpanel))
+  check('奥义门槛', '美食知识页的分类页签含新分类「副业」（否则新分类只在「全部」里可见）',
+    /'副业'/.test(gast))
+  check('奥义门槛', '门槛文案是单一出口（`aojiGateText`），页面不手写「需美食知识 Lv」',
+    !/需美食知识 Lv/.test(gast.replace(/aojiGateLevel/g, '')) || /aojiGateText/.test(gast))
+  // 规则说明也走单一出口 + 攻略同步（否则玩家只看到一排灰掉的卡片，不知道门槛是什么）
+  const { AOJI_GATE_NOTE } = await import('../../src/game/data/aojiGates.js')
+  check('奥义门槛', '规则说明是常数出口 `AOJI_GATE_NOTE`（数字从门槛表派生，不手抄）',
+    typeof AOJI_GATE_NOTE === 'string' && /Lv8~44/.test(AOJI_GATE_NOTE) && /副业线/.test(AOJI_GATE_NOTE))
+  check('奥义门槛', '美食知识页常驻一行规则（否则玩家看到灰卡片却不知道原因）',
+    /AOJI_GATE_NOTE/.test(gast))
+  const guideSrc = rdSrc('src/game/data/guide.js')
+  check('奥义门槛', '攻略写明门槛规则（玩家能事先看到，不用撞上才发现）',
+    /按批次设解锁门槛/.test(guideSrc) && /副业线 Lv8~44/.test(guideSrc))
+}
+
+// ══════════ C63：挂机计划搬进底栏（2026-09-27 用户⑩）+ 计划收工按步骤停（用户⑨）══════════
+{
+  const plan = rdSrc('src/components/PlanPanel.vue')
+  const dock = rdSrc('src/components/BottomDock.vue')
+  const skillView = rdSrc('src/views/SkillView.vue')
+  check('挂机计划', '计划面板独立成组件并挂在底栏（技能页不再有它）',
+    /PLAN_SKILLS/.test(plan) && /PlanPanel/.test(dock) && !/plan-card/.test(skillView))
+  check('挂机计划', '底栏胶囊含「计划」分区（6 个胶囊：挂机/计划/食灵/奥义/状态/日志）',
+    /id: 'plan'/.test(dock) && /dockSection === 'plan'/.test(dock))
+  // 行为：计划跑完**按步骤里出现过的技能**停（原先写死 ['gathering','exploration']，漏了 farming）
+  {
+    const pp = freshPlayer()
+    createSkillInstances(pp)
+    pp.planClear()
+    pp.planAddStep('foraging', pp.getSkillTarget('foraging') ?? 'apple', 'level', 2)
+    pp.planAddStep('farming', 'wheat', 'level', 2)
+    pp.planToggle()
+    pp.setSkillState('foraging', { level: 3, exp: totalXpForLevel(3) })
+    pp._tickPlan() // 第 1 步达标 → 进入第 2 步
+    pp.setSkillState('farming', { level: 3, exp: totalXpForLevel(3) })
+    pp._tickPlan() // 第 2 步达标 → 计划完成
+    check('挂机计划', '行为：计划全部完成后，**计划里出现过的技能**都被暂停（农耕也在内）',
+      pp.isSkillPaused('farming') === true && pp.isSkillPaused('foraging') === true,
+      `foraging=${pp.isSkillPaused('foraging')} farming=${pp.isSkillPaused('farming')}`)
+    check('挂机计划', '行为：计划里没出现过的技能不受影响（不是一刀切全停）',
+      pp.isSkillPaused('fishing') === false, `fishing=${pp.isSkillPaused('fishing')}`)
+  }
+}
+
+// ══════════ C64：左栏「大类按钮 + 右侧导航面板」（2026-09-27 用户⑳）══════════
+{
+  const side = rdSrc('src/components/Sidebar.vue')
+  check('主导航', '功能页改成「大类按钮」为核心：`.feature-cat` + Teleport 出去的 `.feature-flyout`',
+    /class="feature-cat"/.test(side) && /feature-flyout/.test(side) && /<Teleport to="body">/.test(side))
+  check('主导航', '窄屏保留「手风琴 + 磁贴」回退（手机抽屉只有 239px，浮层会溢出屏幕）',
+    /isNarrow/.test(side) && /class="feature-group-label"/.test(side) && /class="feature-tile"/.test(side))
+  check('主导航', '浮层定位避开裁切（fixed + 视口夹取：`.feature-nav` 是 overflow-y:auto）',
+    /position: fixed/.test(rdSrc('src/styles/main.css').slice(rdSrc('src/styles/main.css').indexOf('.feature-flyout'))) &&
+      /Math.min\(a\.top, window\.innerHeight/.test(side))
+  check('主导航', '点页后面板自动收起（`pickFeature` 先清 catOpen 再跳转）',
+    /function pickFeature/.test(side) && /catOpen\.value = null[\s\S]{0,80}goFeature\(it\)/.test(side))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

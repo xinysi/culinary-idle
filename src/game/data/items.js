@@ -799,6 +799,11 @@ for (const def of WOODWORKING_ITEMS) ITEMS[def.id] = def
 import { SIDELINE_ITEMS } from './sidelineWorks.js'
 for (const def of SIDELINE_ITEMS) ITEMS[def.id] = def
 
+// 新增腌制品（2026-09-27 用户⑬「走小扩」）：填「菌类没有即食腌菜」的空档（选择理由见 pickles.js 头注释）。
+// ⚠️ 手写模块，**不是**生成器产物 —— 上面的 expansion1/2 已上硬门禁（重跑会改写冻结层）。
+import { PICKLE_ITEMS } from './pickles.js'
+for (const def of PICKLE_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

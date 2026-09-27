@@ -965,6 +965,77 @@ h2 {
   overflow-y: auto;
 }
 
+/* 大类按钮（2026-09-27 用户⑳）：宽屏下功能页只剩 7 个这一层入口，页面清单在右侧浮层里 */
+.feature-cat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: rgba(var(--panel-soft-rgb), 0.55);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.feature-cat:hover { border-color: var(--primary); }
+.feature-cat.open { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.18); }
+.feature-cat.here { color: var(--primary-strong); } /* 当前所在页所属大类（深档 token，浅色下才达标） */
+.feature-cat .fc-icon { flex: 0 0 auto; }
+.feature-cat .fc-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feature-cat .fc-caret { flex: 0 0 auto; color: var(--muted); }
+
+/* 右侧导航浮层（Teleport 到 body；点外部关闭层与底栏同款做法） */
+.ff-catcher { position: fixed; inset: 0; z-index: 44; }
+.feature-flyout {
+  position: fixed;
+  z-index: 45;
+  width: 208px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: rgba(var(--panel-soft-rgb), 0.98); /* 不透明底：项目里浮层一律不用 backdrop-filter（滚动会重采样） */
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(var(--scrim-rgb), 0.35);
+}
+.ff-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 4px 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-bottom: 1px dashed var(--border);
+}
+.ff-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+}
+.ff-item:hover { background: rgba(var(--primary-tint-rgb), 0.14); border-color: var(--primary); }
+.ff-item.active { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.2); }
+.ff-icon { flex: 0 0 auto; }
+.ff-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ff-badge { flex: 0 0 auto; font-size: 11px; color: var(--bad-strong); }
+.ff-empty { margin: 6px 4px; }
+
 /* 分组标题 = 可点击的折叠开关（2026-09-18 分组默认折叠：首屏只见 6 个分组入口） */
 .feature-group-label {
   display: flex;
@@ -1603,6 +1674,9 @@ h2 {
   border-color: var(--primary);
   color: var(--text);
 }
+/* 等级未达（2026-09-27 用户⑧）：置灰但仍可点（点了会给出「需 LvN」的原因） */
+.combo-aoji .aoji-row.locked { opacity: 0.55; }
+.combo-aoji .aoji-row.locked:hover { border-color: var(--warn-strong); opacity: 0.8; }
 .combo-aoji .aoji-row.on {
   color: var(--text);
   background: rgba(var(--tint-rgb), 0.12);

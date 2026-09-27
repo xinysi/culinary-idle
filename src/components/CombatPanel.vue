@@ -8,6 +8,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
 import { AOJIS } from '../game/data/aojis.js' // 美食奥义栏（只列战斗相关）
+import { aojiUnlockedAt, aojiGateText } from '../game/data/aojiGates.js' // 等级门槛唯一出口（2026-09-27 用户⑧）
 import { bindTip } from '../composables/useFixedTooltip.js'
 import CombatArena from './CombatArena.vue'
 import CombatLoadout from './CombatLoadout.vue'
@@ -116,10 +117,15 @@ const keepLeftText = computed(() => {
 // ③ 直接开关奥义（2026-09-26 用户要求「对标美食奥义页面功能代码」）：
 //    与 `GastronomyView.toggle()` 逐行同构（同一个 store 出口 + 同一条日志文案），
 //    免得同一个动作在两处产生两种日志措辞。
+//    ⚠️ 2026-09-27 用户⑧ 起 `toggleAoji` 可能返回**原因字符串**（等级门槛未达）⇒ 直接显示它。
 function toggleAoji(id) {
-  const on = player.toggleAoji(id)
-  ui.pushLog(on ? `激活奥义：${AOJIS.find((a) => a.id === id)?.name}` : `关闭奥义：${AOJIS.find((a) => a.id === id)?.name}`, 'info')
+  const r = player.toggleAoji(id)
+  if (typeof r === 'string') { ui.pushLog(r, 'warn'); return }
+  ui.pushLog(r ? `激活奥义：${AOJIS.find((a) => a.id === id)?.name}` : `关闭奥义：${AOJIS.find((a) => a.id === id)?.name}`, 'info')
 }
+/** 等级门槛（唯一出口 `aojiGates.js`）：对决页只做展示 + 置灰，权威判定在 `player.toggleAoji` */
+const gastroLevel = computed(() => player.skills?.gastronomy?.level ?? 1)
+const lockedAoji = (a) => !aojiUnlockedAt(a.id, gastroLevel.value)
 /** 去「美食知识」页开关奥义。⚠️ 先 setActiveSkill 再 setView —— 只 setView 会跳到「当前正在练的那个技能」（RelatedPages 踩过） */
 function goGastronomy() {
   player.setActiveSkill('gastronomy')
@@ -249,11 +255,11 @@ function buffText() {
             <button
               v-for="a in aojisOf(cat)" :key="a.id"
               type="button"
-              class="aoji-row" :class="{ on: a.on }"
-              :title="`${a.desc}（消耗 ${a.costPerSec} 品鉴点/秒）\n点击${a.on ? '关闭' : '开启'}`"
+              class="aoji-row" :class="{ on: a.on, locked: lockedAoji(a) }"
+              :title="lockedAoji(a) ? `${a.desc}\n🔒 ${aojiGateText(a.id)}（当前 Lv${gastroLevel}）` : `${a.desc}（消耗 ${a.costPerSec} 品鉴点/秒）\n点击${a.on ? '关闭' : '开启'}`"
               @click="toggleAoji(a.id)"
             >
-              <span class="aoji-name">{{ a.on ? '🟢' : '·' }} {{ a.name }}</span>
+              <span class="aoji-name">{{ a.on ? '🟢' : lockedAoji(a) ? '🔒' : '·' }} {{ a.name }}</span>
               <span class="dim mono aoji-cost">-{{ a.costPerSec }}</span>
               <span v-if="a.on" class="dim aoji-desc">{{ a.desc }}</span>
             </button>

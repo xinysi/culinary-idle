@@ -28,6 +28,7 @@ import { getBgmTrack } from '../game/data/bgmTracks.js' // 手动选曲（settin
 import { SPIRITS, SPIRIT_SLOTS, getSpirit } from '../game/data/spiritTiers.js'
 import { SPIRIT_STORY_STAGES, STAGE_INFO } from '../game/data/spiritStories.js'
 import { AOJIS } from '../game/data/aojis.js'
+import { aojiUnlockedAt, aojiGateLevel } from '../game/data/aojiGates.js' // 奥义等级门槛（2026-09-27 用户⑧）
 import { ALL_ACHIEVEMENTS, collectionTotal } from '../game/data/achievements.js'
 import { QUESTS, questObjectiveKey } from '../game/data/quests.js'
 import { COMBAT_REGIONS } from '../game/data/combat.js'
@@ -526,7 +527,8 @@ export const usePlayerStore = defineStore('player', {
     /** 奥义效果聚合（§3.4.1）— 函数 getter：gastronomyEffects() */
     gastronomyEffects(s) {
       return () => {
-        const eff = { dmgPct: 0, styleDmgPct: {}, defensePct: 0, speedPct: 0, maxHpBonus: 0, yieldPct: 0, xpPct: 0, healPct: 0 }
+        // ⚠️ 这是**封闭集合**：不在这个对象里的键会被静默丢弃（2026-09-27 加 `sideline` 时确认过一遍）。
+        const eff = { dmgPct: 0, styleDmgPct: {}, defensePct: 0, speedPct: 0, maxHpBonus: 0, yieldPct: 0, xpPct: 0, healPct: 0, sideline: {} }
         for (const id of s.gastronomy?.active ?? []) {
           const a = AOJIS.find((x) => x.id === id)
           if (!a?.effect) continue
@@ -539,6 +541,8 @@ export const usePlayerStore = defineStore('player', {
           if (e.yieldPct) eff.yieldPct += e.yieldPct
           if (e.xpPct) eff.xpPct += e.xpPct
           if (e.healPct) eff.healPct += e.healPct
+          // 副业线奥义（2026-09-27）：`{ sideline: { 轴id: 数值 } }`，出口在 `sidelineEffectTotal(axis)`
+          if (e.sideline) for (const [k, v] of Object.entries(e.sideline)) eff.sideline[k] = (eff.sideline[k] ?? 0) + v
         }
         return eff
       }
@@ -614,7 +618,9 @@ export const usePlayerStore = defineStore('player', {
         if (d) decorBonus += (d.effect ?? 1) / 100
       }
       // 副业·木工的量产阶梯（v2.11.0）：多余木器喂出来的「手艺」直接加装潢乘区
-      decorBonus += (this.sidelineLadderTotal?.('decorPct') ?? 0) / 100
+      // ⚠️ 2026-09-27：改读 `sidelineEffectTotal`（唯一派生出口）—— 原先读 `sidelineLadderTotal`，
+      //    那样副业线奥义「木器之魂」的 +6% 加进来也**不会被这条消费链看到**（静默无效）。
+      decorBonus += (this.sidelineEffectTotal?.('decorPct') ?? 0) / 100
       // 顾客好感小费（2026-09-06）：每级 +3%，封顶 20 级（+57%）
       const favorLv = favorLevelFromXp(s.restaurant?.favor?.xp ?? 0)
       // 副业·编织（v2.10.0）：织物提升小费——乘在小费因子上（**唯一出口**，别再往别处加）
@@ -1310,12 +1316,25 @@ export const usePlayerStore = defineStore('player', {
       if (!cfg) return 0
       return ladderTotalOf(cfg.skill, this.sidelinePointsOf(cfg.skill))
     },
-    /** 某效果轴的已获得加成合计（**作品 + 量产阶梯**两段求和）—— **唯一派生出口**，消费方别再自己遍历 */
+    /** 某效果轴的已获得加成合计（**作品 + 量产阶梯 + 奥义**三段求和）—— **唯一派生出口**，消费方别再自己遍历 */
     sidelineEffectTotal(axis) {
+      return this.sidelineEffectParts(axis).total
+    },
+    /**
+     * 同上的**三段拆分**（`{ work, ladder, aoji, total }`）。
+     * 为什么要有它：效果总览那几行原先写「作品 X + 阶梯 Y」，其中 X 是拿合计**减**阶梯倒推出来的 ——
+     * 副业线奥义接入后，那份差额里就混进了奥义那份，页面会把奥义说成「作品」（显示与来源不符）。
+     * 拆分只此一处，页面按需拼串。
+     */
+    sidelineEffectParts(axis) {
       const per = SIDELINE_AXES[axis]?.perItem ?? 0
       let n = 0
       for (const id of this.sidelineWorks ?? []) if (SIDELINE_WORKS[id]?.axis === axis) n++
-      return n * per + this.sidelineLadderTotal(axis)
+      const work = n * per
+      const ladder = this.sidelineLadderTotal(axis)
+      // 副业线奥义（2026-09-27）：与作品/阶梯**同一条轴**相加 —— 界面上那些「+X%」的显示口径因此自动含它
+      const aoji = this.gastronomyEffects?.().sideline?.[axis] ?? 0
+      return { work, ladder, aoji, total: work + ladder + aoji }
     },
     /** 地窖单槽基础价值上限（基础 + 陶艺）。⚠️ 地窖校验与 CellarView 一律走这里，别再引用固定值 */
     cellarSlotValueMax() {
@@ -1338,9 +1357,9 @@ export const usePlayerStore = defineStore('player', {
       // 时长来自「作品」、倍率来自「量产阶梯」，两者都只在蜡烛这条线上
       return marketEventsWithNightExtension(this.nightMarketExtraHours(), this.nightMarketMult() - NIGHT_MARKET_BASE_MULT)
     },
-    /** 夜市狂潮当前的餐厅倍率（基础 ×2 + 蜡烛阶梯每档 +0.03） */
+    /** 夜市狂潮当前的餐厅倍率（基础 ×2 + 蜡烛阶梯每档 +0.03 + 副业线奥义） */
     nightMarketMult() {
-      return NIGHT_MARKET_BASE_MULT + (this.sidelineLadderTotal?.('nightMult') ?? 0)
+      return NIGHT_MARKET_BASE_MULT + (this.sidelineEffectTotal?.('nightMult') ?? 0)
     },
     /** 夜市窗口结束小时（>24 表示跨夜）；UI 文案用 */
     nightMarketEndHour() {
@@ -1982,6 +2001,10 @@ export const usePlayerStore = defineStore('player', {
         return false
       }
       if (!AOJIS.some((a) => a.id === id)) return false
+      // 🔴 等级门槛（2026-09-27 用户⑧）：唯一生效点就是这里 —— 界面（美食知识页 / 对决页奥义栏）
+      //    只是把按钮置灰并写明「需美食知识 LvN」，**权威判定在引擎**。
+      //    返回原因字符串而不是 false，让两个调用点都能把「为什么开不了」说清楚。
+      if (!aojiUnlockedAt(id, this.skills?.gastronomy?.level ?? 1)) return `需美食知识 Lv${aojiGateLevel(id)}（当前 Lv${this.skills?.gastronomy?.level ?? 1}）`
       this.gastronomy.active = [...active, id]
       // 宽限试用期：记录激活时刻，前 10 秒免费试运行（不扣品鉴点）
       this._aojiActivatedAt = this._aojiActivatedAt ?? {}
@@ -2031,6 +2054,17 @@ export const usePlayerStore = defineStore('player', {
     drainAoji(deltaMs) {
       const active = this.gastronomy.active
       if (!active.length) return
+      // 等级门槛复核（2026-09-27 用户⑧）：门槛**只挡开启**，但有一种情况会让已开启的奥义掉回不达标 ——
+      // **美食知识转生**（等级回到 1+保留）。这里每帧复核一次并收走，避免「转生后还在白拿高阶奥义」。
+      // 与点数归零那条同源：收走时发同一个人人都能听的事件。
+      const lv = this.skills?.gastronomy?.level ?? 1
+      const illegal = active.filter((id) => !aojiUnlockedAt(id, lv))
+      if (illegal.length) {
+        this.gastronomy.active = active.filter((id) => aojiUnlockedAt(id, lv))
+        try { useUiStore().pushLog(`🔒 美食知识等级不足，已自动关闭：${illegal.length} 个奥义`, 'warn') } catch (e) { /* 无 UI 上下文（脚本/测试）时忽略 */ }
+        EventBus.emit('gastronomy:off', {})
+        return
+      }
       // 点数归零：立即全部关闭（防止边缘状态不一致）
       if (this.tastePoints <= 0) {
         this.gastronomy.active = []
@@ -2615,8 +2649,13 @@ export const usePlayerStore = defineStore('player', {
       if (st.index >= st.steps.length) {
         st.active = false
         st.index = 0
+        // 🔴 2026-09-27 用户⑨「只修」：原先这里只暂停 `['gathering','exploration']`，
+        //    而**农耕**的实例 type 是 `'farming'` ⇒ 计划跑完农耕照旧在跑（页面写着「全部完成自动暂停」，
+        //    实际只停了采集与探索）。现按**计划里真正出现过的技能**来停 —— 别再手抄一份 type 白名单，
+        //    那正是这次漏掉 farming 的成因（白名单写于农耕接入计划之前，加了技能没人回来改它）。
+        const planned = new Set(st.steps.map((x) => x.skill))
         for (const inst of getAllSkillInstances()) {
-          if (['gathering', 'exploration'].includes(inst.type)) this.setSkillPaused(inst.id, true)
+          if (planned.has(inst.id)) this.setSkillPaused(inst.id, true)
         }
         this.stats.plansDone = (this.stats.plansDone ?? 0) + 1
         EventBus.emit('plan:done', {})

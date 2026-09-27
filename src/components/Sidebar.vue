@@ -99,6 +99,39 @@ function toggleAllGroups() {
   if (!player.settings) return
   player.settings.sidebarOpen = allGroupsOpen.value ? [] : FEATURE_GROUPS.map((g) => g.id)
 }
+
+// ── 功能页：大类按钮 + 右侧导航面板（2026-09-27 用户⑳「各类只需要一个按钮，点击后右边面板显示该类的导航」）──
+// 宽屏：7 个**大类按钮**，点一下在右侧弹出该类的页面清单（`.feature-flyout`，Teleport 到 body
+//       以免被 `.feature-nav` 的 `overflow-y:auto` 裁掉）；点清单里的页 → 跳转并收起。
+// 窄屏（手机抽屉只有 ~239px）：**退回原来的手风琴 + 4 列磁贴** —— 抽屉里再弹一个右侧面板会溢出屏幕。
+const catOpen = ref(null) // 当前展开的大类 id（null = 都收起）
+const catAnchor = ref(null) // 触发按钮的位置（fixed 定位用）
+const isNarrow = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 940px)').matches)
+if (typeof window !== 'undefined') {
+  const mq = window.matchMedia('(max-width: 940px)')
+  const onMq = (e) => { isNarrow.value = e.matches; if (e.matches) catOpen.value = null }
+  mq.addEventListener?.('change', onMq)
+}
+const openCat = computed(() => FEATURE_GROUPS.find((g) => g.id === catOpen.value) ?? null)
+const catItems = (g) => g.items.filter((it) => tileVisible(it))
+function toggleCat(g, ev) {
+  if (catOpen.value === g.id) { catOpen.value = null; return }
+  const r = ev?.currentTarget?.getBoundingClientRect?.()
+  catAnchor.value = r ? { top: r.top, right: r.right } : null
+  catOpen.value = g.id
+}
+/** 面板的 fixed 定位：贴在大类按钮右侧，纵向夹在视口内（面板最高 60vh） */
+const flyoutStyle = computed(() => {
+  const a = catAnchor.value
+  if (!a) return {}
+  const maxH = Math.round(window.innerHeight * 0.6)
+  const top = Math.max(8, Math.min(a.top, window.innerHeight - maxH - 12))
+  return { left: `${Math.round(a.right + 6)}px`, top: `${Math.round(top)}px`, maxHeight: `${maxH}px` }
+})
+function pickFeature(it) {
+  catOpen.value = null
+  goFeature(it)
+}
 const hiddenFeatureCount = computed(() =>
   FEATURE_GROUPS.reduce((n, g) => n + g.items.filter((it) => !tileVisible(it)).length, 0))
 /** 当前激活技能属于哪个页签（副业技能必须落在副业页签，否则点了木工会被切回技能页签） */
@@ -212,37 +245,81 @@ function onAvatarPick(e) {
       <p class="dim side-note">副业把采集原料做成经营侧加成：木器可做成餐厅装潢。</p>
     </nav>
 
-    <!-- 功能页网格（2026-09-10 用户要求：全部展开、方块显示；2026-09-11 实测改一行四个：
-         3 列时 45 片要滚 746px、后 3 组全在折叠线下；4 列后 74→54px、需滚降到 146px 且无换行裁切） -->
+    <!-- 功能页（2026-09-27 用户⑳「各类只需要一个按钮，点击后右边面板显示该类的导航」）：
+         宽屏 = **7 个大类按钮** + 右侧导航面板；窄屏（手机抽屉）退回手风琴 + 4 列磁贴。
+         磁贴网格的列数依据（3→4 列实测）见 main.css 的 `.feature-grid` 注释。 -->
     <nav v-show="sideTab === 'features'" class="feature-nav">
-      <template v-for="g in FEATURE_GROUPS" :key="g.id">
-        <button class="feature-group-label" :class="{ open: groupOpen(g) }" @click="toggleGroup(g)">
-          <span class="fg-arrow">{{ groupOpen(g) ? '▾' : '▸' }}</span>
-          <span>{{ g.icon }} {{ g.name }}</span>
-          <span class="fg-count dim">{{ g.items.filter((it) => tileVisible(it)).length }}</span>
+      <!-- 宽屏：大类按钮 -->
+      <template v-if="!isNarrow">
+        <button
+          v-for="g in FEATURE_GROUPS" :key="g.id"
+          class="feature-cat"
+          :class="{ open: catOpen === g.id, here: groupOfView(ui.activeView) === g.id }"
+          :aria-expanded="catOpen === g.id"
+          @click="toggleCat(g, $event)"
+        >
+          <span class="fc-icon">{{ g.icon }}</span>
+          <span class="fc-name">{{ g.name }}</span>
+          <span class="fg-count dim">{{ catItems(g).length }}</span>
+          <span class="fc-caret" aria-hidden="true">›</span>
         </button>
-        <div v-if="groupOpen(g) && g.items.some((it) => tileVisible(it))" class="feature-grid">
-          <button
-            v-for="it in g.items.filter((it) => tileVisible(it))"
-            :key="it.view"
-            class="feature-tile"
-            :class="{ active: ui.activeView === it.view }"
-            :title="it.badge?.() ? `${it.name}（${it.badge()} 封待领）` : it.name"
-            @click="goFeature(it)"
-          >
-            <span class="feature-icon">{{ it.icon }}</span>
-            <span class="feature-name">{{ it.name }}</span>
-            <!-- 待领角标（2026-09-11 信箱）：非零才显示 -->
-            <span v-if="it.badge?.()" class="feature-badge">{{ it.badge() > 99 ? '99+' : it.badge() }}</span>
+      </template>
+      <!-- 窄屏：保留原手风琴 + 磁贴 -->
+      <template v-else>
+        <template v-for="g in FEATURE_GROUPS" :key="g.id">
+          <button class="feature-group-label" :class="{ open: groupOpen(g) }" @click="toggleGroup(g)">
+            <span class="fg-arrow">{{ groupOpen(g) ? '▾' : '▸' }}</span>
+            <span>{{ g.icon }} {{ g.name }}</span>
+            <span class="fg-count dim">{{ g.items.filter((it) => tileVisible(it)).length }}</span>
           </button>
-        </div>
+          <div v-if="groupOpen(g) && g.items.some((it) => tileVisible(it))" class="feature-grid">
+            <button
+              v-for="it in g.items.filter((it) => tileVisible(it))"
+              :key="it.view"
+              class="feature-tile"
+              :class="{ active: ui.activeView === it.view }"
+              :title="it.badge?.() ? `${it.name}（${it.badge()} 封待领）` : it.name"
+              @click="goFeature(it)"
+            >
+              <span class="feature-icon">{{ it.icon }}</span>
+              <span class="feature-name">{{ it.name }}</span>
+              <!-- 待领角标（2026-09-11 信箱）：非零才显示 -->
+              <span v-if="it.badge?.()" class="feature-badge">{{ it.badge() > 99 ? '99+' : it.badge() }}</span>
+            </button>
+          </div>
+        </template>
       </template>
       <!-- 未解锁的功能页默认收起：给一个随时放开的口子（也避免「找不到入口」的困惑） -->
-      <div v-if="hiddenFeatureCount > 0 || showAllFeatures || !allGroupsOpen" class="feature-hidden">
+      <div v-if="hiddenFeatureCount > 0 || showAllFeatures || !isNarrow" class="feature-hidden">
         <span class="dim">{{ showAllFeatures ? '已显示全部功能' : `已隐藏 ${hiddenFeatureCount} 个未解锁的功能` }}</span>
         <button class="btn btn-sm" @click="showAllFeatures = !showAllFeatures">{{ showAllFeatures ? '只显示已解锁' : '显示全部' }}</button>
-        <button class="btn btn-sm" @click="toggleAllGroups()">{{ allGroupsOpen ? '全部收起' : '全部展开' }}</button>
+        <button v-if="isNarrow" class="btn btn-sm" @click="toggleAllGroups()">{{ allGroupsOpen ? '全部收起' : '全部展开' }}</button>
       </div>
     </nav>
+
+    <!-- 大类导航面板（宽屏）：Teleport 到 body —— `.feature-nav` 是 `overflow-y:auto`，
+         留在里面会被裁掉；放 body 还顺带避开任何祖先的层叠/包含块。 -->
+    <Teleport to="body">
+      <div v-if="openCat && !isNarrow" class="ff-catcher" @click="catOpen = null"></div>
+      <div v-if="openCat && !isNarrow" class="feature-flyout" :style="flyoutStyle" role="dialog" :aria-label="openCat.name">
+        <div class="ff-head">
+          <span>{{ openCat.icon }} {{ openCat.name }}</span>
+          <span class="dim">{{ catItems(openCat).length }} 页</span>
+        </div>
+        <button
+          v-for="it in catItems(openCat)"
+          :key="it.view"
+          class="ff-item"
+          :class="{ active: ui.activeView === it.view }"
+          :title="it.badge?.() ? `${it.name}（${it.badge()} 封待领）` : it.name"
+          @click="pickFeature(it)"
+        >
+          <span class="ff-icon">{{ it.icon }}</span>
+          <span class="ff-name">{{ it.name }}</span>
+          <span v-if="it.badge?.()" class="ff-badge">{{ it.badge() > 99 ? '99+' : it.badge() }}</span>
+        </button>
+        <p v-if="!catItems(openCat).length" class="dim ff-empty">这一类暂时没有已解锁的页面</p>
+      </div>
+    </Teleport>
   </aside>
 </template>

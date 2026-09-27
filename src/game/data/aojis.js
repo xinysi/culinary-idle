@@ -25,6 +25,10 @@ import { AOJI_EXT } from './expansion1.js'
 AOJIS.push(...AOJI_EXT)
 import { AOJI_EXT2 } from './expansion2.js'
 AOJIS.push(...AOJI_EXT2)
+// 内容扩充（2026-09-27 用户⑧）：副业线 10 条 + 第 9 个效果键 `sideline`（产线侧乘区）。
+// ⚠️ 手写模块，**不是**生成器产物 —— 上面两份已上硬门禁（重跑会改写冻结层），新增内容一律走这种手写扩展。
+import { AOJI_SIDELINE } from './aojiSideline.js'
+AOJIS.push(...AOJI_SIDELINE)
 
 // 奥义数值平衡（启动时调用）：把高阶奥义的 costPerSec 下调到可长期维持的区间，
 // 与品鉴点供给（对决胜利）匹配；不改生成器产物文件（AOJI_EXT/EXT2），统一在此归一。

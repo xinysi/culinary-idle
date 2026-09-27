@@ -60,8 +60,8 @@ async function enterGame(page, viewport) {
   })
 }
 
-/** 底部胶囊一共五块（挂机动向 / 食灵 / 奥义 / 快捷状态 / 事件日志），逐块点开 */
-const DOCK_SECS = ['idle', 'spirit', 'aoji', 'status', 'log']
+/** 底部胶囊一共六块（挂机动向 / 食灵 / 奥义 / 快捷状态 / 事件日志），逐块点开 */
+const DOCK_SECS = ['idle', 'plan', 'spirit', 'aoji', 'status', 'log'] // 2026-09-27 用户⑩：+plan
 async function openDock(page, sec) {
   // ⚠️ 先关掉可能压在上面的浮层：**奇遇弹窗**（`.modal-backdrop`，z-index 50）是随机触发的，
   //    守卫跑满 4 分钟期间很可能正好弹一次，把底部胶囊（z-index 46）盖住 ⇒ Playwright 的真点击
@@ -205,7 +205,7 @@ async function scanPages(page, viewport, pages) {
   return { cut, sq, errs, n }
 }
 
-/** 底部两条常驻提示 + 五个胶囊面板：它们不在 `.main-scroll` 里，只扫 main-scroll 会让那几块无人看管 ⇒ 逐块扫一轮。
+/** 底部两条常驻提示 + 六个胶囊面板：它们不在 `.main-scroll` 里，只扫 main-scroll 会让那几块无人看管 ⇒ 逐块扫一轮。
  *  ⚠️ 必须**点胶囊**走真实路径，不要用脚本侧的 store 方法：实测在本守卫里读到的 store 与组件渲染用的不是同一个实例
  *  （flag 变 true 但 DOM 里一个面板都没有），于是整轮静默空转、靠 `drCount` 断言才抓出来。 */
 async function scanDock(page, viewport) {
@@ -214,8 +214,8 @@ async function scanDock(page, viewport) {
   const sq = []
   const errs = []
   page.on('pageerror', (e) => errs.push(e.message))
-  // 底部五个胶囊（2026-09-20 用户要求「五个独立的胶囊和弹出面板」）：它们不在 `.main-scroll` 里，
-  // 只扫 main-scroll 会让那五块（挂机动向/食灵/奥义/快捷状态/事件日志）的排版缺陷无人看管 ⇒ 逐块扫一轮。
+  // 底部六个胶囊（2026-09-20 用户要求「五个独立的胶囊和弹出面板」）：它们不在 `.main-scroll` 里，
+  // 只扫 main-scroll 会让那六块（挂机动向/食灵/奥义/快捷状态/事件日志）的排版缺陷无人看管 ⇒ 逐块扫一轮。
   // ⚠️ 必须**点胶囊**走真实路径，不要用脚本侧的 store 方法：实测在本守卫里那读到的 store 与组件渲染用的
   //    不是同一个实例（flag 变 true 但 DOM 里一个面板都没有），于是整轮静默空转、靠 `drCount` 断言才抓出来。
   // 两条常驻提示（2026-09-19 移到中间列底栏，同样不在 `.main-scroll` 里）→ 先扫一轮
@@ -223,7 +223,7 @@ async function scanDock(page, viewport) {
   const stCount = await page.evaluate(() => document.querySelectorAll('.head-strips *').length)
   for (const x of st.cutControl) if (!x.clickable) cut.push(`底部提示条 · 「${x.ctrl}」被裁 ${x.over}px（${x.box}）`)
   for (const x of st.squeeze) sq.push(`底部提示条 · 「${x.text}」被挤成 ${x.w}×${x.h}（逐字竖排）`)
-  // 五个胶囊各自的面板：逐块点开→展开折叠→扫
+  // 六个胶囊各自的面板：逐块点开→展开折叠→扫
   let drCount = 0
   for (const sec of DOCK_SECS) {
     await openDock(page, sec)
@@ -262,7 +262,7 @@ for (const vp of VIEWPORTS) {
       expect(errs, '页面抛错：' + errs.join(' / ')).toEqual([])
     })
   }
-  test(`布局守卫（${vp.tag}）：底部提示条与五个胶囊面板无被裁控件/逐字竖排`, async ({ page }) => {
+  test(`布局守卫（${vp.tag}）：底部提示条与六个胶囊面板无被裁控件/逐字竖排`, async ({ page }) => {
     const { cut, sq, errs, drCount, stCount } = await scanDock(page, vp)
     expect(drCount, '五个底部面板合计应有内容（否则这一轮扫描是空转）').toBeGreaterThan(40)
     expect(stCount, '底部提示条应有内容（否则这一轮扫描是空转）').toBeGreaterThan(5)

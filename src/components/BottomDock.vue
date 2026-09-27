@@ -1,10 +1,11 @@
 <script setup>
-// 底部状态胶囊组（2026-09-20 用户要求）——原「顶栏 ⚡ 抽屉」与底栏「挂机中条」合并成**五个独立胶囊**：
-//   ⚡挂机动向 · 🐾食灵 · 🍜奥义 · 🧭快捷状态 · 📜事件日志
+// 底部状态胶囊组（2026-09-20 用户要求）——原「顶栏 ⚡ 抽屉」与底栏「挂机中条」合并成**独立胶囊**：
+//   ⚡挂机动向 · 🐝计划 · 🐾食灵 · 🍜奥义 · 🧭快捷状态 · 📜事件日志
 // 每个胶囊点一下从底栏**向上**弹出自己的面板；同一时刻只展开一个（点另一个自动换）。
 //   · 挂机动向：任务列表 + 进度条 + 暂停/继续 + ✕（原底栏条上的那组操作）
+//   · 计划（2026-09-27 用户⑩）：整块挂机计划从技能页搬来这里（原先占技能页头部一整张卡）
 //   · 其余四块：复用 `StatusPanel.vue` 的 `:section` 分区渲染（组件逻辑一行未改，只按块取用）
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { useIdleTasks } from '../composables/useIdleTasks.js'
@@ -13,6 +14,7 @@ import { getItem } from '../game/data/items.js'
 import { SPIRIT_SLOTS } from '../game/data/spiritTiers.js'
 import ProgressBar from './ProgressBar.vue'
 import StatusPanel from './StatusPanel.vue'
+import PlanPanel from './PlanPanel.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -22,7 +24,9 @@ const activeCount = computed(() => runningTasks.value.filter((t) => t.running).l
 const firstActive = computed(() => runningTasks.value.find((t) => t.active) ?? null)
 // 「食灵 / 奥义 / 日志」的角标数量：食灵与 StatusPanel 里那块同源（出战槽位数）
 const spiritCount = computed(() => Object.values(player.spirits?.slots ?? {}).filter(Boolean).length)
-const aojiCount = computed(() => player.activeAojis?.length ?? 0)
+// ⚠️ 原先读 `player.activeAojis` —— 项目里**没有这个 getter**（`?? 0` 静默兜底）⇒ 🍜 角标永远是空的。
+//    2026-09-27 顺手修：与 `player.aojiUpkeep()`（续航的唯一出口）同源。
+const aojiCount = computed(() => (ui.loopTick, player.aojiUpkeep?.().active?.length ?? 0))
 const logCount = computed(() => Math.min(ui.log?.length ?? 0, 99))
 /** 有「可领但没领」的东西时给「快捷状态」亮个点（每日任务 / 未领邮件）——原顶栏 ⚡ 那个点的语义 */
 const todoDot = computed(() => {
@@ -33,15 +37,20 @@ const todoDot = computed(() => {
   }
 })
 
-// 胶囊标签用**短名**（底栏要装 5 个 + 新手横幅，长名会折成两排；完整含义在 title 与面板标题里）
+// 胶囊标签用**短名**（底栏要装 6 个 + 新手横幅，长名会折成两排；完整含义在 title 与面板标题里）
 const SECS = [
   { id: 'idle', icon: '⚡', name: '挂机', full: '挂机动向' },
+  { id: 'plan', icon: '🗓', name: '计划', full: '挂机计划' },
   { id: 'spirit', icon: '🐾', name: '食灵', full: '食灵出战' },
   { id: 'aoji', icon: '🍜', name: '奥义', full: '美食奥义' },
   { id: 'status', icon: '🧭', name: '状态', full: '快捷状态' },
   { id: 'log', icon: '📜', name: '日志', full: '事件日志' },
 ]
 const isOpen = (id) => ui.dockSection === id
+
+const planRef = ref(null)
+/** 计划的角标（由 `PlanPanel` 算好暴露出来；没挂载时为空） */
+const planBadge = computed(() => planRef.value?.planBadge ?? '')
 
 function toggleTaskPause(id) {
   const next = !player.isSkillPaused(id)
@@ -61,9 +70,10 @@ function state(t) {
   if (t.running) return '运行中'
   return '并行位已满'
 }
-/** 胶囊角标（挂机动向 = 运行数 / 并行上限；其余 = 条目数），为 0 时不显示 */
+/** 胶囊角标（挂机动向 = 运行数 / 并行上限；计划 = 步数或「当前/总」；其余 = 条目数），为 0 时不显示 */
 function badge(id) {
   if (id === 'idle') return runningTasks.value.length ? (parallelLimit.value > 0 ? `${activeCount.value}/${parallelLimit.value}` : String(activeCount.value)) : ''
+  if (id === 'plan') return planBadge.value
   if (id === 'spirit') return spiritCount.value ? `${spiritCount.value}/${SPIRIT_SLOTS}` : ''
   if (id === 'aoji') return aojiCount.value ? String(aojiCount.value) : ''
   if (id === 'log') return logCount.value ? String(logCount.value) : ''
@@ -101,7 +111,7 @@ function badge(id) {
     <div v-if="ui.dockSection" class="dock-panel" role="dialog" :aria-label="SECS.find((x) => x.id === ui.dockSection)?.name">
       <div class="dock-panel-head">
         <strong>{{ SECS.find((x) => x.id === ui.dockSection)?.icon }} {{ SECS.find((x) => x.id === ui.dockSection)?.full }}</strong>
-        <span class="dim dock-hint">{{ ui.dockSection === 'idle' ? '每个任务都能暂停 / 继续或关闭' : '与游戏内内容同源，点条目可直接跳转' }}</span>
+        <span class="dim dock-hint">{{ ui.dockSection === 'idle' ? '每个任务都能暂停 / 继续或关闭' : ui.dockSection === 'plan' ? '按顺序挂机：条件满足自动换目标，全部完成自动暂停' : '与游戏内内容同源，点条目可直接跳转' }}</span>
         <button class="btn btn-sm" title="关闭" @click="ui.toggleDockSection(null)">✕</button>
       </div>
       <div class="dock-panel-body">
@@ -119,6 +129,8 @@ function badge(id) {
           </template>
           <p v-else class="dim dock-empty">暂无挂机任务 —— 到技能页选个目标开始</p>
         </template>
+        <!-- 挂机计划（2026-09-27 用户⑩：整块从技能页搬来，胶囊点开就是这个面板） -->
+        <PlanPanel v-else-if="ui.dockSection === 'plan'" ref="planRef" />
         <StatusPanel v-else :section="ui.dockSection" class="dock-status" />
       </div>
     </div>
@@ -287,11 +299,16 @@ function badge(id) {
 @media (max-width: 720px) {
   /* 窄屏：BGM 胶囊只留图标（宽 149.6）⇒ 14 + 149.6 + 5 ≈ 169 */
   .dock { right: 169px; }
-  /* 窄屏只留图标与角标（一行放得下 5 个） */
+  /* 🔴 2026-09-27 用户⑩ 加了第 6 个胶囊（🗓 计划）后**必须抬到手机底部导航之上**：
+     原先胶囊与导航同一水平线（bottom:0）且靠右排，5 个时刚好压不到导航的最左那颗；
+     多一个就把它盖住了（e2e 实测：`.mobile-nav-btn` 第一颗点不动 —— 胶囊拦下了 pointer 事件）。
+     抬到导航高度（56px）之上即与导航无关；面板本来就定在 bottom:96px，正好接在胶囊上方。 */
+  .dock { bottom: 56px; }
+  /* 窄屏只留图标与角标（一行放得下 6 个） */
   .dock-pill-text, .dock-pill-bar { display: none; }
-  /* 再收紧：5 个图标胶囊必须挤进 222px（否则折成两排，底栏上方多出一行） */
-  .dock { gap: 4px; }
-  .dock-pill { padding: 3px 5px; gap: 3px; }
+  /* 再收紧：6 个图标胶囊必须挤进 222px（否则折成两排，底栏上方多出一行） */
+  .dock { gap: 3px; }
+  .dock-pill { padding: 3px 4px; gap: 3px; }
   .dock-pill-caret { display: none; }
   /* ⚠️ 面板改**视口定位**：手机上胶囊组只占右侧一小段，以它为基准会算到 left=-128（实测）。
      改成左右各留 8px、底边抬到导航(56px)之上。 */

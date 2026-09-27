@@ -31,10 +31,10 @@ const PAGES = [
 const DANGER = /删|重置|转生|清空|卖出|出售|放弃|解雇|拆除|销毁|解散|格式化|导入|全部领取|一键/
 const MAX_PER_VIEW = 30 // 每页最多点几个不同处理器（防某个页面处理器特别多导致跑太久）
 
-/** 底部胶囊一共五块（挂机动向 / 食灵 / 奥义 / 快捷状态 / 事件日志），逐块点开。
+/** 底部胶囊一共六块（挂机动向 / 食灵 / 奥义 / 快捷状态 / 事件日志），逐块点开。
  *  ⚠️ 别用脚本侧的 `pinia._s.get('ui').toggleDockSection(...)`：实测在本守卫里那读到的 store
  *     与组件渲染用的不是同一个实例（flag 变 true 但 DOM 里一个面板都没有）。 */
-const DOCK_SECS = ['idle', 'spirit', 'aoji', 'status', 'log']
+const DOCK_SECS = ['idle', 'plan', 'spirit', 'aoji', 'status', 'log'] // 2026-09-27 用户⑩：+plan
 async function openDock(page, sec) {
   // ⚠️ 先关掉可能压在上面的浮层：**奇遇弹窗**（`.modal-backdrop`，z-index 50）是随机触发的，
   //    守卫跑满 4 分钟期间很可能正好弹一次，把底部胶囊（z-index 46）盖住 ⇒ Playwright 的真点击
@@ -205,9 +205,9 @@ for (let i = 0; i < SLICES; i++) {
   })
 }
 
-// 底部两条常驻提示 + 五个胶囊面板（它们不在 `.main-scroll` 里，逐页扫扫不到）：
+// 底部两条常驻提示 + 六个胶囊面板（它们不在 `.main-scroll` 里，逐页扫扫不到）：
 // 独立成一个 test，与上面的页面切片并行跑。
-test('交互守卫：底部提示条与五个底部面板里所有 @click 无运行时报错', async ({ page }) => {
+test('交互守卫：底部提示条与六个底部面板里所有 @click 无运行时报错', async ({ page }) => {
   const failures = []
   await enterGame(page)
   let totalClicks = 0
@@ -260,7 +260,7 @@ test('交互守卫：底部提示条与五个底部面板里所有 @click 无运
       ${f.err}`)
   }
 
-  // 底部五个胶囊（2026-09-20）：它们不在 `.main-scroll` 里，只扫 main-scroll 会让里面的处理器
+  // 底部六个胶囊（2026-09-20）：它们不在 `.main-scroll` 里，只扫 main-scroll 会让里面的处理器
   // （挂机暂停/停止、快捷状态入口、日志清空…）从此无人点过 ⇒ 逐块单独点一轮。
   // 放在全部页面之后，因为「停止挂机」会改变后续页面的前置状态。
   // ⚠️ 必须点胶囊（原因见 e2e-layout 同处注释：脚本侧拿到的 store 与组件渲染用的不是同一个实例）
@@ -319,8 +319,8 @@ test('交互守卫：底部提示条与五个底部面板里所有 @click 无运
   // 断言下限防「面板没渲染 ⇒ 一个都没点到 ⇒ 静默绿」——这正是本守卫最初漏掉 dropModal 的同类假绿。
   // 实测每块都有 1~6 个不同处理器（挂机动向的暂停/继续·关闭、快捷状态各入口、事件日志的清空/折叠…）。
   for (const d of drAll) expect(d.clicked, `底部面板(${d.sec}) 里应点到处理器（为 0 即说明这一轮是空转）`).toBeGreaterThanOrEqual(1)
-  expect(drAll.reduce((a, d) => a + d.clicked, 0), '五个底部面板合计应点到多个处理器').toBeGreaterThanOrEqual(6)
+  expect(drAll.reduce((a, d) => a + d.clicked, 0), '六个底部面板合计应点到多个处理器').toBeGreaterThanOrEqual(6)
 
-  console.log(`  底部提示条 + 五个底部面板 · 实际点击 ${totalClicks} 次（页面部分见各切片）`)
+  console.log(`  底部提示条 + 六个底部面板 · 实际点击 ${totalClicks} 次（页面部分见各切片）`)
   expect(failures, `以下交互触发运行时报错：\n${failures.join('\n')}`).toEqual([])
 })

@@ -5,6 +5,7 @@ import { OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
+import { aojiGateLevel, aojiGateText, aojiUnlockedAt, AOJI_GATE_NOTE } from '../game/data/aojiGates.js' // 等级门槛唯一出口（2026-09-27 用户⑧）
 import { getCombat } from '../game/combat/Combat.js'
 import { INSIGHT_NODES, INSIGHT_BRANCHES, getInsightNode } from '../game/data/insightTree.js'
 import { BISCUIT_TASTE_RATE } from '../game/data/biscuitUse.js'
@@ -12,22 +13,32 @@ import { BISCUIT_TASTE_RATE } from '../game/data/biscuitUse.js'
 const player = usePlayerStore()
 const ui = useUiStore()
 
-// 分类 tab（全部/攻击/防御/采集）
+// 分类 tab（全部/攻击/防御/采集/副业）
 const catFilter = ref('')
 const CATS = [
   { id: '', name: '全部' },
   { id: '攻击', name: '攻击' },
   { id: '防御', name: '防御' },
   { id: '采集', name: '采集' },
+  // 2026-09-27 用户⑧：副业线 10 条（产线侧乘区）
+  { id: '副业', name: '副业' },
 ]
 
 function isOn(id) {
   return player.gastronomy.active.includes(id)
 }
 function toggle(id) {
-  const on = player.toggleAoji(id)
-  ui.pushLog(on ? `激活奥义：${AOJIS.find((a) => a.id === id)?.name}` : `关闭奥义：${AOJIS.find((a) => a.id === id)?.name}`, 'info')
+  const r = player.toggleAoji(id)
+  // ⚠️ 门槛未达时 `toggleAoji` 返回的是**原因字符串**（不是 false）⇒ 直接把它显示出来
+  //    （2026-09-27 用户⑧：界面置灰 + 引擎拒绝，两处都从同一个出口拿文案）
+  if (typeof r === 'string') { ui.pushLog(r, 'warn'); return }
+  ui.pushLog(r ? `激活奥义：${AOJIS.find((a) => a.id === id)?.name}` : `关闭奥义：${AOJIS.find((a) => a.id === id)?.name}`, 'info')
 }
+// 等级门槛（唯一出口 `aojiGates.js`）：卡片徽章与按钮禁用都读它
+const gastroLevel = computed(() => player.skills?.gastronomy?.level ?? 1)
+const gateLevel = (id) => aojiGateLevel(id)
+const gateText = (id) => aojiGateText(id)
+const lockedGate = (a) => !aojiUnlockedAt(a.id, gastroLevel.value)
 function totalDrain() {
   return player.gastronomy.active.reduce((s, id) => s + (AOJIS.find((a) => a.id === id)?.costPerSec ?? 0), 0)
 }
@@ -89,6 +100,8 @@ function unlockNode(id) {
 
     <div class="card">
       <h3>美食奥义（{{ AOJIS.length }} 种）</h3>
+      <!-- 门槛规则常驻一行（2026-09-27 用户⑧）：文案来自 `aojiGateNote()`，页面不手抄数字 -->
+      <p class="dim aoji-gate-note">{{ AOJI_GATE_NOTE }}</p>
       <div class="region-tabs" style="flex-wrap: wrap">
         <button v-for="c in CATS" :key="c.id" class="btn btn-sm" :class="{ 'btn-primary': catFilter === c.id }" @click="catFilter = c.id">
           {{ c.name }}（{{ catCount(c.id) }}）
@@ -112,13 +125,23 @@ function unlockNode(id) {
           </div>
           <div class="spirit-card-badges">
             <span v-if="isOn(a.id)" class="badge badge-on">激活中</span>
+            <!-- 等级门槛（2026-09-27 用户⑧）：门槛的权威判定在 `player.toggleAoji`，这里只做**同一出口**的展示 -->
+            <span v-if="lockedGate(a)" class="badge badge-warn" :title="`开启需要美食知识 Lv${gateLevel(a.id)}，当前 Lv${gastroLevel}`">
+              🔒 {{ gateText(a.id) }}（当前 Lv{{ gastroLevel }}）
+            </span>
             <!-- 攻速类奥义撞硬下限时的诚实提示（2026-09-22）：数据不能改，界面上说清楚 -->
             <span v-if="speedWasted(a)" class="badge badge-warn" title="当前回合间隔已到 1.2s 硬下限，攻速加成不会再缩短间隔">⚠️ 攻速已到上限，此加成当前无效果</span>
           </div>
           <div class="spirit-card-effect dim">
             <span class="ing">{{ a.desc }}</span>
           </div>
-          <button class="btn btn-sm" :class="{ 'btn-primary': isOn(a.id) }" @click="toggle(a.id)">
+          <button
+            class="btn btn-sm"
+            :class="{ 'btn-primary': isOn(a.id) }"
+            :disabled="lockedGate(a)"
+            :title="lockedGate(a) ? gateText(a.id) : ''"
+            @click="toggle(a.id)"
+          >
             {{ isOn(a.id) ? '关闭' : '激活' }}
           </button>
         </div>
@@ -225,5 +248,11 @@ function unlockNode(id) {
 .biscuit-preview {
   font-size: 13px;
   color: var(--good, var(--good));
+}
+/* 门槛规则常驻行（2026-09-27 用户⑧）：卡片区上方一行说明，窄屏自动换行 */
+.aoji-gate-note {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
 }
 </style>

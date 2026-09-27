@@ -76,7 +76,7 @@ const EXEMPT = ['.gacha-btn-top', '.gacha-btn-price', '.gacha-btn-tag', 'b.mono'
 
 /** 底部胶囊（五块）逐块点开；扫描根是 `.dock-panel`。
  *  ⚠️ 面板必须**真展开**才匹配得到；否则那五块的深色/皮肤问题会被静默漏掉。 */
-const DOCK_SECS = ['idle', 'spirit', 'aoji', 'status', 'log']
+const DOCK_SECS = ['idle', 'plan', 'spirit', 'aoji', 'status', 'log'] // 2026-09-27 用户⑩：+plan
 async function openStatusDrawer(page, sec = 'idle') {
   await page.locator(`.dock-pill[data-sec="${sec}"]`).click()
   await page.waitForTimeout(260)

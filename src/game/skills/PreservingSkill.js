@@ -5,6 +5,7 @@
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
+import { PICKLE_RECIPES } from '../data/pickles.js' // 新增腌制品 3 条（2026-09-27 用户⑬ 小扩）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const PRESERVING_RECIPES = [
@@ -44,6 +45,6 @@ export const PRESERVING_RECIPES = [
 
 export class PreservingSkill extends ProductionSkill {
   constructor(player) {
-    super('preserving', player, raiseRecipeLevels([...PRESERVING_RECIPES, ...PRODUCTION_EXT.preserving, ...PRODUCTION_EXT2.preserving]))
+    super('preserving', player, raiseRecipeLevels([...PRESERVING_RECIPES, ...PICKLE_RECIPES, ...PRODUCTION_EXT.preserving, ...PRODUCTION_EXT2.preserving]))
   }
 }

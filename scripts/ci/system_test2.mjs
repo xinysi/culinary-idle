@@ -295,12 +295,12 @@ console.log('══ W6. 新功能 ══')
 console.log('══ X. 奥义/食灵 ══')
 {
   const p = freshPlayer()
-  check('奥义：28 个奥义结构完整（id/name/costPerSec/effect）', AOJIS.every((a) => typeof a === 'object' && a.id && a.name && Number.isFinite(a.costPerSec) && typeof a.effect === 'object'), AOJIS.filter((a) => !(a && a.id && a.name && Number.isFinite(a.costPerSec))).map((a) => a?.id ?? '非对象').join(','))
-  check('奥义：28 个奥义效果键均为支持的键', AOJIS.every((a) => {
+  check('奥义：全部奥义结构完整（id/name/costPerSec/effect）', AOJIS.every((a) => typeof a === 'object' && a.id && a.name && Number.isFinite(a.costPerSec) && typeof a.effect === 'object'), AOJIS.filter((a) => !(a && a.id && a.name && Number.isFinite(a.costPerSec))).map((a) => a?.id ?? '非对象').join(','))
+  check('奥义：全部奥义效果键均为支持的键', AOJIS.every((a) => {
     const e = a.effect ?? {}
-    const supported = new Set(['dmgPct', 'styleDmgPct', 'defensePct', 'speedPct', 'maxHpBonus', 'yieldPct', 'xpPct', 'healPct'])
+    const supported = new Set(['dmgPct', 'styleDmgPct', 'defensePct', 'speedPct', 'maxHpBonus', 'yieldPct', 'xpPct', 'healPct', 'sideline'])
     return Object.keys(e).every((k) => supported.has(k))
-  }), AOJIS.filter((a) => Object.keys(a.effect ?? {}).some((k) => !['dmgPct', 'styleDmgPct', 'defensePct', 'speedPct', 'maxHpBonus', 'yieldPct', 'xpPct', 'healPct'].includes(k))).map((a) => a.id).join(','))
+  }), AOJIS.filter((a) => Object.keys(a.effect ?? {}).some((k) => !['dmgPct', 'styleDmgPct', 'defensePct', 'speedPct', 'maxHpBonus', 'yieldPct', 'xpPct', 'healPct', 'sideline'].includes(k))).map((a) => a.id).join(','))
   check('食灵：32 个食灵结构完整（id/name/effect/level）', SPIRITS.every((s) => s && s.id && s.name && typeof s.effect === 'object'), SPIRITS.filter((s) => !(s && s.id && s.name)).map((s) => s?.id ?? '非对象').join(','))
   check('食灵：32 个食灵效果键均为支持的键', SPIRITS.every((s) => {
     const sup = new Set(['xpPct', 'styleDmgPct', 'dmgPct', 'healPerTurnPct', 'loseHpPerTurnPct', 'fishingAccPct', 'farmYieldBonus'])

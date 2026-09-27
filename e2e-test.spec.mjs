@@ -48,8 +48,9 @@ test.describe('游戏全流程', () => {
     await expect(page.locator('.top-nav-right button:has-text("状态")')).toHaveCount(0)
     await expect(page.locator('.dock-panel')).toHaveCount(0)
     await expect(page.locator('.dock-panel')).toHaveCount(0)
-    // 用户要求：五块 = **五个独立胶囊**（挂机动向 / 食灵 / 奥义 / 快捷状态 / 事件日志）
-    await expect(page.locator('.dock-pill')).toHaveCount(5)
+    // 用户要求：**独立胶囊**；2026-09-27 用户⑩ 加了「🗓 计划」（挂机计划从技能页搬来）⇒ 5 → 6
+// （顺序：⚡挂机动向 / 🗓计划 / 🐾食灵 / 🍜奥义 / 🧭快捷状态 / 📜事件日志）
+    await expect(page.locator('.dock-pill')).toHaveCount(6)
     await expect(page.locator('.dock-pill[data-sec="spirit"]')).toBeVisible()
     const pill = page.locator('.dock-pill[data-sec="idle"]')
     await expect(pill).toBeVisible()
@@ -80,31 +81,43 @@ test.describe('游戏全流程', () => {
       await page.waitForTimeout(350)
       await expect(page.locator('.main-scroll')).toBeVisible()
     }
-    // 其余功能页在左侧栏「功能」折叠分组中（生产与采集 / 经营与挑战）
+    // 其余功能页在左侧栏「功能」页签下
+    // 🔴 2026-09-27 用户⑳ 改版：宽屏只剩 **7 个大类按钮**，页面清单在点开后的右侧浮层
+    //    （`.feature-flyout .ff-item`）里；窄屏才退回「手风琴 + 磁贴」。本用例在宽屏跑 ⇒ 走新路径。
+    // ⚠️ 分组名以 `featureGroups.js` 为准（这里原先写的是「生产与采集 / 经营与挑战」——
+    //    那是 2026-09-10 的老分组名，改版后一直没更新，只是当时按磁贴名查找、分组名用不上才没暴露）。
     const featureGroups = [
-      ['生产与采集', ['商店', '珍馐阁', '炼金', '采集队', '牧场', '地窖', '厨房笔记']],
-      ['经营与挑战', ['分店', '交易所', '自动化', '常客', '食灵物语', '试炼']],
+      ['采买与转化', ['商店', '珍馐阁', '炼金', '交易所']],
+      ['挂机产线', ['采集队', '牧场', '地窖', '自动化']],
+      ['研究与收集', ['厨房笔记', '食灵物语']],
+      ['餐厅经营', ['分店', '常客']],
+      ['挑战与休闲', ['试炼']],
     ]
-    // 左栏页签（2026-09-10）：功能页在「🧩 功能」页签下，方块磁贴一行三个、全部展开
+    // 左栏页签（2026-09-10）：功能页在「🧩 功能」页签下
     await page.locator('.sidebar-tab', { hasText: '功能' }).click()
     await page.waitForTimeout(250)
-    // 2026-09-18 留存改进 ⑤：未解锁的功能页默认收起（新档会少 10 个门槛页），
-    // 本用例要点遍全部功能页，所以先按「显示全部」——顺便也就验证了这个开关本身可用。
+    // 2026-09-18 留存改进 ⑤：未解锁的功能页默认收起，本用例要点遍全部 ⇒ 先按「显示全部」
     const showAllBtn = page.locator('.feature-hidden button', { hasText: '显示全部' })
     if (await showAllBtn.count()) { await showAllBtn.click(); await page.waitForTimeout(300) }
-    // 2026-09-18 起左栏「功能」分组**默认折叠**（首屏只留 8 个分组入口，压掉「入口即成本」）。
-    // 本用例要点遍全部磁贴，所以再按一次「全部展开」——顺带验证这个开关。
-    const expandAllBtn = page.locator('.feature-hidden button', { hasText: '全部展开' })
-    if (await expandAllBtn.count()) { await expandAllBtn.click(); await page.waitForTimeout(300) }
-    for (const [, items] of featureGroups) {
-      for (const it of items) {
-        await page.locator('.feature-tile', { hasText: it }).first().click({ timeout: 3000 })
-        await page.waitForTimeout(350)
-        await expect(page.locator('.main-scroll')).toBeVisible()
+    /** 打开某大类（宽屏浮层）或全部展开（窄屏手风琴）后点某一页 */
+    const openFeature = async (catName, pageName) => {
+      const cat = page.locator('.feature-cat', { hasText: catName })
+      if (await cat.count()) {
+        await cat.first().click({ timeout: 3000 })
+        await page.waitForTimeout(200)
+        await page.locator('.feature-flyout .ff-item', { hasText: pageName }).first().click({ timeout: 3000 })
+      } else {
+        // 窄屏 / 回退布局：磁贴直达
+        await page.locator('.feature-tile', { hasText: pageName }).first().click({ timeout: 3000 })
       }
+      await page.waitForTimeout(330)
+      await expect(page.locator('.main-scroll')).toBeVisible()
     }
-    // 小游戏（经营与挑战组内）：进入后逐个点开游戏入口
-    await page.locator('.feature-tile', { hasText: '小游戏' }).first().click()
+    for (const [catName, items] of featureGroups) {
+      for (const it of items) await openFeature(catName, it)
+    }
+    // 小游戏（挑战与休闲组内）：进入后逐个点开游戏入口
+    await openFeature('挑战与休闲', '小游戏')
     await page.waitForTimeout(500)
     for (const g of ['商店', '火候炉', '讲堂', '2048', '大胃王', '拼图', '连连看', '翻牌', '贪吃蛇', '吃豆人', '消消乐', '笨鸟先飞', '凑凑消', '水果合成', '果了个果', '垂钓渔翁', '切菜大师', '打地鼠', '摆盘', '接汤', '传菜', '方块', '扫雷', '滑冰', '猜菜名', '调味表', '上菜顺序', '汤圆冰壶']) {
       // 分页入口（2026-09-09）：目标不在当前页时先翻页（最多 3 次，防死循环）
@@ -457,7 +470,7 @@ test.describe('游戏全流程', () => {
     expect(await page.locator('.dock-panel').count()).toBe(0)
     expect(await disp('.mobile-nav')).toBe('none')
     expect(await disp('.dock-pill')).not.toBe('MISSING')
-    expect(await page.locator('.dock-pill').count(), '五个胶囊应常驻（宽屏）').toBe(5)
+    expect(await page.locator('.dock-pill').count(), '六个胶囊应常驻（宽屏）').toBe(6)
     await openDrawer()
     const drawer = await page.evaluate(() => {
       const panel = document.querySelector('.dock-panel')
@@ -847,9 +860,9 @@ test.describe('游戏全流程', () => {
     await page.locator('.bgm-pill .bgm-tbtn--play').click() // 恢复播放
     await page.waitForTimeout(200)
 
-    // ⑦ 高度与旁边五个功能胶囊一致（2026-09-21 用户：「BGM 胶囊是不是融合进底栏了，那大小应该也适配为
-    //    旁边五个胶囊的大小」）。原先 BGM 胶囊 33px（竖 padding 7px）、窄屏更被 `padding: 7px 10px`
-    //    撑到 47px，而五个胶囊是 24px ⇒ 右下角看起来是**两块**东西。
+    // ⑦ 高度与旁边那排功能胶囊一致（2026-09-21 用户：「BGM 胶囊是不是融合进底栏了，那大小应该也适配为
+    //    旁边那排胶囊的大小」）。原先 BGM 胶囊 33px（竖 padding 7px）、窄屏更被 `padding: 7px 10px`
+    //    撑到 47px，而功能胶囊是 24px ⇒ 右下角看起来是**两块**东西。
     //    ⚠️ 只做**行为断言**（量真实高度）：高度来自 `--dock-pill-h` 这个单一 token，写死谁的样式都会被这里抓住。
     const heights = await page.evaluate(() => {
       const pills = [...document.querySelectorAll('.dock-pill')]
@@ -861,8 +874,8 @@ test.describe('游戏全流程', () => {
       return { pills: pills.map(box), bgm: box(bgm), token: getComputedStyle(document.documentElement).getPropertyValue('--dock-pill-h').trim() }
     })
     const pillH = heights.pills.map((x) => x.h)
-    expect(heights.pills.length, '五个功能胶囊应都在').toBe(5)
-    expect(Math.max(...pillH) - Math.min(...pillH), `五个胶囊高度不一致：${pillH.join(' / ')}`).toBeLessThan(0.6)
+    expect(heights.pills.length, '六个功能胶囊应都在（2026-09-27 用户⑩ 加了 🗓 计划）').toBe(6)
+    expect(Math.max(...pillH) - Math.min(...pillH), `六个胶囊高度不一致：${pillH.join(' / ')}`).toBeLessThan(0.6)
     expect(heights.bgm.h, `BGM 胶囊 ${heights.bgm.h}px 与功能胶囊 ${pillH[0]}px 不等高（应都等于 --dock-pill-h=${heights.token}）`).toBeCloseTo(pillH[0], 0)
     expect(heights.bgm.h, '--dock-pill-h 与实际高度对不上（有人写死了高度）').toBeCloseTo(Number.parseFloat(heights.token), 0)
     // 间距也必须一致：五个胶囊彼此的 gap 是 5px，BGM 胶囊与第 5 个胶囊的间距**也要是同一个值**，

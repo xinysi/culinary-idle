@@ -44,8 +44,9 @@ export const useUiStore = defineStore('ui', {
     showSearch: false, // 全局搜索弹窗
     showShareCard: false, // 战报分享卡弹窗（2026-09-06）
     showMarketModal: false, // 限时活动轮换表弹窗（2026-09-06）
-    // 底部状态面板（2026-09-19 由右栏改为浮层；2026-09-20 再改成**五个独立胶囊各自向上弹出**）：
-    // `dockSection` = 当前展开的那一块（'idle'|'spirit'|'aoji'|'status'|'log'，null = 全收起）。
+    // 底部状态面板（2026-09-19 由右栏改为浮层；2026-09-20 再改成**独立胶囊各自向上弹出**）：
+    // `dockSection` = 当前展开的那一块（'idle'|'plan'|'spirit'|'aoji'|'status'|'log'，null = 全收起）。
+    // `plan` = 2026-09-27 用户⑩ 加的（挂机计划从技能页搬进底栏，不再是页面里的一整张卡）。
     // 同时只开一个（点另一个自动换）。非存档（与其它浮层一致，刷新后收起）。
     dockSection: null,
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）

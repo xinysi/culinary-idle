@@ -17,11 +17,12 @@
 import { getItem } from './items.js'
 import { isHarshWeather } from './weather.js'
 import { farmSeason } from './farmingSeason.js'
-import { activeMarketEvents } from './marketEvents.js'
+import { activeMarketEvents, NIGHT_MARKET_BASE_MULT } from './marketEvents.js'
 import { OFFLINE_CAP, DERIVED_MAX } from './caps.js'
 import { RANCH_ANIMALS, POND_FISH } from './ranch.js'
 import { MUSHROOM_MEDIA } from './mushroomHouse.js'
 import { SPIRIT_PLANTS } from './spiritField.js'
+import { SIDELINE_AXES } from './sidelineWorks.js' // 副业线奥义的轴标签（2026-09-27）
 import { HIVE_MEDIA, greenhouseHoneyChance } from './greenhouse.js'
 import { SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { CARAVAN_LOSS_FLOOR } from './caravan.js'
@@ -84,6 +85,20 @@ function joinParts(map, labels) {
     out.push(`${labels[k]} ${pct(v)}`)
   }
   return out
+}
+/**
+ * 副业轴的「三段来源」串：`作品 12% + 阶梯 9% + 奥义 6%`（零段自动省略）。
+ * 🔴 为什么不能像原先那样用「合计 − 阶梯」倒推作品：副业线奥义（2026-09-27）接进同一条轴之后，
+ *   那份差额里混着奥义，页面会把奥义说成「作品」。段拆分只在 `player.sidelineEffectParts(axis)` 一处算。
+ */
+function sidelineSegs(p, axis, fmt) {
+  const parts = p.sidelineEffectParts?.(axis) ?? { work: 0, ladder: 0, aoji: 0, total: 0 }
+  const segs = [
+    ['作品', parts.work],
+    ['阶梯', parts.ladder],
+    ['奥义', parts.aoji],
+  ].filter(([, v]) => Math.abs(v) > 1e-9).map(([k, v]) => `${k} ${fmt(v)}`)
+  return segs.length ? segs.join(' + ') : '—'
 }
 const KEY_LABEL = {
   xpPct: '经验', yieldPct: '产量', craftPct: '制作成功率', dmgPct: '伤害', styleDmgPct: '招式伤害',
@@ -388,6 +403,21 @@ export const EFFECT_ROWS = [
     },
   },
   {
+    // 副业线奥义（2026-09-27 用户⑧）：效果落在**副业作品/量产阶梯同一条轴**上（出口 `player.sidelineEffectTotal`），
+    // 所以这一行必须显示 —— 否则玩家为它付了品鉴点却在「效果总览」里看不到任何东西。
+    id: 'aojiSideline', group: 'craft', icon: '🧰', name: '美食奥义·副业线', kind: 'buff', src: '美食知识（已激活的奥义）', view: 'skill:gastronomy',
+    read: (p) => {
+      const s = p.gastronomyEffects?.().sideline ?? {}
+      const parts = []
+      for (const [axis, v] of Object.entries(s)) {
+        const ax = SIDELINE_AXES[axis]
+        parts.push(`${ax?.label ?? axis} ${ax?.amountLabel ? ax.amountLabel(v) : `+${v}`}`)
+      }
+      if (!parts.length) return off('没有激活副业线奥义（木器之魂 / 窑火长明 …）')
+      return { on: true, text: parts.join(' · ') }
+    },
+  },
+  {
     id: 'guildXp', group: 'craft', icon: '🛡', name: '公会被动·经验与制作', kind: 'buff', src: '公会（辅助型 / 制作型）', view: 'guild',
     read: (p) => {
       const g = p.guildEffects()
@@ -499,9 +529,7 @@ export const EFFECT_ROWS = [
     read: (p) => {
       const add = p.sidelineEffectTotal?.('cellarValue') ?? 0
       if (!add) return off('还没把陶器做成作品、也没投入量产阶梯——每件作品 +1,500、每档阶梯 +750')
-      const w = (p.sidelineWorks ?? []).length ? p.sidelineEffectTotal('cellarValue') - p.sidelineLadderTotal('cellarValue') : 0
-      const lad = p.sidelineLadderTotal?.('cellarValue') ?? 0
-      return { on: true, text: `单槽价值上限 ${(p.cellarSlotValueMax?.() ?? 0).toLocaleString()}（基础 16,000 + 作品 ${w.toLocaleString()} + 阶梯 ${lad.toLocaleString()}）` }
+      return { on: true, text: `单槽价值上限 ${(p.cellarSlotValueMax?.() ?? 0).toLocaleString()}（基础 16,000 + ${sidelineSegs(p, 'cellarValue', (v) => v.toLocaleString())}）` }
     },
   },
   {
@@ -509,8 +537,7 @@ export const EFFECT_ROWS = [
     read: (p) => {
       const v = p.tipBonusPct?.() ?? 0
       if (!v) return off('还没把织物做成作品、也没投入量产阶梯——每件作品 +2%、每档阶梯 +1.5%')
-      const lad = p.sidelineLadderTotal?.('tipPct') ?? 0
-      return { on: true, text: `小费 ${pct(v)}（作品 ${pct(v - lad)} + 阶梯 ${pct(lad)}；乘在顾客好感与常客小费之上）` }
+      return { on: true, text: `小费 ${pct(v)}（${sidelineSegs(p, 'tipPct', pct)}；乘在顾客好感与常客小费之上）` }
     },
   },
   {
@@ -518,26 +545,26 @@ export const EFFECT_ROWS = [
     read: (p) => {
       const v = p.michelinSignScore?.() ?? 0
       if (!v) return off('还没把绣品做成作品、也没投入量产阶梯——每件作品 +12 分、每档阶梯 +10 分')
-      const lad = p.sidelineLadderTotal?.('michelinScore') ?? 0
-      return { on: true, text: `米其林评分 +${v} 分（作品 +${v - lad} + 阶梯 +${lad}；第七维「招牌绣屏」，帮你跨星级门槛）` }
+      return { on: true, text: `米其林评分 +${v} 分（${sidelineSegs(p, 'michelinScore', (x) => `+${x}`)}；第七维「招牌绣屏」，帮你跨星级门槛）` }
     },
   },
   {
     id: 'candleNightWindow', group: 'income', icon: '🕯️', name: '蜡烛·夜市狂潮时长', kind: 'buff', src: '副业·蜡烛制作', view: 'skill:candles',
     read: (p) => {
       const h = p.nightMarketExtraHours?.() ?? 0
-      const mult = p.nightMarketMult?.() ?? 2
-      if (!h && mult <= 2) return off('还没把蜡烛做成作品、也没投入量产阶梯——作品每件 +1 小时、阶梯每档 +0.03 倍')
+      const mult = p.nightMarketMult?.() ?? NIGHT_MARKET_BASE_MULT
+      if (!h && mult <= NIGHT_MARKET_BASE_MULT) return off('还没把蜡烛做成作品、也没投入量产阶梯——作品每件 +1 小时、阶梯每档 +0.03 倍')
       const end = p.nightMarketEndHour?.() ?? 22
-      return { on: true, text: `夜市狂潮 16:00–次日 ${String(end % 24).padStart(2, '0')}:00 · 餐厅收入 ×${mult.toFixed(2)}（作品延长时间、阶梯提高倍率）` }
+      const segs = sidelineSegs(p, 'nightMult', (v) => `+${n1(v)} 倍`)
+      return { on: true, text: `夜市狂潮 16:00–次日 ${String(end % 24).padStart(2, '0')}:00 · 餐厅收入 ×${mult.toFixed(2)}（时长：作品 ${h} 小时；倍率：基础 ×${NIGHT_MARKET_BASE_MULT}${segs === '—' ? '' : ` + ${segs}`}）` }
     },
   },
   {
     id: 'woodworkingDecor', group: 'income', icon: '🪚', name: '木工·手工装潢手艺', kind: 'buff', src: '副业·木工（量产阶梯）', view: 'skill:woodworking',
     read: (p) => {
-      const v = p.sidelineLadderTotal?.('decorPct') ?? 0
-      if (!v) return off('还没把多余木器投入量产阶梯——每档装潢加成 +2%')
-      return { on: true, text: `装潢加成 ${pct(v)}（加在商店+手工装潢的合计上）` }
+      const v = p.sidelineEffectTotal?.('decorPct') ?? 0
+      if (!v) return off('还没把多余木器投入量产阶梯、也没开启副业线奥义——每档装潢加成 +2%')
+      return { on: true, text: `装潢加成 ${pct(v)}（${sidelineSegs(p, 'decorPct', pct)}；加在商店+手工装潢的合计上）` }
     },
   },
 

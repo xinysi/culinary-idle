@@ -51,7 +51,8 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
   // 配方成功率条数（含 quote 形态）
   let n = 0
   for (const p of walk('src/game')) n += (src(p).match(/["']?successChance["']?\s*:/g) || []).length
-  check('A. 配方 successChance 条数仍为 1213（未批量改写数据）', n === 1213, `实际 ${n}`)
+  // 2026-09-27 用户⑬：配方 1246→1249（新增 3 条腌制）⇒ successChance 条数基线 1213→1216
+  check('A. 配方 successChance 条数仍为 1216（未批量改写数据）', n === 1216, `实际 ${n}`)
 }
 
 // ── B. 唯一出口：禁止再用原始概率字段 ──
