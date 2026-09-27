@@ -25,6 +25,30 @@ const check = (name, cond, detail = '') => {
   }
 }
 const read = (p) => fs.readFileSync(p, 'utf8')
+
+/**
+ * 剔除模板串插值 `${...}`（花括号配对，吃嵌套模板）与 Vue `{{...}}` 插值。
+ * ⚠️ 放在**模块级**而不是某个 `{}` 块里：2026-09-27 因为把它定义在一个块内、却在另一个块里调用，
+ *   抛 `ReferenceError` 让整段审计没跑完（「守卫没跑」与「守卫全绿」在日志里长得一样）。
+ */
+function stripInterp(str) {
+  let out = ''
+  for (let k = 0; k < str.length; k++) {
+    if (str[k] === '$' && str[k + 1] === '{') {
+      let depth = 1
+      k += 2
+      while (k < str.length && depth > 0) {
+        if (str[k] === '{') depth++
+        else if (str[k] === '}') depth--
+        k++
+      }
+      k--
+      continue
+    }
+    out += str[k]
+  }
+  return out.replace(/\{\{[^}]*\}\}/g, '')
+}
 /** 列出 src 下全部源码文件（.js/.vue） */
 function walkSrc(dir = 'src', out = []) {
   for (const n of fs.readdirSync(dir)) {
@@ -354,7 +378,13 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   for (const f of files) {
     const lines = read(`src/game/data/${f}`).split('\n')
     lines.forEach((line, i) => {
-      for (const m of line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}\1)/g)) {
+      // 🔴 **先剔除 `${...}` 插值，再切字符串字面量**（2026-09-27 修，两处都是真踩过的坑）：
+      //   ① 插值里写 `(`/`)`（如 `fn(a, (x) => x)`）会让「按括号计数」的判据失衡；
+      //   ② 模板串里**再嵌一层反引号**（`总 ${f((x) => `+${x}`)}`）时，下面那条 `(['"`])` 正则会把
+      //      外层串**从内层反引号处切断** ⇒ 里外两半各报一次「括号不配平」（纯假阳性，实测报了 3 条）。
+      //   先剥插值后外层反引号才正确配对；判据仍是「面向玩家的中文里不该有落单的括号」。
+      const lineSafe = stripInterp(line)
+      for (const m of lineSafe.matchAll(/(['"`])((?:\\.|(?!\1).){2,}\1)/g)) {
         const body = m[2].slice(0, -1)
         if (!/[\u4e00-\u9fa5]/.test(body)) continue
         const tag = `${f}:${i + 1}`
@@ -410,25 +440,7 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   //    结果被 `'铜-weapon-copperKnife'` 这类**数据主键**（含中文因此被当成面向玩家的串）打出一片假阳性 ——
   //    「哪些 id 会漏到界面上」不是能靠词表猜的，改成**两处精确的覆盖断言**（见下面两条 check）更可靠。
   const IDS = /\b(tier|minTier|tierReq|reqLevel|itemId|itemName|itemQty|qty|pct|skillId|defId|slotId|amount|exp|foraging|fishing|hunting|excavation|woodcutting|mining|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|opp\(\))\b/
-  /** 剔除模板串插值（花括号配对计数）与 Vue 插值 */
-  function stripInterp(str) {
-    let out = ''
-    for (let k = 0; k < str.length; k++) {
-      if (str[k] === '$' && str[k + 1] === '{') {
-        let depth = 1
-        k += 2
-        while (k < str.length && depth > 0) {
-          if (str[k] === '{') depth++
-          else if (str[k] === '}') depth--
-          k++
-        }
-        k--
-        continue
-      }
-      out += str[k]
-    }
-    return out.replace(/\{\{[^}]*\}\}/g, '')
-  }
+  // stripInterp 见模块级定义（2026-09-27 上提：块内定义跨块调用会 ReferenceError）
   /** 剥掉模板里的标签与属性（引号感知：属性值里可能有 > 或引号） */
   function stripTags(tpl) {
     let out = ''
