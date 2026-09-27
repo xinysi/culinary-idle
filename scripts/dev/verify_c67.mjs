@@ -44,8 +44,8 @@ const CASES = [
   {
     name: '④ 精通次数退回「只在成功时加」（0% 的卡片永远练不起来）',
     rel: 'src/game/skills/ExplorationSkill.js',
-    from: '    this.player.addMastery(this.id, target.id, 1)\n    if (Math.random() < this.successChance(target)) {',
-    to: '    if (Math.random() < this.successChance(target)) {\n      this.player.addMastery(this.id, target.id, 1)',
+    from: '    this.player.addMastery(this.id, target.id, 1)\n',
+    to: '',
     expect: '失败也计精通次数',
   },
   {
@@ -100,9 +100,51 @@ const CASES = [
   {
     name: '⑫ 离线装备掉率改成逐件四舍五入（期望 0.6 件时一件都不掉，与在线掷骰口径脱节）',
     rel: 'src/game/skills/ExplorationSkill.js',
-    from: "    const gearTotal = Math.round(ok * EXPLORE_GEAR_DROP_CHANCE)\n    for (let n = 0; n < gearTotal; n++) {\n      const gear = EXPLORE_GEAR_ITEMS[n % EXPLORE_GEAR_ITEMS.length]\n      items[gear.id] = (items[gear.id] ?? 0) + 1\n    }",
-    to: "    for (const gear of EXPLORE_GEAR_ITEMS) {\n      const q = Math.round((ok * EXPLORE_GEAR_DROP_CHANCE) / EXPLORE_GEAR_ITEMS.length)\n      if (q > 0) items[gear.id] = (items[gear.id] ?? 0) + q\n    }",
+    from: "    const gearTotal = Math.round(actions * EXPLORE_GEAR_DROP_CHANCE)\n    for (let n = 0; n < gearTotal; n++) {\n      const gear = EXPLORE_GEAR_ITEMS[n % EXPLORE_GEAR_ITEMS.length]\n      items[gear.id] = (items[gear.id] ?? 0) + 1\n    }",
+    to: "    for (const gear of EXPLORE_GEAR_ITEMS) {\n      const q = Math.round((actions * EXPLORE_GEAR_DROP_CHANCE) / EXPLORE_GEAR_ITEMS.length)\n      if (q > 0) items[gear.id] = (items[gear.id] ?? 0) + q\n    }",
     expect: '先取整「总件数」',
+  },
+  {
+    name: '⑬ 装备掉率挪回「成功分支」内（末段 0% 的卡片永远掉不出装备）',
+    rel: 'src/game/skills/ExplorationSkill.js',
+    from: "    let gear = null\n    if (Math.random() < EXPLORE_GEAR_DROP_CHANCE) {\n      gear = EXPLORE_GEAR_ITEMS[Math.floor(Math.random() * EXPLORE_GEAR_ITEMS.length)]\n      this.player.gainItem(gear.id, 1)\n    }\n    const gearText = gear ? `✨${gear.name}` : null\n    if (Math.random() < this.successChance(target)) {",
+    to: "    let gear = null\n    let gearText = null\n    if (Math.random() < this.successChance(target)) {\n      if (Math.random() < EXPLORE_GEAR_DROP_CHANCE) {\n        gear = EXPLORE_GEAR_ITEMS[Math.floor(Math.random() * EXPLORE_GEAR_ITEMS.length)]\n        this.player.gainItem(gear.id, 1)\n        gearText = `✨${gear.name}`\n      }",
+    expect: '末段 0% 的卡片',
+  },
+  {
+    name: '⑭ 觅珍不再剔除探索专属装备（图鉴来源又指回抽卡、0.01% 被架空）',
+    rel: 'src/game/data/mijianDraws.js',
+    from: " || EXPLORE_GEAR_IDS.includes(it.id)",
+    to: '',
+    expect: '已从觅珍全部池剔除',
+  },
+  {
+    name: '⑮ 离线掉率基数退回「成功次数」（离线比在线少掉一半以上）',
+    rel: 'src/game/skills/ExplorationSkill.js',
+    from: 'const gearTotal = Math.round(actions * EXPLORE_GEAR_DROP_CHANCE)',
+    to: 'const gearTotal = Math.round(ok * EXPLORE_GEAR_DROP_CHANCE)',
+    expect: 'round(探索动作数 × 0.01%)',
+  },
+  {
+    name: '⑯ 图鉴不登记「美食探索」这条来源（玩家在图鉴里找不到出处）',
+    rel: 'src/game/data/itemSources.js',
+    from: "for (const g of EXPLORE_GEAR_ITEMS) {\n  add(g.id, `美食探索（每次探索 ${(EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3)}% 掉落）`)\n}",
+    to: '',
+    expect: '图鉴来源只写「美食探索」',
+  },
+  {
+    name: '⑰ 卡片掉落列表里删掉专属装备那一行（玩家还是「看不到」）',
+    rel: 'src/views/ExplorationView.vue',
+    from: '            <div class="loot-row loot-row--gear" :title="GEAR_TIP">',
+    to: '            <div v-if="false" class="loot-row loot-row--gear" :title="GEAR_TIP">',
+    expect: '卡片掉落列表里有一行专属装备',
+  },
+  {
+    name: '⑱ 同业榜成长改 0（「越往后越强」不成立 —— 校验新写的那条跨 12 期断言真的会咬）',
+    rel: 'src/game/data/rivals.js',
+    from: 'export const RIVAL_MONTH_GROWTH = 0.06',
+    to: 'export const RIVAL_MONTH_GROWTH = 0',
+    expect: '跨年递增',
   },
 ]
 

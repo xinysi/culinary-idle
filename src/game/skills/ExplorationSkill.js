@@ -157,9 +157,20 @@ export class ExplorationSkill extends Skill {
     //    末段卡片的初始成功率是 0%，若只在成功时计精通，那张卡就永远练不起来（死卡）。
     //    与 Melvor 同口径（偷窃也按尝试计精通）。**这一条是「0% 起步靠精通提高」成立的前提。**
     this.player.addMastery(this.id, target.id, 1)
+    // 🔴 专属装备的 0.01% 是**每次探索动作**掷一次（2026-09-28 用户定口径），与成败无关：
+    //    ① 它是「探索」这件事的奖励，不该被成功率再乘一道（写成成功分支内 ⇒ 段 5 未练精通 33 小时/件、
+    //       **段 10 初始 0% 的卡永远不掉**，那条路等于不存在）；
+    //    ② 与「失败也计精通」同一个理由——末段卡片在把精通练起来之前也得能掉装备。
+    //    掷骰放在**判定成败之前**（顺序不影响概率，但要保证失败分支也带上结果）。
+    let gear = null
+    if (Math.random() < EXPLORE_GEAR_DROP_CHANCE) {
+      gear = EXPLORE_GEAR_ITEMS[Math.floor(Math.random() * EXPLORE_GEAR_ITEMS.length)]
+      this.player.gainItem(gear.id, 1)
+    }
+    const gearText = gear ? `✨${gear.name}` : null
     if (Math.random() < this.successChance(target)) {
       // 成功：结算掉落
-      const gained = []
+      const gained = gearText ? [gearText] : []
       const doubled = Math.random() < this.doubleChance(target) // 精通档位/池的双倍产出（与采集同口径）
       for (const entry of target.loot) {
         if (Math.random() >= this.lootChance(entry)) continue
@@ -172,12 +183,6 @@ export class ExplorationSkill extends Skill {
           this.player.gainItem(entry.itemId, qty)
           gained.push(`${itemName(entry.itemId)}×${qty}`) // 掉落物品用中文名（此前误用英文 id）
         }
-      }
-      // 专属装备（2026-09-27 用户⑥）：每次**成功探索**按 0.01% 掷一次，四件等概率
-      if (Math.random() < EXPLORE_GEAR_DROP_CHANCE) {
-        const gear = EXPLORE_GEAR_ITEMS[Math.floor(Math.random() * EXPLORE_GEAR_ITEMS.length)]
-        this.player.gainItem(gear.id, 1)
-        gained.push(`✨${gear.name}`)
       }
       // 卡片经验（2026-09-09 修复）：此前误用 addXp，少了 ×60 卡片系数与精通倍率 → 满级时长
       // 比同类采集慢约 12 倍（基准 64 天 vs 5 天）。改用 addCardXp，与采集/制作同口径。
@@ -195,7 +200,8 @@ export class ExplorationSkill extends Skill {
         this.player.setCombat({ hp: Math.max(0, this.player.combat.hp - dmg) })
         penalty = `损失 ${dmg} 品鉴值`
       }
-      EventBus.emit('skill:action', { skillId: this.id, itemId: target.id, qty: 0, outcome: 'explorefail', penalty, timestamp: Date.now() })
+      // 失败也可能掉出专属装备（0.01% 按动作算）—— 不带 extraGain 的话玩家在日志里看不到它
+      EventBus.emit('skill:action', { skillId: this.id, itemId: target.id, qty: 0, outcome: 'explorefail', penalty, extraGain: gearText, timestamp: Date.now() })
     }
   }
 
@@ -224,7 +230,9 @@ export class ExplorationSkill extends Skill {
     }
     // 先按 0.01% 算**总件数**，再按稳定次序分给四件；不能逐件 round(期望/4)，
     // 否则期望刚过 0.5 件/件时会在一次离线结算中凭空给出四件。
-    const gearTotal = Math.round(ok * EXPLORE_GEAR_DROP_CHANCE)
+    // ⚠️ 基数是 `actions`（**每次动作**，成败都算）—— 与在线 `performAction` 的掷骰口径一致；
+    //    用 `ok`（成功次数）会让离线比在线少掉一半以上，且在 0% 的卡片上永远不掉。
+    const gearTotal = Math.round(actions * EXPLORE_GEAR_DROP_CHANCE)
     for (let n = 0; n < gearTotal; n++) {
       const gear = EXPLORE_GEAR_ITEMS[n % EXPLORE_GEAR_ITEMS.length]
       items[gear.id] = (items[gear.id] ?? 0) + 1

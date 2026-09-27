@@ -14,6 +14,7 @@ import { SMITHING_SET_RECIPES } from './smithSetExt.js'
 import { PRESERVATION_RECIPES } from '../skills/PreservationSkill.js'
 import { raiseRecipeLevels, balanceRecipeLevels } from '../skills/recipeBalance.js'
 import { EXPLORATION_TARGETS_ALL } from './explorationTargets.js'
+import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from './explorationGear.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
 import { SHOP_ITEMS } from './shop.js'
@@ -147,6 +148,13 @@ for (const s of SHOP_ITEMS) if (s.itemId) add(s.itemId, `杂货铺购买（${s.p
 
 // 探索（200 目标）
 for (const t of EXPLORATION_TARGETS_ALL) for (const l of t.loot ?? []) if (l.itemId) add(l.itemId, `探索「${t.name}」获得`)
+// 探索**专属装备**（与目标无关的独立掷骰）：每条目都是「美食探索（0.01% 掉落）」。
+// 🔴 必须登记：这四件同时已从觅珍各池剔除（`mijianDraws.js` 按 EXPLORE_GEAR_IDS 排除），
+//    不登记就成了「无来源物品」（audit_sync 有一条盯着这个数），而且玩家在图鉴里会找不到出处。
+//    概率数字从常量派生（改掉率时文案自动跟着变，别手抄）。
+for (const g of EXPLORE_GEAR_ITEMS) {
+  add(g.id, `美食探索（每次探索 ${(EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3)}% 掉落）`)
+}
 
 // 赛季：限定装备 + 奖励档位（用 seasonTiers 主题化后的真实发放奖励，避免把被替换的通用道具误标为赛季来源）
 for (const s of SEASONS) {

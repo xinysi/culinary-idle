@@ -1465,10 +1465,16 @@ console.log('══ E. 离线进度 ══')
   // 同业竞争榜（2026-09-10）：月度榜单，对手每月变强，只给正向激励
   {
     check('同业榜', `榜单规模 ${RIVAL_BOARD_SIZE}（含玩家）、对手池 ${RIVAL_SHOPS.length}`, RIVAL_BOARD_SIZE === 6 && RIVAL_SHOPS.length === 12)
-    check('同业榜', '对手分数同月确定、跨月递增', (() => {
+    check('同业榜', '对手分数同月确定、跨年递增', (() => {
       const m = monthIndexOf()
-      return rivalsOfMonth(m).map((r) => r.score).join() === rivalsOfMonth(m).map((r) => r.score).join() &&
-        rivalsOfMonth(m + 1).reduce((a, r) => a + r.score, 0) > rivalsOfMonth(m).reduce((a, r) => a + r.score, 0)
+      const same = rivalsOfMonth(m).map((r) => r.score).join() === rivalsOfMonth(m).map((r) => r.score).join()
+      const sum = (k) => rivalsOfMonth(k).reduce((a, r) => a + r.score, 0)
+      // 🔴 不能拿「相邻两期」比合计（2026-09-28 修）：每月上场的是**轮换后的不同 5 家**
+      //    （`RIVAL_SHOPS[(monthIndex*3 + i*2) % n]`），换人就会让合计变小 —— 实测相邻 1 期
+      //    「递增」只在 31/61 期成立（约掷硬币），这条断言自 2026-09-10 起一直是**半个闰年就红一次**，
+      //    直到 09-28 本地 00:00 换到第 9 期才第一次真红。跨 12 期成长 1+0.06×12 = ×1.72，
+      //    远超每月 ±12% 抖动与换人影响（实测 61/61 期都成立）⇒ 用它钉「越往后越强」。
+      return same && sum(m + 12) > sum(m) && sum(m + 24) > sum(m + 12)
     })())
     check('同业榜', `每月成长 ${Math.round(RIVAL_MONTH_GROWTH * 100)}% 已生效`, RIVAL_MONTH_GROWTH === 0.06)
     const pv = freshPlayer()
@@ -9595,18 +9601,70 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const countGear = (items) =>
       Object.entries(items ?? {}).filter(([id]) => id.startsWith('exploreGear')).reduce((n, [, q]) => n + q, 0)
     const gearQty = countGear(large?.items)
-    check('探索改版', '离线段整体不与在线口径脱节：装备总件数 == round(成功次数 × 0.01%)',
-      large && gearQty === Math.round(Math.round(large.actions * ex3.successChance(last)) * EG.EXPLORE_GEAR_DROP_CHANCE),
-      `合计 ${gearQty} 件`)
-    // 🔴 必须挑「期望总件数是零头」的规模：ok×0.01% ≈ 0.6 件时，先取整总数 ⇒ 掉 1 件；
+    check('探索改版', '离线段整体不与在线口径脱节：装备总件数 == round(探索动作数 × 0.01%)',
+      large && gearQty === Math.round(large.actions * EG.EXPLORE_GEAR_DROP_CHANCE),
+      `合计 ${gearQty} 件（动作 ${large?.actions}）`)
+    // 🔴 必须挑「期望总件数是零头」的规模：6000 次动作 × 0.01% = 0.6 件时，先取整总数 ⇒ 掉 1 件；
     //    逐件写 round(0.6/4)=0 ⇒ 一件都不掉（0 件）。拿 12 件那种整数规模测，两种写法结果相同 ⇒ 假绿。
-    const rateNow = ex3.successChance(last)
-    const wantActions = Math.round(6000 / rateNow)
-    const small = ex3.computeOffline(wantActions * ex3.intervalMs(last), 1)
-    const smallOk = Math.round((small?.actions ?? 0) * rateNow)
+    const smallActions = 6000
+    const small = ex3.computeOffline(smallActions * ex3.intervalMs(last), 1)
     check('探索改版', '离线 0.01% 装备先取整「总件数」再分配（期望 0.6 件 ⇒ 掉 1 件，逐件四舍五入会掉 0 件）',
-      countGear(small?.items) === 1 && Math.abs(smallOk * EG.EXPLORE_GEAR_DROP_CHANCE - 0.6) < 0.05,
-      `成功 ${smallOk} 次 · 期望总件数 ${(smallOk * EG.EXPLORE_GEAR_DROP_CHANCE).toFixed(2)} · 实掉 ${countGear(small?.items)} 件`)
+      countGear(small?.items) === 1 && Math.abs((small?.actions ?? 0) * EG.EXPLORE_GEAR_DROP_CHANCE - 0.6) < 0.02,
+      `动作 ${small?.actions} · 期望总件数 ${((small?.actions ?? 0) * EG.EXPLORE_GEAR_DROP_CHANCE).toFixed(2)} · 实掉 ${countGear(small?.items)} 件`)
+  }
+
+  // ⑨b 专属装备：**每次探索动作**都可能掉（成功与否都算）· 只从探索出 · 掉落列表里看得见
+  {
+    // 每次动作恰好 3 次掷骰：装备判定 → 选中哪一件 → 成功率判定（钉死随机，逐次可预测）
+    const cycleRandom = (pattern, fn) => {
+      const real = Math.random
+      let i = 0
+      Math.random = () => pattern[i++ % pattern.length]
+      try { return fn() } finally { Math.random = real }
+    }
+    const p4 = freshPlayer()
+    createSkillInstances(p4)
+    const ex4 = getAllSkillInstances().find((s) => s.id === 'exploration')
+    p4.setSkillState('exploration', { level: 99, exp: totalXpForLevel(99) })
+    const dead = ex4.targets.find((x) => EB.exploreBandOf(x.reqLevel) === 10)
+    p4.setSkillTarget('exploration', dead.id)
+    const evs = []
+    const onAct = (e) => evs.push(e)
+    EventBus.on('skill:action', onAct)
+    cycleRandom([0.0, 0.0, 0.999], () => { for (let n = 0; n < 6; n++) ex4.performAction(dead) })
+    EventBus.off('skill:action', onAct)
+    const first = EG.EXPLORE_GEAR_ITEMS[0]
+    check('探索改版', '🔴 行为：末段 0% 的卡片（永远不会成功）也掉得出专属装备 —— 掉率按「动作」而不是「成功」',
+      ex4.successChance(dead) === 0 && p4.inventory?.[first.id] === 6,
+      `0% 卡片 6 次动作掉了 ${p4.inventory?.[first.id] ?? 0} 件`)
+    const failEv = evs.filter((e) => e.outcome === 'explorefail')
+    check('探索改版', '失败也掉时**日志里看得见**（explorefail 事件带 extraGain，否则玩家只觉得凭空多了件装备）',
+      failEv.length === 6 && failEv.every((e) => typeof e.extraGain === 'string' && e.extraGain.includes('✨')),
+      `失败事件 ${failEv.length} 条 · 带装备名 ${failEv.filter((e) => e.extraGain?.includes('✨')).length} 条`)
+    // ── 只从探索出：觅珍各池都不许再含这四件（池成员是唯一真身，图鉴来源跟着它走）──
+    const stillInPools = []
+    for (const pool of MIJIAN_POOLS) {
+      const ids = (poolItems(pool.id) ?? []).map((m) => (typeof m === 'string' ? m : m.id))
+      for (const g of EG.EXPLORE_GEAR_ITEMS) if (ids.includes(g.id)) stillInPools.push(`${pool.name}:${g.name}`)
+    }
+    check('探索改版', '探索独占：四件已从觅珍全部池剔除（厨具池/混池/限时池都抽不到）',
+      stillInPools.length === 0, stillInPools.join('、'))
+    const src = EG.EXPLORE_GEAR_ITEMS.map((g) => itemSources(g.id).join('｜'))
+    check('探索改版', '图鉴来源只写「美食探索」，不再把玩家指向抽卡',
+      src.every((s) => /美食探索/.test(s) && !/觅珍/.test(s)), src.join(' ／ '))
+    // ── 掉落列表里看得见（玩家就是在这一处找它）──
+    const view2 = rdSrc('src/views/ExplorationView.vue')
+    const lootBlock = view2.slice(view2.indexOf('class="loot-list"'), view2.indexOf('class="loot-list"') + 1400)
+    // 🔴 「有这个类名」还不够（反例验证 ⑰ 抓到的假绿）：给那一行挂 `v-if="false"` 让它**永不渲染**，
+    //    只查字符串的断言照样绿。所以这里连**那个标签本身**一起钉：不许带任何条件属性。
+    const gearTag = (lootBlock.match(/<div[^>]*loot-row--gear[^>]*>/) ?? [''])[0]
+    check('探索改版', '卡片掉落列表里有一行专属装备（在 v-for 掉落之后，且**无条件常驻**）',
+      /loot-row--gear/.test(lootBlock) && /EXPLORE_GEAR_ITEMS/.test(lootBlock) &&
+        lootBlock.indexOf('v-for="(l, i) in t.loot"') < lootBlock.indexOf('loot-row--gear') &&
+        gearTag.length > 0 && !/\bv-if\b|\bv-show\b/.test(gearTag),
+      `该行 ${/loot-row--gear/.test(lootBlock) ? '在' : '不在'}掉落块内 · 标签 ${gearTag ? '带条件属性' : '未找到'}`)
+    check('探索改版', '文案口径统一成「每次探索」（页脚不再写「每次成功探索」）',
+      /每次探索 \{\{/.test(view2) && !/每次成功探索/.test(view2))
   }
 
   // ⑩ 显示同源 + 展示与其它技能一致

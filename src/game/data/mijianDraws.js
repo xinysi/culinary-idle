@@ -11,9 +11,16 @@ import { tunerOver } from './tuner.js'
 import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
 import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
+import { EXPLORE_GEAR_IDS } from './explorationGear.js'
 
 /** 抽卡池一律排除的类别：矿物（不对口径）与**全部副业独占品**（抽卡能出就等于绕过整条技能线） */
 const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
+
+// 美食探索的**专属装备**同样一律排除（2026-09-28 用户定：只从探索出）。
+// 🔴 为什么单列一条 id 名单而不是加进上面那张类别表：这四件的 `category` 就是槽位名
+//    （offhand/body/boots），与普通装备**共用类别**，按类别排除会把整套装备池一起削掉。
+// ⚠️ 排除只能放在**池成员过滤**这一处（`poolItems` 是池成员的唯一真身）——
+//    图鉴「获取来源」是复用同一个函数的，改这里两边一起对。
 
 // ── 概率常量（⚠️ 必须在 MIJIAN_POOLS **之前**：池描述要引用它们，写在后面会 TDZ 报错）──
 
@@ -219,18 +226,13 @@ export function poolItems(poolId) {
   if (POOL_CACHE[poolId]) return POOL_CACHE[poolId]
   const def = MIJIAN_POOLS.find((p) => p.id === poolId)
   const all = Object.values(ITEMS)
+  // 探索专属装备（4 件）不进任何池 —— 独立于类别表，按 id 名单排除（见上方注释）
+  const excluded = (it) => POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name) || EXPLORE_GEAR_IDS.includes(it.id)
   let items
   if (poolId === 'mix' || poolId === 'limited') {
-    items = all.filter((it) =>
-      ['ingredient', 'spice', 'food', 'drink', 'equipment'].includes(it.type) &&
-      !(POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name))
-    )
+    items = all.filter((it) => ['ingredient', 'spice', 'food', 'drink', 'equipment'].includes(it.type) && !excluded(it))
   } else {
-    items = all.filter((it) =>
-      def.kinds.includes(it.type) &&
-      !(POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name)) &&
-      (!def.cap || it.value <= def.cap)
-    )
+    items = all.filter((it) => def.kinds.includes(it.type) && !excluded(it) && (!def.cap || it.value <= def.cap))
   }
   POOL_CACHE[poolId] = items
   return items

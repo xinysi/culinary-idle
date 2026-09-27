@@ -59,11 +59,14 @@ export const EXPLORE_GEAR_ITEMS = EXPLORE_GEAR_SETS.flatMap((set) =>
 /** 套装 id → 中文名（图鉴/装备页显示用；避免到处手抄） */
 export const EXPLORE_GEAR_SET_NAMES = Object.fromEntries(EXPLORE_GEAR_SETS.map((s) => [s.id, s.name]))
 
+/** 四件 id（**探索独占**：觅珍各池按这张表剔除成员，见 `mijianDraws.js` 的池过滤） */
+export const EXPLORE_GEAR_IDS = EXPLORE_GEAR_ITEMS.map((g) => g.id)
+
 /** 一套合计加多少百分点（提示文案与守卫共用同一份派生值，不手抄 5/10） */
 export function exploreSetTotalPP(setId) {
   const s = EXPLORE_GEAR_SETS.find((x) => x.id === setId)
   return s ? s.pieces.reduce((a, p) => a + p.exploreSuccessPP, 0) : 0
 }
 
-/** 单次成功探索掉出专属装备的概率（用户指定 0.01%） */
+/** 每次**探索动作**（成功与否都算，2026-09-28 用户定口径）掉出专属装备的概率：0.01% */
 export const EXPLORE_GEAR_DROP_CHANCE = 0.0001

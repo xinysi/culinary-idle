@@ -13,7 +13,7 @@ import { LOW_TARGET_NOTE, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { levelEras } from '../game/data/levelEras.js'
 import { masteryXpMultiplier } from '../game/core/mastery.js'
 import { EXPLORE_SUCCESS_CAP, EXPLORE_CAP_TEXT, exploreBandFactor, exploreMasteryPP } from '../game/data/explorationBalance.js'
-import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from '../game/data/explorationGear.js'
+import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE, EXPLORE_GEAR_SETS } from '../game/data/explorationGear.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 
@@ -51,6 +51,8 @@ function lootLine(l) {
   const pct = (props.instance.lootChance(l) * 100).toFixed(2).replace(/\.?0+$/, '')
   return l.type === 'gold' ? `金币 ${l.min}-${l.max}（${pct}%）` : `${getItem(l.itemId)?.name} ×${l.min}-${l.max}（${pct}%）`
 }
+/** 专属装备那一行的悬浮说明：说清「与目标无关」「成败都算」「两套各是哪两件」 */
+const GEAR_TIP = `每次探索（成功与否都算）${(EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3)}% 掉出其中一件，与所打的目标无关；两套共 ${EXPLORE_GEAR_ITEMS.length} 件 —— ${EXPLORE_GEAR_SETS.map((s) => `${s.name}（${s.pieces.map((p) => p.name).join(' / ')}）`).join(' · ')}`
 
 // ── 等级段：与采集/制作共用 `levelEras`（10 级一档 + 段名 = 该档最高级目标）──
 const sections = computed(() => levelEras(props.instance?.targets ?? [], (t) => t.reqLevel, (t) => t.id))
@@ -184,6 +186,18 @@ const bandFactor = (t) => exploreBandFactor(t.reqLevel)
                 alt="" loading="lazy" decoding="async" />
               <span class="mono loot-text">{{ lootLine(l) }}</span>
             </div>
+            <!-- 专属装备：**与目标无关**的独立掷骰（每次探索动作 0.01%），但玩家是在「掉落」这一处找它 ⇒
+                 每张卡都列一行（2026-09-28 用户：「我怎么没看到新装备出现在掉落里」） -->
+            <div class="loot-row loot-row--gear" :title="GEAR_TIP">
+              <img
+                v-for="g in EXPLORE_GEAR_ITEMS"
+                :key="g.id"
+                :src="itemImage(g.id)"
+                class="loot-img loot-img--gear"
+                @error="$event.target.style.display = 'none'"
+                alt="" loading="lazy" decoding="async" />
+              <span class="mono loot-text">专属装备 {{ EXPLORE_GEAR_ITEMS.length }} 件 · {{ (EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3) }}%</span>
+            </div>
           </div>
           <button
             class="btn btn-sm"
@@ -200,7 +214,20 @@ const bandFactor = (t) => exploreBandFactor(t.reqLevel)
     <p class="dim special-note">
       失败惩罚：损失目标对应金币（金币不足则损失 10% 最大品鉴值）。
       卡片成功率上限 {{ EXPLORE_CAP_TEXT }}，其余 {{ 100 - Math.round(EXPLORE_SUCCESS_CAP * 100) }}% 由两套专属装备补足
-      （{{ EXPLORE_GEAR_ITEMS.length }} 件，每次成功探索 {{ (EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3) }}% 掉落）。
+      （{{ EXPLORE_GEAR_ITEMS.length }} 件，每次探索 {{ (EXPLORE_GEAR_DROP_CHANCE * 100).toFixed(3) }}% 掉落，成功与否都算）。
     </p>
   </div>
 </template>
+
+<style scoped>
+/* 专属装备那一行（与目标无关的独立掉落）：4 个小图标 + 一行说明。
+   图标缩到 16px、允许换行 —— 24px 的四个图标加文字在卡片宽度里会顶出去（详见 GEAR_TIP）。 */
+.loot-row--gear {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.loot-img--gear {
+  width: 16px;
+  height: 16px;
+}
+</style>
