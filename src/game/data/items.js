@@ -804,6 +804,11 @@ for (const def of SIDELINE_ITEMS) ITEMS[def.id] = def
 import { PICKLE_ITEMS } from './pickles.js'
 for (const def of PICKLE_ITEMS) ITEMS[def.id] = def
 
+// 美食探索的专属装备（2026-09-27 用户⑥）：两套 × 2 件，属性只有「美食探索成功率」，
+// 由探索成功时按 0.01% 掉落（口径见 explorationGear.js）。
+import { EXPLORE_GEAR_ITEMS } from './explorationGear.js'
+for (const def of EXPLORE_GEAR_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

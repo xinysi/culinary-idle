@@ -9414,6 +9414,163 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   }
 }
 
+// ══════════ C67：美食探索改版（2026-09-27 用户①②③④⑤⑥ 一轮六条）══════════
+// 用户口径：卡片展示与其它技能一致 · 接精通档位与精通池 · 每卡独立成功率（上限 90%）·
+//   全面调低物品概率 · 初始成功率随等级段递减到 0%（靠精通提高）· 两套专属装备（合计 +5%/+10%，掉率 0.01%）。
+// 🔴 冻结数据（200 个目标 / baseSuccess / 掉落表）一个字节没动 —— 下面第一条就是钉这件事。
+{
+  const { EXPLORATION_TARGETS_ALL } = await import('../../src/game/data/explorationTargets.js')
+  const EB = await import('../../src/game/data/explorationBalance.js')
+  const EG = await import('../../src/game/data/explorationGear.js')
+  const { exploreSuccessChance: diffExplore, exploreLootChance } = await import('../../src/game/data/difficulty.js')
+  const { masteryPoolBonus, countForMasteryLevel, masteryIntervalFactor } = await import('../../src/game/core/mastery.js')
+
+  // ① 冻结基线（铁律）：条数、baseSuccess 区间与合计、掉落条数
+  const bs = EXPLORATION_TARGETS_ALL.map((t) => t.baseSuccess)
+  const loot = EXPLORATION_TARGETS_ALL.flatMap((t) => t.loot ?? [])
+  check('探索改版', '冻结数据未改：200 个目标 · baseSuccess 0.60~0.85（合计 144.74）· 掉落 700 条',
+    EXPLORATION_TARGETS_ALL.length === 200 && Math.min(...bs) >= 0.6 && Math.max(...bs) <= 0.85 &&
+      Math.abs(bs.reduce((a, c) => a + c, 0) - 144.74) < 0.005 && loot.length === 700)
+
+  // ② 段位曲线：段 1 ×1.00、逐段单调不增、段 10 = 0
+  const factors = [1, 2, 3, 5, 7, 10].map((b) => EB.exploreBandFactor((b - 1) * 10 + 1))
+  check('探索改版', '初始成功率系数：段 1 ×1.00 → 段 10 ×0.00（单调不增，末段归零）',
+    Math.abs(factors[0] - 1) < 1e-9 && Math.abs(factors[factors.length - 1]) < 1e-9 &&
+      factors.every((v, i) => i === 0 || v <= factors[i - 1] + 1e-9))
+  check('探索改版', '段号按 reqLevel 每 10 级一段（1~100 → 段 1~10）',
+    EB.exploreBandOf(1) === 1 && EB.exploreBandOf(10) === 1 && EB.exploreBandOf(11) === 2 && EB.exploreBandOf(99) === 10)
+
+  // ③ 上限 90%（不含装备）+ 装备补足剩下的 10%（总不超 100%）
+  {
+    const t = { baseSuccess: 0.85, reqLevel: 1 }
+    const maxed = EB.exploreSuccessChance(t, { masteryLevel: 100, poolSuccessPP: 5, gearPP: 0 })
+    const withGear = EB.exploreSuccessChance(t, { masteryLevel: 100, poolSuccessPP: 5, gearPP: 0.1 })
+    const over = EB.exploreSuccessChance(t, { masteryLevel: 999, poolSuccessPP: 999, gearPP: 999 })
+    // ⚠️ 上限必须与**字面量 0.90** 比，不能拿同一个常量自比自（反例验证 ② 就是这么假绿的：
+    //    把 CAP 改成 0.95，`Math.abs(maxed - EXPLORE_SUCCESS_CAP)` 仍然恒等 ⇒ 守卫一点反应都没有）
+    check('探索改版', '卡片上限 90%（精通与池都堆满也不超过），装备在**上限之外**相加 ⇒ 满配 100% 封顶',
+      Math.abs(EB.EXPLORE_SUCCESS_CAP - 0.9) < 1e-9 &&
+      Math.abs(maxed - 0.9) < 1e-9 && withGear > maxed && Math.abs(withGear - 1) < 1e-9 && over === 1)
+  }
+
+  // ④ 末段卡片不是死卡：初始 0% 时靠精通能起来（且精通**每次动作**都加，见下一条行为断言）
+  {
+    const t = EXPLORATION_TARGETS_ALL.find((x) => EB.exploreBandOf(x.reqLevel) === 10)
+    const zero = EB.exploreSuccessChance(t, { masteryLevel: 0 })
+    const m50 = EB.exploreSuccessChance(t, { masteryLevel: 50 })
+    const m100 = EB.exploreSuccessChance(t, { masteryLevel: 100 })
+    check('探索改版', `末段（${t.name}）初始 0% → 精通 50 级 ${(m50 * 100).toFixed(0)}% → 100 级 ${(m100 * 100).toFixed(0)}%`,
+      Math.abs(zero) < 1e-9 && m50 > 0.25 && m100 > 0.5 && m100 <= EB.EXPLORE_SUCCESS_CAP + 1e-9)
+  }
+
+  // ⑤ 行为：成功率 0% 的卡片**也会涨精通**（否则永远练不起来 —— 死卡）
+  {
+    const p0 = freshPlayer()
+    createSkillInstances(p0)
+    const ex = getAllSkillInstances().find((s) => s.id === 'exploration')
+    const t = ex.targets.find((x) => EB.exploreBandOf(x.reqLevel) === 10)
+    const before = ex.mastery[t.id] ?? 0
+    const realRandom = Math.random
+    Math.random = () => 0.999 // 恒「失败」：成功率 0% 时本来也必失败
+    try { for (let i = 0; i < 5; i++) ex.performAction(t) } finally { Math.random = realRandom }
+    check('探索改版', '🔴 行为：**失败也计精通次数**（0% 的卡片靠反复尝试把精通练起来，否则是死卡）',
+      (ex.mastery[t.id] ?? 0) === before + 5, `${before} → ${ex.mastery[t.id]}`)
+  }
+
+  // ⑥ 精通档位与池接线（与采集同一套表）
+  {
+    const p1 = freshPlayer()
+    createSkillInstances(p1)
+    const ex = getAllSkillInstances().find((s) => s.id === 'exploration')
+    const t = ex.targets[0]
+    const base = ex.intervalMs(t)
+    ex.mastery[t.id] = countForMasteryLevel(100)
+    const fast = ex.intervalMs(t)
+    check('探索改版', '精确：间隔随精通档位下降（精通 100 → 基础 ×1/2，且不会慢于基础）',
+      Math.abs(base - t.intervalSec * 1000) < 1e-6 && fast < base && Math.abs(fast - t.intervalSec * 1000 * masteryIntervalFactor(100)) < 1e-6)
+    const cards = ex.targets.length
+    p1.skills.exploration.masteryPool = Math.round(0.99 * 600 * cards)
+    check('探索改版', '精通池：池满档时给整个探索技能 +5pp 成功率 / +5pp 双倍（与采集同一张里程碑表）', (() => {
+      const b = p1.masteryPoolBonus('exploration')
+      return b.successPP === 5 && b.doublePP === 5 && b.xpPct === 5
+    })(), JSON.stringify(p1.masteryPoolBonus('exploration')))
+    check('探索改版', '池加成的成功率真的进了 successChance（不是只显示）', (() => {
+      // ⚠️ 必须挑**中段**目标：首段那张已被精通顶到 90% 上限，池加成会被夹掉（第一版就是这么假失败的）
+      const mid = ex.targets.find((x) => EB.exploreBandOf(x.reqLevel) === 6)
+      ex.mastery[mid.id] = 0
+      p1.skills.exploration.masteryPool = Math.round(0.99 * 600 * cards)
+      const withPool = ex.successChance(mid)
+      p1.skills.exploration.masteryPool = 0
+      const without = ex.successChance(mid)
+      return withPool > without
+    })())
+    check('探索改版', '双倍产出走与采集同一条口径（精通档位 + 池 doublePP，封顶 1）',
+      /masteryDoubleChance\(mLevel\) \+ poolPP/.test(rdSrc('src/game/skills/ExplorationSkill.js')) && ex.doubleChance(t) >= 0 && ex.doubleChance(t) <= 1)
+  }
+
+  // ⑦ 掉落：物品 ÷4、金币原值
+  check('探索改版', '战利品概率收紧到 ÷4（0.3 → 0.075），金币条目仍走原值',
+    Math.abs(exploreLootChance(0.3) - 0.075) < 1e-9 && Math.abs(diffExplore(0.72) - 0.72) < 1e-9)
+
+  // ⑧ 专属装备：两套 × 2 件 · 只加探索成功率 · 合计 5/10pp · 掉率 0.01% · 满配补足到 100%
+  {
+    const items = EG.EXPLORE_GEAR_ITEMS
+    const onlyExplore = items.every((it) => Object.keys(it.stats).length === 1 && it.stats.exploreSuccessPP > 0)
+    check('探索改版', '专属装备共 4 件（两套 × 2 件），**属性只有** exploreSuccessPP',
+      items.length === 4 && onlyExplore && EG.EXPLORE_GEAR_SETS.length === 2)
+    check('探索改版', '两套合计 +5pp / +10pp（派生自件数，不手抄）',
+      Math.abs(EG.exploreSetTotalPP('flavorTrail') - 5) < 1e-9 && Math.abs(EG.exploreSetTotalPP('relicHunt') - 10) < 1e-9)
+    check('探索改版', `掉落率 0.01%（用户指定）`, Math.abs(EG.EXPLORE_GEAR_DROP_CHANCE - 0.0001) < 1e-12)
+    check('探索改版', '四件都已并进 ITEMS（`items.js` 的合并行）',
+      items.every((it) => !!getItem(it.id)))
+    // 行为：穿上两套后 successChance 真的更高（走 equippedStats → gearSuccessPP）
+    const p2 = freshPlayer()
+    createSkillInstances(p2)
+    const ex2 = getAllSkillInstances().find((s) => s.id === 'exploration')
+    const t2 = ex2.targets.find((x) => EB.exploreBandOf(x.reqLevel) === 10)
+    ex2.mastery[t2.id] = countForMasteryLevel(100)
+    const before = ex2.successChance(t2)
+    p2.equipment.offhand = 'exploreGearFlavorCompass'
+    p2.equipment.body = 'exploreGearFlavorCloak'
+    const set1 = ex2.successChance(t2)
+    // ⚠️ 换套必须清掉上一套的槽位（第一版忘了清 body ⇒ 两套加成叠在一起、量到 12.5pp）
+    p2.equipment.body = null
+    p2.equipment.offhand = 'exploreGearRelicLantern'
+    p2.equipment.boots = 'exploreGearRelicBoots'
+    const set2 = ex2.successChance(t2)
+    check('探索改版', '行为：穿第一套 +5pp、第二套 +10pp（装备加成在 90% 上限之外相加）',
+      Math.abs(set1 - before - 0.025 * 2) < 1e-6 && Math.abs(set2 - before - 0.05 * 2) < 1e-6,
+      `${(before * 100).toFixed(1)}% → ${(set1 * 100).toFixed(1)}% → ${(set2 * 100).toFixed(1)}%`)
+  }
+
+  // ⑨ 离线与在线同源
+  {
+    const p3 = freshPlayer()
+    createSkillInstances(p3)
+    const ex3 = getAllSkillInstances().find((s) => s.id === 'exploration')
+    const t3 = ex3.targets[0]
+    p3.setSkillTarget('exploration', t3.id)
+    const off = ex3.computeOffline(3600e3, 1)
+    const expect = Math.floor(3600e3 / ex3.intervalMs(t3))
+    check('探索改版', '离线走同一个 intervalMs / successChance 出口（间隔随精通缩短也被离线吃到）',
+      off != null && off.actions === expect, `actions=${off?.actions} 期望=${expect}`)
+  }
+
+  // ⑩ 显示同源 + 展示与其它技能一致
+  {
+    const view = rdSrc('src/views/ExplorationView.vue')
+    check('探索改版', '卡片展示与其它技能一致：era-tabs 等级段 + 精通行/精通条 + MasteryPoolBar + 进度条',
+      /class="era-tabs"/.test(view) && /<MasteryPoolBar/.test(view) && /class="mastery-bar"/.test(view) && /<ProgressBar/.test(view) &&
+        /levelEras\(/.test(view))
+    check('探索改版', '视图的成功率/掉落概率全部走实例出口（不手写公式、不裸读数据字段）',
+      /instance\.successChance\(/.test(view) && /instance\.lootChance\(/.test(view) &&
+        /instance\.initialChance\(/.test(view) && /instance\.masteryProgress\(/.test(view) &&
+        !/baseSuccess\s*\*/.test(view) && !/\bl\.chance\b\s*\*/.test(view))
+    check('探索改版', '页面写明「上限 90% + 专属装备补足剩下 10%」（玩家不用猜为什么堆不动了）',
+      /EXPLORE_CAP_TEXT/.test(view) && /EXPLORE_GEAR_ITEMS/.test(view) && /EXPLORE_GEAR_DROP_CHANCE/.test(view))
+  }
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)

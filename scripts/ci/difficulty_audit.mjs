@@ -110,7 +110,11 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
   check('B. ExpeditionView 稀有货显示走 otherChance', (src('src/views/ExpeditionView.vue').match(/otherChance\(/g) || []).length >= 2)
   // 两个制作/探索成功率出口必须真的被调用（不是只定义）
   check('B. ProductionSkill 成功率走 craftSuccessChance 出口', /return craftSuccessChance\(raw\)/.test(src('src/game/skills/ProductionSkill.js')))
-  check('B. ExplorationSkill 成功率走 exploreSuccessChance 出口', /return exploreSuccessChance\(raw\)/.test(src('src/game/skills/ExplorationSkill.js')))
+  // 2026-09-27 改版：探索成功率的**曲线**搬进了 `explorationBalance.js`（段位衰减 + 上限 90% + 精通/装备 补足），
+  // 但最终值仍必须乘这道全局出口（桶 `explore` 现为 ×1，留作整档微调口）。
+  check('B. ExplorationSkill 成功率：曲线走 explorationBalance、最终值走 exploreSuccessChance 出口',
+    /exploreChanceOf\(target/.test(src('src/game/skills/ExplorationSkill.js')) &&
+      /return exploreDifficultyMult\(v\)/.test(src('src/game/skills/ExplorationSkill.js')))
 }
 
 // ── C. 金币不受影响 ──
@@ -125,7 +129,7 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
     },
   }
   check('C. lootChance(金币条目) === 原值 0.7', fakeSkill.lootChance({ type: 'gold', chance: 0.7 }) === 0.7)
-  check('C. lootChance(物品条目) 已减半', Math.abs(fakeSkill.lootChance({ type: 'item', chance: 0.3 }) - 0.15) < 1e-9)
+  check('C. lootChance(物品条目) 已收紧到 ÷4（2026-09-27 用户「全面调低美食探索卡片中物品的概率」）', Math.abs(fakeSkill.lootChance({ type: 'item', chance: 0.3 }) - 0.075) < 1e-9)
   // 探索页显示必须调 lootChance，不能读原字段
   check('C. 探索页 lootLine 走 instance.lootChance', /instance\.lootChance\(l\)/.test(src('src/views/ExplorationView.vue')))
   // 吉祥物金币不受系数影响：mascotReward 里 gold 的计算不经任何 chance 函数
@@ -154,9 +158,15 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
   check('D. scaleChance 的 9 条边界不变量全部成立', bad.length === 0, bad.join('、'))
   // 各桶抽样：确认真的降了、且没降到 0
   const samples = [['掉落', dropChance(0.3)], ['制作', craftSuccessChance(0.72)], ['探索成功率', exploreSuccessChance(0.72)], ['探索战利品', exploreLootChance(0.3)], ['其它', otherChance(0.4)], ['附产', gatherExtraChance(0.5)]]
-  check('D. 六个桶抽样都已下调且 > 0', samples.every(([, v]) => v > 0 && v < 1), samples.map(([n, v]) => `${n}=${v}`).join(' '))
+  check('D. 六个桶抽样都 > 0 且 ≤ 原值（探索成功率现为 ×1 = 原值，其余仍下调）',
+    samples.every(([, v]) => v > 0 && v <= 1) && dropChance(0.3) < 0.3 && craftSuccessChance(0.72) < 0.72 && exploreLootChance(0.3) < 0.3 && otherChance(0.4) < 0.4 && gatherExtraChance(0.5) < 0.5,
+    samples.map(([n, v]) => `${n}=${v}`).join(' '))
   check('D. 对决确实是 ÷5', Math.abs(dropChance(0.3) - 0.06) < 1e-9)
-  check('D. 制作/探索确实是 ÷2', Math.abs(craftSuccessChance(0.72) - 0.36) < 1e-9 && Math.abs(exploreSuccessChance(0.72) - 0.36) < 1e-9)
+  check('D. 制作仍是 ÷2', Math.abs(craftSuccessChance(0.72) - 0.36) < 1e-9)
+  // 2026-09-27 用户⑤：探索难度改由「段位曲线」控（段 1 ×1.00 → 段 10 ×0.00 + 精通/装备补足），
+  // ⇒ 全局桶 `explore` 改成 ×1（不再是 ÷2），战利品那侧同时从 ÷2 收紧到 **÷4**。
+  check('D. 探索成功率桶已改为 ×1（难度在 explorationBalance，不再整段腰斩）', Math.abs(exploreSuccessChance(0.72) - 0.72) < 1e-9)
+  check('D. 探索战利品已从 ÷2 收紧到 ÷4', Math.abs(exploreLootChance(0.4) - 0.1) < 1e-9, String(exploreLootChance(0.4)))
   // 吉祥物：物品概率下降，但条目仍存在
   check('D. 吉祥物物品概率已减半（0.5→0.25）', MASCOTS.some((m) => m.itemChance === 0.5 && Math.abs(mascotItemChance(m) - 0.25) < 1e-9))
 
