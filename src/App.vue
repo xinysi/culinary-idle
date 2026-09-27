@@ -19,7 +19,7 @@ import { initCelebrations } from './game/core/celebrations.js'
 import OfflineReportModal from './components/OfflineReportModal.vue'
 import ShareCardModal from './components/ShareCardModal.vue'
 import MarketEventsModal from './components/MarketEventsModal.vue'
-import { useUiStore } from './stores/ui.js'
+import { useUiStore, RAIL_HIDDEN_VIEWS } from './stores/ui.js'
 import { usePlayerStore } from './stores/player.js'
 import { getItem } from './game/data/items.js'
 import { EventBus } from './game/core/EventBus.js'
@@ -159,13 +159,16 @@ if (typeof window !== 'undefined') {
  * 把它变成无内边距的 flex 列、内容撑满中区），再分掉 168px 会把画布挤变形。
  */
 const catRailOn = computed(() =>
-  !!ui.featureCat && railAvailable.value && ui.activeView !== 'shanhai')
+  !!ui.featureCat && railAvailable.value && !RAIL_HIDDEN_VIEWS.includes(ui.activeView))
 // 换到不属于本大类的页面（技能页 / 图鉴 / 餐厅…）就自动收起 —— 否则导航栏会一直占着位置，
 // 且按钮上的「当前所在大类」高亮与实际内容对不上。判据与左栏同一个 `groupForView`。
 watch(() => ui.activeView, (v) => {
   if (!ui.featureCat) return
   if (groupForView(railGroups, v)?.id !== ui.featureCat) ui.closeFeatureCat()
 })
+// 把「导航栏此刻显示没显示」同步给 store：左栏按钮的开关语义要读它（见 ui.js 的 railShown 注释）。
+// App.vue 是**唯一写入者** —— 只有这里同时知道宽窄屏与「整屏画布页」两种例外。
+watch(catRailOn, (v) => ui.setRailShown(v), { immediate: true })
 
 // 页面「指南」（2026-09-21 立功能页版；2026-09-26 用户⑪起**技能页也走这里**）：
 // 原先技能页/副业页在标题旁有一个 📖 指南，功能页却在顶栏有个 📘 指南 —— 同一个东西两个位置

@@ -9297,10 +9297,23 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /isNarrow/.test(side) && /class="feature-group-label"/.test(side) && /class="feature-tile"/.test(side) &&
       /max-width: 940px/.test(side) && /max-width: 940px/.test(app) &&
       /matchMedia\('\(max-width: 940px\)'\)/.test(side) && /matchMedia\('\(max-width: 940px\)'\)/.test(app))
-  check('主导航', '山海食经（整屏画布页）不挂导航栏（`--bleed` 下分掉 168px 会把画布挤变形）',
-    /ui\.activeView !== 'shanhai'/.test(app))
-  check('主导航', '导航栏宽度是单一来源（`--rail-w` token，组件用 var() 读）',
-    /--rail-w:\s*168px/.test(css) && /var\(--rail-w/.test(rail))
+  check('主导航', '山海食经（整屏画布页）不挂导航栏，且这条规则**只有一个来源**（`RAIL_HIDDEN_VIEWS`）',
+    /RAIL_HIDDEN_VIEWS\.includes\(ui\.activeView\)/.test(app) && /export const RAIL_HIDDEN_VIEWS = \['shanhai'\]/.test(rdSrc('src/stores/ui.js')) &&
+      /RAIL_HIDDEN_VIEWS/.test(side))
+  check('主导航', '导航栏宽度是单一来源（`--rail-w` / `--rail-w-mini` 两个 token，组件用 var() 读）',
+    /--rail-w:\s*168px/.test(css) && /--rail-w-mini:\s*46px/.test(css) &&
+      /var\(--rail-w/.test(rail) && /var\(--rail-w-mini/.test(rail))
+  // 折成「仅图标」（2026-09-27 用户：「页面清单增加可折叠为仅图标的按钮」）
+  check('主导航', '导航栏有「折叠为仅图标」按钮，且折叠态：名字藏起来、宽度走 `--rail-w-mini`',
+    /class="fr-btn fr-fold"/.test(rail) && /iconsOnly = !iconsOnly/.test(rail) &&
+      /'feature-rail--mini': iconsOnly/.test(rail) &&
+      /\.feature-rail--mini \.fr-name[^{]*\{\s*display:\s*none/.test(rail))
+  check('主导航', '折叠偏好进存档（`settings.railIcons`，旧档缺键走默认 false）',
+    /railIcons: false/.test(rdSrc('src/stores/player.js')) && /settings\?\.railIcons/.test(rail))
+  check('主导航', '🔴 左栏按钮的开关语义读「界面真值」`railShown`（只看 featureCat 会在「状态还在、界面没显示」时变成关掉）',
+    /ui\.featureCat === g\.id && ui\.railShown/.test(side) && /setRailShown/.test(app) && /railShown: false/.test(rdSrc('src/stores/ui.js')))
+  check('主导航', '落地页要挑**挂得住导航**的页（否则在山海食经上点大类会「毫无变化」）',
+    /landable/.test(side) && /RAIL_HIDDEN_VIEWS\.includes\(it\.view\)/.test(side))
   check('主导航', '内容列 `min-width: 0`（否则宽表会把两栏一起撑破）',
     /\.main-scroll--rail > :not\(\.feature-rail\)\s*\{[^}]*min-width:\s*0/.test(css))
   // 行为：store 上的开关语义（点第二次收起由 Sidebar 的 toggleCat 负责）
@@ -9315,6 +9328,39 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     check('主导航', '行为：`groupForView` 能把每个功能页反查回它的大类（导航栏「收起」判据靠它）',
       groups.every((g) => g.items.every((it) => groupForView(groups, it.view)?.id === g.id)) &&
         groupForView(groups, 'skill') === null && groupForView(groups, 'inventory') === null)
+  }
+}
+
+// ══════════ C65：觅珍「模拟预览」按钮的配色（2026-09-27 用户报「混进了红色」）══════════
+// 用户看到的：材料池上面是**青绿**大按钮，底下却挂着一排**红褐**小按钮 —— 因为那排按钮用的是
+// 品牌主色（`--primary-strong → --primary-deep`，经典皮肤是红褐），与「池主题」两个色系。
+// 现在的口径：模拟按钮**跟池主题走**（`--tlo*`），且按实测取「深档 + 白字」（唯一在五池都 ≥4.5:1 的组合）。
+// 这条守卫把两件事一起钉住：① 不许再回到品牌色/写死色值；② 对比度必须真的达标（**拿池卡自己的 token 现算**，
+// 不需要浏览器 —— 同 C58 的做法）。
+{
+  const mij = rdSrc('src/views/MijianView.vue')
+  const simRule = mij.slice(mij.indexOf('.gacha-sim .sim-btn {'), mij.indexOf('}', mij.indexOf('.gacha-sim .sim-btn {')))
+  check('觅珍配色', '模拟按钮的底色走**池主题**（`--tlo*`），不再用品牌主色、也不再写死色值',
+    /background-color:\s*var\(--tlo2/.test(simRule) && /background-image:[^;]*var\(--tlo1/.test(simRule) &&
+      !/--primary/.test(simRule) && !/#[0-9a-fA-F]{6}/.test(simRule.replace(/var\([^)]*\)/g, '')))
+  check('觅珍配色', '模拟按钮的流光云团也跟池主题（`--sh1/2/d` 读 `--tsh*`）',
+    /--sh1:\s*var\(--tsh1/.test(simRule) && /--sh2:\s*var\(--tsh2/.test(simRule) && /--shd:\s*var\(--tshd/.test(simRule))
+  // 对比度：白字压「深档渐变」的最坏端 —— 五池都必须 ≥4.5:1（13px 粗体算正文，不是大字号）
+  {
+    const hex = (h) => { const t = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(t.slice(i, i + 2), 16)) }
+    const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+    const L = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+    const ratio = (a, b) => { const [x, y] = [L(a), L(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05) }
+    const pools = []
+    for (const m of mij.matchAll(/\.pool-(\w+)\s*\{([\s\S]*?)\}/g)) {
+      const g = (k) => (m[2].match(new RegExp(`--${k}:\\s*(#[0-9a-fA-F]{6})`)) ?? [])[1]
+      if (g('tlo1') && g('tlo2')) pools.push({ id: m[1], lo1: g('tlo1'), lo2: g('tlo2') })
+    }
+    const bad = pools
+      .map((p) => ({ id: p.id, r: Math.min(ratio(hex(p.lo1), hex('#ffffff')), ratio(hex(p.lo2), hex('#ffffff'))) }))
+      .filter((x) => x.r < 4.5)
+    check('觅珍配色', `模拟按钮「深档 + 白字」在全部 ${pools.length} 个池都 ≥4.5:1（13px 粗体算正文）`,
+      pools.length >= 5 && bad.length === 0, bad.map((x) => `${x.id} ${x.r.toFixed(2)}`).join(', '))
   }
 }
 

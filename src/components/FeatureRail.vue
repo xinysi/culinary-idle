@@ -25,6 +25,13 @@ function visible(it) {
   return !it.unlock || it.unlock(player)
 }
 const items = computed(() => (group.value ? group.value.items.filter(visible) : []))
+// 折成「仅图标」的窄栏（2026-09-27 用户：「页面清单增加可折叠为仅图标的按钮」）：
+// 存 `settings.railIcons`（与 showAllFeatures 同一类界面偏好；settings 是整体序列化的，
+// 旧档没有这个键会走默认 false）。
+const iconsOnly = computed({
+  get: () => !!player.settings?.railIcons,
+  set: (v) => { if (player.settings) player.settings.railIcons = !!v },
+})
 
 function pick(it) {
   ui.setView(it.view)
@@ -33,10 +40,21 @@ function pick(it) {
 </script>
 
 <template>
-  <nav v-if="group" class="feature-rail" :aria-label="`${group.name}导航`">
+  <nav
+    v-if="group"
+    class="feature-rail"
+    :class="{ 'feature-rail--mini': iconsOnly }"
+    :aria-label="`${group.name}导航`"
+  >
     <div class="fr-head">
       <span class="fr-title">{{ group.icon }} {{ group.name }}</span>
-      <button class="fr-close" title="收起导航（换到别的页也会自动收起）" @click="ui.closeFeatureCat()">✕</button>
+      <button
+        class="fr-btn fr-fold"
+        :title="iconsOnly ? '展开导航（显示页面名）' : '折叠为仅图标（把宽度让给内容）'"
+        :aria-expanded="!iconsOnly"
+        @click="iconsOnly = !iconsOnly"
+      >{{ iconsOnly ? '»' : '«' }}</button>
+      <button class="fr-btn fr-close" title="收起导航（换到别的页也会自动收起）" @click="ui.closeFeatureCat()">✕</button>
     </div>
     <button
       v-for="it in items"
@@ -56,7 +74,8 @@ function pick(it) {
 
 <style scoped>
 /* 两栏由 `.main-scroll--rail` 的 flex 决定；这里只负责「自己是那条固定的窄栏」+ 粘住不随页滚。
-   宽度用 `--rail-w` 单点定义（窄屏阈值 940px 与侧栏同时出现，见 App.vue 的 railAvailable）。 */
+   宽度用 `--rail-w` 单点定义（折叠态是 `--rail-w-mini`）—— 两个 token 都在 main.css 的 `:root` 里，
+   窄屏阈值 940px 与侧栏同时出现，见 App.vue 的 railAvailable。 */
 .feature-rail {
   flex: 0 0 var(--rail-w, 168px);
   width: var(--rail-w, 168px);
@@ -68,6 +87,16 @@ function pick(it) {
   max-height: calc(100vh - 190px);
   overflow-y: auto;
 }
+/* 仅图标态：整条窄栏只剩图标（名字走 `title` 悬浮提示），把宽度还给内容 */
+.feature-rail--mini {
+  flex: 0 0 var(--rail-w-mini, 46px);
+  width: var(--rail-w-mini, 46px);
+}
+.feature-rail--mini .fr-title,
+.feature-rail--mini .fr-name,
+.feature-rail--mini .fr-empty { display: none; }
+.feature-rail--mini .fr-head { justify-content: center; gap: 3px; padding: 2px 0 8px; }
+.feature-rail--mini .fr-item { justify-content: center; padding: 7px 0; }
 .fr-head {
   display: flex;
   align-items: center;
@@ -78,7 +107,7 @@ function pick(it) {
   color: var(--primary-strong);
 }
 .fr-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fr-close {
+.fr-btn {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
@@ -91,7 +120,7 @@ function pick(it) {
   cursor: pointer;
   font-size: 12px;
 }
-.fr-close:hover { border-color: var(--primary); color: var(--primary-strong); }
+.fr-btn:hover { border-color: var(--primary); color: var(--primary-strong); }
 .fr-item {
   display: flex;
   align-items: center;

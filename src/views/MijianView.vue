@@ -700,27 +700,32 @@ function typeLabel(id) {
   .gacha-btn-bulk { min-width: 150px; padding: 12px 16px; }
 }
 
-/* 模拟预览行（按钮本身浅绿渐变，样式与上方抽卡大按钮一致） */
+/* 模拟预览行（**底色与流光一律跟随当前池主题**，与上方同尺寸的大按钮同一个色系） */
 .gacha-sim {
   display: flex; align-items: center; justify-content: center;
   gap: 16px; margin-top: 12px; font-size: 12px; flex-wrap: wrap;
 }
 .gacha-sim .sim-btn {
-  --sh1: 187, 210, 197; /* 流光光带：灰绿原色系 */
-  --sh2: 205, 224, 213; /* 光带中心：亮灰绿 */
-  --shd: 83, 105, 118;  /* 流光暗斑：蓝灰深端 */
+  /* 流光云团用池主题的流动色（原先写死一组灰绿，与池无关） */
+  --sh1: var(--tsh1, 22, 160, 133);
+  --sh2: var(--tsh2, 53, 232, 192);
+  --shd: var(--tshd, 6, 72, 58);
   position: relative; overflow: hidden;
   flex: 0 0 auto; padding: 8px 22px; font-weight: 700; font-size: 13px;
   color: #fff;
-  border: none; border-radius: 12px;
-  /* 🔴 原先写死 linear-gradient(135deg, rgb(187,210,197), rgb(83,105,118)) + 白字：
-     浅色那一端 (187,210,197) 压白字实测 **1.03:1**（几乎看不见），而且写死色值不跟皮肤。
-     改用主色的深档→最深档渐变：白字压 `--primary-strong` 实测 5.18~9.81，15 套皮肤全过。 */
-  /* 先给不透明兜底色（体检的底色模型只读 background-color，渐变得另算；同时也是渐变失效时的兜底）*/
-  background-color: var(--primary-strong);
-  background-image: linear-gradient(135deg, var(--primary-strong), var(--primary-deep));
-
-  box-shadow: 0 3px 10px rgba(83, 105, 118, 0.4);
+  border: 1px solid rgba(var(--tsh2, 53, 232, 192), 0.5); /* 池主题亮色细边：别让它们看着像禁用态 */
+  border-radius: 12px;
+  /* 底色 = 池主题**深档**（与大按钮「百连」同档）。
+     🔴 这里前后踩过两次，别改回去：
+     ① 最早写死「浅绿渐变 + 白字」→ 浅色端 (187,210,197) 压白字实测 **1.03:1**（几乎看不见），且不跟皮肤；
+     ② 上一版改成 `--primary-strong → --primary-deep`（品牌主色）→ 对比度达标了，但**色相与池主题无关**：
+        材料池是青绿大按钮、底下挂着一排**红褐**小按钮 ⇒ 用户报「混进了红色」。
+     现按**实测**选档：五池 × 三档 × 三种字色的对比度矩阵里，只有「深档 + 白字」在全部五池都 ≥4.5:1
+     （材料 6.47 / 美食 5.94 / 厨具 9.26 / 混池 9.91 / 限时 15.06），其余组合至少有一池不达标
+     （最差是「亮档 + 深彩字」2.74）。复核脚本 `scripts/dev/mijian_button_contrast.mjs`。 */
+  background-color: var(--tlo2, #06483a);
+  background-image: linear-gradient(105deg, var(--tlo1, #0a6b55), var(--tlo2, #06483a));
+  box-shadow: 0 3px 10px rgba(var(--tshd, 6, 72, 58), 0.42);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 

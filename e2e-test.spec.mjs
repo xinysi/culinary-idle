@@ -1963,6 +1963,56 @@ test.describe('游戏全流程', () => {
     await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
     await page.waitForTimeout(300)
     await expect(page.locator('.feature-rail')).toHaveCount(0)
+
+    // ⑤ 折叠为「仅图标」：宽度缩小、页面名藏起来（但 `title` 里还留着，悬浮能看到）、且偏好落存档
+    await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
+    await page.waitForTimeout(400)
+    const wide = await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))
+    await rail.locator('.fr-fold').click()
+    await page.waitForTimeout(350)
+    const narrow = await rail.evaluate((el) => Math.round(el.getBoundingClientRect().width))
+    expect(wide, `折叠前后宽度没变化（${wide} → ${narrow}）：折叠没生效`).toBeGreaterThan(narrow + 60)
+    await expect(rail.locator('.fr-name').first()).toBeHidden()
+    expect(await rail.locator('.fr-item').first().getAttribute('title'), '折叠后名字要从 title 里拿得到').toBeTruthy()
+    const persisted = await page.evaluate(() => {
+      const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
+      return pinia._s.get('player').settings.railIcons
+    })
+    expect(persisted, '折叠偏好没写进 settings.railIcons（刷新后会弹回展开态）').toBe(true)
+    await rail.locator('.fr-fold').click() // 还原，别影响后面的用例
+    await page.waitForTimeout(300)
+    await expect(rail.locator('.fr-name').first()).toBeVisible()
+    await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click() // 收起
+    await page.waitForTimeout(250)
+  })
+
+  // 觅珍「模拟预览」按钮的配色（2026-09-27 用户报「混进了红色」）：
+  // 它必须**跟自己池的主题同色系**，且换池时跟着变（原先写死品牌主色 ⇒ 青绿大按钮下面一排红褐小按钮）。
+  test('觅珍：模拟预览按钮跟池主题同色系（换池会跟着变，不再是品牌红）', async ({ page }) => {
+    await page.locator('.splash-start-btn').click()
+    await page.waitForTimeout(400)
+    await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
+    await expect(page.locator('.app-layout')).toBeVisible()
+    await page.waitForTimeout(900)
+    await page.locator('.top-nav-btn', { hasText: '觅珍' }).first().click()
+    await page.waitForTimeout(1200)
+
+    const toRgb = (h) => { const t = h.replace('#', ''); const [r, g, b] = [0, 2, 4].map((i) => parseInt(t.slice(i, i + 2), 16)); return `rgb(${r}, ${g}, ${b})` }
+    const readSim = () => page.evaluate(() => {
+      const cs = getComputedStyle(document.querySelector('.gacha-sim .sim-btn'))
+      const theme = getComputedStyle(document.querySelector('.gacha-pull'))
+      return { bg: cs.backgroundColor, tlo2: theme.getPropertyValue('--tlo2').trim(), primary: getComputedStyle(document.documentElement).getPropertyValue('--primary-strong').trim() }
+    })
+    // 物料池：底色 = 该池主题深档，且**不是**品牌主色
+    const mat = await readSim()
+    expect(mat.bg, `模拟按钮底色 ${mat.bg} 不等于池主题深档 ${mat.tlo2}`).toBe(toRgb(mat.tlo2))
+    expect(mat.bg, '模拟按钮又用回了品牌主色（用户报的「红色」就是它）').not.toBe(toRgb(mat.primary))
+    // 换到美食池 ⇒ 底色随之改变（证明它读的是池主题，而不是某个固定色）
+    await page.locator('.pool-mini.pool-food').first().click()
+    await page.waitForTimeout(700)
+    const food = await readSim()
+    expect(food.bg, '换池后模拟按钮颜色没跟着变（说明没读池主题）').not.toBe(mat.bg)
+    expect(food.bg).toBe(toRgb(food.tlo2))
   })
 
   // 断网期间加载失败的图片：**回网后要自愈**（2026-09-26 补；此前只有视图 chunk 有兜底，图片一直空着）。

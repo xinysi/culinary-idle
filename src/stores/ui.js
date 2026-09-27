@@ -26,6 +26,13 @@ export const VIEW_KEYS = [
   'inventory', 'equipment',
 ]
 
+/**
+ * **不能**挂大类导航栏的视图（2026-09-27）：整屏画布页 —— `.main-scroll--bleed` 会把滚动区变成
+ * 无内边距的 flex 列、内容撑满中区，再分掉 168px 会把画布挤变形。
+ * 唯一来源：App.vue 的显隐判断与 Sidebar 的「落地页要挑一个挂得住导航的页」都读它。
+ */
+export const RAIL_HIDDEN_VIEWS = ['shanhai']
+
 export const useUiStore = defineStore('ui', {
   state: () => ({
     log: [], // { id, ts, message, kind: info|gain|levelup|offline|warn }
@@ -53,6 +60,10 @@ export const useUiStore = defineStore('ui', {
     // 右边显示详细内容」，形态照开发者面板）：非空时主内容区变成「左导航栏 + 右内容」两栏。
     // 只记「打开了哪个大类」；**离开该类就自动收起**（判定在 App.vue 的 watch —— 需要 player 的解锁过滤）。
     featureCat: null,
+    /** 导航栏此刻**是否真的显示着**（App.vue 是唯一写入者：只有它知道宽窄屏与「整屏画布页」两种例外）。
+     *  左栏按钮的开关语义读它：状态还在、界面没显示时（如山海食经那页），点一下应该是**打开**而不是关掉 ——
+     *  否则玩家看到的是「点了没反应」（探针实测到过）。 */
+    railShown: false,
     logInitialTab: null, // 日志页直达子页（图鉴/卡牌/成就…）
     encounter: null, // 随机奇遇弹窗（非存档：{ encounter, startedAt }）
     offlineReport: null, // 离线结算弹窗（非存档：{ reports, restGold, elapsedMs }）
@@ -108,6 +119,10 @@ export const useUiStore = defineStore('ui', {
     },
     closeFeatureCat() {
       this.featureCat = null
+    },
+    /** 只由 App.vue 调（导航栏显隐的真值来源） */
+    setRailShown(v) {
+      this.railShown = !!v
     },
     toggleSignIn(open) {
       this.showSignIn = open ?? !this.showSignIn

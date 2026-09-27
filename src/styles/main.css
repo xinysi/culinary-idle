@@ -478,6 +478,9 @@ html[data-theme='dark'] .dock-panel-body:hover::-webkit-scrollbar-thumb {
      消费方是 `components/FeatureRail.vue` 的 `flex-basis/width`（用 var() 读，别各写各的）。
      168px 取自开发者面板 `.dp-nav` 的实测宽度（那一栏最长的一条是「💾 存档管理」，168 刚好不折行）。 */
   --rail-w: 168px;
+  /* 折叠为「仅图标」后的宽度（2026-09-27 用户：「页面清单增加可折叠为仅图标的按钮」）：
+     46px = 22px 图标位 + 两侧 12px 内边距，图标不贴边也不浪费宽度。 */
+  --rail-w-mini: 46px;
 }
 
 /* 一键回到顶部按钮（中间页面右下角，避开右侧面板）*/

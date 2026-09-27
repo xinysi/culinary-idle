@@ -2,7 +2,7 @@
 // 左侧技能导航 — 需求文档 §9.1.1：按类别分组，含等级与经验进度条
 import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { useUiStore } from '../stores/ui.js'
+import { useUiStore, RAIL_HIDDEN_VIEWS } from '../stores/ui.js'
 import { SKILL_CATEGORIES, SKILL_DEFS, skillCategoriesOfTab } from '../game/data/skills.js'
 import { xpProgress } from '../game/core/Experience.js'
 import { nameColorOf } from '../game/data/cosmetics.js'
@@ -114,13 +114,16 @@ if (typeof window !== 'undefined') {
   mq.addEventListener?.('change', onMq)
 }
 const catItems = (g) => g.items.filter((it) => tileVisible(it))
-/** 点大类：已在同一类里则收起（同一个按钮的开关语义），否则打开并把落地页切到本类第一页 */
+/** 点大类：**正显示着**它才收起（开关语义），否则打开并把落地页切到本类第一页。
+ *  ⚠️ 判据要用 `ui.railShown`（界面真值），不能只看 `ui.featureCat`：山海食经那页状态保留但导航不显示，
+ *     只看状态的话点一下会变成「关掉」⇒ 玩家看到「点了没反应」。 */
 function toggleCat(g) {
-  if (ui.featureCat === g.id) { ui.closeFeatureCat(); return }
+  if (ui.featureCat === g.id && ui.railShown) { ui.closeFeatureCat(); return }
   ui.openFeatureCat(g.id)
-  const items = catItems(g)
-  const inSameCat = items.some((it) => it.view === ui.activeView)
-  if (!inSameCat && items.length) goFeature(items[0])
+  // 落地页必须落在**能挂导航栏**的页上：当前页若挂不住（山海食经那种整屏画布页）或不属于本类，
+  // 就退到本类第一个可挂的页 —— 否则会出现「点了大类，界面毫无变化」。
+  const landable = catItems(g).filter((it) => !RAIL_HIDDEN_VIEWS.includes(it.view))
+  if (!landable.some((it) => it.view === ui.activeView) && landable.length) goFeature(landable[0])
   else ui.toggleMobileSkills(false)
 }
 const hiddenFeatureCount = computed(() =>
