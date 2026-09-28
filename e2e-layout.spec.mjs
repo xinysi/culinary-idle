@@ -329,3 +329,63 @@ if (VIEWPORTS[0]) {
     })
   }
 }
+
+// ── 美食探索的宽卡排版（2026-09-28 用户两轮反馈：「卡片太长了而且很杂」→「一个卡片改成两个卡片大小」）──
+// 为什么单列一条：这一页的问题**全是渲染层面的**，静态守卫抓不到 ——
+//   · 「一个卡片改成两张卡宽」= 卡片实际宽度（1440px 下 ≥ 380px，而不是原来那 214px）；
+//   · 「文字被挤到第二行」= 统计格折行（上半格 ~110px，4 字标签就放不下）⇒ 逐格量高度；
+//   · 两栏必须在同一条基线上且**不重叠**（首版两栏挨在一起，读起来像同一行走乱了）。
+for (const vp of VIEWPORTS) {
+  test(`布局守卫（${vp.tag}）：美食探索宽卡 —— 卡片够宽、统计行不折行、两栏不重叠`, async ({ page }) => {
+    await enterGame(page, vp)
+    await page.evaluate(async () => {
+      const el = document.querySelector('#app')
+      const pinia = el.__vue_app__.config.pinia ?? el.__vue_app__.config.globalProperties.$pinia
+      const player = pinia._s.get('player')
+      const ui = pinia._s.get('ui')
+      // ⚠️ `setActiveSkill` 在 **player** store 上（不在 ui 上 —— 写 `ui.setActiveSkill?.()`
+      //    会静默变成 undefined，页面停在原来那个技能页 ⇒ 量到的是采集页的 214px 卡，
+      //    断言照样能跑但量的不是探索页）。
+      player.setActiveSkill('exploration')
+      ui.setView('skill')
+    })
+    await page.waitForTimeout(700)
+    const r = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('.gather-card')]
+      if (!cards.length) return { n: 0 }
+      const c = cards[0]
+      // 折行判据：一行文字的高度不会超过 1.6 个行高（换行就会翻倍）
+      const lines = (sel) => [...c.querySelectorAll(sel)].map((e) => {
+        const lh = parseFloat(getComputedStyle(e).lineHeight) || 16
+        return { t: e.textContent.replace(/\s+/g, ' ').trim().slice(0, 20), h: Math.round(e.getBoundingClientRect().height), lh: Math.round(lh) }
+      })
+      const wrapped = [...lines('.ex-stats .gather-card-row'), ...lines('.ex-mastery')].filter((x) => x.h > x.lh * 1.6)
+      const stat = c.querySelector('.ex-col:not(.ex-col--loot)')?.getBoundingClientRect()
+      const loot = c.querySelector('.ex-col--loot')?.getBoundingClientRect()
+      const twoCol = loot && stat && loot.left > stat.left
+      const stacked = loot && stat && loot.left <= stat.left + 1 // 窄屏并栏
+      return {
+        n: cards.length,
+        cardW: Math.round(c.getBoundingClientRect().width),
+        cardH: Math.round(c.getBoundingClientRect().height),
+        twoCol: !!twoCol,
+        stacked: !!stacked,
+        overlap: twoCol ? Math.round((loot.left - stat.right) * 10) / 10 : null,
+        wrapped: wrapped.map((x) => `${x.t}(${x.h}px/${x.lh})`),
+        lootRows: c.querySelectorAll('.loot-row').length,
+        gearRow: c.querySelectorAll('.loot-row--gear').length,
+      }
+    })
+    expect(r.n, '探索页没有卡片（这一轮空转）').toBeGreaterThan(3)
+    // 宽卡：1440px 下每张 ≈ 550px（原来 214px）；窄屏（390px）单栏也是满宽
+    expect(r.cardW, `卡片宽度只有 ${r.cardW}px —— 「一张卡改成两张卡大小」没做到（原来 214px）`).toBeGreaterThan(300)
+    expect(r.wrapped, `统计行折行了（右上角「失败代价」这类 4 字标签在半格里放不下）：${r.wrapped.join('、')}`).toEqual([])
+    expect(r.gearRow, '掉落区里没有专属装备那一行').toBe(1)
+    if (vp.width > 940) {
+      expect(r.twoCol, '宽屏下卡内应分成两栏（数值 / 掉落）').toBe(true)
+      expect(r.overlap, `两栏重叠/贴在一起（间隔 ${r.overlap}px）`).toBeGreaterThan(8)
+    } else {
+      expect(r.stacked, '窄屏下两栏应并成一栏').toBe(true)
+    }
+  })
+}

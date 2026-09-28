@@ -146,6 +146,34 @@ const CASES = [
     to: 'export const RIVAL_MONTH_GROWTH = 0',
     expect: '跨年递增',
   },
+  {
+    name: '⑲ 宽卡网格的防溢出写法改坏（minmax(400px, 1fr) ⇒ 窄屏横向滚动条）',
+    rel: 'src/views/ExplorationView.vue',
+    from: 'grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));',
+    to: 'grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));',
+    expect: '防窄屏横向溢出',
+  },
+  {
+    name: '⑳ 窄屏不再并栏（390px 下两栏各 ~160px，掉落名与概率顶在一起）',
+    rel: 'src/views/ExplorationView.vue',
+    from: '  .ex-col--loot {\n    border-left: 0;\n    padding-left: 0;\n  }',
+    to: '',
+    expect: '并成一栏',
+  },
+  {
+    name: '㉑ 两栏分隔线改回白色玻璃高光（浅色主题下画在白卡片上 = 看不见）',
+    rel: 'src/views/ExplorationView.vue',
+    from: '  border-left: 1px dashed var(--border);',
+    to: '  border-left: 1px dashed rgba(var(--glass-rgb), 0.55);',
+    expect: '--glass-rgb',
+  },
+  {
+    name: '㉒ 减半标签挪回卡片头部（头部窄 ⇒ 整枚换行、同排卡片行高参差；校验 2026-09-28 改稳后的判据仍会咬）',
+    rel: 'src/views/ExplorationView.vue',
+    from: '<span class="dim ex-lv"',
+    to: '<span class="xp-low-chip">{{ LOW_TARGET_CHIP }}</span><span class="dim ex-lv"',
+    expect: '不在卡片头部',
+  },
 ]
 
 function run() {

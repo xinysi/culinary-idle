@@ -9026,10 +9026,17 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
           '标签没挂在自己的 .item-cell-sub 行上')
         continue
       }
-      const head = src.match(/<div class="gather-card-head">[\s\S]{0,1200}?<\/div>\s*<\/div>/)
+      // 🔴 标签**不许回到卡片头部**：头部那一格装不下（图片 + 名字），会整枚换行顶乱行高。
+      // ⚠️ 判据从「正则切 1200 字符内的 `</div></div>`」改成**按结构切**（2026-09-28）：
+      //    探索页把卡片头改成「名字 + 等级 + 右侧掉落条数」三个元素后，头部内部不再是
+      //    `<div>…</div></div>` 的形状 ⇒ 旧正则失配。失配本身被记成 FAIL（这点是对的），
+      //    但**判据不该依赖头部内部的元素个数** —— 现改为「从头部起点切到紧随其后的第一个兄弟块」。
+      const hs = src.indexOf('class="gather-card-head"')
+      const he = hs < 0 ? -1 : Math.max(src.indexOf('ex-body', hs), src.indexOf('gather-card-row', hs))
+      const head = hs < 0 || he < 0 ? null : [src.slice(hs, he)]
       check('低目标衰减', `界面：${label}页的减半标签**不在卡片头部**（头部窄，会把行高顶乱）`,
         !!head && !/xp-low-chip|badge-warn/.test(head[0]),
-        head ? head[0].slice(0, 160) : '没抓到卡片头部（正则失配 —— 这里不能当成通过）')
+        head ? head[0].slice(0, 160) : '没抓到卡片头部（结构变了 —— 这里不能当成通过）')
     }
     // 视图不许手写系数（写死的 0.5 会在调系数时静默与结算脱钩）。
     // 只扫 .vue（技能的 `recipe.xp * 0.5` 是**失败只给半额经验**，另一件事；`FAIL_XP_RATIO` 同理）。
@@ -9679,6 +9686,22 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
         !/baseSuccess\s*\*/.test(view) && !/\bl\.chance\b\s*\*/.test(view))
     check('探索改版', '页面写明「上限 90% + 专属装备补足剩下 10%」（玩家不用猜为什么堆不动了）',
       /EXPLORE_CAP_TEXT/.test(view) && /EXPLORE_GEAR_ITEMS/.test(view) && /EXPLORE_GEAR_DROP_CHANCE/.test(view))
+  }
+
+  // ⑪ 卡片排版（2026-09-28 用户：「卡片太长了而且很杂」→「一个卡片改成两个卡片大小」）
+  {
+    const view = rdSrc('src/views/ExplorationView.vue')
+    // 宽卡网格：`min(400px, 100%)` 是**窄屏不溢出的关键写法** —— 直接写 minmax(400px, 1fr)
+    // 在 350px 的容器里会撑出横向滚动条（本项目在别处踩过同类坑）。
+    check('探索改版', '卡片改成宽卡（网格列宽 ≥400px，且用 min(…,100%) 防窄屏横向溢出）',
+      /gather-grid--wide/.test(view) && /repeat\(auto-fill, minmax\(min\(400px, 100%\), 1fr\)\)/.test(view))
+    // 卡内两栏 + 窄屏并栏
+    check('探索改版', '卡内两栏（数值 / 掉落），窄屏（≤720px）并成一栏并去掉分隔线',
+      /\.ex-body\s*\{[^}]*grid-template-columns/.test(view) && /max-width: 720px[\s\S]{0,200}ex-body/.test(view) &&
+        /max-width: 720px[\s\S]{0,400}border-left: 0/.test(view))
+    // 分隔线必须用能看见的颜色：`--glass-rgb` 是白色玻璃高光，浅色主题下画在白卡片上等于没有
+    check('探索改版', '两栏分隔线与专属装备那条线用 `var(--border)`（不是白色玻璃高光 --glass-rgb）',
+      (view.match(/border-(left|top): 1px dashed var\(--border\)/g) ?? []).length >= 2 && !/1px dashed rgba\(var\(--glass-rgb\)/.test(view))
   }
 }
 
