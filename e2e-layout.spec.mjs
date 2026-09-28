@@ -439,6 +439,7 @@ for (const vp of VIEWPORTS) {
         const right = rightEl?.getBoundingClientRect()
         const act = c.querySelector('.recipe-action')?.getBoundingClientRect()
         const btnTops = [...c.querySelectorAll('.recipe-action .btn')].map((b) => Math.round(b.getBoundingClientRect().top))
+        const btnWs = [...c.querySelectorAll('.recipe-action .btn')].map((b) => Math.round(b.getBoundingClientRect().width))
         const stripes = new Set(btnTops).size // 1 = 四个按钮在同一行
         return {
           n: cards.length,
@@ -449,6 +450,7 @@ for (const vp of VIEWPORTS) {
           gap: left && right ? Math.round((right.left - left.right) * 10) / 10 : null,
           ingInRight: !!rightEl?.querySelector('.ing-cell, .gather-card-ing'),
           btnRows: stripes,
+          btnWs,
           actToBottom: act ? Math.round(cr.bottom - act.bottom) : null,
         }
       })
@@ -461,7 +463,7 @@ for (const vp of VIEWPORTS) {
         expect(r.twoCol, '宽屏下卡内应分成两栏（数值 / 材料）').toBe(true)
         expect(r.gap, `两栏贴在一起（间隔 ${r.gap}px）`).toBeGreaterThan(8)
         expect(r.ingInRight, '材料没有放进右栏').toBe(true)
-        expect(r.btnRows, `动作按钮占了 ${r.btnRows} 行（宽卡下应一行放得下四个）`).toBe(1)
+        expect(r.btnRows, `动作按钮占了 ${r.btnRows} 行（宽卡下应一行放得下四个）· 卡片 ${r.w}px · 各钮宽 ${JSON.stringify(r.btnWs)}`).toBe(1)
       } else {
         expect(r.stacked, '窄屏下两栏应并成一栏').toBe(true)
       }

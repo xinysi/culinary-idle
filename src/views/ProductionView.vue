@@ -775,20 +775,27 @@ const recipeNoun = '配方'
   margin-top: 0;
   align-self: end;
 }
-/* 宽卡下四个按钮**铺满整条**（否则右侧空一大块，看着像没排完）；
-   主按钮「制作」给更大的伸缩基数（它的文案最长：「材料不足」四个字） */
+/* 宽卡下四个按钮**铺满整条且永不换行**（否则右侧空一大块，看着像没排完）。
+   🔴 必须 `flex-wrap: nowrap` + `flex-basis: 0`：只写 `flex: 1 1 60px` 时，按钮的**最小内容宽**
+   仍会撑住行宽，一旦字体度量变大（CI 的 Linux runner 缺中文字体/emoji 字体，实测就那么折成了两行，
+   而本地全绿）就会换行 —— 换行在等高网格里会立刻把整排卡片顶高。基线取 0 ⇒ 由容器决定，永远一行。 */
 .recipe-action .queue-btns {
   width: 100%;
+  flex-wrap: nowrap;
 }
 .recipe-action .queue-btns .btn {
-  flex: 1 1 60px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .recipe-action .queue-btns .btn-primary {
-  flex: 2 1 96px; /* 覆盖全局那条「主按钮独占一行」（那是窄卡时代的妥协） */
+  flex: 2 1 0; /* 主按钮文案最长（「材料不足」），给它两倍份额；同时覆盖全局那条「独占一行」 */
 }
 @media (max-width: 720px) {
+  .recipe-action .queue-btns {
+    flex-wrap: wrap; /* 窄屏（栏并成一行后）恢复换行 */
+  }
   .recipe-action .queue-btns .btn-primary {
-    flex: 1 1 100%; /* 窄屏（栏并成一行后）恢复「主按钮独占一行」 */
+    flex: 1 1 100%; /* 且让主按钮独占一行 */
   }
 }
 /* 装备品质徽章（仅锻造卡片；配色与图鉴/物品详情一致） */
