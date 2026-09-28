@@ -438,9 +438,18 @@ for (const vp of VIEWPORTS) {
         const left = c.querySelector('.card-col:not(.card-col--right)')?.getBoundingClientRect()
         const right = rightEl?.getBoundingClientRect()
         const act = c.querySelector('.recipe-action')?.getBoundingClientRect()
-        const btnTops = [...c.querySelectorAll('.recipe-action .btn')].map((b) => Math.round(b.getBoundingClientRect().top))
-        const btnWs = [...c.querySelectorAll('.recipe-action .btn')].map((b) => Math.round(b.getBoundingClientRect().width))
-        const stripes = new Set(btnTops).size // 1 = 四个按钮在同一行
+        const boxes = [...c.querySelectorAll('.recipe-action .btn')].map((b) => b.getBoundingClientRect())
+        // 🔴 判「同一行」必须按**竖向重叠**，不能比 top 是否相等：`.queue-btns` 是 `align-items: center`，
+        //    按钮高度随字体度量变（CI 的 runner 缺 emoji/中文字体 ⇒ 高度不同 ⇒ top 不同），
+        //    用 top 相等判会在 CI 上把**同一行**误报成两行（实测：各钮宽 [106,106,106,191] 明明铺满一行）。
+        //    与项目里那条「比 y 相等判同一排会误报」同源。
+        const sorted = [...boxes].sort((a, b) => a.top - b.top)
+        let stripes = sorted.length ? 1 : 0
+        let curBottom = sorted[0]?.bottom ?? 0
+        for (const bx of sorted.slice(1)) {
+          if (bx.top >= curBottom - 1) { stripes++; curBottom = bx.bottom } else curBottom = Math.max(curBottom, bx.bottom)
+        }
+        const btnWs = boxes.map((b) => Math.round(b.width))
         return {
           n: cards.length,
           w: Math.round(cr.width),
