@@ -353,7 +353,8 @@ for (const vp of VIEWPORTS) {
     const r = await page.evaluate(() => {
       const cards = [...document.querySelectorAll('.gather-card')]
       if (!cards.length) return { n: 0 }
-      const c = cards[0]
+      // 取**掉落条数最少**的那张卡来量（等高网格里它的多余高度最多，最能暴露「装备行悬空」）
+      const c = [...cards].sort((a, b) => a.querySelectorAll('.loot-row').length - b.querySelectorAll('.loot-row').length)[0]
       // 折行判据：一行文字的高度不会超过 1.6 个行高（换行就会翻倍）
       const lines = (sel) => [...c.querySelectorAll(sel)].map((e) => {
         const lh = parseFloat(getComputedStyle(e).lineHeight) || 16
@@ -362,18 +363,28 @@ for (const vp of VIEWPORTS) {
       const wrapped = [...lines('.ex-stats .gather-card-row'), ...lines('.ex-mastery')].filter((x) => x.h > x.lh * 1.6)
       const stat = c.querySelector('.ex-col:not(.ex-col--loot)')?.getBoundingClientRect()
       const loot = c.querySelector('.ex-col--loot')?.getBoundingClientRect()
+      // 专属装备那一行：横跨整卡 + **贴住按钮**（用户 2026-09-28：「置底在按钮上方」）。
+      // 判据取**掉落条数最少**的那张卡 —— 等高网格里它的多余高度最多，最能暴露「装备行悬空」。
+      const gear = c.querySelector('.loot-row--gear')
+      const btn = c.querySelector('.btn')
+      const gr = gear?.getBoundingClientRect()
+      const br = btn?.getBoundingClientRect()
+      const cardR = c.getBoundingClientRect()
       const twoCol = loot && stat && loot.left > stat.left
       const stacked = loot && stat && loot.left <= stat.left + 1 // 窄屏并栏
       return {
         n: cards.length,
-        cardW: Math.round(c.getBoundingClientRect().width),
-        cardH: Math.round(c.getBoundingClientRect().height),
+        cardW: Math.round(cardR.width),
+        cardH: Math.round(cardR.height),
         twoCol: !!twoCol,
         stacked: !!stacked,
         overlap: twoCol ? Math.round((loot.left - stat.right) * 10) / 10 : null,
         wrapped: wrapped.map((x) => `${x.t}(${x.h}px/${x.lh})`),
         lootRows: c.querySelectorAll('.loot-row').length,
         gearRow: c.querySelectorAll('.loot-row--gear').length,
+        gearW: gr ? Math.round(gr.width) : 0,
+        gearToBtn: gr && br ? Math.round(br.top - gr.bottom) : null,
+        btnToBottom: br ? Math.round(cardR.bottom - br.bottom) : null,
       }
     })
     expect(r.n, '探索页没有卡片（这一轮空转）').toBeGreaterThan(3)
@@ -381,6 +392,14 @@ for (const vp of VIEWPORTS) {
     expect(r.cardW, `卡片宽度只有 ${r.cardW}px —— 「一张卡改成两张卡大小」没做到（原来 214px）`).toBeGreaterThan(300)
     expect(r.wrapped, `统计行折行了（右上角「失败代价」这类 4 字标签在半格里放不下）：${r.wrapped.join('、')}`).toEqual([])
     expect(r.gearRow, '掉落区里没有专属装备那一行').toBe(1)
+    // 横跨整卡（占满卡片内容宽）且**贴住按钮**（间距 = 卡片自身行距；等高网格里多出来的高度
+    // 必须落在卡体内部，而不是把装备行与按钮撑开 —— 用户 2026-09-28「置底在按钮上方」）
+    expect(r.gearW, `专属装备那一行没有横跨整卡（${r.gearW}px / 卡片 ${r.cardW}px）`).toBeGreaterThan(r.cardW - 40)
+    expect(r.gearToBtn, `专属装备那一行没贴住按钮（间距 ${r.gearToBtn}px —— 悬在了半空）`).toBeLessThanOrEqual(10)
+    // ⚠️ 只量「装备行 → 按钮」抓不到另一半缺陷：把「吸收多余高度」的责任拿掉时，**按钮会被顶起来**
+    //    （实测掉落条数最少的卡片 btnToBottom = 38px，而正常是 11px = 卡片内边距 + 描边）——
+    //    所以还要量按钮是否真的贴在卡片底。两个一起量，才等于「装备行与按钮都在底部」。
+    expect(r.btnToBottom, `按钮没贴在卡片底（下缘留了 ${r.btnToBottom}px —— 多余高度没被卡体吸收，按钮被顶起来了）`).toBeLessThanOrEqual(14)
     if (vp.width > 940) {
       expect(r.twoCol, '宽屏下卡内应分成两栏（数值 / 掉落）').toBe(true)
       expect(r.overlap, `两栏重叠/贴在一起（间隔 ${r.overlap}px）`).toBeGreaterThan(8)

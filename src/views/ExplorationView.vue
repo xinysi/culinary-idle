@@ -272,6 +272,12 @@ function succTip(t) {
      实测 1fr/1.05fr 时「失败代价」在 114px 的半格里会折成两行（2026-09-28 用户截图报的），
      现在标签收成 2 字 + 左栏给到 1.2fr 双保险。 */
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  /* 第二行（专属装备那一行）吸收多余高度 ⇒ 它被压到底部、紧贴按钮（2026-09-28 用户要求
+     「置底在按钮上方」）。等高网格里同排卡片一样高，多出来的高度原先把「装备行 → 按钮」
+     撑开、装备行悬在半空 —— 现在把「吸收高度」的责任从按钮（全局 `.gather-card > .btn`
+     的 `margin-top:auto`）挪到卡体。 */
+  grid-template-rows: auto 1fr;
+  flex: 1;
   gap: 4px 14px;
 }
 .ex-col {
@@ -307,10 +313,16 @@ function succTip(t) {
 }
 .loot-row--gear {
   grid-column: 1 / -1;
+  /* 贴住所在行的底边（该行由 `grid-template-rows: auto 1fr` 吸收多余高度） */
+  align-self: end;
   flex-wrap: wrap;
   row-gap: 2px;
   padding-top: 4px;
   border-top: 1px dashed var(--border);
+}
+/* 按钮不再自己贴底（多余高度已由 `.ex-body` 吃下）——否则装备行与按钮之间会留一条空隙 */
+.gather-card > .btn {
+  margin-top: 0;
 }
 .loot-img--gear {
   width: 20px;
