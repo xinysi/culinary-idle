@@ -361,8 +361,9 @@ for (const vp of VIEWPORTS) {
         return { t: e.textContent.replace(/\s+/g, ' ').trim().slice(0, 20), h: Math.round(e.getBoundingClientRect().height), lh: Math.round(lh) }
       })
       const wrapped = [...lines('.ex-stats .gather-card-row'), ...lines('.ex-mastery')].filter((x) => x.h > x.lh * 1.6)
-      const stat = c.querySelector('.ex-col:not(.ex-col--loot)')?.getBoundingClientRect()
-      const loot = c.querySelector('.ex-col--loot')?.getBoundingClientRect()
+      // 两栏骨架用的是共用原语（2026-09-28 抽到 main.css）：左 `.card-col`、右 `.card-col--right`
+      const stat = c.querySelector('.card-col:not(.card-col--right)')?.getBoundingClientRect()
+      const loot = c.querySelector('.card-col--right')?.getBoundingClientRect()
       // 专属装备那一行：横跨整卡 + **贴住按钮**（用户 2026-09-28：「置底在按钮上方」）。
       // 判据取**掉落条数最少**的那张卡 —— 等高网格里它的多余高度最多，最能暴露「装备行悬空」。
       const gear = c.querySelector('.loot-row--gear')
@@ -407,4 +408,64 @@ for (const vp of VIEWPORTS) {
       expect(r.stacked, '窄屏下两栏应并成一栏').toBe(true)
     }
   })
+}
+
+// ── 制作类卡片（制作 / 食材保鲜 / 副业同属 ProductionView）：同步成探索页那套宽卡两栏 ──────────
+// 用户 2026-09-28：「制作的卡片、食材保鲜的卡片、副业的卡片都是过长，需要同步成美食探索的卡片那样」。
+// 改前实测：192px 宽 × 331~424px 高、同屏 8 列；最占地方的是**动作条 87px**（四个按钮折两行）
+// 与**材料行 36~69px**（换行）。改后 527×185。这里量三件静态守卫抓不到的事：
+// 卡片真的变宽变矮、材料进了右栏（两栏）、四个按钮**一行**放得下、动作条贴卡片底。
+for (const vp of VIEWPORTS) {
+  for (const skill of ['cooking', 'preservation', 'woodworking']) {
+    test(`布局守卫（${vp.tag}）：制作类宽卡 ${skill} —— 卡片变宽变矮、材料进右栏、按钮一行`, async ({ page }) => {
+      await enterGame(page, vp)
+      await page.evaluate(async (id) => {
+        const el = document.querySelector('#app')
+        const pinia = el.__vue_app__.config.pinia ?? el.__vue_app__.config.globalProperties.$pinia
+        const player = pinia._s.get('player')
+        const items = (await import('/src/game/data/items.js')).ITEMS
+        for (const [iid, it] of Object.entries(items)) { if (it.type !== 'spirit') player.inventory[iid] = 999 }
+        player.setActiveSkill(id)
+        pinia._s.get('ui').setView('skill')
+      }, skill)
+      await page.waitForTimeout(700)
+      const r = await page.evaluate(() => {
+        const cards = [...document.querySelectorAll('.recipe-grid .gather-card')]
+        if (!cards.length) return { n: 0 }
+        const c = cards[0]
+        const cr = c.getBoundingClientRect()
+        const rightEl = c.querySelector('.card-col--right')
+        const left = c.querySelector('.card-col:not(.card-col--right)')?.getBoundingClientRect()
+        const right = rightEl?.getBoundingClientRect()
+        const act = c.querySelector('.recipe-action')?.getBoundingClientRect()
+        const btnTops = [...c.querySelectorAll('.recipe-action .btn')].map((b) => Math.round(b.getBoundingClientRect().top))
+        const stripes = new Set(btnTops).size // 1 = 四个按钮在同一行
+        return {
+          n: cards.length,
+          w: Math.round(cr.width),
+          h: Math.round(cr.height),
+          twoCol: !!left && !!right && right.left > left.left,
+          stacked: !!left && !!right && right.left <= left.left + 1,
+          gap: left && right ? Math.round((right.left - left.right) * 10) / 10 : null,
+          ingInRight: !!rightEl?.querySelector('.ing-cell, .gather-card-ing'),
+          btnRows: stripes,
+          actToBottom: act ? Math.round(cr.bottom - act.bottom) : null,
+        }
+      })
+      expect(r.n, `${skill} 没有配方卡片（这一轮空转）`).toBeGreaterThan(0)
+      // 宽卡：1440px 下 ≈527px（原来 192px）；窄屏单栏满宽
+      expect(r.w, `卡片宽度只有 ${r.w}px —— 没同步成宽卡（原来 192px）`).toBeGreaterThan(300)
+      // 矮：原来 331~424px；宽卡两栏后 1440px 下应 ≤ 260px（390px 单栏下允许更高）
+      if (vp.width > 940) {
+        expect(r.h, `卡片仍然 ${r.h}px 高 —— 「过长」没解决（原来 331~424px）`).toBeLessThanOrEqual(260)
+        expect(r.twoCol, '宽屏下卡内应分成两栏（数值 / 材料）').toBe(true)
+        expect(r.gap, `两栏贴在一起（间隔 ${r.gap}px）`).toBeGreaterThan(8)
+        expect(r.ingInRight, '材料没有放进右栏').toBe(true)
+        expect(r.btnRows, `动作按钮占了 ${r.btnRows} 行（宽卡下应一行放得下四个）`).toBe(1)
+      } else {
+        expect(r.stacked, '窄屏下两栏应并成一栏').toBe(true)
+      }
+      expect(r.actToBottom, `动作条没贴卡片底（下缘留 ${r.actToBottom}px）`).toBeLessThanOrEqual(14)
+    })
+  }
 }

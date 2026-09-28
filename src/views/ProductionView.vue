@@ -583,7 +583,7 @@ const recipeNoun = '配方'
           <span class="dim" title="该档已精通满 100 的配方数 / 该档配方数">精通 {{ eraProgress(activeSec.list, (r) => masteryOf(r).level).done }}/{{ activeSec.list.length }}</span>
           <span v-if="activeSec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
         </div>
-        <div class="gather-grid recipe-grid">
+        <div class="gather-grid recipe-grid gather-grid--wide">
           <div
             v-for="r in activeSec.list"
             :key="r.id"
@@ -597,62 +597,77 @@ const recipeNoun = '配方'
                 <span v-if="qualityOf[r.id]" class="quality-chip" :style="{ color: qualityOf[r.id].color }">{{ qualityOf[r.id].text }}</span>
                 <div class="dim" style="font-size: 12px">{{ recipeCategory(r) }} · Lv {{ r.reqLevel }}</div>
               </div>
-            </div>
-            <!-- 低目标减半（2026-09-23 改位置）：挂在「经验」这行的数值旁，**不进卡片头部** ——
-                 头部（名字那一格）窄，塞徽章会整枚换行、把同排卡片行高顶得参差不齐（用户截图报的排版乱）。 -->
-            <div class="gather-card-row">
-              <span :title="XP_HINT">经验/次</span>
-              <span class="mono" :title="isLow(r) ? LOW_TARGET_NOTE : XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span><span v-if="isLow(r)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
-            </div>
-            <div class="gather-card-row">
-              <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
-              <span class="mono" title="材料充足时的上限（3 秒/件）；实际受原料供给限制">{{ fmtRate(instance.xpPerHour(r)) }}</span>
-            </div>
-            <!-- 「当前最优」独占一行：塞进右侧值里会被挤成竖排（卡片只有两列宽） -->
-            <div v-if="r.id === bestRecipeId" class="best-flag">
-              ⚡ 最优<template v-if="gainVsHead(r) != null"> · 比队头快 {{ (gainVsHead(r) * 100).toFixed(0) }}%</template>
-            </div>
-            <div class="gather-card-row">
-              <span>精通</span>
-              <span class="mono">
-                {{ masteryOf(r).level }} / 100 级<span v-if="masteryOf(r).batch" class="mastery-hl">&nbsp;· 保底 +{{ masteryOf(r).batch }}</span>
+              <!-- 「当前最优」挪到卡片头右侧（2026-09-28 宽卡重排）：原先它独占一整行 18px，
+                   而宽卡头部右侧本来就是空的（与探索页「N 项掉落」同一个位置） -->
+              <span v-if="r.id === bestRecipeId" class="best-flag pc-best" title="全库性价比最高">
+                ⚡ 最优<template v-if="gainVsHead(r) != null"> · 比队头快 {{ (gainVsHead(r) * 100).toFixed(0) }}%</template>
               </span>
             </div>
-            <ProgressBar :progress="masteryOf(r).progress" class="mastery-bar" />
-            <div class="dim mono" style="font-size: 12px; text-align: right">
-              {{ masteryOf(r).current }} / {{ masteryOf(r).needed }} 次
-            </div>
-            <div class="gather-card-row effect-row">
-              <span class="effect-label">效果</span>
-              <span class="effect-tags">
-                <span v-for="(t, i) in outputEffect(r.output.itemId)" :key="i" class="effect-chip">{{ t }}</span>
-              </span>
-            </div>
-            <div class="ing-cell gather-card-ing">
-              <span
-                v-for="(qty, itemId) in effIngredients(r)"
-                :key="itemId"
-                class="ing"
-                :class="{ lacking: have(itemId) < qty }"
-              >
-                {{ getItem(itemId)?.name }} <span class="mono">{{ have(itemId) }}/{{ need(itemId, qty) }}</span>
-              </span>
-            </div>
-            <div class="recipe-action">
-              <div class="gather-card-row">
-                <span>成功率</span>
-                <!-- 未解锁（技能等级 < 配方等级）时 successChance() 会算出负数（基础值 + 负的等级差），
-                     显示成「成功率 -41%」纯属误导：这个等级根本做不了它。改为显示解锁要求。 -->
-                <span v-if="player.skillState(instance.id).level < r.reqLevel" class="mono dim">Lv{{ r.reqLevel }} 解锁</span>
-                <span v-else class="mono">{{ (instance.successChance(r) * 100).toFixed(0) }}%</span>
+            <!-- 宽卡两栏（与探索页**同一套骨架** `.card-2col`）：左 = 数值与精通，右 = 材料 -->
+            <div class="card-2col">
+              <div class="card-col">
+                <div class="pc-stats">
+                  <!-- 低目标减半（2026-09-23 改位置）：挂在「经验」这行的数值旁，**不进卡片头部** ——
+                       头部（名字那一格）窄，塞徽章会整枚换行、把同排卡片行高顶得参差不齐（用户截图报的排版乱）。 -->
+                  <div class="gather-card-row">
+                    <span :title="XP_HINT">经验/次</span>
+                    <span class="mono" :title="isLow(r) ? LOW_TARGET_NOTE : XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span><span v-if="isLow(r)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
+                  </div>
+                  <div class="gather-card-row">
+                    <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
+                    <span class="mono" title="材料充足时的上限（3 秒/件）；实际受原料供给限制">{{ fmtRate(instance.xpPerHour(r)) }}</span>
+                  </div>
+                  <div class="gather-card-row">
+                    <span>成功率</span>
+                    <!-- 未解锁（技能等级 < 配方等级）时 successChance() 会算出负数（基础值 + 负的等级差），
+                         显示成「成功率 -41%」纯属误导：这个等级根本做不了它。改为显示解锁要求。 -->
+                    <span v-if="player.skillState(instance.id).level < r.reqLevel" class="mono dim">Lv{{ r.reqLevel }} 解锁</span>
+                    <span v-else class="mono pc-rate">{{ (instance.successChance(r) * 100).toFixed(0) }}%</span>
+                  </div>
+                  <div class="gather-card-row">
+                    <span>精通</span>
+                    <span class="mono">{{ masteryOf(r).level }}<span class="dim">/100</span><span v-if="masteryOf(r).batch" class="mastery-hl">&nbsp;保底 +{{ masteryOf(r).batch }}</span></span>
+                  </div>
+                </div>
+                <!-- 进度条与次数并成一行（探索页同款）：比「条 + 次数各占一行」省 18px -->
+                <div class="pc-mastery">
+                  <ProgressBar :progress="masteryOf(r).progress" class="mastery-bar" />
+                  <span class="dim mono pc-count">{{ masteryOf(r).current }}/{{ masteryOf(r).needed }} 次</span>
+                </div>
+                <div class="gather-card-row effect-row">
+                  <span class="effect-label">效果</span>
+                  <span class="effect-tags">
+                    <span v-for="(t, i) in outputEffect(r.output.itemId)" :key="i" class="effect-chip">{{ t }}</span>
+                  </span>
+                </div>
               </div>
-              <div class="queue-btns">
-                <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>
-                <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 10)" title="加入制作队列 ×10（材料不足自动暂停）">⏳×10</button>
-                <button class="btn btn-sm" @click="openTree(r)" title="展开配方材料链（来源/持有/跳转）">🌳</button>
-                <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
-                  {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
-                </button>
+              <!-- 右栏：材料（名称 + 持有/需要，缺料高亮）。宽卡右栏 ~230px，一行放得下 2~3 件 -->
+              <div class="card-col card-col--right">
+                <div class="gather-card-row pc-ing-head">
+                  <span>材料</span>
+                  <span class="dim">持有 / 需要</span>
+                </div>
+                <div class="ing-cell gather-card-ing">
+                  <span
+                    v-for="(qty, itemId) in effIngredients(r)"
+                    :key="itemId"
+                    class="ing"
+                    :class="{ lacking: have(itemId) < qty }"
+                  >
+                    {{ getItem(itemId)?.name }} <span class="mono">{{ have(itemId) }}/{{ need(itemId, qty) }}</span>
+                  </span>
+                </div>
+              </div>
+              <!-- 跨栏一行：四个动作按钮（宽卡整条放得下，原先在窄卡里要折两行） -->
+              <div class="recipe-action card-span">
+                <div class="queue-btns">
+                  <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>
+                  <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 10)" title="加入制作队列 ×10（材料不足自动暂停）">⏳×10</button>
+                  <button class="btn btn-sm" @click="openTree(r)" title="展开配方材料链（来源/持有/跳转）">🌳</button>
+                  <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
+                    {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -710,6 +725,72 @@ const recipeNoun = '配方'
   50% { box-shadow: 0 0 20px rgba(var(--amber-strong-rgb), 0.85); }
 }
 .gather-card.flash { animation: recipeFlash 0.8s ease-in-out 2; }
+
+/* ── 宽卡两栏（2026-09-28 用户：「制作的卡片、食材保鲜的卡片、副业的卡片都是过长，
+      需要同步成美食探索的卡片那样」）────────────────────────────────────────
+   骨架用 `main.css` 的共用原语 `.gather-grid--wide` / `.card-2col` / `.card-col` / `.card-span`
+   （与探索页同一套，改列宽只改那一处）。这里只放制作页自己的排布细节。
+   改前：192px 宽 × 331~424px 高、同屏 8 列；两张最占地方的区块是 `recipe-action`(87px，四个按钮折两行)
+   与 `ing-cell`(36~69px，材料换行)。 */
+.pc-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}
+/* 成功率是这张卡最该被一眼扫到的数（与探索页同口径加粗） */
+.pc-rate {
+  font-weight: 700;
+}
+/* 进度条与次数并成一行（省 18px），并推到底部让条与右栏材料区对齐 */
+.pc-mastery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+.pc-mastery .mastery-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pc-count {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+}
+.pc-ing-head {
+  justify-content: space-between;
+}
+/* 右栏里的材料块**不要**那条虚线（它是单栏时代的分隔线，现在栏与栏之间已有竖线） */
+.card-col--right .gather-card-ing {
+  border-top: 0;
+  padding-top: 0;
+}
+/* 「⚡ 最优」在卡片头右侧（宽卡头部右侧本就是空的） */
+.pc-best {
+  margin-left: auto;
+  align-self: center;
+}
+/* 动作条：跨栏整条、贴住卡片底部；宽卡下一行放得下四个按钮 */
+.recipe-action {
+  margin-top: 0;
+  align-self: end;
+}
+/* 宽卡下四个按钮**铺满整条**（否则右侧空一大块，看着像没排完）；
+   主按钮「制作」给更大的伸缩基数（它的文案最长：「材料不足」四个字） */
+.recipe-action .queue-btns {
+  width: 100%;
+}
+.recipe-action .queue-btns .btn {
+  flex: 1 1 60px;
+}
+.recipe-action .queue-btns .btn-primary {
+  flex: 2 1 96px; /* 覆盖全局那条「主按钮独占一行」（那是窄卡时代的妥协） */
+}
+@media (max-width: 720px) {
+  .recipe-action .queue-btns .btn-primary {
+    flex: 1 1 100%; /* 窄屏（栏并成一行后）恢复「主按钮独占一行」 */
+  }
+}
 /* 装备品质徽章（仅锻造卡片；配色与图鉴/物品详情一致） */
 .quality-chip {
   display: inline-block;

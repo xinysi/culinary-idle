@@ -134,6 +134,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', required=True)
     ap.add_argument('--map', nargs='*', default=DEFAULT_MAP)
+    ap.add_argument('--out', default=None, help='输出目录，默认 items/food；装备图传 items/equipment')
     ap.add_argument('--stats', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--sort', choices=['mtime', 'name'], default='mtime')
@@ -170,7 +171,8 @@ def main():
                 i, f, bg_pct * 100, dropped, body.mean() * 100, med))
         return 0
 
-    os.makedirs(OUT_DIR, exist_ok=True)
+    out_dir = args.out or OUT_DIR
+    os.makedirs(out_dir, exist_ok=True)
     md5s, rows = {}, []
     for i, (f, name) in enumerate(zip(files, args.map), 1):
         sq, side, dropped = build(os.path.join(args.src, f))
@@ -187,7 +189,7 @@ def main():
         print('{:>2}  {:<34} -> {:<8} 裁切边长{:<5} 丢弃孤立块{:<3} 实心{:>3.0f}% 软边{:>2.0f}%  md5={}'.format(
             i, f, name + '.png', int(side), dropped, opaque * 100, semi * 100, md5[:8]))
         if not args.dry_run:
-            out.save(os.path.join(OUT_DIR, name + '.png'))
+            out.save(os.path.join(out_dir, name + '.png'))
         if args.sheet:
             rows.append((name, outs))
 

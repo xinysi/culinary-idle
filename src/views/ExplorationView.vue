@@ -15,6 +15,7 @@ import { masteryXpMultiplier } from '../game/core/mastery.js'
 import { EXPLORE_SUCCESS_CAP, EXPLORE_CAP_TEXT, exploreBandFactor, exploreMasteryPP } from '../game/data/explorationBalance.js'
 import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE, EXPLORE_GEAR_SETS } from '../game/data/explorationGear.js'
 import ProgressBar from '../components/ProgressBar.vue'
+import MasteryHelp from '../components/MasteryHelp.vue'
 import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 
 const props = defineProps({
@@ -121,7 +122,12 @@ function succTip(t) {
       <h3 class="target-head-row">
         <span>探索目标</span>
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×0.5</span>
-        <span class="dim target-head-extra">初始成功率随等级段递减（末段趋 0%），靠精通与专属装备补回</span>
+        <span class="target-head-extra">
+          <span class="dim">初始成功率随等级段递减（末段趋 0%），靠精通与专属装备补回</span>
+          <!-- 精通档位说明（2026-09-28 用户指出本页缺它）：与采集/制作/厨房笔记**同一个组件**，
+               表从 `mastery.js` 派生（视图里不手写任何档位数字） -->
+          <MasteryHelp />
+        </span>
       </h3>
 
       <!-- 等级段标签页（与采集/制作同款：点段切换，段名 = 该档最高级目标） -->
@@ -162,10 +168,10 @@ function succTip(t) {
             <span class="dim ex-loot-count" title="这张卡的战利品条数（含金币）">{{ t.loot.length }} 项掉落</span>
           </div>
 
-          <div class="ex-body">
+          <div class="card-2col">
             <!-- 左栏：数值 2×2 + 精通（列宽 ~230px ⇒ 半格 ~110px，标签与数值贴在一起，不像
                  整栏一行那样被拉成「标签在最左、数值在最右」的两半） -->
-            <div class="ex-col">
+            <div class="card-col">
               <div class="ex-stats">
                 <div class="gather-card-row" :title="isLow(t) ? LOW_TARGET_NOTE : ''">
                   <span>经验</span>
@@ -195,7 +201,7 @@ function succTip(t) {
             </div>
 
             <!-- 右栏：掉落预览（名称靠左、概率靠右 —— 右栏宽约 250px，概率右对齐才用得上这块宽度） -->
-            <div class="ex-col ex-col--loot">
+            <div class="card-col card-col--right">
               <div class="loot-list">
                 <div v-for="(l, i) in t.loot" :key="i" class="loot-row" :title="lootLine(l)">
                   <img
@@ -252,46 +258,13 @@ function succTip(t) {
 /* ── 2026-09-28 卡片重排（用户：「卡片太长了而且很杂，需要重新设计大小和排版」→
       「为什么不能一个卡片改成两个卡片大小呢？现在这样太挤了太小了」）──
    改前单卡 434px 高、214px 宽（同屏 8 列）。现改为**宽卡两栏**：
-   · 网格列宽 ≈ 原两张卡（≥400px，同屏 4 列左右）—— 玩家要的是「更大的卡」，不是把内容压小；
+   · 网格列宽 ≈ 原两张卡（≥400px，同屏 3~4 列）—— 玩家要的是「更大的卡」，不是把内容压小；
    · 卡内左右分栏：左 = 数值与精通，右 = 掉落预览；专属装备横跨两栏；
    · 字号 12px、掉落图标 24px 全部**回到正常尺寸**（上一版试过缩到 11px/16px，实测太挤）。
-   实测高度 ≈ 250px（改前 434），且没有一行需要折行。 */
+   实测 213px × 527px（改前 434×214），且没有一行需要折行。
+   ⚠️ **宽卡网格与两栏骨架已抽成共用原语**（`main.css` 的 `.gather-grid--wide` / `.card-2col` /
+   `.card-col` / `.card-span`）——制作类（制作/保鲜/副业）2026-09-28 同步同一套，改列宽要改那一处。 */
 
-/* 宽卡网格：`min(400px, 100%)` 保证窄屏（<400px）不溢出 —— 直接写 minmax(400px,1fr)
-   在 350px 的容器里会撑出横向滚动。 */
-.gather-grid--wide {
-  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
-}
-
-/* 卡内两栏：左数值 / 右掉落；专属装备整条横跨（它与目标无关，视觉上不属于任何一栏）。
-   两栏之间给一条虚线分隔 —— 没有它时「左栏右对齐的数值」紧挨着「右栏的掉落名」，
-   实测读起来像同一行走乱了（2026-09-28 首版就是这么翻车的）。 */
-.ex-body {
-  display: grid;
-  /* 左栏略宽：它是「标签 + 数值」两段（3~4 字标签最容易折行），右栏是「名称 + 概率」两段。
-     实测 1fr/1.05fr 时「失败代价」在 114px 的半格里会折成两行（2026-09-28 用户截图报的），
-     现在标签收成 2 字 + 左栏给到 1.2fr 双保险。 */
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  /* 第二行（专属装备那一行）吸收多余高度 ⇒ 它被压到底部、紧贴按钮（2026-09-28 用户要求
-     「置底在按钮上方」）。等高网格里同排卡片一样高，多出来的高度原先把「装备行 → 按钮」
-     撑开、装备行悬在半空 —— 现在把「吸收高度」的责任从按钮（全局 `.gather-card > .btn`
-     的 `margin-top:auto`）挪到卡体。 */
-  grid-template-rows: auto 1fr;
-  flex: 1;
-  gap: 4px 14px;
-}
-.ex-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.ex-col--loot {
-  /* ⚠️ 分隔线的颜色**不能**用 `--glass-rgb`（那是白色的玻璃高光）——浅色主题下是白线画在
-     白卡片上，实测完全看不见（2026-09-28 首版就踩了）。用全站统一的 `--border`。 */
-  border-left: 1px dashed var(--border);
-  padding-left: 14px;
-}
 /* 左栏里 2×2 摆（半格 ~110px）：标签与数值贴在一起，不像整栏一行那样被拉成两半 */
 .ex-stats {
   display: grid;
@@ -320,7 +293,7 @@ function succTip(t) {
   padding-top: 4px;
   border-top: 1px dashed var(--border);
 }
-/* 按钮不再自己贴底（多余高度已由 `.ex-body` 吃下）——否则装备行与按钮之间会留一条空隙 */
+/* 按钮不再自己贴底（多余高度已由 `.card-2col` 的 `flex:1` 吃下）——否则装备行与按钮之间会留一条空隙 */
 .gather-card > .btn {
   margin-top: 0;
 }
@@ -360,15 +333,5 @@ function succTip(t) {
   flex: 0 0 auto;
   font-size: 11.5px;
 }
-/* 窄屏（≤720px，与全站同一断点）：两栏并成一栏 —— 分隔线也随之去掉，
-   否则会在掉落块左边留一条悬空的竖线 */
-@media (max-width: 720px) {
-  .ex-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .ex-col--loot {
-    border-left: 0;
-    padding-left: 0;
-  }
-}
+/* 窄屏并栏与分隔线由共用原语 `.card-2col` 的 `@media (max-width: 720px)` 负责（main.css） */
 </style>

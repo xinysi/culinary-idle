@@ -2774,8 +2774,13 @@ console.log('══ C58. 浅色主题对比度 ══')
   const ratio = (a, b) => { const l1 = lum(hex2rgb(a)), l2 = lum(hex2rgb(b)); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) }
   // 底色锚点取自实测（classic 浅色：卡片 --panel-raise #f0eae2 / 页面 --bg #fffbf4 / 金光底 / 粉底）
   const SURF = { card: '#f0eae2', page: '#fffbf4', goldChip: '#f8efd9', pinkChip: '#fae4da' }
-  const base = { '--muted': pick('muted'), '--text-dim': pick('text-dim'), '--gold-strong': pick('gold-strong'), '--primary-strong': pick('primary-strong') }
-  check('浅色对比度', `根 token 齐全（muted/text-dim/gold-strong/primary-strong 都能解析到）`,
+  const base = {
+    '--muted': pick('muted'), '--text-dim': pick('text-dim'), '--gold-strong': pick('gold-strong'),
+    '--primary-strong': pick('primary-strong'), '--primary-soft': pick('primary-soft'), '--text': pick('text'),
+    // 2026-09-28 补两对（制作类页面浅色扫描查出，见下面那条注释）
+    '--bad-strong': pick('bad-strong'), '--bad-soft': pick('bad-soft'),
+  }
+  check('浅色对比度', `根 token 齐全（muted/text-dim/gold-strong/primary-strong/bad-strong/primary-soft 都能解析到）`,
     Object.values(base).every((v) => v), JSON.stringify(base))
   const bad = []
   for (const s of SKINS) {
@@ -2787,15 +2792,33 @@ console.log('══ C58. 浅色主题对比度 ══')
       ['text-dim × 卡片底', hexOf(v['--text-dim']), SURF.card, 4.5],
       ['gold-strong × 金光底', hexOf(v['--gold-strong']), SURF.goldChip, 4.5],
       ['primary-strong × 页面底', hexOf(v['--primary-strong']), SURF.page, 4.5],
+      // 🔴 2026-09-28 补：**压在自家 soft 底上的小字**也要算 —— 上面 5 对全是「深档压卡片底」，
+      //    而胶囊/缺料标记是「压在自己那层淡底上」，那层的对比度天然更低。
+      //    实测（制作类页面的浅色扫描）：`.ing.lacking` 的 `--bad` 压 `--bad-soft` = **3.33**、
+      //    `.effect-chip` 的 `--primary-strong` 压 `--primary-soft` = **4.27**（amber），两处都 <4.5。
+      //    改法沿用本项目口径：**文字用深档**（`--bad-strong`）或**回到正文字色**（`--text`）。
+      ['bad-strong × bad-soft（缺料标记）', hexOf(v['--bad-strong']), hexOf(v['--bad-soft']), 4.5],
+      ['text × primary-soft（效果胶囊）', hexOf(v['--text']), hexOf(v['--primary-soft']), 4.5],
     ]
     for (const [label, fg, bg, need] of pairs) {
-      if (!fg) { bad.push(`${s.id}: ${label} 取不到色值`); continue }
+      if (!fg || !bg) { bad.push(`${s.id}: ${label} 取不到色值`); continue }
       const r = ratio(fg, bg)
       if (r < need) bad.push(`${s.id}: ${label} ${r.toFixed(2)} < ${need}`)
     }
   }
-  check('浅色对比度', `15 皮肤 × 5 对（muted/text-dim/gold-strong/primary-strong 压各自底色）全部 ≥4.5`,
+  check('浅色对比度', `15 皮肤 × 7 对（含「压自家 soft 底」的缺料标记与效果胶囊）全部 ≥4.5`,
     bad.length === 0, bad.slice(0, 5).join(' | '))
+  // 🔴 上面那两条只算了 **token 之间** 的比值 ⇒ 它挡不住「规则里写错 token」
+  //    （把 `.ing.lacking` 的 `--bad-strong` 改回 `--bad`，token 对照样合格、守卫照样绿 —— 实测反例）。
+  //    所以这里再看**规则本身用的是哪个 token**：压 soft 底的小字必须用深档 / 正文字色。
+  const block = (sel) => {
+    const i = css.indexOf(sel)
+    return i < 0 ? '' : css.slice(i, css.indexOf('}', i))
+  }
+  check('浅色对比度', '压 soft 底的规则用的是合格 token（缺料标记 --bad-strong / 效果胶囊 --text）',
+    /color:\s*var\(--bad-strong\)/.test(block('.ing.lacking')) && !/color:\s*var\(--bad\)\s*;/.test(block('.ing.lacking')) &&
+      /color:\s*var\(--text\)/.test(block('.effect-chip')) && !/color:\s*var\(--primary-strong\)\s*;/.test(block('.effect-chip')),
+    `lacking=${block('.ing.lacking').replace(/\s+/g, ' ').slice(-60)} · chip=${block('.effect-chip').replace(/\s+/g, ' ').slice(-60)}`)
 }
 
 // ── C59. 战斗深度 v1（2026-09-26 用户「开始优化，改加新东西还是要加」）──
@@ -9688,20 +9711,37 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       /EXPLORE_CAP_TEXT/.test(view) && /EXPLORE_GEAR_ITEMS/.test(view) && /EXPLORE_GEAR_DROP_CHANCE/.test(view))
   }
 
-  // ⑪ 卡片排版（2026-09-28 用户：「卡片太长了而且很杂」→「一个卡片改成两个卡片大小」）
+  // ⑪ 卡片排版（2026-09-28 用户：「卡片太长了而且很杂」→「一个卡片改成两个卡片大小」；
+  //    同日追加：「制作的卡片、食材保鲜的卡片、副业的卡片都是过长，需要同步成美食探索的卡片那样」）
   {
     const view = rdSrc('src/views/ExplorationView.vue')
-    // 宽卡网格：`min(400px, 100%)` 是**窄屏不溢出的关键写法** —— 直接写 minmax(400px, 1fr)
-    // 在 350px 的容器里会撑出横向滚动条（本项目在别处踩过同类坑）。
-    check('探索改版', '卡片改成宽卡（网格列宽 ≥400px，且用 min(…,100%) 防窄屏横向溢出）',
-      /gather-grid--wide/.test(view) && /repeat\(auto-fill, minmax\(min\(400px, 100%\), 1fr\)\)/.test(view))
-    // 卡内两栏 + 窄屏并栏
-    check('探索改版', '卡内两栏（数值 / 掉落），窄屏（≤720px）并成一栏并去掉分隔线',
-      /\.ex-body\s*\{[^}]*grid-template-columns/.test(view) && /max-width: 720px[\s\S]{0,200}ex-body/.test(view) &&
-        /max-width: 720px[\s\S]{0,400}border-left: 0/.test(view))
+    const prod = rdSrc('src/views/ProductionView.vue')
+    const css = rdSrc('src/styles/main.css')
+    // 骨架**单一来源**：宽卡网格与两栏原语只写在 main.css，两个视图只引用类名。
+    // ⚠️ `min(400px, 100%)` 是**窄屏不溢出的关键写法** —— 直接写 minmax(400px, 1fr)
+    //    在 350px 的容器里会撑出横向滚动条（本项目在别处踩过同类坑）。
+    check('探索改版', '宽卡骨架单一来源（main.css 定义 `.gather-grid--wide` / `.card-2col` / `.card-col--right`，含 min(…,100%) 防溢出）',
+      /\.gather-grid--wide\s*\{[^}]*repeat\(auto-fill, minmax\(min\(400px, 100%\), 1fr\)\)/.test(css) &&
+        /\.card-2col\s*\{[^}]*grid-template-columns/.test(css) &&
+        /\.card-2col\s*\{[^}]*grid-template-rows: auto 1fr/.test(css) &&
+        /\.card-col--right\s*\{[^}]*border-left: 1px dashed var\(--border\)/.test(css) &&
+        /max-width: 720px[\s\S]{0,300}card-2col[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(css))
+    check('探索改版', '两个视图都只**引用**骨架类名，不各自重定义（否则改列宽要改多处）',
+      /gather-grid--wide/.test(view) && /card-2col/.test(view) &&
+        /gather-grid--wide/.test(prod) && /card-2col/.test(prod) &&
+        !/\.gather-grid--wide\s*\{/.test(view) && !/\.gather-grid--wide\s*\{/.test(prod) &&
+        !/\.card-2col\s*\{/.test(view) && !/\.card-2col\s*\{/.test(prod))
     // 分隔线必须用能看见的颜色：`--glass-rgb` 是白色玻璃高光，浅色主题下画在白卡片上等于没有
-    check('探索改版', '两栏分隔线与专属装备那条线用 `var(--border)`（不是白色玻璃高光 --glass-rgb）',
-      (view.match(/border-(left|top): 1px dashed var\(--border\)/g) ?? []).length >= 2 && !/1px dashed rgba\(var\(--glass-rgb\)/.test(view))
+    check('探索改版', '分隔线用 `var(--border)`（不是白色玻璃高光 --glass-rgb）',
+      !/1px dashed rgba\(var\(--glass-rgb\)/.test(css + view + prod) &&
+        (view.match(/border-(left|top): 1px dashed var\(--border\)/g) ?? []).length >= 1)
+    // 制作类卡片（制作/保鲜/副业同属 ProductionView）必须与探索页同一套骨架
+    check('探索改版', '制作类卡片同步宽卡两栏（跨栏动作条 + 材料进右栏），不再是一长条竖排',
+      /recipe-grid gather-grid--wide/.test(prod) && /card-span/.test(prod) &&
+        /card-col--right/.test(prod) && /pc-stats/.test(prod))
+    // 精通档位说明：2026-09-28 用户指出探索页缺它（其余技能页都有）
+    check('探索改版', '探索页有「精通档位说明」按钮（与采集/制作/厨房笔记共用同一个组件）',
+      /<MasteryHelp\s*\/>/.test(view) && /import MasteryHelp from/.test(view))
   }
 }
 

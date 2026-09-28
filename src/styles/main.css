@@ -1552,7 +1552,12 @@ h2 {
 
 .ing.lacking {
   background: var(--bad-soft);
-  color: var(--bad);
+  /* ⚠️ 文字要用 `--bad-strong`（深档），**不能**用 `--bad`：后者是「块面色」，
+     压在自己的 soft 底上浅色主题只有 **3.33**（12px 正文需 ≥4.5）。
+     2026-09-28 由「制作类页面浅色对比度扫描」查出 —— 此前 `light_dom_contrast` 只扫采集页
+     （`setView('skill')` 显示的是当前激活技能），制作/保鲜/副业三页从未被扫到。
+     与 `--gold-strong` / `--primary-strong` 同一个口径：**深档 token 就是给文字用的**。 */
+  color: var(--bad-strong);
 }
 
 .special-note {
@@ -2187,6 +2192,49 @@ html[data-theme='dark'] .era-name {
   padding: 10px 4px 2px;
 }
 
+/* ── 宽卡两栏（2026-09-28 立；探索页先做，制作类同步）───────────────────────────
+   起因：用户两轮反馈 —— 「卡片太长了而且很杂」→「为什么不能一个卡片改成两个卡片大小呢？
+   现在这样太挤了太小了」。结论是**把卡做大、内容分栏**，而不是把字号缩小：
+   · 列宽 ≈ 原来两张卡（≥400px，同屏 ~3 列）；字号/图标保持正常尺寸；
+   · 卡内两栏：左侧数值、右侧明细（探索是掉落、制作是材料）；跨栏内容用 `.card-span`。
+   ⚠️ `min(400px, 100%)` 不能省：直接写 `minmax(400px, 1fr)` 在 350px 容器里会撑出横向滚动条。 */
+.gather-grid--wide {
+  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
+}
+.card-2col {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  /* 第二行（跨栏内容）吸收多余高度 ⇒ 它贴住卡片底部（等高网格里同排卡片一样高） */
+  grid-template-rows: auto 1fr;
+  flex: 1;
+  gap: 4px 14px;
+}
+.card-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.card-col--right {
+  /* ⚠️ 分隔线必须用 `--border`，**不能**用 `--glass-rgb`：那是白色玻璃高光，
+     浅色主题下等于白线画在白卡片上，实测截图里完全看不见（2026-09-28 踩过）。 */
+  border-left: 1px dashed var(--border);
+  padding-left: 14px;
+}
+.card-span {
+  grid-column: 1 / -1;
+}
+/* 窄屏（≤720px，与全站同一断点）：两栏并一栏，分隔线随之去掉（否则留一条悬空竖线） */
+@media (max-width: 720px) {
+  .card-2col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card-col--right {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
 .gather-card {
   display: flex;
   flex-direction: column;
@@ -2296,7 +2344,10 @@ html[data-theme='dark'] .era-name {
   padding: 3px 7px;
   border-radius: 999px;
   background: var(--primary-soft);
-  color: var(--primary-strong);
+  /* 文字用 `--text` 而不是 `--primary-strong`（2026-09-28 对比度扫描）：
+     后者是为**卡片底**设计的深档，压在自己那层 `--primary-soft` 淡底上，amber 皮肤只有 **4.27**
+     （12px 正文需 ≥4.5）。胶囊的强调感由底色承担，文字回到正文字色在**深浅两套主题**下都稳。 */
+  color: var(--text);
   white-space: nowrap;
 }
 

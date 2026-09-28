@@ -35,11 +35,19 @@ for (const skin of SKINS) {
   await p.waitForTimeout(600)
 
   const all = []
-  for (const view of PAGES) {
-    await p.evaluate((v) => {
+  // 技能页要**逐个切 activeSkill** 再扫：`setView('skill')` 只渲染当时激活的那一个技能，
+  // 默认是采集 ⇒ 制作/保鲜/副业三页在 2026-09-28 之前**从未被本工具扫到**
+  // （那次就是在这三页上查出 `.ing.lacking` 3.33 与 `.effect-chip` 4.27 两处真缺陷）。
+  const SKILL_PAGES = ['gathering', 'exploration', 'cooking', 'preservation', 'woodworking']
+  const scanViews = [...PAGES.map((v) => ({ view: v })), ...SKILL_PAGES.map((s) => ({ view: 'skill', skill: s }))]
+  for (const { view, skill } of scanViews) {
+    await p.evaluate(({ v, sk }) => {
       const app = document.querySelector('#app').__vue_app__.config.globalProperties
-      try { app.$pinia._s.get('ui').setView(v) } catch { /* 未注册的视图跳过 */ }
-    }, view)
+      try {
+        if (sk) app.$pinia._s.get('player').setActiveSkill(sk)
+        app.$pinia._s.get('ui').setView(v)
+      } catch { /* 未注册的视图跳过 */ }
+    }, { v: view, sk: skill })
     await p.waitForTimeout(420)
     const rows = await p.evaluate(() => {
       const parse = (c) => {
