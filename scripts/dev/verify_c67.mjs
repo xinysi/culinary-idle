@@ -1,23 +1,8 @@
-// 反例验证：C67 美食探索改版（2026-09-27 用户①②③④⑤⑥ 六条）
-// 用法：node scripts/dev/verify_c67.mjs   （每例跑一遍 system_test，约 25 秒；共 8 例 ⇒ 约 3.5 分钟）
-import { readFileSync, writeFileSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
-const P = (rel) => join(root, rel)
-function inject(rel, from, to) {
-  const orig = readFileSync(P(rel), 'utf8')
-  // ⚠️ 换行符兼容：`bootstrap.js` 是 CRLF，而其它文件是 LF。多行锚点若照抄 LF，
-  // 匹配数是 0 ⇒ 脚本「注入失败」被跳过（看着像通过）。这里按文件实际换行折叠一次。
-  const norm = (s) => (orig.includes('\r\n') ? s.replace(/\r?\n/g, '\r\n') : s.replace(/\r?\n/g, '\n'))
-  const f = norm(from)
-  const t = norm(to)
-  const n = orig.split(f).length - 1
-  if (n !== 1) throw new Error(`${rel} 锚点匹配 ${n} 次（期望 1）：${f.slice(0, 60)}`)
-  writeFileSync(P(rel), orig.replace(f, t), 'utf8')
-}
+// 反例验证：C67 美食探索改版（2026-09-27 用户①②③④⑤⑥ 六条 + 之后各轮口径）
+// 用法：node scripts/dev/verify_c67.mjs
+// 2026-09-28：改**并发执行**（每个注入仍跑完整 system_test，但 6 个槽位并行）。
+//   改前串行：25 次 × 27s ≈ 11 分钟；改后 ≈ 2 分钟。细节见 lib/parallel_verify.mjs 的头注释。
+import { runCases } from './lib/parallel_verify.mjs'
 
 const CASES = [
   {
@@ -148,23 +133,24 @@ const CASES = [
   },
   {
     name: '⑲ 宽卡网格的防溢出写法改坏（minmax(400px, 1fr) ⇒ 窄屏横向滚动条）',
-    rel: 'src/views/ExplorationView.vue',
+    rel: 'src/styles/main.css', // v2.28.5 起宽卡骨架是共用原语（探索/制作两页共用）
     from: 'grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));',
     to: 'grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));',
-    expect: '防窄屏横向溢出',
+    expect: '防溢出', // 断言名已改为「宽卡骨架单一来源（…含 min(…,100%) 防溢出）」
   },
   {
     name: '⑳ 窄屏不再并栏（390px 下两栏各 ~160px，掉落名与概率顶在一起）',
-    rel: 'src/views/ExplorationView.vue',
-    from: '  .ex-col--loot {\n    border-left: 0;\n    padding-left: 0;\n  }',
+    rel: 'src/styles/main.css', // 骨架搬到 main.css 后，窄屏并栏规则也跟着搬（`.card-col--right`）
+    from: '  .card-col--right {\n    border-left: 0;\n    padding-left: 0;\n  }',
     to: '',
-    expect: '并成一栏',
+    expect: '宽卡骨架单一来源', // 这条规则现由「骨架单一来源」断言守着（2026-09-28 并入该断言）
   },
   {
     name: '㉑ 两栏分隔线改回白色玻璃高光（浅色主题下画在白卡片上 = 看不见）',
-    rel: 'src/views/ExplorationView.vue',
-    from: '  border-left: 1px dashed var(--border);',
-    to: '  border-left: 1px dashed rgba(var(--glass-rgb), 0.55);',
+    // ⚠️ 锚点随规则搬家：v2.28.5 把 `.card-col--right` 的分隔线原语挪进 main.css（共用骨架）
+    rel: 'src/styles/main.css',
+    from: '  border-left: 1px dashed var(--border);\n  padding-left: 14px;',
+    to: '  border-left: 1px dashed rgba(var(--glass-rgb), 0.55);\n  padding-left: 14px;',
     expect: '--glass-rgb',
   },
   {
@@ -176,34 +162,12 @@ const CASES = [
   },
 ]
 
-function run() {
-  try {
-    const out = execFileSync(process.execPath, ['scripts/ci/system_test.mjs'], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 28 })
-    return { code: 0, out }
-  } catch (e) {
-    return { code: e.status ?? 1, out: (e.stdout ?? '') + (e.stderr ?? '') }
-  }
-}
-
-const backups = new Map()
-let okAll = true
-console.log('基线下先跑一次（应当全绿）…')
-const base = run()
-console.log(`${base.code === 0 && /失败 0/.test(base.out) ? '✅' : '❌'} 基线：${(base.out.match(/通过 \d+ \/ 失败 \d+/) ?? ['?'])[0]}`)
-if (base.code !== 0) okAll = false
-
-for (const c of CASES) {
-  if (!backups.has(c.rel)) backups.set(c.rel, readFileSync(P(c.rel), 'utf8'))
-  try { inject(c.rel, c.from, c.to) } catch (e) { console.log(`⚠ ${c.name} —— 注入失败：${e.message}`); okAll = false; continue }
-  const r = run()
-  const hit = r.code !== 0 && r.out.includes('FAIL') && r.out.includes(c.expect)
-  console.log(`${hit ? '✅' : '❌'} ${c.name} → ${r.code === 0 ? 'system_test 仍全绿（假绿！）' : 'FAIL'}，点名含「${c.expect}」= ${r.out.includes(c.expect)}`)
-  if (!hit) { okAll = false; console.log(r.out.split('\n').filter((l) => l.startsWith('FAIL')).slice(0, 4).join('\n')) }
-  writeFileSync(P(c.rel), backups.get(c.rel), 'utf8')
-}
-for (const [rel, content] of backups) writeFileSync(P(rel), content, 'utf8')
-const back = run()
-const clean = back.code === 0 && /失败 0/.test(back.out)
-console.log(`${clean ? '✅' : '❌'} 还原后 system_test 全绿（${(back.out.match(/通过 \d+ \/ 失败 \d+/) ?? ['?'])[0]}）`)
-console.log(okAll && clean ? `\n反例验证通过：${CASES.length} 个注入缺陷全部被点名，还原后恢复全绿` : '\n反例验证失败，见上')
-process.exit(okAll && clean ? 0 : 1)
+// 执行：**并发跑**（2026-09-28）。每个注入都要跑完整 system_test（实测 27s），
+// 22 个注入串行 ≈ 11 分钟 —— 这是发布流程里最贵且完全可并行的一段，交给共用执行器：
+// 每个并发槽位一份仓库副本（junction 到真 node_modules），槽内串行、槽间并行。
+// 只跑指定序号：`node scripts/dev/verify_c67.mjs 19 20`
+// （改完锚点先小范围验证，不必等全量 ~9 分钟；全量仍是发布前的标准动作）
+const only = process.argv.slice(2).map(Number).filter((n) => n > 0)
+const list = only.length ? CASES.filter((_, i) => only.includes(i + 1)) : CASES
+const ok = await runCases(`C67 美食探索改版（${list.length}/${CASES.length} 例）`, list, { workers: 6 })
+process.exit(ok ? 0 : 1)

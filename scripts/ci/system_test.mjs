@@ -9725,7 +9725,10 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
         /\.card-2col\s*\{[^}]*grid-template-columns/.test(css) &&
         /\.card-2col\s*\{[^}]*grid-template-rows: auto 1fr/.test(css) &&
         /\.card-col--right\s*\{[^}]*border-left: 1px dashed var\(--border\)/.test(css) &&
-        /max-width: 720px[\s\S]{0,300}card-2col[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(css))
+        /max-width: 720px[\s\S]{0,300}card-2col[\s\S]{0,200}grid-template-columns: minmax\(0, 1fr\)/.test(css) &&
+        // 窄屏并栏后**必须去掉那条分隔线**，否则会留一根悬空竖线
+        // （2026-09-28 补：反例 ⑳ 注入「删掉这条规则」时，原先没有任何断言会 FAIL —— 属于「注入没被点名」）
+        /max-width: 720px[\s\S]{0,500}card-col--right\s*\{[^}]*border-left: 0/.test(css))
     check('探索改版', '两个视图都只**引用**骨架类名，不各自重定义（否则改列宽要改多处）',
       /gather-grid--wide/.test(view) && /card-2col/.test(view) &&
         /gather-grid--wide/.test(prod) && /card-2col/.test(prod) &&
