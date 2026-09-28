@@ -57,6 +57,17 @@ const flags = argv.filter((a) => a.startsWith('--'))
 const picked = argv.filter((a, i) => !a.startsWith('--') && i !== workersIdx + 1)
 
 function changedFiles() {
+  const git = (args) => {
+    try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).split('\n').map((l) => l.trim()).filter(Boolean) } catch { return [] }
+  }
+  // 未提交的改动优先
+  const dirty = execFileSyncShallow()
+  if (dirty.length) return dirty
+  // ⚠️ 工作区干净时退回「最近一次提交的改动」—— 提交完再跑 `--changed` 是最常见的用法，
+  //    只看 `git status` 会挑不出任何东西（实测第一版就是这样：静默退回只跑 e2e-test）
+  return git(['diff', '--name-only', 'HEAD~1', 'HEAD'])
+}
+function execFileSyncShallow() {
   try {
     const out = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' })
     return out.split('\n').map((l) => l.slice(3).trim()).filter(Boolean)
