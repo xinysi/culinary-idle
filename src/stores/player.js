@@ -107,6 +107,7 @@ import { effectiveParallelSlots, unlockedParallelSlots, nextParallelUnlock, PARA
 import {
   SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
   SIDELINE_PRODUCTS, SIDELINE_LADDERS, LADDER_TIERS, ladderTierOf, ladderNextOf, ladderTotalOf,
+  CHAIN_FROM_SKILL, CHAIN_DISCOUNT, // T6/4-C：木工产物跨线投料（半价）
 } from '../game/data/sidelineWorks.js'
 /**
  * 增益剂的乘区轴表（v2.3.0）：一件消耗品可同时带多条。
@@ -1302,7 +1303,7 @@ export const usePlayerStore = defineStore('player', {
      * 缺省一次投入该支**所有**产物；`only` 可指定单个 itemId（UI 分项投入用）。
      * @returns {{ok:boolean, reason?:string, fed:number, points:number, tier:number, tierUp:number, byItem:Array}}
      */
-    feedSideline(skillId, only = null) {
+    feedSideline(skillId, only = null, opts = {}) {
       const list = SIDELINE_PRODUCTS[skillId]
       if (!list) return { ok: false, reason: 'bad', fed: 0, points: 0, tier: 0, tierUp: 0, byItem: [] }
       if (!this.stats) this.stats = {}
@@ -1320,6 +1321,21 @@ export const usePlayerStore = defineStore('player', {
         fed += have
         points += have * p.points
         byItem.push({ itemId: p.itemId, name: p.name, qty: have, points: have * p.points })
+      }
+      // 产业链（2026-09-30 T6 / 4-C）：把背包里的**木工产物**也折算进来（跨线、**半价**计点）。
+      // ⚠️ 只在**显式传 `withChain`** 时生效（`SidelineWorkPanel` 的第二个按钮）——
+      //    绝不并进默认的「投入全部」，否则玩家点一下会**静默花掉自己的木器**。
+      // ⚠️ 木工自己这条线不吃跨线（免得自我循环）；反向也不成立（别支产物喂不进木工）。
+      if (opts.withChain && skillId !== CHAIN_FROM_SKILL) {
+        for (const p of SIDELINE_PRODUCTS[CHAIN_FROM_SKILL] ?? []) {
+          const have = this.inventory[p.itemId] ?? 0
+          if (have <= 0) continue
+          this.spendItem(p.itemId, have)
+          const pts = Math.floor(have * p.points * CHAIN_DISCOUNT)
+          fed += have
+          points += pts
+          byItem.push({ itemId: p.itemId, name: p.name, qty: have, points: pts, chain: true })
+        }
       }
       if (!fed) return { ok: false, reason: 'empty', fed: 0, points: 0, tier: tierBefore, tierUp: 0, byItem: [] }
       this.stats.sidelinePoints[skillId] = before + points
@@ -4174,6 +4190,7 @@ export const usePlayerStore = defineStore('player', {
         critic: this.stats?.criticServed ?? 0,
         regulars,
         branches,
+        banquet: this.stats?.banquets ?? 0, // 第七维（2026-09-30 T4）：宴席承办次数
       }
       let score = 0
       const parts = MICHELIN_FACTORS.map((f) => {

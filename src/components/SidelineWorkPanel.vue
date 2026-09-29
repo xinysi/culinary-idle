@@ -12,7 +12,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import {
   SIDELINE_AXES, SIDELINE_SKILL_LIST, SIDELINE_PRODUCTS, SIDELINE_LADDERS,
-  LADDER_TIERS, LADDER_AXIS_LABEL,
+  LADDER_TIERS, LADDER_AXIS_LABEL, CHAIN_FROM_SKILL, CHAIN_DISCOUNT,
 } from '../game/data/sidelineWorks.js'
 import { getItem } from '../game/data/items.js'
 import { CRAFTED_DECOR, WOODWORK_ITEMS_DEF } from '../game/data/woodworking.js'
@@ -111,6 +111,27 @@ function feed() {
   }
   ui.pushLog(`🏭 ${ladder.value.name}量产阶梯：投入 ${r.fed} 件 → +${r.points} 点${r.tierUp ? `，晋升 ${r.tier} 档！` : ''}`, 'gain')
 }
+
+// 产业链（2026-09-30 T6/4-C）：**木工产物**可以投入**其它任何一支**的阶梯 —— 跨线、**半价**计点。
+// 🔴 必须**独立按钮**、绝不并进上面的「投入全部」：否则玩家点一下会**静默花掉自己的木器**。
+//    半价的理由见 `sidelineWorks.CHAIN_DISCOUNT`（同档木器比别支便宜，全价会变成绕开本职辅料的捷径）。
+const chainRows = computed(() => {
+  const sk = ladder.value?.skill
+  if (!sk || sk === CHAIN_FROM_SKILL) return []
+  return (SIDELINE_PRODUCTS[CHAIN_FROM_SKILL] ?? [])
+    .map((p) => { const have = player.inventory[p.itemId] ?? 0; return { ...p, have, got: Math.floor(have * p.points * CHAIN_DISCOUNT) } })
+    .filter((x) => x.have > 0)
+})
+const chainQty = computed(() => chainRows.value.reduce((a, x) => a + x.have, 0))
+const chainPts = computed(() => chainRows.value.reduce((a, x) => a + x.got, 0))
+function feedChain() {
+  const r = player.feedSideline(ladder.value.skill, null, { withChain: true })
+  if (!r.ok) {
+    ui.pushLog(r.reason === 'empty' ? '背包里没有可投入的产物（含木器）' : '无法投入', 'warn')
+    return
+  }
+  ui.pushLog(`🪚 ${ladder.value.name}量产阶梯（含木器 · 跨线半价）：投入 ${r.fed} 件 → +${r.points} 点${r.tierUp ? `，晋升 ${r.tier} 档！` : ''}`, 'gain')
+}
 </script>
 
 <template>
@@ -175,6 +196,10 @@ function feed() {
         <span v-if="feedRows.length" class="dim sw-feed-list">
           {{ feedRows.map((x) => `${x.name}×${x.have}(+${x.points}/件)`).join(' · ') }}
         </span>
+        <!-- 产业链：木工产物跨线投入（半价）。只在与本线无关时出现，且**独立于上面的按钮** -->
+        <button v-if="chainQty > 0" class="btn btn-sm" @click="feedChain">
+          🪚 投入木器（{{ chainQty }} 件 → +{{ chainPts }} 点，跨线半价）
+        </button>
       </div>
       <p class="dim sw-foot">
         产物是<b>副业独占品</b>：采集拿不到，商店、抽卡、交易所、商队都不出，也不会被自动出售。

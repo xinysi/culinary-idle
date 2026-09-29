@@ -25,6 +25,7 @@
 import { timberOfLevel } from './timbers.js'
 import { WOODWORK_CATEGORY, WOODWORKING_RECIPES } from './woodworking.js'
 import { LATE_SIDELINE_ROWS, LATE_SIDELINE_WOOD } from './lateGameFood.js'
+import { VARIANT_SPECS, VARIANT_WOOD, VARIANT_BASE_LEVEL } from './sidelineVariants.js'
 
 /** 副业产物的物品类别 —— **「副业独占品」的单一来源清单**（木工的 furniture + 本模块四个）。
  *  消费方：`gameShopPools`（礼包池 + 珍馐阁）/ `mijianDraws`（抽卡池）/ `automation`（自动出售）/
@@ -545,7 +546,47 @@ for (const [key, level, itemName, auxId, woodQty, auxQty] of LATE_SIDELINE_ROWS)
   SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId, woodName: null, auxId, auxQty, woodQty }
 }
 
-// 各支的「作品数」改成**实际展开数**（DEFS rows + 补档追加；木工的作品在 woodworking.js，单独一行覆盖）
+// ── 副业「同物变体」（2026-09-30，体检 §7「不足 4」的 T3）──────────────────────────
+// 15 支各给**基底 Lv112** 加 ·精 / ·珍 / ·御（Lv114 / 117 / 120）——数据（后缀/加级/数量）在
+// `sidelineVariants.js`，这里按**与上面同一套形状**展开（物品 / 配方 / SIDELINE_WORKS 三处一起登记；
+// 漏一处就是「有物品没配方」或「作品面板看不到」，C33 的既有口径）。
+// 木工那 3 件不在这里（它的作品 = 手工装潢，定义在 `woodworking.js`，与它上面两件补档同一形状）。
+// 🔴 **轴总量随之 +3×perItem**（每支多 3 件作品）⇒ 陶艺的地窖上限与蜡烛的夜市时长要**同步抬硬顶**
+//    （`caps.js` 的 `CELLAR_SLOT_VALUE_MAX` / `NIGHT_MARKET_MAX_EXTRA_HOURS`），
+//    否则「满配 == 硬顶」的不变量会被顶破（与 2026-09-29 补档那次同一套处置）。
+for (const [key, baseLevel, baseName, baseAuxId] of LATE_SIDELINE_ROWS) {
+  if (baseLevel !== VARIANT_BASE_LEVEL) continue
+  const d = DEFS[key]
+  const axis = SIDELINE_AXES[d.axis]
+  for (const v of VARIANT_SPECS) {
+    const level = baseLevel + v.delta
+    const id = `${key}_${level}`
+    const itemName = `${baseName}${v.suffix}`
+    SIDELINE_ITEMS.push({
+      id,
+      name: itemName,
+      type: 'ingredient',
+      category: d.category,
+      tier: Math.min(10, Math.ceil(level / 10)),
+      value: Math.round(2 + level * 2.5), // 占位：`applySidelineProductValues()` 会按材料价值锚回
+      stackable: true,
+      maxStack: 9999,
+    })
+    SIDELINE_RECIPES[key].push({
+      id: `${key.slice(0, 2)}_${level}`,
+      name: itemName,
+      category: d.catLabel,
+      reqLevel: level,
+      xp: Math.round(25 + level * 13),
+      successChance: Math.max(0.55, 0.95 - level * 0.0044),
+      ingredients: { [VARIANT_WOOD]: v.woodQty, [baseAuxId]: v.auxQty },
+      output: { itemId: id, qty: 1 },
+    })
+    SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId: VARIANT_WOOD, woodName: null, auxId: baseAuxId, auxQty: v.auxQty, woodQty: v.woodQty }
+  }
+}
+
+// 各支的「作品数」改成**实际展开数**（DEFS rows + 补档追加 + 同物变体；木工的作品在 woodworking.js，单独一行覆盖）
 for (const s of SIDELINE_SKILL_LIST) s.works = SIDELINE_RECIPES[s.id].length
 
 /** 效果轴 → 该轴的满级合计（守卫与文案共用；避免各处手算）
@@ -586,6 +627,20 @@ export const SIDELINE_PRODUCTS = (() => {
   out.woodworking = WOODWORKING_RECIPES.map((r) => ({ itemId: r.output.itemId, name: r.name, points: pointsOfLevel(r.reqLevel) }))
   return out
 })()
+
+/**
+ * 产业链（2026-09-30，体检 §7「不足 4」的 T6 / 4-C）：**木工产物**可以投入**其它任何一支**的阶梯。
+ *
+ * 设计口径（为什么是「半价 + 只木工」）：
+ *   · 木工是**全部副业的共同前置**（所有配方都以同档木材为基材）⇒ 让它的产物回流到别的线最自然；
+ *   · 但同档木器**比别支的产物便宜**（Lv112 木器 = 天罡沉香×5，而陶艺 = 天罡沉香×5 + 寒铁矿×2）
+ *     ⇒ 全价会让「拿木器刷别支阶梯」变成**绕开本职辅料的捷径**。**半价**之后它是
+ *     「消化木工产能的第二去处」，本职产物仍是最高效的投入；
+ *   · 反向不成立（别支产物不能喂木工）——用户口径就是「让**木工产物**成为其他副业的供料」。
+ */
+export const CHAIN_FROM_SKILL = 'woodworking'
+/** 跨线投料的计点折扣（<1 ⇒ 绝不会成为捷径） */
+export const CHAIN_DISCOUNT = 0.5
 
 /** 某产物属于哪一支（`feedSideline` 反查用；非副业产物返回 null） */
 export function sidelineSkillOfItem(itemId) {

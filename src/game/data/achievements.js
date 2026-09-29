@@ -168,6 +168,8 @@ export const ACHIEVEMENTS = [
   // 2026-09-26 用户⑮「评级三星封顶」扩到五星后补的两条（否则三星之后评级系统没有终点）
   { id: 'michelin4', name: '四星名店', category: '特殊', desc: '餐厅获得米其林四星', reward: { gold: 60000, items: { mysterySpice: 3, energyBiscuit: 2 } }, check: (p) => (p.michelin?.best ?? 0) >= 4 },
   { id: 'michelin5', name: '五星殿堂', category: '特殊', desc: '餐厅获得米其林五星（六维基本做满）', title: '五星殿堂', reward: { gold: 150000, items: { mysterySpice: 5, energyBiscuit: 3 } }, check: (p) => (p.michelin?.best ?? 0) >= 5 },
+  // 六星（2026-09-30，T4）：门槛 11,500 必须把**第七维「宴席承办」**也做起来才够（只做满六维只有 9,640）
+  { id: 'michelin6', name: '六星殿堂', category: '特殊', desc: '餐厅获得米其林六星（六维 + 宴席承办同时推进）', title: '六星殿堂', reward: { gold: 400000, items: { mysterySpice: 8, energyBiscuit: 5 } }, check: (p) => (p.michelin?.best ?? 0) >= 6 },
   { id: 'flavor5', name: '初尝搭配', category: '收集', desc: '点亮 5 条风味搭配', reward: { gold: 1500, items: { energyBiscuit: 1 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= 5 },
   { id: 'flavorAll', name: '风味百科', category: '收集', desc: '点亮全部风味搭配', title: '风味百科', reward: { gold: 18000, items: { mysterySpice: 3 } }, check: (p) => Object.keys(p.flavors ?? {}).length >= FLAVOR_PAIRS.length },
   { id: 'gearContest3', name: '初登赛场', category: '特殊', desc: '厨具大赛累计参赛 3 届', reward: { gold: 2500, items: { energyBiscuit: 1 } }, check: (p) => (p.stats?.gearContestRuns ?? 0) >= 3 },

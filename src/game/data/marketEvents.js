@@ -67,12 +67,13 @@ export const NIGHT_MARKET_ID = 'nightMarket'
 /** 夜市狂潮的**基础**起止小时（16:00–22:00）；延长量只加在结束侧 */
 const NIGHT_MARKET_BASE_START = 16
 const NIGHT_MARKET_BASE_END = 22
-/** 蜡烛能延长的上限小时数（2026-09-29 补档：蜡烛 8→10 件（各 +1h）⇒ 上限 8→10，窗口 16:00–次日 08:00。
- *  与地窖硬顶（caps.js 的 CELLAR_SLOT_VALUE_MAX）同一处理：作品 +2、硬顶跟着 +2，
+/** 蜡烛能延长的上限小时数（= 蜡烛作品数 × 1h）：2026-09-30 T3「同物变体」再 +3 件 ⇒ **13**
+ *  （窗口 16:00–次日 **11:00**）。沿革：10 件 ⇒ 8→10；13 件 ⇒ 10→13。
+ *  与地窖硬顶（caps.js 的 CELLAR_SLOT_VALUE_MAX）同一处理：作品 +N、硬顶跟着 +N，
  *  保住「满配 == 硬顶」的不变量（system_test 的窗口断言比的就是本常量，会自动跟）。 */
-export const NIGHT_MARKET_MAX_EXTRA_HOURS = 10
+export const NIGHT_MARKET_MAX_EXTRA_HOURS = 13
 /** 蜡烛**量产阶梯**能加到的倍率上限（= 12 档 × +0.03，见 `SIDELINE_LADDERS`）。
- *  ⚠️ 阶梯只加**倍率**、不加时长：时长已经封顶 +10h（16:00–次日 08:00），再延就没有「时段」可言了。 */
+ *  ⚠️ 阶梯只加**倍率**、不加时长：时长已经封顶 +13h（16:00–次日 11:00），再延就没有「时段」可言了。 */
 export const NIGHT_MARKET_BASE_MULT = 2
 export const NIGHT_MARKET_MAX_EXTRA_MULT = 0.36
 

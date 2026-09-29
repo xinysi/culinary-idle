@@ -24,7 +24,7 @@ export const MILESTONES = [
   { id: 'm_school30', group: '成长', icon: '📜', name: '六派研究 30 级', target: 30, unit: '级', hint: '六派各 5 级', value: (p) => p.schoolTotalLevels?.() ?? 0 },
   { id: 'm_insight12', group: '成长', icon: '🗺️', name: '菜系图谱 12 节点', target: 12, unit: '节点', hint: '美食见闻解锁', value: (p) => (p.insights ?? []).length },
   // ── 收集 ──
-  { id: 'm_collection100', group: '收集', icon: '📖', name: '图鉴 100%', target: 100, unit: '%', hint: '全部 2516 件物品收集', value: (p) => Math.floor(p.collectionPct ?? 0) },
+  { id: 'm_collection100', group: '收集', icon: '📖', name: '图鉴 100%', target: 100, unit: '%', hint: '全部 2564 件物品收集', value: (p) => Math.floor(p.collectionPct ?? 0) },
   { id: 'm_flavor28', group: '收集', icon: '📔', name: '风味搭配 28 条', target: 28, unit: '条', hint: '食材组合全点亮', value: (p) => Object.keys(p.flavors ?? {}).length },
   { id: 'm_spirit160', group: '收集', icon: '✨', name: '食灵 160 种', target: 160, unit: '种', hint: '食灵阁收集', value: (p) => Object.keys(p.spirits?.owned ?? {}).length },
   { id: 'm_season40', group: '收集', icon: '🎪', name: '40 季全部领奖', target: 40, unit: '季', hint: '时空穿梭者成就', value: (p) => Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length },
@@ -42,7 +42,7 @@ export const MILESTONES = [
   { id: 'm_regularAll', group: '经营', icon: '📖', name: '12 位常客满好感', target: REGULARS.length, unit: '位', hint: '每日招待 1 次', value: (p) => Object.values(p.regulars ?? {}).filter((r) => (r?.serves ?? 0) >= 25).length },
   { id: 'm_guildMax', group: '经营', icon: '🤝', name: '公会点数 10000', target: 10000, unit: '点', hint: '每日任务累积', value: (p) => p.guild?.points ?? 0 },
   // ── 长线 ──
-  { id: 'm_achievementAll', group: '长线', icon: '🏅', name: '成就全清', get target() { return ALL_ACHIEVEMENTS.length }, unit: '项', hint: '全部 264 项成就', value: (p) => (p.achievements ?? []).length },
+  { id: 'm_achievementAll', group: '长线', icon: '🏅', name: '成就全清', get target() { return ALL_ACHIEVEMENTS.length }, unit: '项', hint: '全部 265 项成就', value: (p) => (p.achievements ?? []).length },
   { id: 'm_endingame', group: '长线', icon: '👑', name: '毕业：禁忌食神', target: 1, unit: '', hint: 'L100 首领', value: (p) => ((p.stats?.bosses ?? []).includes('禁忌食神') ? 1 : 0) },
 ]
 

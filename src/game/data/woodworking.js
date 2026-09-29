@@ -32,6 +32,12 @@ export const WOODWORK_ITEMS_DEF = [
   // 每件的手工装潢效果由下面 CRAFTED_DECOR 的曲线公式自动续上（12.1% / 13.1%）。
   { level: 102, id: 'divineCouch', name: '太初神榻', wood: 'late_wood_01', woodQty: 5, tier: '传说' },
   { level: 112, id: 'agarwoodAltar', name: '天罡香案', wood: 'late_wood_02', woodQty: 5, tier: '传说' },
+  // 副业「同物变体」三件（2026-09-30，体检 §7「不足 4」的 T3）：给**基底天罡香案（Lv112）**加
+  // ·精 / ·珍 / ·御（Lv114 / 117 / 120），木沿用基底那一档（天罡沉香 Lv112 ≤ 114+5 ✓），数量 6/7/8。
+  // 物品 / 配方 / 手工装潢三处由上面的 `.map()` 与 `CRAFTED_DECOR` 曲线**自动派生**，无需另写。
+  { level: 114, id: 'agarwoodAltarFine', name: '天罡香案·精', wood: 'late_wood_02', woodQty: 6, tier: '传说' },
+  { level: 117, id: 'agarwoodAltarRare', name: '天罡香案·珍', wood: 'late_wood_02', woodQty: 7, tier: '传说' },
+  { level: 120, id: 'agarwoodAltarRoyal', name: '天罡香案·御', wood: 'late_wood_02', woodQty: 8, tier: '传说' },
 ]
 
 /**
