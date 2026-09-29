@@ -10375,6 +10375,16 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /qtyMode\.value === 'practice'/.test(viewSrc) && /enqueue\(r, n, \{ practice: true \}\)/.test(viewSrc))
   check('练习', '练习不走 canAfford（这正是它与制作的区别；加了就回到「必须囤料才能练」）',
     !/function openPractice\(r\) \{[\s\S]{0,120}?canAfford/.test(viewSrc))
+  // 🔴 「练满 = 到精通 100」而不是「到下一档」：线上核验时弹窗写着「练满 8 次」而实际要 3750 次
+  //    ⇒ 用了 `masteryProgress()` 那对（「x/y 次」是**到下一档**的进度）。判据两条：
+  //    ① 算的是 `countForMasteryLevel(MASTERY_LEVEL_CAP) − 该卡已累计次数`；② **不许**再出现 `prog.needed − prog.current`。
+  const practiceLeftBody = viewSrc.slice(viewSrc.indexOf('function practiceLeft('), viewSrc.indexOf('function practiceHours('))
+  check('练习', '🔴 弹窗上限 = 到**精通 100** 还差的次数（不是到下一档；用 masteryProgress 会少报几十倍）',
+    /countForMasteryLevel\(MASTERY_LEVEL_CAP\)/.test(practiceLeftBody) &&
+      !/prog\.needed\s*-\s*prog\.current/.test(practiceLeftBody) &&
+      /const cur = props\.instance\.mastery\?\.\[r\.id\]/.test(practiceLeftBody))
+  check('练习', '弹窗标题写明「到精通 100 还差 N 次」（文案与上面的口径一致）',
+    /到精通 100 还差 \$\{n\} 次/.test(viewSrc))
   check('练习', '队列条目在界面上有区分标记（否则「练习 ×100」与「制作 ×100」长得一样）',
     // ⚠️ 只查 `queue-tag` 文本存在是**假绿**（反例 ⑫ 证实：给标签挂 `v-if="false"` 让它永不渲染，照样全绿；
     //    而 CSS 里也有 `.queue-tag` 这个类名，纯文本匹配更弱）⇒ 连**元素本身**与它的条件一起钉。

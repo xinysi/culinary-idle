@@ -134,6 +134,14 @@ const CASES = [
     to: "const PATH_MASTERY_SCALE = { farm: 0.25 }",
     expect: '缩放表只含被授权的线',
   },
+  {
+    name: '⑯ 弹窗上限退回「到下一档」（masteryProgress 那对）⇒ 写着「还差 8 次」实际要 3750 次',
+    rel: VIEW,
+    // ⚠️ 多行锚点用**单行**写法表达换行（`\n` 是 JS 字符串里的转义，不能被工具写成真换行 —— 本轮踩过）
+    from: "  const need = countForMasteryLevel(MASTERY_LEVEL_CAP)\n  const cur = props.instance.mastery?.[r.id] ?? 0",
+    to: "  const prog = props.instance.masteryProgress?.(r)\n  const cur = props.instance.mastery?.[r.id] ?? 0",
+    expect: '弹窗上限 = 到**精通 100** 还差的次数',
+  },
 ]
 
 /** 跑**两条守卫**：C76 的断言大部分在 system_test，而生成器那两条（汇金缩放 / 缩放表核准）在

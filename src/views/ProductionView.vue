@@ -13,7 +13,7 @@ import ItemImg from '../components/ItemImg.vue'
 import MasteryHelp from '../components/MasteryHelp.vue'
 import MasteryPoolBar from '../components/MasteryPoolBar.vue'
 import ProgressBar from '../components/ProgressBar.vue'
-import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
+import { masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus, countForMasteryLevel, MASTERY_LEVEL_CAP } from '../game/core/mastery.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { effIngredients } from '../game/data/materialCost.js' // 材料用量唯一出口（与实际扣料同源）
@@ -290,7 +290,7 @@ const qtyTitle = computed(() => {
   if (!craftTarget.value) return ''
   if (qtyMode.value !== 'practice') return `制作 ${craftTarget.value.name}`
   const n = practiceLeft(craftTarget.value)
-  return `练习 ${craftTarget.value.name}（练满 ${n} 次 ≈ ${practiceHours(n)} 小时）`
+  return `练习 ${craftTarget.value.name}（到精通 100 还差 ${n} 次 ≈ ${practiceHours(n)} 小时）`
 })
 /** 数量弹窗的确认：按模式分派（练习走 practiceAdd，制作走原来的火候挑战链路） */
 function onQtyConfirm(n) {
@@ -358,12 +358,18 @@ function queueAdd(r, qty) {
 }
 
 // ── 练习（2026-09-29）：只涨精通的排队动作（不扣料/不产出/不给经验，见 ProductionSkill.practice 的说明）──
-/** 这张卡还差多少次动作到精通 100（口径与卡片上的「x/y 次」同一个出口 `masteryProgress`） */
+/**
+ * 这张卡**到精通 100** 还差多少次动作（= 一次点击排满那张卡，正是长线门槛要刷的量）。
+ *
+ * 🔴 别用 `masteryProgress()` 的 `needed − current`：那对是**到下一档**的进度（卡片上「x/y 次」就是它）。
+ *    线上核验时正是因为用了它，弹窗写着「练满 8 次」而实际「练满」要 3750 次 —— 一句假话
+ *    （本项目最忌讳的「显示与结算不一致」；那条线上核验当场抓到了它）。
+ * ⚠️ 广度倍率有时会让一次动作涨 >1 点 ⇒ 按剩余次数排是**上界**（不会浪费：精通到 100 就不再涨）。
+ */
 function practiceLeft(r) {
-  const prog = props.instance.masteryProgress?.(r)
-  if (!prog || prog.needed <= 0) return 1
-  // ⚠️ 广度倍率有时会让一次动作涨 >1 点 ⇒ 按剩余次数排是**上界**（多排的不会浪费：精通到 100 就不再涨）
-  return Math.max(1, Math.ceil(prog.needed - prog.current))
+  const need = countForMasteryLevel(MASTERY_LEVEL_CAP)
+  const cur = props.instance.mastery?.[r.id] ?? 0
+  return Math.max(1, Math.ceil(need - cur))
 }
 function practiceHours(n) {
   return Math.max(0.1, ((n * CRAFT_QUEUE_INTERVAL_MS) / 3600000)).toFixed(1)
