@@ -50,9 +50,13 @@ ok(/赤霄釉瓮·御/.test(potText), '② 副业同物变体出现（陶艺末�
 ok(/赤霄釉瓮·珍/.test(potText), '② 同支另两档也在（·精 / ·珍 至少一档可见）')
 
 // ③ 米其林六星 + 第七维（成就页找成就、米其林页找星级阶梯）
+// ⚠️ 成就页是**分页渲染**的（`limit` + 「查看更多」）⇒ 只切大类也可能翻不到那条。
+//    用页面自带的**搜索框**过滤（`.av-search`）最稳。
 await go('achievements')
+const search = page.locator('.av-search').first()
+if (await search.count()) { await search.fill('六星'); await page.waitForTimeout(700) }
 const achText = await bodyText()
-ok(/六星殿堂/.test(achText), '③ 成就页出现「六星殿堂」', (achText.match(/.{0,4}六星殿堂/) ?? ['未找到'])[0])
+ok(/六星殿堂/.test(achText), '③ 成就页能搜到「六星殿堂」', (achText.match(/.{0,4}六星殿堂/) ?? ['未找到'])[0])
 // ⚠️ 米其林页**要解锁**（餐厅 Lv3）才有内容渲染 —— 不抬餐厅等级只会看到「未解锁」
 await page.evaluate(() => {
   const pinia = document.querySelector('#app').__vue_app__.config.globalProperties.$pinia
