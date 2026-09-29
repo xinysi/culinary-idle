@@ -917,6 +917,17 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
       d.knife > 0 && d.plating > 0 && d.flavorArtistry > 0 && ratio > 2.8 && ratio < 3.4,
       `knife=${d.knife} plating=${d.plating} flavor=${d.flavorArtistry} ratio=${ratio.toFixed(2)}`)
   }
+  // 🔴 界面必须把这件事讲出来（2026-09-29）：引擎改了、界面一个字没提 ⇒ 玩家不知道
+  //    「换着练能把三条一起带起来」，那份改动等于白做（而且「用哪个流派那个流派快 3 倍」的取舍也没人看得见）。
+  //    ⚠️ 断言写成「引用常数」而不是「模板里有 1/3」：后者在分母改成 2 时会变成假话。
+  //    ⚠️ 还**连那个元素本身一起钉**（`<p …>用哪个流派…` 中间没有任何指令）——
+  //       只查「文本在不在」的话，给那行挂个 `v-if="false"` 就能让它永不渲染而断言照样绿（本项目踩过同款假绿）。
+  const cp = read('src/components/CombatPanel.vue')
+  check('风格经验 · 对决面板写明「副风格也在涨经验」，且比例从 STYLE_OFF_XP_DIV 派生（不写死）',
+    /import \{[^}]*STYLE_OFF_XP_DIV[^}]*\} from/.test(cp)
+    && /Math\.round\(100 \/ STYLE_OFF_XP_DIV\)/.test(cp)
+    && /<p class="dim style-note">用哪个流派，那个流派拿全额经验；另外两个流派各拿 \{\{ offStylePct \}\}%/.test(cp),
+    `import=${/STYLE_OFF_XP_DIV/.test(cp)} 派生=${/Math\.round\(100 \/ STYLE_OFF_XP_DIV\)/.test(cp)} 元素=${/<p class="dim style-note">用哪个流派/.test(cp)}`)
 }
 
 process.exit(fail === 0 ? 0 : 1)

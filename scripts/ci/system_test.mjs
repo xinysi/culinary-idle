@@ -63,7 +63,7 @@ import { recipesForPair, easiestRecipeForPair } from '../../src/game/data/flavor
 import { SKINS, SKIN_REQUIRED_KEYS, skinVars, rgbOf } from '../../src/game/data/skins.js'
 import { daoGraphLayout, GRAPH_METRICS } from '../../src/game/data/daoGraph.js'
 import { SHANHAI_PATHS, SHANHAI_NODES, SHANHAI_RING_COUNT, SHANHAI_RINGS, SHANHAI_RING_SLOTS, SHANHAI_GAPS, SHANHAI_TICKET_RING } from '../../src/game/data/shanhaiTree.js'
-import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, DERIVED_MAX, OFFLINE_CAP, safeCap, XP_MULTIPLIER_OPTIONS, safeXpMultiplier } from '../../src/game/data/caps.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, DERIVED_MAX, OFFLINE_CAP, OFFLINE_LEVEL_STEPS, offlineBaseHoursForLevel, safeCap, XP_MULTIPLIER_OPTIONS, safeXpMultiplier } from '../../src/game/data/caps.js'
 import { SHANHAI_EFFECT_FIELDS, SHANHAI_EFFECT_CAPS, shanhaiIndex, shanhaiNodeState, shanhaiEffectSum } from '../../src/game/data/shanhaiProgress.js'
 import { shanhaiGraphLayout } from '../../src/game/data/shanhaiGraph.js'
 import { DAO_PATHS, DAO_NODES, DAO_OUTER, daoNodesOf, daoPathCost, daoUnlockedTotal } from '../../src/game/data/daoTree.js'
@@ -4702,7 +4702,7 @@ console.log('══ C23. 上限一致性 ══')
     return p.spirits.active.length <= 2 && p.restaurant.menu.length <= DERIVED_MAX.restaurantSlots
       && p.farming.plots.length <= DERIVED_MAX.farmPlots && p.settings.maxParallelIdle === 0
   })())
-  check('上限', `离线上限走唯一出口：${OFFLINE_CAP.baseHours}h + 饼干(≤${OFFLINE_CAP.biscuitMaxHours}) + 厨神之路(≤${OFFLINE_CAP.daoMaxHours}) + 山海食经(≤${OFFLINE_CAP.shanhaiMaxHours})`, (() => {
+  check('上限', `离线上限走唯一出口：基础(12~20，按最高技能等级) + 饼干(≤${OFFLINE_CAP.biscuitMaxHours}) + 厨神之路(≤${OFFLINE_CAP.daoMaxHours}) + 山海食经(≤${OFFLINE_CAP.shanhaiMaxHours})`, (() => {
     const p = freshPlayer()
     p.offlineBonusH = 99 // 越界 → 段内夹到饼干上限
     // 山海段：把**全树所有 offlineH 节点**都点亮（12 线时共 8 个，7 条采集线第 6 环 + 采撷终点）
@@ -4712,7 +4712,9 @@ console.log('══ C23. 上限一致性 ══')
     const wan = p.offlineMaxHours()
     const wan2 = p.offlineMaxHours()
     // 段内必须**刚好用满**（多了会被夹掉＝发了读不到的奖励，少了＝浪费设计位）
-    return shanhai === OFFLINE_CAP.shanhaiMaxHours && dao === 0 && wan === OFFLINE_CAP.baseHours + OFFLINE_CAP.biscuitMaxHours + shanhai && wan2 === wan
+    // ⚠️ 基础那段读**派生值**（2026-09-29 起按最高技能等级分档），不写 OFFLINE_CAP.baseHours——
+    //    否则本断言在满级玩家口径下会变成「自比自」的假绿。
+    return shanhai === OFFLINE_CAP.shanhaiMaxHours && dao === 0 && wan === p.offlineBaseHours() + OFFLINE_CAP.biscuitMaxHours + shanhai && wan2 === wan
   })(), (() => {
     const p = freshPlayer()
     p.offlineBonusH = 99
@@ -7426,7 +7428,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 // 本作秘境原口径只有「逐层 3 选 1 + 按层结算」、对手等级**封顶 99**、奖励线性小额、无跨局进度 ⇒ 打久了没目标。
 // 现已补：档位（1..10，倍率 ×1..×3.25，同时乘对手属性与本局奖励）、升档目标（通过 6/10/…/38 层）、深层券。
 {
-  const { REALM_TIER_MAX, realmTierMult, realmTierGoal, realmReward, realmOpponent, realmOpponentLevel } =
+  const { REALM_TIER_MAX, REALM_TIER_GATES, realmTierMult, realmTierGoal, realmTierCapFor, realmTierUnlocked, realmReward, realmOpponent, realmOpponentLevel } =
     await import('../../src/game/data/mysticRealm.js')
   const { ITEMS } = await import('../../src/game/data/items.js')
   const { totalXpForLevel } = await import('../../src/game/core/Experience.js')
@@ -7455,14 +7457,47 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   const p2 = freshPlayer(); p2.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null }
   check('秘境档位', '旧档没有 tier 字段时回退第 1 档（不炸）', p2.realmTier() === 1)
   const p3 = freshPlayer(); p3.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: 99 }
-  check('秘境档位', '脏值 tier 被夹到上限（不产生越界倍率）', p3.realmTier() === REALM_TIER_MAX, `实得 ${p3.realmTier()}`)
+  // 🔴 口径 2026-09-29 变了：11 档起挂等级门槛 ⇒ **生效档位**夹到「当前等级能开的最高档」，
+  //    而**存储值**仍夹到 REALM_TIER_MAX（不清洗，转生掉级期间只降低生效档、等级回来即恢复）。
+  check('秘境档位', '脏值 tier 被夹到「当前等级能开的最高档」（存储值不越界、生效值不越权）',
+    p3.realmState().tier === REALM_TIER_MAX && p3.realmTier() === realmTierCapFor(p3.combatLevel),
+    `存储 ${p3.realmState().tier} 生效 ${p3.realmTier()} 上限 ${realmTierCapFor(p3.combatLevel)}`)
+  {
+    // 门槛（11~13 档 = Lv105/110/115）：低等级夹在 10、达标逐档放开、非法等级不放行
+    const gateOk = REALM_TIER_GATES.every((g) =>
+      realmTierCapFor(g.level) === g.tier && realmTierCapFor(g.level - 1) === g.tier - 1
+      && realmTierUnlocked(g.tier, g.level) && !realmTierUnlocked(g.tier, g.level - 1))
+    check('秘境档位', '门槛：第 11/12/13 档分别在对决 Lv105/110/115 解锁，低一级不放行；前 10 档一直开放',
+      gateOk && realmTierCapFor(1) === 10 && realmTierCapFor(0) === 10
+      && realmTierCapFor(null) === 10 && realmTierCapFor(NaN) === 10 && realmTierCapFor('abc') === 10
+      && !realmTierUnlocked(NaN, 200) && !realmTierUnlocked(null, 200),
+      REALM_TIER_GATES.map((g) => `${g.tier}@Lv${g.level}`).join(' '))
+    // 行为：**存储档位高于当前等级能开的档**时，按低档打、且不再继续往上升
+    const pg = freshPlayer(); pg.realm = { active: false, floor: 0, buffs: [], best: 0, pending: null, tier: 13 }
+    const effLow = pg.realmTier()
+    pg.realmStart(); for (let i = 0; i < 60; i++) pg.realmAdvance()
+    const r = pg.realmEnd()
+    check('秘境档位', '掉级期间：生效档降到 10、结算按生效档发奖、且不继续升档；存储值保留 13（等级回来即恢复）',
+      effLow === 10 && r.tierUp === null && pg.realmState().tier === 13,
+      `生效 ${effLow} 结算升档 ${JSON.stringify(r.tierUp)} 存储 ${pg.realmState().tier}`)
+    // 🔴 这条才是「11 档起真有门槛」的判别式：低等级玩家把第 10 档刷穿 60 层（目标 42）
+    //    **存储档位也不许升进 11** —— 只看「生效档」抓不到「升进去了但被夹回 10」的那种写法。
+    const pl = freshPlayer(); pl.realm = { active: false, floor: 0, buffs: [], best: 0, pending: null, tier: 10 }
+    pl.realmStart(); for (let i = 0; i < 60; i++) pl.realmAdvance()
+    pl.realmEnd()
+    check('秘境档位', '等级不够时不许升进第 11 档（存储档位也停在 10）',
+      pl.realmState().tier === 10 && pl.realmTier() === 10,
+      `存储 ${pl.realmState().tier} 生效 ${pl.realmTier()}`)
+  }
   const p4 = freshPlayer(); p4.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: 4 }
   const back4 = freshPlayer(); back4.applySave(JSON.parse(JSON.stringify(p4.serialize())))
   check('秘境档位', '档位随存档往返保留（含 serialize/applySave 三处）', back4.realmTier() === 4, `实得 ${back4.realmTier()}`)
-  const p5 = freshPlayer(); p5.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: REALM_TIER_MAX }
+  const p5 = freshPlayer({ knife: 115, tasteAcumen: 115, heatControl: 115 })
+  p5.realm = { active: false, floor: 0, buffs: [], best: 3, pending: null, tier: REALM_TIER_MAX }
   p5.realmStart(); for (let i = 0; i < 60; i++) p5.realmAdvance()
   p5.realmEnd()
-  check('秘境档位', '满档后不再继续升（封顶）', p5.realmTier() === REALM_TIER_MAX)
+  check('秘境档位', '满档后不再继续升（封顶）', p5.realmTier() === REALM_TIER_MAX && p5.realmState().tier === REALM_TIER_MAX,
+    `生效 ${p5.realmTier()} / 上限 ${REALM_TIER_MAX}`)
   void totalXpForLevel
 }
 
@@ -7474,17 +7509,59 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 //   ② 塔从第 5 层起被击退**退一层**（`onTowerLose`，`best` 纪录永不回退）；
 //   ③ 战斗面板显示奥义续航（`aojiUpkeep`），且必须与真实扣点**同源**（否则又是「显示与结算不一致」）。
 {
-  const { TOWER_TIERS, towerTierOf, applyTowerTier, towerMilestoneKey, towerMilestone, towerFloor, TOWER_FLOOR_DROP_FROM } =
+  const { TOWER_TIERS, towerTierOf, towerTierUnlocked, applyTowerTier, towerMilestoneKey, towerMilestone, towerFloor, TOWER_FLOOR_DROP_FROM } =
     await import('../../src/game/data/battleTower.js')
   const { AOJIS } = await import('../../src/game/data/aojis.js')
+  /** 该玩家**当前实际生效**的对手属性倍率（= towerOpp 的 hp ÷ 同层无档位的 hp；用于钉「结算路径也走了出口」） */
+  const topOppMult = (pl) => {
+    const floor = Math.max(1, pl.tower?.floor ?? 1)
+    const raw = towerFloor(floor, pl.combatLevel)
+    const got = pl.towerOpp()
+    return raw?.hp ? got.hp / raw.hp : 1
+  }
 
-  // ① 档位表本身：三档、id 唯一、属性倍率与奖励倍率**同名同值**、标准档是第一档（= 默认，旧档回退目标）
+  // ① 档位表本身：id 唯一、属性倍率与奖励倍率**同名同值**、标准档是第一档（= 默认，旧档回退目标）
   const ids = TOWER_TIERS.map((t) => t.id)
-  check('难度档', `档位为 标准/精英/极限（${ids.join(' / ')}），id 唯一`, ids.length === 3 && new Set(ids).size === 3)
+  check('难度档', `档位 id 唯一、不少于三档、带门槛的档位等级严格递增（${ids.join(' / ')}）`,
+    ids.length >= 3 && new Set(ids).size === ids.length
+    && TOWER_TIERS.filter((t) => t.reqLevel > 0).every((t, i, a) => i === 0 || t.reqLevel > a[i - 1].reqLevel),
+    ids.join(' / '))
   check('难度档', '属性倍率严格递增且标准档 = ×1', TOWER_TIERS[0].mult === 1 && TOWER_TIERS.every((t, i) => i === 0 || t.mult > TOWER_TIERS[i - 1].mult), TOWER_TIERS.map((t) => t.mult).join(' / '))
   check('难度档', '每一档的属性倍率与奖励倍率相等（难 1.5 倍 ⇒ 奖励也 1.5 倍，不出现「更难但没多拿」）',
     TOWER_TIERS.every((t) => t.rewardMult === t.mult))
   check('难度档', '脏档/空档回退标准档（不产生越界倍率）', towerTierOf('nope').id === ids[0] && towerTierOf(undefined).id === ids[0] && towerTierOf(null).id === ids[0])
+  // ①b 解锁门槛（2026-09-29 新增第 4 档「饕餮」= 末段 101-120 的零美术满足点，需对决 Lv105）
+  {
+    const gated = TOWER_TIERS.filter((t) => t.reqLevel > 0)
+    check('难度档', '带门槛的档位：未达标一律不解锁，达标即解锁（唯一出口 towerTierUnlocked）',
+      gated.length >= 1
+      && gated.every((t) => !towerTierUnlocked(t.id, t.reqLevel - 1) && towerTierUnlocked(t.id, t.reqLevel) && towerTierUnlocked(t.id, 200))
+      // 无门槛档位任何时候都解锁（前三档口径不变）
+      && TOWER_TIERS.filter((t) => !t.reqLevel).every((t) => towerTierUnlocked(t.id, 1) && towerTierUnlocked(t.id, 0)),
+      gated.map((t) => `${t.id}@Lv${t.reqLevel}`).join(' '))
+    check('难度档', '非法等级不解锁（NaN / null / 字符串非数字）',
+      gated.every((t) => !towerTierUnlocked(t.id, NaN) && !towerTierUnlocked(t.id, null) && !towerTierUnlocked(t.id, 'abc')),
+      gated.map((t) => t.id).join(' '))
+    // 🔴 行为：未解锁的档位**切不进去**，且**转生掉级后自动退回标准档**（读的时候也要复核，不能只在选择那一刻校验）
+    {
+      const tp = freshPlayer({ knife: 110, tasteAcumen: 110, heatControl: 110 })
+      const high = gated[gated.length - 1]
+      const setOk = tp.setTowerTier(high.id).id === high.id
+      const atHigh = tp.towerTier().id === high.id
+      // 掉等级（模拟转生）→ 读的时候必须回退
+      tp.setSkillState('knife', { level: 40, exp: 0 })
+      tp.setSkillState('tasteAcumen', { level: 40, exp: 0 })
+      tp.setSkillState('heatControl', { level: 40, exp: 0 })
+      const afterDrop = tp.towerTier().id
+      const oppMult = topOppMult(tp)
+      check('难度档', '门槛行为：达标可切 / 未达标切不进 / 掉级后自动回标准档（且对手倍率同步回 ×1）',
+        setOk && atHigh && afterDrop === 'standard' && Math.abs(oppMult - 1) < 1e-9,
+        `切=${setOk} 在位=${atHigh} 掉级后=${afterDrop} 对手倍率=${oppMult}`)
+      const tp2 = freshPlayer({ knife: 40, tasteAcumen: 40, heatControl: 40 })
+      const lockedSet = tp2.setTowerTier(high.id).id
+      check('难度档', '未达标时 setTowerTier 拒绝切换（存档手改 / 旧前端也绕不过去）', lockedSet === 'standard', `实得 ${lockedSet}`)
+    }
+  }
 
   // ② `applyTowerTier` 是**纯函数**且只乘属性：不改传入的冻结对手对象、不动等级与掉落、不引入 NaN
   const base = towerFloor(50, 100)
@@ -10573,6 +10650,83 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   const viewSrc = fs.readFileSync('src/views/FarmingView.vue', 'utf8')
   check('农田产出', '🔴 农耕页的「期望件数」也读同一个常数（否则卡片写着 1 件、实际 2 件）',
     /const base = FARM_BASE_YIELD \+ masteryYieldBonus/.test(viewSrc) && !/const base = 1 \+ masteryYieldBonus/.test(viewSrc))
+}
+
+// ── C80（2026-09-29）：离线基础时长按「最高技能等级」分档 ────────────────────────
+// 起因：成长平衡体检量出 **Lv101-120 吃掉 86% 的经验却只有 6% 的内容**（内容/时间 = 0.40）
+// ⇒ 末 20 级「最长、也最空」。补内容要美术，这条是**零美术**的补法：每 5 级给一段
+// **看得见、每天都能感觉到**的奖励（离线结算窗口 12h → 20h），且**只抬窗口、不动任何数值乘区**
+// ⇒ 它是「更方便」而不是「更强」，不会位移任何已标定的时长。
+// 见 `docs/成长平衡体检-2026-09-29.md` §8 的方案 1-A。
+{
+  const off = (lv) => offlineBaseHoursForLevel(lv)
+  const AE_SRC = fs.readFileSync(new URL('../../src/game/data/activeEffects.js', import.meta.url), 'utf8')
+  check('离线分档', '档位表：等级严格递增、小时数单调不减、终点 20h',
+    (() => {
+      let prevH = 0
+      for (const s of OFFLINE_LEVEL_STEPS) { if (!(s.hours >= prevH)) return false; prevH = s.hours }
+      return OFFLINE_LEVEL_STEPS.length === 5
+        && OFFLINE_LEVEL_STEPS.every((s, i, a) => i === 0 || s.level > a[i - 1].level)
+        && OFFLINE_LEVEL_STEPS[0].level === 100
+        && OFFLINE_LEVEL_STEPS[OFFLINE_LEVEL_STEPS.length - 1].hours === 20
+    })(), `实际 ${OFFLINE_LEVEL_STEPS.map((s) => `Lv${s.level}:${s.hours}`).join(' ')}`)
+  // 🔴 这条是「不是无差别加强」的防线：新档玩家的成长速度必须一字不改
+  check('离线分档', '🔴 早期不动：Lv1~99 全部等于 baseHours（新档零加成）',
+    (() => { for (let lv = 1; lv <= 99; lv++) if (off(lv) !== OFFLINE_CAP.baseHours) return false; return true })(),
+    `Lv50=${off(50)} Lv99=${off(99)} base=${OFFLINE_CAP.baseHours}`)
+  check('离线分档', '边界：99=12 / 100=13 / 104=13 / 105=14 / 110=16 / 115=18 / 119=18 / 120=20',
+    off(99) === 12 && off(100) === 13 && off(104) === 13 && off(105) === 14 && off(110) === 16
+    && off(115) === 18 && off(119) === 18 && off(120) === 20,
+    `${off(99)} ${off(100)} ${off(104)} ${off(105)} ${off(110)} ${off(115)} ${off(119)} ${off(120)}`)
+  check('离线分档', '全区间单调不减（枚举 1~140）',
+    (() => { let prev = 0; for (let lv = 1; lv <= 140; lv++) { const h = off(lv); if (h < prev) return false; prev = h } return true })())
+  check('离线分档', '非法输入回退到 baseHours（null / 空串 / NaN / 负数 / 非数字）',
+    off(null) === OFFLINE_CAP.baseHours && off('') === OFFLINE_CAP.baseHours && off(NaN) === OFFLINE_CAP.baseHours
+    && off(-5) === OFFLINE_CAP.baseHours && off('abc') === OFFLINE_CAP.baseHours && off(undefined) === OFFLINE_CAP.baseHours,
+    `${off(null)} ${off('')} ${off(NaN)} ${off(-5)} ${off('abc')}`)
+  check('离线分档', '字符串等级按数字处理（存档里是字符串也不误判）', off('120') === 20 && off('105') === 14, `${off('120')} ${off('105')}`)
+  // 行为断言：走真实 store，确认唯一出口真的用了派生基础
+  check('离线分档', '唯一出口：120 级玩家的 offlineMaxHours = 派生基础 + 三段加成',
+    (() => {
+      const p = freshPlayer({ foraging: 120 })
+      p.offlineBonusH = OFFLINE_CAP.biscuitMaxHours
+      const expect = 20 + OFFLINE_CAP.biscuitMaxHours
+      return p.offlineBaseHours() === 20 && p.offlineMaxHours() === expect
+    })(), (() => { const p = freshPlayer({ foraging: 120 }); return `base=${p.offlineBaseHours()} 总=${p.offlineMaxHours()}` })())
+  check('离线分档', '新档（Lv1）的上限与改动前逐值相同（12 + 饼干）',
+    (() => {
+      const p = freshPlayer()
+      p.offlineBonusH = OFFLINE_CAP.biscuitMaxHours
+      return p.offlineBaseHours() === OFFLINE_CAP.baseHours && p.offlineMaxHours() === 24
+    })(), (() => { const p = freshPlayer(); return `base=${p.offlineBaseHours()} 总=${p.offlineMaxHours()}` })())
+  // 🔴 显示同源：效果总览那一行的「基础 N」必须是派生值（写死 12 就是显示/结算不一致）
+  // ⚠️ 两个分支都要测：`off()` 把说明放在 **`why`**（`text` 恒为 '—'），`on` 分支才放在 `text`
+  //    —— 首版只读 `text` ⇒ 断言在 off 分支上**永远是假绿/假红**（实测就是这么红的）。
+  check('离线分档', '🔴 显示同源：效果总览那行的「基础」随等级走（on / off 两个分支都测）',
+    (() => {
+      const def = EFFECT_ROWS.find((e) => e.id === 'offlineHours')
+      if (!def) return false
+      const p = freshPlayer({ foraging: 120 })
+      const r1 = def.read(p) // 无加成 → off 分支（说明在 why）
+      const offShown = `${r1?.text ?? ''} ${r1?.why ?? ''}`
+      p.offlineBonusH = OFFLINE_CAP.biscuitMaxHours // 有加成 → on 分支（说明在 text）
+      const onShown = String(def.read(p)?.text ?? '')
+      return offShown.includes('基础 20') && !offShown.includes('基础 12')
+        && onShown.includes('基础 20') && !onShown.includes('基础 12')
+    })(), (() => {
+      const def = EFFECT_ROWS.find((e) => e.id === 'offlineHours')
+      if (!def) return '(没找到效果行)'
+      const p = freshPlayer({ foraging: 120 })
+      const r1 = def.read(p)
+      p.offlineBonusH = OFFLINE_CAP.biscuitMaxHours
+      const r2 = def.read(p)
+      return `off.why=${String(r1?.why).slice(0, 40)} | on.text=${String(r2?.text).slice(0, 40)}`
+    })())
+  check('离线分档', '静态：activeEffects 不拿 OFFLINE_CAP.baseHours 当「基础」直接显示',
+    !/parts = \[`基础 \$\{OFFLINE_CAP\.baseHours\}`\]/.test(AE_SRC) && /offlineBaseHours\?\.\(\)/.test(AE_SRC))
+  // 攻略文案也要跟着（audit_sync 只钉「含 12h/80%」，不改口径就会写成假话）
+  check('离线分档', '攻略写明基础随等级抬升（不是写死 12h）',
+    /基础随你的最高技能等级抬升/.test(fs.readFileSync('src/game/data/guide.js', 'utf8')))
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

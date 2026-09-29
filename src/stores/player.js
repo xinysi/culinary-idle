@@ -5,7 +5,7 @@
 // 腐坏计时（§5.4）、成就/图鉴/称号（§6）、主线任务进度（§7.2）、统计
 
 import { defineStore } from 'pinia'
-import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST, OFFLINE_CAP, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList, safeXpMultiplier } from '../game/data/caps.js'
+import { CAP_MAX, CAP_BASE, PAID_CAP_MAX, STORAGE_BASE, STORAGE_MAX, STORAGE_PAID_MAX, COLD_EXPAND_COST, OFFLINE_CAP, offlineBaseHoursForLevel, DERIVED_MAX, IDLE_CAP_HOURS, FACILITY_MAX, CARAVAN_CARGO_CAP, safeCap, safeList, safeXpMultiplier } from '../game/data/caps.js'
 import { tunerOver } from '../game/data/tuner.js'
 import { STACK_MAX, effectiveStackCap } from '../game/data/stackRules.js'
 import { BANK_TAB_COUNT, DEFAULT_BANK_TABS, sanitizeBankTabs, sanitizeItemTabs, sanitizeTabIndex } from '../game/data/bankTabs.js'
@@ -46,10 +46,10 @@ import { PAST_SEASON_GEAR_PRICE, pastSeasonGearToClaim, seasonGearIds } from '..
 import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
 import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyChallenge.js'
-import { REALM_BUFFS, rollRealmChoices, realmReward, realmTierGoal, realmTierMult, REALM_TIER_MAX } from '../game/data/mysticRealm.js'
+import { REALM_BUFFS, rollRealmChoices, realmReward, realmTierGoal, realmTierMult, realmTierCapFor, REALM_TIER_MAX } from '../game/data/mysticRealm.js'
 import { DAO_NODES, DAO_PATHS, daoNode, daoEffectSum, daoSpent, daoCanUnlock, daoPathCost } from '../game/data/daoTree.js'
 import { INSIGHT_NODES, insightEffectSum, canUnlockInsight } from '../game/data/insightTree.js'
-import { towerFloor, towerMilestone, towerMilestoneKey, towerTierOf, applyTowerTier, TOWER_UNLOCK_LEVEL, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
+import { towerFloor, towerMilestone, towerMilestoneKey, towerTierOf, towerTierUnlocked, applyTowerTier, TOWER_UNLOCK_LEVEL, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
 import { festThemeFor, festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES } from '../game/data/cookingFest.js'
 import { COLLECTABLE_SETS, setBonusReward } from '../game/data/setBonuses.js'
 import { equipSetBonuses } from '../game/data/equipSets.js'
@@ -5609,15 +5609,33 @@ export const usePlayerStore = defineStore('player', {
     },
     // ── 山海食经（v2.1 收集科技树）：**条件点亮、不消耗资源**、flat 奖励、零新货币 ──
     /**
-     * 离线收益时长上限（小时）—— **唯一出口**：基础 12 + 能量饼干(≤12) + 厨神之路(≤6) + 山海食经(≤6)。
+     * 离线收益时长上限（小时）—— **唯一出口**：基础(12~20，见下) + 能量饼干(≤12) + 厨神之路(≤6) + 山海食经(≤8)。
      * 段与段各有天花板，任何一段都不会被别的段放大；改动上限只改 `data/caps.js`。
      * （审计发现：原先三处 UI 文案把窗口写成「12h + 饼干」，与实际不符。）
+     * 2026-09-29：基础那一段改成**按最高技能等级分档**（12 → 20h，Lv100 起每 5 级抬一次）——
+     * 末段（101-120）的「零美术满足点」。分档表与函数都在 `caps.js`，这里只做算术。
      */
     offlineMaxHours() {
       const biscuit = safeCap(this.offlineBonusH, 0, OFFLINE_CAP.biscuitMaxHours)
       const dao = Math.min(OFFLINE_CAP.daoMaxHours, Number(this.daoEffects?.()?.offlineHours) || 0)
       const shanhai = Math.min(OFFLINE_CAP.shanhaiMaxHours, Number(this.shanhaiEffects?.()?.offlineH) || 0)
-      return tunerOver('offlineHours', OFFLINE_CAP.baseHours + biscuit + dao + shanhai, 0.25, 72)
+      return tunerOver('offlineHours', this.offlineBaseHours() + biscuit + dao + shanhai, 0.25, 72)
+    },
+    /**
+     * 离线**基础**时长（按最高技能等级分档）—— 界面要显示「基础 N 小时」时**一律读它**，
+     * 不许在组件里另算一遍（本项目最忌「显示一个数、按另一个数结算」）。
+     */
+    offlineBaseHours() {
+      return offlineBaseHoursForLevel(this.maxSkillLevel())
+    },
+    /** 最高技能等级（离线分档用；转生后可达 120）—— 派生值，不进存档 */
+    maxSkillLevel() {
+      let m = 1
+      for (const s of Object.values(this.skills ?? {})) {
+        const lv = Number(s?.level)
+        if (Number.isFinite(lv) && lv > m) m = lv
+      }
+      return m
     },
     /** 已点亮节点的效果合计：{ offlineH, flatYield: { skillId: n }, caps } */
     shanhaiEffects() {
@@ -5819,8 +5837,13 @@ export const usePlayerStore = defineStore('player', {
       this.realm.tier = Math.max(1, Math.min(REALM_TIER_MAX, Math.floor(this.realm.tier)))
       return this.realm
     },
-    /** 本局档位（1..10） */
-    realmTier() { return this.realmState().tier ?? 1 },
+    /** 本局**实际生效**的档位（1..13；= 存储档位夹到「当前对决等级能开的最高档」）
+     *  🔴 存储值**不抹掉**：转生掉级期间按低档打，等级回来即恢复 —— 档位是**进度**不是一次性选择。
+     *     （与挑战塔的「选择型」档位不同：那里掉级要退回标准档，这里只夹生效值。） */
+    realmTier() {
+      const st = this.realmState()
+      return Math.max(1, Math.min(realmTierCapFor(this.combatLevel), st.tier ?? 1))
+    },
     /** 本局增益聚合（未进入秘境返回 null，避免影响普通对决） */
     realmModifiers() {
       const st = this.realm
@@ -5885,7 +5908,9 @@ export const usePlayerStore = defineStore('player', {
           this.stats.realmTicketPaid = (this.stats.realmTicketPaid ?? 0) + r.tickets
         }
         // 升档：本局通过层数达到目标 ⇒ 下一档（对手更难、奖励更高）——参考作 Runs 的 tiers 推进
-        if (st.tier < REALM_TIER_MAX && floor >= realmTierGoal(st.tier)) {
+        // 🔴 11 档起有等级门槛（Lv105/110/115）⇒ 上限走 realmTierCapFor（唯一出口），不能只看 REALM_TIER_MAX
+        const cap = realmTierCapFor(this.combatLevel)
+        if (st.tier < cap && floor >= realmTierGoal(st.tier)) {
           const from = st.tier
           st.tier += 1
           tierUp = { from, to: st.tier, mult: realmTierMult(st.tier) }
@@ -5939,13 +5964,16 @@ export const usePlayerStore = defineStore('player', {
     towerUnlocked() {
       return this.combatLevel >= TOWER_UNLOCK_LEVEL
     },
-    /** 当前**难度档**（脏值回退标准档；存档里存的是 id） */
+    /** 当前**难度档**（脏值回退标准档；**未解锁的档也回退标准档** —— 转生掉级后仍带着「饕餮」就必须失效） */
     towerTier() {
-      return towerTierOf(this.tower?.tier)
+      const t = towerTierOf(this.tower?.tier)
+      return towerTierUnlocked(t.id, this.combatLevel) ? t : towerTierOf('standard')
     },
-    /** 切换难度档（只影响之后的战斗与奖励；已领里程碑按档分别记账） */
+    /** 切换难度档（只影响之后的战斗与奖励；已领里程碑按档分别记账）。
+     *  ⚠️ **未解锁的档位拒绝切换**（界面已置灰，这里是第二道闸）：否则存档手改/旧前端都能绕过去。 */
     setTowerTier(id) {
       const t = towerTierOf(id)
+      if (!towerTierUnlocked(t.id, this.combatLevel)) return this.towerTier()
       const cur = this.tower ?? { floor: 1, best: 0, rewarded: [], tier: 'standard' }
       cur.tier = t.id
       this.tower = cur
@@ -5954,18 +5982,20 @@ export const usePlayerStore = defineStore('player', {
     /** 该层在当前档位下的里程碑是否已领（页面用它显示「已领」，与发奖**同一个键**） */
     towerMilestoneClaimed(floorNum) {
       const t = this.tower ?? {}
-      return (t.rewarded ?? []).includes(towerMilestoneKey(floorNum, t.tier ?? 'standard'))
+      return (t.rewarded ?? []).includes(towerMilestoneKey(floorNum, this.towerTier().id))
     },
-    /** 当前挑战层对手（动态生成 + **运行时**叠加难度档倍率；冻结数据不动） */
+    /** 当前挑战层对手（动态生成 + **运行时**叠加难度档倍率；冻结数据不动）
+     *  🔴 档位走 `this.towerTier()`（**带解锁复核的出口**），不直接读 `this.tower.tier`：
+     *     直读会让「转生掉级后未解锁的档」照样乘进属性里（战斗按 ×2.5 打、界面显示标准档）。 */
     towerOpp() {
       const floor = Math.max(1, this.tower?.floor ?? 1)
-      return applyTowerTier(towerFloor(floor, this.combatLevel), this.tower?.tier ?? 'standard')
+      return applyTowerTier(towerFloor(floor, this.combatLevel), this.towerTier().id)
     },
     /** 塔层胜利结算：推进层数 + 里程碑一次性奖励（金币/券按档位倍率） */
     onTowerWin(floor) {
       this.bumpChallenge('tower', floor) // 每周挑战赛：塔层（2026-09-09）
       const t = this.tower ?? { floor: 1, best: 0, rewarded: [], tier: 'standard' }
-      const tier = towerTierOf(t.tier)
+      const tier = this.towerTier() // 🔴 走带解锁复核的出口：否则奖励按 ×2.5 发、而战斗是按标准档打的
       const tPrev = t.best ?? 0
       t.best = Math.max(t.best ?? 0, floor)
       if (t.best > tPrev) this.recordChronicle('tower:' + t.best, 'tower', `无尽挑战塔推进到第 ${t.best} 层`)

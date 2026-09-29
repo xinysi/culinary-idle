@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { getCombat } from '../game/combat/Combat.js'
+import { getCombat, STYLE_OFF_XP_DIV } from '../game/combat/Combat.js'
 import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
 import { AOJIS } from '../game/data/aojis.js' // 美食奥义栏（只列战斗相关）
 import { aojiUnlockedAt, aojiGateText } from '../game/data/aojiGates.js' // 等级门槛唯一出口（2026-09-27 用户⑧）
@@ -34,6 +34,13 @@ const takenPct = computed(() => Math.round(pStats.value.damageTakenPct ?? 0))
 const critMult = computed(() => combat?.critMultiplier?.() ?? 2)
 // 克制加成（+15%）：数值取自引擎 getter，避免界面与伤害公式两套真相
 const advPct = computed(() => Math.round(((combat?.advantageMultiplier?.() ?? 1.15) - 1) * 100))
+/**
+ * 副风格的经验比例（%）—— 🔴 **从引擎常数派生，不在模板里写死「1/3」**：
+ * `Combat.addStyleXp` 给当前风格全额、另外两个各 1/`STYLE_OFF_XP_DIV`（v2.29.0）。
+ * 界面必须说这件事：实测原先**一个字都没提**，玩家不知道换着练能把三条一起带起来，
+ * 等于那份改动白做（而且「用哪个流派那个流派快 3 倍」这个取舍也就没人看得见）。
+ */
+const offStylePct = computed(() => Math.round(100 / STYLE_OFF_XP_DIV))
 const offense = computed(() => [
   { k: '攻击伤害', v: Math.round(pStats.value.attack ?? 0), hint: '每回合的基础伤害（未计克制/暴击）' },
   { k: '暴击率', v: `${((pStats.value.critChance ?? 0) * 100).toFixed(1)}%`, hint: '命中后按此概率触发暴击' },
@@ -180,6 +187,8 @@ function buffText() {
         </div>
         <!-- 2026-09-20 用户要求：这条说明从右侧「属性面板」挪到**三个风格按钮下方** -->
         <p class="dim style-note">调味冲击每次消耗 10 调味能量；每回合自动回复 +5，战斗中喝果茶/香草茶可大幅恢复（调酒制作）。</p>
+        <!-- 2026-09-29：把「副风格也在涨经验」讲出来（引擎 v2.29.0 起就给，界面此前一个字没提） -->
+        <p class="dim style-note">用哪个流派，那个流派拿全额经验；另外两个流派各拿 {{ offStylePct }}%（换着练能把三条一起带起来，当前流派的经验一点不少）。</p>
       </div>
       <div class="combo-divider"></div>
       <div class="combo-right">

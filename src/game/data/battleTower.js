@@ -144,9 +144,26 @@ export const TOWER_TIERS = [
   { id: 'standard', name: '标准', icon: '🗼', mult: 1, rewardMult: 1, desc: '原始强度' },
   { id: 'elite', name: '精英', icon: '🔥', mult: 1.5, rewardMult: 1.5, desc: '守塔人属性 ×1.5 · 里程碑金币与抽卡券 ×1.5' },
   { id: 'extreme', name: '极限', icon: '💀', mult: 2, rewardMult: 2, desc: '守塔人属性 ×2 · 里程碑金币与抽卡券 ×2（墙会明显前移）' },
+  // 第 4 档（2026-09-29）：**对决 Lv105 解锁** —— 末段（101-120）的「零美术满足点」之一。
+  // 起因：成长平衡体检量出 Lv101-120 吃掉全站 86% 的经验却只有 6% 的内容（内容/时间 = 0.40）。
+  // 口径与前三档完全一致：只乘属性与里程碑奖励（**物品一件不加**），冻结的对手数据一字未动。
+  // ⚠️ 倍率刻意取 **2.5**（不是 ×3）：极限档的墙本就比标准档浅得多（实测 ≈F360 vs ≈F950）⇒
+  //    再陡一档的墙只会更浅。它的定位是「把已经打得过的层按 ×2.5 再领一遍」，不是「推得比极限更深」。
+  { id: 'feast', name: '饕餮', icon: '🍲', mult: 2.5, rewardMult: 2.5, reqLevel: 105, desc: '守塔人属性 ×2.5 · 里程碑金币与抽卡券 ×2.5（墙比极限档再前移一截）' },
 ]
 export function towerTierOf(id) {
   return TOWER_TIERS.find((t) => t.id === id) ?? TOWER_TIERS[0]
+}
+
+/** 档位解锁门槛：**没写 `reqLevel` 的档位 = 一直开放**（前三档口径不变）。
+ *  唯一出口 —— 界面置灰、`setTowerTier` 与 `towerTier()` 复核都读它，
+ *  避免「界面能选、结算按未解锁档打」这种显示/结算不一致（本项目老坑）。
+ *  ⚠️ 读的时候**也要复核**（不只是选择那一刻）：转生会掉等级 ⇒ 满级时选的「饕餮」在掉到 105 以下后必须自动回标准档。 */
+export function towerTierUnlocked(tierId, combatLevel) {
+  const need = Number(towerTierOf(tierId).reqLevel)
+  if (!Number.isFinite(need) || need <= 0) return true
+  const lv = Number(combatLevel)
+  return Number.isFinite(lv) && lv >= need
 }
 /** 把档位倍率作用到对手副本上（**返回新对象，不改传入数据**） */
 export function applyTowerTier(opponent, tierId) {

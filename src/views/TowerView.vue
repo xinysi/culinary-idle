@@ -10,7 +10,7 @@ import CombatLog from '../components/CombatLog.vue'
 import { EventBus } from '../game/core/EventBus.js'
 
 import { sfx } from '../game/core/sound.js'
-import { towerFloorName, towerMilestone, TOWER_UNLOCK_LEVEL, TOWER_TIERS, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
+import { towerFloorName, towerMilestone, TOWER_UNLOCK_LEVEL, TOWER_TIERS, towerTierUnlocked, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const player = usePlayerStore()
@@ -146,6 +146,10 @@ function setTier(id) {
   const t = player.setTowerTier(id)
   ui.pushLog(`🗼 挑战塔难度档改为「${t.name}」：守塔人属性 ×${t.mult}，里程碑金币与券 ×${t.rewardMult}（已领里程碑按档分别记账）`, 'info')
 }
+/** 档位是否已解锁（判定走 battleTower 的唯一出口，界面只做置灰与提示） */
+function tierUnlocked(t) {
+  return towerTierUnlocked(t.id, player.combatLevel)
+}
 function fmt(g) { return g.toLocaleString() }
 </script>
 
@@ -178,15 +182,17 @@ function fmt(g) { return g.toLocaleString() }
             :key="t.id"
             class="btn btn-sm"
             :class="{ 'btn-primary': tier.id === t.id }"
-            :title="t.desc"
+            :disabled="!tierUnlocked(t)"
+            :title="tierUnlocked(t) ? t.desc : `对决 Lv${t.reqLevel} 解锁（你现在 Lv${combatLevel}）`"
             @click="setTier(t.id)"
-          >{{ t.icon }} {{ t.name }}<template v-if="t.mult > 1"> ×{{ t.mult }}</template></button>
+          >{{ t.icon }} {{ t.name }}<template v-if="t.mult > 1"> ×{{ t.mult }}</template><template v-if="!tierUnlocked(t)"> 🔒</template></button>
           <span class="dim" :title="tier.desc">{{ tier.desc }}</span>
         </div>
         <p class="dim tower-tier-hint">
           档位只改守塔人属性与里程碑倍率，<b>不改你已过的最高层</b>；里程碑按档<b>分别记账</b> ⇒
           用标准档推深度、再用高难档把已经打得过的层按更高倍率领一遍，是后期多拿一份奖励的常规玩法。
-          高难档的墙会明显前移（实测满配：标准 ≈F1100、精英 ≈F800、极限 ≈F450），所以别指望在极限档推得比标准更深。
+          高难档的墙会明显前移（满配带足料理实测：标准 ≈F950、精英 ≈F560、极限 ≈F360、饕餮更浅），
+          所以别指望在极限档推得比标准更深。饕餮档需<b>对决 Lv105</b>；转生掉到 105 以下会自动退回标准档。
         </p>
       </div>
 

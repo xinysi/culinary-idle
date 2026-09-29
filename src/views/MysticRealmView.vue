@@ -7,7 +7,7 @@ import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getCombat } from '../game/combat/Combat.js'
 import { EventBus } from '../game/core/EventBus.js'
-import { REALM_BUFFS, realmOpponent, realmOpponentLevel, realmReward, realmTierMult, realmTierGoal } from '../game/data/mysticRealm.js'
+import { REALM_BUFFS, realmOpponent, realmOpponentLevel, realmReward, realmTierMult, realmTierGoal, REALM_TIER_MAX, REALM_TIER_GATES, realmTierCapFor } from '../game/data/mysticRealm.js'
 import CombatPanel from '../components/CombatPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import RelatedPages from '../components/RelatedPages.vue'
@@ -72,6 +72,15 @@ const tier = computed(() => player.realmTier())
 const tierMult = computed(() => realmTierMult(tier.value))
 const tierGoal = computed(() => realmTierGoal(tier.value))
 const tierProgress = computed(() => `${realm.value.floor}/${tierGoal.value}`)
+/** 卡在等级门槛上时给一句提示（11~13 档要对决 Lv105/110/115；判定走 mysticRealm 的唯一出口）
+ *  —— 否则玩家看到「距升档 N 层」却永远不升，不知道是等级不够。 */
+const tierLockHint = computed(() => {
+  const cap = realmTierCapFor(player.combatLevel)
+  if (tier.value >= REALM_TIER_MAX) return ''
+  if (tier.value < cap) return ''
+  const g = REALM_TIER_GATES.find((x) => x.tier === cap + 1)
+  return g ? `第 ${g.tier} 档需对决 Lv${g.level}（你现在 Lv${player.combatLevel}）` : ''
+})
 const nextHpBoost = computed(() => Math.round(nextFloor.value * 6))
 
 const REWARD_FLOORS = [1, 3, 5, 10, 15, 20, 30]
@@ -106,6 +115,7 @@ const rewardTable = computed(() =>
           <span class="badge" :title="`秘境第 ${tier} 档：对手属性与本局奖励都 ×${tierMult}；本局通过 ${tierGoal} 层即升档`">
             🏅 第 {{ tier }} 档 · ×{{ tierMult }}
           </span>
+          <span v-if="tierLockHint" class="dim">🔒 {{ tierLockHint }}</span>
           <span v-if="realm.active" class="dim">距升档 {{ tierProgress }} 层</span>
           <span v-if="realm.best" class="dim">历史最佳 {{ realm.best }} 层</span>
           <template v-if="realm.active">

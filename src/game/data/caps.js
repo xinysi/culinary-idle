@@ -49,6 +49,40 @@ export const OFFLINE_CAP = {
 }
 
 /**
+ * 离线**基础时长按「最高技能等级」分档**（2026-09-29 用户「开始」，成长平衡体检的第一条处置）。
+ *
+ * 🔴 为什么加这个（要解决的问题）：Lv101-120 吃掉全站 **86% 的经验**却只有 **6% 的内容**
+ *    （内容/时间 = 0.40）⇒ 末 20 级「最长、也最空」。补内容要美术，而这条是**零美术**的补法：
+ *    每 5 级给一段**看得见、每天都能感觉到**的奖励，把「末段有台阶」从「只有称号」扩到「有实感」。
+ * 🔴 口径：**只抬「结算窗口」这一个数，不动任何数值乘区** —— 它是「更方便」而不是「更强」：
+ *    离线上限不参与经验叠区、不影响在线成长速度、不进战斗公式 ⇒ **不会位移任何已标定的时长**。
+ *    （这正是它比「给末段加产量百分比」安全的地方：后者要穿精通池那 5 个函数 + 18 处调用点。）
+ * ⚠️ **Lv1~99 一个字节不动**（守卫「早期档恒为 baseHours」钉住）——新档玩家的成长速度完全不变，
+ *    被抬的只有已经走到末段的玩家。
+ * ⚠️ 副作用如实记录：Lv120 的离线窗口 12h → **20h（+67%）**，挂机更宽松。**这是刻意的**：
+ *    末段的奖励应该是「更省心」，而不是再给一层乘区（本项目刚把叠区收口过，不宜再开）。
+ */
+export const OFFLINE_LEVEL_STEPS = [
+  { level: 100, hours: 13 },
+  { level: 105, hours: 14 },
+  { level: 110, hours: 16 },
+  { level: 115, hours: 18 },
+  { level: 120, hours: 20 },
+]
+
+/**
+ * 该「最高技能等级」对应的离线基础小时数（**唯一出口**；非法/越界输入回退到 `baseHours`）。
+ * @param {number} level 玩家最高技能等级
+ */
+export function offlineBaseHoursForLevel(level) {
+  const lv = Number(level)
+  if (!Number.isFinite(lv) || lv < OFFLINE_LEVEL_STEPS[0].level) return OFFLINE_CAP.baseHours
+  let h = OFFLINE_CAP.baseHours
+  for (const s of OFFLINE_LEVEL_STEPS) if (lv >= s.level) h = s.hours
+  return h
+}
+
+/**
  * 随等级派生的上限（原先散落在 getter / 技能里的字面量）：
  * 起步值 + 成长公式 + 硬顶都在这里，getter 只做算术。
  */

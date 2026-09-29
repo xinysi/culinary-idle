@@ -1147,12 +1147,16 @@ export const EFFECT_ROWS = [
   {
     id: 'offlineHours', group: 'idle', icon: '🛏', name: '离线结算上限', kind: 'buff', src: '基础 + 能量饼干 + 厨神之路 + 山海食经', view: 'automation',
     read: (p) => {
+      // 🔴 「基础」这一段是**按最高技能等级分档**的（12~20h，`caps.js` 的 OFFLINE_LEVEL_STEPS）
+      //    ⇒ 这一行必须读 p.offlineBaseHours()，**不许写 OFFLINE_CAP.baseHours**：
+      //    写死会在满级玩家那里显示「基础 12」而实际按 20 结算 —— 本项目最忌的显示/结算不一致。
+      const base = p.offlineBaseHours?.() ?? OFFLINE_CAP.baseHours
       const total = p.offlineMaxHours()
-      if (total <= OFFLINE_CAP.baseHours) return off(`还没有任何时长加成（基础 ${OFFLINE_CAP.baseHours} 小时；能量饼干最多 +${OFFLINE_CAP.biscuitMaxHours} 小时，厨神之路 / 山海食经各最多 +${OFFLINE_CAP.daoMaxHours} 小时）`)
+      if (total <= base) return off(`还没有任何时长加成（基础 ${base} 小时；能量饼干最多 +${OFFLINE_CAP.biscuitMaxHours} 小时，厨神之路 / 山海食经各最多 +${OFFLINE_CAP.daoMaxHours} 小时）`)
       const bis = p.offlineBonusH ?? 0
       const dao = p.daoEffects?.().offlineHours ?? 0
       const sh = p.shanhaiEffects?.().offlineH ?? 0
-      const parts = [`基础 ${OFFLINE_CAP.baseHours}`]
+      const parts = [`基础 ${base}`]
       if (bis) parts.push(`能量饼干 +${n1(bis)}`)
       if (dao) parts.push(`厨神之路 +${n1(dao)}`)
       if (sh) parts.push(`山海食经 +${n1(sh)}`)

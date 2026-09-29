@@ -19,13 +19,37 @@ export const REALM_BUFFS = [
 // ── 档位（2026-09-19 参照 Rocky Idle 的 Runs 增加）────────────────────────────
 // 参考作的 Runs 是**分档**的（`runs_tiers`、每档有倍率 `this_tier: Nx`），通关推进档位 ⇒ 挑战与回报同步抬升；
 // 本作秘境原口径是「单一难度 + 按层结算」，对手等级封顶 99 ⇒ 打到一定程度后没有爬升目标。
-export const REALM_TIER_MAX = 10
-/** 档位倍率：**对手属性与本局奖励都乘它**（第 1 档 ×1.00 → 第 10 档 ×3.25） */
+//
+// 🔺 2026-09-29：**11~13 档（对决 Lv105/110/115 解锁）** —— 末段（101-120）的「零美术满足点」之一
+//   （起因：成长平衡体检量出 Lv101-120 吃 86% 的经验却只有 6% 的内容）。前 10 档口径**一字未改**。
+/** 11 档起要挂等级门槛：`{ tier, level }`。**1~10 档一直开放**（老玩家不受影响）。 */
+export const REALM_TIER_GATES = [
+  { tier: 11, level: 105 },
+  { tier: 12, level: 110 },
+  { tier: 13, level: 115 },
+]
+export const REALM_TIER_MAX = REALM_TIER_GATES[REALM_TIER_GATES.length - 1].tier
+/** 该对决等级**能开到的最高档**（唯一出口：读档夹取、升档判定、界面提示都读它） */
+export function realmTierCapFor(combatLevel) {
+  const lv = Number(combatLevel)
+  let cap = 10
+  for (const g of REALM_TIER_GATES) if (Number.isFinite(lv) && lv >= g.level) cap = g.tier
+  return cap
+}
+/** 某档是否已解锁（非法输入按「未解锁」处理 —— 宁可少开，不可越权）。
+ *  ⚠️ **必须显式挡 `t < 1`**：`Number(null) === 0` 且 `Number('') === 0` 都是**有限数**，
+ *  只判 `Number.isFinite` 会让 `null` 变成「第 0 档 ≤ 上限 ⇒ 已解锁」（本项目 `Number(null)===0` 的老坑）。 */
+export function realmTierUnlocked(tier, combatLevel) {
+  const t = Number(tier)
+  if (!Number.isFinite(t) || t < 1) return false
+  return Math.floor(t) <= realmTierCapFor(combatLevel)
+}
+/** 档位倍率：**对手属性与本局奖励都乘它**（第 1 档 ×1.00 → 第 10 档 ×3.25 → 第 13 档 ×4.00） */
 export function realmTierMult(tier = 1) {
   const t = Math.max(1, Math.min(REALM_TIER_MAX, Math.floor(Number(tier)) || 1))
   return +(1 + 0.25 * (t - 1)).toFixed(2)
 }
-/** 升档目标：本局**通过** N 层即升 1 档（第 1 档要 6 层 → 第 9 档要 38 层） */
+/** 升档目标：本局**通过** N 层即升 1 档（第 1 档要 6 层 → 第 9 档要 38 层 → 第 12 档要 50 层） */
 export function realmTierGoal(tier = 1) {
   const t = Math.max(1, Math.min(REALM_TIER_MAX, Math.floor(Number(tier)) || 1))
   return 6 + 4 * (t - 1)
