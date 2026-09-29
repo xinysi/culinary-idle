@@ -213,7 +213,7 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
     </header>
 
-    <FoldCard title="🧫 培养基一览" hint="堆肥 6h → 蘑菇+茯苓；沃肥 4h → 蘑菇+松茸+灵芝（吃肥料、不占并行槽、不吃种子）">
+    <FoldCard title="🧫 培养基一览" hint="堆肥 6h → 蘑菇+茯苓；沃肥 4h → 蘑菇+松茸+灵芝；加倍沃肥 8h / 厚培 12h → 云芝、血芝、太岁、九畹灵芝（吃肥料、不占并行槽、不吃种子）">
       <div class="card mf-table-card">
         <h3>🧫 培养基一览（菇床吃肥料，不占并行槽、不吃种子）</h3>
         <div class="table-scroll">
@@ -232,7 +232,7 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
     </FoldCard>
 
-    <FoldCard title="🌱 可种灵植一览" hint="6 种灵植需采摘 Lv40~85；收获回收 1 颗同类种子 ⇒ 一次投入、永久产出">
+    <FoldCard title="🌱 可种灵植一览" hint="8 种灵植需采摘 Lv40~115；收获回收 1 颗同类种子 ⇒ 一次投入、永久产出">
       <div class="card mf-table-card">
         <h3>🌱 可种灵植一览（灵圃吃稀有种子，收获回收种子 ⇒ 一次投入、永久产出）</h3>
         <div class="table-scroll">

@@ -45,6 +45,13 @@ SHOP_ITEMS.push(...SHOP_SEED_ENTRIES)
 import { LATE_SEED_SHOP } from './lateGameFood.js'
 SHOP_ITEMS.push(...LATE_SEED_SHOP)
 
+// 灵田 Ⅵ/Ⅶ 档的两颗稀有种子（spiritFieldSeeds.js，2026-09-30 体检 §9.1 的 1-A ④）——
+// 灵田要种它们，所以必须有稳定来源；与上面同一条口径（手写侧上架，不动生成器产物）。
+// ⚠️ 这个 import 还有**顺序副作用**：它把两颗种子并进 `SEED_MAP`，而 `itemSources.js` 既 import 本模块
+//    （拿 `SHOP_ITEMS`）又 import `SEED_MAP` ⇒ 本行保证「登记来源串时 SEED_MAP 已经含它们」。
+import { SPIRIT_FIELD_SEED_SHOP } from './spiritFieldSeeds.js'
+SHOP_ITEMS.push(...SPIRIT_FIELD_SEED_SHOP)
+
 export function shopItemName(itemId) {
   return ITEMS[itemId]?.name ?? itemId
 }

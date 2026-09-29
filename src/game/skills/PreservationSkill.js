@@ -7,6 +7,10 @@
 
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRESERVE_TIER_RECIPES } from '../data/preserveTiers.js'
+// Ⅵ/Ⅶ 阶（2026-09-29，体检 §9.1 的 5-A）：手写扩展模块，**push 进被 import 的这张基础表**（C66 口径）——
+// `itemSources` / `valueBalance` / `itemBalance` / `recipeBalance` 读的都是 `PRESERVATION_RECIPES`，
+// 只并进技能实例的入参会让那四个消费方看不到（历史前科：pickles.js 首版）。
+import { PRESERVE_TIER_EXT_RECIPES } from '../data/preserveTiersExt.js'
 import { balanceRecipeLevels } from './recipeBalance.js'
 
 // 肥料（堆肥/肥沃堆肥）保留在保鲜技能，不参与 5 阶级。
@@ -22,7 +26,7 @@ const ENTRY_RECIPES = [
   { id: 'compostEntry', name: '厨余堆肥', category: '肥料', reqLevel: 1, xp: 20, successChance: 0.95, ingredients: { potato: 2 }, output: { itemId: 'compost', qty: 1 } },
 ]
 
-export const PRESERVATION_RECIPES = [...ENTRY_RECIPES, ...FERTILIZER_RECIPES, ...PRESERVE_TIER_RECIPES]
+export const PRESERVATION_RECIPES = [...ENTRY_RECIPES, ...FERTILIZER_RECIPES, ...PRESERVE_TIER_RECIPES, ...PRESERVE_TIER_EXT_RECIPES]
 
 export class PreservationSkill extends ProductionSkill {
   constructor(player) {

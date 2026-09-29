@@ -52,6 +52,12 @@ export const HIVE_MEDIA = [
   { id: 'rosella', name: '洛神蜜箱', icon: '🌺', hours: 5, feed: { rosella: 2 }, honeyQty: 1 },
   { id: 'jasmine', name: '茉莉蜜箱', icon: '🌷', hours: 6, feed: { jasmine: 2 }, honeyQty: 2 },
   { id: 'osmanthus', name: '桂花蜜箱', icon: '🌾', hours: 8, feed: { osmanthus: 2 }, honeyQty: 2 },
+  // ── Lv105 / 115 两档（2026-09-30，成长平衡体检 §9.1 的 1-A ④）──
+  // 蜂蜜**已经 8 品到顶**（`HONEY_TIERS` 最高 `honeySupreme` 起于 Lv86），所以这两档不再抬品级，
+  // 而是抬高**每周期产量**（3 / 4 瓶）。蜜源换成 Lv102/112「补档」作物 ⇒ `hiveMediaLevel()`
+  // 由「该作物在 `CROPS` 里的 reqLevel」派生（102/115 ≥ 86）⇒ 品级仍是最高档，与显示同源。
+  { id: 'lateMelon', name: '霜蜜蜜箱', icon: '🍈', hours: 10, feed: { late_far_01: 2 }, honeyQty: 3 },
+  { id: 'lateBean', name: '紫府蜜箱', icon: '🫘', hours: 12, feed: { late_far_02: 2 }, honeyQty: 4 },
 ]
 
 const MEDIA_INDEX = new Map(HIVE_MEDIA.map((m) => [m.id, m]))

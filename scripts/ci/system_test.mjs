@@ -2553,8 +2553,9 @@ console.log('══ S. 内容扩充完整性 ══')
   check('扩充', '采集七技能目标数（145/78/75/51/22/45；2026-09-29 补档 +13）', insts.foraging.targets.length === 145 && insts.fishing.targets.length === 78 && insts.hunting.targets.length === 75 && insts.excavation.targets.length === 51 && insts.woodcutting.targets.length === 22 && insts.mining.targets.length === 45, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
   check('扩充', '制作五技能食谱数（297/99/93/129/99；腌制 90→93 见 pickles.js；2026-09-29 补档 +9）', insts.cooking.recipes.length === 297 && insts.baking.recipes.length === 99 && insts.preserving.recipes.length === 93 && insts.brewing.recipes.length === 129 && insts.spiceMixing.recipes.length === 99, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 381 配方（20 品质套 + 独立矿套 365 + 2026-09-29 补档装备线 16）', insts.craftsmithing.recipes.length === 381, `n=${insts.craftsmithing.recipes.length}`)
-  // 18 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
-  check('扩充', '食材保鲜 18 配方（入门 1 + 肥料 2 + 保鲜/增益剂 15）', insts.preservation.recipes.length === 18, `n=${insts.preservation.recipes.length}`)
+  // 24 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
+  //      + Ⅵ/Ⅶ 阶 6（preserveTiersExt.js，2026-09-29 体检 §9.1 的 5-A）
+  check('扩充', '食材保鲜 24 配方（入门 1 + 肥料 2 + 保鲜/增益剂 15 + Ⅵ/Ⅶ 阶 6）', insts.preservation.recipes.length === 24, `n=${insts.preservation.recipes.length}`)
   // 制作技能入口保护（2026-09-09）：每个制作技能必须至少有一个 Lv1 配方，否则技能永远无法起步
   {
     const noEntry = ['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'spiritSummoning']
@@ -8891,8 +8892,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 {
   const { readdirSync, readFileSync } = await import('node:fs')
   const CAL_TOTAL = 7462 // 生成器产物的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
-  const CAL_TOTAL_LATE = 459 // 2026-09-29 补档 57 条新配方的原始材料件数（新增、非改写；生成器产物那边由 gen_drift_audit 钉）
-  const CAL_COUNT = 1306 // 同上：配方条数（2026-09-29 补档 +57：制作 9 + 副业 30 + 木工 2 + 装备线 16）
+  const CAL_TOTAL_LATE = 723 // 2026-09-29 补档 57 条新配方的原始材料件数 459 + 保鲜 Ⅵ/Ⅶ 阶 6 条的 264（新增、非改写；生成器产物那边由 gen_drift_audit 钉）
+  const CAL_COUNT = 1312 // 同上：配方条数（2026-09-29 补档 +57：制作 9 + 副业 30 + 木工 2 + 装备线 16；体检 §9.1 的 5-A 再 +6 保鲜 Ⅵ/Ⅶ）
   const c53 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
 
   // ── A. 成长阻尼：乘法叠区（转生 × 增益剂 × 精通或设置 × 对决补正 × 限时窗口）先相乘、再统一折减 ──
@@ -10727,6 +10728,133 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // 攻略文案也要跟着（audit_sync 只钉「含 12h/80%」，不改口径就会写成假话）
   check('离线分档', '攻略写明基础随等级抬升（不是写死 12h）',
     /基础随你的最高技能等级抬升/.test(fs.readFileSync('src/game/data/guide.js', 'utf8')))
+}
+
+// ── C81（2026-09-30）：食材保鲜 Ⅵ/Ⅶ 阶（成长平衡体检 §9.1 的 5-A / T1）────────────
+// 目的：把**全站最疏的一条线**（8 个内容点、末件 Lv85、Lv86→120 空 35 级）铺到 Lv120。
+// 🔴 本组的**核心防线是「乘数不许抬」**：Ⅵ/Ⅶ 只加时长 —— 抬乘数会让体检的四档矩阵
+//    与「叠区二级饱和」（`XP_SPEEDUP_CAP_BANDS` ×6/×10/×14）的标定一起作废。
+{
+  const { PRESERVE_TIER_ITEMS } = await import('../../src/game/data/preserveTiers.js')
+  const { PRESERVE_TIER_EXT_ITEMS, PRESERVE_TIER_EXT_RECIPES } = await import('../../src/game/data/preserveTiersExt.js')
+  const { PRESERVATION_RECIPES } = await import('../../src/game/skills/PreservationSkill.js')
+
+  check('保鲜Ⅵ/Ⅶ', '6 件新物品都在 ITEMS 里（3 系列 × Ⅵ/Ⅶ，id 与名称逐字对上）',
+    PRESERVE_TIER_EXT_ITEMS.length === 6 && PRESERVE_TIER_EXT_ITEMS.every((it) => getItem(it.id)?.name === it.name),
+    PRESERVE_TIER_EXT_ITEMS.map((x) => x.id).join(','))
+
+  check('保鲜Ⅵ/Ⅶ', '配方等级 = Lv105 / Lv120（把 Lv86→120 那 35 级空白切成两段）',
+    PRESERVE_TIER_EXT_RECIPES.length === 6 && PRESERVE_TIER_EXT_RECIPES.every((r, i) => r.reqLevel === (i % 2 === 0 ? 105 : 120)),
+    PRESERVE_TIER_EXT_RECIPES.map((r) => r.reqLevel).join(','))
+
+  // 🔴 核心防线：乘数**不许再抬**（Ⅵ/Ⅶ 只能加时长）
+  const capXp = PRESERVE_TIER_ITEMS.find((x) => x.id === 'xpTonic5')?.use?.buffXp?.mult
+  const capYield = PRESERVE_TIER_ITEMS.find((x) => x.id === 'yieldTonic5')?.use?.buffYield?.mult
+  check('保鲜Ⅵ/Ⅶ', `🔴 增益剂的乘数没有抬高（Ⅵ/Ⅶ 都 ≤ Ⅴ 阶的 ×${capXp}；抬了四档矩阵与叠区标定一起作废）`,
+    [['xpTonic6', 'buffXp', capXp], ['xpTonic7', 'buffXp', capXp], ['yieldTonic6', 'buffYield', capYield], ['yieldTonic7', 'buffYield', capYield]]
+      .every(([id, key, cap]) => (getItem(id)?.use?.[key]?.mult ?? Infinity) <= cap),
+    `xp: Ⅴ=${capXp} Ⅵ=${getItem('xpTonic6')?.use?.buffXp?.mult} Ⅶ=${getItem('xpTonic7')?.use?.buffXp?.mult}｜产: Ⅴ=${capYield}`)
+
+  check('保鲜Ⅵ/Ⅶ', '🔴 时长逐阶严格递增（经验/产量 Ⅰ<…<Ⅶ 分钟数；保鲜剂 Ⅰ<…<Ⅶ 刷新毫秒数）',
+    (() => {
+      const mins = ['xpTonic', 'yieldTonic'].map((s) => [1, 2, 3, 4, 5, 6, 7].map((n) => getItem(`${s}${n}`)?.use?.[s === 'xpTonic' ? 'buffXp' : 'buffYield']?.minutes))
+      const spoil = [1, 2, 3, 4, 5, 6, 7].map((n) => getItem(`preservTier${n}`)?.use?.refreshSpoilMs)
+      return [...mins, spoil].every((arr) => arr.every((v, i) => i === 0 || v > arr[i - 1]))
+    })(),
+    (() => { const c = [1, 2, 3, 4, 5, 6, 7].map((n) => getItem(`xpTonic${n}`)?.use?.buffXp?.minutes); return `xp 分钟 ${c.join(' ')}` })())
+
+  check('保鲜Ⅵ/Ⅶ', '材料等级 ≤ 配方等级 + 5（对它们是恒等变换，不会被 raiseRecipeLevels 悄悄改写）',
+    PRESERVE_TIER_EXT_RECIPES.every((r) => Object.keys(r.ingredients ?? {}).every((m) => { const lv = materialLevelOf(m); return lv == null || lv <= r.reqLevel + 5 })),
+    PRESERVE_TIER_EXT_RECIPES.map((r) => `${r.id}:${Object.keys(r.ingredients ?? {}).join('+')}`).join(' '))
+
+  // 🔴 「只写在数据里、没人用」= 静默失效（pickles.js 的历史前科）：必须并进被消费的那张表
+  check('保鲜Ⅵ/Ⅶ', '🔴 新配方并进了 `PRESERVATION_RECIPES` 本身（图鉴来源/价值/材料平衡都读它）',
+    PRESERVE_TIER_EXT_RECIPES.every((r) => PRESERVATION_RECIPES.some((x) => x.id === r.id && x.reqLevel === r.reqLevel)),
+    `表内 ${PRESERVATION_RECIPES.length} 条`)
+
+  // 行为断言（真实引擎）：Ⅵ 的乘区与时长都要真的生效，且比 Ⅴ 更长
+  check('保鲜Ⅵ/Ⅶ', '行为：使用 Ⅵ 得 ×4.5 且时长比 Ⅴ 更长（Ⅴ=195 分 / Ⅵ=260 分）',
+    (() => {
+      const a = freshPlayer(); a.inventory.xpTonic5 = 1; a.useConsumable('xpTonic5')
+      const b = freshPlayer(); b.inventory.xpTonic6 = 1; b.useConsumable('xpTonic6')
+      const ra = (a.buffs.xpMult?.expiresAt ?? 0) - Date.now()
+      const rb = (b.buffs.xpMult?.expiresAt ?? 0) - Date.now()
+      return b.buffs.xpMult?.mult === 4.5 && rb > ra + 60_000
+    })())
+}
+
+// ── C82（2026-09-30）：挂机产线 Lv105/115 两档（成长平衡体检 §9.1 的 1-A ④ / T2）─────
+// 目的：体检量出「材料真实供给 224 天 > 等级轴 19 天」⇒ 后期瓶颈是**供料**。
+//   这四类产线**不占并行槽**（与农耕同理），加档是**纯增量供给**。
+// 设计口径：优先用**已有物品**（产物/饲料都是已存在物品）；只有灵田的两味「稀有种子」必须新增
+//   （既有种子最高 Lv99），而**种子不配图** ⇒ 仍是零美术。
+{
+  const { SPIRIT_PLANTS } = await import('../../src/game/data/spiritField.js')
+  const { MUSHROOM_MEDIA } = await import('../../src/game/data/mushroomHouse.js')
+  const { HIVE_MEDIA, hiveMediaLevel } = await import('../../src/game/data/greenhouse.js')
+  const { RANCH_ANIMALS } = await import('../../src/game/data/ranch.js')
+  const { GOODS_ITEMS } = await import('../../src/game/data/processedGoods.js')
+  const { SPIRIT_FIELD_SEEDS, SPIRIT_FIELD_SEED_SHOP } = await import('../../src/game/data/spiritFieldSeeds.js')
+  const { SHOP_ITEMS } = await import('../../src/game/data/shop.js')
+  const { honeyTierForLevel, HONEY_TIERS } = await import('../../src/game/data/honey.js')
+
+  const newPlants = SPIRIT_PLANTS.filter((p) => p.reqLevel >= 100)
+  check('产线末段', '灵田新档：reqLevel 严格递增（85 < 105 < 115），两档',
+    newPlants.length === 2 && newPlants[0].reqLevel === 105 && newPlants[1].reqLevel === 115,
+    newPlants.map((p) => `${p.id}:Lv${p.reqLevel}`).join(' '))
+
+  const newAnimals = RANCH_ANIMALS.filter((a) => (a.cost ?? 0) >= 100000)
+  const newBeds = MUSHROOM_MEDIA.filter((m) => (m.cost ?? 0) >= 60000)
+  const newHives = HIVE_MEDIA.slice(-2)
+  check('产线末段', '四类都各加了 2 档（灵田 / 牧场 / 菌房 / 蜂箱）',
+    newPlants.length === 2 && newAnimals.length === 2 && newBeds.length === 2 && newHives.length === 2,
+    `灵田${newPlants.length} 牧场${newAnimals.length} 菌房${newBeds.length} 蜂箱${newHives.length}`)
+
+  check('产线末段', '所有新档的产物 / 饲料 id 都存在（无幽灵物品）',
+    [...newPlants.map((p) => [...Object.keys(p.products ?? {}), p.seedId]), ...newAnimals.map((a) => [...Object.keys(a.products ?? {}), ...Object.keys(a.feed ?? {})]), ...newBeds.map((m) => [...Object.keys(m.products ?? {}), ...Object.keys(m.feed ?? {})]), ...newHives.map((h) => [...Object.keys(h.feed ?? {})])]
+      .every((ids) => ids.every((id) => !!getItem(id))))
+
+  check('产线末段', '所有新档的周期（hours）都 > 0',
+    [...newPlants, ...newAnimals, ...newBeds, ...newHives].every((x) => Number(x.hours) > 0))
+
+  check('产线末段', '牧场新动物各含 ≥1 件加工品（沿用既有断言的同一口径）',
+    newAnimals.every((a) => Object.keys(a.products ?? {}).some((id) => GOODS_ITEMS.some((g) => g.id === id))),
+    newAnimals.map((a) => a.id).join(','))
+
+  check('产线末段', '蜂箱新档产**最高品**蜂蜜（`hiveMediaLevel` 由饲料作物等级派生，8 品甜）',
+    newHives.every((h) => honeyTierForLevel(hiveMediaLevel(h.id)) === HONEY_TIERS.length),
+    newHives.map((h) => `${h.id}→${honeyTierForLevel(hiveMediaLevel(h.id))}`).join(' '))
+
+  // 🔴 灵田新档的种子必须「拿得到 + 看得懂」：ITEMS / SEED_MAP（附产）/ 商店 / 图鉴详情 四处齐备
+  check('产线末段', '🔴 灵田新种子四处齐备：ITEMS + SEED_MAP（采摘/挖掘附产）+ 商店上架 + 图鉴「种植产物」行',
+    SPIRIT_FIELD_SEEDS.every((sd) => !!getItem(sd.id) && sd.type === 'seed')
+      && Object.values(SEED_MAP).some((v) => v === 'late_for_03Seed') && Object.values(SEED_MAP).some((v) => v === 'late_exc_02Seed')
+      && SPIRIT_FIELD_SEED_SHOP.every((e) => SHOP_ITEMS.some((s) => s.itemId === e.itemId && s.price === e.price))
+      && SPIRIT_FIELD_SEEDS.every((sd) => itemDetailLines(sd.id).some((l) => l[0] === '种植产物')),
+    SPIRIT_FIELD_SEEDS.map((sd) => sd.id).join(','))
+
+  // 行为断言（真实引擎）：用新种子真的能种下并收获
+  check('产线末段', '行为：用新种子在灵田种下并收获（走真实引擎，产 2 件且自动续种）',
+    (() => {
+      const p = freshPlayer({ foraging: 120 })
+      p.inventory.late_for_03Seed = 1
+      if (p.spiritPlant(0, 'late_for_03Seed')?.ok !== true) return false
+      p.spiritState().plots[0].readyAt = Date.now() - 1
+      const r = p.spiritHarvest(0)
+      return r?.ok === true && (r.got?.late_for_03 ?? 0) >= 2
+    })())
+
+  // 行为断言（真实引擎）：牧场新动物真的会把产物发到背包
+  check('产线末段', '行为：牧场新动物（霜甲犀）按周期把产物发到背包',
+    (() => {
+      const p = freshPlayer({ farming: 120 })
+      p.gold = 500000
+      p.inventory.late_far_01 = 20
+      if (p.ranchBuy(0, 'rhino')?.ok !== true) return false
+      p.ranch.pens[0].lastAt = Date.now() - 24 * 3600e3
+      p._tickRanch()
+      return (p.inventory.late_hun_01 ?? 0) > 0 && (p.inventory.boneBroth ?? 0) > 0
+    })())
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

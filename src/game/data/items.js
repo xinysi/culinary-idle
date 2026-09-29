@@ -772,6 +772,17 @@ for (const def of ITEMS_SUPPLEMENT) ITEMS[def.id] = { ...def, stackable: false }
 import { PRESERVE_TIER_ITEMS } from './preserveTiers.js'
 for (const def of PRESERVE_TIER_ITEMS) ITEMS[def.id] = def
 
+// 保鲜/增益剂 **Ⅵ/Ⅶ 阶**（2026-09-29，成长平衡体检 §9.1 的 5-A）——手写扩展模块（照 pickles.js / lateGameFood.js 的合并方式）：
+// `preserveTiers.js` 是**生成器产物**（勿手改、勿重跑），新阶级只能走手写模块再 push 进同一条链。
+// 乘数**不许再抬**（Ⅵ/Ⅶ 只加时长，见模块头注释）。
+import { PRESERVE_TIER_EXT_ITEMS } from './preserveTiersExt.js'
+for (const def of PRESERVE_TIER_EXT_ITEMS) ITEMS[def.id] = def
+
+// 灵田 Ⅵ/Ⅶ 档的两颗「稀有种子」（2026-09-30，体检 §9.1 的 1-A ④ / T2）——手写模块，**种子不配图**（零美术）。
+// 同一模块还负责把它们并进 `SEED_MAP`（采摘/挖掘附产）与商店上架清单（`shop.js` 里 push）。
+import { SPIRIT_FIELD_SEEDS } from './spiritFieldSeeds.js'
+for (const def of SPIRIT_FIELD_SEEDS) ITEMS[def.id] = def
+
 // 蜂蜜（2026-09-14 新增）：8 品级、**唯一来源是「温室蜂场」**（作物伴生 10% + 蜂箱产蜜），
 // 双效增益（一次同时给经验 + 产量）。type=consumable ⇒ 不进采集/配方/抽卡/交易所/自动出售。
 import { HONEY_ITEMS } from './honey.js'

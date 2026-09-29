@@ -9,6 +9,7 @@ import { CELLAR_CATEGORIES } from './cellar.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { CRAFTED_DECOR } from './woodworking.js'
 import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDERS } from './sidelineWorks.js'
+import { getSpiritPlantBySeed, spiritProductText } from './spiritField.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
 
@@ -85,7 +86,7 @@ export function itemDetailLines(id) {
   // 获取等级：从获取来源文字解析最低 LvX（只读展示，不改任何等级定义）
   const lvMatches = itemSources(id).map((s) => s.match(/Lv(\d+)/)).filter(Boolean).map((m) => parseInt(m[1], 10))
   if (lvMatches.length) lines.push(['获取等级', `Lv${Math.min(...lvMatches)}`])
-  // 种子种植信息（只读 CROPS，不改数据）
+  // 种子种植信息（只读 CROPS / SPIRIT_PLANTS，不改数据）
   if (it.type === 'seed') {
     const crop = CROPS.find((c) => c.seedId === id)
     if (crop) {
@@ -93,6 +94,15 @@ export function itemDetailLines(id) {
       lines.push(['种植产物', cropIt?.name ?? crop.itemId])
       lines.push(['种植等级', `Lv${crop.reqLevel}`])
       lines.push(['生长时间', crop.growSec >= 60 ? `${Math.round(crop.growSec / 60)} 分钟` : `${crop.growSec} 秒`])
+    } else {
+      // 灵田专属种子（2026-09-30，体检 §9.1 的 1-A ④）：不在农田 `CROPS` 里，只能种在「灵圃菌房」的灵田格。
+      // 不补这一支的话：图鉴详情会缺「种植产物」行 ⇒ 玩家不知道它种哪、`item_triple_audit` 也会判「种子无种植信息」。
+      const plant = getSpiritPlantBySeed(id)
+      if (plant) {
+        lines.push(['种植产物', `${spiritProductText(plant)}（灵田）`])
+        lines.push(['种植等级', `Lv${plant.reqLevel}`])
+        lines.push(['生长时间', plant.hours >= 24 ? `${Math.round(plant.hours / 24)} 天（${plant.hours} 小时）` : `${plant.hours} 小时`])
+      }
     }
   }
   if (it.heal) lines.push(['对决回血', String(it.heal)])

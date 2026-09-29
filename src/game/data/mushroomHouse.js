@@ -47,6 +47,32 @@ export const MUSHROOM_MEDIA = [  // cost = 铺床一次性金币（与牧场买�
     products: { mushroom: 3, matsutake: 1, lingzhi: 1 },
     desc: '肥沃堆肥培育，周期更短并伴生松茸与灵芝',
   },
+
+  // ── Lv105 / 115 两档（2026-09-30，成长平衡体检 §9.1 的 1-A ④）：把料线的等级轴铺到末段 ──
+  // 菌房不吃等级、只吃肥料，所以这两档的门槛同样体现在**饲料的量与选择**上（沃肥 ×2 / ×3）。
+  // ⚠️ 上面那句「高阶菌（木耳/银耳）刻意不放进来」的顾虑是**单位产值**：本轮按同一口径核过 ——
+  //    既有沃肥床 1 份沃肥（60 金）/4h → 392 价值 = 98 价值/时；本批两档 = 104 / 86 价值/时，
+  //    **落在同一带内**（不是越级）。
+  {
+    id: 'cloudBed',
+    name: '云芝沃床',
+    icon: '🌀',
+    cost: 60000,
+    hours: 8,
+    feed: { richCompost: 2 },
+    products: { cloudFungus: 2, bloodFungus: 1 },
+    desc: '加倍沃肥培育，产高阶云芝与血芝',
+  },
+  {
+    id: 'supremeBed',
+    name: '九畹菌床',
+    icon: '✨',
+    cost: 150000,
+    hours: 12,
+    feed: { richCompost: 3 },
+    products: { taiSui: 1, late_for_03: 2 },
+    desc: '沃肥厚培，产太岁与九畹灵芝（末段配方原料）',
+  },
 ]
 
 const MEDIA_INDEX = new Map(MUSHROOM_MEDIA.map((m) => [m.id, m]))

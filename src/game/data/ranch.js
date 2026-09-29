@@ -23,6 +23,14 @@ export const RANCH_ANIMALS = [
   { id: 'boar', name: '野猪', icon: '🐗', cost: 15000, hours: 6, feed: { potato: 4 }, products: { boarMeat: 2, lard: 1 } },
   { id: 'goat', name: '山羊', icon: '🐐', cost: 25000, hours: 8, feed: { cabbage: 4 }, products: { goatMeat: 1, milk: 1, cheese: 1 } },
   { id: 'bison', name: '野牛', icon: '🐃', cost: 45000, hours: 12, feed: { rice: 5 }, products: { bisonMeat: 1, milk: 2, boneBroth: 1 } },
+
+  // ── Lv105 / 115 两档（2026-09-30，成长平衡体检 §9.1 的 1-A ④）──
+  // 牧场本身没有等级门槛（与既有四头一致：代价是金币 + 饲料），所以「等级轴」体现在**饲料的来源**上：
+  // 它们吃 Lv102/112「补档」作物，产同批的**狩猎**材料 ⇒ 把农田产出换成被狩猎限速的原料（纯增量供给）。
+  // 🔴 每头动物的产物必须含 ≥1 件**加工品**（`processedGoods.js`），这是 system_test 的既有断言；
+  //    复用既有加工品（牛骨高汤 / 羊酪）而不是新增，避免动 `GOODS_ITEMS.length === 8` 那条基线。
+  { id: 'rhino', name: '霜甲犀', icon: '🦏', cost: 120000, hours: 14, feed: { late_far_01: 2 }, products: { late_hun_01: 2, boneBroth: 1, milk: 1 } },
+  { id: 'snowYak', name: '雪鬃牦牛', icon: '🐂', cost: 200000, hours: 18, feed: { late_far_02: 2 }, products: { late_hun_02: 2, cheese: 1, milk: 2 } },
 ]
 
 const ANIMAL_INDEX = new Map(RANCH_ANIMALS.map((a) => [a.id, a]))

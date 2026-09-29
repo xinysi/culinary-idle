@@ -40,6 +40,13 @@ export const SPIRIT_PLANTS = [
   { id: 'snowFungus', seedId: 'foraging_ext_23Seed', name: '银耳架', icon: '🤍', hours: 30, products: { foraging_ext_23: 2 }, reqLevel: 75 },
   { id: 'dragonRoot', seedId: 'dragonRootSeed', name: '龙根畦', icon: '🐉', hours: 48, products: { dragonRoot: 2 }, reqLevel: 70 },
   { id: 'spiritFruit', seedId: 'spiritFruitSeed', name: '灵果藤', icon: '✨', hours: 72, products: { spiritFruit: 2 }, reqLevel: 85 },
+  // ── Lv105 / 115 两档（2026-09-30，成长平衡体检 §9.1 的 1-A ④）：把灵田的等级轴铺到末段 ──
+  // 既有种子最高只到 Lv99（`foraging_ext_30Seed`），所以这两档的种子由 `spiritFieldSeeds.js` 新补
+  // （**种子不配图** ⇒ 仍是零美术）。产物取 Lv102/112「补档」批的两味原料：灵田的定位正是
+  // 「定向、长周期地拿到本来只能靠采集的东西」，而这两味是末段配方（`lateGameFood.js`）的常客。
+  // 周期 84/96h 沿既有尾部（灵果藤 72h），每格 2 件。
+  { id: 'nineSpirit', seedId: 'late_for_03Seed', name: '九畹灵芝圃', icon: '🍄', hours: 84, products: { late_for_03: 2 }, reqLevel: 105 },
+  { id: 'rootGinseng', seedId: 'late_exc_02Seed', name: '无根玉参畦', icon: '🌱', hours: 96, products: { late_exc_02: 2 }, reqLevel: 115 },
 ]
 
 const PLANT_BY_SEED = new Map(SPIRIT_PLANTS.map((p) => [p.seedId, p]))
