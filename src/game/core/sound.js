@@ -155,8 +155,12 @@ const synthSfx = {
   friend: () => { tone(587, 0.08, 'sine', 0.08); tone(880, 0.12, 'sine', 0.07, 0.07) }, // 拜访 / 社交
   serve: () => { tone(659, 0.07, 'triangle', 0.09); tone(988, 0.12, 'triangle', 0.08, 0.06) }, // 上菜 / 交付
   tower: () => { tone(440, 0.08, 'triangle', 0.09); tone(660, 0.1, 'triangle', 0.09, 0.07); tone(880, 0.16, 'triangle', 0.09, 0.15) }, // 爬塔推进
+  // ⚠️ 2026-09-28 接线体检：`tower`/`tick`/`offline` 三个**当前没有任何调用点**（前两个原挂在
+  //    `arena:end`/`tower:advance` 这类全站零发射的死监听上，已删；`tick`/`offline` 更早就没在用）。
+  //    留着是因为它们是可复用的音色（低频大事件，冷却表里也各占一行）；想给爬塔推进配声，
+  //    接在 `tower:milestone` 上最自然 —— 但那会换掉现在用的 `sfx.reward`，属口味改动，没动。
   boss: () => { tone(110, 0.3, 'sawtooth', 0.1); tone(165, 0.34, 'sawtooth', 0.09, 0.12) }, // 首领登场
-  tick: () => tone(1320, 0.04, 'square', 0.05), // 计时到 / 刷新
+  tick: () => tone(1320, 0.04, 'square', 0.05), // 计时到 / 刷新（当前无调用点）
   offline: () => { tone(523, 0.14, 'sine', 0.09); tone(392, 0.2, 'sine', 0.08, 0.12) }, // 离线结算
 }
 

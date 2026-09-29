@@ -542,11 +542,14 @@ onMounted(() => {
   EventBus.on('supplier:deliver', () => on() && sfx.mail())
   EventBus.on('guild:join', () => on() && sfx.friend())
   EventBus.on('chef:win', () => on() && sfx.serve())
-  EventBus.on('arena:end', () => on() && sfx.tower())
-  EventBus.on('tower:advance', () => on() && sfx.tower())
-  EventBus.on('boss:appear', () => on() && sfx.boss())
+  // ⚠️ 这里原有三条监听（arena:end / tower:advance / boss:appear）**全站无人发射**，已删（2026-09-28）：
+  //   arena:end  → 竞技场现在发 `arena:reward`（下面 :551 已接 sfx.reward）
+  //   tower:advance → 塔现在发 `tower:milestone`（下面已接 sfx.reward）
+  //   boss:appear → 从未有过发射方；首领登场改由 `combat:start` 的 isBoss 分流（下一行）
+  // 守卫 `event_wiring_audit` 会断言「凡有 on 必有 emit」——别再把它们加回来。
   EventBus.on('quest:complete', () => on() && sfx.win())
-  EventBus.on('combat:start', () => { if (on()) sfx.collect(); syncBgm() })
+  // 首领登场用 sfx.boss（低频大事件音，冷却 800ms）；普通对手走轻音 sfx.collect
+  EventBus.on('combat:start', ({ isBoss } = {}) => { if (on()) (isBoss ? sfx.boss() : sfx.collect()); syncBgm() })
   EventBus.on('combat:end', ({ result }) => { if (on()) (result === 'win' ? sfx.win() : sfx.lose()); syncBgm() })
   EventBus.on('arena:reward', () => on() && sfx.reward())
   EventBus.on('achievement:unlock', () => on() && sfx.reward())
@@ -564,7 +567,9 @@ onMounted(() => {
   EventBus.on('skill:outofammo', () => on() && sfx.warn())
   EventBus.on('inventory:full', () => on() && sfx.warn())
   EventBus.on('mail:overflow', () => on() && sfx.warn()) // 信箱：溢出转存同样给一声提醒（2026-09-11）
-  EventBus.on('bank:full', () => on() && sfx.warn())
+  // 🔴 原写 `bank:full` —— 那是「仓库」时代的名字，bank 概念移除后**全站再无人发射**（守卫已抓）。
+  // 真正会满的是**冷库**：`player.js` 的 gainItem 冷库路径发 `cold:full`，此前没有任何监听者 ⇒ 满库没警告音。
+  EventBus.on('cold:full', () => on() && sfx.warn())
   EventBus.on('spoilage:spoil', () => on() && sfx.warn())
 })
 </script>

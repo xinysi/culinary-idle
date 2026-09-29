@@ -481,7 +481,9 @@ function settle() {
 }
 
 onMounted(() => {
-  window.addEventListener('pointercancel', () => {})
+  // ⚠️ 原有 `window.addEventListener('pointercancel', () => {})` 已删（2026-09-28）：
+  //    它是个**什么都不做的匿名 handler**，而 `onUnmounted` 只调 stopLoop() ⇒ 每次进入本页都泄漏一个
+  //    无法移除的监听（匿名函数没引用可 `removeEventListener`）。要拦触摸取消就在真需要时用具名函数配对注册。
   reset()
 })
 onUnmounted(() => { stopLoop() })

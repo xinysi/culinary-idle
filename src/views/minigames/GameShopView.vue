@@ -1,6 +1,6 @@
 <script setup>
 // 游戏商店（2026-09-07 v2）：九件商品全部真实生效——扣游戏币 → 发放/应用效果；一次性商品（称号/头像框/头像）防重复购买
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 

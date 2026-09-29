@@ -156,7 +156,11 @@ onMounted(() => {
   import('../game/data/tales_ext.js').then((m) => {
     talesExt.value = m.TALES_EXT
     quirks.value = m.QUIRKS
-  }).catch(() => {})
+  }).catch((e) => {
+    // 🔴 不能静默（原为空 catch）：分片加载失败时「传闻/轶事」整段渲染成空，
+    // 玩家只看到没内容、控制台也没有任何线索（与 App.vue 的懒加载兜底卡是同一类失败）。
+    console.warn('[StoryView] 传闻/轶事分片（tales_ext）加载失败，本页该部分将为空：', e)
+  })
 })
 </script>
 

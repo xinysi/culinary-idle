@@ -5,6 +5,7 @@
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
+import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const BREWING_RECIPES = [
@@ -58,6 +59,9 @@ export const BREWING_RECIPES = [
   { id: 'brewFix_2', name: '李子汁', category: '果汁', reqLevel: 4, xp: 48, successChance: 0.8, ingredients: { foraging_ext2_02: 3, water: 1 }, output: { itemId: 'brewFix_2', qty: 1 } },
   { id: 'brewFix_3', name: '杨桃汁', category: '果汁', reqLevel: 11, xp: 132, successChance: 0.8, ingredients: { foraging_ext2_04: 3, water: 1 }, output: { itemId: 'brewFix_3', qty: 1 } },
 ]
+
+// ── Lv101-120「补档」配方：push 进**被 import 的这张基础表**（C66 口径，同 CookingSkill 的说明）。
+BREWING_RECIPES.push(...LATE_PROD.brewing)
 
 export class BrewingSkill extends ProductionSkill {
   constructor(player) {

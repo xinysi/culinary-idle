@@ -32,6 +32,61 @@ export function dampXpStack(stack) {
   return 1 + (p - 1) * tunerOver('xpDamping', XP_STACK_DAMPING, 0, 1)
 }
 
+// ── 叠区二级饱和（2026-09-29 立，用户「游玩时长因为 buff 被缩短不解决吗」）────────────
+// **问题**：四层相乘（转生 × 增益剂 × 设置或精通 × 对决补正 × 限时窗口）原始上限 **101×**，
+// 阻尼（0.75）后仍有 **76×** ⇒ 全技能并行满级的时长被压缩 **59×**：无buff **35 天** → 满buff **14.3 小时**。
+// 而且长线（山海/厨神之路/里程碑）**全部挂在等级与转生上** ⇒ 一起被压扁。
+//
+// 🔴 **为什么是「二级饱和」而不是「砍各层幅度」**（算过，别走回头路）：
+//   要把满配从 14.3h 拉回 ≈2.5 天，需要原始乘积 101 → 18.3，即每层「超出 1 的部分」同比例砍到 **f ≈ 0.48**
+//   （设置 5→2.9、转生 +20%/层→+9.6%、增益剂 4.5→2.68、窗口 1.5→1.24）。那条路四条代价：
+//     ① **无差别**：无/单一/中配三档本来没撞顶，砍完也一起慢约 2× —— 而早期玩家最弱、最依赖那几层；
+//     ② 要重写**玩家可见的承诺**（「+20%/层」在指南/成就/里程碑约 15 处、Ⅴ 档 ×4.5 在道具说明里）
+//        —— 上一轮特意保住了「各层原值一个字节没动」，砍了就全得重刷；
+//     ③ **治不了无界**：转生层数没有上限，砍到 +9.6%/层 后转生 50 层仍 ×5.8、100 层 ×10.5，问题只是推迟；
+//     ④ 玩家感知是「我练出来的奖励被削了」。
+//   ⇒ 饱和式：**低于上界原样通过**（无/单一/中配完全不受影响），**超过上界的那部分只按 TAIL 计入**。
+//
+// **两条不变量**（与 `dampXpStack` 同一套设计语言）：
+//   ① **严格单调不破**：超界后仍有 `(stack − CAP) × TAIL` 的尾巴 ⇒ 转生 8/9/10 层在经验上**仍然有差别**
+//      （这正是当年否决「硬夹/压低单层」的理由 —— 硬夹会让高阶档位与小档位拉平、玩家没理由再做高阶货）；
+//   ② **永不产生惩罚**：结果恒 ≥1 且严格单调递增 ⇒ 不可能出现「堆得越多反而越慢」。
+//
+// ⚠️ **它只夹「经验」**：产出/精通/动作间隔一概不动 —— 尤其**不能把溢出改道到精通次数**，
+//   那会让「动作/精通轴」重新被倍率压缩，而那条轴正是长线要搬过去的地方（见 AGENTS 的「动作轴」一节）。
+//
+// ⚠️ 改这两个数前先跑 `scripts/sim/growth_sim.mjs`（四档全技能矩阵）与 `system_test` 的 C71 组。
+
+/** 叠区上界：按等级分档（等级越高，允许的加速越大——因为高等级的单卡经验需求是指数的） */
+export const XP_SPEEDUP_CAP_BANDS = [
+  { upTo: 40, cap: 6 },
+  { upTo: 70, cap: 10 },
+  { upTo: Infinity, cap: 14 },
+]
+/** 超过上界那部分仍按这个比例计入（→ 保住「家族内严格单调」） */
+export const XP_TAIL_RATE = 0.1
+
+/** 该等级允许的经验叠区上界 */
+export function xpSpeedupCap(level) {
+  const lv = Number(level)
+  if (!Number.isFinite(lv)) return XP_SPEEDUP_CAP_BANDS[XP_SPEEDUP_CAP_BANDS.length - 1].cap
+  for (const b of XP_SPEEDUP_CAP_BANDS) if (lv <= b.upTo) return b.cap
+  return XP_SPEEDUP_CAP_BANDS[XP_SPEEDUP_CAP_BANDS.length - 1].cap
+}
+
+/**
+ * 叠区二级饱和：`damped ≤ CAP ? damped : CAP + (damped − CAP) × XP_TAIL_RATE`
+ * @param {number} level 当前技能等级（分档依据）
+ * @param {number} damped 已过 `dampXpStack` 的叠区
+ */
+export function capXpSpeedup(level, damped) {
+  const d = Number(damped)
+  if (!Number.isFinite(d) || d <= 1) return 1
+  const cap = xpSpeedupCap(level)
+  if (d <= cap) return d
+  return cap + (d - cap) * tunerOver('xpTailRate', XP_TAIL_RATE, 0, 1)
+}
+
 // ── 低目标经验衰减（2026-09-22 用户要求）────────────────────────────────────────
 // 「所有技能、副业，如果正在进行的目标等级小于技能等级 5 级及以上，获得的经验减半，
 //   鼓励玩家去挂对应等级段的目标」

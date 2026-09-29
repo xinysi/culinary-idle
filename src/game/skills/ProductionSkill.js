@@ -17,6 +17,16 @@ const MAX_SUCCESS = 0.98
 // 这条差异正是「制作侧梯级比采集更陡」的结构原因（实测同精通天花板 ×19~×48 vs 采集 ×8.5~×27）。
 // `xpPerHour()` 与守卫都读这个导出常量，别再写第二份 3000。
 export const CRAFT_QUEUE_INTERVAL_MS = 3000
+/**
+ * **单次心跳内最多追赶多少次**（2026-09-29 立）。
+ *
+ * 🔴 为什么需要追赶：`tick(deltaMs)` 的 `deltaMs` 是**真实经过的时间**，而浏览器会把后台标签页的定时器降速
+ * （Chrome：后台 1 秒一次、intensive throttling 时 **1 分钟一次**）。原先的实现是「每次调用只做 1 次动作、
+ * 累加器清零」⇒ 被降速时制作会慢 **20 倍**（采集/探索没这个问题：它们用 `while` 把攒下的时间连续做掉）。
+ * 现在与采集**同口径**：把累积时间按 3 秒一段连续结算，`guard` 封顶 300（超上限就把累积清零，防止无限囤积）。
+ * `300` 与 `GatheringSkill.tick` 里那个上限刻意相同（同一套「单帧多段产出上限保护」语义，守卫有断言钉住）。
+ */
+export const CRAFT_CATCHUP_MAX = 300
 const MAX_QUEUE_ENTRIES = 8 // 每技能最多排队条目（相同配方自动合并）
 
 export class ProductionSkill extends Skill {
@@ -189,6 +199,33 @@ export class ProductionSkill extends Skill {
     return 'fail'
   }
 
+  /**
+   * 练习：**只涨精通**的动作（2026-09-29 立）——不消耗材料、不产出成品、不给经验，精通 +1（队列同为 3 秒/次）。
+   *
+   * 🔴 为什么需要它：山海第 8~10 环的门槛是「该线精通总级数 = 卡数 × 100」，也就是**每张卡 3750 次动作**。
+   *   而制作的动作原先只有 `craft()` —— 每次都扣料 ⇒ 精通轴实际被**采集供料**限速：
+   *   实测（`scripts/sim/craft_material_axis.mjs`，与 `material_bottleneck.mjs` 同一套口径）
+   *   五条制作线刷满要 **9658 天**（上界），而队列口径只有 130.9 天 —— 差 **×74**，最贵的单张卡光材料就要 188 天。
+   *   长线的设计意图是挂在**动作轴**上（不受 XP 乘区影响、可预期），而动作轴的含义是「动作次数」，
+   *   **不该被资源绑定** ⇒ 练习把「练」与「做」解耦：想产出就 craft（照旧扣料、照旧给经验），
+   *   想把这张卡精通刷满就 practice（纯时间）。
+   *
+   * ⚠️ **刻意不给经验、不计入任何产出型系统**：经验会绕过已标定的等级轴；
+   *   成就/任务/赛季/轶事/奇遇都挂在 `skill:action` 的 craft 分支上（bootstrap 与 encounters）⇒
+   *   **本方法不发 `skill:action`**，另发 `skill:practice`（音效/统计若要接就接它）。
+   *   若改成发 `skill:action`，bootstrap 那个 switch 的 `default` 会每 3 秒刷一行「获得 X ×0」。
+   * @returns {'ok'|'denied'}
+   */
+  practice(recipe) {
+    // 与 enqueue 的等级校验同口径：等级不够的配方不能练（否则「练习」会变成绕过门槛的通道）
+    if (!recipe || !this.recipes?.some((r) => r.id === recipe.id)) return 'denied'
+    if (this.level < recipe.reqLevel) return 'denied'
+    this.actionsDone++
+    this.player.addMastery(this.id, recipe.id, 1)
+    EventBus.emit('skill:practice', { skillId: this.id, recipeId: recipe.id, timestamp: Date.now() })
+    return 'ok'
+  }
+
   /* ── 制作队列（自动连续制作，放置核心） ── */
 
   /** 当前队列（持久化于 player.craftQueues[this.id]，条目 { recipeId, qty, paused }） */
@@ -202,44 +239,68 @@ export class ProductionSkill extends Skill {
   }
 
   /**
-   * 入队：校验等级；相同配方合并到队尾条目；满 8 条目拒绝。
+   * 入队：校验等级；相同配方**且同一模式**（制作 / 练习）合并到队尾条目；满 8 条目拒绝。
+   * @param {object} recipe
+   * @param {number} qty
+   * @param {{practice?: boolean}} [opts] `practice: true` = 练习（不扣料、不产出、不给经验，只涨精通，见 `practice()`）
    * @returns {{ok:boolean, reason?:string}}
    */
-  enqueue(recipe, qty = 1) {
+  enqueue(recipe, qty = 1, opts = {}) {
     if (this.level < recipe.reqLevel) return { ok: false, reason: 'level' }
+    const practice = opts.practice === true
     const q = this.craftQueue
     const last = q[q.length - 1]
-    if (last && last.recipeId === recipe.id) {
+    // 🔴 合并条件必须**同时**比 recipeId 与 practice：只比 recipeId 的话
+    //    「练习 ×10」与「制作 ×10」会合成一条、用先入队者的模式跑完 20 次（显示与结算直接对不上）。
+    if (last && last.recipeId === recipe.id && (last.practice === true) === practice) {
       last.qty += qty
     } else if (q.length >= MAX_QUEUE_ENTRIES) {
       return { ok: false, reason: 'full' }
     } else {
-      q.push({ recipeId: recipe.id, qty, paused: false })
+      q.push({ recipeId: recipe.id, qty, paused: false, ...(practice ? { practice: true } : {}) })
     }
     return { ok: true }
   }
 
-  /** 引擎 tick：推进队列（3 秒 1 次；队头材料不足则暂停等待，补料后手动恢复） */
+  /**
+   * 引擎 tick：推进队列（3 秒 1 次；队头材料不足则暂停等待，补料后手动恢复；练习条目不受材料影响）。
+   *
+   * 🔴 **会把攒下的时间连续做掉（追赶）**，上限 `CRAFT_CATCHUP_MAX` —— 口径与 `GatheringSkill.tick` 一致。
+   * 改前的写法是「每次调用只做 1 次 + 累加器清零」，两个后果：① 后台被降速时慢 20 倍；
+   * ② 每次清零还白丢最多 100ms ⇒ 实际节奏是 3.0~3.1 秒/件（不是标定的 3.0）。现在按段扣减、保留余数。
+   */
   tick(deltaMs) {
     if (!(deltaMs > 0)) return
     const q = this.player.craftQueues?.[this.id]
-    if (!Array.isArray(q) || q.length === 0 || q[0]?.paused) return
+    if (!Array.isArray(q) || q.length === 0) return
     this._queueAccum = (this._queueAccum ?? 0) + deltaMs
-    if (this._queueAccum < CRAFT_QUEUE_INTERVAL_MS) return
-    this._queueAccum = 0
-    const head = q[0]
-    const recipe = this.recipes.find((r) => r.id === head.recipeId)
-    if (!recipe) {
-      q.shift()
-      return
+    let guard = 0
+    while (this._queueAccum >= CRAFT_QUEUE_INTERVAL_MS && guard < CRAFT_CATCHUP_MAX) {
+      const head = q[0]
+      if (!head || head.paused) {
+        this._queueAccum = 0 // 暂停中不囤积时间（补料/升级后从零起算，避免一恢复就爆发）
+        return
+      }
+      const recipe = this.recipes.find((r) => r.id === head.recipeId)
+      if (!recipe) {
+        q.shift()
+        this._queueAccum -= CRAFT_QUEUE_INTERVAL_MS
+        guard++
+        continue
+      }
+      const res = head.practice === true ? this.practice(recipe) : this.craft(recipe)
+      if (res === 'denied') {
+        head.paused = true // 制作：材料不足；练习：等级不够（转生把等级打回 6 级时会遇到）
+        this._queueAccum = 0
+        return
+      }
+      this._queueAccum -= CRAFT_QUEUE_INTERVAL_MS
+      head.qty--
+      guard++
+      if (head.qty <= 0) q.shift()
     }
-    const res = this.craft(recipe)
-    if (res === 'denied') {
-      head.paused = true // 材料不足：暂停等补料
-      return
-    }
-    head.qty--
-    if (head.qty <= 0) q.shift()
+    // 单帧多段产出上限保护：撞到上限说明积压超出处理能力，直接丢弃余量（与采集同口径）
+    if (guard >= CRAFT_CATCHUP_MAX) this._queueAccum = 0
   }
 
   /** 恢复被暂停的队头（补料后） */

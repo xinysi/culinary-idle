@@ -40,6 +40,11 @@ export const SHOP_ITEMS = [
 // 农耕种子扩充（生成器 gen_farm_seeds.mjs 产出，勿手改）：所有可采集/可挖掘非矿物食材的种子
 SHOP_ITEMS.push(...SHOP_SEED_ENTRIES)
 
+// Lv101-120「补档」的两档种子（lateGameFood.js，2026-09-29 用户授权批）：
+// 生成器产物不能重跑，所以这两条在手写侧上架（价格沿既有尾部 97@99 → 100/110）。
+import { LATE_SEED_SHOP } from './lateGameFood.js'
+SHOP_ITEMS.push(...LATE_SEED_SHOP)
+
 export function shopItemName(itemId) {
   return ITEMS[itemId]?.name ?? itemId
 }

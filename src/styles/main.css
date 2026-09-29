@@ -4774,7 +4774,11 @@ html[data-theme='dark'] .prestige-item, html[data-theme='dark'] .spirit-detail-p
 html[data-theme='dark'] .eq-option, html[data-theme='dark'] .battle-left, html[data-theme='dark'] .battle-right,
 html[data-theme='dark'] .alchemy-card, html[data-theme='dark'] .eq-modal,
 html[data-theme='dark'] .gather-section, html[data-theme='dark'] .story-chapter, html[data-theme='dark'] .status-line,
-html[data-theme='dark'] .stat-line, html[data-theme='dark'] .quick-item {
+html[data-theme='dark'] .stat-line, html[data-theme='dark'] .quick-item,
+/* 2026-09-29：赛季页新增的「往季补领」分组块（SeasonView）——它沿用赛季卡的
+   `rgba(var(--glass-rgb), 0.94)` 白玻璃底，而 `--glass-rgb` 是**恒白**的（浅色玻璃面），
+   深色下不并进这条覆盖就是「白底 + 金字」：e2e-dark 直接报 1 处亮底 + 3 处对比度（实测 1.31 / 1.82）。 */
+html[data-theme='dark'] .season-past-group {
   background: rgba(var(--panel-soft-rgb), 0.92);
   color: var(--text);
 }

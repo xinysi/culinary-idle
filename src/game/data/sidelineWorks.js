@@ -24,6 +24,7 @@
 
 import { timberOfLevel } from './timbers.js'
 import { WOODWORK_CATEGORY, WOODWORKING_RECIPES } from './woodworking.js'
+import { LATE_SIDELINE_ROWS, LATE_SIDELINE_WOOD } from './lateGameFood.js'
 
 /** 副业产物的物品类别 —— **「副业独占品」的单一来源清单**（木工的 furniture + 本模块四个）。
  *  消费方：`gameShopPools`（礼包池 + 珍馐阁）/ `mijianDraws`（抽卡池）/ `automation`（自动出售）/
@@ -112,7 +113,17 @@ export const SIDELINE_AXES = {
 //    把五支的技能等级全改成 1，五条轴的派生值必须**一分不变**。
 // ══════════════════════════════════════════════════════════════════════════════
 
-/** 阶梯门槛（累计**点**，12 档，×2.5 递增；末档 ≈ 与练到 100 级的产量同量级） */
+/** 阶梯门槛（累计**点**，12 档，×2.5 递增；末档 ≈ 与练到 100 级的产量同量级）
+ *
+ *  🔴 **2026-09-29 试过扩到 16 档（想让它覆盖 91~120 段）—— 被守卫挡回来了，别重试**：
+ *    加档会**等比抬高各轴的满档总加成**（`perTier × 档数`），实测**陶艺的地窖上限从 40000 顶到 43000**，
+ *    而 `CELLAR_SLOT_VALUE_MAX = 40000` 是硬顶（冻结口径）。要扩档就得同时按比例下调 16 支的 `perTier`
+ *    （等于重塑每一支的轴曲线），那是另一件独立的平衡工作。
+ *  ⇒ **91~120 段的「满足点」改由「等级台阶」承担**（`levelPerks.js`：每 2 级一个称号 + 技能页的下一档提示，
+ *    纯收藏不给数值，零平衡风险）。阶梯的**点数仍在累计**（玩家照样在喂产物），只是不再出新档。
+ *  ⚠️ 阶梯/轴**绝不能挂到「当前技能等级」上**（`prestigeSkill` 满级会把等级重置回 6 级 ⇒ 转生自罚），
+ *    所以「按等级给档」这条路也是堵死的 —— 见下面 C34 的说明。
+ */
 export const LADDER_TIERS = [10, 25, 60, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000]
 
 /** 计点：**按档位加权**，`点 = 1 + ⌊配方等级/10⌋` ⇒ Lv1 陶碗 1 点、Lv91 龙凤陶瓮 10 点。
@@ -456,10 +467,8 @@ const DEFS = {
   },
 }
 
-/** 效果轴 → 该轴的满级合计（守卫与文案共用；避免各处手算） */
-export const SIDELINE_AXIS_TOTALS = Object.fromEntries(
-  Object.entries(DEFS).map(([k, d]) => [d.axis, { skill: k, axis: d.axis, perItem: SIDELINE_AXES[d.axis].perItem, count: d.rows.length, total: SIDELINE_AXES[d.axis].perItem * d.rows.length }]),
-)
+// （SIDELINE_AXIS_TOTALS 的定义挪到了文件后部：必须在 DEFS 循环 + 补档追加循环**之后**，
+//   才能按 SIDELINE_WORKS 的实际作品数重算 —— 见「效果轴 → 该轴的满级合计」那一段。）
 
 /** 展开后的物品定义（合并进 ITEMS） */
 export const SIDELINE_ITEMS = []
@@ -500,6 +509,56 @@ for (const [key, d] of Object.entries(DEFS)) {
     SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId: w.id, woodName: w.name, auxId, auxQty, woodQty }
   }
 }
+
+// ── Lv101-120「补档」：15 支副业各追加 2 档作品（2026-09-29 用户授权批）──────────────
+// ⚠️ 与上面 DEFS 循环**同一套形状**（物品/配方/SIDEWORKS 三处一起登记），但有两处刻意不同：
+//   ① 木不走 `timberOfLevel(level)`——那 20 档与装备套一一对应、只覆盖到 Lv100 且是冻结口径，
+//     新档直接点名本批新木（102 档玄铁杉 / 112 档天罡沉香，见 `LATE_SIDELINE_WOOD`）；
+//   ② 行数据在 `lateGameFood.js` 的 `LATE_SIDELINE_ROWS`（本文件只负责展开，保持「数据一处、展开一处」）。
+// 🔴 轴总量随之 +2×perItem：陶艺的地窖满配 40000 → 43000，硬顶 `CELLAR_SLOT_VALUE_MAX` 已同步上移
+//    （caps.js），「满配 == 硬顶」的不变量由两处同改保持（system_test 6431 的断言比的就是这个常量）。
+for (const [key, level, itemName, auxId, woodQty, auxQty] of LATE_SIDELINE_ROWS) {
+  const d = DEFS[key]
+  const axis = SIDELINE_AXES[d.axis]
+  const id = `${key}_${level}`
+  const woodId = LATE_SIDELINE_WOOD[level]
+  SIDELINE_ITEMS.push({
+    id,
+    name: itemName,
+    type: 'ingredient',
+    category: d.category,
+    tier: Math.min(10, Math.ceil(level / 10)),
+    value: Math.round(2 + level * 2.5),
+    stackable: true,
+    maxStack: 9999,
+  })
+  SIDELINE_RECIPES[key].push({
+    id: `${key.slice(0, 2)}_${level}`,
+    name: itemName,
+    category: d.catLabel,
+    reqLevel: level,
+    xp: Math.round(25 + level * 13),
+    successChance: Math.max(0.55, 0.95 - level * 0.0044),
+    ingredients: { [woodId]: woodQty, [auxId]: auxQty },
+    output: { itemId: id, qty: 1 },
+  })
+  SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId, woodName: null, auxId, auxQty, woodQty }
+}
+
+// 各支的「作品数」改成**实际展开数**（DEFS rows + 补档追加；木工的作品在 woodworking.js，单独一行覆盖）
+for (const s of SIDELINE_SKILL_LIST) s.works = SIDELINE_RECIPES[s.id].length
+
+/** 效果轴 → 该轴的满级合计（守卫与文案共用；避免各处手算）
+ *  🔴 按 **SIDELINE_WORKS 实际作品数**重算（2026-09-29 补档给 15 支各 +2 件）——原先按 DEFS rows.length
+ *    算，追加的作品不计入 ⇒ totals 过期、「满配合计 == 各轴 total + 阶梯」的恒等式断言 FAIL。
+ *    按实际作品算之后，以后再追加内容这里自动跟上，不会再出现两套口径。
+ *    ⚠️ 必须定义在两个展开循环**之后**（早求值会拿到空表，与 SIDELINE_PRODUCTS 同一条纪律）。 */
+export const SIDELINE_AXIS_TOTALS = Object.fromEntries(
+  Object.entries(SIDELINE_AXES).map(([axisKey, a]) => {
+    const mine = Object.values(SIDELINE_WORKS).filter((w) => w.axis === axisKey)
+    return [axisKey, { skill: mine[0]?.skill ?? null, axis: axisKey, perItem: a.perItem, count: mine.length, total: a.perItem * mine.length }]
+  }),
+)
 
 /** 该产物是不是副业作品（有定义即有作品） */
 export function sidelineWorkOf(itemId) {

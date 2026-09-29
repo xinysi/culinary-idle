@@ -2,7 +2,7 @@
 // 全局搜索弹窗：按名称搜索 物品 / 对手 / 首领，物品可查看详情
 import { ref, computed } from 'vue'
 import { useUiStore } from '../stores/ui.js'
-import { ITEMS, getItem } from '../game/data/items.js'
+import { ITEMS } from '../game/data/items.js'
 import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { COMBAT_REGIONS, COMBAT_BOSSES } from '../game/data/combat.js'
 import ItemDetailModal from './ItemDetailModal.vue'

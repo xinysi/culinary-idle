@@ -6,7 +6,7 @@ import { computed, ref, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { ALL_ACHIEVEMENTS } from '../game/data/achievements.js'
-import { ACHIEVEMENT_TITLES, SHOP_TITLES, CODEX_SHOP_TITLES } from '../game/data/titles.js'
+import { ACHIEVEMENT_TITLES, SHOP_TITLES, CODEX_SHOP_TITLES, LEVEL_TITLES } from '../game/data/titles.js'
 import { achievementProgress, achievementNeed } from '../game/data/achievementProgress.js'
 import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -86,8 +86,11 @@ function goEquipTitle() {
 const ownedShopTitles = computed(() => SHOP_TITLES.filter((t) => player.shopOwned?.[t.key]).length)
 const ownedCodexTitles = computed(() => CODEX_SHOP_TITLES.filter((t) => (player.codexOwned ?? []).includes(t.key)).length)
 const ownedAchTitles = computed(() => ACHIEVEMENT_TITLES.filter((t) => unlockedIds.value.has(t.id)).length)
-const totalTitles = computed(() => ACHIEVEMENT_TITLES.length + SHOP_TITLES.length + CODEX_SHOP_TITLES.length)
-const ownedTitles = computed(() => ownedAchTitles.value + ownedShopTitles.value + ownedCodexTitles.value)
+// 等级台阶称号（2026-09-29 第四来源）：条件是「**任一**技能达到该等级」，派生自当前等级 ⇒ 不进存档、无需账本
+const maxSkillLevel = computed(() => Math.max(1, ...Object.values(player.skills ?? {}).map((s) => s.level ?? 1)))
+const ownedLevelTitles = computed(() => LEVEL_TITLES.filter((t) => maxSkillLevel.value >= t.level).length)
+const totalTitles = computed(() => ACHIEVEMENT_TITLES.length + SHOP_TITLES.length + CODEX_SHOP_TITLES.length + LEVEL_TITLES.length)
+const ownedTitles = computed(() => ownedAchTitles.value + ownedShopTitles.value + ownedCodexTitles.value + ownedLevelTitles.value)
 
 // 成就完成度
 const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.length) * 100)
@@ -100,7 +103,7 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
         <h2>🏅 成就与称号</h2>
         <p class="dim">
           成就解锁后自动发放奖励；部分成就附带<b>称号</b>，可在此佩戴（展示在左侧栏与主界面名字旁）。
-          称号共三个来源：成就解锁、<b>游戏商店</b>购买、<b>图鉴兑换所</b>兑换。
+          称号共四个来源：成就解锁、<b>游戏商店</b>购买、<b>图鉴兑换所</b>兑换、<b>等级台阶</b>（任一技能到 Lv82/84/…/120）。
         </p>
       </div>
     </header>
@@ -221,6 +224,31 @@ const completion = computed(() => (unlockedIds.value.size / ALL_ACHIEVEMENTS.len
           </div>
         </div>
         <p v-if="!CODEX_SHOP_TITLES.length" class="dim">暂无图鉴兑换称号。</p>
+      </div>
+
+      <!-- ④ 等级台阶称号（2026-09-29）：大后期每 2 级一个（Lv82~120），补「101-120 没有任何新内容」那段荒漠。
+           纯收藏、不带被动；达成条件是「任一技能达到该等级」（派生自等级，不进存档）。 -->
+      <div class="card av-card">
+        <div class="av-h">🎖 等级台阶称号（{{ ownedLevelTitles }}/{{ LEVEL_TITLES.length }}）</div>
+        <p class="dim av-desc">
+          任一技能达到对应等级即解锁（Lv82 起每 2 级一个，直到转生后的 Lv120）。
+          这是大后期「每两级还有东西可拿」的那条线——<b>纯收藏，不带数值被动</b>。
+        </p>
+        <div class="av-grid">
+          <div
+            v-for="t in LEVEL_TITLES"
+            :key="t.id"
+            class="av-title"
+            :class="{ locked: maxSkillLevel < t.level, equipped: player.title === t.name }"
+          >
+            <div class="av-title-name">
+              <strong>{{ t.name }}</strong>
+              <span v-if="player.title === t.name" class="badge badge-on">佩戴中</span>
+            </div>
+            <div class="dim av-title-desc">{{ maxSkillLevel >= t.level ? '已达成' : `未达成 · Lv${t.level}` }}</div>
+          </div>
+        </div>
+        <p v-if="ownedLevelTitles === LEVEL_TITLES.length" class="dim">已全部达成 🎉</p>
       </div>
     </template>
 

@@ -809,6 +809,17 @@ for (const def of PICKLE_ITEMS) ITEMS[def.id] = def
 import { EXPLORE_GEAR_ITEMS } from './explorationGear.js'
 for (const def of EXPLORE_GEAR_ITEMS) ITEMS[def.id] = def
 
+// Lv101-120「补档」批（2026-09-29 用户授权）：手写扩展模块（照 explorationGear.js 的合并方式），
+// 采集目标/配方在各自技能文件里 push 进**被 import 的那张表**（C66 口径），这里只并物品定义。
+// ⚠️ 上面 704 行已有一个本地常量叫 `LATE_ITEMS`（另一批历史补档的物品），这里**必须别名**，不能撞名。
+import { LATE_ITEMS as LATE_BATCH_ITEMS } from './lateGameFood.js'
+for (const def of LATE_BATCH_ITEMS) ITEMS[def.id] = def
+
+// Lv101-120「补档」· **装备线**（批次三，16 件：4 档 × 4 件）。数值由 itemBalance 启动时按
+// `center(等级)` 覆写（与锻造 20 品质套同一条路），所以这里只并定义、不并数值。
+import { LATE_GEAR_ITEMS } from './lateGear.js'
+for (const def of LATE_GEAR_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

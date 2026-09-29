@@ -9,6 +9,7 @@ import { HUNTING_TARGETS } from '../skills/HuntingSkill.js'
 import { EXCAVATION_TARGETS } from '../skills/ExcavationSkill.js'
 import { CROPS } from '../skills/FarmingSkill.js'
 import { EXPLORATION_TARGETS_ALL } from './explorationTargets.js'
+import './lateExplore.js' // 副作用：扩展目标（腐坏时长曲线按目标表算，漏了会少算新档）
 import { GATHERING_EXT } from './expansion1.js'
 import { GATHERING_EXT2 } from './expansion2.js'
 

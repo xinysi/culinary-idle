@@ -72,8 +72,10 @@ export class SaveManager {
         if (!raw) continue
         const data = JSON.parse(raw)
         out.push({ idx: i, savedAt: data?.savedAt ?? null })
-      } catch {
-        /* 损坏快照跳过 */
+      } catch (e) {
+        // 🔴 不能静默：损坏的快照会让玩家的一个「回滚点」无声消失（此前这里是空 catch）。
+        // 只报不断 —— 坏档不该让整张快照列表打不开。
+        console.warn(`[SaveManager] 快照 #${i}（槽 ${slot}）损坏，已从列表跳过：`, e)
       }
     }
     return out.sort((a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0))

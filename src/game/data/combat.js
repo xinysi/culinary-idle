@@ -12,6 +12,9 @@ export const STYLE_INFO = {
 /** key 克 value */
 export const STYLE_ADVANTAGE = { knife: 'plating', plating: 'flavor', flavor: 'knife' }
 
+/** 三个**风格技能**的 id（= 三个流派各自绑定的技能）—— 风格经验分摊的唯一口径（见 `Combat.addStyleXp`） */
+export const STYLE_SKILL_IDS = Object.values(STYLE_INFO).map((s) => s.skillId)
+
 /** 按等级生成对手属性（数值档位：随等级线性成长） */
 export function opp(level, name, style, extra = {}) {
   return {

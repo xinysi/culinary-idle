@@ -185,6 +185,41 @@ export const useUiStore = defineStore('ui', {
       this.log.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ts: Date.now(), message, kind })
       if (this.log.length > LOG_MAX) this.log.splice(0, this.log.length - LOG_MAX)
     },
+    /**
+     * 追加日志；**同一 `mergeKey` 的连续动作合并成一行**（就地更新上一条，附「连续 ×N」）。
+     *
+     * 🔴 为什么需要（2026-09-29）：制作/练习是「每 3 秒一次」的动作，而批量制作弹窗一次做 999 份、
+     * 心跳追赶一次最多 300 次 ⇒ 逐次 pushLog 会在几秒内把 500 条容量的日志**刷爆**，
+     * 玩家反而看不到别的事件（老问题：一次 999 份 = 999 行）。合并后一行就够。
+     * 合并窗口取 `windowMs`：队列是 3 秒/次 ⇒ 默认 6 秒能把连续动作圈在一行里，
+     * 而中间停了（暂停/换配方）或超过窗口就另起一行，不会把半天前的记录续上。
+     * `exp` 传**本次动作的经验**，合并时**累加**后渲染（否则一行「连续 ×12」旁边挂着单次经验，
+     * 玩家会把它当成总数 —— 本项目最忌讳的「显示与结算不一致」）。
+     */
+    pushOrMergeLog(message, kind = 'info', mergeKey = null, { windowMs = 6000, exp = 0 } = {}) {
+      const now = Date.now()
+      const withSuffix = (base, count, expSum) =>
+        `${base}${expSum > 0 ? `（+${expSum} 经验）` : ''}${count > 1 ? `（连续 ×${count}）` : ''}`
+      if (mergeKey) {
+        const last = this.log[this.log.length - 1]
+        if (last && last.mergeKey === mergeKey && now - last.ts <= windowMs) {
+          last.mergeCount = (last.mergeCount ?? 1) + 1
+          last.mergeExp = (last.mergeExp ?? 0) + (exp > 0 ? exp : 0)
+          last.baseMessage = message
+          last.ts = now
+          last.message = withSuffix(message, last.mergeCount, last.mergeExp)
+          return
+        }
+      }
+      this.log.push({
+        id: `${now}-${Math.random().toString(36).slice(2, 7)}`,
+        ts: now,
+        message: withSuffix(message, 1, exp > 0 ? exp : 0),
+        kind,
+        ...(mergeKey ? { mergeKey, mergeCount: 1, mergeExp: exp > 0 ? exp : 0, baseMessage: message } : {}),
+      })
+      if (this.log.length > LOG_MAX) this.log.splice(0, this.log.length - LOG_MAX)
+    },
     clearLog() {
       this.log = []
     },

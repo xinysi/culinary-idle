@@ -3,7 +3,9 @@
 // 口径（用户 2026-09-13 拍板）：
 //   · 12 条收集线 × 10 环（前 5 环每环 3 个、第 6 环起每环 5 个 = 每线 40）+ 汇金 60 + 珍券 12 = 552 节点，
 //     中心向外发散（辐射式，复用 DaoTreeGraph 画布）
-//     前 6 环＝收集件数 + 技能等级；第 7~10 环＝大后期里程碑（技能 100 级 / 转生 1 / 5 / 10 次）
+//     前 6 环＝收集件数 + 技能等级；第 7~10 环＝大后期里程碑（技能 100 级 / **精通总级数达满分 60%→80%→100%**）
+//     ⚠️ 2026-09-29 起第 8~10 环不再看「转生次数」——精通是**动作轴**（受经验加成只压 1.11×），
+//        而等级/转生是经验轴（会被压 59×）⇒ 长线挂动作轴才不会被高配玩家一小时刷完。
 //   · **纯条件点亮**：该线已收集件数 + 该技能等级达标即可，**不消耗任何资源**
 //   · 奖励只有**固定数值**：背包/仓库/冷库格数、离线上限小时、采集每次 +1 件（无任何百分比）
 //   · 点亮是两步：点节点 → 再点「确认点亮」；条件不足时**按钮不置灰**，点了给红色失败反馈
@@ -190,6 +192,15 @@ const ringName = (t) => RING_NAME[t - 1] ?? `第 ${t} 环`
             <span class="dim sh-req-tail">转生要求技能先满 100 级（转生后等级归 1，故里程碑只看转生次数）</span>
           </div>
           <div v-if="pickedState.needPrestige" class="sh-bar"><i :style="{ width: Math.min(100, Math.round((pickedState.prestige / Math.max(1, pickedState.needPrestige)) * 100)) + '%' }"></i></div>
+          <!-- 第 8~10 环的门槛（2026-09-29 起）：**精通总级数**（该技能所有卡的精通等级之和）。
+               为什么换掉「转生次数」：精通是**动作轴**（每卡按动作次数涨），实测只被经验加成压 1.11×，
+               而等级/转生是经验轴、会被压 59× —— 长线挂这条轴上，buff 再高也刷不快。 -->
+          <div v-if="pickedState.needMastery" class="sh-req-row">
+            <span class="dim">精通总级数</span>
+            <span class="mono" :class="{ ok: pickedState.mastery >= pickedState.needMastery }">{{ pickedState.mastery.toLocaleString('en-US') }} / {{ pickedState.needMastery.toLocaleString('en-US') }}</span>
+            <span class="dim sh-req-tail">按动作次数涨、不受经验加成影响（门槛 = 该线 {{ pickedState.pathName }} 技能精通满分的比例，见节点说明）</span>
+          </div>
+          <div v-if="pickedState.needMastery" class="sh-bar"><i :style="{ width: Math.min(100, Math.round((pickedState.mastery / Math.max(1, pickedState.needMastery)) * 100)) + '%' }"></i></div>
         </div>
 
         <div class="sh-panel-foot">

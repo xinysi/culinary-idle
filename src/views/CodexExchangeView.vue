@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS, getCodexReward } from '../game/data/codexShop.js'
+import { CODEX_TIERS, CODEX_TIER_TOTAL, CODEX_REWARDS } from '../game/data/codexShop.js'
 import { collectionTotal } from '../game/data/achievements.js'
 import { getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'

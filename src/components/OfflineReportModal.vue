@@ -3,7 +3,7 @@
 import { computed } from 'vue'
 import { useUiStore } from '../stores/ui.js'
 import { usePlayerStore } from '../stores/player.js'
-import { getItem, itemName } from '../game/data/items.js'
+import { itemName } from '../game/data/items.js'
 import { formatDuration } from '../game/core/OfflineProgress.js'
 
 const ui = useUiStore()

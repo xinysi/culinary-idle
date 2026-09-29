@@ -32,6 +32,11 @@ const FLAKE_SIGNS = [
   '详情面板应显示腐坏倒计时',
   "Cannot read properties of undefined (reading 'click')",
   '没解码出来',
+  // 2026-09-28 实测补：长命 dev server 还会让**整个测试**超时 —— `page.evaluate: Test timeout of 300000ms exceeded`
+  // （e2e-layout 正常 152s，在跑了几套之后的 server 上飙到 387s 且超时）。
+  // **证据**：同一条命令、同一个 commit，重启 server + 先跑一套预热后再跑 ⇒ **20 用例全过、1.2 分钟**。
+  // 之所以要加进来：命中未知签名时本脚本会提示「按真缺陷对待」，于是人得手动排查/重启/重跑一轮（≈10 分钟）。
+  'Test timeout of 300000ms exceeded',
 ]
 
 /** 改动 → 受影响套件。判据取「这个 spec 扫的是什么」；宁可多跑一套，别漏。 */
@@ -54,7 +59,11 @@ const workers = workersIdx >= 0 ? Number(argv[workersIdx + 1]) || 1 : 2
 const flags = argv.filter((a) => a.startsWith('--'))
 // ⚠️ `--workers 2` 的**值**不能被当成套件名（第一版就栽在这：`picked` 里多了个 `2` ⇒ Playwright 报
 //    「No tests found」，而汇总还写着「1 套 有失败」，看着像测试失败）
-const picked = argv.filter((a, i) => !a.startsWith('--') && i !== workersIdx + 1)
+// 🔴 只有**真的传了** `--workers` 才排除它后面那个参数。首版写死 `i !== workersIdx + 1`，
+//    而 `--workers` 缺席时 `workersIdx = -1` ⇒ 它排掉的是**下标 0** ⇒ `e2e_run.mjs e2e-layout e2e-test`
+//    会**静默丢掉第一个套件**（实测：我点名的 6 套只跑了 5 套，最该跑的 e2e-layout 没跑，
+//    输出只有一句「跑 5 套：…」—— 不盯着数字看根本发现不了。与「全绿」是同一类假绿）。
+const picked = argv.filter((a, i) => !a.startsWith('--') && !(workersIdx >= 0 && i === workersIdx + 1))
 
 function changedFiles() {
   const git = (args) => {

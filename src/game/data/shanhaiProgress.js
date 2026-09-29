@@ -52,10 +52,32 @@ export function shanhaiPathLevel(player, pathId) {
   const p = shanhaiPath(pathId)
   return p ? (player?.skills?.[p.skill]?.level ?? 1) : 1
 }
-/** 该线技能的**转生次数**（第 8~10 环的里程碑条件；旧档/新档缺字段都回退 0） */
+/** 该线技能的**转生次数**（历史门槛；旧档/新档缺字段都回退 0） */
 export function shanhaiPathPrestige(player, pathId) {
   const p = shanhaiPath(pathId)
   return p ? (player?.skills?.[p.skill]?.prestiges ?? 0) : 0
+}
+
+/**
+ * 该线技能的**精通总级数**（= 该技能所有卡的精通等级之和）—— 第 8~10 环的里程碑条件（2026-09-29 起）。
+ *
+ * 🔴 **为什么大后期门槛要从「转生次数」换成它**：转生/等级都是**经验轴**，会被 XP 乘区压缩
+ *    （实测满 buff 把等级轴压 **59×**：全技能并行满级 35 天 → 14.3 小时）；
+ *    而精通是**动作轴**（每张卡按「动作次数」涨），实测同一条线被压只有 **1.11×**（9.5 天 → 8.6 天）。
+ *    ⇒ 挂在精通上的门槛，**无论玩家 buff 多高，所需时长都基本不变** —— 这正是长线该待的地方。
+ *    实测依据：`scripts/sim/mastery_axis.mjs`（142 张卡逐张刷到精通 100）。
+ */
+export function shanhaiPathMastery(player, pathId) {
+  const p = shanhaiPath(pathId)
+  if (!p) return 0
+  return player?.masteryBreadthOf?.(p.skill)?.total ?? 0
+}
+
+/** 该线技能的**精通满分**（= 卡数 × 100 级）——门槛按比例表达，避免「卡数」出现第二份真值 */
+export function shanhaiPathMasteryMax(player, pathId) {
+  const p = shanhaiPath(pathId)
+  if (!p) return 0
+  return (player?.masteryCardCount?.(p.skill) ?? 0) * 100
 }
 
 /**
@@ -96,13 +118,26 @@ export function shanhaiNodeState(node, player, unlockedIds = null) {
   const prestige = gap
     ? Math.min(shanhaiPathPrestige(player, gap.a), shanhaiPathPrestige(player, gap.b))
     : shanhaiPathPrestige(player, node.path)
+  // 精通总级数（第 8~10 环的门槛，2026-09-29 起；gap 节点同样取两线较低者）
+  const mastery = gap
+    ? Math.min(shanhaiPathMastery(player, gap.a), shanhaiPathMastery(player, gap.b))
+    : shanhaiPathMastery(player, node.path)
   const need = node.req?.count ?? 0
   const needLevel = node.req?.level ?? 0
   const needPrestige = node.req?.prestige ?? 0
+  // 门槛按**比例**表达（`masteryPct`），绝对值在读取点现算 ⇒ 卡数只有 `masteryCardCount` 一份真值
+  const masteryMax = gap
+    ? Math.min(shanhaiPathMasteryMax(player, gap.a), shanhaiPathMasteryMax(player, gap.b))
+    : shanhaiPathMasteryMax(player, node.path)
+  const needMastery = node.req?.masteryPct ? Math.ceil(masteryMax * node.req.masteryPct) : 0
   const miss = []
   if (have < need) miss.push(gap ? `还差 ${need - have} 件（两线合计 ${have}/${need}）` : `还差 ${need - have} 件（已收集 ${have}/${need}）`)
   if (level < needLevel) miss.push(gap ? `两条线技能均需 ${needLevel} 级（当前较低者 ${level}）` : `技能需 ${needLevel} 级（当前 ${level}）`)
   if (prestige < needPrestige) miss.push(gap ? `两条线均需转生 ${needPrestige} 次（当前较低者 ${prestige} 次）` : `需转生 ${needPrestige} 次（当前 ${prestige} 次）`)
+  if (needMastery > 0 && mastery < needMastery) {
+    const pctText = `精通总级数 ${mastery.toLocaleString('en-US')}/${needMastery.toLocaleString('en-US')}（${Math.round(node.req.masteryPct * 100)}%，按动作次数涨、不受经验加成影响）`
+    miss.push(gap ? `两条线均需 ${pctText}` : `需 ${pctText}`)
+  }
   return {
     ...node,
     pathName: gap ? gap.name : (shanhaiPath(node.path)?.name ?? node.path),
@@ -114,6 +149,8 @@ export function shanhaiNodeState(node, player, unlockedIds = null) {
     needLevel,
     prestige,
     needPrestige,
+    mastery,
+    needMastery,
     can: !unlocked && miss.length === 0,
     reason: unlocked ? '已点亮' : miss.length ? miss.join(' · ') : '条件已达成',
   }

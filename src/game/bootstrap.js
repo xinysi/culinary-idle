@@ -22,6 +22,7 @@ import { ENCOUNTERS } from './data/encounters.js'
 import { otherChance } from './data/difficulty.js' // 全局难度系数（奇遇触发率）
 import { offlineMailBody } from './data/mail.js'
 import { FEST_MILESTONES } from './data/cookingFest.js'
+import { levelPerkAt } from './data/levelPerks.js' // 等级台阶（82~120 每 2 级一个称号）
 
 export const saveManager = new SaveManager({ slot: 0 })
 let engine = null
@@ -98,7 +99,11 @@ export function settleOffline(player, ui, elapsedMs) {
       reward: null,
     })
   }
-  return reports.length || restGold > 0 ? { reports, restGold, elapsedMs } : null
+  const hasProgress = reports.length > 0 || restGold > 0
+  // 开发者面板「第一次离线结算」里程碑的**唯一信号**（此前它听 `dev:offline`，而全站没人发射过 ⇒ 恒不点亮）。
+  // 只在真的有收益时发，与「离线报告弹窗会不会出现」同一判据。
+  if (hasProgress) EventBus.emit('offline:settled', { elapsedMs, skills: reports.length, restGold })
+  return hasProgress ? { reports, restGold, elapsedMs } : null
 }
 
 /**
@@ -203,8 +208,13 @@ export function registerGameEvents() {
         msg = `${skillName}：获得 ${name} ×${qty}${doubled ? '（双倍！）' : ''}`
     }
     if (extraItem) msg += `，额外获得 ${extraItem.split(',').map((x) => itemName(x.trim())).join('、')} ×1`
-    if (typeof e.expGained === 'number' && e.expGained > 0) msg += `（+${e.expGained} 经验）`
-    ui.pushLog(msg, kind)
+    // 制作/练习是「每 3 秒一次」的动作，批量弹窗（一次可做 999 份）与心跳追赶（一次最多 300 次）
+    // 会让同一句话连刷几十上百行 ⇒ 这两类走**合并**出口（同技能+同配方+同结果合成一行，经验累加）。
+    const isCraft = outcome === 'craft' || outcome === 'craftfail'
+    const expNum = typeof e.expGained === 'number' && e.expGained > 0 ? e.expGained : 0
+    if (!isCraft && expNum > 0) msg += `（+${expNum} 经验）`
+    if (isCraft) ui.pushOrMergeLog(msg, kind, `${outcome}|${skillId}|${e.recipeId ?? itemId}`, { exp: expNum })
+    else ui.pushLog(msg, kind)
 
     // 主线任务 / 赛季 / 公会 / 每日周常进度（§7.2 / §13）
     const gatherOutcomes = ['catch', 'hunt', 'dig', 'gather', 'rare']
@@ -244,6 +254,11 @@ export function registerGameEvents() {
   })
   EventBus.on('player:levelup', ({ skillId, level }) => {
     ui.pushLog(`🎉 ${getSkillDef(skillId)?.name} 升到 ${level} 级！`, 'levelup')
+    // 等级台阶（2026-09-29）：82~120 段每 2 级一个称号 —— 大后期那条荒漠线上「每两级还有东西可拿」的反馈。
+    // ⚠️ 派生自等级、不进存档 ⇒ 这条日志**可能重复出现**（重登后再升级到同一档不会，但读档回放不会触发它）；
+    //    真值在称号页（`LEVEL_TITLES` 的 locked 判定），日志只是当下的提示。
+    const perk = levelPerkAt(level)
+    if (perk) ui.pushLog(`🎖 等级台阶达成：Lv${level} · 「${perk.title}」——可在「成就与称号」页佩戴`, 'levelup')
   })
   EventBus.on('player:prestige', ({ skillId, prestiges }) => {
     ui.pushLog(`✨ ${getSkillDef(skillId)?.name} 转生！${prestiges} 转：+20% 经验，上限突破至 120 级`, 'levelup')
@@ -349,7 +364,9 @@ export function registerGameEvents() {
   })
   // 物品原地未动（仓库/冷库 → 背包 放不下时物品仍在原处；或信箱也塞满、确实发不出去）
   EventBus.on('inventory:full', () => ui.pushLog('🎒 背包已满！请整理、存入仓库或出售（商店可扩展容量）', 'warn'))
-  EventBus.on('bank:full', () => ui.pushLog('📦 仓库已满！请取出物品或扩展仓库', 'warn'))
+  // ⚠️ 原有 `bank:full` 一条已删（2026-09-28）：bank 概念移除后全站无人发射它，而冷库满有自己的日志
+  //    （`player.js` 冷库路径 emit `cold:full` 时**自己**就 pushLog 了「🧊 冷库已满（X/Y 格）」）
+  //    ⇒ 这里再接一份会是同一事件两条日志。音效那侧由 App.vue 听 `cold:full` 补上。
 
   // 硬核模式死亡：删除当前存档并重置（§4.1/§8.2）
   EventBus.on('hardcore:death', () => {

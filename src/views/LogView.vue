@@ -3,7 +3,7 @@
 // 图鉴 tab：物品（分类展示全部物品+未获得标记）/ 悬浮详情；首领 / 赛季 / 卡牌对战 + 配方手册 + 故事
 // 2026-09-11：成就/称号/主线任务三块已移出为独立页（见 views/AchievementsView.vue、views/QuestsView.vue），
 //             本页只在页签栏保留两个跳转按钮
-import { bindTip } from '../composables/useFixedTooltip.js'
+
 import { ref, computed, watch } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -246,7 +246,6 @@ function scrollToLabel(instId, label) {
   const el = document.getElementById('recipe-sec-' + instId + '-' + label)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
-
 
 const SLOT_ZH = { weapon: '武器', helmet: '头盔', body: '身体', legs: '腿甲', boots: '脚部', offhand: '副手', amulet: '饰品1', ring: '饰品2' }
 const slotZh = (id) => SLOT_ZH[getItem(id)?.slot] ?? getItem(id)?.slot ?? ''

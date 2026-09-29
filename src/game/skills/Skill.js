@@ -8,7 +8,7 @@
 
 import { EventBus } from '../core/EventBus.js'
 import { getSkillDef } from '../data/skills.js'
-import { dampXpStack, targetLevelXpMult, isLowTarget } from '../core/growthRate.js'
+import { dampXpStack, capXpSpeedup, targetLevelXpMult, isLowTarget } from '../core/growthRate.js'
 import { tunerOver } from '../data/tuner.js'
 
 export const MAX_LEVEL = 100
@@ -156,7 +156,9 @@ export class Skill {
     // 阻尼作用在乘积上而不是某一层上 ⇒ 各条阶梯（转生层数、增益剂档位）的档间差距一分不变、
     // 只是整体被压缩；低乘区几乎不动（×1.2 → ×1.15），只有乘区堆高时才明显（×13.5 → ×10.4）。
     // ⚠️ 别改成「逐层乘阻尼」——那等价于把每层的系数都调低，高档位就白做了（见 growthRate.js 的说明）。
-    const expMult = dampXpStack(prestigeMult * tonicMult * growthMult * catchup * marketMult)
+    // 二级饱和（2026-09-29）：叠区在**高配**下会被压到「半天满级」，这里按等级夹上界；
+    // 超界部分只按 XP_TAIL_RATE 计入 ⇒ 家族内仍然严格单调（详见 growthRate.js 的说明）
+    const expMult = capXpSpeedup(this.level, dampXpStack(prestigeMult * tonicMult * growthMult * catchup * marketMult))
 
     let exp = this.exp + amount * (1 + spiritPct / 100 + aojiPct / 100 + guildPct / 100 + insightPct / 100 + michelinPct / 100 + patronPct / 100 + honorPct / 100 + daoPct / 100) * expMult
     let level = this.level

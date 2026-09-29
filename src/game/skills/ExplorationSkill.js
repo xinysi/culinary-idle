@@ -7,6 +7,7 @@ import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryLevelProgress, masteryXpMultiplier, masteryDoubleChance, masteryIntervalFactor, masteryFixedInterval } from '../core/mastery.js'
 import { itemName } from '../data/items.js'
 import { EXPLORATION_TARGETS_ALL } from '../data/explorationTargets.js'
+import '../data/lateExplore.js' // 副作用：Lv102-120 扩展目标
 import { exploreSuccessChance as exploreDifficultyMult, exploreLootChance } from '../data/difficulty.js' // 全局难度系数（唯一缩放出口）
 import { exploreSuccessChance as exploreChanceOf, exploreInitialChance, exploreBandOf } from '../data/explorationBalance.js'
 import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from '../data/explorationGear.js'

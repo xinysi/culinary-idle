@@ -9,6 +9,7 @@ import { SMITHING_EXT2 } from '../data/expansion2.js'
 import { SMITHING_SET_RECIPES } from '../data/smithSetExt.js'
 import { retargetTimberMaterials } from '../data/timberRecipes.js'
 import { balanceRecipeLevels } from './recipeBalance.js'
+import { LATE_GEAR_RECIPES } from '../data/lateGear.js' // Lv101-120 补档装备线（16 条，手写模块）
 
 export const SMITHING_RECIPES = [
   // 铜制（L1-12）
@@ -86,6 +87,8 @@ export class CraftsmithingSkill extends ProductionSkill {
     // v2.7.0：先把 20 品质套的木材材料按档入配方（用户授权的一次固定层改写，范围见 data/timberRecipes.js），
     // 再跑既有的等级/材料平衡——顺序不能反：先入档位木材，平衡才看得到最终材料构成。
     retargetTimberMaterials(SMITHING_SET_RECIPES)
-    super('craftsmithing', player, balanceRecipeLevels(SMITHING_SET_RECIPES))
+    // Lv101-120「补档」装备线（16 条）：拼在右边 —— 生成器产物 `SMITHING_SET_RECIPES` 一个字节不动。
+    // 材料已满足「≤ 配方+5」，所以下面的 balanceRecipeLevels 对它们是恒等变换（守卫有断言）。
+    super('craftsmithing', player, balanceRecipeLevels([...SMITHING_SET_RECIPES, ...LATE_GEAR_RECIPES]))
   }
 }

@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { SET_MEALS, SET_MEAL_TAKEOUT_RATIO, menuCategoryCount } from '../game/data/setMeals.js'
+import { SET_MEAL_TAKEOUT_RATIO, menuCategoryCount } from '../game/data/setMeals.js'
 import { getItem } from '../game/data/items.js'
 
 const player = usePlayerStore()

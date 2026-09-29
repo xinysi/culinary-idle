@@ -1,12 +1,13 @@
 // 并行跑全套 CI 脚本（2026-09-28 立）。
 //
-// 为什么：15 个脚本彼此**完全独立**（各读源码/各建自己的 Pinia），原先在 CI 与本地都是**串行**。
-// 实测串行合计 **57s**，其中 `system_test` 独占 27s（47%）、`continuity_test` 13s。
+// 为什么：18 个脚本彼此**完全独立**（各读源码/各建自己的 Pinia），原先在 CI 与本地都是**串行**。
+// 实测串行合计 **57s**（15 个时），其中 `system_test` 独占 27s（47%）、`continuity_test` 13s；
+// 2026-09-28 新增 3 条接线守卫（各 <1s，合计不到 2s）。
 // 并发受限执行后 ≈ **30s**（下限由最慢的那个脚本决定）——省得不多，但顺带给出**耗时表**，
 // 以后「哪个脚本变慢了」一眼看得见（此前只能靠感觉）。
 //
 // 用法：
-//   node scripts/ci/run_all.mjs                      # 核心 15 个（并发 4，约 26s）
+//   node scripts/ci/run_all.mjs                      # 核心 18 个（并发 4，约 27s）
 //   node scripts/ci/run_all.mjs --jobs 8             # 指定并发
 //   node scripts/ci/run_all.mjs --with-build         # 另加需要 dist/ 的两条（先自行 npm run build）
 //   node scripts/ci/run_all.mjs --slow               # 另加 exe_image_audit（132s，查打包产物）
@@ -39,6 +40,12 @@ const CORE = [
   'audit_sync', 'content_sync_audit', 'item_triple_audit', 'minigame_ui_audit',
   'difficulty_audit', 'image_path_audit', 'bgm_audit', 'gen_drift_audit',
   'template_binding_audit', 'action_sweep',
+  // 2026-09-28 立：全量体检抓到的三类「不报错、也不生效」的接线缺陷，各配一条守卫
+  'event_wiring_audit',    // 凡有 EventBus.on 必有 emit（抓死监听）
+  'effect_binding_audit',  // 效果登记表 p.NAME 必须存在于真实 store（抓 ?.() 掩盖的错名）
+  'timer_lifecycle_audit', // 会重启玩法的 setTimeout 句柄必须被跟踪 + setInterval 必须配对
+  'unused_import_audit',   // `.vue` 里导入了却没用的符号（本项目没有 eslint，这类噪声此前无人管）
+  'ui_tick_audit',         // 10Hz 引擎节拍只给该给的人（显式名单 + 慢节拍不许开太快）
 ]
 const POST_BUILD = ['css_output_audit', 'dev_panel_audit']
 const SLOW = ['exe_image_audit']

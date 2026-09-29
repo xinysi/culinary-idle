@@ -74,7 +74,10 @@ export function achievementProgress(p, a) {
   else if (a.id.startsWith('prestige')) cur = p.stats.prestiges
   else if (a.id === 'level120') cur = Math.max(...Object.values(p.skills).map((s) => s.level ?? 1))
   else if (a.id.startsWith('totalLevel')) cur = p.totalLevels
-  else if (a.id.startsWith('season')) cur = Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length
+  // 🔴 必须与 `achievements.js` 的 `check` **同源**（那里是「累计领奖次数」）：
+  //    原实现数的是「有领奖的**季数**」⇒ 单季领满 8 档时 `check` 已达成（8 ≥ 5）而进度条只显示 1/5，
+  //    正是本项目最忌的「显示与结算不一致」。往季补领（2026-09-29）让混季状态更常见，这里一起收口。
+  else if (a.id.startsWith('season')) cur = Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0)
   else if (a.id === 'allDishes') cur = Object.keys(p.collected).filter((id) => getItem(id)?.type === 'food').length
   else if (a.id === 'allGear') cur = Object.keys(p.collected).filter((id) => getItem(id)?.type === 'equipment').length
   else if (a.id === 'allFish') cur = Object.keys(p.collected).filter((id) => ['fish', 'seafood'].includes(getItem(id)?.category)).length

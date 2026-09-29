@@ -6,6 +6,7 @@
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
+import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const COOKING_RECIPES = [
@@ -258,6 +259,11 @@ export const COOKING_RECIPES = [
   { id: 'wildDish_555', name: '清炒芜菁', category: '主菜', reqLevel: 7, xp: 84, successChance: 0.8, ingredients: { excavation_ext_03: 2, saltOre: 1, garlic: 1 }, output: { itemId: 'wildDish_555', qty: 1 } },
   { id: 'wildDish_556', name: '清炒菱角', category: '主菜', reqLevel: 24, xp: 288, successChance: 0.8, ingredients: { excavation_ext_08: 2, saltOre: 1, garlic: 1 }, output: { itemId: 'wildDish_556', qty: 1 } },
 ]
+
+// ── Lv101-120「补档」配方（lateGameFood.js）：push 进**被 import 的这张基础表**（C66 口径）——
+// itemSources / valueBalance / recipeBalance / itemUses 读的都是 COOKING_RECIPES 本体，
+// 在 super 里 spread 它们看不到（本轮实测踩到：图鉴来源会漏掉这 3 条）。
+COOKING_RECIPES.push(...LATE_PROD.cooking)
 
 export class CookingSkill extends ProductionSkill {
   constructor(player) {

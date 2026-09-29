@@ -39,7 +39,10 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
   check('A. 探索 baseSuccess 仍是 0.60~0.85（未被改写）',
     Math.min(...t.map((x) => x.baseSuccess)) === 0.6 && Math.max(...t.map((x) => x.baseSuccess)) === 0.85)
   const itemLoot = t.flatMap((x) => (x.loot ?? []).filter((l) => l.type !== 'gold').map((l) => l.chance))
-  check('A. 探索物品战利品条数仍为 500', itemLoot.length === 500, `实际 ${itemLoot.length}`)
+  // ⚠️ 2026-09-29：探索目标表现是「生成器 200 条 + 手写扩展 10 条（`lateExplore.js`）」，但**本组只钉生成器那 500 条** ——
+  //    这一组的语义是「生成器数据未被批量改写」（本模块不 import lateExplore，看到的就是生成器产物本身）。
+  //    扩展的 30 条由 system_test 的 C75 单独断言（条数/等级带/概率区间）。
+  check('A. 生成器探索物品战利品条数仍为 500', itemLoot.length === 500, `实际 ${itemLoot.length}`)
   check('A. 探索物品战利品仍是 0.28~0.35（未被改写）',
     Math.min(...itemLoot) === 0.28 && Math.max(...itemLoot) === 0.35)
   const opp = COMBAT_REGIONS.flatMap((r) => (r.opponents ?? []).flatMap((o) => (o.drops ?? []).map((d) => d.chance)))
@@ -51,8 +54,9 @@ const src = (p) => readFileSync(join(root, p), 'utf8')
   // 配方成功率条数（含 quote 形态）
   let n = 0
   for (const p of walk('src/game')) n += (src(p).match(/["']?successChance["']?\s*:/g) || []).length
-  // 2026-09-27 用户⑬：配方 1246→1249（新增 3 条腌制）⇒ successChance 条数基线 1213→1216
-  check('A. 配方 successChance 条数仍为 1216（未批量改写数据）', n === 1216, `实际 ${n}`)
+  // 2026-09-27 用户⑬：配方 1246→1249（新增 3 条腌制）⇒ 基线 1213→1216；
+  // 2026-09-29 补档：lateGameFood.js 9 条制作配方（公式引用）+ sidelineWorks 追加循环 1 处 ⇒ 基线 1216→1226
+  check('A. 配方 successChance 条数仍为 1227（未批量改写数据；+11 = 补档 9 条制作 + 副业追加循环 1 + 装备线 1 处公式）', n === 1227, `实际 ${n}`)
 }
 
 // ── B. 唯一出口：禁止再用原始概率字段 ──

@@ -4,7 +4,7 @@
 import fs from 'fs'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
-import { createSkillInstances } from '../../src/game/skills/registry.js'
+import { createSkillInstances, getAllSkillInstances } from '../../src/game/skills/registry.js'
 import { ITEMS } from '../../src/game/data/items.js'
 import { ENCOUNTERS } from '../../src/game/data/encounters.js'
 import { COMBAT_BOSSES } from '../../src/game/data/combat.js'
@@ -655,6 +655,268 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
   // 反向断言：注册表行数必须够多（防止有人把表清空后本项恒真）
   const rowCount = (effSrc.match(/\n\s+id: '/g) ?? []).length
   check(`效果总览：注册表登记了 ${rowCount} 条效果行（≥40 才算完整）`, rowCount >= 40, `仅 ${rowCount} 条`)
+}
+
+// ── 农耕成长系数：结算 ↔ 展示必须同源（2026-09-28 立，FARM_XP_MULT）──────────────
+// 起因：成长曲线体检实测**农耕是全项目最慢的一条线**（基准 46.2 天，次慢的美食探索只有 4.0 天），
+// 结构性原因是**间隔**（采摘最高档 intervalSec=8s vs 作物 growSec 最高 1080s = 135×）⇒ 加一个**读取点系数**。
+// 🔴 为什么必须成对断言：这类系数最容易只接「结算」漏「展示」——玩家看到卡片写 N 经验、实际到账 2N，
+//    正是本项目最忌的「显示与结算不一致」（`materialCost` 的 9 处接线就是为同一件事立的）。
+{
+  const { FARM_XP_MULT } = await import('../../src/game/data/farmingTuning.js')
+  const { CROPS } = await import('../../src/game/skills/FarmingSkill.js')
+  const { getSkillInstance } = await import('../../src/game/skills/registry.js')
+  const farmSrc = read('src/game/skills/FarmingSkill.js')
+  const viewSrc = read('src/views/FarmingView.vue')
+  check('农耕系数：常数是 >1 的有限数（=1 即关掉）', Number.isFinite(FARM_XP_MULT) && FARM_XP_MULT > 1, `实际 ${FARM_XP_MULT}`)
+  check('农耕系数：结算点用了它（`FarmingSkill` 传给 addCardXp 的 base）', /crop\.xp \* FARM_XP_MULT/.test(farmSrc))
+  check('农耕系数：展示点也用了它（否则卡片写 N、实际到账 2N）', /FARM_XP_MULT/.test(viewSrc))
+  check('农耕系数：展示式就是「低目标减半 × 系数」的同一算式（不是手抄一个数）',
+    /Math\.round\(\(isLow\(c\) \? c\.xp \* LOW_TARGET_XP_MULT : c\.xp\) \* FARM_XP_MULT\)/.test(viewSrc))
+  // 冻结数据基线：**只乘不改** —— `xp`/`growSec` 一个字节都不能动。
+  // 🔴 2026-09-29 起 CROPS = 生成器产物 FARM_CROPS（199 条，冻结）+ 补档 2 条（lateGameFood.js）：
+  //    所以「生成器产物未被改写」的判据要钉在 **FARM_CROPS** 上，CROPS 总量 = 199 + 2。
+  const { FARM_CROPS } = await import('../../src/game/data/farmSeeds.js')
+  const genXp = FARM_CROPS.reduce((a, c) => a + (c.xp ?? 0), 0)
+  const genGrow = FARM_CROPS.reduce((a, c) => a + (c.growSec ?? 0), 0)
+  const xpSum = CROPS.reduce((a, c) => a + (c.xp ?? 0), 0)
+  const growSum = CROPS.reduce((a, c) => a + (c.growSec ?? 0), 0)
+  check('农耕系数：生成器产物 FARM_CROPS 仍 184 条、xp 合计 == 52231（冻结数据未被改写）',
+    FARM_CROPS.length === 184 && genXp === 52231, `实际 ${FARM_CROPS.length} 条 / xp ${genXp}`)
+  check('农耕系数：生成器产物 growSec 合计 == 80020（**产出一动，材料成本系数与制作类时长口径就失准**）',
+    genGrow === 80020, `实际 ${genGrow}`)
+  check('农耕系数：CROPS = 生成器 199 + 补档 2 = 201（xp/growSec 合计随之 57091 / 89080）',
+    CROPS.length === 201 && xpSum === 57091 && growSum === 89080, `实际 ${CROPS.length} 条 / xp ${xpSum} / grow ${growSum}`)
+  // 行为断言（真实引擎）：收获一次，捕获交给 addCardXp 的 base —— 必须等于 `crop.xp × 系数`。
+  // 用「捕获 base」而不是「比总经验」：总经验上还叠着 XP 乘区/精通池，比 base 才是**这个系数**的作用点。
+  setActivePinia(createPinia())
+  const pf = usePlayerStore()
+  pf.newGame()
+  createSkillInstances(pf)
+  const farm = getSkillInstance('farming')
+  const crop = CROPS[0]
+  pf.inventory[crop.seedId] = 5
+  check('农耕系数：能种下第一个作物（行为断言的前置）', farm.plant(0, crop.seedId) === true)
+  const plot = farm.plotAt(0)
+  if (plot) pf.setPlot(0, { ...plot, plantedAt: Date.now() - 10 * 86400000 }) // 直接催熟，省掉等 100 秒
+  let captured = null
+  const origAdd = farm.addCardXp.bind(farm)
+  farm.addCardXp = (base, mult, lvl) => { if (captured === null) captured = { base, lvl }; return origAdd(base, mult, lvl) }
+  const harvested = farm.harvest(0)
+  farm.addCardXp = origAdd
+  check('农耕系数：收获成功（行为断言的前置）', harvested === true)
+  check(`农耕系数：收获传给 addCardXp 的 base == crop.xp × 系数（${crop.xp} × ${FARM_XP_MULT} = ${crop.xp * FARM_XP_MULT}）`,
+    captured != null && captured.base === crop.xp * FARM_XP_MULT, captured ? `实际 ${captured.base}` : '没捕获到调用')
+}
+
+// ── 山海大后期门槛：**必须是「精通总级数」，不能退回「转生次数」**（2026-09-29 立）──
+// 起因：游玩时长被 buff 压缩 —— 转生/等级是**经验轴**（实测满 buff 压 59×），而精通是**动作轴**（压 1.11×）。
+// 长线挂动作轴才不会被高配玩家一小时刷完。守卫钉四件事：门槛轴、比例（而不是烘死绝对值）、**没有回退**、
+// 以及**线级缩放的作用面**（2026-09-29 追加：稼穑按 0.25 缩放，见生成器的 PATH_MASTERY_SCALE）。
+{
+  const { SHANHAI_NODES, SHANHAI_RINGS, SHANHAI_PATH_MASTERY_SCALE } = await import('../../src/game/data/shanhaiTree.js')
+  const late = SHANHAI_NODES.filter((n) => (n.ring ?? 0) >= 8 && n.path !== 'ticket')
+  check('山海门槛', late.length > 0, `第 8~10 环的节点数 = ${late.length}`)
+  const badAxis = late.filter((n) => !n.req?.masteryPct)
+  check('山海门槛 · 第 8~10 环的门槛轴是**精通总级数**（不是转生次数）', badAxis.length === 0,
+    badAxis.length ? `${badAxis.length} 个节点没有 masteryPct，例如 ${badAxis[0].id}` : '')
+  const backslide = SHANHAI_NODES.filter((n) => n.req?.prestige)
+  check('山海门槛 · 🔴 没有任何节点仍以「转生次数」为门槛（防回退到经验轴）', backslide.length === 0,
+    backslide.slice(0, 3).map((n) => n.id).join(', '))
+  // 比例 = 基准（60/80/100）× 线级缩放。缩放表**只允许**被授权的线（多了就是悄悄放松了别条线）。
+  const { SHANHAI_PATHS } = await import('../../src/game/data/shanhaiTree.js')
+  const skillOfPath = Object.fromEntries(SHANHAI_PATHS.map((p) => [p.id, p.skill]))
+  const scaleOfSkill = Object.fromEntries(Object.entries(SHANHAI_PATH_MASTERY_SCALE).map(([pid, v]) => [skillOfPath[pid] ?? pid, v]))
+  const BASE = { 8: 0.6, 9: 0.8, 10: 1.0 }
+  // 分支环按**本线**缩放；汇金（空隙）环按**两侧较低者**（它的门槛是 min(两线卡数)×比例，要求两条线都达到）
+  const expectPct = (n) => {
+    const sc = n.gap != null
+      ? Math.min(scaleOfSkill[n.req?.skill ?? ''] ?? 1, scaleOfSkill[n.req?.skill2 ?? ''] ?? 1)
+      : (scaleOfSkill[n.req?.skill ?? ''] ?? 1)
+    return BASE[n.ring] * sc
+  }
+  const badPct = late.filter((n) => Math.abs((n.req?.masteryPct ?? 0) - expectPct(n)) > 1e-9)
+  check('山海门槛 · 比例 = 基准 60/80/100% × 线级缩放（缩放表：' +
+    (Object.keys(SHANHAI_PATH_MASTERY_SCALE).join(',') || '无') + '）', badPct.length === 0,
+    badPct.slice(0, 3).map((n) => `${n.id}:${n.req?.masteryPct}≠${expectPct(n)}`).join(', '))
+  check('山海门槛 · 🔴 缩放表只含被授权的线（核准到具体值：稼穑 0.5 —— 它的「一张卡」= 3750 次收获，是别线的 10~20 倍量纲；0.5 是量出来的：前 100 张 = 43.2 天，与第二名锻造 40.2 天齐平）',
+    Object.keys(SHANHAI_PATH_MASTERY_SCALE).length === 1 && SHANHAI_PATH_MASTERY_SCALE.farm === 0.5,
+    JSON.stringify(SHANHAI_PATH_MASTERY_SCALE))
+  // 🔴 空隙（汇金）节点也必须跟着缩放：它的门槛是 min(两线卡数)×比例、且要求**两条线都达到**
+  //    ⇒ 不缩的话紧挨稼穑的空隙会把门槛顶回未缩放的 100%（缩放白做）。判据：四舍五入到 4 位后与缩放假设一致。
+  const gaps = SHANHAI_NODES.filter((n) => n.gap != null && (n.ring ?? 0) >= 8)
+  const gapBad = gaps.filter((n) => {
+    const sc = Math.min(scaleOfSkill[n.req?.skill ?? ''] ?? 1, scaleOfSkill[n.req?.skill2 ?? ''] ?? 1)
+    return Math.abs((n.req?.masteryPct ?? 0) - BASE[n.ring] * sc) > 1e-9
+  })
+  check('山海门槛 · 🔴 汇金（空隙）节点也按两侧较低者缩放（否则会把门槛顶回去）', gapBad.length === 0,
+    gapBad.slice(0, 3).map((n) => `${n.id}:${n.req?.masteryPct}`).join(', '))
+  // 空隙恒不该比任一侧自己那条线的环要求更严（min(卡数)×min(比例) ≤ 卡数ᵃ×比例ᵃ）
+  const gapLenient = gaps.every((n) => {
+    const sc = Math.min(scaleOfSkill[n.req?.skill ?? ''] ?? 1, scaleOfSkill[n.req?.skill2 ?? ''] ?? 1)
+    const scMax = Math.max(scaleOfSkill[n.req?.skill ?? ''] ?? 1, scaleOfSkill[n.req?.skill2 ?? ''] ?? 1)
+    return (n.req?.masteryPct ?? 0) <= BASE[n.ring] * scMax + 1e-9
+  })
+  check('山海门槛 · 空隙要求不高于任一侧自己那条线的环要求（缩放后仍成立）', gapLenient)
+  // 绝对值不许烘进数据（否则「卡数」会有第二份真值；加卡片时门槛不会跟着走）
+  const baked = late.filter((n) => n.req?.mastery != null || n.req?.masteryTotal != null)
+  check('山海门槛 · 数据里**不烘绝对值**（门槛按比例在读取点现算 ⇒ 卡数只有 masteryCardCount 一份真值）',
+    baked.length === 0, baked.slice(0, 2).map((n) => n.id).join(', '))
+  const ringMeta = SHANHAI_RINGS.filter((r) => r.ring >= 8)
+  check('山海门槛 · 环元数据也带 masteryPct（展示/守卫同源）',
+    ringMeta.length === 3 && ringMeta.every((r) => r.masteryPct > 0))
+}
+// ── 精通池上限：凡有卡的技能都必须 > 0（2026-09-29 抓到的洞：农耕卡是 crops，旧口径对它恒返回 0）──
+{
+  const { masteryPoolCap } = await import('../../src/game/core/mastery.js')
+  setActivePinia(createPinia())
+  const pm = usePlayerStore()
+  pm.newGame()
+  createSkillInstances(pm)
+  // 🔴 判据必须是「存取器 vs 实例自身卡数」的**两侧对账**。
+  //    第一版写的是「有卡但池上限为 0」⇒ 旧写法下农耕卡数是 **0**，被 `n<=0 continue` 直接跳过 ⇒
+  //    **永远抓不到它要抓的那个洞**（反例验证当场抓到的假绿）。改成两侧对账后，农耕 0≠199 立刻红。
+  const expectedOf = (inst) => inst?.targets?.length ?? inst?.recipes?.length ?? inst?.crops?.length ?? 0
+  const mismatch = []
+  let withCards = 0
+  for (const inst of getAllSkillInstances()) {
+    const expected = expectedOf(inst)
+    const actual = pm.masteryCardCount?.(inst.id) ?? 0
+    if (expected > 0) withCards++
+    if (actual !== expected) mismatch.push(`${inst.id}: 存取器 ${actual} ≠ 实例 ${expected}`)
+    else if (expected > 0 && !(masteryPoolCap(actual) > 0)) mismatch.push(`${inst.id}: 池上限为 0`)
+  }
+  // ⚠️ **判据必须放在第 2 个参数**：我第一版把动态文案写成第 2 个参数（`check(名字, 模板串, 条件, 详情)`）⇒
+//    条件落到第 3 位被忽略、而第 2 位收到一个非空字符串（恒真）⇒ **断言永远绿**。
+//    反例验证当场抓到（注入旧写法时它照样 ok）—— 这就是「4 个参数的 check」这种假绿长什么样。
+  check('精通池', mismatch.length === 0, `扫了 ${withCards} 个技能；不一致：${mismatch.slice(0, 4).join('；') || '无'}`)
+  check('精通池', pm.masteryCardCount('farming') === 201,
+    `农耕卡数 = ${pm.masteryCardCount('farming')}（它的卡是 crops，2026-09-29 起 = 生成器 199 + 补档 2；旧口径恒 0 ⇒ 池一辈子填不满、四档加成全失效）`)
+}
+
+// ── 厨神之路门槛：**印记之外必须有「精通总级数」这道地板**（2026-09-29 立）──
+// 起因同山海：轮回印记是「转生次数派生」= **经验轴**（实测满 buff 压 59×）⇒ 整条厨神之路对高配玩家等于不存在。
+// 精通是动作轴（压 1.11×）⇒ 给每层加一条并列门槛，高配玩家才有一块刷不掉的地板。
+{
+  const { DAO_TIER_MASTERY, daoCanUnlock } = await import('../../src/game/data/daoTree.js')
+  const tiers = Object.values(DAO_TIER_MASTERY)
+  check(`厨神门槛 · 门槛表三层齐全且严格递增（${tiers.join(' / ')}）`,
+    tiers.length === 3 && tiers.every((v, i) => v > 0 && (i === 0 || v > tiers[i - 1])), JSON.stringify(DAO_TIER_MASTERY))
+  // 行为：印记管够但精通为 0 ⇒ 一层节点仍被「精通总级数」挡住（这就是高配玩家的地板）
+  const r0 = daoCanUnlock('g1', [], 999, 0)
+  check('厨神门槛 · 🔴 印记管够（999）而精通为 0 ⇒ 仍被挡住，且原因点明「精通总级数」',
+    r0.ok === false && /精通总级数/.test(r0.reason), r0.reason)
+  // 行为：精通达标后这条不再拦（其余门槛可能还挡，所以断言「原因里不再提精通」）
+  const r1 = daoCanUnlock('g1', [], 999, DAO_TIER_MASTERY[1])
+  check('厨神门槛 · 精通达标（1500）后「精通总级数」这条不再拦', !/精通总级数/.test(r1.reason), r1.reason)
+  // 外环（觅珍环）不受影响：它走「全树已解锁数」分支，不吃精通门槛
+  const rx = daoCanUnlock('x1', [], 999, 0)
+  check('厨神门槛 · 外环觅珍环不受精通门槛影响（仍按「全树已解锁数」判）', /全树已解锁/.test(rx.reason), rx.reason)
+  // 静态接线：store 的那个出口必须**真的把精通总级数传进去**（漏传 = 门槛静默失效）
+  const pl = read('src/stores/player.js')
+  check('厨神门槛 · store 的 `daoCanUnlock` 把 `totalMasteryLevels()` 传进了出口（漏传即静默失效）',
+    /daoCanUnlock\(id,\s*this\.daoUnlocked\s*\?\?\s*\[\],\s*this\.daoPoints\(\),\s*this\.totalMasteryLevels\(\)\)/.test(pl))
+  // 🔴 **每个调用点都要接上第 4 参**（通用守卫）：
+  //    加门槛参数时最容易漏的是**视图侧**——本轮就漏了 `DaoView`（它调 `daoCanUnlock(id, unlocked, points)`
+  //    不传精通 ⇒ 界面一律把节点画成「精通 0/N 锁着」而 store 其实放行 = 显示与结算不一致）。
+  //    判据：模块级 `daoCanUnlock(` 的调用必须含 `totalMasteryLevels`（store 里那个同名**方法**是包装器，1 参合法）。
+  {
+    const files = ['src/views/DaoView.vue', 'src/stores/player.js']
+    const miss = []
+    for (const f of files) {
+      const lines = read(f).split('\n')
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i]
+        if (!l.includes('daoCanUnlock(')) continue
+        if (/export function daoCanUnlock/.test(l)) continue   // 出口自身
+        if (/daoCanUnlock\(id\)\s*\{/.test(l)) continue        // store 里的包装器**定义**（1 参合法）
+        if (/this\.daoCanUnlock\(/.test(l)) continue          // store 内部调自己的包装器（合法：包装器内部已传精通）
+        // 取「本行 + 后续两行」当窗口：多行调用（store 内部那处）也覆盖得到。
+        // ⚠️ 别用 `\(([^)]*)\)` 抠参数 —— `this.daoPoints()` 的内层括号会把它截断 ⇒ **误报**（本轮踩过）
+        const window = lines.slice(i, i + 3).join('\n')
+        if (!window.includes('totalMasteryLevels')) miss.push(`${f}:${i + 1}  ${l.trim().slice(0, 70)}`)
+      }
+    }
+    check('厨神门槛 · 所有调用点都接上了精通总级数（漏一处就是显示与结算不一致）',
+      miss.length === 0, miss.join('；'))
+  }
+}
+
+// ── 大后期「满足点」两条零美术的轴（2026-09-29 立）────────────────────────────────
+// 起因：体检发现本作内容密度**方向与 Melvor 相反**（Melvor 越后期越密），且 **Lv101-120 没有任何新目标**。
+// 补「新物品」要美术，所以先做两条零美术的：
+//   ① **等级台阶**（`levelPerks.js`）：82~120 每 2 级一个称号 + 技能页的「下一档」提示（纯收藏、不给数值）
+//   ② **副业阶梯扩到 16 档**（`LADDER_TIERS`）：把 91~120 段纳入（原 12 档在练到 100 级前就耗尽）
+{
+  const { LEVEL_PERKS, LEVEL_PERK_START, LEVEL_PERK_END, levelPerkAt, nextLevelPerk, levelPerksReached } = await import('../../src/game/data/levelPerks.js')
+  const { LADDER_TIERS } = await import('../../src/game/data/sidelineWorks.js')
+  const { allTitleNames } = await import('../../src/game/data/titles.js')
+  // ① 等级台阶表：覆盖 82~120、步长 2、无重复、称号名唯一
+  const levels = LEVEL_PERKS.map((p) => p.level)
+  check('后期满足点 · 等级台阶覆盖 82~120 且步长 2、共 20 档',
+    LEVEL_PERKS.length === 20 && levels[0] === LEVEL_PERK_START && levels[levels.length - 1] === LEVEL_PERK_END
+    && levels.every((v, i) => i === 0 || v - levels[i - 1] === 2), `实际 ${levels.length} 档：${levels[0]}~${levels[levels.length - 1]}`)
+  check('后期满足点 · 台阶称号名唯一（不与他人重名）',
+    new Set(LEVEL_PERKS.map((p) => p.title)).size === LEVEL_PERKS.length)
+  check('后期满足点 · 台阶称号已进「全部称号名」出口（称号总量口径同源，audit_sync 的 README 钉也读它）',
+    LEVEL_PERKS.every((p) => allTitleNames().includes(p.title)))
+  check('后期满足点 · 达成是**派生**的（level >= 档位即算，不需要存档账本）',
+    levelPerksReached(LEVEL_PERK_END).length === LEVEL_PERKS.length && levelPerksReached(LEVEL_PERK_START - 1).length === 0
+    && levelPerkAt(LEVEL_PERK_START)?.level === LEVEL_PERK_START && levelPerkAt(LEVEL_PERK_START + 1) === null)
+  check('后期满足点 · 未满级时「下一档」存在（技能页就是靠它显示「还差几级」）',
+    nextLevelPerk(1)?.level === LEVEL_PERK_START && nextLevelPerk(LEVEL_PERK_END) === null)
+  // ② 副业阶梯：严格递增 + **末档不许再加深**（2026-09-29 试过扩到 16 档覆盖 91~120，被硬顶挡回：
+//    加档按 perTier×档数 等比抬高各轴总量 ⇒ 陶艺的地窖上限顶破 CELLAR_SLOT_VALUE_MAX=40000）
+  check('后期满足点 · 副业阶梯仍为 12 档（扩档会等比抬高轴总量、顶破硬顶，见 LADDER_TIERS 的说明）',
+    LADDER_TIERS.length === 12 && LADDER_TIERS.every((v, i) => i === 0 || v > LADDER_TIERS[i - 1]),
+    `${LADDER_TIERS.length} 档，末档 ${LADDER_TIERS[LADDER_TIERS.length - 1].toLocaleString('en-US')}`)
+  // 展示同源：三处消费点都必须读同一个出口
+  {
+    const sk = read('src/views/SkillView.vue')
+    const av = read('src/views/AchievementsView.vue')
+    const bs = read('src/game/bootstrap.js')
+    check('后期满足点 · 展示同源：技能页用 nextLevelPerk、称号页用 LEVEL_TITLES、升级日志用 levelPerkAt',
+      sk.includes('nextLevelPerk') && av.includes('LEVEL_TITLES') && bs.includes('levelPerkAt'))
+    const panel = read('src/components/SidelineWorkPanel.vue')
+    check('后期满足点 · 副业面板的档数从 LADDER_TIERS.length 派生（不手写 12/16）',
+      panel.includes('LADDER_TIERS.length') && !/\d+\s*档<\/b>/.test(panel.replace(/\{\{[^}]*\}\}/g, '')))
+  }
+}
+
+// ── 风格经验分摊（2026-09-29）：当前风格全额、另两个风格各 1/3 ────────────────────
+// 起因：风格经验原先只发给「当前用的那个风格」⇒ 3 个风格技能（刀工/摆盘/调味）**各练一遍**才全满（≈27 天）。
+// 参照作 Melvor 是「一场战斗同时升多个战斗技能」⇒ 这份重复是两作的真实结构差，不是设计选择。
+// 现在其他风格吃 1/3：**取舍保留**（用哪个流派快 3 倍）· **重复去掉**（全满 ≈16 天）。
+{
+  const { STYLE_OFF_XP_DIV } = await import('../../src/game/combat/Combat.js')
+  const { STYLE_SKILL_IDS, STYLE_INFO } = await import('../../src/game/data/combat.js')
+  check('风格经验 · 分摊分母 = 3（另两风格各 1/3）且三个风格技能 id 齐全',
+    STYLE_OFF_XP_DIV === 3 && STYLE_SKILL_IDS.length === 3
+    && STYLE_SKILL_IDS.every((id) => Object.values(STYLE_INFO).some((s) => s.skillId === id)),
+    `${STYLE_OFF_XP_DIV} / ${STYLE_SKILL_IDS.join(',')}`)
+  // 静态：三处风格经验写点都必须走 addStyleXp（留一处裸写 = 那条路径不给另外两个风格）
+  const cb = read('src/game/combat/Combat.js')
+  check('风格经验 · 没有裸写风格技能经验（`getSkillInstance(this.styleSkillId)?.addXp` 必须为空）',
+    !/getSkillInstance\(this\.styleSkillId\)\?\.addXp/.test(cb))
+  check('风格经验 · 三处写点都在 addStyleXp 里（命中 / 胜场 / 败场）',
+    (cb.match(/this\.addStyleXp\(/g) ?? []).length === 3, `实际 ${(cb.match(/this\.addStyleXp\(/g) ?? []).length} 处`)
+  // 行为（真实引擎）：同样的 amount 下，当前风格 ≈ 另两个风格的 3 倍
+  {
+    setActivePinia(createPinia())
+    const pc = usePlayerStore()
+    pc.newGame()
+    createSkillInstances(pc)
+    const { Combat } = await import('../../src/game/combat/Combat.js')
+    const c = new Combat(pc)
+    pc.setCombatStyle('knife')
+    const b = { knife: pc.skills.knife.exp, plating: pc.skills.plating.exp, flavorArtistry: pc.skills.flavorArtistry.exp }
+    c.addStyleXp(300)
+    const d = { knife: pc.skills.knife.exp - b.knife, plating: pc.skills.plating.exp - b.plating, flavorArtistry: pc.skills.flavorArtistry.exp - b.flavorArtistry }
+    const ratio = d.knife / Math.max(1, d.plating)
+    check('风格经验 · 行为：当前风格 ≈ 另两个风格的 3 倍（实测 3.0~3.3，因为各自还有自己的经验乘区）',
+      d.knife > 0 && d.plating > 0 && d.flavorArtistry > 0 && ratio > 2.8 && ratio < 3.4,
+      `knife=${d.knife} plating=${d.plating} flavor=${d.flavorArtistry} ratio=${ratio.toFixed(2)}`)
+  }
 }
 
 process.exit(fail === 0 ? 0 : 1)

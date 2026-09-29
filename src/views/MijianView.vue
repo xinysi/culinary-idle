@@ -631,6 +631,15 @@ function typeLabel(id) {
   0%, 100% { box-shadow: 0 0 6px rgba(var(--tsh2, 255, 190, 90), 0.3); }
   50% { box-shadow: 0 0 16px rgba(var(--tsh2, 255, 190, 90), 0.6); }
 }
+/* 🔴 翻开的卡背**停掉呼吸光**（2026-09-28 性能收口）：百连一次最多 100 张卡背在跑这个动画，
+   而结果面板不清就一直留在页面上。⚠️ 量级**未实测**：`.gacha-face` 有 `backface-visibility: hidden`，
+   翻过去之后浏览器多半已经不画它了，所以这条的主要收益是「不留下长期在跑的动画」。
+   若要更彻底，把呼吸光挪到伪元素上动 `opacity`（合成层属性）—— 那会动到观感，需先出样张对比。 */
+.gacha-card.revealed .gacha-back { animation: none; }
+/* 尊重系统「减少动效」偏好（此前只有背景那条有兜底） */
+@media (prefers-reduced-motion: reduce) {
+  .gacha-back { animation: none; }
+}
 /* 卡面：主题淡色边框（稀有度 q-* 规则仍覆盖边框色） */
 .gacha-front {
   background: var(--card);

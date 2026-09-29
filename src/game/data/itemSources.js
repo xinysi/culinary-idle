@@ -11,9 +11,11 @@ import { PRESERVING_RECIPES } from '../skills/PreservingSkill.js'
 import { BREWING_RECIPES } from '../skills/BrewingSkill.js'
 import { SPICE_RECIPES } from '../skills/SpiceMixingSkill.js'
 import { SMITHING_SET_RECIPES } from './smithSetExt.js'
+import { LATE_GEAR_RECIPES } from './lateGear.js'
 import { PRESERVATION_RECIPES } from '../skills/PreservationSkill.js'
 import { raiseRecipeLevels, balanceRecipeLevels } from '../skills/recipeBalance.js'
 import { EXPLORATION_TARGETS_ALL } from './explorationTargets.js'
+import './lateExplore.js' // 副作用：把 Lv102-120 扩展目标并进上面那张表（顺序必须在读它之前）
 import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from './explorationGear.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
@@ -26,6 +28,7 @@ import { ENCOUNTERS } from './encounters.js'
 import { COMBAT_BOSSES } from './combat.js'
 import { SEASONS } from './seasons.js'
 import { seasonTiers } from './seasonContent.js'
+import { PAST_SEASON_GEAR_PRICE } from './seasonPast.js'
 import { SPIRITS } from './spiritTiers.js'
 import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { QUESTS } from './quests.js'
@@ -113,6 +116,8 @@ for (const [name, key, base] of PROD) {
   for (const r of merged) add(r.output?.itemId, `${name}（Lv${r.reqLevel} 可学）`)
 }
 for (const r of raiseRecipeLevels(SMITHING_SET_RECIPES)) add(r.output?.itemId, `厨具锻造（Lv${r.reqLevel} 可学）`)
+// Lv101-120「补档」装备线（16 件，lateGear.js）：与上面同一条来源串口径（它们也走 balanceRecipeLevels）
+for (const r of balanceRecipeLevels(LATE_GEAR_RECIPES)) add(r.output?.itemId, `厨具锻造（Lv${r.reqLevel} 可学）`)
 // 食材保鲜走的是另一条校正出口（`balanceRecipeLevels`，见 PreservationSkill 的构造函数），照抄同一条
 for (const r of balanceRecipeLevels([...PRESERVATION_RECIPES, ...PRESERVE_EXT, ...PRESERVE_EXT2])) {
   add(r.output?.itemId, `食材保鲜制作（Lv${r.reqLevel} 可学）`)
@@ -157,8 +162,11 @@ for (const g of EXPLORE_GEAR_ITEMS) {
 }
 
 // 赛季：限定装备 + 奖励档位（用 seasonTiers 主题化后的真实发放奖励，避免把被替换的通用道具误标为赛季来源）
+// 🔴 2026-09-29：赛季限定装备多了**第二条获取路径**（往季花金币补领，`seasonPast.js`）——
+//    不写进来源串等于把玩家指向「只能等赛季轮回来」这条不存在的路（本项目对来源的硬要求：显示与可达同源）。
+//    价格从常量派生，改价时文案自动跟着变。
 for (const s of SEASONS) {
-  add(s.limitedItem, `赛季「${s.name}」限定奖励`)
+  add(s.limitedItem, `赛季「${s.name}」限定奖励（或往季每档 ${PAST_SEASON_GEAR_PRICE} 金币补领）`)
   for (const t of seasonTiers(s)) for (const id of Object.keys(t.reward?.items ?? {})) add(id, `赛季「${s.name}」奖励`)
 }
 

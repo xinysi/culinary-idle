@@ -1,8 +1,8 @@
 <script setup>
 // 制作类技能视图 — 需求文档 §3.2：食谱列表 / 材料需求 / 成功率 / 制作按钮
 // 烘焙：能量饼干使用（离线加成 §8.1）；厨具锻造：成品可直接穿戴（§5.1）
-import { computed, ref, watch } from 'vue'
-import { CAP_MAX, PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP } from '../game/data/caps.js'
+import { computed, ref } from 'vue'
+import { PAID_CAP_MAX, COLD_EXPAND_COST, OFFLINE_CAP } from '../game/data/caps.js'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem, ITEMS } from '../game/data/items.js'
@@ -22,7 +22,8 @@ import RecipeTreeModal from '../components/RecipeTreeModal.vue'
 import HeatChallengeModal from '../components/HeatChallengeModal.vue'
 import SidelineWorkPanel from '../components/SidelineWorkPanel.vue'
 import { decorOfWoodwork } from '../game/data/woodworking.js'
-import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDER_SKILL_IDS, SIDELINE_LADDERS } from '../game/data/sidelineWorks.js'
+import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDER_SKILL_IDS } from '../game/data/sidelineWorks.js'
+import { CRAFT_QUEUE_INTERVAL_MS } from '../game/skills/ProductionSkill.js' // 队列节奏（供料那两行要用同一个数）
 
 const props = defineProps({
   instance: { type: Object, required: true },
@@ -245,6 +246,24 @@ function need(itemId, qty) {
 function canAfford(recipe) {
   return props.instance.canCraft(recipe)
 }
+/** 供料口径说明（唯一文案出口；口径在 `player.materialSecPerCraft`，与 `scripts/sim/material_bottleneck.mjs` 一致） */
+const SUPPLY_HINT = '按这张配方自己的材料算：每件成品需要多少秒的采集时间（取每种材料最快的采集/农耕来源，含材料系数 ×2）。'
+  + '队列本身是每 3 秒 1 件，所以「实际周期」= 两者较慢的那个 —— 全项目 718 条材料来源可追溯的配方实测全是材料限速。'
+/** 每件成品需要的采集秒数（0 = 材料来源不在采集侧，如商队/商店专属料） */
+function supplySec(recipe) {
+  return player.materialSecPerCraft?.(recipe) ?? 0
+}
+function supplyText(recipe) {
+  const s = supplySec(recipe)
+  if (!s) return '—'
+  return s < 60 ? `${s}s/件` : `${Math.round(s / 60)}分/件`
+}
+/** 实际周期 = max(队列 3 秒, 供料秒数) —— 让「3 秒/件」的错觉显形 */
+function cycleText(recipe) {
+  const s = Math.max(CRAFT_QUEUE_INTERVAL_MS / 1000, supplySec(recipe))
+  return s < 60 ? `${s.toFixed(s < 10 ? 1 : 0)}s/件` : `${Math.round(s / 60)}分/件`
+}
+
 /** 材料能支撑的最大制作次数（上限 999，2026-09-25 用户要求放宽）——用量走 `effIngredients`（与扣料同源） */
 function maxCraft(recipe) {
   let n = 999
@@ -253,10 +272,35 @@ function maxCraft(recipe) {
   }
   return Math.max(0, n)
 }
-const craftTarget = ref(null) // 待制作配方（弹出数量选择）
+const craftTarget = ref(null) // 待制作/待练习的配方（弹出数量选择）
+/** 数量弹窗当前是给谁用的：'craft' 制作（扣料、给经验、可能触发火候挑战）/ 'practice' 练习（只涨精通） */
+const qtyMode = ref('craft')
 function openCraft(r) {
   if (!canAfford(r)) return
+  qtyMode.value = 'craft'
   craftTarget.value = r
+}
+/** 练习还是制作（见 qtyMode） */
+function openPractice(r) {
+  qtyMode.value = 'practice'
+  craftTarget.value = r
+}
+/** 弹窗标题：练习那一侧带上「练满要多久」（3 秒/次 ⇒ 一张卡往往要几小时，先说清） */
+const qtyTitle = computed(() => {
+  if (!craftTarget.value) return ''
+  if (qtyMode.value !== 'practice') return `制作 ${craftTarget.value.name}`
+  const n = practiceLeft(craftTarget.value)
+  return `练习 ${craftTarget.value.name}（练满 ${n} 次 ≈ ${practiceHours(n)} 小时）`
+})
+/** 数量弹窗的确认：按模式分派（练习走 practiceAdd，制作走原来的火候挑战链路） */
+function onQtyConfirm(n) {
+  if (qtyMode.value === 'practice') {
+    const r = craftTarget.value
+    craftTarget.value = null
+    if (r) practiceAdd(r, n)
+    return
+  }
+  doCraftBatch(n)
 }
 const heatModal = ref(null) // { recipe, n }
 function doCraftBatch(n) {
@@ -311,6 +355,27 @@ function queueAdd(r, qty) {
     lastRecipeId.value = r.id // 精通池的补给目标跟着「你正在做的这味」走
     ui.pushLog(`「${r.name}」×${qty} 已加入制作队列（每 3 秒自动制作 1 次）`, 'info')
   } else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
+}
+
+// ── 练习（2026-09-29）：只涨精通的排队动作（不扣料/不产出/不给经验，见 ProductionSkill.practice 的说明）──
+/** 这张卡还差多少次动作到精通 100（口径与卡片上的「x/y 次」同一个出口 `masteryProgress`） */
+function practiceLeft(r) {
+  const prog = props.instance.masteryProgress?.(r)
+  if (!prog || prog.needed <= 0) return 1
+  // ⚠️ 广度倍率有时会让一次动作涨 >1 点 ⇒ 按剩余次数排是**上界**（多排的不会浪费：精通到 100 就不再涨）
+  return Math.max(1, Math.ceil(prog.needed - prog.current))
+}
+function practiceHours(n) {
+  return Math.max(0.1, ((n * CRAFT_QUEUE_INTERVAL_MS) / 3600000)).toFixed(1)
+}
+function practiceAdd(r, qty) {
+  const n = Math.max(1, Math.floor(qty) || 1)
+  const res = props.instance.enqueue(r, n, { practice: true })
+  if (res.ok) {
+    lastRecipeId.value = r.id
+    ui.pushLog(`「${r.name}」×${n} 已加入练习队列（不耗材料、不产出、不给经验，只涨精通）`, 'info')
+  } else if (res.reason === 'full') ui.pushLog('制作队列已满（最多 8 项，相同配方自动合并）', 'warn')
+  else if (res.reason === 'level') ui.pushLog(`等级不足：练习「${r.name}」需要 Lv${r.reqLevel}`, 'warn')
 }
 
 // ── 精通池的「补给目标」（2026-09-22 用户报「制作的无法使用精通池」）──────────────
@@ -555,7 +620,7 @@ const recipeNoun = '配方'
         </button>
       </div>
 
-      <!-- 制作队列：排队自动制作（材料不足自动暂停，补料后恢复） -->
+      <!-- 制作队列：排队自动制作（材料不足自动暂停，补料后恢复）；练习条目只涨精通 -->
       <div v-if="queueList.length" class="card queue-card">
         <div class="queue-head">
           <strong>⚙️ 制作队列</strong>
@@ -567,9 +632,10 @@ const recipeNoun = '配方'
         </div>
         <div class="queue-list">
           <div v-for="(e, i) in queueList" :key="i" class="queue-item">
+            <span v-if="e.practice" class="queue-tag" title="练习：不消耗材料、不产出成品、不给经验，只按动作次数涨精通">🧪 练习</span>
             <span class="queue-name">{{ e.recipe?.name ?? e.recipeId }}</span>
             <span class="mono">×{{ e.qty }}</span>
-            <span v-if="e.paused" class="queue-paused">⚠ 材料不足，暂停中</span>
+            <span v-if="e.paused" class="queue-paused">{{ e.practice ? '⚠ 等级不足，暂停中' : '⚠ 材料不足，暂停中' }}</span>
             <button class="btn btn-sm queue-rm" @click="instance.removeQueueEntry(i)">移除</button>
           </div>
         </div>
@@ -614,8 +680,20 @@ const recipeNoun = '配方'
                     <span class="mono" :title="isLow(r) ? LOW_TARGET_NOTE : XP_HINT">{{ xpOfRecipe(r) }}<span v-if="masteryOf(r).level >= 5" class="mastery-hl">&nbsp;×{{ masteryOf(r).xpMult }}</span><span v-if="isLow(r)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
                   </div>
                   <div class="gather-card-row">
-                    <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量还取决于你有没有在挂对应原料（一件成品的采集时间中位约 90 秒）">效率</span>
+                    <span title="按「材料充足、队列每 3 秒出 1 件」算的上限；实际产量受原料供给限制，见下面那行">效率</span>
                     <span class="mono" title="材料充足时的上限（3 秒/件）；实际受原料供给限制">{{ fmtRate(instance.xpPerHour(r)) }}</span>
+                  </div>
+                  <!-- 供料（2026-09-29）：**按这张配方自己的材料**算，不是那句「全局中位约 90 秒」——
+                       实测各配方差 70 倍（熏香 3911s/件 vs 木工 71s/件），中位把这件事盖住了：
+                       卡片上写着「每 3 秒制作 1 次」，实际可能在等 65 分钟的料。
+                       ⚠️ 纯展示（`player.materialSecPerCraft`），不改任何结算。 -->
+                  <div class="gather-card-row" :title="SUPPLY_HINT">
+                    <span>供料</span>
+                    <span class="mono" :class="{ 'pc-supply-slow': supplySec(r) > 6 }">{{ supplyText(r) }}</span>
+                  </div>
+                  <div class="gather-card-row">
+                    <span>实际周期</span>
+                    <span class="mono" :class="{ 'pc-supply-slow': supplySec(r) > 6 }" :title="SUPPLY_HINT">{{ cycleText(r) }}</span>
                   </div>
                   <div class="gather-card-row">
                     <span>成功率</span>
@@ -658,11 +736,12 @@ const recipeNoun = '配方'
                   </span>
                 </div>
               </div>
-              <!-- 跨栏一行：四个动作按钮（宽卡整条放得下，原先在窄卡里要折两行） -->
+              <!-- 跨栏一行：动作按钮（宽卡整条放得下，原先在窄卡里要折两行） -->
               <div class="recipe-action card-span">
                 <div class="queue-btns">
                   <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 1)" title="加入制作队列 ×1（每 3 秒 1 份，材料不足自动暂停）">⏳×1</button>
                   <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="queueAdd(r, 10)" title="加入制作队列 ×10（材料不足自动暂停）">⏳×10</button>
+                  <button class="btn btn-sm" :disabled="player.skillState(instance.id).level < r.reqLevel" @click="openPractice(r)" title="练习：不消耗材料、不产出成品、不给经验，只按动作次数涨精通（山海深层环的门槛就是它）">🧪 练习</button>
                   <button class="btn btn-sm" @click="openTree(r)" title="展开配方材料链（来源/持有/跳转）">🌳</button>
                   <button class="btn btn-sm btn-primary" :disabled="!canAfford(r) || maxCraft(r) <= 0" @click="openCraft(r)">
                     {{ player.skillState(instance.id).level < r.reqLevel ? `Lv${r.reqLevel} 解锁` : maxCraft(r) > 0 ? '制作' : '材料不足' }}
@@ -675,13 +754,14 @@ const recipeNoun = '配方'
       </template>
     </div>
 
-    <!-- 制作数量选择弹窗 -->
+    <!-- 数量选择弹窗：制作（上限=材料够做几份）与练习（上限=练到精通 100 还差几次）共用 -->
     <QuantityModal
       :show="!!craftTarget"
-      :title="craftTarget ? `制作 ${craftTarget.name}` : ''"
-      :max="craftTarget ? maxCraft(craftTarget) : 1"
+      :title="qtyTitle"
+      :max="craftTarget ? (qtyMode === 'practice' ? practiceLeft(craftTarget) : maxCraft(craftTarget)) : 1"
+      :unit="qtyMode === 'practice' ? '次动作' : '个'"
       @close="craftTarget = null"
-      @confirm="doCraftBatch"
+      @confirm="onQtyConfirm"
     />
     <RecipeTreeModal v-if="treeRecipe" :recipe="treeRecipe" :player="player" @close="treeRecipe = null" @jump="goTree" />
     <HeatChallengeModal
@@ -713,6 +793,12 @@ const recipeNoun = '配方'
 }
 .queue-item .queue-name { font-weight: 600; }
 .queue-item .queue-paused { color: var(--bad-strong); font-size: 12px; font-weight: 700; }
+/* 练习条目的标签：与「制作」区分开。文字用 `--text` 而不是 `--primary-strong` ——
+   后者压在自己的 `--primary-soft` 淡底上 amber 皮肤只有 4.27（12px 正文需 ≥4.5，见 2026-09-28 对比度扫描）。 */
+.queue-item .queue-tag {
+  font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 6px;
+  color: var(--text); background: var(--primary-soft); white-space: nowrap;
+}
 .queue-rm { margin-left: auto; }
 .queue-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .queue-btns .btn-primary { flex: 1 1 100%; } /* 主「制作」按钮独占整行 */
@@ -739,6 +825,11 @@ const recipeNoun = '配方'
 }
 /* 成功率是这张卡最该被一眼扫到的数（与探索页同口径加粗） */
 .pc-rate {
+  font-weight: 700;
+}
+/* 供料明显慢于队列节奏（>6s/件）时标出来 —— 用深档 token 而不是品牌色（浅色下品牌色当文字不达标，见 C58） */
+.pc-supply-slow {
+  color: var(--warn-strong);
   font-weight: 700;
 }
 /* 进度条与次数并成一行（省 18px），并推到底部让条与右栏材料区对齐 */

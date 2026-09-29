@@ -13,7 +13,7 @@ import { EventBus } from '../game/core/EventBus.js'
 import { saveManager } from '../game/bootstrap.js' // 竞技场状态键要带存档位（跨档残留修复，2026-09-26）
 import { scaledEnemy } from '../game/data/enemyScaling.js'
 import { generateArenaOpponents } from '../game/data/arena.js'
-import { STYLE_INFO, STYLE_ADVANTAGE } from '../game/data/combat.js'
+import { STYLE_ADVANTAGE } from '../game/data/combat.js'
 import { getItem } from '../game/data/items.js'
 import { sfx } from '../game/core/sound.js'
 import ProgressBar from '../components/ProgressBar.vue'

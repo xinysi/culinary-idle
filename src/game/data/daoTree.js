@@ -126,14 +126,28 @@ export function daoSpent(unlocked = []) {
 
 /**
  * 能否解锁某节点：返回 { ok, reason }
- * 门槛：未解锁 + 本路已达该层「本路已解锁数」要求 + 印记够
+ * 门槛：未解锁 + 本路已达该层「本路已解锁数」要求 + 印记够 + **精通总级数够**（2026-09-29 加）
  */
 /** 已解锁的**道途节点**数（不含外环；外环门槛用它，避免自引用） */
 export function daoUnlockedTotal(unlocked = []) {
   return DAO_NODES.filter((n) => n.path !== 'outer' && unlocked.includes(n.id)).length
 }
 
-export function daoCanUnlock(id, unlocked = [], points = 0) {
+// ── 精通总级数门槛（2026-09-29 立，与山海第 8~10 环同一场仗）──────────────────────
+// 🔴 **为什么加它**：轮回印记是「**转生次数**派生」的（`stats.prestiges`），而转生是**经验轴** ——
+//    实测满 buff 把经验轴压 **59×**（全技能并行满级 35 天 → 14.3 小时）⇒ 整条厨神之路对高配玩家等于不存在。
+//    精通是**动作轴**（每卡按动作次数涨），同一条线只被压 **1.11×**（见 `scripts/sim/mastery_axis.mjs`）。
+//    ⇒ 给每层加一条与印记**并列**的「全技能精通总级数」门槛：对**无加成**玩家它与印记同量级（不额外拉长），
+//      对**高配**玩家它成为唯一的地板（印记两小时刷完，而精通要一百多小时）。
+//
+// 阈值口径（`全技能精通总级数` = Σ 各卡精通等级；满分 ≈ Σ(各技能卡数 × 100)，二十万量级）：
+//   · 第 1 层 **1500** ≈ 15 张卡刷满 ≈ 20 小时（对比：无加成玩家第 1 枚印记要 ~44 小时 ⇒ 不成为瓶颈）
+//   · 第 2 层 **5000** ≈ 50 张卡 ≈ 70 小时（对比：第 2 枚印记累计 ~88 小时 ⇒ 仍不成为瓶颈）
+//   · 第 3 层 **10000** ≈ 100 张卡 ≈ 135 小时（对比：第 3 枚印记累计 ~132 小时 ⇒ **与印记同量级**）
+// ⚠️ 改这三个数前先跑 `node scripts/sim/mastery_axis.mjs` 看「刷满一张卡多少小时」的现量。
+export const DAO_TIER_MASTERY = { 1: 1500, 2: 5000, 3: 10000 }
+
+export function daoCanUnlock(id, unlocked = [], points = 0, masteryTotal = 0) {
   const def = DAO_INDEX.get(id)
   if (!def) return { ok: false, reason: '节点不存在' }
   if (unlocked.includes(id)) return { ok: false, reason: '已解锁' }
@@ -147,6 +161,15 @@ export function daoCanUnlock(id, unlocked = [], points = 0) {
   const need = DAO_TIER_REQ[def.tier] ?? 0
   if (inPath < need) return { ok: false, reason: `需本路已解锁 ${need} 个节点（当前 ${inPath}）` }
   if (points < def.cost) return { ok: false, reason: `需轮回印记 ${def.cost}（当前 ${points}）` }
+  // 精通总级数（动作轴）：对高配玩家是唯一的地板；对无加成玩家与印记同量级、不额外拉长
+  const needMastery = DAO_TIER_MASTERY[def.tier] ?? 0
+  if (needMastery > 0 && masteryTotal < needMastery) {
+    return {
+      ok: false,
+      reason: `需全技能精通总级数 ${needMastery.toLocaleString('en-US')}（当前 ${masteryTotal.toLocaleString('en-US')}）`
+        + '——按动作次数涨、不受经验加成影响',
+    }
+  }
   return { ok: true }
 }
 

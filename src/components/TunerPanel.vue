@@ -21,7 +21,7 @@ import { devLogout } from '../game/dev/devFlag.js'
 import { sha256Hex } from '../game/dev/hash.js'
 import { DIFFICULTY, CHANCE_FLOOR, scaleChance, dropChance, craftSuccessChance, exploreSuccessChance, gatherExtraChance } from '../game/data/difficulty.js'
 import { MATERIAL_COST_MULT, materialQty } from '../game/data/materialCost.js'
-import { XP_STACK_DAMPING, LOW_TARGET_XP_MULT, LOW_TARGET_GAP, dampXpStack, targetLevelXpMult, isLowTarget } from '../game/core/growthRate.js'
+import { XP_STACK_DAMPING, XP_TAIL_RATE, LOW_TARGET_XP_MULT, LOW_TARGET_GAP, dampXpStack, targetLevelXpMult, isLowTarget } from '../game/core/growthRate.js'
 import { MASTERY_XP_BONUS_SCALE, masteryXpMultiplier, masteryXpMultiplierRaw } from '../game/core/mastery.js'
 import { PRESTIGE_XP_BONUS } from '../game/skills/Skill.js'
 import { combatTurnIntervalSec, combatSpeedCapLevel, COMBAT_RESPAWN_SEC, COMBAT_SPEED_BASE_SEC, COMBAT_SPEED_FLOOR_SEC, COMBAT_SPEED_DECAY_PER_LEVEL, OFFLINE_CAP } from '../game/data/caps.js'
@@ -48,6 +48,8 @@ const ROWS = [
   { group: 'grow', key: 'prestigeXpBonus', label: '转生经验加成 / 层', base: PRESTIGE_XP_BONUS, min: 0, max: 1, step: 0.05 },
   { group: 'grow', key: 'materialCost', label: '材料成本倍率', base: MATERIAL_COST_MULT, min: 1, max: 8, step: 0.5 },
   { group: 'grow', key: 'xpDamping', label: '乘法叠区阻尼', base: XP_STACK_DAMPING, min: 0, max: 1, step: 0.05 },
+  // 叠区二级饱和的「尾巴」（2026-09-29）：超界部分仍按此比例计入 ⇒ 调成 0 就是硬夹（高阶档位会与低档拉平，别调 0）
+  { group: 'grow', key: 'xpTailRate', label: '叠区饱和尾巴（0=硬夹）', base: XP_TAIL_RATE, min: 0, max: 1, step: 0.01 },
   { group: 'grow', key: 'masteryScale', label: '精通经验强度', base: MASTERY_XP_BONUS_SCALE, min: 0, max: 1, step: 0.05 },
   { group: 'grow', key: 'lowTargetMult', label: '低目标经验衰减', base: LOW_TARGET_XP_MULT, min: 0, max: 1, step: 0.05 },
   { group: 'grow', key: 'lowTargetGap', label: '低目标判定差（级）', base: LOW_TARGET_GAP, min: 1, max: 20, step: 1 },

@@ -41,7 +41,8 @@ import { countForMasteryLevel } from '../game/core/mastery.js'
 import { MASTERY_LEVEL_CAP, MASTERY_POOL_GAIN_RATE, masteryPoolCap, masteryPoolPct, masteryPoolBonus, nextMasteryPoolTier, poolSpendAmount, masteryBreadthMultiplier } from '../game/core/mastery.js'
 import { MAX_LEVEL, PRESTIGE_MAX_LEVEL } from '../game/skills/Skill.js'
 import { getGuild, GUILD_SHOP } from '../game/data/guilds.js'
-import { getSeason, activeSeasonId } from '../game/data/seasons.js'
+import { getSeason, activeSeasonId, SEASONS } from '../game/data/seasons.js'
+import { PAST_SEASON_GEAR_PRICE, pastSeasonGearToClaim, seasonGearIds } from '../game/data/seasonPast.js'
 import { RESTAURANT_DECOR_BY_ID } from '../game/data/restaurantDecor.js'
 import { dailyTasksFor, weeklyTaskFor, DAILY_BONUS } from '../game/data/dailyTasks.js'
 import { CHALLENGES, challengeForWeek, getChallenge } from '../game/data/weeklyChallenge.js'
@@ -98,7 +99,11 @@ import { EXCHANGE_UNLOCK_SKILL, EXCHANGE_UNLOCK_LEVEL, EXCHANGE_DAILY_LIMIT, exc
 import { TRIALS, getTrial, TRIAL_UNLOCK_LEVEL, repeatReward } from '../game/data/trials.js'
 import { CELLAR_UNLOCK_SKILL, CELLAR_UNLOCK_LEVEL, CELLAR_BASE_SLOTS, CELLAR_MAX_SLOTS, CELLAR_EXPAND_COSTS, CELLAR_MAX_QTY, CELLAR_CATEGORIES, cellarTier, cellarPayout, nextCellarExpandCost } from '../game/data/cellar.js'
 import { CELLAR_SLOT_VALUE_BASE } from '../game/data/caps.js'
+// 制作侧的真瓶颈口径（2026-09-29）：`materialSecPerCraft` 读生效材料表 —— 与扣料/显示同一出口
+import { effIngredients } from '../game/data/materialCost.js'
 import { todayKey, weekNum } from '../game/core/clockKeys.js' // 日历口径单一出口（2026-09-26）
+// 并行槽位单一出口（2026-09-29）：起步 1 槽、靠山海/成就/转生解锁 —— 设置面板只能再限低
+import { effectiveParallelSlots, unlockedParallelSlots, nextParallelUnlock, PARALLEL_SLOT_BASE, PARALLEL_SLOT_UNLOCKS } from '../game/data/parallelSlots.js'
 import {
   SIDELINE_WORKS, SIDELINE_AXES, SIDELINE_AXIS_TOTALS, sidelineWorkOf,
   SIDELINE_PRODUCTS, SIDELINE_LADDERS, LADDER_TIERS, ladderTierOf, ladderNextOf, ladderTotalOf,
@@ -122,6 +127,10 @@ let _restaurantAccumMs = 0
 // 首次访问整技能扫一遍，之后在升级时增量 ±1；`newGame()` 与 `applySave()` 必须清空它，
 // 否则换档后仍用上一档的广度（C49 有断言）。
 let _breadthLevelSum = new Map()
+
+// 「最快采集来源 秒/件」的懒缓存（2026-09-29）：来源表是静态的（技能 targets/crops），一次建好即可。
+// 换档不清也无妨 —— 各来源表的 intervalSec/growSec 与存档无关。
+let _gatherSecCache = null
 
 // 日期辅助（用 setDate 精确减 1 天，自动处理跨月/闰年/夏令时，避免 Date.now()-86400000 的跨日隐患）
 function _dateStr(d) { return d.toLocaleDateString('en-CA') } // YYYY-MM-DD
@@ -364,7 +373,8 @@ const defaultState = () => ({
     },
     upgrades: {}, // 装备强化：{ [itemId]: level }（§13）
     settings: { autoEat: true, autoEatThreshold: 50, autoEatItem: null, autoFarm: true, autoSupply: true, autoSupplyReserve: 2000, crispMode: false, soundEnabled: false, maxParallelIdle: 0, uiScale: 1, xpMultiplier: 1, theme: 'light', heatCraftChallenge: true, bgmEnabled: false, sfxVolume: 0.6, bgmVolume: 0.35, skin: 'classic', bgmTrack: null, bgmPaused: false, bgmMode: 'repeat', showAllFeatures: false, railIcons: false, sidebarOpen: [], invDblClick: true, invShortQty: true, invStickyDetail: true, chefAvatar: 'male' }, // soundEnabled：音效开关（2026-09-10 补声明——此前只在 UI 里读写、未进默认值，等效恒为关）；crispMode：高清晰模式；theme：亮/深色；bgmTrack：手动选曲（null = 自动跟随场景，2026-09-17 右下角播放器）；bgmPaused：播放器上的暂停（保留进度，与 bgmEnabled 开关是两回事）；bgmMode：播放模式 repeat 单曲循环 / sequence 顺序 / shuffle 随机（2026-09-18）；showAllFeatures：左栏是否显示未解锁的功能页（2026-09-18 留存改进 ⑤，默认只显示已解锁）；railIcons：主区大类导航栏是否折成「仅图标」（2026-09-27 用户要求，默认 false = 显示页面名）；sidebarOpen：左栏已展开的功能分组 id（2026-09-18 分组默认折叠，空数组 = 全折叠；当前页所属分组自动展开）；invDblClick/invShortQty/invStickyDetail：厨藏设置的三个开关（2026-09-20，默认全开，见 InventoryView 的「设置」页签）；chefAvatar：玩家标准形象 male/female（2026-09-21，图在 public/images/chef/，见 game/data/chefImage.js）；autoEatItem：指定自动进食的料理 id（2026-09-21，null = 自动挑回血最高的，见战斗屏左上角「战备」）
-    // maxParallelIdle：并行挂机上限 0=无限制（§3.1）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
+    // maxParallelIdle：面板档位 0..8，**0 = 用满「进度解锁」的槽位**（不再是「无限制」——2026-09-29 起槽位是进度奖励，
+// 起步 1、靠山海/成就/转生解锁到 8；面板只能**再限低**，真正的上限由 parallelSlots.js 算）；uiScale：界面缩放（0.9-1.1 安全区间，超出排版会错乱）；xpMultiplier：全局经验倍率（1/10/50/100/250/500/1000）；autoFarm：农耕成熟自动收种（2026-09-09，放置化）；autoSupply/autoSupplyReserve：弹药自动补给与保留金币（2026-09-09）
     // 厨藏面板分类（2026-09-20）：10 块面板 + 物品归属 + 默认分类，见 game/data/bankTabs.js。
     // ⚠️ 存档字段必须三处齐备（defaultState / serialize / applySave），读档一律走 sanitize*
     bankTabs: DEFAULT_BANK_TABS.map((t) => ({ ...t })),
@@ -462,7 +472,9 @@ export const usePlayerStore = defineStore('player', {
     /** 当前实际运行的挂机技能列表（§3.1 并行上限：活动技能优先，0=无限制） */
     getRunningIdleSkills(s) {
       return () => {
-        const limit = s.settings?.maxParallelIdle ?? 0
+        // 槽位上限 = **进度奖励**（起步 1 槽，靠山海/成就/转生解锁到 8 —— 见 `parallelSlots.js`）。
+        // 设置面板那个选择只能**再限低**（0 = 用满进度上限），不能再突破 —— 旧档带 `0` 也会被进度上限夹住。
+        const limit = effectiveParallelSlots(s)
         const candidates = getAllSkillInstances().filter((inst) => {
           if (!inst || !['gathering', 'exploration'].includes(inst.type)) return false
           const t = inst.currentTarget
@@ -476,7 +488,7 @@ export const usePlayerStore = defineStore('player', {
           if (b.id === s.activeSkill) return 1
           return a.id < b.id ? -1 : 1
         })
-        return limit > 0 ? candidates.slice(0, limit) : candidates
+        return candidates.slice(0, limit)
       }
     },
     /** 对决等级 = 品鉴力/最高攻击技能/火候 的平均（Melvor 式战斗等级，§4.4 门控用） */
@@ -803,7 +815,8 @@ export const usePlayerStore = defineStore('player', {
         itemTabs: sanitizeItemTabs(saved.itemTabs),
         invDefaultTab: sanitizeTabIndex(saved.invDefaultTab),
         settings: (() => {
-          const st = { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }
+          // 并行槽位：面板档位 0..8（0 = 用满进度上限）；真正的上限由 parallelSlots.js 的进度解锁算
+          const st = { ...this.settings, ...(saved.settings ?? {}), maxParallelIdle: [0, 1, 2, 3, 4, 5, 6, 7, 8].includes(Number(saved.settings?.maxParallelIdle)) ? Number(saved.settings.maxParallelIdle) : 0 }
           // 经验倍率只接受合法档位（唯一口径见 caps.js）：旧档里存过 10/50/…/1000，面板上已无那些选项，
           // 不夹的话老玩家会带着 ×1000 跑、而界面显示与实际不一致（2026-09-21）
           st.xpMultiplier = safeXpMultiplier(st.xpMultiplier)
@@ -1656,7 +1669,11 @@ export const usePlayerStore = defineStore('player', {
     /** 该技能的卡片数（采集=目标数、制作=配方数）——池上限与广度分母的唯一来源 */
     masteryCardCount(skillId) {
       const inst = getSkillInstance(skillId)
-      return inst?.targets?.length ?? inst?.recipes?.length ?? 0
+      // 🔴 2026-09-29 修：「农耕」的卡是 **`crops`**（不是 targets/recipes）⇒ 旧写法对它恒返回 **0**，
+      //    而精通池上限是按卡数派生的（`masteryPoolCap = 600 × 卡数`）⇒ **农耕的池一辈子是 0**，
+      //    池的四档加成（双倍产出/成功率/经验）对它**完全失效**，而它明明有 199 张卡（与其它技能不一致）。
+      //    这个洞是「统计每个技能的精通卡数」时才暴露的 —— 本文件里 `masteryPoolCap` 与 AI/UI 都读这一处。
+      return inst?.targets?.length ?? inst?.recipes?.length ?? inst?.crops?.length ?? 0
     },
 
     /**
@@ -1679,6 +1696,40 @@ export const usePlayerStore = defineStore('player', {
     /** 该技能的池上限（卡片数 × 常量） */
     masteryPoolCapOf(skillId) {
       return masteryPoolCap(this.masteryCardCount(skillId))
+    },
+
+    /**
+     * **最快采集来源的「秒/件」**（制作侧的真瓶颈口径，2026-09-29 加）。
+     *
+     * 为什么需要它：全站只有一句**全局中位**的提示（「一件成品的采集时间中位约 90 秒」），
+     * 而实测各配方差 **70 倍**（熏香 1462s/件 vs 木工 21s/件）——中位把这件事盖住了：
+     * 玩家在卡片上看到「每 3 秒自动制作 1 次」，实际可能每件要等 24 分钟的料。
+     * （`scripts/sim/material_bottleneck.mjs` 实测：718/718 条材料来源可追溯的配方**全是材料限速**。）
+     * 口径与那个 sim 一致：**取该物品所有采集/农耕来源里最快的那个间隔**（农耕按 `growSec`）；
+     * 只是来源表改读**技能实例自己的 targets/crops**（技能真正在用的那份 = 唯一真值）。
+     * ⚠️ **纯展示**：不参与结算（能不能做仍看 `canCraft` 的真实背包数量）。
+     */
+    gatherSecPerUnit(itemId) {
+      if (!_gatherSecCache) {
+        _gatherSecCache = new Map()
+        const put = (id, sec) => {
+          if (id == null || !(sec > 0)) return
+          const cur = _gatherSecCache.get(id)
+          if (cur === undefined || sec < cur) _gatherSecCache.set(id, sec)
+        }
+        for (const inst of getAllSkillInstances()) {
+          for (const t of inst?.targets ?? []) put(t.itemId ?? t.id, t.intervalSec)
+          for (const c of inst?.crops ?? []) put(c.itemId, c.growSec)
+        }
+      }
+      return _gatherSecCache.get(itemId) ?? 0
+    },
+    /** 该配方**每件成品**需要的采集秒数（Σ 生效材料件数 × 最快来源秒/件；未知来源按 0 计） */
+    materialSecPerCraft(recipe) {
+      if (!recipe) return 0
+      let sum = 0
+      for (const [id, qty] of Object.entries(effIngredients(recipe))) sum += qty * this.gatherSecPerUnit(id)
+      return Math.round(sum)
     },
 
     /** 池状态（UI 与守卫共用）：{ pool, cap, pct, tierIdx, tier, next, cardCount } */
@@ -1737,7 +1788,11 @@ export const usePlayerStore = defineStore('player', {
     /** 设置自定义头像（base64 dataUrl） */
     setAvatar(dataUrl) {
       this.avatar = dataUrl || null
-      if (this.avatar) this.pushLog?.('头像已更新', 'info')
+      // 🔴 原写 `this.pushLog?.()`：player store 上**没有** pushLog（它在 ui store，本文件其余 20 处都写
+      // `useUiStore().pushLog`），可选链把「方法不存在」静默吃掉 ⇒ 这句日志从来没出过。
+      if (this.avatar) {
+        try { useUiStore().pushLog('头像已更新', 'info') } catch { /* ui 未就绪 */ }
+      }
     },
 
     /** 修改玩家昵称 */
@@ -2145,7 +2200,11 @@ export const usePlayerStore = defineStore('player', {
           // ⚠️ 这里是**任务**（quests）的进度：语义 =「**不同赛季**中领过奖的季数」，
           // 必须与 `quests.js` 的文案「赛季领奖达到 2 季 / 5 季」同义（文案与实现同义是项目铁律）。
           // （2026-09-19 参照 Rocky Idle 去掉的「日历硬门」在**故事**侧：`story.js` 的 `storyReqCur('seasons')` 已改为累计次数。）
-          case 'seasons': this.quests.progress[key] = Object.values(this.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length; break
+          // 🔴 2026-09-29 修遗留：此处原为「**不同赛季数**」——而**故事**侧 2026-09-19 就已改成「累计领奖次数」
+          //    （`story.js` 的 `storyReqCur('seasons')`），上面那行注释自己都写着「已改」⇒ **任务侧漏改**，
+          //    于是 q27/q37 仍带着「必须等 N 个赛季 = N×14 天的日历硬门」，努力无法缩短。
+          //    现与故事同口径（累计 `claimed.length` 之和）⇒ 认真参与一季（10 档）即可满足 q27/q37。
+          case 'seasons': this.quests.progress[key] = Object.values(this.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0); break
           case 'card': this.quests.progress[key] = this.stats?.cardBattle?.wins ?? 0; break
           case 'arena': this.quests.progress[key] = this.stats?.arena?.bestStreak ?? 0; break
           case 'restaurant': this.quests.progress[key] = this.restaurant?.level ?? 1; break
@@ -2351,8 +2410,11 @@ export const usePlayerStore = defineStore('player', {
       const now = Date.now()
       if (this.orders.list.length) {
         const before = this.orders.list.length
-        this.orders.list = this.orders.list.filter((o) => o.expireAt > now)
-        if (this.orders.list.length < before) {
+        const kept = this.orders.list.filter((o) => o.expireAt > now)
+        // 🔴 只有**真的删掉了**才重新赋值：`orders.list` 是响应式依赖，无条件 `= 新数组` 会让餐厅页
+        //    （RestaurantView 的 `orders.list` computed）跟着 10Hz 引擎节拍重渲染 —— 明明什么都没变。
+        if (kept.length < before) {
+          this.orders.list = kept
           try { useUiStore().pushLog('食客订单超时：有食客等不及离开了', 'warn') } catch (e) { /* ignore */ }
         }
       }
@@ -2537,6 +2599,47 @@ export const usePlayerStore = defineStore('player', {
       if (seasonFull) {
         this.recordChronicle(`season-tier:${season.id}`, 'seasonal', `赛季「${season.name}」全部档位领取完毕`)
       }
+      return true
+    },
+
+    // ── 赛季：往季限定装备「花金币补领」（2026-09-29）──
+    // 🔴 为什么要有这条路径：40 季 × 10 件 = 400 件赛季限定，而每季最多领 10 档 ⇒ 自然领满要 560 天真实时间。
+    //    故事那边已靠「累计次数」去门（需求 8 < 单季容量 10），但这里需求 400 > 容量 10 ⇒ 只能加第二条路径。
+    //    口径见 seasonPast.js：只对**往季**、只对**含限定装备的档位**、买到手记进 `claimed`（不可重复买）。
+    // ⚠️ 补领**也记进 `claimed`** ⇒ 成就/任务那套「累计领奖次数」口径跟着推进（与正常领奖同源，不是另一套计数）。
+    pastSeasonGearClaims() {
+      return pastSeasonGearToClaim(SEASONS, activeSeasonId(), this.collected ?? {}, this.seasons ?? {})
+    },
+    seasonBuyPastTier(seasonId, index) {
+      if (seasonId === activeSeasonId()) return false // 当季仍走赛季点数（积分兑换语义，不改）
+      const season = getSeason(seasonId)
+      const tier = season?.tiers?.[index]
+      if (!tier) return false
+      // 只放行「含该季限定装备」的档位（其余档是金币/消耗品，花钱买等于金币换金币）
+      const gear = seasonGearIds(season)
+      const ids = Object.keys(tier.reward?.items ?? {}).filter((id) => gear.has(id))
+      if (!ids.length) return false
+      if (!this.seasons[seasonId]) this.seasons[seasonId] = { points: 0, claimed: [], awarded: [], missionProgress: {} }
+      const st = this.seasons[seasonId]
+      if (st.claimed.includes(index)) return false // 已领过（自然领或补领）不重复卖
+      if (this.gold < PAST_SEASON_GEAR_PRICE) return false
+      this.gold -= PAST_SEASON_GEAR_PRICE
+      st.claimed.push(index)
+      const reward = tier.reward ?? {}
+      const filed = (reward.gold || reward.items)
+        ? this.sendMail({
+            kind: 'reward',
+            from: 'system',
+            subject: `往季补领：${tier.name ?? `第 ${index + 1} 档`}`,
+            body: `你花 ${PAST_SEASON_GEAR_PRICE} 金币补领了赛季「${season.name}」的档位奖励。\n\n点「领取」即可入包；若背包空间不足，先清理背包再来取——附件不会过期。`,
+            reward,
+          })
+        : null
+      if (filed === null) {
+        if (reward.gold) this.gainGold(reward.gold)
+        if (reward.items) this.gainItems(reward.items)
+      }
+      EventBus.emit('season:claim', { name: season.name, tier: tier.name ?? `往季补领 ${index + 1}`, full: false, seasonName: season.name })
       return true
     },
 
@@ -5475,9 +5578,15 @@ export const usePlayerStore = defineStore('player', {
     daoSpentPoints() {
       return daoSpent(this.daoUnlocked ?? [])
     },
-    /** 能否解锁某节点（含层数门槛与印记校验） */
+    /** 全技能**精通总级数**（Σ 各卡精通等级；动作轴指标，不受经验加成影响）——厨神之路的门槛用它 */
+    totalMasteryLevels() {
+      let sum = 0
+      for (const id of Object.keys(this.skills ?? {})) sum += this.masteryBreadthOf(id)?.total ?? 0
+      return sum
+    },
+    /** 能否解锁某节点（含层数门槛、印记与**精通总级数**校验；2026-09-29 加最后一条） */
     daoCanUnlock(id) {
-      return daoCanUnlock(id, this.daoUnlocked ?? [], this.daoPoints())
+      return daoCanUnlock(id, this.daoUnlocked ?? [], this.daoPoints(), this.totalMasteryLevels())
     },
     /** 解锁节点：消耗印记（由转生次数派生）→ 影响立即生效 */
     daoUnlock(id) {

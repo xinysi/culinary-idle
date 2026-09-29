@@ -35,9 +35,9 @@ import { getPatron } from './patrons.js'
 import { STAFF } from './staff.js'
 import { BRANCHES } from './branches.js'
 import { RESTAURANT_DECOR_BY_ID } from './restaurantDecor.js'
-import { TAKEOUT_PRICE_MULT } from './takeout.js'
+import { TAKEOUT_PRICE_MULT, takeoutConcurrency } from './takeout.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryYieldBonus } from '../core/mastery.js'
-import { XP_STACK_DAMPING, dampXpStack } from '../core/growthRate.js'
+import { XP_STACK_DAMPING, XP_TAIL_RATE, dampXpStack, capXpSpeedup, xpSpeedupCap } from '../core/growthRate.js'
 import { PRESTIGE_XP_BONUS } from '../skills/Skill.js'
 
 /** 分组（页面按此顺序分节） */
@@ -106,7 +106,7 @@ const KEY_LABEL = {
   maxHpPct: '品鉴值', maxHpBonus: '品鉴值', critPct: '暴击', critChance: '暴击', goldPct: '金币',
   orderGoldPct: '订单赏金', branchPct: '分店收入', gatherXpPct: '采集经验', craftXpPct: '制作经验',
   allXpPct: '全技能经验', seedChancePct: '采种概率', offlineHours: '离线上限', speedPct: '攻速',
-  accuracyPct: '命中', evasionPct: '闪避', healPerTurnPct: '每回合回血', farmingPct: '农田',
+  accuracyPct: '命中', evasionPct: '闪避', healPerTurnPct: '每回合回血',
   restaurant: '餐厅收入', gatherYield: '采集产量', gatherXp: '采集经验', craftXp: '制作经验',
   combatXp: '对决经验', farmYield: '农田产量',
 }
@@ -501,7 +501,19 @@ export const EFFECT_ROWS = [
       if (stack <= 1.001) return off('乘法叠区还没超过 ×1，没有需要折减的部分（转生 / 增益剂 / 限时窗口 / 设置倍率都是 ×1）')
       // 两位小数：这一行的「前后」差值常常只有零点几（×1.5 → ×1.375），一位小数会看成「没变」
       const n2 = (v) => Math.round(v * 100) / 100
-      return { on: true, text: `乘法叠区超出 ×1 的部分统一按 ×${XP_STACK_DAMPING} 折减：当前最大叠区 ×${n2(stack)} → ×${n2(dampXpStack(stack))}` }
+      // 二级饱和（2026-09-29）：叠区在高配下会被压到「半天满级」，现按等级夹上界（超界部分只按尾巴计入）。
+      // 玩家必须知道这件事——否则他自己乘出来的数（×76）与实际到账（×20）差 3.8 倍，会以为系统在骗他。
+      const damped = dampXpStack(stack)
+      const cap = xpSpeedupCap(99) // 展示用最高档（等级越高上界越大；技能页每张卡按自己的等级算）
+      const capped = capXpSpeedup(99, damped)
+      const tail = damped > cap
+      return {
+        on: true,
+        text: `乘法叠区超出 ×1 的部分统一按 ×${XP_STACK_DAMPING} 折减：当前最大叠区 ×${n2(stack)} → ×${n2(damped)}`
+          + (tail
+            ? `；再按等级上界饱和（满级档 ×${cap}）⇒ 实际 ×${n2(capped)}（超出上界的部分只按 ×${XP_TAIL_RATE} 计入，档位之间仍然有差别）`
+            : `（未达等级上界，全额生效）`),
+      }
     },
   },
   {
@@ -782,7 +794,9 @@ export const EFFECT_ROWS = [
     read: (p) => {
       const lv = p.takeoutLevel?.() ?? 0
       if (!lv) return off('还没有开通外卖业务')
-      return { on: true, text: `外卖 ${lv} 级：单价 = 菜品价值 ${mult(TAKEOUT_PRICE_MULT)}（套餐定食另有加成），同时可接 ${p.takeoutConcurrency?.() ?? 1} 单` }
+      // 并发单量走 `takeout.js` 的纯函数（**不是** store 方法：`p.takeoutConcurrency` 不存在，
+      // 老写法靠 `?.()` 静默回落成 1 ⇒ 高等级也永远显示「可接 1 单」。见守卫 effect_binding_audit）
+      return { on: true, text: `外卖 ${lv} 级：单价 = 菜品价值 ${mult(TAKEOUT_PRICE_MULT)}（套餐定食另有加成），同时可接 ${takeoutConcurrency(lv)} 单` }
     },
   },
   {
@@ -938,11 +952,19 @@ export const EFFECT_ROWS = [
     id: 'productionQueue', group: 'farm', icon: '🍳', name: '制作队列暂停', kind: 'debuff', src: '制作类技能（材料不足）', view: 'skill',
     read: (p) => {
       const names = []
+      const practiced = []
       for (const [sid, q] of Object.entries(p.craftQueues ?? {})) {
-        if (Array.isArray(q) && q[0]?.paused) names.push(SKILL_CN[sid] ?? sid)
+        if (!Array.isArray(q) || !q[0]?.paused) continue
+        // 练习条目不消耗材料 ⇒ 它停下来的唯一原因是**等级不够**（转生会把等级打回 6 级）；
+        // 说成「材料不足」就是一句假话（本项目最忌讳的「显示与结算不一致」）。
+        if (q[0]?.practice === true) practiced.push(SKILL_CN[sid] ?? sid)
+        else names.push(SKILL_CN[sid] ?? sid)
       }
-      if (!names.length) return off('制作队列没有停滞（材料不足会暂停，补料后继续）')
-      return { on: true, text: `${names.join('、')} 的队列因材料不足暂停` }
+      if (!names.length && !practiced.length) return off('制作队列没有停滞（材料不足会暂停，补料后继续）')
+      const parts = []
+      if (names.length) parts.push(`${names.join('、')} 的队列因材料不足暂停`)
+      if (practiced.length) parts.push(`${practiced.join('、')} 的练习队列已暂停（配方等级高于当前技能等级）`)
+      return { on: true, text: parts.join('；') }
     },
   },
 

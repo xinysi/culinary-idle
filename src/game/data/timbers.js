@@ -67,6 +67,12 @@ export const WOODCUTTING_TARGETS = TIMBERS.map((t) => ({
   intervalSec: 3.0 + (t.level - 1) * 0.045,
 }))
 
+// ── Lv101-120「补档」：20 档木材体系（TIMBERS，与装备套一一对应）**一个字节不动**，
+// 只往伐木的**目标表**追加两档新木（它们同时是 16 支副业新档的主料，见 lateGameFood.js）。
+// itemSources / valueBalance / recipeBalance / itemNav 读的都是这张表（C66 口径）。
+import { LATE_GATHER } from './lateGameFood.js'
+WOODCUTTING_TARGETS.push(...LATE_GATHER.woodcutting)
+
 /** 某个等级落在哪一档（0..19）：Lv1-5→0、Lv71-75→14、Lv96-100→19 */
 export function timberIndexForLevel(level) {
   const lv = Math.max(1, Math.min(100, Math.floor(level || 1)))

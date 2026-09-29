@@ -3,7 +3,7 @@
 // 道具：食物回血（3 回合冷却，§4.5）、酱料增益 10 回合、饮品 增益（酒类有醉酒 负面效果）
 // 失败惩罚：随机丢失一件已装备装备（非硬核模式，§4.1）
 
-import { STYLE_INFO, STYLE_ADVANTAGE } from '../data/combat.js'
+import { STYLE_INFO, STYLE_ADVANTAGE, STYLE_SKILL_IDS } from '../data/combat.js'
 import { getItem, itemName } from '../data/items.js'
 import { getSkillInstance } from '../skills/registry.js'
 import { EventBus } from '../core/EventBus.js'
@@ -13,6 +13,9 @@ import { tunerOver } from '../data/tuner.js'
 import { combatXpPerSkill, hitXpFor } from '../data/combatXpCurve.js' // 经验口径（按伤害 + 开局爬坡）单一来源
 import { scaledEnemy } from '../data/enemyScaling.js' // 血量分档（读取点系数，冻结数据不动）
 import { dropChance } from '../data/difficulty.js' // 全局难度系数：掉落概率的唯一缩放出口（数据层不动）
+
+/** 非当前风格的经验分摊分母（2026-09-29）：3 = 另外两个风格各吃 1/3（见 `addStyleXp` 的说明） */
+export const STYLE_OFF_XP_DIV = 3
 // 战斗深度 v1（2026-09-26）：命中/闪避的可堆形态 + 玩家对敌人的状态 + 敌人抗性
 // ⚠️ 三个机制的**全部常量**都在那个模块里，这里只调它的出口函数，不写字面量（守卫会扫）
 import {
@@ -227,8 +230,37 @@ export class Combat {
     this.statusApplied = 0
     this.heavyFired = false
     this.logLine(`⚔️ 对决开始：${o.name}（等级 ${o.level}，${o.styleName}）`)
-    EventBus.emit('combat:start', { opponent: o.name })
+    // isBoss 供界面/音效分流（首领登场给一声重的，普通对手给轻音）——与 combat:end 的 payload 同一口径
+    EventBus.emit('combat:start', { opponent: o.name, isBoss: !!o.isBoss })
     return true
+  }
+
+  /**
+   * 风格技能经验（2026-09-29）：**当前风格全额、另外两个风格各 1/3**。
+   *
+   * 🔴 改这里的原因（成长曲线体检）：风格经验原先**只发给当前用的那个风格** ⇒ 3 个风格技能（刀工/摆盘/调味）
+   *   必须**各练一遍**才有全满（实测单遍 ≈ 9 天 ⇒ 全满 ≈ 27 天）。而参照作 Melvor 是**一场战斗同时升多个战斗技能**
+   *   （攻/力/防/血各自速率不同）—— 这份「重复劳动」是两作的真实结构差，不是设计选择。
+   *   现在改成其他风格吃 1/3：**取舍保留**（用哪个流派，那个流派快 3 倍），**重复去掉**（全满 ≈ 16 天而不是 27 天）。
+   *
+   * ⚠️ 起作用的是「当前风格全额」那一条 —— 它保证**同等级打赢一场的 XP 与改前一模一样**（成长标定不动，
+   *    `combatXpCurve` 的冻结基线只钉这一条）。另外两个风格是**新增**的收益，不会动任何既有基线。
+   */
+  addStyleXp(amount) {
+    const amt = Number(amount)
+    if (!(amt > 0)) return 0
+    const mine = this.styleSkillId
+    let gained = 0
+    for (const id of STYLE_SKILL_IDS) {
+      const inst = getSkillInstance(id)
+      if (!inst) continue
+      // 另两个风格取 1/3（向下取整；小到 0 就跳过 —— 前期每次命中才几点，别凭空给 1 点把比例做假）
+      const v = id === mine ? amt : Math.floor(amt / STYLE_OFF_XP_DIV)
+      if (!(v > 0)) continue
+      const g = inst.addXp(v)
+      if (id === mine) gained = g
+    }
+    return gained
   }
 
   /** 击杀后的重生剩余毫秒（0 = 可以开打）。界面据此显示倒计时/禁用按钮 */
@@ -428,7 +460,7 @@ export class Combat {
     const effDmg = Math.min(dmg, this.opponentHp)
     this.damageDealt = (this.damageDealt ?? 0) + effDmg
     this.opponentHp = Math.max(0, this.opponentHp - dmg)
-    getSkillInstance(this.styleSkillId)?.addXp(hitXpFor(this.player.combatLevel)) // 每次命中（基准 4；开局爬坡见 combatXpCurve）
+    this.addStyleXp(hitXpFor(this.player.combatLevel)) // 每次命中（基准 4；开局爬坡见 combatXpCurve）· 另两风格各 1/3
     this.logLine(`${crit ? '💥 暴击！' : '⚔️'} 对 ${o.name} 造成 ${dmg} 伤害${advantage ? '（克制 +15%）' : ''}`)
 
     // 战斗深度 v1：命中后按风格尝试给敌人挂状态（对手已被打死则不挂 —— 否则日志会出现「先击杀再挂状态」）
@@ -595,7 +627,7 @@ export class Combat {
     //    ② 血量翻倍 ⇒ 打出的伤害翻倍 ⇒ 经验跟着翻倍（所以 (c) 加血不亏经验）；
     //    ③ 溢出伤害与「自杀式刷级」都不占便宜（败场仍按 30%）。
     const xpEach = combatXpPerSkill(o.level, this.damageDealt, o.hp, true, this.player.combatLevel)
-    getSkillInstance(this.styleSkillId)?.addXp(xpEach)
+    this.addStyleXp(xpEach)
     getSkillInstance('tasteAcumen')?.addXp(xpEach)
     getSkillInstance('heatControl')?.addXp(xpEach)
     const xpStyle = xpEach
@@ -641,7 +673,7 @@ export class Combat {
     const o = this.opponent
     if (o) {
       const lostXp = combatXpPerSkill(o.level, this.damageDealt, o.hp, false, this.player.combatLevel)
-      getSkillInstance(this.styleSkillId)?.addXp(lostXp)
+      this.addStyleXp(lostXp)
       getSkillInstance('tasteAcumen')?.addXp(lostXp)
       getSkillInstance('heatControl')?.addXp(lostXp)
     }

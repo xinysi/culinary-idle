@@ -8,7 +8,7 @@ import { getCombat } from '../game/combat/Combat.js'
 import CombatPanel from '../components/CombatPanel.vue'
 import CombatLog from '../components/CombatLog.vue'
 import { EventBus } from '../game/core/EventBus.js'
-import { STYLE_INFO } from '../game/data/combat.js'
+
 import { sfx } from '../game/core/sound.js'
 import { towerFloorName, towerMilestone, TOWER_UNLOCK_LEVEL, TOWER_TIERS, TOWER_FLOOR_DROP_FROM } from '../game/data/battleTower.js'
 import ProgressBar from '../components/ProgressBar.vue'
@@ -99,6 +99,8 @@ function stopFight() {
   fighting.value = false
   combat?.stop()
 }
+// 自动爬楼的待触发定时器。**必须存引用**：见 handleCombatEnd 里的说明。
+let climbTimer = null
 function handleCombatEnd({ result }) {
   if (!fighting.value) return
   fighting.value = false
@@ -108,7 +110,13 @@ function handleCombatEnd({ result }) {
     // 胜利自动爬楼：等**重生间隔**（(b)）走完再开下一场（间隔由引擎给，显示与结算同源）
     if (autoNext.value && unlocked.value) {
       const wait = Math.max(500, Math.ceil(combat?.respawnLeftMs?.() ?? 0) + 30)
-      setTimeout(() => { if (!fighting.value && !combat?.inFight) startFight() }, wait)
+      // 🔴 这个回调的守卫（`没在打`）与卸载钩子（把 fighting 置 false + combat.stop）**恰好一致**
+      // ⇒ 不 clearTimeout 就会在**离开塔页之后**真的 startFight()：白耗料理与品鉴点，
+      // 而 combat:end 监听已解绑 ⇒ 那一场不结算、也不推进层数。
+      climbTimer = setTimeout(() => {
+        climbTimer = null
+        if (!fighting.value && !combat?.inFight) startFight()
+      }, wait)
     }
   } else {
     // 失败代价（2026-09-22）：从第 5 层起**退回上一层**（best 纪录永不回退）
@@ -122,7 +130,13 @@ function handleCombatEnd({ result }) {
   }
 }
 onMounted(() => EventBus.on('combat:end', handleCombatEnd))
-onBeforeUnmount(() => { EventBus.off?.('combat:end', handleCombatEnd); fighting.value = false; combat?.stop() })
+onBeforeUnmount(() => {
+  EventBus.off?.('combat:end', handleCombatEnd)
+  // 先撤销待触发的自动爬楼（否则下面的 fighting=false 会**放行**它 ⇒ 离场后自己开打）
+  if (climbTimer) { clearTimeout(climbTimer); climbTimer = null }
+  fighting.value = false
+  combat?.stop()
+})
 
 // 里程碑预览（最近 5 档）
 // 里程碑按**当前档位的奖励倍率**预览（与发奖同一个函数、同一个倍率）

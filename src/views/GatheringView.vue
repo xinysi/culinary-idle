@@ -7,7 +7,7 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
-import { xpProgress } from '../game/core/Experience.js'
+
 import { masteryXpMultiplier, masteryYieldBonus } from '../game/core/mastery.js'
 import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
 import { CARD_XP_SCALE } from '../game/skills/Skill.js'

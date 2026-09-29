@@ -9,6 +9,7 @@ import { primeAudio, sfx } from '../game/core/sound.js'
 import { SKINS, skinUnlocked } from '../game/data/skins.js'
 import { CHEF_AVATARS } from '../game/data/chefImage.js'
 import { XP_MULTIPLIER_OPTIONS } from '../game/data/caps.js' // 经验倍率档位的唯一口径（读档夹取也用它）
+import { PARALLEL_SLOT_UNLOCKS, effectiveParallelSlots, nextParallelUnlock, unlockedParallelSlots } from '../game/data/parallelSlots.js'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -24,6 +25,11 @@ const tab = ref('play')
 // 皮肤解锁按成就数（与「成就」系统联动）；点未解锁的给出提示音与日志
 const achievementCount = computed(() => (player.achievements ?? []).length)
 const unlockedSkins = computed(() => SKINS.filter((s) => skinUnlocked(s.id, achievementCount.value)).length)
+// 并行槽位（2026-09-29）：起步 1、靠山海/成就/转生解锁到 8；面板只能再限低
+const unlockedSlots = computed(() => unlockedParallelSlots(player))
+const effectiveSlots = computed(() => effectiveParallelSlots(player))
+const maxSlots = PARALLEL_SLOT_UNLOCKS[PARALLEL_SLOT_UNLOCKS.length - 1].slots
+const nextUnlock = computed(() => nextParallelUnlock(player))
 function pickSkin(skin) {
   if (!skinUnlocked(skin.id, achievementCount.value)) {
     sfx.error()
@@ -125,14 +131,22 @@ function openSavePanel() {
                 <span>农耕自动收种（成熟即收获并补种同种种子）</span>
               </label>
             </div>
-            <div class="settings-row">
+            <div class="settings-row" style="align-items: flex-start">
               <span class="dim">挂机并行上限：</span>
-              <select v-model.number="player.settings.maxParallelIdle" style="flex: 1">
-                <option :value="0">无限制（全部已选目标并行）</option>
-                <option :value="3">3 个技能并行</option>
-                <option :value="2">2 个技能并行</option>
-                <option :value="1">1 个技能（文档原版单技能模式）</option>
-              </select>
+              <div style="flex: 1">
+                <!-- 🔴 2026-09-29：槽位改成**进度奖励**（起步 1，靠山海/成就/转生解锁到 8）。
+                     这个选择只能**再限低**，不能再突破进度上限 ⇒ 旧档带「无限制」也会被夹住。
+                     文案必须把「已解锁多少」和「下一档差什么」写清楚，否则玩家会以为功能坏了。 -->
+                <select v-model.number="player.settings.maxParallelIdle" style="width: 100%">
+                  <option :value="0">用满已解锁槽位（{{ unlockedSlots }} 个）</option>
+                  <option v-for="n in unlockedSlots" :key="n" :value="n">{{ n }} 个技能并行</option>
+                </select>
+                <div class="dim" style="font-size: 12px; margin-top: 4px">
+                  已解锁 <b>{{ unlockedSlots }}</b> / {{ maxSlots }} 槽 · 实际生效 {{ effectiveSlots }} 个
+                  <template v-if="nextUnlock">　·　再解锁：{{ nextUnlock.label }}（{{ nextUnlock.have }}/{{ nextUnlock.need }}）</template>
+                  <template v-else>　·　已全部解锁</template>
+                </div>
+              </div>
             </div>
           </section>
 

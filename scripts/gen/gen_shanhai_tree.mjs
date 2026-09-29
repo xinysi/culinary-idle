@@ -54,16 +54,48 @@ const RINGS = [
   { ring: 4, name: '精研', pct: 0.50, level: 20 },
   { ring: 5, name: '大成', pct: 0.70, level: 45 },
   { ring: 6, name: '化境', pct: 0.90, level: 75 },
-  // ── 大后期四档（2026-09-13 用户追加）：满级 100 → 转生 1 / 5 / 10 ──
-  //   收集门槛沿用第 6 环的 90%（这条线基本收齐），真正的门槛是等级/转生；
-  //   转生环**只写 prestige、不写 level**（转生后等级会归 1+传承 ≤20，写 100 会永远够不着）。
+  // ── 大后期四档（2026-09-13 用户追加「满级 100 → 转生 1 / 5 / 10」；**2026-09-29 改门槛轴**）──
+  //   🔴 第 8~10 环的门槛从「转生次数」换成「**该线精通总级数占满分的比例**」（60% / 80% / 100%）。
+  //      理由（实测）：转生与等级都是**经验轴**，会被 XP 乘区压缩 **59×**（全技能并行满级 35 天 → 满buff 14.3 小时）；
+  //      而精通是**动作轴**（每卡按动作次数涨），同一条线只被压 **1.11×**（9.5 天 → 8.6 天）
+  //      ⇒ 挂在精通上的长线，无论 buff 多高，所需时长都基本不变。证据：`scripts/sim/mastery_axis.mjs`。
+  //   门槛按**比例**写（绝对值由 `shanhaiProgress.js` 在读取点按 `masteryCardCount × 100 × pct` 现算）
+  //   —— 这样「卡数」只有运行时那一份真值，加卡片会自动跟着走。
+  //   ⚠️ 收集门槛沿用第 6 环的 90%（这条线基本收齐），第 7 环仍是「该技能 100 级」。
   { ring: 7, name: '圆满', pct: 0.90, level: 100 },
-  { ring: 8, name: '轮回', pct: 0.90, level: 0, prestige: 1 },
-  { ring: 9, name: '历劫', pct: 0.90, level: 0, prestige: 5 },
-  { ring: 10, name: '悟道', pct: 0.90, level: 0, prestige: 10 },
+  { ring: 8, name: '轮回', pct: 0.90, level: 0, masteryPct: 0.60 },
+  { ring: 9, name: '历劫', pct: 0.90, level: 0, masteryPct: 0.80 },
+  { ring: 10, name: '悟道', pct: 0.90, level: 0, masteryPct: 1.00 },
 ]
 /** 节点的后缀（按槽位取；前 5 环 3 个，第 6 环起 5 个） */
 const SUFFIX = ['录', '谱', '典', '章', '卷']
+
+/**
+ * **线级精通门槛缩放**（2026-09-29 立）——只被授权的线可以偏离基准 60/80/100%。
+ *
+ * 🔴 为什么要开这个口子：门槛的单位是「该线精通总级数 = 卡数 × 100」，而**各线「一张卡」的时间量纲不同**：
+ *   采集/制作线一张卡 = 重复一次动作（1~3 秒，可被间隔档位减半）；稼穑一张卡 = 3750 次**收获** ÷ 地块数（4~20）
+ *   × 生长秒数（90~1260）= **10~65 小时/卡**。实测刷满：稼穑 **151.2 天**，而第二名锻造只有 40.2 天、
+ *   其余 11 条中位数 9.0 天 ⇒ 不改门槛的话**全树天花板由稼穑一条线单独决定**（证据 `scripts/sim/mastery_axis.mjs`）。
+ *
+ * 🔴 **0.5 是量出来的、不是拍的**：精通累计曲线**前轻后重**（低档作物快、高档作物生长慢），逐卡实测
+ *   （`scripts/dev/farm_mastery_probe.mjs`，按 reqLevel 升序刷）：
+ *   | 进度 | 前 50 张(25%) | 前 100 张(50%) | 前 120 张(60%) | 前 160 张(80%) | 全 201 张(100%) |
+ *   | 累计 | 14.9 天 | **43.2 天** | 58.3 天 | 97.2 天 | 147.7 天（+两张需转生的卡 ≈151.2） |
+ *   ⇒ **×0.5（即 30% / 40% / 50%）把它落在 43.2 天**，与第二名锻造（40.2 天）齐平；
+ *     若按线性拍脑袋取 ×0.25，实际只有 **15.4 天**（曲线前轻后重 ⇒ 线性外推会低估一半以上，这是本轮踩到的坑）。
+ *   ⚠️ 这不是「放松难度」的糊弄：稼穑那条线**单卡的难度一字未改**，改的只是「要求刷满多少张」。
+ *
+ * 🔴 **缩放必须同时作用于分支环与汇金（空隙）环**：空隙门槛 = `min(两线卡数) × 比例`、且要求**两条线都达到**
+ *   ⇒ 只降分支不降空隙的话，夹在稼穑旁边的空隙节点（如 `稼穑·烹煮`，min(201,297)=201 张）会把门槛
+ *   顶回**未缩放的 100%**，缩放白做。空隙取 `min(两侧缩放)`：与「空隙一律取两条线里较低的门槛」语义同源，
+ *   且恒有「空隙要求 ≤ 任一侧自己那条线的环要求」（min(卡数)×min(比例) ≤ 卡数ᵃ×比例ᵃ，恒成立）。
+ */
+const PATH_MASTERY_SCALE = { farm: 0.5 }
+/** 该线的精通门槛缩放（未列出的线恒为 1） */
+const scaleOf = (pathId) => PATH_MASTERY_SCALE[pathId] ?? 1
+/** 按比例取整到 4 位小数（避免 0.6×0.25 = 0.15000000000000002 这类浮点噪声写进数据） */
+const pct4 = (v) => Math.round(v * 10000) / 10000
 /**
  * 每环的**节点个数**（用户 2026-09-13 二次反馈：第 6 圈起显得空 → 每环 5 个）。
  * 前 5 环保持 3（收集曲线，节点少而明确）；第 6~10 环（含大后期四档）各 5 个。
@@ -214,12 +246,15 @@ for (const path of PATHS) {
     if (R.ring <= 6) { need = Math.max(base, prevNeed + 1); need6 = need } else { need = need6 }
     prevNeed = need
     const slots = RING_SLOTS[R.ring - 1]
+    // 线级缩放（见 PATH_MASTERY_SCALE 的说明）：同一环在不同线上可以是不同的比例
+    const mPct = R.masteryPct ? pct4(R.masteryPct * scaleOf(path.id)) : 0
     for (let slot = 0; slot < slots; slot++) {
       const eff = effectOf(path, R.ring, slot)
       // 里程碑环：转生环只写 prestige（转生后等级重置为 1+传承，写 level 100 永远够不着）
       const req = { kind: 'codex', skill: path.skill, count: need, level: R.level }
       if (R.prestige) req.prestige = R.prestige
-      const gate = [R.prestige ? `${path.name}技能转生 ${R.prestige} 次` : '', R.level ? `${path.name}技能达 ${R.level} 级` : '']
+      if (mPct) req.masteryPct = mPct
+      const gate = [R.prestige ? `${path.name}技能转生 ${R.prestige} 次` : '', R.level ? `${path.name}技能达 ${R.level} 级` : '', mPct ? `${path.name}技能精通总级数达满分 ${Math.round(mPct * 100)}%（按动作次数涨）` : '']
         .filter(Boolean)
         .join('、')
       nodes.push({
@@ -250,7 +285,10 @@ for (const g of GAPS) {
   const count = need(la) + need(lb)
   GOLD_RINGS.forEach((ring, gi) => {
     const R = RINGS[ring - 1]
-    const gate = [R.prestige ? `两条线技能均转生 ${R.prestige} 次` : '', R.level ? `两条线技能均达 ${R.level} 级` : ''].filter(Boolean).join('、')
+    // 空隙环的门槛缩放取**两侧较低者**（理由见 PATH_MASTERY_SCALE）：不缩放的话，紧挨稼穑的空隙节点
+    // 会用 min(两线卡数) × 未缩放比例，把稼穑的门槛顶回 100%。
+    const gPct = R.masteryPct ? pct4(R.masteryPct * Math.min(scaleOf(g.a.id), scaleOf(g.b.id))) : 0
+    const gate = [R.prestige ? `两条线技能均转生 ${R.prestige} 次` : '', R.level ? `两条线技能均达 ${R.level} 级` : '', gPct ? `两条线技能精通总级数均达满分 ${Math.round(gPct * 100)}%（按动作次数涨）` : ''].filter(Boolean).join('、')
     const amount = GOLD_BY_RING[ring]
     nodes.push({
       id: `${g.id}_${ring}`,
@@ -262,7 +300,7 @@ for (const g of GAPS) {
       // 分支节点才用物品图。想换成物品图的话，给它一个 iconItem 即可（画布两者都支持）。
       icon: '🪙',
       iconItem: null,
-      req: { kind: 'codex', skill: g.a.skill, skill2: g.b.skill, count, level: R.level, ...(R.prestige ? { prestige: R.prestige } : {}) },
+      req: { kind: 'codex', skill: g.a.skill, skill2: g.b.skill, count, level: R.level, ...(R.prestige ? { prestige: R.prestige } : {}), ...(gPct ? { masteryPct: gPct } : {}) },
       effect: { field: 'gold', amount },
       desc: `${g.a.name}线与${g.b.name}线合计收集 ${count} 件${gate ? `、${gate}` : ''} → 金币 +${amount.toLocaleString('en-US')}`,
     })
@@ -296,8 +334,13 @@ const stamp = new Date().toISOString().slice(0, 10)
 const out = `// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，${stamp}，勿手改）
 //
 // 口径：${PATHS.length} 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= ${nodes.length} 节点；**纯条件点亮**（不消耗资源）。
-// 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能转生次数（req.kind 恒为 'codex'）。
-// 前 6 环＝收集/等级曲线；第 7~10 环＝大后期里程碑（技能 100 级 / 转生 1 / 5 / 10 次）。
+// 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能精通总级数（req.kind 恒为 'codex'）。
+// 前 6 环＝收集/等级曲线；第 7 环＝该技能 100 级；第 8~10 环＝精通总级数达满分 60% / 80% / 100%
+//   （2026-09-29 从「转生 1/5/10 次」改过来：精通是**动作轴**，实测只被 XP 乘区压 1.11×，
+//    而转生/等级是经验轴、会被压 59× —— 长线挂在这条轴上才不会被 high-buff 玩家一小时刷完）。
+// 🔴 **线级缩放**：门槛单位是「该线精通总级数 = 卡数 × 100」，而各线「一张卡」的时间量纲不同
+//   （稼穑一张卡 = 3750 次收获 ÷ 地块数 × 生长秒数 = 10~65 小时）⇒ 稼穑按 SHANHAI_PATH_MASTERY_SCALE 缩放
+//   （分支环与汇金环都缩；汇金取两侧较低者），否则全树天花板由它一条线单独决定。
 // 奖励只用固定数值：inventoryCap / bankCap / coldStorageCap / offlineH / flatYield / gold（无任何百分比）。
 // 第 6~10 环**正中间**那个节点 = 金币节点（数额见 GOLD_BY_RING）。
 // 节点图标：iconItem（该线该深度位置的物品 id，画布用 public/images/items 的物品图渲染；icon 为 emoji 兜底）。
@@ -306,7 +349,12 @@ const out = `// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shan
 export const SHANHAI_PATHS = ${JSON.stringify(pathMeta, null, 2)}
 
 /** 每环的展示名与门槛（文案用；数值门槛已写进各节点 req） */
-export const SHANHAI_RINGS = ${JSON.stringify(RINGS.map((r) => ({ ring: r.ring, name: r.name, level: r.level, prestige: r.prestige ?? 0 })), null, 2)}
+export const SHANHAI_RINGS = ${JSON.stringify(RINGS.map((r) => ({ ring: r.ring, name: r.name, level: r.level, prestige: r.prestige ?? 0, masteryPct: r.masteryPct ?? 0 })), null, 2)}
+
+/** 线级精通门槛缩放（基准比例的乘数；未列出的线 = 1）。**只有被授权的线能在表里**，守卫会核。
+ *  稼穑 0.25：它的「一张卡」= 3750 次收获 ÷ 地块数 × 生长秒数（10~65 小时），是其它线的 10~20 倍量纲
+ *  ⇒ 不缩放的话全树天花板由它一条线决定（实测 151.2 天 vs 第二名 40.2 天）。理由详见生成器同名字段。 */
+export const SHANHAI_PATH_MASTERY_SCALE = ${JSON.stringify(PATH_MASTERY_SCALE, null, 2)}
 
 export const SHANHAI_NODES = ${JSON.stringify(nodes, null, 2)}
 

@@ -3,7 +3,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { RANCH_ANIMALS, RANCH_UNLOCK_LEVEL, getAnimal, nextRanchExpandCost, POND_FISH, POND_BASE, POND_MAX, getPondFish, nextPondExpandCost } from '../game/data/ranch.js'
+import { RANCH_ANIMALS, RANCH_UNLOCK_LEVEL, getAnimal, nextRanchExpandCost, POND_FISH, getPondFish, nextPondExpandCost } from '../game/data/ranch.js'
 import { IDLE_CAP_HOURS } from '../game/data/caps.js'
 import { getItem } from '../game/data/items.js'
 import { getGoods, goodsEffectText } from '../game/data/processedGoods.js'

@@ -2,8 +2,18 @@
 // 来源一：成就解锁的称号（ALL_ACHIEVEMENTS 中带 title 的项）
 // 来源二：游戏商店购买的外观称号（与 GameShopView 的 title/title2..title7 一一对应）
 // 来源三：图鉴兑换所兑换的限定称号（2026-09-10，key 对应 player.codexOwned）
+// 来源四：**等级台阶称号**（2026-09-29，Lv82~120 每 2 级一个；纯收藏、不带被动 —— 见 `levelPerks.js`）
 import { ALL_ACHIEVEMENTS } from './achievements.js'
 import { CODEX_TITLES } from './codexShop.js'
+import { LEVEL_PERKS } from './levelPerks.js'
+
+/** 等级台阶称号：{ id, name, desc, level }（达成条件是「任一技能到该等级」） */
+export const LEVEL_TITLES = LEVEL_PERKS.map((p) => ({
+  id: `lv${p.level}`,
+  name: p.title,
+  desc: `任一技能达到 ${p.level} 级`,
+  level: p.level,
+}))
 
 /** 成就称号：{ id, name, desc, achName } */
 export const ACHIEVEMENT_TITLES = ALL_ACHIEVEMENTS.filter((a) => a.title).map((a) => ({
@@ -33,5 +43,6 @@ export function allTitleNames() {
     ...ACHIEVEMENT_TITLES.map((t) => t.name),
     ...SHOP_TITLES.map((t) => t.name),
     ...CODEX_SHOP_TITLES.map((t) => t.name),
+    ...LEVEL_TITLES.map((t) => t.name),
   ]
 }

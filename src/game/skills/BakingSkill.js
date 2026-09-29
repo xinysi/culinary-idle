@@ -5,6 +5,7 @@
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
+import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const BAKING_RECIPES = [
@@ -47,6 +48,9 @@ export const BAKING_RECIPES = [
   { id: 'bakeDown_25', name: '芝麻馅糕', category: '甜点', reqLevel: 46, xp: 552, successChance: 0.7, ingredients: { preserving_ext2_22: 2, rice: 2 }, output: { itemId: 'bakeDown_25', qty: 1 } },
   { id: 'bakeDown_26', name: '五仁馅酥', category: '甜点', reqLevel: 46, xp: 552, successChance: 0.7, ingredients: { preserving_ext2_23: 2, rice: 2 }, output: { itemId: 'bakeDown_26', qty: 1 } },
 ]
+
+// ── Lv101-120「补档」配方：push 进**被 import 的这张基础表**（C66 口径，同 CookingSkill 的说明）。
+BAKING_RECIPES.push(...LATE_PROD.baking)
 
 export class BakingSkill extends ProductionSkill {
   constructor(player) {

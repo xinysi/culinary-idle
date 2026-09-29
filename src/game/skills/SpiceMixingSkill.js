@@ -5,6 +5,7 @@
 import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
+import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const SPICE_RECIPES = [
@@ -47,6 +48,9 @@ export const SPICE_RECIPES = [
   { id: 'spiceFix_2', name: '女贞子粉', category: '药膳调料', reqLevel: 24, xp: 288, successChance: 0.8, ingredients: { excavation_ext2_08: 2, salt: 1 }, output: { itemId: 'spiceFix_2', qty: 1 } },
   { id: 'fossilSpice', name: '化石秘香粉', category: '药膳调料', reqLevel: 70, xp: 900, successChance: 0.66, ingredients: { fossilIngredient: 2, salt: 1 }, output: { itemId: 'fossilSpice', qty: 1 } },
 ]
+
+// ── Lv101-120「补档」配方：push 进**被 import 的这张基础表**（C66 口径，同 CookingSkill 的说明）。
+SPICE_RECIPES.push(...LATE_PROD.spiceMixing)
 
 export class SpiceMixingSkill extends ProductionSkill {
   constructor(player) {

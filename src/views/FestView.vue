@@ -1,8 +1,8 @@
 <script setup>
 // 月度厨艺大赛 — 与赛季错峰的月度主题比赛（2026-09-06）
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { getItem, ITEMS } from '../game/data/items.js'
+import { getItem } from '../game/data/items.js'
 import { festScore, festAccepts, FEST_MILESTONES, FEST_DAILY_ENTRIES, FEST_THEMES, festThemeFor } from '../game/data/cookingFest.js'
 import { CATEGORY_LABEL } from '../game/data/itemDetail.js'
 import { itemImage } from '../game/data/itemImage.js'
@@ -65,7 +65,6 @@ const candidates = computed(() =>
         </div>
       </div>
     </header>
-
 
     <FoldCard
       title="🗓 主题日历（本期与前后三个月）"

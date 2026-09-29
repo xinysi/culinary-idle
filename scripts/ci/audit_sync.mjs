@@ -236,6 +236,37 @@ const check = (name, cond, detail = '') => {
   check('README：版本行的数据规模数字与数据一致（技能/首领/赛季/成就/称号/皮肤/效果登记表）', drift.length === 0, drift.join('; '))
 }
 
+// ── README「图鉴补全」行的物品分类数字（2026-09-28 立）──────────────────────
+// 起因：2026-09-28 全量体检对照发现这一行写着「配方 1246 / 物品 2430（食材 663 / 装备 736）」，
+// 而实际是 **1249 / 2434 / 666 / 740**。上一块（版本行）**钉不到这一行** —— 它是另一行、另一套数字，
+// 于是静静地飘了两版（README 是公开仓库首页，在线游玩与 Releases 都指向它）。
+// 判据两条：① **分项之和必须等于该行写的总数**（改一个分项忘改总数 ⇒ 立刻 FAIL）
+//          ② 总数与 8 个分项逐个 == `ITEMS` 按 `type` 数出来的真实值（**不是**拿 README 自比自）
+// ⚠️ 「制作配方 1249 条」不在这里钉：配方条数要建技能实例才数得出（成本高），
+//    它的数据基线在 `system_test` 的 `CAL_COUNT`，改配方条数会被那边抓到。
+{
+  const readme = fs.readFileSync(`${ROOT}README.md`, 'utf8')
+  const row = readme.split('\n').find((l) => l.includes('| 图鉴补全 |')) ?? ''
+  const items = Object.values(ITEMS)
+  const num = (re) => { const m = row.match(re); return m ? Number(m[1]) : NaN }
+  const TYPES = [['食材', 'ingredient'], ['调料', 'spice'], ['种子', 'seed'], ['消耗品', 'consumable'], ['料理', 'food'], ['饮品', 'drink'], ['装备', 'equipment'], ['食灵', 'spirit']]
+  const total = num(/\*\*物品\s*(\d+)\*\*/)
+  const parts = Object.fromEntries(TYPES.map(([k]) => [k, num(new RegExp(`${k}\\s*(\\d+)`))]))
+  const drift = []
+  if (!row) drift.push('README 里找不到「图鉴补全」行')
+  else if (!Object.values(parts).every(Number.isFinite) || !Number.isFinite(total)) drift.push(`数字没解析全：total=${total} ${JSON.stringify(parts)}`)
+  else {
+    const sum = Object.values(parts).reduce((a, b) => a + b, 0)
+    if (sum !== total) drift.push(`分项之和 ${sum} ≠ 该行写的总数 ${total}`)
+    if (total !== items.length) drift.push(`物品总数：README 写 ${total}，实际 ${items.length}`)
+    for (const [k, t] of TYPES) {
+      const actual = items.filter((it) => it.type === t).length
+      if (parts[k] !== actual) drift.push(`${k}：README 写 ${parts[k]}，实际 ${actual}`)
+    }
+  }
+  check('README：图鉴补全行的物品分类数字与数据一致（且分项之和 == 总数）', drift.length === 0, drift.join('; '))
+}
+
 // ── 游戏内攻略的总量数字同样不能飘（2026-09-27 立，v2.28.1）──────────────────
 // 起因：延续性审计时顺手对照，发现 `guide.js` 的攻略概述里写着「成就（262）与称号（122）」，
 // 而实际是 **264 / 123** —— README 那行有守卫盯着（上一块），游戏内这一份**没有**，于是它先飘了。
@@ -274,6 +305,30 @@ const check = (name, cond, detail = '') => {
   }
   check('发布面：本地内部资料未进入仓库', tracked.length === 0,
     `被跟踪了：${tracked.join('、')}（只该留在本地；见 .gitignore 末段）`)
+}
+
+// ── CI 守卫**自身**的假绿：3 参 check 的第 2 个实参不得是字符串字面量（2026-09-29 立）────
+// 起因：`content_sync_audit` 的 check 签名是 **3 参**（`name, cond, detail`），而 `system_test` 是 **4 参**
+//   （`group, name, cond, detail`）。我按后者习惯在本轮新写的断言里写成 `check('山海门槛', '描述', 条件, …)`
+//   ⇒ 在 3 参文件里第 2 位收到一个**非空字符串**（恒真）、真条件落到第 3 位被忽略
+//   ⇒ **那 12 条断言全是假绿**（其中一条本该抓出「视图漏传门槛参数」的缺陷，结果它「通过」了）。
+// 这正是本项目最忌的「假绿守卫」，而且**任何单条断言都不会自知** ⇒ 只能靠一条**扫描守卫源码**的元守卫。
+{
+  const ciDir = `${ROOT}scripts/ci`
+  const bad = []
+  for (const f of fs.readdirSync(ciDir).filter((x) => x.endsWith('.mjs'))) {
+    const src = fs.readFileSync(`${ciDir}/${f}`, 'utf8')
+    const sig = src.match(/const check = \(([^)]*)\)/)
+    if (!sig) continue // 自己定义 check 格式的脚本（如自建 runner）不在本判据内
+    const arity = sig[1].split(',').map((x) => x.trim()).filter(Boolean).length
+    if (arity !== 3) continue // 4 参签名（group, name, cond, detail）另有约定：第 2 参本来就该是名字
+    src.split('\n').forEach((l, i) => {
+      if (l.trim().startsWith('//') || l.trim().startsWith('*')) return
+      if (/check\(\s*(['"`])[^'"`]*\1\s*,\s*['"`]/.test(l)) bad.push(`${f}:${i + 1}`)
+    })
+  }
+  check('CI 守卫自身：3 参 check 的第 2 个实参不得是字符串字面量（会恒真 = 假绿）',
+    bad.length === 0, bad.length ? `疑似：${bad.slice(0, 8).join('、')}` : '')
 }
 
 console.log(fail === 0 ? '\nSYNC AUDIT PASS' : `\n${fail} FAILURES`)

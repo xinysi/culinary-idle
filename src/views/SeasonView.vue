@@ -4,9 +4,11 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { getSeason, seasonRemainingMs, SEASONS } from '../game/data/seasons.js'
+import { seasonRemainingMs, SEASONS } from '../game/data/seasons.js'
+import { PAST_SEASON_GEAR_PRICE } from '../game/data/seasonPast.js'
 import { itemName, getItem } from '../game/data/items.js'
 import ProgressBar from '../components/ProgressBar.vue'
+import ItemImg from '../components/ItemImg.vue'
 
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -86,6 +88,23 @@ const SEASON_COLORS = {
   sesame: '#c9973f', chili2: '#d64545', wine: '#7a3b6f', phoenix: '#d2583a', dragon2: '#3e6d9c',
 }
 const seasonColor = computed(() => SEASON_COLORS[season.value?.id] ?? 'var(--primary-tint)')
+// ── 往季补领（2026-09-29）：40 季 × 10 件 = 400 件限定装备，自然领满要 560 天 ⇒ 加金币出口把「时间门」变成「努力门」
+// 只列还没拿到手的（`collected` 里没有的）；买到的会记进该季 `claimed` ⇒ 不可重复买、且推进「累计领奖次数」成就。
+// 按赛季分组展示（一档可能一次给 2 件，价格是**每档** 5 万金而不是每件），39 个往季 × ≤5 档，分组才好扫。
+const pastClaims = computed(() => player.pastSeasonGearClaims())
+const pastGold = computed(() => Math.floor(player.gold ?? 0))
+const pastGroups = computed(() => {
+  const out = []
+  for (const c of pastClaims.value) {
+    let g = out[out.length - 1]
+    if (!g || g.seasonId !== c.seasonId) { g = { seasonId: c.seasonId, seasonName: c.seasonName, items: [] }; out.push(g) }
+    g.items.push(c)
+  }
+  return out
+})
+function buyPast(c) {
+  if (!player.seasonBuyPastTier(c.seasonId, c.index)) ui.pushLog('金币不足或已补领', 'warn')
+}
 // 领取礼花：点击领取在按钮位置迸发小粒子
 function doClaim(i, ev) {
   claim(i)
@@ -159,10 +178,60 @@ function doClaim(i, ev) {
       </div>
       <p class="dim special-note">历史赛季：{{ SEASONS.map((s) => s.name).join('、') }}（限定装备永久保留）</p>
     </div>
+
+    <!-- 往季补领（2026-09-29）：赛季轮换后没赶上的限定装备可花金币补领 -->
+    <div v-if="pastGroups.length" class="card">
+      <h3>往季补领（{{ pastClaims.length }} 档未补）</h3>
+      <p class="dim special-note">
+        赛季轮换后错过的限定装备，可以花 {{ PAST_SEASON_GEAR_PRICE }} 金币一档补领（奖励进信箱，一档可能含多件）。
+        集齐 40 季限定套装不必等满 40 季；补领同样计入「累计领奖次数」的成就与任务。
+      </p>
+      <div class="season-past-grid">
+        <div v-for="g in pastGroups" :key="g.seasonId" class="season-past-group">
+          <div class="season-past-head">赛季「{{ g.seasonName }}」<span class="dim">· 剩 {{ g.items.length }} 档</span></div>
+          <div v-for="c in g.items" :key="c.index" class="season-past-row">
+            <ItemImg v-for="id in c.itemIds" :key="id" :item-id="id" size="sm" />
+            <span class="season-past-name">{{ c.itemIds.map((id) => itemName(id)).join('、') }}</span>
+            <button class="btn btn-sm" :disabled="pastGold < PAST_SEASON_GEAR_PRICE" @click="buyPast(c)">
+              {{ PAST_SEASON_GEAR_PRICE }} 金
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* 往季补领：按赛季分组（一档一行：图标 + 物品名 + 价格按钮）。清单可达百条 ⇒ 分组 + 扁行，别用大卡片。 */
+.season-past-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+.season-past-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(var(--glass-rgb), 0.94);
+}
+.season-past-head { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.season-past-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.season-past-row + .season-past-row { margin-top: 4px; }
+.season-past-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.season-past-row .btn { flex: 0 0 auto; white-space: nowrap; }
 .season-task-grid,
 .season-tier-grid {
   display: grid;

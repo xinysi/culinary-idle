@@ -15,7 +15,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { DEV_PANEL_ENABLED, devLogout } from '../game/dev/devFlag.js'
+import { devLogout } from '../game/dev/devFlag.js'
 import { DEV_DEFAULT_PASSWORD_HINT } from '../game/dev/devAuth.js'
 import * as T from '../game/dev/devTools.js'
 import * as P from '../game/dev/devProbe.js'

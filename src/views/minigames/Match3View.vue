@@ -1,6 +1,6 @@
 <script setup>
 // 消消乐（2026-09-08 v2 动画版）：tile 绝对定位（交换/下落过渡、消除弹出动画、连锁）；十模式短名 + 高目标分
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { ITEMS } from '../../game/data/items.js'

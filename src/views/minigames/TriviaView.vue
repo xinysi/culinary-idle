@@ -5,7 +5,7 @@ import { ref, computed } from 'vue'
 import { usePlayerStore } from '../../stores/player.js'
 import { useUiStore } from '../../stores/ui.js'
 import { assetUrl } from '../../game/data/itemImage.js'
-import { getItem, ITEMS } from '../../game/data/items.js'
+import { getItem } from '../../game/data/items.js'
 import { weekKey as weekKeyOf } from '../../game/core/clockKeys.js' // 周键单一出口（2026-09-26）
 
 const player = usePlayerStore()

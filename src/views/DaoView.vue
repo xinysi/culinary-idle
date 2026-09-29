@@ -41,7 +41,9 @@ const paths = computed(() =>
         req: DAO_TIER_REQ[tier] ?? 0,
         nodes: nodes.filter((n) => n.tier === tier).map((n) => {
           const owned = (player.daoUnlocked ?? []).includes(n.id)
-          const chk = owned ? { ok: false, reason: '已解锁' } : daoCanUnlock(n.id, player.daoUnlocked ?? [], points.value)
+          // ⚠️ 必须传「全技能精通总级数」（第 4 参）：漏传会让界面一律显示「精通 0/N」把节点画成锁着，
+          //    而 store 那边其实放行 —— 那就是「显示与结算不一致」（2026-09-29 加精通门槛时踩过一次）
+          const chk = owned ? { ok: false, reason: '已解锁' } : daoCanUnlock(n.id, player.daoUnlocked ?? [], points.value, player.totalMasteryLevels())
           return { ...n, owned, can: chk.ok, reason: chk.reason }
         }),
       })),
@@ -53,7 +55,8 @@ const paths = computed(() =>
 const outerNodes = computed(() =>
   DAO_NODES.filter((n) => n.ring).map((n) => {
     const owned = (player.daoUnlocked ?? []).includes(n.id)
-    const chk = owned ? { ok: false, reason: '已解锁' } : daoCanUnlock(n.id, player.daoUnlocked ?? [], points.value)
+    // 同上：第 4 参必须传精通总级数（外环虽然不吃这条门槛，但保持同一调用口径，免得下次改门槛又漏）
+    const chk = owned ? { ok: false, reason: '已解锁' } : daoCanUnlock(n.id, player.daoUnlocked ?? [], points.value, player.totalMasteryLevels())
     return { ...n, owned, can: chk.ok, reason: chk.reason }
   })
 )

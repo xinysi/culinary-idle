@@ -8,6 +8,7 @@ import { AOJIS } from '../../src/game/data/aojis.js'
 import { SPIRITS } from '../../src/game/data/spiritTiers.js'
 import { SEASONS, getSeason, activeSeasonId } from '../../src/game/data/seasons.js'
 import { ITEMS } from '../../src/game/data/items.js'
+import { FARM_BASE_YIELD } from '../../src/game/skills/FarmingSkill.js'
 import { COMBAT_BOSSES, COMBAT_REGIONS } from '../../src/game/data/combat.js'
 import { totalXpForLevel } from '../../src/game/core/Experience.js'
 import { craftSuccessChance } from '../../src/game/data/difficulty.js'
@@ -166,12 +167,12 @@ console.log('══ W4. 农耕肥料 ══')
   // 成熟后施肥被拒
   p.setPlot(1, { seedId: 'wheatSeed', plantedAt: Date.now() - 200_000 })
   check('肥料：成熟后施肥被拒', farm.fertilize(1, 'compost') === false)
-  // 沃肥收获 +1（无随机扰动：qty = 1 + 0 + 1 = 2）
+  // 沃肥收获 +1（无随机扰动：qty = FARM_BASE_YIELD + 0 + 1）
   // 地块 0 是刚种下的，未成熟 → 收割会失败。这里回拨种植时间使其成熟（与地块 1 的写法一致）
   p.setPlot(0, { seedId: 'wheatSeed', plantedAt: Date.now() - 200_000, fertilizer: 'richCompost' })
   withRandom2(() => {
     const before = p.inventory.wheat ?? 0
-    check('肥料：沃肥收获数量 +1', farm.harvest(0) === true && (p.inventory.wheat ?? 0) - before === 2, `wheat ${before}→${p.inventory.wheat}`)
+    check('肥料：沃肥收获数量 = 基础件数 + 1', farm.harvest(0) === true && (p.inventory.wheat ?? 0) - before === FARM_BASE_YIELD + 1, `wheat ${before}→${p.inventory.wheat}`)
   })
   // 商店售卖
   const { SHOP_ITEMS } = await import('../../src/game/data/shop.js')

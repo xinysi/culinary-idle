@@ -4,9 +4,9 @@ import { ref, computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { useIdleTasks } from '../composables/useIdleTasks.js'
-import { getItem } from '../game/data/items.js'
+
 import { getSkillDef } from '../game/data/skills.js'
-import { getAllSkillInstances } from '../game/skills/registry.js'
+
 import { SPIRIT_SLOTS } from '../game/data/spiritTiers.js'
 import { AOJIS } from '../game/data/aojis.js'
 import ProgressBar from './ProgressBar.vue'
@@ -24,7 +24,7 @@ const show = (sec) => !props.section || props.section === sec
 import { getSeason, activeSeasonId } from '../game/data/seasons.js'
 import { getGuild } from '../game/data/guilds.js'
 import { QUESTS } from '../game/data/quests.js'
-import { itemName } from '../game/data/items.js'
+
 const activeBuffs = computed(() => {
   const now = Date.now()
   const out = []

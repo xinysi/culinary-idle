@@ -1,15 +1,16 @@
 <script setup>
 // 技能详情视图 — 需求文档 §9.1.2
 // 按技能类型分派到对应视图组件；100 级时可转生突破至 120（§3）
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getSkillInstance } from '../game/skills/registry.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { xpProgress } from '../game/core/Experience.js'
+import { nextLevelPerk } from '../game/data/levelPerks.js'
 import { MAX_LEVEL } from '../game/skills/Skill.js'
 import { carryFromLevel } from '../game/data/legacy.js'
-import { SPIRIT_SLOTS } from '../game/data/spiritTiers.js'
+
 import ProgressBar from '../components/ProgressBar.vue'
 import GatheringView from './GatheringView.vue'
 import FarmingView from './FarmingView.vue'
@@ -26,6 +27,8 @@ const activeDef = computed(() => getSkillDef(player.activeSkill))
 const instance = computed(() => getSkillInstance(player.activeSkill))
 const maxLevel = computed(() => player.getMaxLevel(player.activeSkill))
 const progress = computed(() => xpProgress(player.skillState(player.activeSkill).exp, maxLevel.value, player.skillState(player.activeSkill).level))
+// 等级台阶：本技能等级对应的「下一档」（见 game/data/levelPerks.js；Lv82 起每 2 级一个，直到 120）
+const nextPerk = computed(() => nextLevelPerk(player.skillState(player.activeSkill)?.level ?? 1))
 const prestiges = computed(() => player.skillState(player.activeSkill).prestiges ?? 0)
 
 // 当前出站食灵对本技能的加成（§3.3.6）：让作用直观可见
@@ -83,6 +86,12 @@ function doPrestige() {
           </div>
         </div>
         <ProgressBar :progress="progress.progress" />
+        <!-- 等级台阶（2026-09-29）：大后期 82~120 段每 2 级一个称号，这里把它变成**看得见的下一档目标**。
+             荒漠段（Lv101-120 没有任何新目标）原本只剩数值，这一行就是那段里唯一的「还有东西可拿」。 -->
+        <div v-if="nextPerk" class="dim skill-perk-hint">
+          🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」
+          （还差 {{ nextPerk.level - progress.level }} 级 · 任一技能达到即可，称号见「成就与称号」）
+        </div>
         <button
           v-if="progress.level >= MAX_LEVEL && maxLevel === MAX_LEVEL"
           class="btn btn-primary btn-sm"

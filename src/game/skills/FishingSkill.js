@@ -9,6 +9,7 @@ import { GATHERING_EXT2 } from '../data/expansion2.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { otherChance } from '../data/difficulty.js' // 全局难度系数（成功率与稀有鱼的唯一缩放出口）
+import { LATE_GATHER } from '../data/lateGameFood.js'
 
 export const FISHING_TARGETS = [
   { itemId: 'crucian', reqLevel: 1, xpPerAction: 10, intervalSec: 3.2 },
@@ -30,6 +31,9 @@ export const FISHING_TARGETS = [
   { itemId: 'blackMarlin', reqLevel: 80, xpPerAction: 410, intervalSec: 8.0 },
   { itemId: 'humpheadWrasse', reqLevel: 90, xpPerAction: 460, intervalSec: 8.0 },
 ]
+
+// ── Lv101-120「补档」目标（lateGameFood.js）：push 进**被 import 的这张表**（C66 口径）。
+FISHING_TARGETS.push(...LATE_GATHER.fishing)
 
 export const RARE_FISH_ID = 'goldenDragonFish'
 const RARE_CHANCE = 0.005 // 0.5%

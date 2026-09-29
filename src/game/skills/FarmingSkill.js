@@ -9,10 +9,12 @@ import { Skill } from './Skill.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryXpMultiplier, masteryYieldBonus } from '../core/mastery.js'
 import { FARM_CROPS } from '../data/farmSeeds.js'
+import { FARM_XP_MULT } from '../data/farmingTuning.js'
 import { seasonalCropBonus } from '../data/farmingSeason.js'
 import { PRIME_CROP_ID, PRIME_MIN_LEVEL, primeCropChance } from '../data/primeCrop.js'
 import { toolTimeFactor } from '../data/farmTools.js'
 import { getItem } from '../data/items.js'
+import { LATE_CROPS } from '../data/lateGameFood.js'
 import { DERIVED_MAX } from '../data/caps.js'
 
 const CROPS_15 = [
@@ -34,7 +36,8 @@ const CROPS_15 = [
 ]
 
 // 合并生成器补充的所有可采集/可挖掘非矿物食材作物（含现有 15 种），按等级升序展示
-export const CROPS = [...CROPS_15, ...FARM_CROPS].sort((a, b) => a.reqLevel - b.reqLevel || a.itemId.localeCompare(b.itemId))
+// + Lv101-120「补档」两档作物（lateGameFood.js；种子映射也在那边并进 SEED_MAP）
+export const CROPS = [...CROPS_15, ...FARM_CROPS, ...LATE_CROPS].sort((a, b) => a.reqLevel - b.reqLevel || a.itemId.localeCompare(b.itemId))
 
 /** 肥料档位（用于「已施肥」判定：同种/降级拒绝，升级允许覆盖） */
 const FERTILIZER_RANK = { compost: 1, richCompost: 2 }
@@ -44,6 +47,25 @@ export const FERTILIZER = {
   compost: { name: '堆肥', wither: 0.01, bonusQty: 0 },
   richCompost: { name: '肥沃堆肥', wither: 0, bonusQty: 1 },
 }
+
+/**
+ * **一次收获的基础件数**（2026-09-29 由 1 提到 2）。
+ *
+ * 🔴 为什么动它：制作线的原料里有 **76%~97% 来自农田**（其余来自采集），而农田的单位时间产能
+ * = 地块数 ÷ 生长秒数 —— 一块地一轮只出 1 件 ⇒ 稻米 120 秒 1 件、橄榄 1040 秒 1 件，
+ * 而同等时间采集能出几百件（采集满级满精通 = 1 秒 1 件）。
+ * 逐条制作线实测（`scripts/sim/craft_material_axis.mjs` 同族口径：采集 1 秒/件 · 农田 `growSec ÷ 地块数`）：
+ * **供料时间是队列时间的 ×6.3~×36.6（合计 ×15.8）**，其中农田占 88/76/96/97%（锻造除外，它吃矿石木材）。
+ * 把基础件数提到 2 ⇒ **农田那一半直接减半**（合计 ×15.8 → ≈×9）。
+ *
+ * ⚠️ **为什么改件数、而不是改地块数/生长秒数**：
+ *   · 改 `DERIVED_MAX.farmPlots`（地块上限）会同时加快**农耕自己的精通轴**（每收一块地 +1 精通），
+ *     而那条轴刚按 ×0.5 缩放到「与锻造齐平 43 天」⇒ 会被连带打乱；改件数**只影响产出量、不动精通节奏**。
+ *   · 改 `CROPS` 的 `growSec` **绝对不行**：`content_sync_audit` 有「growSec 合计 == 80020」的冻结基线，
+ *     而且那份数据同时是材料成本系数与制作类时长口径的输入（AGENTS 的「农耕成长系数」一节）。
+ * 常量放在这里而不是 `caps.js`：它是**产出公式的一部分**（`harvest()` 里那一项），不是容量上限。
+ */
+export const FARM_BASE_YIELD = 2
 
 export class FarmingSkill extends Skill {
   constructor(player) {
@@ -257,7 +279,7 @@ export class FarmingSkill extends Skill {
     const fertBonus = this.plotFertilizer(i)?.bonusQty ?? 0 // 肥沃堆肥收获 +1
     const batch = masteryYieldBonus(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)) // 精通保底批量（2026-09-09）
     const shanhai = this.player.shanhaiEffects?.().flatYield?.farming ?? 0 // 山海食经：每次收获 +N 件（v2.1，固定数值）
-    let qty = 1 + farmBonus + fertBonus + batch + shanhai + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
+    let qty = FARM_BASE_YIELD + farmBonus + fertBonus + batch + shanhai + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
     // 精通档位双倍（新表：5→1%…100→80%）
     if (Math.random() < masteryDoubleChance(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0))) qty *= 2
     // 农时乘区（v2.4.0）：**天气**（农田吃天气、温室不吃）+ **当季作物**（按月份轮换类别 ×1.5）。
@@ -278,7 +300,13 @@ export class FarmingSkill extends Skill {
       }
     }
     this.player.addMastery(this.id, crop.itemId, 1)
-    const expGained = this.addCardXp(crop.xp, masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)), crop.reqLevel)
+    // 农耕成长系数（唯一出口 ①结算）：FARM_XP_MULT 见 game/data/farmingTuning.js 的说明。
+    // ⚠️ 展示侧（FarmingView 的「N 经验」）必须用**同一个出口**，否则卡片写着 N 而实际到账 2N —— C70 成对断言。
+    const expGained = this.addCardXp(
+      crop.xp * FARM_XP_MULT,
+      masteryXpMultiplier(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0)),
+      crop.reqLevel,
+    )
     this.player.clearPlot(i)
     EventBus.emit('skill:action', {
       skillId: this.id,

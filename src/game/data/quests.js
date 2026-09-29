@@ -139,7 +139,7 @@ const QUESTS_BASE = [
     reward: { gold: 500 },
   },
   {
-    id: 'q27', name: '赛季收藏家', desc: '赛季领奖达到 2 季。',
+    id: 'q27', name: '赛季收藏家', desc: '赛季累计领奖 2 次（每季最多 10 档，认真参与一季即可）。',
     objectives: [{ kind: 'seasons', param: 'total', qty: 2 }],
     reward: { gold: 600 },
   },
@@ -189,7 +189,7 @@ const QUESTS_BASE = [
     reward: { gold: 1200 },
   },
   {
-    id: 'q37', name: '赛季老手', desc: '赛季领奖达到 5 季。',
+    id: 'q37', name: '赛季老手', desc: '赛季累计领奖 5 次（每季最多 10 档）。',
     objectives: [{ kind: 'seasons', param: 'total', qty: 5 }],
     reward: { gold: 1500 },
   },

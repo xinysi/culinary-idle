@@ -78,7 +78,14 @@ const battleFrame = computed(() => {
 // （原先这里还有一张「食神秘境」入口卡，2026-09-19 用户要求对决页不要它，已删；秘境走左栏/realm 页。）
 // ── 持久战：胜利后自动重新挑战当前敌人 ──
 // 监听随组件挂载注册、卸载解除（避免每次进出对决页叠加一个永不解除的 combat:end 监听）
+// 待触发的那一场也存引用：卸载时不撤销的话，胜利后 500ms 内离开本页会**再多打一场**
+// （白耗料理/品鉴点，而 combat:end 已解绑 ⇒ 那场结果没人处理）。
 let persistOff = null
+let persistTimer = null
+function schedulePersist(ms) {
+  clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => { persistTimer = null; startNextOpponent() }, ms)
+}
 onMounted(() => {
   persistOff = EventBus.on('combat:end', ({ result }) => {
     // 食神秘境（2026-09-09）：秘境局内由 realm 流程接管，不走持久战
@@ -88,13 +95,14 @@ onMounted(() => {
       return
     }
     if (result === 'win' && persistent.value && combat) {
-      setTimeout(() => startNextOpponent(), 500) // 小延迟，让胜利结算/日志先落
+      schedulePersist(500) // 小延迟，让胜利结算/日志先落
     }
   })
 })
 onBeforeUnmount(() => {
   persistOff?.()
   persistOff = null
+  if (persistTimer) { clearTimeout(persistTimer); persistTimer = null }
 })
 function togglePersistent() {
   persistent.value = !persistent.value
@@ -105,7 +113,7 @@ function startNextOpponent() {
   if (!persistent.value || !combat) return
   // 重生间隔（(b)）：等它走完再开下一场，避免「自动连打」把间隔刷掉
   const wait = combat.respawnLeftMs?.() ?? 0
-  if (wait > 0) { setTimeout(() => startNextOpponent(), Math.ceil(wait) + 30); return }
+  if (wait > 0) { schedulePersist(Math.ceil(wait) + 30); return }
   const o = combat?.opponent // 当前选中的敌人（胜利后 opponent 引用保留）
   if (!o) return
   if (player.combat.hp <= 0) player.setCombat({ hp: player.maxHp })

@@ -1,6 +1,6 @@
 <script setup>
 // 供应商合约（2026-09-10 新增）— 一次性定金签 7 天长约，锁定单价、每日自动到货；金币不足当日不到货、次日再试。
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
@@ -78,7 +78,6 @@ const RELATED = [{ view: 'shop', label: '🛒 商店' }, { view: 'exchange', lab
         </p>
       </div>
     </header>
-
 
     <FoldCard
       title="📋 各商行合约对照"

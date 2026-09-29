@@ -5,7 +5,7 @@
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
-import { ALL_TITLES, HONOR_STATS, HONOR_MAX_LEVEL, HONOR_PER_LEVEL, TITLE_PERK_VALUE, perkOf, honorLevelOf } from '../game/data/honor.js'
+import { ALL_TITLES, HONOR_STATS, HONOR_MAX_LEVEL, HONOR_PER_LEVEL, TITLE_PERK_VALUE, perkOf } from '../game/data/honor.js'
 import ProgressBar from '../components/ProgressBar.vue'
 
 const player = usePlayerStore()

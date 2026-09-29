@@ -12,6 +12,7 @@
 import { computed, watchEffect } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
+import { useIntervalTick } from '../composables/useIntervalTick.js'
 import { collectEffects } from '../game/data/activeEffects.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { getCombat } from '../game/combat/Combat.js'
@@ -30,8 +31,14 @@ const RELATED = [
   { view: 'stats', label: '📊 统计' },
 ]
 
+// 🔴 本页是全站**唯一**实测「每 tick 重算真的贵」的页面（2026-09-28 计时：`collectEffects` **2037 µs/次**，
+// 105 行逐条 `row.read(player)`；其它页面的同类调用只有 1~14 µs）⇒ 原挂 10Hz 引擎节拍时每秒烧 **20 ms** 主线程，
+// 还要重渲染 105 行。本页显示的全是**秒级文案**（剩余时长），1Hz 完全够 ⇒ 走 1Hz 慢节拍。
+// 相关页面若也要「实时」，先量自己的单次成本再决定（见 `useIntervalTick.js` 顶部那张实测表）。
+const tick = useIntervalTick(1000)
+
 const data = computed(() => {
-  ui.loopTick // 跟随全局 tick 刷新剩余时间
+  tick.value // 跟随 1Hz 慢节拍刷新剩余时间（只作依赖触发器）
   return collectEffects(player, {
     combat: getCombat(),
     skill: (id) => getSkillInstance(id),

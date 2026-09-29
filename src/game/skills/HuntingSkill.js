@@ -9,6 +9,7 @@ import { GATHERING_EXT2 } from '../data/expansion2.js'
 import { EventBus } from '../core/EventBus.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率）
+import { LATE_GATHER } from '../data/lateGameFood.js'
 
 export const HUNTING_TARGETS = [
   { itemId: 'rabbitMeat', reqLevel: 1, xpPerAction: 10, intervalSec: 3.0 },
@@ -27,6 +28,9 @@ export const HUNTING_TARGETS = [
   { itemId: 'rhinoMeat', reqLevel: 84, xpPerAction: 430, intervalSec: 8.0 },
   { itemId: 'yetiMeat', reqLevel: 97, xpPerAction: 495, intervalSec: 8.0 },
 ]
+
+// ── Lv101-120「补档」目标（lateGameFood.js）：push 进**被 import 的这张表**（C66 口径）。
+HUNTING_TARGETS.push(...LATE_GATHER.hunting)
 
 const PHESANT_EGG_CHANCE = 0.15
 

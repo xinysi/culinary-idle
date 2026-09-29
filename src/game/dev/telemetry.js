@@ -27,9 +27,13 @@ export const FIRST_MARKS = [
   { id: 'first_boss', label: '第一个首领', event: 'combat:end', when: (p) => p?.result === 'win' && p?.isBoss },
   { id: 'first_achievement', label: '第一个成就', event: 'achievement:unlock' },
   { id: 'first_mastery', label: '第一次专精升级', event: 'mastery:levelup' },
-  { id: 'first_offline', label: '第一次离线结算', event: 'dev:offline' },
-  { id: 'first_prestige', label: '第一次转生', event: 'dev:prestige' },
-  { id: 'first_season_claim', label: '第一次领取赛季奖励', event: 'dev:season' },
+  // ⚠️ 这三条原写 `dev:offline` / `dev:prestige` / `dev:season` —— 全站**从来没有发射过**，
+  //    于是开发者面板的这三个里程碑恒定不点亮（2026-09-28 体检发现，守卫 event_wiring_audit 抓）。
+  //    现分别改指**真实存在的事件**：离线结算由 `settleOffline` 发 `offline:settled`；
+  //    转生与赛季领奖早就有 `player:prestige`（player.js 的 prestige）与 `season:claim`（claimSeasonTier）。
+  { id: 'first_offline', label: '第一次离线结算', event: 'offline:settled' },
+  { id: 'first_prestige', label: '第一次转生', event: 'player:prestige' },
+  { id: 'first_season_claim', label: '第一次领取赛季奖励', event: 'season:claim' },
 ]
 
 const CRAFT_SKILLS = new Set(['cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing'])

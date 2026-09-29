@@ -13,6 +13,7 @@ import { PRESERVATION_RECIPES } from '../skills/PreservationSkill.js'
 import { PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'
 import { SMITHING_SET_RECIPES } from './smithSetExt.js'
+import { LATE_GEAR_RECIPES } from './lateGear.js' // Lv101-120 补档装备线（16 条）
 import { balanceRecipeLevels, raiseRecipeLevels } from '../skills/recipeBalance.js'
 import { equipTierFor, equipQualityFor } from './equipTierCurve.js'
 import { LEGENDARY_LEVEL } from './combatLoot.js'
@@ -37,6 +38,9 @@ const G = [
   [BREWING_RECIPES, PRODUCTION_EXT.brewing, PRODUCTION_EXT2.brewing, raiseRecipeLevels],
   [SPICE_RECIPES, PRODUCTION_EXT.spiceMixing, PRODUCTION_EXT2.spiceMixing, raiseRecipeLevels],
   [SMITHING_SET_RECIPES, [], [], balanceRecipeLevels],
+  // Lv101-120「补档」装备线（16 条，lateGear.js）：必须登记在这里，否则新装备**不会**被平衡层归一
+  // （主维度会停在手写的占位 1 ⇒ 顶级装备打出 Lv1 的数值）。
+  [LATE_GEAR_RECIPES, [], [], balanceRecipeLevels],
   [PRESERVATION_RECIPES, PRESERVE_EXT, PRESERVE_EXT2, balanceRecipeLevels],
 ]
 for (const [a, b, c, fn] of G) indexRecipes([...a, ...(b ?? []), ...(c ?? [])], fn)

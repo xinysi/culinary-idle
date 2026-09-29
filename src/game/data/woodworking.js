@@ -27,6 +27,11 @@ export const WOODWORK_ITEMS_DEF = [
   { level: 71, id: 'carvedPanel', name: '木雕挂屏', wood: 'glazeWood', woodQty: 4, tier: '名贵' },
   { level: 81, id: 'incenseTable', name: '木香案', wood: 'starWood', woodQty: 5, tier: '名贵' },
   { level: 91, id: 'sacredAltar', name: '神木供案', wood: 'voidWood', woodQty: 5, tier: '传说' },
+  // Lv101-120「补档」两件（2026-09-29 用户授权批）：木直接点名本批新木（玄铁杉/天罡沉香，
+  // 见 lateGameFood.js——20 档木材体系与装备套对应、只到 Lv100，是冻结口径）。
+  // 每件的手工装潢效果由下面 CRAFTED_DECOR 的曲线公式自动续上（12.1% / 13.1%）。
+  { level: 102, id: 'divineCouch', name: '太初神榻', wood: 'late_wood_01', woodQty: 5, tier: '传说' },
+  { level: 112, id: 'agarwoodAltar', name: '天罡香案', wood: 'late_wood_02', woodQty: 5, tier: '传说' },
 ]
 
 /**

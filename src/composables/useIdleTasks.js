@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getAllSkillInstances } from '../game/skills/registry.js'
+import { effectiveParallelSlots, unlockedParallelSlots } from '../game/data/parallelSlots.js'
 
 export function useIdleTasks() {
   const player = usePlayerStore()
@@ -37,7 +38,11 @@ export function useIdleTasks() {
     return tasks
   })
 
-  const parallelLimit = computed(() => player.settings.maxParallelIdle ?? 0)
+  // ⚠️ 实际生效的槽位 = **进度解锁的**（起步 1，靠山海/成就/转生涨到 8）与玩家自限值取小。
+  //    别再读 `player.settings.maxParallelIdle` —— 那个只是「再限低」的旋钮，`0` 不再是「无限制」（2026-09-29）。
+  const parallelLimit = computed(() => effectiveParallelSlots(player))
+  /** 已解锁到几槽（设置面板显示 N/8 与「下一档要什么」用） */
+  const parallelUnlocked = computed(() => unlockedParallelSlots(player))
 
-  return { runningTasks, parallelLimit }
+  return { runningTasks, parallelLimit, parallelUnlocked }
 }

@@ -60,8 +60,60 @@ OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '
 
 
 def body_mask(mn, chroma):
-    """主体掩码：色度感知的背景候选 → 边缘洪水填充 → 去掉小块。返回 (mask, 丢弃块数)"""
-    cand = (mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))
+    """主体掩码（浅色底）：色度感知的背景候选 → 边缘洪水填充 → 去掉小块。返回 (mask, 丢弃块数)"""
+    return _fill_and_clean((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN)))
+
+
+# ── 深色底分支（2026-09-29 立，用户那批 16 件装备图：1600² RGB WebP、**近黑底 + 蓝色发光描边**）──
+# 为什么要单独一条：上面那条链按「近白背景」判候选，深色底下它会判出「主体占画布 100%」
+# （实测：背景候选 0~7%、主体亮度中位 7~33）⇒ 整张原图被当成主体缩下去，出来是**带黑底的方块**。
+# 深色底的正确判据是它的镜像：**近黑且中性**才是背景候选，其余全留。
+# 发光描边天然是「亮」的 ⇒ 它不会被判成候选 ⇒ 从画布边缘的洪水填充**跨不过描边**，
+# 于是「描边 + 主体内部（含主体自身的深色部分）」整块被保住 —— 这正是我们要的
+# （与浅色链里那句「被物体包住的白色高光不连边 ⇒ 保住」是同一条原理）。
+DARK_MAX = 48        # 「近黑」上限（实测这批角底色 0~37）
+DARK_CHROMA = 14     # 中性度上限（这批底色 chroma ≤ 12；描边是蓝的、chroma 很高 ⇒ 不会误判成背景）
+GLOW_FULL = 120      # 亮度 ≥ 此值的边缘像素算「实心发光」；之间按亮度给软 alpha（保住外圈光晕）
+
+
+def body_mask_dark(mx, chroma):
+    """深色底的主体掩码：近黑中性 + 边缘洪水填充（其余全部保留）
+
+    🔴 额外一步「亮度过筛」（2026-09-29 实测加的）：这类图的主体一定**自带发光描边或高光**
+    （描边是这套画风的核心），而近黑底上那些没被去掉的残留（噪点团、主体外的暗部碎块）
+    **一个亮像素都没有**（实测：陨砂踏鞋 / 天罡华冠 周围留黑斑，就是它们）。
+    ⇒ 丢掉「整块不含 ≥ GLOW_FULL 亮像素」的内容块。**别把这一步搬到浅色分支**：
+    浅色链的主体完全可以是暗的（如玄玉参深绿、太初神木暗红），过筛会把主体本身删掉。
+    """
+    body, dropped = _fill_and_clean((mx <= DARK_MAX) & (chroma <= DARK_CHROMA))
+    if body is None:
+        return None, dropped
+    lab, n = ndimage.label(body, structure=np.ones((3, 3)))
+    if n <= 1:
+        return body, dropped
+    bright = mx >= GLOW_FULL
+    keep = []
+    for i in range(1, n + 1):
+        sel = lab == i
+        if bright[sel].any():
+            keep.append(i)
+    if not keep:                       # 全都不亮 ⇒ 宁可原样返回（由调用方的「找不到主体」兜底）
+        return body, dropped
+    kept = np.isin(lab, keep)
+    return kept, dropped + (n - len(keep))
+
+
+def _fill_and_clean(cand):
+    """从画布边缘洪水填充 cand → 反相得到内容，再丢掉面积过小的孤立块。返回 (mask, dropped)。
+
+    ⚠️ 填充前先对 cand 做一次**形态学闭合**（2026-09-29 实测加的）：深色底那批图有极轻的颗粒噪点，
+    会把「近黑中性」的候选掩码切成几百个碎片（实测某张丢弃小块 **976** 个）——碎片之间那些
+    略超阈值的像素成了**细栅栏**，洪水填充跨不过去 ⇒ 主体周围留一圈没被去掉的黑斑。
+    闭合（先膨胀后腐蚀）把这些细栅栏焊上；顺带焊上发光描边上偶尔的 1px 断口（防填充漏进主体内部）。
+    🔴 `border_value=1` 不能省：默认把画布**外**当成空 ⇒ 腐蚀会把掩码在画布边缘啃掉一圈，
+    于是背景连通块**不再触边**（实测 `触边标签=0`）⇒ 整张图被判成「内容」、裁切边长变成 1600。
+    """
+    cand = ndimage.binary_closing(cand, structure=np.ones((5, 5)), border_value=1)
     lab, _ = ndimage.label(cand, structure=np.ones((3, 3)))
     border = set(lab[0, :].tolist()) | set(lab[-1, :].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
     border.discard(0)
@@ -73,8 +125,7 @@ def body_mask(mn, chroma):
     sizes = np.bincount(lab2.ravel())[1:]
     floor = max(MIN_KEEP_PX, sizes.max() * KEEP_RATIO)
     keep = [i + 1 for i, s in enumerate(sizes) if s >= floor]
-    dropped = n2 - len(keep)
-    return np.isin(lab2, keep), dropped
+    return np.isin(lab2, keep), n2 - len(keep)
 
 
 def _masks(path):
@@ -84,23 +135,76 @@ def _masks(path):
     return arr, mn, chroma
 
 
-def analyze(path):
+# ── 已带 alpha 的源图（2026-09-29 立，用户那批 `newwq/` 是**真·透明底 RGBA**）──
+# 这类图**不需要去背**：alpha 就是掩码（而且它自带的抗锯齿比我们重新描的软边更准）。
+# ⚠️ 两条不能省的细节：
+#   ① 绝不能用 `_masks()`（它 `convert('RGB')` 会把 alpha **平铺成黑底**）⇒ 单独读 RGBA；
+#   ② 不套用 EDGE_BAND 软边那一步（原图 alpha 已经抗锯齿，再压一次会把边缘啃细一圈）。
+def _alpha_mask(path):
+    im = Image.open(path)
+    if 'A' not in im.getbands():
+        raise RuntimeError('%s 没有 alpha 通道（--bg alpha 只用于真透明底的源图）' % path)
+    a = np.asarray(im.convert('RGBA')).astype(np.int16)
+    return a[:, :, :3], a[:, :, 3]
+
+
+def analyze(path, bgmode='light'):
+    if bgmode == 'alpha':
+        arr, al = _alpha_mask(path)
+        mn = arr.min(axis=2)
+        body = al > 8
+        lab, n = ndimage.label(body, structure=np.ones((3, 3)))
+        dropped = 0
+        if n > 1:
+            sizes = np.bincount(lab.ravel())[1:]
+            floor = max(MIN_KEEP_PX, sizes.max() * KEEP_RATIO)
+            keep = [i + 1 for i, s in enumerate(sizes) if s >= floor]
+            body = np.isin(lab, keep)
+            dropped = n - len(keep)
+        return arr, mn, body, dropped, float((~body).mean())
     arr, mn, chroma = _masks(path)
-    body, dropped = body_mask(mn, chroma)
-    bg_pct = float(((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))).mean())
+    mx = arr.max(axis=2)
+    if bgmode == 'dark':
+        body, dropped = body_mask_dark(mx, chroma)
+        bg_pct = float(((mx <= DARK_MAX) & (chroma <= DARK_CHROMA)).mean())
+    else:
+        body, dropped = body_mask(mn, chroma)
+        bg_pct = float(((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))).mean())
     return arr, mn, body, dropped, bg_pct
 
 
-def build(path):
-    arr, mn, body, dropped, _ = analyze(path)
+def build(path, bgmode='light'):
+    if bgmode == 'alpha':
+        arr, al = _alpha_mask(path)
+        mn = arr.min(axis=2)
+        _, _, body, dropped, _ = analyze(path, 'alpha')
+        if body is None:
+            return None, 0, 0
+        # 原图 alpha 直接当输出 alpha（保留它自带的抗锯齿），只把「被判掉的孤立小块」抹零
+        alpha = np.where(body, np.asarray(Image.open(path).convert('RGBA')).astype(np.int16)[:, :, 3], 0).astype(np.float32)
+        return _finish(arr, alpha, dropped)
+
+    arr, mn, body, dropped, _ = analyze(path, bgmode)
     if body is None:
         return None, 0, 0
     alpha = np.where(body, 255.0, 0.0)
-    # 外缘带：主体里、但离背景 2px 以内的像素 → 按白度压成半透明（去掉抗锯齿白边）
+    # 外缘带：主体里、但离背景 EDGE_BAND px 以内的像素 → 压成半透明（去锯齿边）
+    #  · 浅色底按**白度**（越白越透明）
+    #  · 深色底按**亮度**（越暗越透明）——这样发光描边外圈那层光晕保留成半透明，
+    #    而不是被硬切成一条直边（这批图的观感主要靠那圈光）
     band = body & ndimage.binary_dilation(~body, iterations=EDGE_BAND)
     if band.any():
-        soft = np.clip((255.0 - mn) / float(255 - EDGE_T0), 0.0, 1.0) * 255.0
+        if bgmode == 'dark':
+            mx = arr.max(axis=2).astype(np.float32)
+            soft = np.clip((mx - DARK_MAX) / float(GLOW_FULL - DARK_MAX), 0.0, 1.0) * 255.0
+        else:
+            soft = np.clip((255.0 - mn) / float(255 - EDGE_T0), 0.0, 1.0) * 255.0
         alpha = np.where(band, np.minimum(alpha, soft), alpha)
+    return _finish(arr, alpha, dropped)
+
+
+def _finish(arr, alpha, dropped):
+    """裁到 alpha 包围盒 → 补成外接正方形（三种底色分支共用）。"""
     rgba = np.dstack([arr.astype(np.uint8), alpha.astype(np.uint8)])
     im = Image.fromarray(rgba, 'RGBA')
     bbox = im.getchannel('A').getbbox()
@@ -136,6 +240,10 @@ def main():
     ap.add_argument('--map', nargs='*', default=DEFAULT_MAP)
     ap.add_argument('--out', default=None, help='输出目录，默认 items/food；装备图传 items/equipment')
     ap.add_argument('--stats', action='store_true')
+    # 2026-09-29：深色底（近黑 + 发光描边那类图，实测角底色 0~37）走反相分支；默认仍是浅色链
+    ap.add_argument('--bg', choices=['light', 'dark', 'alpha'], default='light',
+                    help='源图底色：light（近白，默认）| dark（近黑，主体常靠发光描边勾勒）| '
+                         'alpha（**真·透明底 RGBA**，直接用源图 alpha 当掩码、不做去背）')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--sort', choices=['mtime', 'name'], default='mtime')
     ap.add_argument('--filter', default=None, help='只处理文件名含该子串的图（跳过旧批次残留）')
@@ -143,7 +251,9 @@ def main():
     ap.add_argument('--resample', choices=['box', 'nearest', 'lanczos', 'both'], default='box')
     args = ap.parse_args()
 
-    files = [f for f in os.listdir(args.src) if f.lower().endswith('.png')]
+    # 2026-09-29：也收 `.webp`（用户那批 AI 出图导出的是 1600×1600 **RGB WebP**——
+    # 与 PNG 那批同一种情况：写着「无背景」其实没有 alpha、背景是四边连片近白 ⇒ 同一条去背链适用）。
+    files = [f for f in os.listdir(args.src) if f.lower().endswith(('.png', '.webp'))]
     if args.filter:
         files = [f for f in files if args.filter in f]
     if args.sort == 'name':
@@ -162,7 +272,7 @@ def main():
 
     if args.stats:
         for i, f in enumerate(files, 1):
-            arr, mn, body, dropped, bg_pct = analyze(os.path.join(args.src, f))
+            arr, mn, body, dropped, bg_pct = analyze(os.path.join(args.src, f), args.bg)
             if body is None:
                 print('{:>2}  {:<34} 找不到主体'.format(i, f))
                 continue
@@ -175,7 +285,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     md5s, rows = {}, []
     for i, (f, name) in enumerate(zip(files, args.map), 1):
-        sq, side, dropped = build(os.path.join(args.src, f))
+        sq, side, dropped = build(os.path.join(args.src, f), args.bg)
         if sq is None:
             print('❌ 第 %d 张找不到主体（阈值过激？）：%s' % (i, f))
             return 1

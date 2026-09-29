@@ -19,6 +19,7 @@ import { SMITH_ORE_TARGETS } from '../data/smithOres.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { getItem } from '../data/items.js'
 import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率；只压常量基准值）
+import { LATE_GATHER } from '../data/lateGameFood.js'
 
 /** ⚠️ 历史手写清单（10 条，含 1 个矿物 `saltOre`）——**内容保持原样**（见文件头注释）。 */
 export const EXCAVATION_TARGETS = [
@@ -44,6 +45,11 @@ export const EXCAVATION_TARGETS = [
   { itemId: 'vermilionGrass', reqLevel: 96, xpPerAction: 490, intervalSec: 7.3 },
   { itemId: 'mysticRoot', reqLevel: 99, xpPerAction: 505, intervalSec: 7.5 },
 ]
+
+// ── Lv101-120「补档」目标（lateGameFood.js）：矿与根茎一起 push 进这张表 ——
+// 矿物由下面的 `isMineralTarget` 分流自动进 `MINING_TARGETS`（与既有「同名矿」同一条路），
+// 根茎留在挖掘。照旧 push 进**被 import 的这张表**（C66 口径）。
+EXCAVATION_TARGETS.push(...LATE_GATHER.excavation, ...LATE_GATHER.mining)
 
 /** 是否矿物（分流依据**只看物品类别**，不看名字——石膏/硝石/明矾这类名字里没有「矿」） */
 export function isMineralTarget(t) {

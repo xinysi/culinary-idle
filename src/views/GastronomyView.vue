@@ -7,7 +7,7 @@ import { useUiStore } from '../stores/ui.js'
 import { AOJIS } from '../game/data/aojis.js'
 import { aojiGateLevel, aojiGateText, aojiUnlockedAt, AOJI_GATE_NOTE } from '../game/data/aojiGates.js' // 等级门槛唯一出口（2026-09-27 用户⑧）
 import { getCombat } from '../game/combat/Combat.js'
-import { INSIGHT_NODES, INSIGHT_BRANCHES, getInsightNode } from '../game/data/insightTree.js'
+import { INSIGHT_NODES, INSIGHT_BRANCHES } from '../game/data/insightTree.js'
 import { BISCUIT_TASTE_RATE } from '../game/data/biscuitUse.js'
 
 const player = usePlayerStore()

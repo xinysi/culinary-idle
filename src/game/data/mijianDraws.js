@@ -12,6 +12,7 @@ import { ITEMS } from './items.js'
 import { itemImage } from './itemImage.js'
 import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
 import { EXPLORE_GEAR_IDS } from './explorationGear.js'
+import { LATE_GEAR_IDS } from './lateGear.js'
 
 /** 抽卡池一律排除的类别：矿物（不对口径）与**全部副业独占品**（抽卡能出就等于绕过整条技能线） */
 const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
@@ -227,7 +228,9 @@ export function poolItems(poolId) {
   const def = MIJIAN_POOLS.find((p) => p.id === poolId)
   const all = Object.values(ITEMS)
   // 探索专属装备（4 件）不进任何池 —— 独立于类别表，按 id 名单排除（见上方注释）
-  const excluded = (it) => POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name) || EXPLORE_GEAR_IDS.includes(it.id)
+  // `LATE_GEAR_IDS`（2026-09-29 批次三）：Lv104-116 的顶级装备同理 —— 500 金/抽以 0.05% 权重能抽到它，
+  // 就绕开了「采矿→伐木→锻造」整条链（那正是这批要给的**努力门**）。口径与探索专属装备一致。
+  const excluded = (it) => POOL_EXCLUDED_CATEGORIES.includes(it.category) || /矿$/.test(it.name) || EXPLORE_GEAR_IDS.includes(it.id) || LATE_GEAR_IDS.includes(it.id)
   let items
   if (poolId === 'mix' || poolId === 'limited') {
     items = all.filter((it) => ['ingredient', 'spice', 'food', 'drink', 'equipment'].includes(it.type) && !excluded(it))

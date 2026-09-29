@@ -2,7 +2,7 @@
 // 厨藏页（2026-09-19 由 `InventoryModal` 升级为独立页面；2026-09-20 **存储合一**）——
 // 只有一个存储（`player.inventory`），没有仓库、没有入仓/出仓。版式参考梅尔沃的仓库界面：
 // 顶部分类标签 + 搜索/排序，中间**高密度格子**，右侧选中物品详情与来源；**点了物品才出操作**。
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
@@ -44,42 +44,56 @@ let justDragged = false       // 刚拖完，忽略紧随其后的 click
 const renameIdx = ref(-1)     // 正在改名的面板下标（双击页签进入）
 const renameText = ref('')
 
+/** 🔴 厨藏页的**唯一一次遍历**（2026-09-28 性能收口）。
+ *  此前 `bankTabs` / `list` / `catTabsShown` **各自**把全部物品扫一遍（默认视图共 3 遍），
+ *  其中两遍还各调一次 `player.bankTabOf(id)`。实测（2434 件满仓）：扫一遍 ≈ 2.0ms、
+ *  `bankTabOf` 每 2434 次 ≈ 4.8ms ⇒ **整页 ≈ 14ms，且每次进物/卖物都要重付一次**
+ *  （挂机时每秒数次 ⇒ 每秒几十毫秒主线程 + 掉帧）。现在只扫一遍、把 `tab` 与 `cat` 一起算出来，
+ *  三处都从它派生 ⇒ 降到 ≈ 10ms（剩下的是 `bankTabOf` 的响应式开销与排序）。
+ *  ⚠️ 反应性仍然完整：`bankTabOf` 内部读 `itemTabs`/`invDefaultTab`，所以把物品拖进别的面板照样会刷新。
+ *  ⚠️ 想再降要动的是「大对象上的响应式 proxy 读取」（用 `toRaw` + 一个版本号计数器），
+ *     但那要求**所有**改 inventory 的路径都记得 +1，漏一处就是界面静默不更新 —— 本项目最忌那类缺陷，
+ *     故本轮只做「少扫两遍」这一步安全的。 */
+const owned = computed(() => {
+  const out = []
+  for (const [id, qty] of Object.entries(player.inventory ?? {})) {
+    if (!(qty > 0)) continue
+    out.push({ id, total: qty, tab: player.bankTabOf(id), cat: catOf(id) })
+  }
+  return out
+})
+
+/** 有货物品的 type 白名单（`catFilter` 的「其它」= 不在这 8 类里的）。**提到模组层**：
+ *  原实现把它写在 `list` 的循环里 ⇒ 每件物品都新建一个 8 元素数组。 */
+const KNOWN_CATS = ['food', 'ingredient', 'drink', 'spice', 'equipment', 'seed', 'consumable', 'spirit']
+
 /** 面板页签（10 块，见 game/data/bankTabs.js）：第 0 块「全部」固定；每块显示自己有几件 */
 const bankTabs = computed(() => {
   const count = {}
-  for (const [id, qty] of Object.entries(player.inventory ?? {})) {
-    if (!(qty > 0)) continue
-    const t = player.bankTabOf(id)
-    count[t] = (count[t] ?? 0) + 1
-  }
-  return (player.bankTabs ?? []).map((t, i) => ({ ...t, i, count: i === 0 ? Object.keys(player.inventory ?? {}).filter((k) => player.inventory[k] > 0).length : (count[i] ?? 0) }))
+  for (const e of owned.value) count[e.tab] = (count[e.tab] ?? 0) + 1
+  const total = owned.value.length
+  return (player.bankTabs ?? []).map((t, i) => ({ ...t, i, count: i === 0 ? total : (count[i] ?? 0) }))
 })
 
 /** 厨藏列表（唯一存储）：按**面板** + 分类 + 搜索过滤，再按当前排序 */
 const list = computed(() => {
   const q = searchQ.value.trim()
   const out = []
-  for (const [id, qty] of Object.entries(player.inventory ?? {})) {
-    if (!(qty > 0)) continue
+  for (const e of owned.value) {
     // 面板过滤：0 = 全部（所有物品）；其余只显示归属该面板的物品
-    if (tabFilter.value !== 0 && player.bankTabOf(id) !== tabFilter.value) continue
+    if (tabFilter.value !== 0 && e.tab !== tabFilter.value) continue
     if (catFilter.value !== 'all') {
-      const c = catOf(id)
-      const known = ['food', 'ingredient', 'drink', 'spice', 'equipment', 'seed', 'consumable', 'spirit']
-      if (catFilter.value === 'other' ? known.includes(c) : c !== catFilter.value) continue
+      if (catFilter.value === 'other' ? KNOWN_CATS.includes(e.cat) : e.cat !== catFilter.value) continue
     }
-    if (q && !(getItem(id)?.name ?? '').includes(q)) continue
-    out.push({ id, total: qty })
+    if (q && !(getItem(e.id)?.name ?? '').includes(q)) continue
+    out.push({ id: e.id, total: e.total })
   }
   return sortList(out)
 })
 /** 只显示"有货"的分类标签（空标签不占位） */
 const catTabsShown = computed(() => {
-  const present = new Set()
-  for (const id of Object.keys(player.inventory ?? {})) {
-    if ((player.inventory?.[id] ?? 0) > 0) present.add(catOf(id))
-  }
-  return CAT_TABS.filter((t) => t.id === 'all' || (t.id === 'other' ? [...present].some((c) => !['food', 'ingredient', 'drink', 'spice', 'equipment', 'seed', 'consumable', 'spirit'].includes(c)) : present.has(t.id)))
+  const present = new Set(owned.value.map((e) => e.cat))
+  return CAT_TABS.filter((t) => t.id === 'all' || (t.id === 'other' ? [...present].some((c) => !KNOWN_CATS.includes(c)) : present.has(t.id)))
 })
 
 const selected = ref(null) // 选中的 itemId（格子高亮 + 右侧详情 + 操作）

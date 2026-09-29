@@ -6,11 +6,13 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { itemImage } from '../game/data/itemImage.js'
 import { DERIVED_MAX } from '../game/data/caps.js'
-import { SEASONAL_BONUS, farmSeason, seasonalTip } from '../game/data/farmingSeason.js'
+import { SEASONAL_BONUS, farmSeason } from '../game/data/farmingSeason.js'
 import { TOOL_MAX_LEVEL, TOOL_TIME_PER_LEVEL, nextToolCost } from '../game/data/farmTools.js'
 import { PRIME_BASE_CHANCE, PRIME_CROP_ID, PRIME_MAX_CHANCE, PRIME_MIN_LEVEL } from '../game/data/primeCrop.js'
 import { masteryDoubleChance, masteryLevelFromCount, masteryYieldBonus } from '../game/core/mastery.js'
 import { LOW_TARGET_NOTE, LOW_TARGET_XP_MULT, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
+import { FARM_XP_MULT } from '../game/data/farmingTuning.js'
+import { FARM_BASE_YIELD } from '../game/skills/FarmingSkill.js' // 每次收获的基础件数（展示与结算同源）
 import { isHarshWeather } from '../game/data/weather.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import FoldCard from '../components/FoldCard.vue'
@@ -50,7 +52,9 @@ const isLow = (c) => props.instance.isLowTargetLevel(c.reqLevel)
 
 function expectedPerHarvest(crop) {
   const m = masteryLevelFromCount(props.instance.mastery?.[crop.itemId] ?? 0)
-  const base = 1 + masteryYieldBonus(m)
+  // ⚠️ 基础件数走**唯一出口** `FARM_BASE_YIELD`（2026-09-29 由 1 提到 2）：这里手写 1 的话，
+  // 卡片上的「每次收获期望件数 / 件每分钟」会立刻比实际少一半（显示与结算不一致）。
+  const base = FARM_BASE_YIELD + masteryYieldBonus(m)
   return base * (1 + masteryDoubleChance(m))
 }
 /** 全部地块折合「件/分钟」，并与一条满精通采集线（约 30 件/分）做对照 */
@@ -288,7 +292,9 @@ function seedName(seedId) {
             </div>
             <div class="item-cell-sub" style="font-size: 12px">
               <span class="dim">{{ toolTimeText(c.growSec) }} 生长</span>
-              <span class="dim" :title="LOW_TARGET_NOTE">{{ isLow(c) ? Math.round(c.xp * LOW_TARGET_XP_MULT) : c.xp }} 经验</span>
+              <!-- 每收获经验：低目标减半（实例出口）× 农耕成长系数（同一出口，见 game/data/farmingTuning.js）
+                   —— 与 FarmingSkill.harvest 的到账值**必须一致**，C70 有成对断言 -->
+              <span class="dim" :title="LOW_TARGET_NOTE">{{ Math.round((isLow(c) ? c.xp * LOW_TARGET_XP_MULT : c.xp) * FARM_XP_MULT) }} 经验</span>
             </div>
             <!-- 低目标减半（2026-09-23）：农耕的种子格子**只有 ~110px 宽**，标签塞进上面那行会把
                  「90s 生长」挤成两行（实测截图）。所以给低目标**单独一行**，宁可格子高一行，也不挤坏同行文字。 -->

@@ -104,9 +104,12 @@ export const ACHIEVEMENTS = [
   { id: 'totalLevel500', name: '全能美食家', category: '特殊', desc: '总等级达到 500', reward: { gold: 3000 }, check: (p) => p.totalLevels >= 500 },
   { id: 'totalLevel1000', name: '食之大成', category: '特殊', desc: '总等级达到 1000', reward: { gold: 10000 }, check: (p) => p.totalLevels >= 1000 },
   { id: 'hardcore10', name: '硬核勇士', category: '特殊', desc: '硬核模式下赢得 10 场对决', title: '硬核勇士', reward: { gold: 5000 }, check: (p) => p.hardcore && p.stats.combatWins >= 10 },
-  { id: 'season5', name: '四季轮回', category: '特殊', desc: '在 5 个不同赛季领取过奖励', reward: { gold: 5000 }, check: (p) => Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length >= 5 },
-  { id: 'season10', name: '岁月饕客', category: '特殊', desc: '在 10 个不同赛季领取过奖励', reward: { gold: 12000 }, check: (p) => Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length >= 10 },
-  { id: 'seasonAll', name: '时空穿梭者', category: '特殊', desc: '在全部 40 个赛季领取过奖励', title: '时空穿梭者', reward: { gold: 50000 }, check: (p) => Object.values(p.seasons ?? {}).filter((s) => (s.claimed?.length ?? 0) > 0).length >= 40 },
+  // 🔴 2026-09-29 去日历门：原判据是「**不同赛季数**」⇒ 5/10/40 季 = 70/140/560 天的**日历硬门**，努力无法缩短。
+  //    改成与故事（`storyReqCur` 的 'seasons'）和任务（`player.js` 的 `case 'seasons'`）**同一口径**：累计领奖次数。
+  //    每季最多 10 档 ⇒ 「累计 5 次」一季内就能达成、40 次约 4 季。⚠️ **「图鉴 100%」的时间门仍在**（见 milestones 的说明）。
+  { id: 'season5', name: '四季轮回', category: '特殊', desc: '赛季累计领奖 5 次', reward: { gold: 5000 }, check: (p) => Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0) >= 5 },
+  { id: 'season10', name: '岁月饕客', category: '特殊', desc: '赛季累计领奖 10 次（约一季领满）', reward: { gold: 12000 }, check: (p) => Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0) >= 10 },
+  { id: 'seasonAll', name: '时空穿梭者', category: '特殊', desc: '赛季累计领奖 40 次（约 4 季领满）', title: '时空穿梭者', reward: { gold: 50000 }, check: (p) => Object.values(p.seasons ?? {}).reduce((t, s) => t + (s.claimed?.length ?? 0), 0) >= 40 },
   // 图鉴完成度里程碑（2026-09-06 长线收集线）
   { id: 'collection25', name: '图鉴入门', category: '收集', desc: '收集图鉴达到 25%', reward: { gold: 1000 }, check: (p) => p.collectionPct >= 25 },
   { id: 'collection50', name: '图鉴行家', category: '收集', desc: '收集图鉴达到 50%', title: '图鉴行家', reward: { gold: 3000, items: { mysterySpice: 1 } }, check: (p) => p.collectionPct >= 50 },

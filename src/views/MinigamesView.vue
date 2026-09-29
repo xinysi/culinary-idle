@@ -1,9 +1,8 @@
 <script setup>
 // 小游戏（2026-09-06 全面重构）：顶部入口行 + 下方自然流游戏区（与全站普通页面一致）
 // 2026-09-09：商店入口固定在最左；右侧游戏分类分页（每页 9 个，支持 ‹ › 翻页与自动跟随）
-import { ref, computed, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, defineAsyncComponent } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
-import { EventBus } from '../game/core/EventBus.js'
 
 const player = usePlayerStore()
 
@@ -87,10 +86,9 @@ watch(active, (id) => {
   const idx = GAMES.findIndex((g) => g.id === id)
   if (idx >= 0) page.value = Math.floor(idx / PAGE_SIZE)
 })
-// 小游戏「🚪 退出」→ 回到大厅默认游戏
-function onBack() { active.value = 'heat' }
-onMounted(() => EventBus.on('mg:back', onBack))
-onUnmounted(() => EventBus.off('mg:back', onBack))
+// ⚠️ 原有「小游戏『🚪 退出』→ 回到大厅默认游戏」的 `mg:back` 监听已删（2026-09-28）：
+//    27 款小游戏**从来没有发射过**它（没有一款挂过退出按钮，也没有 EventBus 引用），
+//    即整段是不可达的死代码。若以后要做「每款游戏内的退出按钮」，再在游戏侧 emit + 这里接。
 import FoldCard from '../components/FoldCard.vue'
 import RelatedPages from '../components/RelatedPages.vue'
 // 相关页面（2026-09-10 补）
