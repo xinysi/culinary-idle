@@ -41,6 +41,8 @@ await btn.click()
 await page.waitForTimeout(500)
 const modalText = await page.locator('.qty-modal').innerText()
 ok(/练习/.test(modalText) && /次动作/.test(modalText), '① 弹窗标题与单位是练习口径（不耗料、不产出、不给经验）', modalText.replace(/\n/g, ' ').slice(0, 60))
+// v2.29.1 修的那处口径：上限必须是「到精通 100 还差 N 次」，不是到下一档（后者会写成「还差 8 次」）
+ok(/到精通 100 还差 \d+ 次/.test(modalText), '① 弹窗上限的口径 = 到精通 100 还差 N 次（v2.29.1 修正）', (modalText.match(/到精通 100 还差 [\d,]+ 次/) ?? ['未找到'])[0])
 await page.locator('.qty-modal .qty-quick button', { hasText: '最大' }).click()
 await page.locator('.qty-modal .qty-actions .btn-primary').click()
 await page.waitForTimeout(700)
