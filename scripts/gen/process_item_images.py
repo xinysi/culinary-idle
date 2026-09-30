@@ -51,6 +51,12 @@ DEFAULT_MAP = [
 WHITE_MIN = 235      # 近白：直接算背景
 SHADOW_MIN = 190     # 「淡」的下限（配合低色度 → 投影/水印）
 CHROMA_MAX = 10      # 色度 ≤ 此值算中性灰
+# 形态学闭运算核（`_fill_and_clean` 用）：把噪点/细栅栏焊上，让洪水填充跨得过去。
+# 🔴 **2026-09-30 实测：它对小图（64×64）是有害的** —— 那批源图的描边只有 1~2px，
+#    5×5 闭运算会把描边**焊穿**，于是主体的**浅色内部**（肉块的浅色截面、鱼腹、果子果肉、
+#    菌盖的浅色部分）与画布外的背景连成一片、被一起填掉 ⇒ 出来是「只剩一圈外壳」的空心图。
+#    ⇒ 64×64 这类小图用 `--closing 0`（不闭）或 3；大图（1600²）保持默认 5。
+CLOSING = 5
 EDGE_T0 = 200        # 软边基准：外缘带内 min<=200 视为全不透明，min>=255 视为全透明
 EDGE_BAND = 2        # 软边带宽（px，原图尺度）
 KEEP_RATIO = 0.01    # 丢掉面积小于「最大连通域 × 此比例」的孤立块
@@ -59,9 +65,17 @@ OUT_SIZE = 64
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'public', 'images', 'items', 'food')
 
 
-def body_mask(mn, chroma):
-    """主体掩码（浅色底）：色度感知的背景候选 → 边缘洪水填充 → 去掉小块。返回 (mask, 丢弃块数)"""
-    return _fill_and_clean((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN)))
+def body_mask(mn, chroma, white_only=False):
+    """主体掩码（浅色底）：色度感知的背景候选 → 边缘洪水填充 → 去掉小块。返回 (mask, 丢弃块数)
+
+    🔴 `white_only=True`（`--bg white`）时**只把近白算背景**，不再把「淡且中性」也当背景。
+    为什么需要它（2026-09-30 实测）：默认那条 `(chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN)` 是为
+    **AI 出图的淡灰投影/水印**加的，但主体**自己也可能是淡的**（银耳、藕、霜果、肉块的浅色截面）
+    ⇒ 这些像素被判成背景后，只要与画布外的背景连通（小图上 5×5 闭运算会把细描边焊穿）
+    就会被整块填掉 = **空心图**。它是「按需档位」，默认行为一个字节没改（旧批次不受影响）。
+    """
+    cand = (mn >= WHITE_MIN) if white_only else ((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN)))
+    return _fill_and_clean(cand)
 
 
 # ── 深色底分支（2026-09-29 立，用户那批 16 件装备图：1600² RGB WebP、**近黑底 + 蓝色发光描边**）──
@@ -113,7 +127,8 @@ def _fill_and_clean(cand):
     🔴 `border_value=1` 不能省：默认把画布**外**当成空 ⇒ 腐蚀会把掩码在画布边缘啃掉一圈，
     于是背景连通块**不再触边**（实测 `触边标签=0`）⇒ 整张图被判成「内容」、裁切边长变成 1600。
     """
-    cand = ndimage.binary_closing(cand, structure=np.ones((5, 5)), border_value=1)
+    if CLOSING > 0:
+        cand = ndimage.binary_closing(cand, structure=np.ones((CLOSING, CLOSING)), border_value=1)
     lab, _ = ndimage.label(cand, structure=np.ones((3, 3)))
     border = set(lab[0, :].tolist()) | set(lab[-1, :].tolist()) | set(lab[:, 0].tolist()) | set(lab[:, -1].tolist())
     border.discard(0)
@@ -167,6 +182,9 @@ def analyze(path, bgmode='light'):
     if bgmode == 'dark':
         body, dropped = body_mask_dark(mx, chroma)
         bg_pct = float(((mx <= DARK_MAX) & (chroma <= DARK_CHROMA)).mean())
+    elif bgmode == 'white':
+        body, dropped = body_mask(mn, chroma, white_only=True)
+        bg_pct = float((mn >= WHITE_MIN).mean())
     else:
         body, dropped = body_mask(mn, chroma)
         bg_pct = float(((mn >= WHITE_MIN) | ((chroma <= CHROMA_MAX) & (mn >= SHADOW_MIN))).mean())
@@ -241,15 +259,23 @@ def main():
     ap.add_argument('--out', default=None, help='输出目录，默认 items/food；装备图传 items/equipment')
     ap.add_argument('--stats', action='store_true')
     # 2026-09-29：深色底（近黑 + 发光描边那类图，实测角底色 0~37）走反相分支；默认仍是浅色链
-    ap.add_argument('--bg', choices=['light', 'dark', 'alpha'], default='light',
-                    help='源图底色：light（近白，默认）| dark（近黑，主体常靠发光描边勾勒）| '
-                         'alpha（**真·透明底 RGBA**，直接用源图 alpha 当掩码、不做去背）')
+    ap.add_argument('--bg', choices=['light', 'dark', 'alpha', 'white'], default='light',
+                    help='源图底色：light（近白 + 淡中性，默认）| dark（近黑，主体靠发光描边勾勒）| '
+                         'alpha（真·透明底 RGBA，直接用源图 alpha）| '
+                         '**white**（只把近白算背景 —— 主体本身发白/发淡的图必须用它，'
+                         '否则主体的浅色内部会被当背景填掉 ⇒ 空心图；2026-09-30 实测）')
+    ap.add_argument('--closing', type=int, default=None,
+                    help='形态学闭运算核边长（默认 5；**64×64 这类小图请用 0 或 3** —— '
+                         '5 会把 1~2px 的描边焊穿，导致主体浅色内部与外部背景连通而被填掉）')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--sort', choices=['mtime', 'name'], default='mtime')
     ap.add_argument('--filter', default=None, help='只处理文件名含该子串的图（跳过旧批次残留）')
     ap.add_argument('--sheet', default=None)
     ap.add_argument('--resample', choices=['box', 'nearest', 'lanczos', 'both'], default='box')
     args = ap.parse_args()
+    if args.closing is not None:
+        global CLOSING
+        CLOSING = args.closing
 
     # 2026-09-29：也收 `.webp`（用户那批 AI 出图导出的是 1600×1600 **RGB WebP**——
     # 与 PNG 那批同一种情况：写着「无背景」其实没有 alpha、背景是四边连片近白 ⇒ 同一条去背链适用）。
