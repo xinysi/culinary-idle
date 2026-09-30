@@ -77,3 +77,5 @@ __pycache__/
 # 本机工具的工作目录（含 taste/会话数据，属内部层，绝不入库）
 .commandcode/
 
+scripts/dev/.items.json
+

@@ -18,6 +18,9 @@ const out = Object.values(ITEMS).map((it) => ({
   category: it.category ?? '',
   categoryLabel: CATEGORY_LABEL[it.category] ?? '',
   level: ITEM_LEVEL[it.id] ?? null,
-  img: it.image ? decodeURIComponent(it.image) : null,
+  // ⚠️ 必须走 `itemImage()`（唯一出口，按 type/name 推导 + 加版本号）；
+  //    直接读 `it.image` 的话绝大多数物品是 undefined（它们不手写这个字段），
+  //    批量入库脚本就会把它们全跳过（2026-09-30 实测踩过）。
+  img: itemImage(it.id) ? decodeURIComponent(itemImage(it.id).split('?')[0]) : null,
 }))
 console.log(JSON.stringify(out))
