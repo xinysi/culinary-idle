@@ -831,6 +831,12 @@ for (const def of LATE_BATCH_ITEMS) ITEMS[def.id] = def
 import { LATE_GEAR_ITEMS } from './lateGear.js'
 for (const def of LATE_GEAR_ITEMS) ITEMS[def.id] = def
 
+// Lv101-119「末段空档」批（2026-09-30 用户授权）：把**7 个完全无内容的等级**（101/103/107/109/113/115/119）
+// 各补 6 件（4 原料 + 2 成品）。同样是手写扩展模块，采集目标/作物/配方在各自技能文件里 push 进
+// **被 import 的那张表**（C66 口径），这里只并物品定义。
+import { GAP_ITEMS } from './lateGapFood.js'
+for (const def of GAP_ITEMS) ITEMS[def.id] = def
+
 export function getItem(id) {
   return ITEMS[id] ?? null
 }

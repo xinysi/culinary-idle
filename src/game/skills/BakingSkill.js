@@ -6,6 +6,7 @@ import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
 import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
+import { GAP_PROD } from '../data/lateGapFood.js' // Lv101-119「末段空档」配方（2026-09-30 用户授权）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const BAKING_RECIPES = [
@@ -51,6 +52,9 @@ export const BAKING_RECIPES = [
 
 // ── Lv101-120「补档」配方：push 进**被 import 的这张基础表**（C66 口径，同 CookingSkill 的说明）。
 BAKING_RECIPES.push(...LATE_PROD.baking)
+
+// ── Lv101-119「末段空档」配方（lateGapFood.js）：同样 push 进这张基础表（C66 口径）。
+BAKING_RECIPES.push(...GAP_PROD.baking)
 
 export class BakingSkill extends ProductionSkill {
   constructor(player) {

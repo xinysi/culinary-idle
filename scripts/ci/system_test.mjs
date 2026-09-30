@@ -2550,8 +2550,8 @@ console.log('══ S. 内容扩充完整性 ══')
   createSkillInstances(freshPlayer())
   for (const id of ['foraging', 'fishing', 'hunting', 'excavation', 'woodcutting', 'mining', 'cooking', 'baking', 'preserving', 'brewing', 'spiceMixing', 'craftsmithing', 'preservation', 'exploration']) insts[id] = getSkillInstance(id)
   // 各技能扩充后数量：与当前生成器产物一致（2026-09-16 实测量；v2.7.0 矿物拆出后 挖掘 83→42，新增伐木 20 / 采矿 43）
-  check('扩充', '采集七技能目标数（145/78/75/51/22/45；2026-09-29 补档 +13）', insts.foraging.targets.length === 145 && insts.fishing.targets.length === 78 && insts.hunting.targets.length === 75 && insts.excavation.targets.length === 51 && insts.woodcutting.targets.length === 22 && insts.mining.targets.length === 45, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
-  check('扩充', '制作五技能食谱数（297/99/93/129/99；腌制 90→93 见 pickles.js；2026-09-29 补档 +9）', insts.cooking.recipes.length === 297 && insts.baking.recipes.length === 99 && insts.preserving.recipes.length === 93 && insts.brewing.recipes.length === 129 && insts.spiceMixing.recipes.length === 99, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
+  check('扩充', '采集七技能目标数（152/83/80/58/22/45；2026-09-29 补档 +13、2026-09-30 末段空档 +24）', insts.foraging.targets.length === 152 && insts.fishing.targets.length === 83 && insts.hunting.targets.length === 80 && insts.excavation.targets.length === 58 && insts.woodcutting.targets.length === 22 && insts.mining.targets.length === 45, JSON.stringify({ f: insts.foraging.targets.length, g: insts.fishing.targets.length, h: insts.hunting.targets.length, x: insts.excavation.targets.length, w: insts.woodcutting.targets.length, m: insts.mining.targets.length }))
+  check('扩充', '制作五技能食谱数（305/102/93/132/99；腌制 90→93 见 pickles.js；2026-09-29 补档 +9；2026-09-30 末段空档 +14）', insts.cooking.recipes.length === 305 && insts.baking.recipes.length === 102 && insts.preserving.recipes.length === 93 && insts.brewing.recipes.length === 132 && insts.spiceMixing.recipes.length === 99, JSON.stringify({ c: insts.cooking.recipes.length, b: insts.baking.recipes.length, p: insts.preserving.recipes.length, r: insts.brewing.recipes.length, s: insts.spiceMixing.recipes.length }))
   check('扩充', '锻造 381 配方（20 品质套 + 独立矿套 365 + 2026-09-29 补档装备线 16）', insts.craftsmithing.recipes.length === 381, `n=${insts.craftsmithing.recipes.length}`)
   // 24 = 入门 1（厨余堆肥，2026-09-09 解除 Lv1 阻塞）+ 肥料 2 + 保鲜/增益剂 15
   //      + Ⅵ/Ⅶ 阶 6（preserveTiersExt.js，2026-09-29 体检 §9.1 的 5-A）
@@ -5667,7 +5667,7 @@ console.log('== C28. 伐木 / 采矿 / 20 档木材 ==')
   const M = getSkillInstance('mining')
   const W = getSkillInstance('woodcutting')
   const E = getSkillInstance('excavation')
-  check('伐木采矿', `目标数：伐木 ${W.targets.length} / 采矿 ${M.targets.length} / 挖掘 ${E.targets.length}（2026-09-29 补档各 +2）`, W.targets.length === 22 && M.targets.length === 45 && E.targets.length === 51, `${W.targets.length}/${M.targets.length}/${E.targets.length}`)
+  check('伐木采矿', `目标数：伐木 ${W.targets.length} / 采矿 ${M.targets.length} / 挖掘 ${E.targets.length}（2026-09-29 补档各 +2；2026-09-30 末段空档给挖掘 +7）`, W.targets.length === 22 && M.targets.length === 45 && E.targets.length === 58, `${W.targets.length}/${M.targets.length}/${E.targets.length}`)
   // 拆分无损：两边的目标集合不相交，并集 == 拆分前的 83 条
   const wIds = new Set(W.targets.map((t) => t.itemId))
   const mIds = new Set(M.targets.map((t) => t.itemId))
@@ -8639,7 +8639,10 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   const { SHANHAI_NODES } = await import('../../src/game/data/shanhaiTree.js')
   const dig = SHANHAI_NODES.filter((n) => n.pathId === 'excavation' || String(n.id).startsWith('dig'))
   const lastDig = dig.length ? Math.max(...dig.map((n) => (n.req?.count ?? 0))) : 0
-  check('后期补档', `山海食经掘藏线的件数已按 49 件重新标定（最高门槛 ${lastDig} ≤ 49 且 > 42）`, lastDig > 42 && lastDig <= 49, `实得 ${lastDig}`)
+  // ⚠️ 上界**从真实件数现算**（原来写死 49 = 09-19 那轮的口径；2026-09-30 末段空档给挖掘 +7 ⇒ 58）
+  //    —— 门槛必须 ≤ 该线可收集件数，钉死数字会在每次加内容时变成假失败。
+  const digCount = getSkillInstance('excavation').targets.length
+  check('后期补档', `山海食经掘藏线的门槛已按真实件数标定（最高门槛 ${lastDig} ≤ ${digCount} 且 > 42）`, lastDig > 42 && lastDig <= digCount, `实得 ${lastDig} / 件数 ${digCount}`)
 
   // ── 第 2 批：垂钓 +4 / 狩猎 +3（2026-09-19）──
   const NEW2 = [
@@ -8951,8 +8954,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 {
   const { readdirSync, readFileSync } = await import('node:fs')
   const CAL_TOTAL = 7462 // 生成器产物的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
-  const CAL_TOTAL_LATE = 1976 // 补档/扩展批新增配方的原始材料件数合计：459（09-29 补档）+ 264（保鲜 Ⅵ/Ⅶ）+ 516（T3 同物变体 48 条）+ 737（v2.29.7 副业档位加密 142 条：15 支各 9 + 木工 9）
-  const CAL_COUNT = 1502 // 同上：配方条数（09-29 补档 +57：制作 9 + 副业 30 + 木工 2 + 装备线 16；保鲜 Ⅵ/Ⅶ +6；T3 同物变体 45 + 3 = +48；v2.29.7 档位加密 +142）
+  const CAL_TOTAL_LATE = 2031 // 补档/扩展批新增配方的原始材料件数合计：459（09-29 补档）+ 264（保鲜 Ⅵ/Ⅶ）+ 516（T3 同物变体 48 条）+ 737（v2.29.7 副业档位加密 142 条）+ 55（v2.29.9 末段空档 14 条）
+  const CAL_COUNT = 1516 // 同上：配方条数（09-29 补档 +57；保鲜 Ⅵ/Ⅶ +6；T3 同物变体 +48；v2.29.7 档位加密 +142；v2.29.9 末段空档 +14）
   const c53 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
 
   // ── A. 成长阻尼：乘法叠区（转生 × 增益剂 × 精通或设置 × 对决补正 × 限时窗口）先相乘、再统一折减 ──
@@ -10640,8 +10643,11 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   check('山海缩放', '行为：精通总级数未达缩放后门槛时「精通」出现在缺失清单里、达到后不再出现',
     /精通总级数/.test(String(under.reason)) && !/精通总级数/.test(String(over.reason)),
     `under=${under.reason} · over=${over.reason}`)
+  // ⚠️ 绝对级数**从 maxLevels 现算**（原来写死 10,050 = 上一轮的件数口径；件数一增它就假失败）
+  const needText = needLevels.toLocaleString('en-US')
   check('山海缩放', '门槛文案里印的是**缩放后**的百分比（玩家看到的 50% 与结算一致）',
-    /50%/.test(String(node.desc)) && /50%/.test(String(under.reason ?? '')) && /10,050|10050/.test(String(under.reason ?? '')),
+    /50%/.test(String(node.desc)) && /50%/.test(String(under.reason ?? ''))
+    && (String(under.reason ?? '').includes(needText) || String(under.reason ?? '').includes(String(needLevels))),
     String(under.reason ?? node.desc).slice(0, 110))
 }
 
@@ -11140,6 +11146,58 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const missing = Object.keys(SIDELINE_AXES).filter((axis) => !covered(axis))
     check('副业出口', `全部 ${Object.keys(SIDELINE_AXES).length} 条副业轴都登记进了「效果总览」`, missing.length === 0, missing.join(','))
   }
+}
+
+// ══════════ C88：「末段空档」批（2026-09-30）—— 把 7 个**零内容**等级填满 ══════════
+// 起因：把「采集目标 / 农耕作物 / 制作配方 / 探索目标」四类内容**按等级**摆开后量出
+// Lv101/103/107/109/113/115/119 **一件内容都没有**，而它们正落在 Lv101-120 这段吃掉
+// 全站 86.2% 经验的长路里。这批**每级补 6 件**（4 原料 + 2 成品，28 + 14 + 4 枚种子 = 46）。
+{
+  const { GAP_ITEMS, GAP_GATHER, GAP_CROPS, GAP_PROD, GAP_SEED_SHOP } = await import('../../src/game/data/lateGapFood.js')
+  const { EXPLORATION_TARGETS_ALL } = await import('../../src/game/data/explorationTargets.js')
+  const { SEED_MAP } = await import('../../src/game/data/farmSeeds.js')
+  const GAP_LEVELS = [101, 103, 107, 109, 113, 115, 119]
+  freshPlayer()
+  const instList = getAllSkillInstances()
+  // ① 🔴 **定义性断言**：四类内容按等级摆开，那 7 级每级 ≥2 件（原料 + 成品）—— 这批的全部意义就在这
+  const byLv = new Map()
+  const add = (lv) => { const n = Number(lv); if (Number.isFinite(n)) byLv.set(n, (byLv.get(n) ?? 0) + 1) }
+  for (const it of instList) {
+    for (const t of it.targets ?? []) add(t.reqLevel)
+    for (const c of it.crops ?? []) add(c.reqLevel)
+    for (const r of it.recipes ?? []) add(r.reqLevel)
+  }
+  for (const t of EXPLORATION_TARGETS_ALL) add(t.reqLevel)
+  const empty = GAP_LEVELS.filter((lv) => (byLv.get(lv) ?? 0) < 2)
+  check('末段空档', `🔴 7 个原本零内容的等级（${GAP_LEVELS.join('/')}）现在每级 ≥2 件内容`, empty.length === 0,
+    empty.map((lv) => `${lv}:${byLv.get(lv) ?? 0}`).join(' '))
+  // ② 本批 46 件：都在 ITEMS 里、都有图片、id 唯一且带 `gap_` 前缀（与既有内容零重叠）
+  const iBad = []
+  for (const it of GAP_ITEMS) {
+    if (!ITEMS[it.id]) iBad.push(`${it.id} 未并入 ITEMS`)
+    if (!it.id.startsWith('gap_')) iBad.push(`${it.id} 前缀不是 gap_`)
+    if (!imgExists(it.id)) iBad.push(`${it.id} 缺图片`)
+  }
+  check('末段空档', `本批 ${GAP_ITEMS.length} 件（原料 28 + 成品 14 + 种子 4）都在 ITEMS 里、都有图片、id 唯一`,
+    GAP_ITEMS.length === 46 && new Set(GAP_ITEMS.map((i) => i.id)).size === 46 && iBad.length === 0, iBad.slice(0, 4).join('; '))
+  // ③ 采集目标 24 条 + 作物 4 条：等级**必须落在那 7 级里**（否则「填补空档」这件事没做到）
+  const gLv = [...Object.values(GAP_GATHER).flat().map((t) => Number(t.reqLevel)), ...GAP_CROPS.map((c) => Number(c.reqLevel))]
+  check('末段空档', `采集目标 ${Object.values(GAP_GATHER).flat().length} 条 + 作物 ${GAP_CROPS.length} 条，等级全部落在那 7 级里`,
+    gLv.length === 28 && gLv.every((lv) => GAP_LEVELS.includes(lv)), gLv.filter((lv) => !GAP_LEVELS.includes(lv)).join(','))
+  // ④ 🔴 **每件原料都被成品吃掉**（本批的硬口径：不留「做出来没处用」的东西）
+  const eaten = new Set()
+  for (const list of Object.values(GAP_PROD)) for (const r of list) for (const id of Object.keys(r.ingredients)) if (id.startsWith('gap_')) eaten.add(id)
+  const rawIds = [...Object.values(GAP_GATHER).flat().map((t) => t.itemId), ...GAP_CROPS.map((c) => c.itemId)]
+  const orphan = rawIds.filter((id) => !eaten.has(id))
+  check('末段空档', `🔴 ${rawIds.length} 件原料全部被 ${Object.values(GAP_PROD).flat().length} 条配方吃掉（无孤儿）`,
+    orphan.length === 0 && eaten.size === rawIds.length, `孤儿 ${orphan.join(',') || '无'} / 吃到 ${eaten.size}`)
+  // ⑤ 4 颗新种子**真的上了架**（读 SHOP_ITEMS 本体，而不是只读这份清单 —— 只读清单的话
+  //    「shop.js 里忘了 push」这条就抓不到）。
+  const { SHOP_ITEMS } = await import('../../src/game/data/shop.js')
+  check('末段空档', '4 颗新种子都在商店上架清单里（且 SEED_MAP 已含它们 ⇒ 真能种、附产也掉得到）',
+    GAP_SEED_SHOP.length === 4 && GAP_CROPS.every((c) => SEED_MAP[c.itemId] === c.seedId)
+    && GAP_SEED_SHOP.every((s) => SHOP_ITEMS.some((x) => x.itemId === s.itemId)),
+    `上架 ${GAP_SEED_SHOP.filter((s) => SHOP_ITEMS.some((x) => x.itemId === s.itemId)).length}/4`)
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

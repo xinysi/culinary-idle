@@ -7,6 +7,7 @@ import { ProductionSkill } from './ProductionSkill.js'
 import { PRODUCTION_EXT } from '../data/expansion1.js'
 import { PRODUCTION_EXT2 } from '../data/expansion2.js'
 import { LATE_PROD } from '../data/lateGameFood.js' // Lv101-120「补档」配方（2026-09-29 用户授权批）
+import { GAP_PROD } from '../data/lateGapFood.js' // Lv101-119「末段空档」配方（2026-09-30 用户授权）
 import { raiseRecipeLevels } from './recipeBalance.js'
 
 export const COOKING_RECIPES = [
@@ -264,6 +265,9 @@ export const COOKING_RECIPES = [
 // itemSources / valueBalance / recipeBalance / itemUses 读的都是 COOKING_RECIPES 本体，
 // 在 super 里 spread 它们看不到（本轮实测踩到：图鉴来源会漏掉这 3 条）。
 COOKING_RECIPES.push(...LATE_PROD.cooking)
+
+// ── Lv101-119「末段空档」配方（lateGapFood.js）：同样 push 进这张基础表（C66 口径）。
+COOKING_RECIPES.push(...GAP_PROD.cooking)
 
 export class CookingSkill extends ProductionSkill {
   constructor(player) {

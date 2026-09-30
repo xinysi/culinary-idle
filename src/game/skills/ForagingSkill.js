@@ -10,6 +10,7 @@ import { SEED_MAP } from '../data/farmSeeds.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率）
 import { LATE_GATHER } from '../data/lateGameFood.js'
+import { GAP_GATHER } from '../data/lateGapFood.js' // Lv101-119「末段空档」批（2026-09-30 用户授权）
 
 export const FORAGING_TARGETS = [
   { itemId: 'apple', reqLevel: 1, xpPerAction: 10, intervalSec: 3.0 },
@@ -73,6 +74,9 @@ export const FORAGING_TARGETS = [
 // ── Lv101-120「补档」目标（lateGameFood.js）：push 进**被 import 的这张表** ——
 // itemSources / valueBalance / recipeBalance / itemNav 读的都是它，一处 push 四处同步（C66 口径）。
 FORAGING_TARGETS.push(...LATE_GATHER.foraging)
+
+// ── Lv101-119「末段空档」目标（lateGapFood.js）：同样 push 进**被 import 的这张表**（C66 口径）。
+FORAGING_TARGETS.push(...GAP_GATHER.foraging)
 
 export const WOOD_CHANCE = 0.5 // 50% 附带产出木材（厨具锻造原料 §3.2.6）
 export const SEED_CHANCE = 0.1 // 10% 附带产出本作物种子（农耕种子掉落 §3.1.5）

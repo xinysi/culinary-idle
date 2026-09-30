@@ -10,6 +10,7 @@ import { EventBus } from '../core/EventBus.js'
 import { masteryXpMultiplier } from '../core/mastery.js'
 import { otherChance } from '../data/difficulty.js' // 全局难度系数（成功率与稀有鱼的唯一缩放出口）
 import { LATE_GATHER } from '../data/lateGameFood.js'
+import { GAP_GATHER } from '../data/lateGapFood.js' // Lv101-119「末段空档」批（2026-09-30 用户授权）
 
 export const FISHING_TARGETS = [
   { itemId: 'crucian', reqLevel: 1, xpPerAction: 10, intervalSec: 3.2 },
@@ -34,6 +35,9 @@ export const FISHING_TARGETS = [
 
 // ── Lv101-120「补档」目标（lateGameFood.js）：push 进**被 import 的这张表**（C66 口径）。
 FISHING_TARGETS.push(...LATE_GATHER.fishing)
+
+// ── Lv101-119「末段空档」目标（lateGapFood.js）：同样 push 进这张表（C66 口径）。
+FISHING_TARGETS.push(...GAP_GATHER.fishing)
 
 export const RARE_FISH_ID = 'goldenDragonFish'
 const RARE_CHANCE = 0.005 // 0.5%

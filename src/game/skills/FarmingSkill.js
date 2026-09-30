@@ -15,6 +15,7 @@ import { PRIME_CROP_ID, PRIME_MIN_LEVEL, primeCropChance } from '../data/primeCr
 import { toolTimeFactor } from '../data/farmTools.js'
 import { getItem } from '../data/items.js'
 import { LATE_CROPS } from '../data/lateGameFood.js'
+import { GAP_CROPS } from '../data/lateGapFood.js' // Lv101-119「末段空档」作物（2026-09-30 用户授权）
 import { DERIVED_MAX } from '../data/caps.js'
 
 const CROPS_15 = [
@@ -37,7 +38,8 @@ const CROPS_15 = [
 
 // 合并生成器补充的所有可采集/可挖掘非矿物食材作物（含现有 15 种），按等级升序展示
 // + Lv101-120「补档」两档作物（lateGameFood.js；种子映射也在那边并进 SEED_MAP）
-export const CROPS = [...CROPS_15, ...FARM_CROPS, ...LATE_CROPS].sort((a, b) => a.reqLevel - b.reqLevel || a.itemId.localeCompare(b.itemId))
+// + Lv101-119「末段空档」4 档作物（lateGapFood.js；种子映射也在那边并进 SEED_MAP）
+export const CROPS = [...CROPS_15, ...FARM_CROPS, ...LATE_CROPS, ...GAP_CROPS].sort((a, b) => a.reqLevel - b.reqLevel || a.itemId.localeCompare(b.itemId))
 
 /** 肥料档位（用于「已施肥」判定：同种/降级拒绝，升级允许覆盖） */
 const FERTILIZER_RANK = { compost: 1, richCompost: 2 }

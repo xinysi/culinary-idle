@@ -685,8 +685,8 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
     FARM_CROPS.length === 184 && genXp === 52231, `实际 ${FARM_CROPS.length} 条 / xp ${genXp}`)
   check('农耕系数：生成器产物 growSec 合计 == 80020（**产出一动，材料成本系数与制作类时长口径就失准**）',
     genGrow === 80020, `实际 ${genGrow}`)
-  check('农耕系数：CROPS = 生成器 199 + 补档 2 = 201（xp/growSec 合计随之 57091 / 89080）',
-    CROPS.length === 201 && xpSum === 57091 && growSum === 89080, `实际 ${CROPS.length} 条 / xp ${xpSum} / grow ${growSum}`)
+  check('农耕系数：CROPS = 生成器 199 + 补档 2 + 末段空档 4 = 205（xp/growSec 合计随之 60691 / 94120）',
+    CROPS.length === 205 && xpSum === 60691 && growSum === 94120, `实际 ${CROPS.length} 条 / xp ${xpSum} / grow ${growSum}`)
   // 行为断言（真实引擎）：收获一次，捕获交给 addCardXp 的 base —— 必须等于 `crop.xp × 系数`。
   // 用「捕获 base」而不是「比总经验」：总经验上还叠着 XP 乘区/精通池，比 base 才是**这个系数**的作用点。
   setActivePinia(createPinia())
@@ -790,8 +790,8 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
 //    条件落到第 3 位被忽略、而第 2 位收到一个非空字符串（恒真）⇒ **断言永远绿**。
 //    反例验证当场抓到（注入旧写法时它照样 ok）—— 这就是「4 个参数的 check」这种假绿长什么样。
   check('精通池', mismatch.length === 0, `扫了 ${withCards} 个技能；不一致：${mismatch.slice(0, 4).join('；') || '无'}`)
-  check('精通池', pm.masteryCardCount('farming') === 201,
-    `农耕卡数 = ${pm.masteryCardCount('farming')}（它的卡是 crops，2026-09-29 起 = 生成器 199 + 补档 2；旧口径恒 0 ⇒ 池一辈子填不满、四档加成全失效）`)
+  check('精通池', pm.masteryCardCount('farming') === 205,
+    `农耕卡数 = ${pm.masteryCardCount('farming')}（它的卡是 crops，= 生成器 199 + 补档 2 + 末段空档 4；旧口径恒 0 ⇒ 池一辈子填不满、四档加成全失效）`)
 }
 
 // ── 厨神之路门槛：**印记之外必须有「精通总级数」这道地板**（2026-09-29 立）──

@@ -52,6 +52,11 @@ SHOP_ITEMS.push(...LATE_SEED_SHOP)
 import { SPIRIT_FIELD_SEED_SHOP } from './spiritFieldSeeds.js'
 SHOP_ITEMS.push(...SPIRIT_FIELD_SEED_SHOP)
 
+// Lv101-119「末段空档」的 4 档种子（lateGapFood.js，2026-09-30 用户授权批）。
+// ⚠️ 与上面同一条口径：这个 import 也有**顺序副作用**（把 4 颗种子并进 `SEED_MAP`）。
+import { GAP_SEED_SHOP } from './lateGapFood.js'
+SHOP_ITEMS.push(...GAP_SEED_SHOP)
+
 export function shopItemName(itemId) {
   return ITEMS[itemId]?.name ?? itemId
 }

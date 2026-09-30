@@ -20,6 +20,7 @@ import { masteryXpMultiplier } from '../core/mastery.js'
 import { getItem } from '../data/items.js'
 import { gatherExtraChance } from '../data/difficulty.js' // 全局难度系数（附产概率；只压常量基准值）
 import { LATE_GATHER } from '../data/lateGameFood.js'
+import { GAP_GATHER } from '../data/lateGapFood.js' // Lv101-119「末段空档」批（2026-09-30 用户授权）
 
 /** ⚠️ 历史手写清单（10 条，含 1 个矿物 `saltOre`）——**内容保持原样**（见文件头注释）。 */
 export const EXCAVATION_TARGETS = [
@@ -50,6 +51,9 @@ export const EXCAVATION_TARGETS = [
 // 矿物由下面的 `isMineralTarget` 分流自动进 `MINING_TARGETS`（与既有「同名矿」同一条路），
 // 根茎留在挖掘。照旧 push 进**被 import 的这张表**（C66 口径）。
 EXCAVATION_TARGETS.push(...LATE_GATHER.excavation, ...LATE_GATHER.mining)
+
+// ── Lv101-119「末段空档」目标（lateGapFood.js）：本批全是**根茎**（无矿物）⇒ 只并进挖掘那张表。
+EXCAVATION_TARGETS.push(...GAP_GATHER.excavation)
 
 /** 是否矿物（分流依据**只看物品类别**，不看名字——石膏/硝石/明矾这类名字里没有「矿」） */
 export function isMineralTarget(t) {
