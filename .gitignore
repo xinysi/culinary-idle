@@ -73,3 +73,7 @@ __pycache__/
 # .zcodeignore 是「.gitignore 的上游清单」（ZCode 工具同步用），它逐条列出了内部层路径
 # ⇒ 与 `_purge_private.mjs` 同类，属于**不该公开的清单**，绝不入库（2026-09-29）
 .zcodeignore
+
+# 本机工具的工作目录（含 taste/会话数据，属内部层，绝不入库）
+.commandcode/
+
