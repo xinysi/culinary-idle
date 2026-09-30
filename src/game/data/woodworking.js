@@ -12,6 +12,8 @@
 // 3. 配方材料一律是**该等级档位的木材**（每 10 级一件，正好覆盖 20 档木材的前 10 档），
 //    满足「材料获取等级 ≤ 物品等级 + 5」，因此 `balanceRecipeLevels` 不会裁剪它们。
 
+import { timberOfLevel } from './timbers.js'
+
 /** 木器类别标签（`itemDetail.CATEGORY_LABEL` 需同步加 `furniture: '木器'`） */
 export const WOODWORK_CATEGORY = 'furniture'
 
@@ -40,6 +42,32 @@ export const WOODWORK_ITEMS_DEF = [
   { level: 120, id: 'agarwoodAltarRoyal', name: '天罡香案·御', wood: 'late_wood_02', woodQty: 8, tier: '传说' },
 ]
 
+// ── 档位加密（v2.29.7，2026-09-30 用户口径：「同样的时长但不枯燥」）────────────────────
+// 与「副业 16 支」同一套口径（完整说明见 `sidelineWorks.js` 顶部那段）：木工 10 件基底也是
+// **10 级/件**，每两档之间插一档「**·良**」（Lv6/16/…/86），**图沿用基底那张**（零美术）。
+// 🔴 **加密档不进 `CRAFTED_DECOR`**（它不是手工装潢）⇒ 手工装潢的件数与合计（+65%）一个都不变，
+//    「手工装潢效果严格递增」那条守卫也不受影响。它的去处与其它加密档一致：**量产阶梯 + 半价回收**。
+// ⚠️ 这段**必须排在 `CRAFTED_DECOR` 之前**：那样下面那层 `.filter((it) => !it.densified)` 才是
+//    **承重的**（漏掉就真的会凭空多出 9 件装潢）。排在后面的话过滤只是装饰，反例验证抓不到它。
+// 只加密 **Lv1~91 那段平原**（补档 102/112 与同物变体 114/117/120 本来就够密）。
+const DENSIFY_SUFFIX = '·良'
+{
+  const out = []
+  for (let i = 0; i < WOODWORK_ITEMS_DEF.length; i++) {
+    const it = WOODWORK_ITEMS_DEF[i]
+    out.push(it)
+    const next = WOODWORK_ITEMS_DEF[i + 1]
+    if (next && next.level <= 91 && next.level - it.level >= 10) {
+      // 木材取**自己那一档**（`timberOfLevel(等级)`，不是沿用基底那档）——同档木材是不变量，
+      // 有守卫按「|木材档位 − 配方等级| ≤ 4」逐条查（沿用基底会让 Lv6 的配方用 Lv1 的木材而 FAIL）。
+      const lvMid = it.level + 5
+      out.push({ ...it, level: lvMid, id: `${it.id}Fine`, name: `${it.name}${DENSIFY_SUFFIX}`, wood: timberOfLevel(lvMid).id, densified: true })
+    }
+  }
+  WOODWORK_ITEMS_DEF.length = 0
+  WOODWORK_ITEMS_DEF.push(...out)
+}
+
 /**
  * 手工装潢：每件木器对应一件装潢，效果（餐厅收入 %）随等级递增。
  * ⚠️ v2.10.1（2026-09-17 用户要求「300 件装潢的加成应该下调，加成比手工的太多了」）：
@@ -60,7 +88,10 @@ export const CRAFTED_DECOR = [
     effect: 1.5,
     craftedFrom: { itemId: 'wood', qty: 10 },
   },
-  ...WOODWORK_ITEMS_DEF.map((it) => ({
+  // ⚠️ `.filter` 是**显式**的（不靠「加密通行在下面、此处已求值」这种顺序巧合）：
+  //   加密档「·良」不是手工装潢（见下面「档位加密」一段），漏掉这层过滤就会凭空多出 9 件装潢、
+  //   把手工装潢合计与「效果严格递增」一起改写。
+  ...WOODWORK_ITEMS_DEF.filter((it) => !it.densified).map((it) => ({
     id: `decor_hand_${it.id}`,
     name: `🪚 ${it.name}`,
     category: 'handmade', // 不进商店的 category 页签（DECOR_CATEGORIES 里没有它）
@@ -82,6 +113,8 @@ export const WOODWORKING_ITEMS = WOODWORK_ITEMS_DEF.map((it) => ({
   value: Math.round(2 + it.level * 2.5),
   stackable: true,
   maxStack: 9999,
+  // 加密档：**与基底共用同一张图**（零美术；显式 `image` 优先于按名字拼路径，见 itemImage.js）
+  ...(it.densified ? { image: `images/items/food/${encodeURIComponent(it.name.slice(0, -DENSIFY_SUFFIX.length))}.png` } : {}),
 }))
 
 /** 木工配方（制作类：与锻造同型，成功率随等级递减；经验贴近「25 + 等级×13」基准） */

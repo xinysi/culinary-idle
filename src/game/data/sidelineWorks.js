@@ -468,6 +468,36 @@ const DEFS = {
   },
 }
 
+// ── 档位加密（v2.29.7，2026-09-30 用户口径：「同样的时长但不枯燥」）────────────────────
+// 体检量出**副业 16 支是全站最平的一条线**：恒定 **10 级/件**（其余线 0.2~5.0），
+// 而它们合计占**串行总时长的 26%** ⇒ 「花最多的时间、看到最少的新东西」。
+// 加密只动**内容密度**、不动任何数值：
+//   · 每两档之间插一档「**·良**」（同一个物件的更高一档做工）—— 名字带后缀、**图沿用基底那张**（零美术）；
+//   · 木材由 `timberOfLevel(等级)` 自动取该档、辅料沿用基底那一味 ⇒ **零新增材料**；
+//   · 经验 / 成功率由下面 DEFS 循环里那条式子按等级自动算 ⇒ **总经验不变 ⇒ 时长不变**。
+//
+// 🔴 三条硬约束（都有守卫）：
+//   ① **加密档不登记为作品**（`SIDELINE_WORKS` 里没有它们）⇒ 各轴「作品数 × 每件加成」**一分不差**，
+//      硬顶（`CELLAR_SLOT_VALUE_MAX` / `NIGHT_MARKET_MAX_EXTRA_HOURS`）与全部比值守卫都不用动。
+//      ⚠️ 这正是 2026-09-29「把阶梯扩到 16 档被硬顶挡回」那条教训的**正确解法**：改密度、不改轴总量。
+//      （若登记为作品，作品数 15→24 ⇒ 每件加成得按比例下调 ⇒ 作品系统被整体削平，
+//        中期玩家拿到同样多作品只值原来的 62% —— 那是**平衡改动**，不是「同样时长」。）
+//   ② 只在**档距 ≥ 10** 的相邻两档之间插（蜡烛是 12 级档，照样插；最后一档后面没有下一档，不插）。
+//   ③ 加密档的去处与基底同一套：**量产阶梯**（`SIDELINE_PRODUCTS` 由配方表派生，自动含它们）
+//      与**半价回收**（`valueBalance` 按材料锚价）⇒ 不会变成「做出来没处放」的东西。
+const DENSIFY_SUFFIX = '·良'
+for (const d of Object.values(DEFS)) {
+  const out = []
+  for (let i = 0; i < d.rows.length; i++) {
+    const [lv, name, auxId, woodQty, auxQty] = d.rows[i]
+    out.push(d.rows[i])
+    const next = d.rows[i + 1]
+    // 只加密 **Lv1~91 那段平原**（补档 102/112 与同物变体 114/117/120 本来就只有 2~3 级一档，够密了）
+    if (next && next[0] <= 91 && next[0] - lv >= 10) out.push([lv + 5, `${name}${DENSIFY_SUFFIX}`, auxId, woodQty, auxQty, true])
+  }
+  d.rows = out
+}
+
 // （SIDELINE_AXIS_TOTALS 的定义挪到了文件后部：必须在 DEFS 循环 + 补档追加循环**之后**，
 //   才能按 SIDELINE_WORKS 的实际作品数重算 —— 见「效果轴 → 该轴的满级合计」那一段。）
 
@@ -484,10 +514,10 @@ for (const [key, d] of Object.entries(DEFS)) {
   const axis = SIDELINE_AXES[d.axis]
   SIDELINE_RECIPES[key] = []
   SIDELINE_SKILL_LIST.push({ id: d.skill, name: d.name, icon: d.icon, category: d.category, catLabel: d.catLabel, axis: d.axis, works: d.rows.length, materialNote: d.materialNote })
-  for (const [level, itemName, auxId, woodQty, auxQty] of d.rows) {
+  for (const [level, itemName, auxId, woodQty, auxQty, densified] of d.rows) {
     const id = `${key}_${level}`
     const w = timberOfLevel(level)
-    SIDELINE_ITEMS.push({
+    const item = {
       id,
       name: itemName,
       type: 'ingredient',
@@ -496,7 +526,11 @@ for (const [key, d] of Object.entries(DEFS)) {
       value: Math.round(2 + level * 2.5),
       stackable: true,
       maxStack: 9999,
-    })
+    }
+    // 加密档（`·良`）：**与基底共用同一张图**（零美术）。显式 `image` 优先于「按名字拼路径」
+    // （见 `itemImage.js` 第 37 行）—— 不写的话会去找 `陶碗·良.png`，那文件不存在（图会被 @error 隐藏）。
+    if (densified) item.image = `images/items/food/${encodeURIComponent(itemName.slice(0, -DENSIFY_SUFFIX.length))}.png`
+    SIDELINE_ITEMS.push(item)
     SIDELINE_RECIPES[key].push({
       id: `${key.slice(0, 2)}_${level}`,
       name: itemName,
@@ -507,7 +541,10 @@ for (const [key, d] of Object.entries(DEFS)) {
       ingredients: { [w.id]: woodQty, [auxId]: auxQty },
       output: { itemId: id, qty: 1 },
     })
-    SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId: w.id, woodName: w.name, auxId, auxQty, woodQty }
+    // 🔴 **加密档不登记为作品**（见文件上方「档位加密」的硬约束①）：各轴「作品数 × 每件加成」一分不差
+    if (!densified) {
+      SIDELINE_WORKS[id] = { itemId: id, name: itemName, catLabel: d.catLabel, skill: d.skill, skillName: d.name, axis: d.axis, amount: axis.perItem, level, woodId: w.id, woodName: w.name, auxId, auxQty, woodQty }
+    }
   }
 }
 
@@ -586,8 +623,11 @@ for (const [key, baseLevel, baseName, baseAuxId] of LATE_SIDELINE_ROWS) {
   }
 }
 
-// 各支的「作品数」改成**实际展开数**（DEFS rows + 补档追加 + 同物变体；木工的作品在 woodworking.js，单独一行覆盖）
-for (const s of SIDELINE_SKILL_LIST) s.works = SIDELINE_RECIPES[s.id].length
+// 各支的「作品数」= **SIDELINE_WORKS 里的实际条数**（DEFS rows + 补档追加 + 同物变体；
+// 木工的作品是手工装潢、在 woodworking.js，不在 SIDELINE_SKILL_LIST 里）。
+// ⚠️ v2.29.7 起**不能再写成 `SIDELINE_RECIPES[s.id].length`**：加密档「·良」有配方、**不是作品** ⇒
+//    按配方数算会把作品数虚报（面板写「作品 24」而实际只能做 15 件）。
+for (const s of SIDELINE_SKILL_LIST) s.works = Object.values(SIDELINE_WORKS).filter((w) => w.skill === s.id).length
 
 /** 效果轴 → 该轴的满级合计（守卫与文案共用；避免各处手算）
  *  🔴 按 **SIDELINE_WORKS 实际作品数**重算（2026-09-29 补档给 15 支各 +2 件）——原先按 DEFS rows.length

@@ -8,7 +8,7 @@ import { equipSetOf } from './equipSets.js'
 import { CELLAR_CATEGORIES } from './cellar.js'
 import { EXCHANGE_POOL_CATEGORIES } from './exchange.js'
 import { CRAFTED_DECOR } from './woodworking.js'
-import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDERS } from './sidelineWorks.js'
+import { sidelineWorkOf, SIDELINE_AXES, SIDELINE_LADDERS, sidelineSkillOfItem } from './sidelineWorks.js'
 import { getSpiritPlantBySeed, spiritProductText } from './spiritField.js'
 
 const TYPE_LABEL = { ingredient: '食材', food: '料理', drink: '饮品', spice: '调料', seed: '种子', consumable: '道具', equipment: '装备', spirit: '食灵' }
@@ -159,6 +159,20 @@ export function itemDetailLines(id) {
     lines.push(['量产阶梯', `多余的可投入「${work.skillName}量产阶梯」换永久加成：按档位计点（Lv1 的 1 点、Lv91 的 10 点）、每档 ${lad.unit(lad.perTier)}`])
     lines.push(['多余收益', '价值等于配方材料的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
+  }
+  // 副业「档位加密」产物（v2.29.7 的「同物·良」档）：有配方、有产物，但**不是作品**
+  // （见 `sidelineWorks.js` 的「档位加密」硬约束①）⇒ 不进上面两个分支。它的去处与基底同一套：
+  // **量产阶梯 + 半价回收**。没有这条分支的话，图鉴里这些物品只剩一行名字（三查会报「详细作用缺失」）。
+  if (!work && !woodDecor) {
+    const sk = sidelineSkillOfItem(id)
+    if (sk) {
+      const lad = SIDELINE_LADDERS.find((l) => l.skill === sk.skill)
+      const nm = SKILL_LABEL[sk.skill] ?? sk.skill
+      lines.push(['副业产物', `${nm}的加密档（采集与商店都拿不到）`])
+      lines.push(['量产阶梯', `可投入「${nm}量产阶梯」换永久加成：按档位计点（Lv1 的 1 点、Lv91 的 10 点）、每档 ${lad.unit(lad.perTier)}`])
+      lines.push(['多余收益', '价值等于配方材料的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
+      lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
+    }
   }
   if (it.use?.refreshSpoilMs) lines.push(['保鲜时长', `${Math.round(it.use.refreshSpoilMs / 3600000)} 小时`])
   if (it.use?.buffXp) lines.push(['经验增益', `×${it.use.buffXp.mult}（${it.use.buffXp.minutes} 分钟）`])

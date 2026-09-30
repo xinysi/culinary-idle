@@ -6009,8 +6009,10 @@ console.log('══ C32. 副业·木工 ══')
     if (!ITEMS[it.id]) badItems.push(`${it.id}: 未合并进 ITEMS`)
     else if (it.type !== 'ingredient' || it.category !== WOODWORK_CATEGORY) badItems.push(`${it.id}: type/category 非 ingredient/furniture`)
   }
-  check('副业·木工', `木器共 ${WOODWORKING_ITEMS.length} 件、全部并入 ITEMS 且类别为木器（furniture）`,
-    WOODWORKING_ITEMS.length === 15 && new Set(WOODWORKING_ITEMS.map((i) => i.id)).size === 15 && badItems.length === 0, badItems.join('; '))
+  // v2.29.7「档位加密」：15 件基底/补档/变体之外，Lv1~91 的平原上每两档之间再插一档「·良」（+9 件）
+  const woDensified = WOODWORKING_ITEMS.filter((i) => i.name.endsWith('·良'))
+  check('副业·木工', `木器共 ${WOODWORKING_ITEMS.length} 件（15 基底/补档/变体 + 9 加密档「·良」）、全部并入 ITEMS 且类别为木器（furniture）`,
+    WOODWORKING_ITEMS.length === 24 && woDensified.length === 9 && new Set(WOODWORKING_ITEMS.map((i) => i.id)).size === 24 && badItems.length === 0, badItems.join('; '))
   check('副业·木工', '每件木器都有图片文件（占位图也算，但文件必须真实存在）',
     WOODWORKING_ITEMS.every((it) => imgExists(it.id)), WOODWORKING_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
   // 木器价值 == 木材投入合计（v2.10.1：多余木器半价卖回即等于把木材整包卖掉）
@@ -6039,8 +6041,8 @@ console.log('══ C32. 副业·木工 ══')
     if (!ITEMS[r.output?.itemId]) rBad.push(`${r.id}: 产物不存在`)
   }
   check('副业·木工', `配方 ${WOODWORKING_RECIPES.length} 条：材料均为同档木材、数量 2~8、产物存在`, rBad.length === 0, rBad.slice(0, 4).join('; '))
-  check('副业·木工', '配方等级：每 10 级一件（Lv1,11,…,91）+ 补档 102/112 + 同物变体 114/117/120，严格递增',
-    WOODWORKING_RECIPES.map((r) => r.reqLevel).join(',') === '1,11,21,31,41,51,61,71,81,91,102,112,114,117,120')
+  check('副业·木工', '配方等级：基底每 10 级一件（Lv1,11,…,91）+ 加密档 Lv6/16/…/86（把平原做成 5 级/件）+ 补档 102/112 + 同物变体 114/117/120，严格递增',
+    WOODWORKING_RECIPES.map((r) => r.reqLevel).join(',') === '1,6,11,16,21,26,31,36,41,46,51,56,61,66,71,76,81,86,91,102,112,114,117,120')
 
   // ⑤ 启动重算不改动这些配方（raiseRecipeLevels 必须对它们是恒等变换）
   const liveRecipes = inst.recipes
@@ -6127,12 +6129,20 @@ console.log('══ C32. 副业·木工 ══')
   const gBad = []
   for (const it of WOODWORKING_ITEMS) {
     const lines = itemDetailLines(it.id).map((l) => l.join('')).join('|')
-    if (!lines.includes('手工装潢')) gBad.push(`${it.id}: 详细作用缺「做成手工装潢」`)
     if (!itemSources(it.id).some((s) => s.includes('木工'))) gBad.push(`${it.id}: 来源缺「木工制作」`)
     const uses = itemUses(it.id)
-    if (!uses.some((u) => u.kind === 'decor' && u.outputId === decorOfWoodwork(it.id)?.id)) gBad.push(`${it.id}: 可用于制作缺装潢`)
+    if (it.name.endsWith('·良')) {
+      // 加密档**不是手工装潢**（v2.29.7）⇒ 三查的判据换成「量产阶梯」这一条；同时反向钉住
+      // 「它不该有装潢」（否则等于凭空多出 9 件装潢、把手工合计与效果递增一起改写）。
+      if (!lines.includes('量产阶梯')) gBad.push(`${it.id}: 详细作用缺「量产阶梯」`)
+      if (!uses.some((u) => u.kind === 'ladder')) gBad.push(`${it.id}: 可用于制作缺「量产阶梯」`)
+      if (decorOfWoodwork(it.id)) gBad.push(`${it.id}: 加密档不该有手工装潢`)
+    } else {
+      if (!lines.includes('手工装潢')) gBad.push(`${it.id}: 详细作用缺「做成手工装潢」`)
+      if (!uses.some((u) => u.kind === 'decor' && u.outputId === decorOfWoodwork(it.id)?.id)) gBad.push(`${it.id}: 可用于制作缺装潢`)
+    }
   }
-  check('副业·木工', '图鉴三查：木器的详细作用 / 可用于制作（装潢）/ 获取来源（木工制作）三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
+  check('副业·木工', '图鉴三查：木器的详细作用 / 可用于制作（基底→装潢、加密档→量产阶梯）/ 获取来源（木工制作）三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
   check('副业·木工', '木器与手工装潢的来源串都能跳转（图鉴里不是死文本）',
     jumpForSource('木工制作（松木×2，Lv1 可学）')?.skill === 'woodworking' && !!jumpForSource('餐厅装潢'))
   check('副业·木工', '木材的「可用于制作」已含木工配方（下游真的接上了）',
@@ -6163,17 +6173,46 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
   check('副业四支', `副业共 16 支，SKILL_DEFS 里 sideline 计数一致`,
     Object.values(SKILL_DEFS).filter((d) => d.category === 'sideline').length === 16 && SIDELINE_SKILL_IDS.length === 15)
 
-  // ② 物品与作品：38 件、id 唯一、类别在「副业独占清单」内、每件都并入 ITEMS、每件都有作品定义
+  // ② 物品与作品：id 唯一、类别在「副业独占清单」内、每件都并入 ITEMS；
+  //    **非加密档**必须有作品定义（加密档「·良」的去处是量产阶梯 —— 见 sidelineWorks 的硬约束①）
   const iBad = []
+  const densItems = SIDELINE_ITEMS.filter((i) => i.name.endsWith('·良'))
   for (const it of SIDELINE_ITEMS) {
     if (!ITEMS[it.id]) iBad.push(`${it.id}: 未并入 ITEMS`)
     if (!SIDELINE_ITEM_CATEGORIES.includes(it.category)) iBad.push(`${it.id}: 类别不在独占清单`)
-    if (!sidelineWorkOf(it.id)) iBad.push(`${it.id}: 缺作品定义`)
+    if (!sidelineWorkOf(it.id) && !it.name.endsWith('·良')) iBad.push(`${it.id}: 既不是作品也不是加密档`)
   }
-  check('副业四支', `产物共 ${SIDELINE_ITEMS.length} 件（16 支各 10~12 件 + 补档 15 支 ×2 + T3 同物变体 15 支 ×3）、id 唯一、类别合法、均有作品定义`,
-    SIDELINE_ITEMS.length === 223 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 223 && iBad.length === 0, iBad.slice(0, 4).join('; '))
-  check('副业四支', '223 件产物都有图片文件', SIDELINE_ITEMS.every((it) => imgExists(it.id)),
+  check('副业四支', `产物共 ${SIDELINE_ITEMS.length} 件（223 基底/补档/变体 + ${densItems.length} 加密档「·良」）、id 唯一、类别合法、非加密档均有作品定义`,
+    SIDELINE_ITEMS.length === 356 && densItems.length === 133 && new Set(SIDELINE_ITEMS.map((i) => i.id)).size === 356 && iBad.length === 0, iBad.slice(0, 4).join('; '))
+  check('副业四支', `${SIDELINE_ITEMS.length} 件产物都有图片文件（加密档与基底共用同一张）`, SIDELINE_ITEMS.every((it) => imgExists(it.id)),
     SIDELINE_ITEMS.filter((it) => !imgExists(it.id)).map((i) => i.name).join('、'))
+
+  // ②c 🔴 **档位加密的核心不变量**（v2.29.7，2026-09-30 用户口径「同样的时长但不枯燥」）：
+  //    加密档必须是「**级差 5 的同物**·良」、与基底**共用同一张图**（零美术）、辅料与基底完全相同、
+  //    **不登记为作品**（⇒ 各轴「作品数 × 每件加成」一分不差、硬顶不用动）、且真的能进量产阶梯。
+  //    ——这几条就是「不加时长、不加数值，只加密度」的全部含义，缺一条这个改动就变味了。
+  {
+    const dBad = []
+    for (const it of densItems) {
+      const baseName = it.name.replace(/·良$/, '') // 「·良」是两个字符（间隔号 + 良）
+      const base = SIDELINE_ITEMS.find((x) => x.name === baseName)
+      if (!base) { dBad.push(`${it.name}: 找不到基底`); continue }
+      const rIt = SIDELINE_RECIPES[sidelineSkillOfItem(it.id).skill].find((r) => r.output.itemId === it.id)
+      const rBase = SIDELINE_RECIPES[sidelineSkillOfItem(base.id).skill].find((r) => r.output.itemId === base.id)
+      if (rIt.reqLevel - rBase.reqLevel !== 5) dBad.push(`${it.name}: 级差 ${rIt.reqLevel - rBase.reqLevel} ≠ 5`)
+      if (itemImage(it.id) !== itemImage(base.id)) dBad.push(`${it.name}: 与基底不是同一张图`)
+      const auxOf = (r) => Object.entries(r.ingredients).filter(([k]) => !TIMBERS.some((t) => t.id === k))
+      if (JSON.stringify(auxOf(rIt)) !== JSON.stringify(auxOf(rBase))) dBad.push(`${it.name}: 辅料与基底不一致`)
+      if (sidelineWorkOf(it.id)) dBad.push(`${it.name}: 加密档不该登记为作品`)
+      if (!SIDELINE_PRODUCTS[sidelineSkillOfItem(it.id).skill].some((x) => x.itemId === it.id)) dBad.push(`${it.name}: 不在量产阶梯产物表里`)
+    }
+    check('副业四支', `🔴 加密档 ${densItems.length} 件：级差 5 的同物 · 与基底同图 · 辅料一致 · **不登记作品** · 能进量产阶梯`,
+      dBad.length === 0, dBad.slice(0, 4).join('; '))
+    // 作品数口径：必须数 **SIDELINE_WORKS 的条数**（加密档有配方但不是作品）——写成配方数会虚报
+    const wBad = SIDELINE_SKILL_LIST.filter((s) => s.works !== Object.values(SIDELINE_WORKS).filter((w) => w.skill === s.id).length)
+    check('副业四支', '各支「作品数」= SIDELINE_WORKS 条数（**不是配方数**：加密档有配方、不是作品）',
+      wBad.length === 0 && SIDELINE_SKILL_LIST.every((s) => s.works <= 15), wBad.map((s) => `${s.id}:${s.works}`).join(','))
+  }
   // ②b 产物价值 = 配方材料价值合计（v2.10.1：让「多做出来的」半价卖回时不亏）
   // 2026-09-21：材料用量改走全局系数 ⇒ 这里也必须用 `effIngredients`（同源），
   // 否则「材料翻倍但产物价值没跟上」会让这条不变量名存实亡（守卫反而助长静默失效）。
@@ -6328,12 +6367,18 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
   const gBad = []
   for (const it of SIDELINE_ITEMS) {
     const lines = itemDetailLines(it.id).map((l) => l.join('')).join('|')
-    if (!lines.includes('做成')) gBad.push(`${it.id}: 详细作用缺「做成…作品」`)
     if (!itemSources(it.id).some((s) => s.includes('制作'))) gBad.push(`${it.id}: 来源缺「制作」`)
     const uses = itemUses(it.id)
-    if (!uses.some((u) => u.kind === 'work')) gBad.push(`${it.id}: 可用于制作缺作品`)
+    if (it.name.endsWith('·良')) {
+      // 加密档（v2.29.7）：**不是作品** ⇒ 去处记在「量产阶梯」那一行（与木工加密档同一套判据）
+      if (!lines.includes('量产阶梯')) gBad.push(`${it.id}: 详细作用缺「量产阶梯」`)
+      if (!uses.some((u) => u.kind === 'ladder')) gBad.push(`${it.id}: 可用于制作缺「量产阶梯」`)
+    } else {
+      if (!lines.includes('做成')) gBad.push(`${it.id}: 详细作用缺「做成…作品」`)
+      if (!uses.some((u) => u.kind === 'work')) gBad.push(`${it.id}: 可用于制作缺作品`)
+    }
   }
-  check('副业四支', '图鉴三查：详细作用 / 可用于制作（作品）/ 获取来源 三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
+  check('副业四支', '图鉴三查：详细作用 / 可用于制作（基底→作品、加密档→量产阶梯）/ 获取来源 三处齐全', gBad.length === 0, gBad.slice(0, 4).join('; '))
   check('副业四支', '四个技能的中文名都在效果总览的 SKILL_CN 里（文案不露内部 id）',
     SIDELINE_SKILL_IDS.every((id) => !!SKILL_CN[id]))
   check('副业四支', '效果总览登记了四条副业效果行（一个都不能漏）',
@@ -6540,12 +6585,13 @@ console.log('══ C35. 副业干净轴五支 ══')
     if (inst?.type !== 'production') bad.push(`${id}: 实例非 production`)
     if (!def || def.category !== 'sideline') bad.push(`${id}: 不在 sideline`)
     if (!def?.icon || def.icon === '•') bad.push(`${id}: 缺图标`)
-    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 15) bad.push(`${id}: 产物数 ${SIDELINE_PRODUCTS[id]?.length}`)
+    // 15 = 10 基底 + 2 补档 + 3 同物变体；v2.29.7 档位加密再 +9（Lv1~91 的平原做成 5 级/件）
+    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 24) bad.push(`${id}: 产物数 ${SIDELINE_PRODUCTS[id]?.length}`)
     if (!SIDELINE_LADDERS.some((l) => l.skill === id && l.axis === AXIS_OF[id])) bad.push(`${id}: 阶梯/轴不对`)
     if (!SIDELINE_AXES[AXIS_OF[id]]) bad.push(`${id}: 轴 ${AXIS_OF[id]} 未定义`)
   }
-  check('干净轴五支', '五支都已注册（production / sideline / 图标 / 15 件产物 / 各一条阶梯；补档 +2、T3 变体 +3）', bad.length === 0, bad.join('; '))
-  check('干净轴五支', '五支的 75 件产物都有图片，且五个新类别都在「副业独占清单」里（否则会漏进抽卡/礼包池）',
+  check('干净轴五支', '五支都已注册（production / sideline / 图标 / 24 件产物 / 各一条阶梯；补档 +2、T3 变体 +3、加密档 +9）', bad.length === 0, bad.join('; '))
+  check('干净轴五支', '五支的 120 件产物都有图片，且五个新类别都在「副业独占清单」里（否则会漏进抽卡/礼包池）',
     NEW5.every((id) => SIDELINE_PRODUCTS[id].every((p) => imgExists(p.itemId)))
     && ['huntingGear', 'fishingGear', 'incense', 'gift', 'jade'].every((c) => SIDELINE_ITEM_CATEGORIES.includes(c) && SELL_EXCLUDED_CATEGORIES.includes(c)))
 
@@ -6666,11 +6712,11 @@ console.log('══ C36. 副业第二批二支 ══')
     if (inst?.type !== 'production') bad.push(`${id}: 实例非 production`)
     if (SKILL_DEFS[id]?.category !== 'sideline') bad.push(`${id}: 不在 sideline`)
     if (!SKILL_DEFS[id]?.icon || SKILL_DEFS[id].icon === '•') bad.push(`${id}: 缺图标`)
-    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 15) bad.push(`${id}: 产物数不为 15（补档 +2、T3 变体 +3）`)
+    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 24) bad.push(`${id}: 产物数不为 24（补档 +2、T3 变体 +3、加密档 +9）`)
     if (!SIDELINE_LADDERS.some((l) => l.skill === id && l.axis === AXIS2[id])) bad.push(`${id}: 阶梯/轴不对`)
     if (!SIDELINE_PRODUCTS[id].every((p) => imgExists(p.itemId))) bad.push(`${id}: 缺图`)
   }
-  check('第二批二支', '两支都已注册（production / sideline / 图标 / 15 件产物 / 各一条阶梯 / 图片齐备）', bad.length === 0, bad.join('; '))
+  check('第二批二支', '两支都已注册（production / sideline / 图标 / 24 件产物 / 各一条阶梯 / 图片齐备）', bad.length === 0, bad.join('; '))
   check('第二批二支', '两个新类别都在「副业独占清单」里（否则会漏进抽卡/礼包池，v2.12.0 踩过）',
     ['goodsTag', 'miningGear'].every((c) => SIDELINE_ITEM_CATEGORIES.includes(c) && SELL_EXCLUDED_CATEGORIES.includes(c)))
 
@@ -6763,11 +6809,11 @@ console.log('══ C37. 副业第三批四支 ══')
     if (getSkillInstance(id)?.type !== 'production') bad.push(`${id}: 实例非 production`)
     if (SKILL_DEFS[id]?.category !== 'sideline') bad.push(`${id}: 不在 sideline`)
     if (!SKILL_DEFS[id]?.icon || SKILL_DEFS[id].icon === '•') bad.push(`${id}: 缺图标`)
-    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 15) bad.push(`${id}: 产物数不为 15（补档 +2、T3 变体 +3）`)
+    if ((SIDELINE_PRODUCTS[id] ?? []).length !== 24) bad.push(`${id}: 产物数不为 24（补档 +2、T3 变体 +3、加密档 +9）`)
     if (!SIDELINE_LADDERS.some((l) => l.skill === id && l.axis === AXIS4[id])) bad.push(`${id}: 阶梯/轴不对`)
     if (!SIDELINE_PRODUCTS[id].every((p) => imgExists(p.itemId))) bad.push(`${id}: 缺图`)
   }
-  check('第三批四支', '四支都已注册（production / sideline / 图标 / 15 件产物 / 各一条阶梯 / 图片齐备）', bad.length === 0, bad.join('; '))
+  check('第三批四支', '四支都已注册（production / sideline / 图标 / 24 件产物 / 各一条阶梯 / 图片齐备）', bad.length === 0, bad.join('; '))
   check('第三批四支', '四个新类别都在「副业独占清单」里（否则会漏进抽卡/礼包池）',
     ['stationery', 'instrument', 'soap', 'voucher'].every((c) => SIDELINE_ITEM_CATEGORIES.includes(c) && SELL_EXCLUDED_CATEGORIES.includes(c)))
 
@@ -8898,8 +8944,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 {
   const { readdirSync, readFileSync } = await import('node:fs')
   const CAL_TOTAL = 7462 // 生成器产物的原始材料件数合计（2026-09-21 标定：含烹饪/烘焙/腌制/调酒/调料/锻造/保鲜/食灵/副业）
-  const CAL_TOTAL_LATE = 1239 // 补档/扩展批新增配方的原始材料件数合计：459（09-29 补档）+ 264（保鲜 Ⅵ/Ⅶ）+ 516（T3 同物变体 48 条）
-  const CAL_COUNT = 1360 // 同上：配方条数（09-29 补档 +57：制作 9 + 副业 30 + 木工 2 + 装备线 16；保鲜 Ⅵ/Ⅶ +6；T3 同物变体 45 + 3 = +48）
+  const CAL_TOTAL_LATE = 1976 // 补档/扩展批新增配方的原始材料件数合计：459（09-29 补档）+ 264（保鲜 Ⅵ/Ⅶ）+ 516（T3 同物变体 48 条）+ 737（v2.29.7 副业档位加密 142 条：15 支各 9 + 木工 9）
+  const CAL_COUNT = 1502 // 同上：配方条数（09-29 补档 +57：制作 9 + 副业 30 + 木工 2 + 装备线 16；保鲜 Ⅵ/Ⅶ +6；T3 同物变体 45 + 3 = +48；v2.29.7 档位加密 +142）
   const c53 = (rel) => stripComments(readFileSync(new URL(`../../src/${rel}`, import.meta.url), 'utf8'))
 
   // ── A. 成长阻尼：乘法叠区（转生 × 增益剂 × 精通或设置 × 对决补正 × 限时窗口）先相乘、再统一折减 ──
