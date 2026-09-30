@@ -9185,7 +9185,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
       `${gain(1000, 45)} vs ${hi}`)
     check('低目标衰减', '行为：低 4 级仍是 1×（边界没写宽）', gain(1000, 46) === hi, `${gain(1000, 46)} vs ${hi}`)
     check('低目标衰减', '行为：拿不到等级（null）⇒ 1×（离线缺目标时不会误砍）', gain(1000, null) === hi, `${gain(1000, null)} vs ${hi}`)
-    // 副业的参照系必须夹住：陶艺顶档 91，技能 120 时顶档配方仍满经验
+    // 副业的参照系必须夹住：技能 120 时「能用的最高档」配方仍满经验
     const po = getSkillInstance('pottery')
     p.setSkillState('pottery', { level: 120, exp: totalXpForLevel(120), prestiges: 1 })
     check('低目标衰减', `行为：副业（顶档 ${po.topTargetLevel}）在技能 120 时顶档配方**不被罚**（参照系夹取生效，否则转生后全域减半）`,
@@ -9201,6 +9201,64 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
         const bestHi = Math.max(...list.filter((t) => !fo.isLowTargetLevel(t.reqLevel)).map(rate))
         return bestHi > bestLow
       })())
+    // 🔴 2026-09-30 修：参照系 = **玩家此刻能用的最高档**（不是表内最高档）。
+    //    内容铺到 99 级以上之后两者不再相等（保鲜表内 120 / Lv99 能用 85；副业 120 / 91），
+    //    拿表内最高档当参照会把「已经做到自己能做的最高档」误判成低目标而减半
+    //    （实测保鲜 34.9h → 48.0h）。**枚举 9 个等级 × 全部带目标表的技能**逐条验：
+    //      ① 参照档 == 表内「reqLevel ≤ 技能等级」的最大档（兜底表内最小档）；
+    //      ② 那个档位**永不被罚**（与 LOW_TARGET_NOTE 的承诺一致）；
+    //      ③ 但比它低 5 级及以上的**仍然**被罚（规则没被改哑）。
+    {
+      // ⚠️ 必须用**自己的玩家**：上面 `p0 = freshPlayer({ foraging: 50 })` 之后，`getAllSkillInstances()`
+      //    返回的是 **p0 的**实例 —— 往 `p` 上设状态实例不会变（首版就栽在这，报了一串「参照 50≠…」）。
+      const p2 = freshPlayer()
+      const bad = []
+      const LEVELS = [1, 5, 30, 50, 90, 99, 100, 110, 120]
+      for (const inst of getAllSkillInstances()) {
+        const list = inst.targets ?? inst.recipes ?? inst.crops ?? null
+        if (!Array.isArray(list) || !list.length) continue
+        const lvs = [...new Set(list.map((x) => Number(x.reqLevel)).filter((v) => Number.isFinite(v)))].sort((a, b) => a - b)
+        if (!lvs.length) continue
+        for (const lv of LEVELS) {
+          p2.setSkillState(inst.id, { level: lv, exp: 0 })
+          const top = inst.topUsableTargetLevel
+          const expect = Math.max(...lvs.filter((x) => x <= lv).concat([lvs[0]]))
+          if (top !== expect) bad.push(`${inst.id}@L${lv}: 参照 ${top}≠${expect}`)
+          if (inst.isLowTargetLevel(top)) bad.push(`${inst.id}@L${lv}: 能用的最高档 ${top} 被判低目标`)
+          const lower = lvs.filter((x) => x <= top - LOW_TARGET_GAP)
+          if (lower.length && !inst.isLowTargetLevel(lower[lower.length - 1])) bad.push(`${inst.id}@L${lv}: 低档 ${lower[lower.length - 1]} 未被罚`)
+        }
+      }
+      check('低目标衰减', `🔴 参照系 = 玩家**能用的最高档**（枚举 ${LEVELS.length} 个等级 × 全部带目标表的技能：档位正确 · 顶档永不被罚 · 低 5 级仍被罚）`,
+        bad.length === 0, bad.slice(0, 6).join('; '))
+    }
+    // 🔴 行为（**结算侧 + 显示侧一起钉**）：内容铺到 99 级以上时，「玩家能用的最高档」在 Lv99 仍拿满经验。
+    //    只钉 `isLowTargetLevel`（判定函数）抓不到「结算/显示路径改回表内最高档」——反例 ①/④ 当场证实。
+    {
+      const p3 = freshPlayer()
+      const bad = []
+      for (const id of ['preservation', 'pottery', 'weaving', 'woodworking']) {
+        const inst = getSkillInstance(id)
+        const list = inst.recipes ?? []
+        const usable = Math.max(...list.filter((r) => r.reqLevel <= 99).map((r) => r.reqLevel))
+        const rU = list.find((r) => r.reqLevel === usable)
+        const gain = (lv, target) => { p3.setSkillState(id, { level: lv, exp: 0 }); return inst.addCardXp(1000, 1, target) }
+        const full = gain(99, usable)            // 能用的最高档 ⇒ 必须满经验
+        const lower = gain(99, usable - LOW_TARGET_GAP) // 比它低 5 级 ⇒ 必须减半
+        if (!(full > 0 && Math.abs(full / lower - 2) < 0.02)) bad.push(`${id}: Lv99 做能用最高档(${usable}) 与低 5 级之比 ${lower > 0 ? (full / lower).toFixed(2) : '?'} ≠ 2`)
+        // 显示侧（卡片上的「配方效率」）：同一等级下，把 `xpPerCraft` 约掉后剩下的就是低目标系数 ——
+        // 「能用的最高档」必须是「最低档」的 2 倍（满经验 vs 减半）。
+        // ⚠️ 别直接比两个等级的绝对值：`xpPerCraft` 本身随等级变（实测 Lv85→Lv99 有 +10%），
+        //    那样会在**正确实现**上误报（首版就是这么假红了一次）。
+        p3.setSkillState(id, { level: 99, exp: 0 })
+        const rL = list.reduce((a, b) => ((b.reqLevel ?? 0) < (a.reqLevel ?? 0) ? b : a))
+        const rate = (r) => inst.xpPerHour(r) / inst.xpPerCraft(r)
+        const ratio = rate(rU) / rate(rL)
+        if (!(Math.abs(ratio - 2) < 0.02)) bad.push(`${id}: 效率显示的「最高档 ÷ 最低档」= ${ratio.toFixed(3)} ≠ 2`)
+      }
+      check('低目标衰减', '🔴 行为：内容铺到 99 级以上时（保鲜 85 / 副业 91），「能用的最高档」在 Lv99 仍拿满经验 —— **结算与显示**都必须同源',
+        bad.length === 0, bad.slice(0, 4).join('; '))
+    }
     // 精通次数不受影响（规则只碰经验，不碰精通/池/里程碑）
     check('低目标衰减', '只减经验、不动精通：`addCardXp` 里不得出现 addMastery（精通次数仍由各动作 +1）',
       !/addMastery/.test(c54('game/skills/Skill.js')))

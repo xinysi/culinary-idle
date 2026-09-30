@@ -198,7 +198,7 @@ export class GatheringSkill extends Skill {
     if (!(sec > 0)) return 0
     // 低目标经验减半（2026-09-22）：效率必须与结算同源 —— 不然卡片写着「880 万/时」而实际只到账 440 万，
     // 正是本项目最忌的「显示与结算不一致」（`system_test` 的「目标效率」那条就是拿它与真实引擎对账的）。
-    const lowMult = targetLevelXpMult(this.level, target.reqLevel, this.topTargetLevel)
+    const lowMult = targetLevelXpMult(this.level, target.reqLevel, this.topUsableTargetLevel)
     return (target.xpPerAction * CARD_XP_SCALE * lowMult * masteryXpMultiplier(this.masteryLevel(target))) / sec * 3600
   }
 

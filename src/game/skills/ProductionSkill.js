@@ -121,7 +121,7 @@ export class ProductionSkill extends Skill {
     const schoolMult = 1 + (this.player.schoolCraftXpPct?.(recipe.category) ?? 0) / 100
     // 低目标经验减半（2026-09-22）：效率必须与结算同源 —— 否则卡片上写着「120 万/时」而实际到账只有 60 万，
     // 正是本项目最忌的「显示与结算不一致」（`system_test` 的「配方效率」那条就是拿它跟真实引擎对账的）。
-    const lowMult = targetLevelXpMult(this.level, recipe.reqLevel, this.topTargetLevel)
+    const lowMult = targetLevelXpMult(this.level, recipe.reqLevel, this.topUsableTargetLevel)
     return (this.xpPerCraft(recipe) * schoolMult * CARD_XP_SCALE * lowMult * masteryXpMultiplier(this.masteryLevel(recipe))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   }
 

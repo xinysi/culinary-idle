@@ -77,13 +77,48 @@ export class Skill {
     // 低目标经验衰减（2026-09-22）：目标比「你能做到的最高档」低 5 级及以上 ⇒ 经验减半。
     // 乘在这里（而非让各调用点自己乘）⇒ 采集/制作/探索/农耕/副业/离线全部同源，且加成的日志数字
     // （返回的 expGained）与实际到账一致。规则与常数见 core/growthRate.js。
-    const lowMult = targetLevelXpMult(this.level, targetLevel, this.topTargetLevel)
+    const lowMult = targetLevelXpMult(this.level, targetLevel, this.topUsableTargetLevel)
     return this.addXp(b * CARD_XP_SCALE * lowMult * tunerOver('cardXpScale', 1, 0.1, 10), mult > 0 ? mult : 1)
   }
 
-  /** 该技能「最高可用目标/配方等级」——低目标衰减的参照系（`lowTargetRefLevel` 会与技能等级取小）。
-   *  采集类读 `targets`、制作类（含副业）读 `recipes`、农耕读 `crops`；都没有的技能（对决类、食灵）
-   *  退回技能等级。没有它的话，副业 96 级 / 转生后 100+ 会出现「所有目标都被判低目标」的退化。 */
+  /**
+   * 🔴 **低目标衰减的参照系 = 玩家「此刻能用的最高档」**（不是表内最高档）。
+   *
+   * 为什么不能用表内最高档：规则的原意是「挑你这一档最高的目标，蹲低阶就减半」——
+   * 参照的必须是**你现在做得到的最高档**。而 2026-09-29 起内容被铺到 99 级以上之后，
+   * 「表内最高档」与「此刻能用的最高档」不再相等：
+   *   · 食材保鲜：表内 120（Ⅶ 阶），Lv99 能用的是 **85**（Ⅴ 档）
+   *   · 16 支副业：表内 120（同物变体），Lv99 能用的是 **91**
+   * 用表内最高档当参照 ⇒ `min(99, 120) = 99` ⇒ **玩家已经做到自己能做的最高档，却被判「低目标」减半**
+   * （实测：保鲜 34.9h → 48.0h、副业整体慢一截），且与 `LOW_TARGET_NOTE` 的承诺
+   * （「顶档目标永远不会被罚」）直接矛盾。2026-09-30 体检发现并修。
+   *
+   * 口径：表内 `reqLevel ≤ 技能等级` 的**最大值**；一个都用不了（等级低于最低档）时退回**表内最小档**
+   * （再与技能等级取小后，早期不会误罚）。采集读 `targets`、制作（含副业）读 `recipes`、农耕读 `crops`；
+   * 没有目标表的技能（对决类、食灵）退回技能等级。
+   */
+  get topUsableTargetLevel() {
+    const list = this.targets ?? this.recipes ?? this.crops ?? null
+    if (!Array.isArray(list) || !list.length) return this.level
+    // 缓存：界面每张卡都要问一次（列表最多 381 条）；键要带上**等级**（等级变了可用档就变）
+    const c = this._topUsableCache
+    if (c && c.list === list && c.n === list.length && c.lv === this.level) return c.v
+    let best = 0
+    let minLv = Infinity
+    for (const x of list) {
+      const lv = Number(x?.reqLevel)
+      if (!Number.isFinite(lv)) continue
+      if (lv < minLv) minLv = lv
+      if (lv <= this.level && lv > best) best = lv
+    }
+    const v = best > 0 ? best : (Number.isFinite(minLv) ? minLv : this.level)
+    this._topUsableCache = { list, n: list.length, lv: this.level, v }
+    return v
+  }
+
+  /** 该技能「表内最高档」（**内容口径**：图鉴/守卫/文案用；低目标衰减**不要**用它当参照系，
+   *  用 `topUsableTargetLevel`）。采集类读 `targets`、制作类（含副业）读 `recipes`、农耕读 `crops`；
+   *  都没有的技能（对决类、食灵）退回技能等级。 */
   get topTargetLevel() {
     const list = this.targets ?? this.recipes ?? this.crops ?? null
     if (!Array.isArray(list) || !list.length) return this.level
@@ -104,7 +139,7 @@ export class Skill {
   /** 界面用：这个目标/配方是否吃「低目标经验减半」（视图统一读它，别各自手写 0.5/5 —— 
    *  否则页面写着「满经验」而实际减半，正是本项目最忌的「显示与结算不一致」）。 */
   isLowTargetLevel(targetLevel) {
-    return isLowTarget(this.level, targetLevel, this.topTargetLevel)
+    return isLowTarget(this.level, targetLevel, this.topUsableTargetLevel)
   }
 
   /** 加经验：应用全部加成后处理升级，写回玩家状态
