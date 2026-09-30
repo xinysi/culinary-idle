@@ -11,7 +11,7 @@ import { computed } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import {
-  SIDELINE_AXES, SIDELINE_SKILL_LIST, SIDELINE_PRODUCTS, SIDELINE_LADDERS,
+  SIDELINE_AXES, SIDELINE_SKILL_LIST, SIDELINE_PRODUCTS, SIDELINE_LADDERS, sidelineWorkOf,
   LADDER_TIERS, LADDER_AXIS_LABEL, CHAIN_FROM_SKILL, CHAIN_DISCOUNT,
 } from '../game/data/sidelineWorks.js'
 import { getItem } from '../game/data/items.js'
@@ -56,7 +56,11 @@ const rows = computed(() => {
   }
   if (!def.value) return []
   const owned = new Set(player.sidelineWorks ?? [])
-  return (props.instance.recipes ?? []).map((r) => {
+  // 🔴 只列**作品**（`SIDELINE_WORKS` 里有定义的那些）。加密档「·良」（v2.29.7）**有配方但不是作品**
+  //    —— 不过滤会把面板写成「已完成 x/24 件」，而实际只能做 15 件：这正是本项目最忌的
+  //    「显示与结算不一致」（**线上核验当场抓到**：本地守卫只查了数据层的 `works` 口径，
+  //    而视图自己另有一份「拿配方表当作品表」的写法）。
+  return (props.instance.recipes ?? []).filter((r) => sidelineWorkOf(r.output.itemId)).map((r) => {
     const itemId = r.output.itemId
     const it = getItem(itemId)
     return {

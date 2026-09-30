@@ -6212,6 +6212,13 @@ console.log('══ C33. 副业四支（陶艺/编织/刺绣/蜡烛）══')
     const wBad = SIDELINE_SKILL_LIST.filter((s) => s.works !== Object.values(SIDELINE_WORKS).filter((w) => w.skill === s.id).length)
     check('副业四支', '各支「作品数」= SIDELINE_WORKS 条数（**不是配方数**：加密档有配方、不是作品）',
       wBad.length === 0 && SIDELINE_SKILL_LIST.every((s) => s.works <= 15), wBad.map((s) => `${s.id}:${s.works}`).join(','))
+    // 🔴 **视图侧的另一份口径**（v2.29.7 线上核验当场抓到）：`SidelineWorkPanel` 的作品行原先直接
+    //    拿 `instance.recipes` 当作品表 ⇒ 面板写「已完成 x/**24** 件」而实际只能做 15 件。
+    //    数据层修好了不代表视图修好了 —— 两边都要钉。
+    const { readFileSync: rfs } = await import('node:fs')
+    const panelSrc = stripComments(rfs(new URL('../../src/components/SidelineWorkPanel.vue', import.meta.url), 'utf8'))
+    check('副业四支', '🔴 作品面板只列「作品」（按 sidelineWorkOf 过滤，不能直接拿 recipes 当作品表）',
+      /filter\(\(r\)\s*=>\s*sidelineWorkOf\(r\.output\.itemId\)\)/.test(panelSrc), '面板没按 sidelineWorkOf 过滤')
   }
   // ②b 产物价值 = 配方材料价值合计（v2.10.1：让「多做出来的」半价卖回时不亏）
   // 2026-09-21：材料用量改走全局系数 ⇒ 这里也必须用 `effIngredients`（同源），

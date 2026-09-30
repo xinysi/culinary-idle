@@ -26,6 +26,7 @@ function injectText(rel, from, to) {
 
 const SW = 'src/game/data/sidelineWorks.js'
 const WW = 'src/game/data/woodworking.js'
+const PANEL = 'src/components/SidelineWorkPanel.vue'
 const EXP_DENS = '加密档'          // 加密档核心不变量那条
 const EXP_WOOD = '配方等级：基底每 10 级'
 const EXP_DECOR = '手工装潢'
@@ -78,6 +79,14 @@ const CASES = [
     from: 'for (const s of SIDELINE_SKILL_LIST) s.works = Object.values(SIDELINE_WORKS).filter((w) => w.skill === s.id).length',
     to: 'for (const s of SIDELINE_SKILL_LIST) s.works = SIDELINE_RECIPES[s.id].length',
     expect: '作品数',
+  },
+  {
+    // ⑦ 视图侧那份口径（**线上核验抓到的真缺陷**）：面板直接拿 recipes 当作品表 ⇒ 写「已完成 x/24 件」
+    name: '⑦ 作品面板不按 sidelineWorkOf 过滤（面板写「x/24 件」而实际只能做 15 件）',
+    rel: PANEL,
+    from: '  return (props.instance.recipes ?? []).filter((r) => sidelineWorkOf(r.output.itemId)).map((r) => {',
+    to: '  return (props.instance.recipes ?? []).map((r) => {',
+    expect: '作品面板只列',
   },
 ]
 
