@@ -13,7 +13,7 @@ import { computed, watchEffect } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
 import { useIntervalTick } from '../composables/useIntervalTick.js'
-import { collectEffects } from '../game/data/activeEffects.js'
+import { collectEffects, EFFECT_ROWS, EFFECT_GROUPS, formulaOf } from '../game/data/activeEffects.js'
 import { getAllSkillInstances, getSkillInstance } from '../game/skills/registry.js'
 import { getCombat } from '../game/combat/Combat.js'
 import StatusChips from '../components/StatusChips.vue'
@@ -53,6 +53,19 @@ const debuffs = computed(() => [...data.value.groups, ...data.value.dormant].fla
 watchEffect(() => player.noteEffectsSeen(data.value.stats.on))
 
 const KIND_TAG = { buff: '增益', debuff: '减益', rule: '规则' }
+
+// ── 数值公式栏（2026-10-01 用户要求）────────────────────────────────
+// 「每条效果的数值到底怎么算出来的」——与上面的生效列表**同一份注册表**（`EFFECT_ROWS`），
+// 公式来自 `EFFECT_FORMULAS`（单一口径，守卫对账「有行必有公式」）。
+// 这里列的是**全部 105 条**（含此刻未生效的）：公式是「规则」，与生不生效无关。
+const formulaGroups = computed(() => {
+  return EFFECT_GROUPS.map((g) => ({
+    ...g,
+    items: EFFECT_ROWS.filter((r) => r.group === g.id)
+      .map((r) => ({ ...r, formula: formulaOf(r.id, player, { skill: (id) => getSkillInstance(id) }) }))
+      .filter((r) => r.formula),
+  })).filter((g) => g.items.length)
+})
 
 function open(row) {
   if (!row.view) return
@@ -149,6 +162,25 @@ function jumpLabel(view) {
             <span class="dim fx-text">{{ i.why || '当前条件未满足' }}</span>
           </span>
           <button v-if="i.view" class="btn btn-sm" @click="open(i)">{{ jumpLabel(i.view) }} ↗</button>
+        </div>
+      </div>
+    </FoldCard>
+
+    <!-- 数值公式栏（2026-10-01 用户要求）：把「每条效果的数值怎么算出来的」一次讲全 -->
+    <FoldCard
+      :title="`🧮 各效果的数值公式（${EFFECT_ROWS.length} 条）`"
+      hint="每条效果的计算口径都写在这里；数字一律取自游戏里的真实常量（改平衡时这里会跟着变），不是手抄的说明"
+    >
+      <p class="dim fx-formula-note">
+        口径：<b>同类加成相加、跨类相乘</b>；经验类还要过一道「先相乘再统一阻尼 + 按等级夹上界」（见「成长阻尼」那条）。
+        当前生效的<b>数值</b>在页面上方的列表里逐条显示，这里只说<b>怎么算</b>。
+      </p>
+      <div v-for="g in formulaGroups" :key="g.id" class="fx-formula-group">
+        <div class="dim fx-formula-head">{{ g.icon }} {{ g.name }}（{{ g.items.length }} 条）</div>
+        <div class="fx-formula-row" v-for="r in g.items" :key="r.id">
+          <span class="fx-formula-name">{{ r.icon }} {{ r.name }}</span>
+          <span class="fx-formula-src dim">· {{ r.src }}</span>
+          <span class="fx-formula-text">{{ r.formula }}</span>
         </div>
       </div>
     </FoldCard>
@@ -274,6 +306,40 @@ function jumpLabel(view) {
 }
 .fx-note code {
   font-size: 11px;
+}
+/* ── 数值公式栏 ── */
+.fx-formula-note {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0 0 10px;
+}
+.fx-formula-group {
+  margin-bottom: 12px;
+}
+.fx-formula-head {
+  font-size: 12px;
+  margin: 8px 0 6px;
+}
+.fx-formula-row {
+  font-size: 12.5px;
+  line-height: 1.75;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  border: 1px dashed var(--border);
+  margin-bottom: 4px;
+}
+.fx-formula-name {
+  font-weight: 600;
+}
+.fx-formula-src {
+  font-size: 11px;
+  margin-left: 6px;
+}
+/* 公式单独起一行：它们都偏长，挤在名字右边会折断得很难读 */
+.fx-formula-text {
+  display: block;
+  margin-top: 2px;
 }
 @media (max-width: 720px) {
   .fx-row {

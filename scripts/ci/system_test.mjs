@@ -11291,6 +11291,29 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   check('探索改名', '三个消费方（技能/图鉴来源/腐坏曲线）都副作用导入了改名模块', missing.length === 0, missing.join(',') || 'OK')
 }
 
+// ═══ C92 效果总览的「数值公式栏」（2026-10-01 用户要求）═══
+{
+  const { EFFECT_ROWS, EFFECT_FORMULAS, formulaOf } = await import('../../src/game/data/activeEffects.js')
+  const miss = EFFECT_ROWS.filter((r) => !formulaOf(r.id, null, {})).map((r) => r.id)
+  check('效果公式', `${EFFECT_ROWS.length} 条效果都有公式文案（少一条 = 页面上那行空着）`, miss.length === 0, miss.slice(0, 6).join(','))
+
+  const extra = Object.keys(EFFECT_FORMULAS).filter((k) => !EFFECT_ROWS.some((r) => r.id === k))
+  check('效果公式', '没有「有公式却没对应效果行」的孤儿键（改名时漏删会静默留着）', extra.length === 0, extra.join(','))
+
+  // 公式里不许出现内部字段名 / 技能 id（与「面向玩家的文案」同一条纪律）
+  const bad = []
+  for (const r of EFFECT_ROWS) {
+    const f = formulaOf(r.id, null, {})
+    if (/(xpPct|yieldPct|craftPct|cultivatePct|maxHpBonus|gatherXpPct|craftXpPct|allXpPct|orderGoldPct|branchPct|seedChancePct|_PCT|_MULT\b)/.test(f)) bad.push(r.id)
+  }
+  check('效果公式', '公式文案里不出现内部字段名（一律中文口径）', bad.length === 0, bad.slice(0, 6).join(','))
+
+  // 页面上真的把这一栏渲染出来了（接线断了 = 静默没有这一栏）
+  const fx = stripComments(fs.readFileSync(new URL('../../src/views/EffectsView.vue', import.meta.url), 'utf8'))
+  check('效果公式', '效果总览页真的渲染了这一栏（读 EFFECT_ROWS + formulaOf）',
+    /EFFECT_ROWS/.test(fx) && /formulaOf\(/.test(fx) && /fx-formula-row/.test(fx), 'EffectsView.vue')
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
