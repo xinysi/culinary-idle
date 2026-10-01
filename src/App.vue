@@ -267,21 +267,11 @@ function applySkin() {
   applySkinToDom(pref ?? 'classic', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
 }
 // 场景背景图（2026-10-01）：当前页面 → 该页的昼/夜背景。
-// 两层交叉淡入：`background-image` 本身没有过渡 ⇒ 用两层叠着、切换时翻 `on` 那一层。
-// 换图前先 `new Image()` 预载，避免切页瞬间那一下空白（没下完也不打紧：`.app-layout` 上原有的静态壁纸兜底）。
+// ⚠️ 这里**故意只用 `computed` 直接绑模板**，不做「预载 + 翻层」的交叉淡入：
+//    线上实测过一次「预载请求发出去了、但翻面没发生」（DOM 行内 style 一直停在旧图），
+//    属于本项目最忌讳的**静默失效**——少一层状态就少一个失效面（背景切换的观感差别很小，
+//    因为三块面板 82~88% 不透明，只有页头与缝隙看得见）。要淡入也应先把「为什么不翻面」查清再来。
 const sceneUrl = computed(() => bgImageFor(sceneForView(ui.activeView, player.activeSkill), isDark.value) || '')
-const bgLayers = ref(['', ''])
-const bgFront = ref(0)
-watch(sceneUrl, (u) => {
-  const back = 1 - bgFront.value
-  const show = () => { bgLayers.value[back] = u; bgFront.value = back }
-  if (!u) return show()
-  if (bgLayers.value[back] === u) { bgFront.value = back; return }
-  const im = new Image()
-  im.onload = show
-  im.onerror = show
-  im.src = u
-}, { immediate: true })
 
 function syncAudioSettings() {
   setSfxVolume(player.settings?.sfxVolume ?? 0.6)
@@ -603,7 +593,7 @@ onMounted(() => {
   <div v-else class="app-layout">
     <!-- 场景背景（2026-10-01）：按当前页面/技能切换，昼夜随主题；`aria-hidden` + 不接指针事件 -->
     <div class="scene-bg" aria-hidden="true">
-      <div v-for="(u, i) in bgLayers" :key="i" class="scene-bg-layer" :class="{ on: i === bgFront }" :style="u ? { backgroundImage: `url(${u})` } : null"></div>
+      <div class="scene-bg-layer on" :style="sceneUrl ? { backgroundImage: `url(${sceneUrl})` } : null"></div>
     </div>
     <!-- 三栏主体 -->
     <div class="app-body">

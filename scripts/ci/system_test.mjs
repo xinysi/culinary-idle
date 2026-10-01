@@ -11241,8 +11241,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // 静态：接线断了就会「静默没有背景」（不报错、不白屏）⇒ 两处调用点各钉一条
   const appSrc = stripComments(fs.readFileSync(new URL('../../src/App.vue', import.meta.url), 'utf8'))
   const splashSrc = stripComments(fs.readFileSync(new URL('../../src/components/SplashScreen.vue', import.meta.url), 'utf8'))
-  check('场景背景', 'App.vue 渲染了场景背景层（`.scene-bg` + 两层 + 读 bgScenes）',
-    /class="scene-bg"/.test(appSrc) && /scene-bg-layer/.test(appSrc) && /bgScenes\.js/.test(appSrc),
+  check('场景背景', 'App.vue 渲染了场景背景层（`.scene-bg` + 层 + 直接绑 `sceneUrl`）',
+    /class="scene-bg"/.test(appSrc) && /scene-bg-layer/.test(appSrc) && /:style="sceneUrl/.test(appSrc) && /bgScenes\.js/.test(appSrc),
     'App.vue')
   check('场景背景', '启动页绑定了场景图（:style="splashStyle"）',
     /:style="splashStyle"/.test(splashSrc) && /bgScenes\.js/.test(splashSrc), 'SplashScreen.vue')
