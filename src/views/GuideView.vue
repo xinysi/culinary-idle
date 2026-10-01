@@ -296,11 +296,39 @@ function stepIcon(i) {
 .gd-now { font-size: 10px; padding: 0 4px; border-radius: 4px; color: #fff; background: var(--btn-primary-bg); }
 
 /* ── 内容区：放开留白（用户：「太紧凑，玩家看的头疼」）── */
-.gd-stage { margin-top: 12px; display: flex; flex-direction: column; gap: 14px; }
+/* ⚠️ 阅读宽度必须设上限：攻略是文字页，铺满整宽时一行上百字，回行极累（2026-10-02 看截图才发现） */
+.gd-stage { margin-top: 12px; display: flex; flex-direction: column; gap: 14px; max-width: 940px; }
 .gd-hero h3 { margin-bottom: 8px; }
 .gd-summary { margin: 0 0 10px; color: var(--text-dim); line-height: 1.8; }
-.gd-goals { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; line-height: 1.75; }
-.gd-sec { margin: 14px 0 0; font-size: 15px; }
+.gd-goals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gd-goals li {
+  padding: 4px 11px;
+  font-size: 12.5px;
+  border-radius: 999px;
+  background: rgba(var(--panel-soft-rgb), 0.7);
+  border: 1px solid var(--border);
+}
+/* 小节标题：主色横条（原来只是一行粗体字，与正文拉不开层次 ⇒ 页面看着"平"） */
+.gd-sec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 8px;
+  padding: 9px 14px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--primary-strong);
+  border-radius: 9px;
+  background: rgba(var(--primary-tint-rgb), 0.16);
+  border-left: 4px solid var(--primary);
+}
 /* 功能页的阶段小节标题（行内版，不嵌套容器） */
 .gd-sghead {
   margin: 14px 0 2px;
@@ -338,39 +366,59 @@ function stepIcon(i) {
   30% { box-shadow: 0 0 0 3px rgba(var(--primary-tint-rgb), 0.55); }
 }
 
-/* 行动清单排两栏（用户 2026-10-01 选定方案 A）：
-   宽屏两列、窄屏回单列。grid 按行填充 ⇒ 阅读顺序是 ①② / ③④，与编号一致。
-   `minmax(0, 1fr)` 不能省：直接写 `1fr` 时长内容会把列撑破（项目里的老坑）。 */
+/* ── 行动清单：单栏时间轴（2026-10-02 重做）──
+   上一版是两栏卡片网格，卡片高度不等 ⇒ 每行参差不齐，整页像打翻的纸牌（用户：「太丑了」）。
+   现在：一条竖轨 + 圆形序号 + 无边框条目 —— 阅读动线自上而下一条，安静、也能快扫。
+   窄屏不需要改（本来就是单栏）。 */
 .gd-steps {
   list-style: none;
   margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: start;
+  padding: 0 0 0 2px;
+  position: relative;
+}
+.gd-steps::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 20px;
+  bottom: 20px;
+  width: 3px;
+  background: rgba(var(--primary-rgb), 0.38);
 }
 .gd-step {
   display: flex;
-  gap: 12px;
-  padding: 12px 14px;
-  background: rgba(var(--panel-rgb), 0.72);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  gap: 13px;
+  padding: 9px 0;
+  position: relative;
 }
-.gd-step-no { flex: 0 0 auto; width: 22px; font-weight: 700; color: var(--primary-strong); }
-.gd-step-body { flex: 1 1 auto; min-width: 0; }
-.gd-step-title { font-weight: 600; margin-bottom: 5px; line-height: 1.6; }
-.gd-step-text { color: var(--text-dim); line-height: 1.85; font-size: 13px; }
+.gd-step-no {
+  flex: 0 0 auto;
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--btn-primary-bg);
+  box-shadow: 0 0 0 3px var(--bg); /* 用页面底色把竖轨"切开"，序号才像站在线上 */
+  z-index: 1;
+}
+.gd-step-body { flex: 1 1 auto; min-width: 0; padding-top: 3px; }
+.gd-step-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; line-height: 1.55; }
+.gd-step-text { color: var(--text-dim); line-height: 1.9; font-size: 13px; }
 
 .gd-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .gd-mini h4 { margin: 0 0 10px; }
 .gd-checks, .gd-tips { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; line-height: 1.8; }
 .gd-box { margin-right: 7px; color: var(--text-dim); }
 
-.gd-cats { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.gd-cats { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 1000px; }
 .gd-cat .gd-items { display: flex; flex-direction: column; gap: 12px; }
-.gd-item { padding: 9px 0; border-top: 1px dashed var(--border); }
+.gd-item { padding: 11px 0; border-top: 1px dashed var(--border); }
+.gd-item .ov-desc { line-height: 1.85; }
 .gd-item:first-child { border-top: none; }
 .ov-desc { line-height: 1.8; }
 
