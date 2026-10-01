@@ -169,19 +169,19 @@ const GOLD_BY_RING = { 6: 6000, 7: 18000, 8: 48000, 9: 120000, 10: 300000 }
 const GOLD_RINGS = [6, 7, 8, 9, 10]
 function effectOf(path, ring, slot) {
   if (ring <= 2) return { field: 'inventoryCap', amount: 1, desc: '背包格数 +1' }
-  if (ring <= 5) return { field: 'bankCap', amount: 1, desc: '仓库格数 +1' }
+  if (ring <= 5) return { field: 'bankCap', amount: 1, desc: '厨藏格数 +1' }
   const kind = RING6_PLUS[ring][slot]
   switch (kind) {
     // 第 6 环主槽：采集线给离线上限（用掉 5 个名额），制作线改大额仓库
     case 'special0':
       return path.gather
         ? { field: 'offlineH', amount: 1, desc: '离线收益时长上限 +1 小时' }
-        : { field: 'bankCap', amount: 4, desc: '仓库格数 +4' }
+        : { field: 'bankCap', amount: 4, desc: '厨藏格数 +4' }
     // 第 6/7 环次槽：采集线把「每次动作 +1 件」补到每技能封顶 2；制作线读不到 → 发仓库
     case 'special1':
       return path.gather
         ? { field: 'flatYield', amount: 1, desc: `${path.name}每次动作额外 +1 件` }
-        : { field: 'bankCap', amount: 4, desc: '仓库格数 +4' }
+        : { field: 'bankCap', amount: 4, desc: '厨藏格数 +4' }
     // 第 10 环中间槽：**采撷线终点**承载全树最后 1 小时离线上限，其余线发冷库 +2
     case 'lastOffline':
       return path.id === 'pick'
@@ -191,10 +191,10 @@ function effectOf(path, ring, slot) {
     case 'bag1': return { field: 'inventoryCap', amount: 1, desc: '背包格数 +1' }
     case 'bag2': return { field: 'inventoryCap', amount: 2, desc: '背包格数 +2' }
     case 'bag3': return { field: 'inventoryCap', amount: 3, desc: '背包格数 +3' }
-    case 'bank2': return { field: 'bankCap', amount: 2, desc: '仓库格数 +2' }
-    case 'bank3': return { field: 'bankCap', amount: 3, desc: '仓库格数 +3' }
-    case 'bank4': return { field: 'bankCap', amount: 4, desc: '仓库格数 +4' }
-    case 'bank5': return { field: 'bankCap', amount: 5, desc: '仓库格数 +5' }
+    case 'bank2': return { field: 'bankCap', amount: 2, desc: '厨藏格数 +2' }
+    case 'bank3': return { field: 'bankCap', amount: 3, desc: '厨藏格数 +3' }
+    case 'bank4': return { field: 'bankCap', amount: 4, desc: '厨藏格数 +4' }
+    case 'bank5': return { field: 'bankCap', amount: 5, desc: '厨藏格数 +5' }
     default: throw new Error(`未知的槽位奖励类型：${kind}`)
   }
 }

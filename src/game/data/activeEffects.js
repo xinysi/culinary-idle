@@ -1,6 +1,6 @@
 // 效果总览注册表（v2.6.0）——「当前正在生效的增益 / 效果 / 减益」的**唯一来源清单**。
 //
-// 为什么要有这张表：全项目只有 4 个真正的乘区聚合出口（`Skill.addXp` / `GatheringSkill.yieldExtraChance` /
+// 为什么要有这张表：全项目只有 4 个真正的加成聚合出口（`Skill.addXp` / `GatheringSkill.yieldExtraChance` /
 // `player.restaurantHourlyIncome` / `Combat.playerStats`），其余 20 多个来源是**散装**在各技能与各视图里的
 // （例如天气的农田产量只在 FarmingSkill 里读、节庆的采集产量只在 GatheringSkill 里读、农耕精通联动只在
 // GatheringSkill 里读）。所以「只读聚合出口」必然漏项——页面必须逐条显式登记每个来源。
@@ -163,7 +163,7 @@ export const EFFECT_FORMULAS = {
   patronBonus: { tag: '相加', f: '全技能经验 + 定向技能经验' },
   honorGather: { tag: '相加', f: '荣誉等级 + 佩戴称号' },
   daoGather: { tag: '相加', f: '产量加成、采种概率各自求和' },
-  shanhaiFlat: { tag: '定额', f: '每次动作 + 固定件数', note: '不吃任何乘区' },
+  shanhaiFlat: { tag: '定额', f: '每次动作 + 固定件数', note: '不受任何加成影响' },
   farmMasteryLink: { tag: '相加', f: '按农耕各作物的精通档位给采集线' },
   masteryBatch: { tag: '分段', f: '双倍 1%→80% · 保底 +0→+2 件', note: '按卡片精通档位' },
   masteryPool: { tag: '分段', f: '每 25% 入池，10 / 25 / 50 / 95% 四档', note: '给经验 / 双倍 / 保底 / 成功率' },
@@ -228,10 +228,10 @@ export const EFFECT_FORMULAS = {
   essencePrime: { tag: '概率', f: '基础概率 × 催化倍率', note: '消耗一份催化物' },
   wither: { tag: '概率', f: '基础值 ×（1 − 肥料减益）', note: '施沃肥后为 0' },
   spoilage: { tag: '分段', f: '基础时长 × 保鲜等级系数', note: '等级越高越慢' },
-  stallRanch: { tag: '停机', f: '缺料 ⇒ 本轮不产、进度归零' },
-  stallPond: { tag: '停机', f: '缺料 ⇒ 本轮不产、进度归零' },
-  stallMushroom: { tag: '停机', f: '缺料 ⇒ 本轮不产、进度归零' },
-  stallHive: { tag: '停机', f: '缺料 ⇒ 本轮不产、进度归零' },
+  stallRanch: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
+  stallPond: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
+  stallMushroom: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
+  stallHive: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
   greenhouseHoney: { tag: '概率', f: '伴生 10%', note: '品级按作物等级' },
   hiveProduce: { tag: '分段', f: '按花类等级定品级', note: '2~4 品' },
   mushroomLine: { tag: '分段', f: '堆肥 6 小时 ×2 / 沃肥 4 小时 ×3 加 1' },
@@ -293,7 +293,7 @@ export function formulaTextOf(id, player, ctx) {
 /**
  * 页面左栏的系统分组（2026-10-01 用户要求重做：「按系统分栏，左导航 + 右内容」）。
  *
- * 为什么另开一张表而不是用 `EFFECT_GROUPS`：那 8 组是**按乘区赛道**分的（全局/采集/制作/餐厅/…），
+ * 为什么另开一张表而不是用 `EFFECT_GROUPS`：那 8 组是**按加成赛道**分的（全局/采集/制作/餐厅/…），
  * 而玩家找东西是按**系统**找的（「美食探索受什么影响」）——探索的几行原本被压在「系统与玩法规则」里，
  * 与塔/秘境混在一起，正是用户实报「看不到美食探索」的原因。
  *
@@ -729,7 +729,7 @@ export const EFFECT_ROWS = [
     },
   },
 
-  // ── 副业四支（v2.10.0）：每支**只接一条**乘区出口，四条全部登记在此 ──
+  // ── 副业四支（v2.10.0）：每支**只接一条**加成方向，四条全部登记在此 ──
   // 「效果总览一个都不能漏」：这四行就是那四条的**唯一登记点**，改出口数值时同步这里。
   {
     id: 'potteryCellar', group: 'income', icon: '🏺', name: '陶艺·地窖单槽上限', kind: 'buff', src: '副业·陶艺', view: 'skill:pottery',
@@ -775,7 +775,7 @@ export const EFFECT_ROWS = [
     },
   },
 
-  // ── v2.12.0 第一批：五支「干净轴」副业（每支占一条此前没人占的乘区）──
+  // ── v2.12.0 第一批：五支「干净轴」副业（每支各自补上一个此前没人补的短板）──
   {
     id: 'fletchingAmmo', group: 'gather', icon: '🏹', name: '制箭·狩猎省箭', kind: 'buff', src: '副业·制箭', view: 'skill:fletching',
     read: (p) => {
@@ -1380,7 +1380,7 @@ export const EFFECT_ROWS = [
       const plots = c?.skill?.('farming')?.maxPlots ?? 0
       return {
         on: true,
-        text: `背包 ${p.inventorySlotsUsed ?? 0}/${p.inventoryCap ?? 0} 格 · 仓库 ${p.bankSlotsUsed ?? 0}/${p.bankCap ?? 0} 格 · 冷库 ${p.coldStorageSlotsUsed ?? 0}/${p.coldStorageCap ?? 0} 格 · 农田 ${plots}/${DERIVED_MAX.farmPlots} 块（扩容只影响能装多少，不产生加成）`,
+        text: `厨藏 ${p.inventorySlotsUsed ?? 0}/${p.inventoryCap ?? 0} 格 · 冷库 ${p.coldStorageSlotsUsed ?? 0}/${p.coldStorageCap ?? 0} 格 · 农田 ${plots}/${DERIVED_MAX.farmPlots} 块（扩容只影响能装多少，不产生加成）`,
       }
     },
   },

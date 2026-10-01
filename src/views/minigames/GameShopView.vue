@@ -27,7 +27,7 @@ function rareBoxApply(min, max) {
   }
   let got = 0
   for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
-  return got ? `稀有食材 ${got} 份（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+  return got ? `稀有食材 ${got} 份（${Object.keys(counts).length} 种）` : '厨藏已满，未能入库'
 }
 /** 通用礼包：先随机 3~8 种再分数量（种类集中不爆背包），背包满直发仓库 */
 function poolBagApply(pool, count) {
@@ -40,7 +40,7 @@ function poolBagApply(pool, count) {
   }
   let got = 0
   for (const [id, q] of Object.entries(counts)) if (grantShopItem(id, q)) got += q
-  return got ? `入库 ${got} 份（${Object.keys(counts).length} 种）` : '背包与仓库均满，未入库'
+  return got ? `入库 ${got} 份（${Object.keys(counts).length} 种）` : '厨藏已满，未能入库'
 }
 function seedBagApply(count) {
   return poolBagApply(SEED_POOL, count)

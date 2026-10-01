@@ -15,7 +15,7 @@ export const AOJI_GATE_BATCHES = [
   { prefix: '', base: 1, step: 0, note: '入门 12 条：不设门槛（教程组）' },
   { prefix: 'aoji_', base: 12, step: 3, note: '扩展 1 批' },
   { prefix: 'aoji2_', base: 45, step: 4, note: '扩展 2 批' },
-  { prefix: 'aojiSideline_', base: 8, step: 4, note: '副业线（2026-09-27）' },
+  { prefix: 'aojiSideline_', base: 8, step: 4, note: '副业线' },
 ]
 
 /** 显式门槛表（**先生成后落表**，便于人眼审：`id → 要求的美食知识等级`；缺省 = 1 表示不设门槛） */

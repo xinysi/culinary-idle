@@ -3,7 +3,7 @@
 //
 // 三个区块：① 菇床（吃肥料产菌菇/松茸/茯苓）② 灵圃（种稀有种子产灵植）③ 萃露炉（把菌菇/灵植酿成 8 档菌灵露）。
 // 为什么要「萃露」：采集是无限的（灵芝约 15,400 件/天），产线若也产材料就永远没有意义；
-// 菌灵露是采集拿不到的**乘区物品**（经验/产量/采集间隔/餐厅收入），于是采集越多 → 精华越多 → 乘区越强。
+// 菌灵露是采集拿不到的**稀有加成物**（经验/产量/采集间隔/餐厅收入），于是采集越多 → 精华越多 → 加成越强。
 import { computed, ref } from 'vue'
 import { usePlayerStore } from '../stores/player.js'
 import { useUiStore } from '../stores/ui.js'
@@ -201,7 +201,7 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
         <h2>🌿 灵圃菌房</h2>
         <p class="dim">
           菇床吃<b>肥料</b>出菌菇、灵圃种<b>稀有种子</b>出灵植，两条料线都汇入<b>萃露炉</b>——
-          酿成 8 档<b>菌灵露</b>（采集<b>拿不到</b>的乘区物品：经验 / 产量 / 采集间隔 / 餐厅收入）；
+          酿成 8 档<b>菌灵露</b>（采集<b>拿不到</b>的稀有加成物：经验 / 产量 / 采集间隔 / 餐厅收入）；
           开酿时可加 1 件<b>精耕作物</b>当催化剂，本次酿造时间 <b>−{{ Math.round((1 - PRIME_CATALYST_TIME) * 100) }}%</b>。
           离线照常结算，单次最多补 {{ IDLE_CAP_HOURS }} 小时；缺料即停机。
         </p>
@@ -258,9 +258,9 @@ function expandEssence() { const r = player.essenceExpand(); if (!r.ok) ui.pushL
       </div>
     </FoldCard>
 
-    <FoldCard title="🧪 菌灵露 8 档（按材料等级锚定）" hint="Ⅰ~Ⅳ 给经验+产量、Ⅴ 起加采集间隔、Ⅶ 起加餐厅收入——全是采集拿不到的乘区">
+    <FoldCard title="🧪 菌灵露 8 档（按材料等级锚定）" hint="Ⅰ~Ⅳ 给经验+产量、Ⅴ 起加采集间隔、Ⅶ 起加餐厅收入——全是采集拿不到的加成">
       <div class="card mf-table-card">
-        <h3>🧪 菌灵露 8 档（越靠后越强 · 全是采集拿不到的乘区）</h3>
+        <h3>🧪 菌灵露 8 档（越靠后越强 · 全是采集拿不到的加成）</h3>
         <div class="table-scroll">
         <table class="target-table">
           <tbody>

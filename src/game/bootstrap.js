@@ -379,7 +379,7 @@ export function registerGameEvents() {
     )
   })
   // 物品原地未动（仓库/冷库 → 背包 放不下时物品仍在原处；或信箱也塞满、确实发不出去）
-  EventBus.on('inventory:full', () => ui.pushLog('🎒 背包已满！请整理、存入仓库或出售（商店可扩展容量）', 'warn'))
+  EventBus.on('inventory:full', () => ui.pushLog('🎒 厨藏已满！请整理或出售（商店可扩展容量）', 'warn'))
   // ⚠️ 原有 `bank:full` 一条已删（2026-09-28）：bank 概念移除后全站无人发射它，而冷库满有自己的日志
   //    （`player.js` 冷库路径 emit `cold:full` 时**自己**就 pushLog 了「🧊 冷库已满（X/Y 格）」）
   //    ⇒ 这里再接一份会是同一事件两条日志。音效那侧由 App.vue 听 `cold:full` 补上。

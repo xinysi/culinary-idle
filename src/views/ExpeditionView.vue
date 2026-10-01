@@ -68,7 +68,7 @@ function claim(lineId, i) {
   player.expeditionClaim(lineId, i) // 成功由 expedition:claim 事件推送日志
 }
 function stop(lineId, i) {
-  if (player.expeditionStop(lineId, i)) ui.pushLog('已撤回该槽位（本轮进度放弃）', 'info')
+  if (player.expeditionStop(lineId, i)) ui.pushLog('已撤回该槽位（这一轮的进度放弃）', 'info')
 }
 // 熟练度阶梯（8 档）与全部线路档案（2026-09-12 补；v2.7.4 起条数跟随 EXPEDITIONS，不再写死）：数值与 store 的结算同源
 //   每轮产出件数 = 周期小时 × 5 × 产量倍率；每轮金币 = 槽位 goldPerHour × 周期

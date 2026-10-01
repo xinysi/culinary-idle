@@ -4,7 +4,7 @@
 //
 // 🔴 为什么重做（用户原话）：「我还是觉得效果总览页面需要重做一下」「为什么没看到美食探索之类的」。
 //    v2.30.x 那版是**两条长清单**（生效列表 + 公式列表）叠在一起，想查某个系统得自己滚；
-//    而玩家找东西是按**系统**找的（「美食探索受什么影响」），不是按「乘区赛道」找的。
+//    而玩家找东西是按**系统**找的（「美食探索受什么影响」），不是按「加成赛道」找的。
 //    ⇒ 改成**左系统栏 + 右内容**：点一个系统，右边只看它 —— 正生效 / 全部规则与公式 / 还在叠哪些全局效果。
 //
 // 本页**零新增存档字段、不写任何状态**：全部是对既有 player 接口的只读汇总，逐条登记在
@@ -229,42 +229,48 @@ function jumpLabel(view) {
 
 <style scoped>
 /* ── 左系统栏 + 右内容（复用「左导航右内容」的观感）── */
+/* 2026-10-01 用户：「效果总览和攻略的导航还是显得占空间」⇒ 左侧竖排改成**平铺胶囊**：
+   整行吸顶、自动换行，内容区恢复整宽（与攻略页同一套处理）。 */
 .fx-split {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
 .fx-rail {
-  flex: 0 0 186px;
-  position: sticky;
-  top: 0;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh - 150px);
-  overflow-y: auto;
-}
-.fx-rail-item {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 7px 9px;
-  font-size: 12.5px;
-  text-align: left;
-  border-radius: 6px;
-  border: 1px dashed var(--border);
-  background: var(--bg-soft);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(var(--panel-soft-rgb), 0.45);
+  border: 1px solid var(--border);
+}
+.fx-rail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  white-space: nowrap;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(var(--panel-rgb), 0.75);
   color: var(--text);
   cursor: pointer;
 }
 .fx-rail-item:hover { border-color: var(--primary); }
+/* 选中态：描边 + 加粗，**文字不换色** —— 主色压主色淡底在浅色主题下对比度不够
+   （e2e-dark 的皮肤体检抓到过同类；与「别把品牌色当文字色」是同一条规矩） */
 .fx-rail-item.active {
-  background: rgba(var(--primary-tint-rgb), 0.18);
-  border-style: solid;
-  border-color: var(--primary);
-  font-weight: 600;
+  border-color: var(--primary-strong);
+  box-shadow: inset 0 0 0 1px var(--primary-strong);
+  font-weight: 700;
 }
 .fx-rail-icon { text-align: center; }
 .fx-rail-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

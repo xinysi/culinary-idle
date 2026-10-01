@@ -2609,15 +2609,23 @@ console.log('══ T. 攻略数据 ══')
   // 内容列 `min-width: 0`（否则宽表会把两栏一起撑破 —— 项目里的老坑）。
   {
     const gv = rdSrc('src/views/GuideView.vue')
-    check('攻略', '页面是「左导航 + 右内容」两栏（`.gd-rail` + `.gd-pane`）',
-      /class="gd-rail"/.test(gv) && /class="gd-pane"/.test(gv) && /\.gd-body\s*\{[^}]*display:\s*flex/.test(gv))
+    check('攻略', '导航是**平铺胶囊**（`.gd-chips` + `.gd-chip`）—— 2026-10-01 用户：「导航还是显得占空间」',
+      /class="gd-chips"/.test(gv) && /class="gd-chip"/.test(gv) && /\.gd-chips\s*\{[^}]*flex-wrap:\s*wrap/.test(gv))
     check('攻略', '左导航覆盖**全部阶段与全部功能大类**（从数据派生，新增一类不会漏进导航）',
       /v-for="s in GUIDE_STAGES"/.test(gv) && /v-for="c in GUIDE_OVERVIEW"/.test(gv) &&
         /GUIDE_STAGES\.find/.test(gv) && /GUIDE_OVERVIEW\.find/.test(gv))
-    check('攻略', '🔴 不再有「页签层」（同一件事只留一个入口：8 个页签已并入左导航）',
-      !/region-tabs/.test(gv) && !/selectedId/.test(gv))
-    check('攻略', '内容列 `min-width: 0`（否则宽表把两栏一起撑破）',
-      /\.gd-pane\s*\{[^}]*min-width:\s*0/.test(gv))
+    check('攻略', '🔴 不再有「页签层」与左侧竖栏（同一件事只留一个入口）',
+      !/region-tabs/.test(gv) && !/selectedId/.test(gv) && !/\.gd-rail/.test(gv))
+    check('攻略', '🔴 胶囊**选中态**不许用浅档主色当文字（主色压主色淡底在浅色主题下对比度不够，e2e-dark 抓到过）',
+      // 只钉 `.gd-chip.on` 那一块，且只禁**浅档** `--primary`（深档 `--primary-strong` 是对比度安全的，
+      // 页内别处用来当文字色是合规的 —— 第一版把整文件都禁了，结果把自己合规的 `.gd-step-no` 告了）。
+      (() => {
+        const src = gv.replace(/\/\*[\s\S]*?\*\//g, '')
+        const on = (src.match(/\.gd-chip\.on\s*\{([^}]*)\}/) || [])[1] ?? ''
+        return on !== '' && !/\bcolor:\s*var\(--primary\)/.test(on)
+      })())
+    check('攻略', '行动清单是「标题 + 正文」卡片（用户：「太紧凑，玩家看的头疼」）',
+      /gd-step-title/.test(gv) && /function stepParts/.test(gv) && /\.gd-step\s*\{[^}]*padding:\s*1[0-9]px/.test(gv))
   }
 }
 

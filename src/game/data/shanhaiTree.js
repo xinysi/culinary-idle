@@ -1,4 +1,4 @@
-// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-09-30，勿手改）
+// 山海食经 · 收集科技树（生成器 scripts/gen/gen_shanhai_tree.mjs 产出，2026-10-01，勿手改）
 //
 // 口径：12 条收集线 × 10 环（前 5 环各 3 节点、第 6~10 环各 5 节点）= 552 节点；**纯条件点亮**（不消耗资源）。
 // 条件只用已持久化的玩家状态：该线可收集物品的已收集件数 + 该技能等级 + 该技能精通总级数（req.kind 恒为 'codex'）。
@@ -325,7 +325,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 46 件 → 仓库格数 +1"
+    "desc": "采撷线收集 46 件 → 厨藏格数 +1"
   },
   {
     "id": "pick32",
@@ -344,7 +344,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 46 件 → 仓库格数 +1"
+    "desc": "采撷线收集 46 件 → 厨藏格数 +1"
   },
   {
     "id": "pick33",
@@ -363,7 +363,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 46 件 → 仓库格数 +1"
+    "desc": "采撷线收集 46 件 → 厨藏格数 +1"
   },
   {
     "id": "pick41",
@@ -382,7 +382,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 仓库格数 +1"
+    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "pick42",
@@ -401,7 +401,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 仓库格数 +1"
+    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "pick43",
@@ -420,7 +420,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 仓库格数 +1"
+    "desc": "采撷线收集 76 件、采撷技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "pick51",
@@ -439,7 +439,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 仓库格数 +1"
+    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "pick52",
@@ -458,7 +458,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 仓库格数 +1"
+    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "pick53",
@@ -477,7 +477,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 仓库格数 +1"
+    "desc": "采撷线收集 107 件、采撷技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "pick61",
@@ -553,7 +553,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "采撷线收集 137 件、采撷技能达 75 级 → 仓库格数 +2"
+    "desc": "采撷线收集 137 件、采撷技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "pick65",
@@ -648,7 +648,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "采撷线收集 137 件、采撷技能达 100 级 → 仓库格数 +2"
+    "desc": "采撷线收集 137 件、采撷技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "pick75",
@@ -707,7 +707,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "pick83",
@@ -747,7 +747,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "pick85",
@@ -807,7 +807,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "pick93",
@@ -847,7 +847,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "pick95",
@@ -907,7 +907,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "pick103",
@@ -947,7 +947,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "采撷线收集 137 件、采撷技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "pick105",
@@ -1100,7 +1100,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 25 件 → 仓库格数 +1"
+    "desc": "渔获线收集 25 件 → 厨藏格数 +1"
   },
   {
     "id": "fish32",
@@ -1119,7 +1119,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 25 件 → 仓库格数 +1"
+    "desc": "渔获线收集 25 件 → 厨藏格数 +1"
   },
   {
     "id": "fish33",
@@ -1138,7 +1138,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 25 件 → 仓库格数 +1"
+    "desc": "渔获线收集 25 件 → 厨藏格数 +1"
   },
   {
     "id": "fish41",
@@ -1157,7 +1157,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "fish42",
@@ -1176,7 +1176,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "fish43",
@@ -1195,7 +1195,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 仓库格数 +1"
+    "desc": "渔获线收集 42 件、渔获技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "fish51",
@@ -1214,7 +1214,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "fish52",
@@ -1233,7 +1233,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "fish53",
@@ -1252,7 +1252,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 仓库格数 +1"
+    "desc": "渔获线收集 59 件、渔获技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "fish61",
@@ -1328,7 +1328,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 75 件、渔获技能达 75 级 → 仓库格数 +2"
+    "desc": "渔获线收集 75 件、渔获技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "fish65",
@@ -1423,7 +1423,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 75 件、渔获技能达 100 级 → 仓库格数 +2"
+    "desc": "渔获线收集 75 件、渔获技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "fish75",
@@ -1482,7 +1482,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "fish83",
@@ -1522,7 +1522,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "fish85",
@@ -1582,7 +1582,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "fish93",
@@ -1622,7 +1622,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "fish95",
@@ -1682,7 +1682,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "fish103",
@@ -1722,7 +1722,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "渔获线收集 75 件、渔获技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "fish105",
@@ -1875,7 +1875,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 24 件 → 仓库格数 +1"
+    "desc": "山猎线收集 24 件 → 厨藏格数 +1"
   },
   {
     "id": "hunt32",
@@ -1894,7 +1894,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 24 件 → 仓库格数 +1"
+    "desc": "山猎线收集 24 件 → 厨藏格数 +1"
   },
   {
     "id": "hunt33",
@@ -1913,7 +1913,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 24 件 → 仓库格数 +1"
+    "desc": "山猎线收集 24 件 → 厨藏格数 +1"
   },
   {
     "id": "hunt41",
@@ -1932,7 +1932,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt42",
@@ -1951,7 +1951,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt43",
@@ -1970,7 +1970,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 仓库格数 +1"
+    "desc": "山猎线收集 40 件、山猎技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt51",
@@ -1989,7 +1989,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt52",
@@ -2008,7 +2008,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt53",
@@ -2027,7 +2027,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 仓库格数 +1"
+    "desc": "山猎线收集 56 件、山猎技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "hunt61",
@@ -2103,7 +2103,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 72 件、山猎技能达 75 级 → 仓库格数 +2"
+    "desc": "山猎线收集 72 件、山猎技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "hunt65",
@@ -2198,7 +2198,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 72 件、山猎技能达 100 级 → 仓库格数 +2"
+    "desc": "山猎线收集 72 件、山猎技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "hunt75",
@@ -2257,7 +2257,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "hunt83",
@@ -2297,7 +2297,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "hunt85",
@@ -2357,7 +2357,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "hunt93",
@@ -2397,7 +2397,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "hunt95",
@@ -2457,7 +2457,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "hunt103",
@@ -2497,7 +2497,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "山猎线收集 72 件、山猎技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "hunt105",
@@ -2650,7 +2650,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 18 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 18 件 → 厨藏格数 +1"
   },
   {
     "id": "dig32",
@@ -2669,7 +2669,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 18 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 18 件 → 厨藏格数 +1"
   },
   {
     "id": "dig33",
@@ -2688,7 +2688,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 18 件 → 仓库格数 +1"
+    "desc": "掘藏线收集 18 件 → 厨藏格数 +1"
   },
   {
     "id": "dig41",
@@ -2707,7 +2707,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "dig42",
@@ -2726,7 +2726,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "dig43",
@@ -2745,7 +2745,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 29 件、掘藏技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "dig51",
@@ -2764,7 +2764,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "dig52",
@@ -2783,7 +2783,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "dig53",
@@ -2802,7 +2802,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 仓库格数 +1"
+    "desc": "掘藏线收集 41 件、掘藏技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "dig61",
@@ -2878,7 +2878,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 53 件、掘藏技能达 75 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 53 件、掘藏技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "dig65",
@@ -2973,7 +2973,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 53 件、掘藏技能达 100 级 → 仓库格数 +2"
+    "desc": "掘藏线收集 53 件、掘藏技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "dig75",
@@ -3032,7 +3032,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "dig83",
@@ -3072,7 +3072,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "dig85",
@@ -3132,7 +3132,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "dig93",
@@ -3172,7 +3172,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "dig95",
@@ -3232,7 +3232,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "dig103",
@@ -3272,7 +3272,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "掘藏线收集 53 件、掘藏技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "dig105",
@@ -3425,7 +3425,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 62 件 → 仓库格数 +1"
+    "desc": "稼穑线收集 62 件 → 厨藏格数 +1"
   },
   {
     "id": "farm32",
@@ -3444,7 +3444,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 62 件 → 仓库格数 +1"
+    "desc": "稼穑线收集 62 件 → 厨藏格数 +1"
   },
   {
     "id": "farm33",
@@ -3463,7 +3463,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 62 件 → 仓库格数 +1"
+    "desc": "稼穑线收集 62 件 → 厨藏格数 +1"
   },
   {
     "id": "farm41",
@@ -3482,7 +3482,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "farm42",
@@ -3501,7 +3501,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "farm43",
@@ -3520,7 +3520,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 103 件、稼穑技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "farm51",
@@ -3539,7 +3539,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "farm52",
@@ -3558,7 +3558,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "farm53",
@@ -3577,7 +3577,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 仓库格数 +1"
+    "desc": "稼穑线收集 144 件、稼穑技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "farm61",
@@ -3653,7 +3653,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "稼穑线收集 185 件、稼穑技能达 75 级 → 仓库格数 +2"
+    "desc": "稼穑线收集 185 件、稼穑技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "farm65",
@@ -3748,7 +3748,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "稼穑线收集 185 件、稼穑技能达 100 级 → 仓库格数 +2"
+    "desc": "稼穑线收集 185 件、稼穑技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "farm75",
@@ -3807,7 +3807,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 30%（按动作次数涨） → 仓库格数 +3"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 30%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "farm83",
@@ -3847,7 +3847,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 30%（按动作次数涨） → 仓库格数 +2"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 30%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "farm85",
@@ -3907,7 +3907,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 40%（按动作次数涨） → 仓库格数 +4"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 40%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "farm93",
@@ -3947,7 +3947,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 40%（按动作次数涨） → 仓库格数 +3"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 40%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "farm95",
@@ -4007,7 +4007,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 50%（按动作次数涨） → 仓库格数 +5"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 50%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "farm103",
@@ -4047,7 +4047,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 50%（按动作次数涨） → 仓库格数 +3"
+    "desc": "稼穑线收集 185 件、稼穑技能精通总级数达满分 50%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "farm105",
@@ -4200,7 +4200,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 92 件 → 仓库格数 +1"
+    "desc": "烹煮线收集 92 件 → 厨藏格数 +1"
   },
   {
     "id": "cook32",
@@ -4219,7 +4219,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 92 件 → 仓库格数 +1"
+    "desc": "烹煮线收集 92 件 → 厨藏格数 +1"
   },
   {
     "id": "cook33",
@@ -4238,7 +4238,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 92 件 → 仓库格数 +1"
+    "desc": "烹煮线收集 92 件 → 厨藏格数 +1"
   },
   {
     "id": "cook41",
@@ -4257,7 +4257,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "cook42",
@@ -4276,7 +4276,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "cook43",
@@ -4295,7 +4295,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 153 件、烹煮技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "cook51",
@@ -4314,7 +4314,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "cook52",
@@ -4333,7 +4333,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "cook53",
@@ -4352,7 +4352,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 仓库格数 +1"
+    "desc": "烹煮线收集 214 件、烹煮技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "cook61",
@@ -4371,7 +4371,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 仓库格数 +4"
+    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "cook62",
@@ -4390,7 +4390,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 仓库格数 +4"
+    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "cook63",
@@ -4428,7 +4428,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 仓库格数 +2"
+    "desc": "烹煮线收集 275 件、烹煮技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "cook65",
@@ -4485,7 +4485,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烹煮线收集 275 件、烹煮技能达 100 级 → 仓库格数 +4"
+    "desc": "烹煮线收集 275 件、烹煮技能达 100 级 → 厨藏格数 +4"
   },
   {
     "id": "cook73",
@@ -4523,7 +4523,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烹煮线收集 275 件、烹煮技能达 100 级 → 仓库格数 +2"
+    "desc": "烹煮线收集 275 件、烹煮技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "cook75",
@@ -4582,7 +4582,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "cook83",
@@ -4622,7 +4622,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "cook85",
@@ -4682,7 +4682,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "cook93",
@@ -4722,7 +4722,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "cook95",
@@ -4782,7 +4782,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "cook103",
@@ -4822,7 +4822,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烹煮线收集 275 件、烹煮技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "cook105",
@@ -4975,7 +4975,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 31 件 → 仓库格数 +1"
+    "desc": "烘焙线收集 31 件 → 厨藏格数 +1"
   },
   {
     "id": "bake32",
@@ -4994,7 +4994,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 31 件 → 仓库格数 +1"
+    "desc": "烘焙线收集 31 件 → 厨藏格数 +1"
   },
   {
     "id": "bake33",
@@ -5013,7 +5013,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 31 件 → 仓库格数 +1"
+    "desc": "烘焙线收集 31 件 → 厨藏格数 +1"
   },
   {
     "id": "bake41",
@@ -5032,7 +5032,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "bake42",
@@ -5051,7 +5051,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "bake43",
@@ -5070,7 +5070,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 51 件、烘焙技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "bake51",
@@ -5089,7 +5089,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "bake52",
@@ -5108,7 +5108,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "bake53",
@@ -5127,7 +5127,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 仓库格数 +1"
+    "desc": "烘焙线收集 72 件、烘焙技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "bake61",
@@ -5146,7 +5146,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 仓库格数 +4"
+    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "bake62",
@@ -5165,7 +5165,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 仓库格数 +4"
+    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "bake63",
@@ -5203,7 +5203,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 仓库格数 +2"
+    "desc": "烘焙线收集 92 件、烘焙技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "bake65",
@@ -5260,7 +5260,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烘焙线收集 92 件、烘焙技能达 100 级 → 仓库格数 +4"
+    "desc": "烘焙线收集 92 件、烘焙技能达 100 级 → 厨藏格数 +4"
   },
   {
     "id": "bake73",
@@ -5298,7 +5298,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烘焙线收集 92 件、烘焙技能达 100 级 → 仓库格数 +2"
+    "desc": "烘焙线收集 92 件、烘焙技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "bake75",
@@ -5357,7 +5357,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "bake83",
@@ -5397,7 +5397,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "bake85",
@@ -5457,7 +5457,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "bake93",
@@ -5497,7 +5497,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "bake95",
@@ -5557,7 +5557,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "bake103",
@@ -5597,7 +5597,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "烘焙线收集 92 件、烘焙技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "bake105",
@@ -5750,7 +5750,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 40 件 → 仓库格数 +1"
+    "desc": "酿造线收集 40 件 → 厨藏格数 +1"
   },
   {
     "id": "brew32",
@@ -5769,7 +5769,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 40 件 → 仓库格数 +1"
+    "desc": "酿造线收集 40 件 → 厨藏格数 +1"
   },
   {
     "id": "brew33",
@@ -5788,7 +5788,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 40 件 → 仓库格数 +1"
+    "desc": "酿造线收集 40 件 → 厨藏格数 +1"
   },
   {
     "id": "brew41",
@@ -5807,7 +5807,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 仓库格数 +1"
+    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "brew42",
@@ -5826,7 +5826,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 仓库格数 +1"
+    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "brew43",
@@ -5845,7 +5845,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 仓库格数 +1"
+    "desc": "酿造线收集 66 件、酿造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "brew51",
@@ -5864,7 +5864,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 仓库格数 +1"
+    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "brew52",
@@ -5883,7 +5883,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 仓库格数 +1"
+    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "brew53",
@@ -5902,7 +5902,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 仓库格数 +1"
+    "desc": "酿造线收集 93 件、酿造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "brew61",
@@ -5921,7 +5921,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 仓库格数 +4"
+    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "brew62",
@@ -5940,7 +5940,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 仓库格数 +4"
+    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "brew63",
@@ -5978,7 +5978,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 仓库格数 +2"
+    "desc": "酿造线收集 119 件、酿造技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "brew65",
@@ -6035,7 +6035,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "酿造线收集 119 件、酿造技能达 100 级 → 仓库格数 +4"
+    "desc": "酿造线收集 119 件、酿造技能达 100 级 → 厨藏格数 +4"
   },
   {
     "id": "brew73",
@@ -6073,7 +6073,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "酿造线收集 119 件、酿造技能达 100 级 → 仓库格数 +2"
+    "desc": "酿造线收集 119 件、酿造技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "brew75",
@@ -6132,7 +6132,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "brew83",
@@ -6172,7 +6172,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "brew85",
@@ -6232,7 +6232,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "brew93",
@@ -6272,7 +6272,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "brew95",
@@ -6332,7 +6332,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "brew103",
@@ -6372,7 +6372,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "酿造线收集 119 件、酿造技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "brew105",
@@ -6525,7 +6525,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 30 件 → 仓库格数 +1"
+    "desc": "调味线收集 30 件 → 厨藏格数 +1"
   },
   {
     "id": "spice32",
@@ -6544,7 +6544,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 30 件 → 仓库格数 +1"
+    "desc": "调味线收集 30 件 → 厨藏格数 +1"
   },
   {
     "id": "spice33",
@@ -6563,7 +6563,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 30 件 → 仓库格数 +1"
+    "desc": "调味线收集 30 件 → 厨藏格数 +1"
   },
   {
     "id": "spice41",
@@ -6582,7 +6582,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 50 件、调味技能达 20 级 → 仓库格数 +1"
+    "desc": "调味线收集 50 件、调味技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "spice42",
@@ -6601,7 +6601,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 50 件、调味技能达 20 级 → 仓库格数 +1"
+    "desc": "调味线收集 50 件、调味技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "spice43",
@@ -6620,7 +6620,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 50 件、调味技能达 20 级 → 仓库格数 +1"
+    "desc": "调味线收集 50 件、调味技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "spice51",
@@ -6639,7 +6639,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 70 件、调味技能达 45 级 → 仓库格数 +1"
+    "desc": "调味线收集 70 件、调味技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "spice52",
@@ -6658,7 +6658,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 70 件、调味技能达 45 级 → 仓库格数 +1"
+    "desc": "调味线收集 70 件、调味技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "spice53",
@@ -6677,7 +6677,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "调味线收集 70 件、调味技能达 45 级 → 仓库格数 +1"
+    "desc": "调味线收集 70 件、调味技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "spice61",
@@ -6696,7 +6696,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "调味线收集 90 件、调味技能达 75 级 → 仓库格数 +4"
+    "desc": "调味线收集 90 件、调味技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "spice62",
@@ -6715,7 +6715,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "调味线收集 90 件、调味技能达 75 级 → 仓库格数 +4"
+    "desc": "调味线收集 90 件、调味技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "spice63",
@@ -6753,7 +6753,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "调味线收集 90 件、调味技能达 75 级 → 仓库格数 +2"
+    "desc": "调味线收集 90 件、调味技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "spice65",
@@ -6810,7 +6810,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "调味线收集 90 件、调味技能达 100 级 → 仓库格数 +4"
+    "desc": "调味线收集 90 件、调味技能达 100 级 → 厨藏格数 +4"
   },
   {
     "id": "spice73",
@@ -6848,7 +6848,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "调味线收集 90 件、调味技能达 100 级 → 仓库格数 +2"
+    "desc": "调味线收集 90 件、调味技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "spice75",
@@ -6907,7 +6907,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "spice83",
@@ -6947,7 +6947,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "spice85",
@@ -7007,7 +7007,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "spice93",
@@ -7047,7 +7047,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "spice95",
@@ -7107,7 +7107,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "spice103",
@@ -7147,7 +7147,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "调味线收集 90 件、调味技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "调味线收集 90 件、调味技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "spice105",
@@ -7300,7 +7300,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 115 件 → 仓库格数 +1"
+    "desc": "锻造线收集 115 件 → 厨藏格数 +1"
   },
   {
     "id": "smith32",
@@ -7319,7 +7319,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 115 件 → 仓库格数 +1"
+    "desc": "锻造线收集 115 件 → 厨藏格数 +1"
   },
   {
     "id": "smith33",
@@ -7338,7 +7338,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 115 件 → 仓库格数 +1"
+    "desc": "锻造线收集 115 件 → 厨藏格数 +1"
   },
   {
     "id": "smith41",
@@ -7357,7 +7357,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 仓库格数 +1"
+    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "smith42",
@@ -7376,7 +7376,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 仓库格数 +1"
+    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "smith43",
@@ -7395,7 +7395,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 仓库格数 +1"
+    "desc": "锻造线收集 191 件、锻造技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "smith51",
@@ -7414,7 +7414,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 仓库格数 +1"
+    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "smith52",
@@ -7433,7 +7433,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 仓库格数 +1"
+    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "smith53",
@@ -7452,7 +7452,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 仓库格数 +1"
+    "desc": "锻造线收集 267 件、锻造技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "smith61",
@@ -7471,7 +7471,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 仓库格数 +4"
+    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "smith62",
@@ -7490,7 +7490,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 仓库格数 +4"
+    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 厨藏格数 +4"
   },
   {
     "id": "smith63",
@@ -7528,7 +7528,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 仓库格数 +2"
+    "desc": "锻造线收集 343 件、锻造技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "smith65",
@@ -7585,7 +7585,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "锻造线收集 343 件、锻造技能达 100 级 → 仓库格数 +4"
+    "desc": "锻造线收集 343 件、锻造技能达 100 级 → 厨藏格数 +4"
   },
   {
     "id": "smith73",
@@ -7623,7 +7623,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "锻造线收集 343 件、锻造技能达 100 级 → 仓库格数 +2"
+    "desc": "锻造线收集 343 件、锻造技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "smith75",
@@ -7682,7 +7682,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "smith83",
@@ -7722,7 +7722,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "smith85",
@@ -7782,7 +7782,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "smith93",
@@ -7822,7 +7822,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "smith95",
@@ -7882,7 +7882,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "smith103",
@@ -7922,7 +7922,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "锻造线收集 343 件、锻造技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "smith105",
@@ -8075,7 +8075,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 7 件 → 仓库格数 +1"
+    "desc": "伐薪线收集 7 件 → 厨藏格数 +1"
   },
   {
     "id": "wood32",
@@ -8094,7 +8094,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 7 件 → 仓库格数 +1"
+    "desc": "伐薪线收集 7 件 → 厨藏格数 +1"
   },
   {
     "id": "wood33",
@@ -8113,7 +8113,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 7 件 → 仓库格数 +1"
+    "desc": "伐薪线收集 7 件 → 厨藏格数 +1"
   },
   {
     "id": "wood41",
@@ -8132,7 +8132,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "wood42",
@@ -8151,7 +8151,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "wood43",
@@ -8170,7 +8170,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 11 件、伐薪技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "wood51",
@@ -8189,7 +8189,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "wood52",
@@ -8208,7 +8208,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "wood53",
@@ -8227,7 +8227,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 仓库格数 +1"
+    "desc": "伐薪线收集 16 件、伐薪技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "wood61",
@@ -8303,7 +8303,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "伐薪线收集 20 件、伐薪技能达 75 级 → 仓库格数 +2"
+    "desc": "伐薪线收集 20 件、伐薪技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "wood65",
@@ -8398,7 +8398,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "伐薪线收集 20 件、伐薪技能达 100 级 → 仓库格数 +2"
+    "desc": "伐薪线收集 20 件、伐薪技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "wood75",
@@ -8457,7 +8457,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "wood83",
@@ -8497,7 +8497,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "wood85",
@@ -8557,7 +8557,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "wood93",
@@ -8597,7 +8597,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "wood95",
@@ -8657,7 +8657,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "wood103",
@@ -8697,7 +8697,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "伐薪线收集 20 件、伐薪技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "wood105",
@@ -8850,7 +8850,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 14 件 → 仓库格数 +1"
+    "desc": "矿脉线收集 14 件 → 厨藏格数 +1"
   },
   {
     "id": "ore32",
@@ -8869,7 +8869,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 14 件 → 仓库格数 +1"
+    "desc": "矿脉线收集 14 件 → 厨藏格数 +1"
   },
   {
     "id": "ore33",
@@ -8888,7 +8888,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 14 件 → 仓库格数 +1"
+    "desc": "矿脉线收集 14 件 → 厨藏格数 +1"
   },
   {
     "id": "ore41",
@@ -8907,7 +8907,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "ore42",
@@ -8926,7 +8926,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "ore43",
@@ -8945,7 +8945,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 23 件、矿脉技能达 20 级 → 厨藏格数 +1"
   },
   {
     "id": "ore51",
@@ -8964,7 +8964,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "ore52",
@@ -8983,7 +8983,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "ore53",
@@ -9002,7 +9002,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 1
     },
-    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 仓库格数 +1"
+    "desc": "矿脉线收集 32 件、矿脉技能达 45 级 → 厨藏格数 +1"
   },
   {
     "id": "ore61",
@@ -9078,7 +9078,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "矿脉线收集 41 件、矿脉技能达 75 级 → 仓库格数 +2"
+    "desc": "矿脉线收集 41 件、矿脉技能达 75 级 → 厨藏格数 +2"
   },
   {
     "id": "ore65",
@@ -9173,7 +9173,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "矿脉线收集 41 件、矿脉技能达 100 级 → 仓库格数 +2"
+    "desc": "矿脉线收集 41 件、矿脉技能达 100 级 → 厨藏格数 +2"
   },
   {
     "id": "ore75",
@@ -9232,7 +9232,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +3"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "ore83",
@@ -9272,7 +9272,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 2
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 60%（按动作次数涨） → 仓库格数 +2"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 60%（按动作次数涨） → 厨藏格数 +2"
   },
   {
     "id": "ore85",
@@ -9332,7 +9332,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 4
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +4"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +4"
   },
   {
     "id": "ore93",
@@ -9372,7 +9372,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 80%（按动作次数涨） → 仓库格数 +3"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 80%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "ore95",
@@ -9432,7 +9432,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 5
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +5"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +5"
   },
   {
     "id": "ore103",
@@ -9472,7 +9472,7 @@ export const SHANHAI_NODES = [
       "field": "bankCap",
       "amount": 3
     },
-    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 100%（按动作次数涨） → 仓库格数 +3"
+    "desc": "矿脉线收集 41 件、矿脉技能精通总级数达满分 100%（按动作次数涨） → 厨藏格数 +3"
   },
   {
     "id": "ore105",

@@ -108,7 +108,7 @@ export const EXPANSIONS = [
   },
   {
     id: 'essenceVats', group: 'idle', name: '萃露炉', icon: '🧪', view: 'mycoField', unit: '格',
-    desc: '把菌菇/灵植酿成 8 档菌灵露（乘区物品）',
+    desc: '把菌菇/灵植酿成 8 档菌灵露（稀有加成物）',
     current: (p) => p.essenceVats(), max: ESSENCE_MAX_VATS,
     price: (p) => nextEssenceExpandCost(p.essenceVats()), apply: (p) => p.essenceExpand(),
   },
