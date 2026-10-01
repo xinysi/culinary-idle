@@ -39,6 +39,13 @@ import { TAKEOUT_PRICE_MULT, takeoutConcurrency } from './takeout.js'
 import { masteryLevelFromCount, masteryDoubleChance, masteryYieldBonus } from '../core/mastery.js'
 import { XP_STACK_DAMPING, XP_TAIL_RATE, dampXpStack, capXpSpeedup, xpSpeedupCap } from '../core/growthRate.js'
 import { PRESTIGE_XP_BONUS } from '../skills/Skill.js'
+// 系统与玩法规则那一组（2026-10-01 补）：这些数值跑在各自的平衡模块里
+import { DIFFICULTY } from './difficulty.js'
+import { exploreBandOf, exploreInitialChance, exploreMasteryPP } from './explorationBalance.js'
+import { EXPLORE_GEAR_ITEMS } from './explorationGear.js'
+import { TOWER_TIERS } from './battleTower.js'
+import { REALM_TIER_MAX, realmTierMult } from './mysticRealm.js'
+import { enemyScalingText } from './enemyScaling.js'
 
 /** 分组（页面按此顺序分节） */
 export const EFFECT_GROUPS = [
@@ -49,6 +56,11 @@ export const EFFECT_GROUPS = [
   { id: 'farm', name: '农田与产线', icon: '🌱', desc: '农田生长与挂机产线的运转状态（含停机与损耗）' },
   { id: 'combat', name: '对决与挑战', icon: '⚔️', desc: '对决属性、减伤回血，以及只在战斗内存在的临时状态' },
   { id: 'idle', name: '离线与容量', icon: '🛏', desc: '离线时长与效率、各类容量与槽位' },
+  // 🔴 2026-10-01 新增（用户：「为什么没看到美食探索之类的」）：上面 7 组登记的是**加成来源**，
+  //    而「美食探索成功率」这类**跑在各自平衡模块里**的玩法规则绕过了 `player.*Effects` 访问器 ⇒
+  //    按访问器扫的守卫看不见它们（探索/挑战塔档位/秘境档位/敌人血量分档/全局难度系数都漏了）。
+  //    单开一组把「怎么算」讲清楚——这些同样直接决定玩家看到的结果。
+  { id: 'system', name: '系统与玩法规则', icon: '🎛', desc: '不随状态开关的玩法规则：全局难度系数、美食探索的成功率与战利品、挑战塔与秘境档位、敌人血量分档' },
 ]
 
 /** 技能 id → 中文名（文案里不出现内部 id） */
@@ -251,6 +263,15 @@ export const EFFECT_FORMULAS = {
   offlineEfficiency: { tag: '打折', f: '全程按 80% 结算' },
   apprentice: { tag: '相加', f: '徒弟等级给的效率加成' },
   caps: { tag: '相加', f: '基础 + 商店扩容 + 山海奖励', note: '硬顶不小于两者之和' },
+
+  // 🎛 系统与玩法规则（2026-10-01 补：这一组的数值跑在各平衡模块里，原先整组没登记）
+  difficulty: { tag: '相乘（分四桶）', f: '掉落 ÷5 · 制作 ÷2 · 探索物品 ÷4 · 附产 ÷2', note: '各桶另有下限，永不抬高' },
+  exploreChance: { tag: '分段', f: '初始 × 段位系数 + 精通 + 池，再夹 90%', note: '专属装备在上限外另加' },
+  exploreLoot: { tag: '相乘', f: '战利品概率 ×0.25', note: '金币走原值不缩' },
+  exploreGear: { tag: '定额', f: '两套各 +5%，四件合计上限 +10%', note: '每次动作 0.01% 掉落' },
+  towerTier: { tag: '相乘', f: '对手属性与奖励同倍：1 · 1.5 · 2 · 2.5', note: '四档：标准 / 精英 / 极限 / 饕餮' },
+  realmTier: { tag: '相乘', f: '13 档，强度 ×1.00 起、逐档 +0.25', note: '末三档需对决 105 / 110 / 115 级' },
+  enemyScale: { tag: '分段', f: '血量：低段 ×2 · 中段 ×1.8 / 1.5 · 高段 ×1', note: '经验按伤害给，跟着同倍' },
 }
 
 /** 取某条效果的公式（`{ tag, f, note }`；没有登记时返回 null；守卫会断言「有行必有公式」）。
@@ -1334,6 +1355,60 @@ export const EFFECT_ROWS = [
         text: `背包 ${p.inventorySlotsUsed ?? 0}/${p.inventoryCap ?? 0} 格 · 仓库 ${p.bankSlotsUsed ?? 0}/${p.bankCap ?? 0} 格 · 冷库 ${p.coldStorageSlotsUsed ?? 0}/${p.coldStorageCap ?? 0} 格 · 农田 ${plots}/${DERIVED_MAX.farmPlots} 块（扩容只影响能装多少，不产生加成）`,
       }
     },
+  },
+
+  // ══ 系统与玩法规则（2026-10-01 补：这一组原先整组没登记，用户实测「看不到美食探索」）══════
+  {
+    id: 'difficulty', group: 'system', icon: '🎚', name: '全局难度系数', kind: 'debuff', src: '平衡（在读取点乘，数据一个字节没改）', view: '',
+    read: () => ({
+      on: true,
+      text: `对决掉落 ÷${n1(1 / DIFFICULTY.drop)} · 制作成功率 ÷${n1(1 / DIFFICULTY.craft)} · 探索物品 ÷${n1(1 / DIFFICULTY.exploreLoot)} · 采集附产 ÷${n1(1 / DIFFICULTY.gatherExtra)}（各桶另有下限，永不抬高）`,
+    }),
+  },
+  {
+    id: 'exploreChance', group: 'system', icon: '🧭', name: '美食探索·成功率', kind: 'rule', src: '美食探索（段位曲线 + 精通 + 池 + 专属装备）', view: 'skill:exploration',
+    read: (p, ctx) => {
+      const s = ctx?.skill?.('exploration')
+      const t = s?.currentTarget
+      if (!s || !t) return off('当前没有选中的探索目标')
+      const band = exploreBandOf(t.reqLevel)
+      const ini = exploreInitialChance(t)
+      const mpp = exploreMasteryPP(t)
+      const pool = Math.min(5, p.masteryPoolBonus?.(s.id)?.successPP ?? 0)
+      const gear = Math.min(10, p.equippedStats?.exploreSuccessPP ?? 0)
+      const fin = s.successChance(t)
+      return { on: true, text: `${t.name}（段 ${band}）：初始 ${Math.round(ini * 100)}% + 精通 ${Math.round(mpp * 100)} 点 + 池 ${n1(pool)} 点 = ${Math.round(fin * 100)}%；专属装备 +${n1(gear)} 点在封顶之外，全程夹 90%` }
+    },
+  },
+  {
+    id: 'exploreLoot', group: 'system', icon: '📦', name: '美食探索·战利品概率', kind: 'debuff', src: '全局难度系数（探索物品桶）', view: 'skill:exploration',
+    read: () => ({ on: true, text: `目标写着的战利品概率一律 ×${n1(DIFFICULTY.exploreLoot)}（金币战利品走原值不缩）` }),
+  },
+  {
+    id: 'exploreGear', group: 'system', icon: '🎒', name: '美食探索·专属装备', kind: 'buff', src: '寻味行装 / 遗珍行装（共四件）', view: 'skill:exploration',
+    read: (p) => {
+      const gear = Math.min(10, p.equippedStats?.exploreSuccessPP ?? 0)
+      const own = EXPLORE_GEAR_ITEMS.filter((g) => (p.inventory?.[g.id] ?? 0) > 0).length
+      return { on: true, text: `已收集 ${own} / ${EXPLORE_GEAR_ITEMS.length} 件（寻味行装各 +2.5%、遗珍行装各 +5%，四件合计上限 +10%；当前穿戴 +${n1(gear)} 点）。每次探索动作 0.01% 掷一次掉落，成败都算` }
+    },
+  },
+  {
+    id: 'towerTier', group: 'system', icon: '🗼', name: '挑战塔·难度档', kind: 'rule', src: '挑战塔（自选档位）', view: 'tower',
+    read: () => ({
+      on: true,
+      text: TOWER_TIERS.map((t) => `${t.name} ×${n1(t.mult)}`).join(' · ') + '（对手属性与金币 / 券奖励同倍；物品数量不随档提高）',
+    }),
+  },
+  {
+    id: 'realmTier', group: 'system', icon: '🏯', name: '食神秘境·档位', kind: 'rule', src: '食神秘境（1~13 档）', view: 'realm',
+    read: () => ({
+      on: true,
+      text: `第 1 档 ×${n1(realmTierMult(1))}，每档 +0.25，第 ${REALM_TIER_MAX} 档 ×${n1(realmTierMult(REALM_TIER_MAX))}；第 11 / 12 / 13 档分别需对决 105 / 110 / 115 级（转生掉级时生效档回退、进度保留）`,
+    }),
+  },
+  {
+    id: 'enemyScale', group: 'system', icon: '🩸', name: '敌人血量分档', kind: 'rule', src: '平衡（读取点乘系数）', view: 'skill:knife',
+    read: () => ({ on: true, text: enemyScalingText() }),
   },
 ]
 

@@ -11324,6 +11324,23 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   }).map((r) => `${r.id}:${(formulaOf(r.id, null, {}).f ?? '').length}`)
   check('效果公式', '公式本体 ≤34 字、补充 ≤24 字（一眼能读完）', long.length === 0, long.slice(0, 6).join(','))
 
+  // 🔴 「系统与玩法规则」这一组要真的盖住那几个**跑在各自平衡模块里**的系统。
+  //    为什么单独钉：它们绕过了 `player.*Effects` 访问器（那 34 个是内容同步审计扫的），
+  //    所以「按访问器扫」的守卫**天然看不见**它们 —— 2026-10-01 用户实测「效果总览里看不到美食探索」
+  //    就是这样漏掉的（探索成功率 / 专属装备 / 全局难度系数 / 塔档位 / 秘境档位 / 敌人分档 全整组没登记）。
+  //    判据：注册表源码里必须出现这些系统各自的关键导出一词（改动系统时若忘了同步，这条会红）。
+  const src = fs.readFileSync(new URL('../../src/game/data/activeEffects.js', import.meta.url), 'utf8')
+  const SYSTEMS = [
+    ['DIFFICULTY', '全局难度系数'],
+    ['exploreBandOf', '美食探索·段位曲线'],
+    ['EXPLORE_GEAR_ITEMS', '美食探索·专属装备'],
+    ['TOWER_TIERS', '挑战塔·难度档'],
+    ['REALM_TIER_MAX', '食神秘境·档位'],
+    ['enemyScalingText', '敌人血量分档'],
+  ]
+  const missed = SYSTEMS.filter(([k]) => !src.includes(k)).map(([, n]) => n)
+  check('效果公式', `「系统与玩法规则」覆盖 ${SYSTEMS.length} 个自平衡系统（访问器守卫看不见它们）`, missed.length === 0, missed.join(','))
+
   // 页面上真的把这一栏渲染出来了（接线断了 = 静默没有这一栏）
   const fx = stripComments(fs.readFileSync(new URL('../../src/views/EffectsView.vue', import.meta.url), 'utf8'))
   check('效果公式', '效果总览页真的渲染了这一栏（读 EFFECT_ROWS + formulaOf + 标签样式）',
