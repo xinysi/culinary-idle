@@ -11341,6 +11341,24 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   const missed = SYSTEMS.filter(([k]) => !src.includes(k)).map(([, n]) => n)
   check('效果公式', `「系统与玩法规则」覆盖 ${SYSTEMS.length} 个自平衡系统（访问器守卫看不见它们）`, missed.length === 0, missed.join(','))
 
+  // 🔴 左栏「按系统分栏」的归属必须**总数守恒**（2026-10-01 用户要求把页面重做成左系统栏 + 右内容）：
+  //    每条效果恰好归一个系统（不许漏、不许重复计），左栏每格「生效 N / 登记 M」的 M 之和 == 总条数。
+  const { EFFECT_SYSTEMS, systemOf } = await import('../../src/game/data/activeEffects.js')
+  const sysRows = EFFECT_SYSTEMS.filter((s) => !s.overview)
+  const unmapped = EFFECT_ROWS.filter((r) => !sysRows.some((s) => s.match(r))).map((r) => r.id)
+  check('效果公式', `${EFFECT_ROWS.length} 条效果都能归到一个系统（左栏不漏项）`, unmapped.length === 0, unmapped.slice(0, 6).join(','))
+  const sum = sysRows.reduce((a, s) => a + EFFECT_ROWS.filter((r) => systemOf(r) === s.id).length, 0)
+  check('效果公式', '左栏各系统登记条数之和 == 总条数（不重不漏）', sum === EFFECT_ROWS.length, `${sum} vs ${EFFECT_ROWS.length}`)
+  const emptySys = sysRows.filter((s) => !EFFECT_ROWS.some((r) => systemOf(r) === s.id)).map((s) => s.name)
+  check('效果公式', '左栏没有空系统（空格子会让玩家以为「这里什么都没有」）', emptySys.length === 0, emptySys.join(','))
+  // 「美食探索」必须自成一格（用户就是找不到它才让重做的）
+  check('效果公式', '「美食探索」在左栏自成一个系统（本次重做的直接起因）',
+    EFFECT_ROWS.some((r) => systemOf(r) === 'explore') && sysRows.some((s) => s.id === 'explore'), '')
+  // 页面真的按左栏渲染（接线断了 = 又变回一条长清单）
+  const fx2 = fs.readFileSync(new URL('../../src/views/EffectsView.vue', import.meta.url), 'utf8')
+  check('效果公式', '效果总览页是「左系统栏 + 右内容」（fx-rail + fx-pane）',
+    /fx-rail/.test(fx2) && /fx-pane/.test(fx2) && /EFFECT_SYSTEMS/.test(fx2), 'EffectsView.vue')
+
   // 页面上真的把这一栏渲染出来了（接线断了 = 静默没有这一栏）
   const fx = stripComments(fs.readFileSync(new URL('../../src/views/EffectsView.vue', import.meta.url), 'utf8'))
   check('效果公式', '效果总览页真的渲染了这一栏（读 EFFECT_ROWS + formulaOf + 标签样式）',

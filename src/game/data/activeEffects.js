@@ -290,6 +290,34 @@ export function formulaTextOf(id, player, ctx) {
   return f.note ? `${f.f}（${f.note}）` : f.f
 }
 
+/**
+ * 页面左栏的系统分组（2026-10-01 用户要求重做：「按系统分栏，左导航 + 右内容」）。
+ *
+ * 为什么另开一张表而不是用 `EFFECT_GROUPS`：那 8 组是**按乘区赛道**分的（全局/采集/制作/餐厅/…），
+ * 而玩家找东西是按**系统**找的（「美食探索受什么影响」）——探索的几行原本被压在「系统与玩法规则」里，
+ * 与塔/秘境混在一起，正是用户实报「看不到美食探索」的原因。
+ *
+ * `match` 从上往下第一个命中的即归属；守卫会断言「112 行每行恰好归一个系统」+「左栏覆盖全部系统」。
+ */
+export const EFFECT_SYSTEMS = [
+  { id: 'all', name: '总览（全部）', icon: '🧿', match: () => true, overview: true },
+  { id: 'explore', name: '美食探索', icon: '🧭', match: (r) => r.view === 'skill:exploration' },
+  { id: 'gastronomy', name: '美食知识（奥义 / 图谱）', icon: '📖', match: (r) => /gastronomy/.test(r.view ?? '') || /奥义|图谱/.test(r.src ?? '') },
+  { id: 'combat', name: '对决与挑战', icon: '⚔️', match: (r) => r.group === 'combat' || ['tower', 'realm', 'arena', 'trials', 'fest', 'chefChallenge', 'gearContest'].includes(r.view) },
+  { id: 'income', name: '餐厅与经营', icon: '🍽', match: (r) => r.group === 'income' },
+  { id: 'gather', name: '采集与产量', icon: '🌾', match: (r) => r.group === 'gather' },
+  { id: 'craft', name: '经验与制作', icon: '📈', match: (r) => r.group === 'craft' },
+  { id: 'farm', name: '农田与产线', icon: '🌱', match: (r) => r.group === 'farm' },
+  { id: 'idle', name: '离线与容量', icon: '🛏', match: (r) => r.group === 'idle' },
+  { id: 'global', name: '全局环境与消耗品', icon: '🌤', match: (r) => r.group === 'global' },
+  { id: 'rules', name: '其它玩法规则', icon: '🎛', match: (r) => r.group === 'system' },
+]
+
+/** 某一行效果归属哪个系统（左栏第一个命中的，`all` 除外） */
+export function systemOf(row) {
+  return EFFECT_SYSTEMS.find((s) => !s.overview && s.match(row))?.id ?? 'rules'
+}
+
 // ── 注册表主体 ──────────────────────────────────────────────────────
 // kind: 'buff' 增益 / 'debuff' 减益 / 'rule' 中性规则或基准
 export const EFFECT_ROWS = [
