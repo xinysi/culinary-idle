@@ -160,8 +160,9 @@ function stepIcon(i) {
       </button>
     </div>
 
-    <!-- 阶段 -->
+    <!-- 阶段：左 = 正文（hero / 流程图 / 行动清单），右 = 里程碑与提示（2026-10-02） -->
     <div v-if="stage" class="gd-stage">
+      <div class="gd-main">
       <div class="card gd-hero">
         <h3>{{ stage.icon }} {{ stage.name }} <span class="dim">（{{ stage.range }}）</span></h3>
         <p class="gd-summary">{{ stage.summary }}</p>
@@ -210,7 +211,9 @@ function stepIcon(i) {
         </ol>
       </template>
 
-      <div class="gd-two">
+      </div><!-- /gd-main -->
+
+      <aside class="gd-two">
         <div class="card gd-mini">
           <h4>🏁 里程碑 <span class="dim">自评检查点</span></h4>
           <ul class="gd-checks">
@@ -223,7 +226,7 @@ function stepIcon(i) {
             <li v-for="(t, i) in stage.tips" :key="i" v-html="t"></li>
           </ul>
         </div>
-      </div>
+      </aside>
     </div>
 
     <!-- 单个功能大类 / 全部 -->
@@ -296,8 +299,17 @@ function stepIcon(i) {
 .gd-now { font-size: 10px; padding: 0 4px; border-radius: 4px; color: #fff; background: var(--btn-primary-bg); }
 
 /* ── 内容区：放开留白（用户：「太紧凑，玩家看的头疼」）── */
-/* ⚠️ 阅读宽度必须设上限：攻略是文字页，铺满整宽时一行上百字，回行极累（2026-10-02 看截图才发现） */
-.gd-stage { margin-top: 12px; display: flex; flex-direction: column; gap: 14px; max-width: 940px; }
+/* 两栏工作区（2026-10-02）：左 = 正文（限阅读宽度，别让一行上百字），右 = 里程碑/提示。
+   上一版只给整页加了 max-width ⇒ 右边空出一大片（用户：「右边空白你打算怎么办」）—— 空出来的
+   宽度本来就该给支撑信息用，而不是留白。 */
+.gd-stage {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.gd-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .gd-hero h3 { margin-bottom: 8px; }
 .gd-summary { margin: 0 0 10px; color: var(--text-dim); line-height: 1.8; }
 .gd-goals {
@@ -331,6 +343,9 @@ function stepIcon(i) {
 }
 /* 功能页的阶段小节标题（行内版，不嵌套容器） */
 .gd-sghead {
+  /* ⚠️ 必须跨两列：不跨的话「前期起 (1)」这类标题只占左栏，而网格会把条目继续往右栏填
+     ⇒ 标题与自己的条目错位（截图里一眼看出）。跨列后会强制下一行从第 1 列开始。 */
+  grid-column: 1 / -1;
   margin: 14px 0 2px;
   padding-bottom: 5px;
   font-size: 13px;
@@ -410,24 +425,31 @@ function stepIcon(i) {
 .gd-step-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; line-height: 1.55; }
 .gd-step-text { color: var(--text-dim); line-height: 1.9; font-size: 13px; }
 
-.gd-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gd-two { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
 .gd-mini h4 { margin: 0 0 10px; }
 .gd-checks, .gd-tips { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; line-height: 1.8; }
 .gd-box { margin-right: 7px; color: var(--text-dim); }
 
-.gd-cats { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; max-width: 1000px; }
-.gd-cat .gd-items { display: flex; flex-direction: column; gap: 12px; }
+.gd-cats { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+/* 功能页条目本来就短（名字 + 建议阶段 + 一两行说明）⇒ 排两栏正好把宽度用满，
+   而不是像上一版那样右侧留一大片空白（用户截图指出）。 */
+.gd-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 30px; align-items: start; }
+.gd-cat .gd-items { align-items: start; } /* 栏数由 .gd-items 统一管（0,1,0 vs 这条 0,2,0：别在这里再写 display，否则会压掉两栏） */
 .gd-item { padding: 11px 0; border-top: 1px dashed var(--border); }
 .gd-item .ov-desc { line-height: 1.85; }
 .gd-item:first-child { border-top: none; }
 .ov-desc { line-height: 1.8; }
 
 @media (max-width: 1100px) {
-  .gd-steps { grid-template-columns: 1fr; }  /* 窄一点就回单列，别把卡片挤成条 */
+  /* 两栏在窄屏必须塌回单列 —— 否则右栏的 minmax(300px,1fr) 会把内容挤出屏幕
+     （e2e-layout 在 390px 当场抓到「被裁控件/逐字竖排」）。 */
+  .gd-stage { grid-template-columns: 1fr; }
+  .gd-two { position: static; }
+  .gd-items { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 940px) {
   .gd-chips { position: static; }
-  .gd-two { grid-template-columns: 1fr; }
+  .gd-two { position: static; }
 }
 </style>

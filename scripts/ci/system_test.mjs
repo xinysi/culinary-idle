@@ -2627,7 +2627,8 @@ console.log('══ T. 攻略数据 ══')
     check('攻略', '行动清单是「标题 + 正文」的时间轴（2026-10-02 重做：竖轨 + 圆形序号；用户：「太紧凑/太丑」）',
     /gd-step-title/.test(gv) && /function stepParts/.test(gv) &&
       /\.gd-steps::before/.test(gv) && /\.gd-step-no\s*\{[^}]*border-radius:\s*50%/.test(gv) &&
-      /\.gd-stage\s*\{[^}]*max-width:/.test(gv))
+      /\.gd-stage\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.55fr\)/.test(gv) &&
+      /\.gd-main\s*\{/.test(gv) && /\.gd-two\s*\{[^}]*position:\s*sticky/.test(gv))
   // 阶段流程图（2026-10-01 用户：「参考运营调参员页面那种流程图来结合出最优方案」）：
   // 形态照 TunerPanel 的 `.tp-chain`，但**可点**（点一步滚到对应行动卡）⇒ 三件事都要在。
   check('攻略', '阶段流程图落地（`.gd-flow` + 可点的 `.gd-fnode`），行动卡带 `data-step` 供跳转',
