@@ -5,6 +5,8 @@ import { useUiStore } from '../stores/ui.js'
 import { usePlayerStore } from '../stores/player.js'
 import { saveManager, startGame } from '../game/bootstrap.js'
 import { DEV_PANEL_ENABLED, requestDevEntry } from '../game/dev/devFlag.js'
+// 启动页背景（2026-10-01）：用「启动页」场景那张，昼夜按全局偏好键（这里还没读档，读不到存档里的设置）
+import { bgImageFor, isNightPref, SPLASH_SCENE } from '../game/data/bgScenes.js'
 
 const ui = useUiStore()
 const player = usePlayerStore()
@@ -29,6 +31,9 @@ function startNew() {
 
 // 「试玩」两个字的说明改挂悬浮提示（按钮太窄放不下，游戏内另有顶栏徽章与存档面板横幅在讲）
 const GUEST_TIP = '免建档试玩：不占存档位、不写入任何本地数据，刷新页面即清空'
+// 启动页场景图（无图时返回 null ⇒ 保留 CSS 里那张兜底壁纸）
+const splashUrl = bgImageFor(SPLASH_SCENE, isNightPref())
+const splashStyle = splashUrl ? { backgroundImage: `url(${splashUrl})` } : null
 
 /** 游客 / 试玩（2026-09-24）：免建档进游戏，**不占存档位、不写任何存档**，刷新即清空。
  *  给「想先看看再决定」的人和答辩/演示场景用——他们不该覆盖已有进度。 */
@@ -58,7 +63,7 @@ function tapTitle() {
 
 <template>
   <div class="splash">
-    <div class="splash-bg"></div>
+    <div class="splash-bg" :style="splashStyle"></div>
     <!-- 柔和渐变遮罩：让标题自然浮现（无边框、无毛玻璃） -->
     <div class="splash-overlay"></div>
     <div class="splash-content">

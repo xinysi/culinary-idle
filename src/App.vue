@@ -30,6 +30,7 @@ import { applySkinToDom } from './game/data/skins.js'
 import { getSeason, activeSeasonId } from './game/data/seasons.js'
 import { guideEntryForView } from './game/data/guide.js'
 import { featureGroups, groupForView } from './game/data/featureGroups.js'
+import { sceneForView, bgImageFor, THEME_PREF_KEY } from './game/data/bgScenes.js'
 import FeatureRail from './components/FeatureRail.vue'
 import { getSkillDef } from './game/data/skills.js' // 技能页「指南」按钮的数据源（2026-09-26 用户⑪统一位置）
 import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
@@ -246,11 +247,14 @@ function applyCrisp() {
 // 深色主题（2026-09-06）：<html data-theme="dark"> 驱动 CSS 覆写
 // 2026-09-10：主题偏好另存一份全局键，供「启动界面」使用——启动页阶段还没读档，
 // player.settings 是默认值（theme:'light'），深色玩家否则会在启动页看到亮色壁纸。
-const THEME_KEY = 'culinary-idle.theme'
+const THEME_KEY = THEME_PREF_KEY // 唯一出处见 `game/data/bgScenes.js`（启动页也要用它选夜景背景）
+// 场景背景层要跟着主题换夜景版 ⇒ 起一个响应式的镜像（`dataset.theme` 不是响应式的，读它模板不会更新）
+const isDark = ref(false)
 function applyTheme() {
   const saved = player.settings?.theme
   // 进游戏前（phase = splash，尚未读档）优先用全局偏好；进游戏后以存档内的设置为准
   const pref = ui.phase === 'game' ? saved : (localStorage.getItem(THEME_KEY) || saved)
+  isDark.value = pref === 'dark'
   if (pref === 'dark') document.documentElement.dataset.theme = 'dark'
   else delete document.documentElement.dataset.theme
 }
@@ -262,6 +266,23 @@ function applySkin() {
   // 皮肤分浅/深两版主色：按当前主题取（applyTheme 已先跑，此处读到的就是生效值）
   applySkinToDom(pref ?? 'classic', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
 }
+// 场景背景图（2026-10-01）：当前页面 → 该页的昼/夜背景。
+// 两层交叉淡入：`background-image` 本身没有过渡 ⇒ 用两层叠着、切换时翻 `on` 那一层。
+// 换图前先 `new Image()` 预载，避免切页瞬间那一下空白（没下完也不打紧：`.app-layout` 上原有的静态壁纸兜底）。
+const sceneUrl = computed(() => bgImageFor(sceneForView(ui.activeView, player.activeSkill), isDark.value) || '')
+const bgLayers = ref(['', ''])
+const bgFront = ref(0)
+watch(sceneUrl, (u) => {
+  const back = 1 - bgFront.value
+  const show = () => { bgLayers.value[back] = u; bgFront.value = back }
+  if (!u) return show()
+  if (bgLayers.value[back] === u) { bgFront.value = back; return }
+  const im = new Image()
+  im.onload = show
+  im.onerror = show
+  im.src = u
+}, { immediate: true })
+
 function syncAudioSettings() {
   setSfxVolume(player.settings?.sfxVolume ?? 0.6)
   setBgmVolume(player.settings?.bgmVolume ?? 0.35)
@@ -580,6 +601,10 @@ onMounted(() => {
 
   <!-- 游戏主界面（三栏） -->
   <div v-else class="app-layout">
+    <!-- 场景背景（2026-10-01）：按当前页面/技能切换，昼夜随主题；`aria-hidden` + 不接指针事件 -->
+    <div class="scene-bg" aria-hidden="true">
+      <div v-for="(u, i) in bgLayers" :key="i" class="scene-bg-layer" :class="{ on: i === bgFront }" :style="u ? { backgroundImage: `url(${u})` } : null"></div>
+    </div>
     <!-- 三栏主体 -->
     <div class="app-body">
       <Sidebar class="app-sidebar" />

@@ -191,14 +191,46 @@ html[data-theme='dark'] {
   display: flex;
   flex-direction: column;
   height: 100%;
-  /* 整幅壁纸铺在最外层（含顶部导航栏区域）：顶栏/三栏/底部状态条共用同一张连续图（2026-09-11） */
+  /* 场景背景层的定位基准（见下方 `.scene-bg`） */
+  position: relative;
+  /* 整幅壁纸铺在最外层（含顶部导航栏区域）：顶栏/三栏/底部状态条共用同一张连续图（2026-09-11）
+     ⚠️ 2026-10-01 起这张图退居**兜底**：真正显示的是按页面切换的 `.scene-bg` 两层。 */
   background-image: url('../../public/images/bg-start.jpg');
   background-size: cover;
   background-position: center; /* 百分比高度链（html/body/#app 100%）：zoom 缩放时与视口物理尺寸一致，绝不溢出/留空（2026-09-06） */
 }
 
+/* 场景背景（2026-10-01）：按当前页面/技能切换的整幅背景，两层交叉淡入。
+   ⚠️ 必须留在 `.app-body` **下面**（z-index 0 < 1）：三块面板才是内容所在。 */
+.scene-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+.scene-bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.scene-bg-layer.on { opacity: 1; }
+/* 深色：在夜景图之上压一层中性加深（与 `.app-layout` 深色那条同一组数值，
+   否则夜景图会比原来的深色壁纸亮一截、金边与羊皮纸字跳不出来） */
+html[data-theme='dark'] .scene-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(16, 9, 5, .20), rgba(10, 6, 4, .34));
+}
+
 /* 顶部功能导航 + 三栏主体 */
 .app-body {
+  position: relative;
+  z-index: 1;
   display: grid;
   /* 2026-09-11：三栏 = 三块**直角**面板，**贴顶贴底贴左右**；壁纸只出现在面板之间的竖缝里 */
   padding: 0;

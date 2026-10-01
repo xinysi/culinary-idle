@@ -11200,6 +11200,54 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     `上架 ${GAP_SEED_SHOP.filter((s) => SHOP_ITEMS.some((x) => x.itemId === s.itemId)).length}/4`)
 }
 
+// ═══ C89 场景背景图（2026-10-01 用户提供：105 场景 × 昼/夜，按页面/技能切换）═══
+{
+  const { sceneForView, bgImageFor, allSceneNames, SPLASH_SCENE, SCENE_FALLBACK } =
+    await import('../../src/game/data/bgScenes.js')
+  const { VIEW_KEYS } = await import('../../src/stores/ui.js')
+  const BG = new URL('../../public/images/bg/', import.meta.url)
+  // `assetUrl()` 返回的是 `images/bg/x.webp`（对外相对路径）⇒ 换回磁盘路径
+  const disk = (u) => new URL('../../public/' + decodeURIComponent(String(u).split('?')[0]), import.meta.url)
+  const exists = (u) => !!u && fs.existsSync(disk(u))
+  // 唯一豁免：`dev`（开发者面板，整页接管、故意不挂玩家背景）
+  const EXEMPT = new Set(['dev'])
+
+  const skillMiss = []
+  for (const id of Object.keys(SKILL_DEFS)) {
+    const sc = sceneForView('skill', id)
+    if (!exists(bgImageFor(sc, false)) || !exists(bgImageFor(sc, true))) skillMiss.push(id)
+  }
+  check('场景背景', `${Object.keys(SKILL_DEFS).length} 个技能的昼/夜背景都在磁盘上`, skillMiss.length === 0, skillMiss.join(',') || 'OK')
+
+  const viewMiss = []
+  for (const v of VIEW_KEYS) {
+    if (EXEMPT.has(v)) continue
+    const sc = sceneForView(v, 'foraging')
+    if (!sc || !exists(bgImageFor(sc, false)) || !exists(bgImageFor(sc, true))) viewMiss.push(`${v}→${sc}`)
+  }
+  check('场景背景', `${VIEW_KEYS.length - EXEMPT.size} 个页面都能取到昼/夜背景（skill 页按激活技能取）`, viewMiss.length === 0, viewMiss.join(',') || 'OK')
+
+  check('场景背景', '启动页场景的昼/夜都在', exists(bgImageFor(SPLASH_SCENE, false)) && exists(bgImageFor(SPLASH_SCENE, true)), SPLASH_SCENE)
+  const fbBad = Object.entries(SCENE_FALLBACK).filter(([, s]) => !exists(bgImageFor(s, false)))
+  check('场景背景', '回落目标的背景真实存在（分店 → 餐厅）', fbBad.length === 0, JSON.stringify(fbBad))
+
+  // 磁盘 ↔ 映射双向对账：给了 105 个场景就应有 210 张、且一张不浪费（漏挂一个场景 = 那张图永远不会显示）
+  const onDisk = fs.readdirSync(BG).filter((f) => f.endsWith('.webp'))
+  const used = new Set()
+  for (const s of allSceneNames()) { for (const n of [false, true]) { const u = bgImageFor(s, n); if (exists(u)) used.add(decodeURIComponent(String(u).split('/').pop())) } }
+  const orphan = onDisk.filter((f) => !used.has(f))
+  check('场景背景', `磁盘 ${onDisk.length} 张 = 映射用到 ${used.size} 张（无孤儿图）`, onDisk.length === used.size && orphan.length === 0, `孤儿 ${orphan.slice(0, 6).join(',') || '无'}`)
+
+  // 静态：接线断了就会「静默没有背景」（不报错、不白屏）⇒ 两处调用点各钉一条
+  const appSrc = stripComments(fs.readFileSync(new URL('../../src/App.vue', import.meta.url), 'utf8'))
+  const splashSrc = stripComments(fs.readFileSync(new URL('../../src/components/SplashScreen.vue', import.meta.url), 'utf8'))
+  check('场景背景', 'App.vue 渲染了场景背景层（`.scene-bg` + 两层 + 读 bgScenes）',
+    /class="scene-bg"/.test(appSrc) && /scene-bg-layer/.test(appSrc) && /bgScenes\.js/.test(appSrc),
+    'App.vue')
+  check('场景背景', '启动页绑定了场景图（:style="splashStyle"）',
+    /:style="splashStyle"/.test(splashSrc) && /bgScenes\.js/.test(splashSrc), 'SplashScreen.vue')
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)
