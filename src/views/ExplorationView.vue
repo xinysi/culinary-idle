@@ -176,7 +176,7 @@ function succTip(t) {
         >
           <div class="gather-card-head">
             <div>
-              <strong>{{ t.name }}</strong><span v-if="!isUnlocked(t.id)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
+              <strong>{{ t.name }}</strong><span v-if="!isUnlocked(t.id)" class="lock-flag" :title="`需 Lv ${t.reqLevel} 解锁`">🔒</span>
               <span class="dim ex-lv" :title="isUnlocked(t.id) ? `本档 ${t.reqLevel} 级可探索` : `需 Lv ${t.reqLevel} 解锁`">{{ isUnlocked(t.id) ? `Lv ${t.reqLevel}` : `需 Lv ${t.reqLevel}` }}</span>
             </div>
             <span class="dim ex-loot-count" title="这张卡的战利品条数（含金币）">{{ t.loot.length }} 项掉落</span>

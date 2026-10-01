@@ -158,7 +158,7 @@ function jumpLabel(view) {
 
         <!-- ② 正生效 -->
         <div class="card">
-          <h3>✅ 正生效（{{ mineOn.length }}）<span class="dim fx-hint">数值口径逐条显示；点右侧按钮可跳到对应页面</span></h3>
+          <h3>✅ 正生效（{{ mineOn.length }}）<span class="dim fx-hint">每条都写明它怎么算；点右侧按钮可跳到对应页面</span></h3>
           <p v-if="!mineOn.length" class="dim fx-empty">这个系统此刻没有任何加成在生效（下面的「规则与公式」仍然成立）。</p>
           <div class="fx-list">
             <div v-for="i in mineOn.filter((x) => x.kind !== 'debuff')" :key="i.id" class="fx-row" :class="{ 'fx-row-rule': i.kind === 'rule', 'fx-row-tough': i.tough }">

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 // 采集类技能视图 — 需求文档 §3.1：目标列表 / 状态 / 特殊机制展示
 // 覆盖：采摘（双倍）、垂钓（成功率/稀有鱼）、狩猎（弹药消耗/野鸡蛋）、挖掘（化石食材）
 import { computed, ref, watch } from 'vue'
@@ -219,7 +219,7 @@ function selectEra(label) {
             <div class="gather-card-head">
               <img v-if="itemImage(t.itemId)" :src="itemImage(t.itemId)" class="item-img" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
               <div>
-                <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" title="需 Lv {{ t.reqLevel }} 解锁">🔒</span>
+                <strong>{{ getItem(t.itemId)?.name }}</strong><span v-if="!isUnlocked(t.itemId)" class="lock-flag" :title="`需 Lv ${t.reqLevel} 解锁`">🔒</span>
                 <div class="dim" style="font-size: 12px">Lv {{ t.reqLevel }} 解锁</div>
               </div>
             </div>

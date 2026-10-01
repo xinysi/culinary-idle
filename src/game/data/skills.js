@@ -14,7 +14,7 @@ export const SKILL_DEFS = {
   hunting: { id: 'hunting', name: '狩猎', category: 'gathering', desc: '猎取野味和家禽，获得肉类食材' },
   excavation: { id: 'excavation', name: '挖掘', category: 'gathering', desc: '挖掘根茎类食材与食用菌（矿物已独立为采矿）' },
   woodcutting: { id: 'woodcutting', name: '伐木', category: 'gathering', desc: '砍伐 20 档木材，供厨具锻造与装备强化按档取用' },
-  mining: { id: 'mining', name: '采矿', category: 'gathering', desc: '开采矿物与宝石原料（v2.7.0 从挖掘独立）' },
+  mining: { id: 'mining', name: '采矿', category: 'gathering', desc: '开采矿物与宝石原料' },
   farming: { id: 'farming', name: '农耕', category: 'gathering', desc: '种植作物，定时收获' },
 
   // ── 制作类（§3.2）──

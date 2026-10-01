@@ -247,8 +247,8 @@ function canAfford(recipe) {
   return props.instance.canCraft(recipe)
 }
 /** 供料口径说明（唯一文案出口；口径在 `player.materialSecPerCraft`，与 `scripts/sim/material_bottleneck.mjs` 一致） */
-const SUPPLY_HINT = '按这张配方自己的材料算：每件成品需要多少秒的采集时间（取每种材料最快的采集/农耕来源，含材料系数 ×2）。'
-  + '队列本身是每 3 秒 1 件，所以「实际周期」= 两者较慢的那个 —— 全项目 718 条材料来源可追溯的配方实测全是材料限速。'
+const SUPPLY_HINT = '按这张配方自己的材料算：每件成品需要多少秒的采集时间（取每种材料最快的采集/农耕来源）。'
+  + '队列本身是每 3 秒 1 件，所以「实际周期」= 两者较慢的那个 —— 大多时候，真正卡住你的是收料而不是制作。'
 /** 每件成品需要的采集秒数（0 = 材料来源不在采集侧，如商队/商店专属料） */
 function supplySec(recipe) {
   return player.materialSecPerCraft?.(recipe) ?? 0

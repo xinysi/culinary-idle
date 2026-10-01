@@ -135,6 +135,19 @@ check('B. 模板标识符必须已声明（`_ctx.X` 全部能在 `<script setup>
 check('C. 没有元素把 `v-if` 与 `v-for` 写在同一处（Vue 3 会先求 v-if ⇒ 循环变量恒 undefined）',
   badFiles.every((x) => x.dupAttr.length === 0),
   badFiles.filter((x) => x.dupAttr.length).map((x) => `${x.f} → ${x.dupAttr.join(', ')}`).join(' | '))
+// 🔴 C2. 静态属性里写 `{{ }}`（2026-10-01 立）：Vue **只在文本节点与 `v-bind` 里**插值，
+//    `title="{{ x }}"` 会把字面量原样交给浏览器 ⇒ 玩家悬浮时看到 `需 Lv {{ t.reqLevel }} 解锁`。
+//    e2e-text 的 title 扫描当场抓到过两处（采集/探索卡片的锁定图标），这里补一条**静态**护栏，
+//    让它不必等到跑浏览器才现形。
+{
+  const bad = []
+  for (const f of files) {
+    // 先剥 HTML 注释（注释里写示例是项目里的老坑）
+    const src = readFileSync(join(root, f), 'utf8').replace(/<!--[\s\S]*?-->/g, '')
+    for (const m of src.matchAll(/\b(title|alt|placeholder|aria-label)\s*=\s*"[^"]*\{\{/g)) bad.push(`${f}:${m[1]}`)
+  }
+  check('C2. 静态属性里不许写 {{ }}（会原样显示给玩家；要插值请用 :title="`…`"）', bad.length === 0, bad.slice(0, 5).join(', '))
+}
 
 // ── 输出 ──
 console.log('══ 模板绑定审计（编译器级：模板里用的名字必须真的存在）══')

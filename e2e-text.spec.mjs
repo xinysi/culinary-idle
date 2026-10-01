@@ -42,12 +42,31 @@ const PATTERNS = [
   // （当天在塔页说明与战斗面板各写了一次）。静态守卫只扫数据模块，模板文本扫不到 ⇒ 这里补上运行时那一半。
   { name: 'markdown 粗体残留', re: /\*\*[^*\n]{1,40}\*\*/ },
   // 英文标识符裸露（2026-09-13 用户报「很多页面出现 tier」后立）：内部字段名不该出现在界面上
-  { name: '英文标识符裸露', re: /(tier|minTier|tierReq|reqLevel|itemId|itemQty|pct|undefined|NaN|foraging|fishing|hunting|excavation|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|flavorArtistry|pickled|seasoning|seafood)/ },
+  { name: '英文标识符裸露', re: /(tier|minTier|tierReq|reqLevel|itemId|itemQty|pct|undefined|NaN|foraging|fishing|hunting|excavation|cooking|baking|brewing|preserving|spiceMixing|craftsmithing|flavorArtistry|pickled|seasoning|seafood)/ },
+  // 🔴 snake_case 内部 id 裸露（2026-10-01 立）：比词表更狠且**零误报** —— 面向玩家的文案里不会出现
+  //    `explore_001` / `late_for_02` / `smith_寒铁_legs` 这类带下划线的标识符。用户报「效果总览里显示 explore_001」。
+  { name: 'snake_case id 裸露', re: /\b[a-zA-Z][a-zA-Z0-9]*_[a-zA-Z0-9_]+\b/ },
 ]
+// 🔴 数据派生的裸 id 名单（2026-10-01 补）：**别手抄** —— 用户报「年鉴里显示 encounter」就是因为
+//    `CHRONICLE_KINDS` 表里缺这一项、页面兜底打印了原始 kind。凡「会作为显示兜底来源」的 id 集合，
+//    都在这里从数据导出，页面兜底一旦生效就会被抓到。
+const BARE_IDS = (await import('./src/game/data/chronicle.js')).CHRONICLE_KIND_KEYS
+const BARE_RE = new RegExp(`\\b(${BARE_IDS.join('|')})\\b`)
+PATTERNS.push({ name: '裸 id 裸露（年鉴/记录类兜底）', re: BARE_RE })
+// 🔴 开发腔 / 实现口径泄漏（2026-10-01 用户报「攻略里很多描述完全是开发状态的注释，却展示给玩家看」）：
+//    这类文字的共同点是**在跟同事说话**而不是在跟玩家说话 —— 实测数据、平衡系数、口径说明、
+//    「现已覆盖 N 种」这种版本记录式补充。判定放在**运行时**（静态扫字符串会把代码里的日志键也算进来，
+//    实测噪声 76 条里绝大多数是假阳性）。
+PATTERNS.push({ name: '开发腔：实测/口径/系数', re: /(实测|平衡系数|成本系数|数值口径|数据对齐|已按|现已|门控|§\d)/ })
+PATTERNS.push({ name: '开发腔：版本/日期', re: /(v\d+\.\d+\.\d+|20\d\d-\d\d-\d\d)/ })
+PATTERNS.push({ name: '开发腔：守卫/断言类词', re: /(守卫|断言|回归测试|CI|假绿|反例验证)/ })
 
 /** 页内扫描（真函数，序列化后传进浏览器） */
 function scanText(pats) {
   const out = []
+  // ⚠️ 2026-10-01：除文本节点外，**还要扫 tooltip / 无障碍属性** —— 内部 id 最常见的藏身之处
+  // 就是 `title="explore_001"` 这类属性（文本节点扫不到它，上一版守卫因此有盲区）。
+  const attrs = ['title', 'aria-label', 'placeholder', 'alt']
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   let n
   while ((n = walk.nextNode())) {
@@ -57,6 +76,18 @@ function scanText(pats) {
       if (new RegExp(p.re, p.flags ?? '').test(t)) {
         out.push({ pat: p.name, text: t.trim().slice(0, 100), where: n.parentElement?.className || n.parentElement?.tagName, n: document.body.innerText.length })
         break
+      }
+    }
+  }
+  for (const el of document.querySelectorAll('[title], [aria-label], [placeholder], [alt]')) {
+    for (const a of attrs) {
+      const v = el.getAttribute?.(a)
+      if (!v) continue
+      for (const p of pats) {
+        if (new RegExp(p.re, p.flags ?? '').test(v)) {
+          out.push({ pat: p.name, text: `[${a}] ${v.slice(0, 90)}`, where: el.className || el.tagName, n: 0 })
+          break
+        }
       }
     }
   }
@@ -136,7 +167,9 @@ async function scanPagesText(page, pages) {
     await setView(v)
     await scan(v)
     const tabCount = await page.evaluate(() => {
-      const rows = document.querySelectorAll('.region-tabs, [class*="-tabs"]')
+      // ⚠️ 2026-10-01：攻略页改成了「左导航 + 右内容」（`.gd-rail`）⇒ 它不再是 `*-tabs`，
+      // 但**同理**要逐个点开再扫（否则右栏内容只扫到默认那一项，其余 5 阶段 + 6 大类全成盲区）。
+      const rows = document.querySelectorAll('.region-tabs, [class*="-tabs"], .gd-rail, .fx-rail')
       let n = 0
       for (const r of rows) for (const b of r.querySelectorAll('button')) { b.dataset.__scanned = '1'; n++ }
       return n

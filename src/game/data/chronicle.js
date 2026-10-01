@@ -20,9 +20,14 @@ export const CHRONICLE_KINDS = {
   // 挂机产线四套（2026-09-14）
   caravan: { label: '商队', icon: '🐫' },
   mushroom: { label: '菌房', icon: '🍄' },
-  spirit: { label: '灵田', icon: '🌿' },
+  // ⚠️ 2026-10-01 修：这一行原先写的是 `spirit`，与上面「食灵」**重名**（对象字面量后写的赢）
+  //    ⇒ 食灵物语的记录一直被显示成「灵田」。灵田改用独立 kind `field`。
+  field: { label: '灵田', icon: '🌿' },
   bee: { label: '蜂场', icon: '🐝' },
   essence: { label: '萃露', icon: '🧪' },
+  // ⚠️ 2026-10-01 补：`player.js` 记录奇遇时用的就是 `encounter`，但表里没有 ⇒ 年鉴那行退化成
+  //    兜底 `label: k`、直接印英文 id（用户实测「年鉴里显示 encounter」）。
+  encounter: { label: '奇遇', icon: '❓' },
 }
 
 export const CHRONICLE_KIND_KEYS = Object.keys(CHRONICLE_KINDS)

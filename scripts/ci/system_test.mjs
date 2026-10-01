@@ -2604,6 +2604,21 @@ console.log('══ T. 攻略数据 ══')
   // 阶段自动定位边界（对决等级）
   const cases = [[1, 'beginner'], [10, 'beginner'], [11, 'early'], [30, 'early'], [31, 'mid'], [60, 'mid'], [61, 'late'], [85, 'late'], [86, 'lategame'], [99, 'lategame'], [100, 'endgame'], [120, 'endgame']]
   check('攻略', '按对决等级自动定位正确', cases.every(([lv, id]) => G.currentGuideStageId(lv) === id), cases.filter(([lv, id]) => G.currentGuideStageId(lv) !== id).map(([lv]) => `L${lv}`).join(','))
+  // 2026-10-01 用户选定排版方案 A（「左导航 + 右内容」）：改前是 8 个页签 + 88 条目平铺，
+  // 玩家得先猜「我要看的东西在哪个页签里」。守卫钉三件事：两栏结构、左导航**覆盖全部**可选内容、
+  // 内容列 `min-width: 0`（否则宽表会把两栏一起撑破 —— 项目里的老坑）。
+  {
+    const gv = rdSrc('src/views/GuideView.vue')
+    check('攻略', '页面是「左导航 + 右内容」两栏（`.gd-rail` + `.gd-pane`）',
+      /class="gd-rail"/.test(gv) && /class="gd-pane"/.test(gv) && /\.gd-body\s*\{[^}]*display:\s*flex/.test(gv))
+    check('攻略', '左导航覆盖**全部阶段与全部功能大类**（从数据派生，新增一类不会漏进导航）',
+      /v-for="s in GUIDE_STAGES"/.test(gv) && /v-for="c in GUIDE_OVERVIEW"/.test(gv) &&
+        /GUIDE_STAGES\.find/.test(gv) && /GUIDE_OVERVIEW\.find/.test(gv))
+    check('攻略', '🔴 不再有「页签层」（同一件事只留一个入口：8 个页签已并入左导航）',
+      !/region-tabs/.test(gv) && !/selectedId/.test(gv))
+    check('攻略', '内容列 `min-width: 0`（否则宽表把两栏一起撑破）',
+      /\.gd-pane\s*\{[^}]*min-width:\s*0/.test(gv))
+  }
 }
 
 // ── U. 图鉴数据完整性（物品来源/BOSS/赛季图鉴）──────

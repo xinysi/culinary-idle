@@ -3704,7 +3704,7 @@ export const usePlayerStore = defineStore('player', {
       const got = { ...plant.products, [plot.seedId]: (plant.products[plot.seedId] ?? 0) + 1 }
       for (const [id, q] of Object.entries(got)) this.gainItem(id, q)
       this.stats.spiritHarvests = (this.stats.spiritHarvests ?? 0) + 1
-      if (this.stats.spiritHarvests === 1) this.recordChronicle?.('spirit:first', 'spirit', `灵田首次收获：${plant.name}`)
+      if (this.stats.spiritHarvests === 1) this.recordChronicle?.('spirit:first', 'field', `灵田首次收获：${plant.name}`)
       // 自动续种（与采集队「领取后自动开下一轮」同思路）：还有种子就接着种
       let replanted = false
       if ((this.inventory[plot.seedId] ?? 0) >= 1) {
