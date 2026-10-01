@@ -161,7 +161,7 @@ function outputEffect(itemId) {
   }
   if (!parts.length) {
     // 副业产物没有 buff/use 字段，它的「效果」就是它能换来的经营侧加成：
-    // 木器 → 手工装潢（餐厅收入）；陶器/织物/绣品/蜡烛 → 各自的乘区轴（v2.10.0）。
+    // 木器 → 手工装潢（餐厅收入）；陶器/织物/绣品/蜡烛 → 各自的加成轴（v2.10.0）。
     // 数据驱动：新增副业不必再改本文件。
     const dec = decorOfWoodwork(itemId)
     const work = sidelineWorkOf(itemId)

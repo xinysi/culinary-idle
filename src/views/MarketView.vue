@@ -32,7 +32,7 @@ const nowWeekday = computed(() => now.value.getDay())
 
 const activeNow = computed(() => activeMarketEvents(nowHour.value, nowWeekday.value, EVENTS.value))
 const boostNow = computed(() => aggregateMarketBoost(nowHour.value, nowWeekday.value, EVENTS.value))
-// 实际生效倍率（叠加了玩家的其它乘区后，这里只展示市场窗口这一层，故直接读 marketBoost 的乘法项）
+// 实际生效倍率（叠加了玩家的其它加成后，这里只展示市场窗口这一层，故直接读 marketBoost 的乘法项）
 const BOOST_LABELS = [
   { key: 'restaurant', label: '餐厅收入' },
   { key: 'combatXp', label: '对决经验' },
@@ -97,7 +97,7 @@ function remainText(ev) {
         <h2>💹 行情与限时窗口</h2>
         <p class="dim">
           每天 <b>{{ EVENTS.length }}</b> 个限时窗口按<b>本地时段</b>轮换（部分只在固定星期开放）。
-          命中期间给的是<b>基础乘区</b>，多个窗口重叠时<b>相乘叠加</b>；与天气、节庆、奥义等其它乘区也相乘。
+          命中期间给的是<b>基础加成</b>，多个窗口重叠时<b>相乘叠加</b>；与天气、节庆、奥义等其它加成也相乘。
           <template v-if="extraHours > 0">
             · 副业·蜡烛已把<b>夜市狂潮</b>延长 <b>+{{ extraHours }} 小时</b>、餐厅倍率提到 <b>×{{ nightMult.toFixed(2) }}</b>（时长上限 +{{ NIGHT_MARKET_MAX_EXTRA_HOURS }}h；倍率来自量产阶梯，去左侧「副业 → 蜡烛制作」继续做）。
           </template>

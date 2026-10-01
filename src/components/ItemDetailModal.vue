@@ -31,7 +31,7 @@ function jumpSource(s) {
 const usable = computed(() => player.usableOf?.(innerId.value))
 const ownedCount = computed(() => player.inventory[innerId.value] ?? 0)
 const buffLeft = computed(() => {
-  // 用 usableOf 的 kind 反查当前生效的乘区（原先按 id 前缀 xpTonic/yieldTonic 判断，
+  // 用 usableOf 的 kind 反查当前生效的加成（原先按 id 前缀 xpTonic/yieldTonic 判断，
   // 蜂蜜等新物品不会显示倒计时；双效取剩余时间较晚的那条）。
   const kind = usable.value?.kind
   if (!kind || kind === 'refreshSpoil') return null

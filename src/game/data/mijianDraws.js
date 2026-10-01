@@ -14,7 +14,7 @@ import { SIDELINE_ITEM_CATEGORIES } from './sidelineWorks.js'
 import { EXPLORE_GEAR_IDS } from './explorationGear.js'
 import { LATE_GEAR_IDS } from './lateGear.js'
 
-/** 抽卡池一律排除的类别：矿物（不对口径）与**全部副业独占品**（抽卡能出就等于绕过整条技能线） */
+/** 抽卡池一律排除的类别：矿物（不对口径）与**全部独家产出**（抽卡能出就等于绕过整条技能线） */
 const POOL_EXCLUDED_CATEGORIES = ['mineral', ...SIDELINE_ITEM_CATEGORIES]
 
 // 美食探索的**专属装备**同样一律排除（2026-09-28 用户定：只从探索出）。

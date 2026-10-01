@@ -29,7 +29,7 @@ const inFight = computed(() => combat?.inFight ?? false)
 // 「伤害减免」与「暴击伤害」此前界面上没有、但伤害公式里真实存在（def/(def+100)、暴击 ×2），
 // 玩家看不出防御到底减了多少伤。数值一律从引擎的只读 getter 取，不在组件里重算。
 const reductionPct = computed(() => combat?.reductionPct?.(pStats.value.defense ?? 0) ?? 0)
-/** 受击减免（%）：奥义等来源的受伤乘区，由引擎统一暴露（`playerStats().damageTakenPct`） */
+/** 受击减免（%）：奥义等来源的受伤加成，由引擎统一暴露（`playerStats().damageTakenPct`） */
 const takenPct = computed(() => Math.round(pStats.value.damageTakenPct ?? 0))
 const critMult = computed(() => combat?.critMultiplier?.() ?? 2)
 // 克制加成（+15%）：数值取自引擎 getter，避免界面与伤害公式两套真相
@@ -54,7 +54,7 @@ const defense = computed(() => [
   { k: '最大品鉴值', v: Math.round(pStats.value.maxHp ?? 0), hint: '生命上限，归零即战败' },
   { k: '防御力', v: Math.round(pStats.value.defense ?? 0), hint: '决定下方的伤害减免' },
   { k: '伤害减免', v: `${(reductionPct.value * 100).toFixed(1)}%`, hint: '由防御力算出的减伤（def/(def+100)）' },
-  // 受伤减免（2026-09-22）：奥义「铜墙铁壁」这类**直接按比例减少受击伤害**的加成，与「防御力」是两条独立乘区。
+  // 受伤减免（2026-09-22）：奥义「铜墙铁壁」这类**直接按比例减少受击伤害**的加成，与「防御力」是两条独立加成。
   // 此前界面上完全没有它 ⇒ 激活后防御/减伤数字一动不动，玩家看不出发生了什么（实测确认的显示缺口）。
   ...(takenPct.value > 0
     ? [{ k: '受击减免', v: `-${takenPct.value}%`, hint: '奥义等来源直接按比例减少你受到的伤害（与防御力相乘，不显示在防御力里）' }]

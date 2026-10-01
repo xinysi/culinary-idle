@@ -28,7 +28,7 @@ import { QUESTS } from '../game/data/quests.js'
 const activeBuffs = computed(() => {
   const now = Date.now()
   const out = []
-  // v2.3.0：四条乘区轴（菌灵露/蜂蜜/加工品）。采集间隔是「越小越快」，显示成「−N%」更直观。
+  // v2.3.0：四条加成轴（菌灵露/蜂蜜/加工品）。采集间隔是「越小越快」，显示成「−N%」更直观。
   for (const [key, label] of [['xpMult', '经验增益'], ['yieldMult', '产量增益'], ['gatherMult', '采集间隔'], ['restaurantMult', '餐厅收入']]) {
     const b = player.buffs?.[key]
     if (b && now < b.expiresAt) {
@@ -73,7 +73,7 @@ function closeTask(id) {
 }
 
 const activeBuff = computed(() => {
-  // 快捷状态里的一行摘要：四条乘区轴都要出现（v2.3.0 补采集间隔/餐厅收入）
+  // 快捷状态里的一行摘要：四条加成轴都要出现（v2.3.0 补采集间隔/餐厅收入）
   const now = Date.now()
   const parts = []
   const xp = player.buffs?.xpMult

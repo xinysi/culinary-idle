@@ -149,7 +149,7 @@ export function itemDetailLines(id) {
     lines.push(['多余收益', '价值等于所用木材的合计，卖给杂货铺按半价回收（= 把材料整包卖掉，不会浪费）'])
     lines.push(['不可交易', '不能在交易所挂单、不能当商队货物、也不会被自动出售'])
   }
-  // 副业四支的产物（v2.10.0）：每件对应一条经营侧乘区，出口唯一（见 sidelineWorks.js）
+  // 副业四支的产物（v2.10.0）：每件对应一条经营侧加成，出口唯一（见 sidelineWorks.js）
   const work = sidelineWorkOf(id)
   if (work) {
     const ax = SIDELINE_AXES[work.axis]

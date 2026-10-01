@@ -224,6 +224,11 @@ function hourlyOf(dishId) {
           </button>
         </div>
 
+        <!-- ⚠️ 换菜弹窗必须 `<Teleport to="body">`（2026-10-01 用户报「餐厅加菜的弹窗位置有问题」）：
+             这一段嵌在 `.card` 里，而 `.card` 有 `backdrop-filter` —— 它会给后代建立新的包含块，
+             于是弹窗的 `position: fixed` 变成「相对这张卡片定位」⇒ 弹窗跑到卡片里、位置全错。
+             `MasteryHelp.vue` 上踩过同一条，项目规范：**弹窗一律挂到 body**。 -->
+        <Teleport to="body">
         <div v-if="pickSlot >= 0" class="modal-backdrop" @click.self="pickSlot = -1">
           <div class="modal menu-modal">
             <header class="modal-head">
@@ -254,6 +259,7 @@ function hourlyOf(dishId) {
             </div>
           </div>
         </div>
+        </Teleport>
         <p class="dim special-note">
           点菜图换菜；同一道菜只能占一个菜单位。收入一律按<b>金币/小时</b>记。
         </p>

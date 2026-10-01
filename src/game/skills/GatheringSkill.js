@@ -96,7 +96,7 @@ export class GatheringSkill extends Skill {
     const byRatio = sec * masteryIntervalFactor(lv)
     const fixedSec = masteryFixedInterval(lv)
     const base = fixedSec != null ? Math.min(fixedSec, byRatio) : byRatio
-    // 增益剂「采集间隔」乘区（菌灵露·Ⅴ+ / 鲍汁）：挂在唯一的间隔出口上、**乘在最终结果**上，
+    // 增益剂「采集间隔」加成（菌灵露·Ⅴ+ / 鲍汁）：挂在唯一的间隔出口上、**乘在最终结果**上，
     // 这样「精通固定间隔」那一支也吃得到加成（只在某一条分支里乘会静默漏掉一半情况）。
     return base * (this.player.getGatherMultiplier?.() ?? 1) * 1000
   }
@@ -189,7 +189,7 @@ export class GatheringSkill extends Skill {
    *   「跟等级换」比「全程蹲最低级卡片」24h 多拿 ×9.2 经验，是全局最强的成长杠杆。
    * ⚠️ 乘 `CARD_XP_SCALE` 是为了与技能经验条同口径（`Skill.addCardXp` 也乘它）；
    *   倍率关系不受影响，但**数字要与玩家在经验条上看到的对得上**，否则又是一个「页面骗人」。
-   * ⚠️ 含增益剂带来的间隔乘区（`intervalMs` 里已乘），所以它会随增益剂波动 —— 这是对的，
+   * ⚠️ 含增益剂带来的间隔加成（`intervalMs` 里已乘），所以它会随增益剂波动 —— 这是对的，
    *   玩家比较目标时本来就在同一个时刻比较。
    */
   xpPerHour(target = this.currentTarget) {

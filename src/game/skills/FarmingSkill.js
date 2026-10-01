@@ -284,7 +284,7 @@ export class FarmingSkill extends Skill {
     let qty = FARM_BASE_YIELD + farmBonus + fertBonus + batch + shanhai + (extraChance > 0 && Math.random() < extraChance ? 1 : 0)
     // 精通档位双倍（新表：5→1%…100→80%）
     if (Math.random() < masteryDoubleChance(masteryLevelFromCount(this.mastery[crop.itemId] ?? 0))) qty *= 2
-    // 农时乘区（v2.4.0）：**天气**（农田吃天气、温室不吃）+ **当季作物**（按月份轮换类别 ×1.5）。
+    // 农时加成（v2.4.0）：**天气**（农田吃天气、温室不吃）+ **当季作物**（按月份轮换类别 ×1.5）。
     // 农耕没有离线结算（成熟后停在地里等玩家来收），所以直接作用于本次收成即可；
     // 取整后至少 1 件 —— 坏天气也不会让玩家颗粒无收。
     const wx = this.player.weatherEffects?.() ?? {}

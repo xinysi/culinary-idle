@@ -103,7 +103,7 @@ export function combatXpPerSkill(level, damage, oppMaxHp, win, playerLevel = lev
 //    「突然慢 30%」的断崖（玩家能感觉到「这一级怎么变难了」）。这里 L40 只残余 1%，对
 //    「战斗三技能 ~6 天」那套标定（大后期占绝对多数）的影响可忽略，而开局从 2.6 小时 → 几分钟。
 // ⚠️ 只压/提**系统给的基准**，与难度系数那套同一纪律：不改 `xpKillBaseline`（它是冻结基线，
-//    守卫逐级钉着），而是在**读取点**乘。命中经验（`hitXpFor`）也走同一个乘区 ——
+//    守卫逐级钉着），而是在**读取点**乘。命中经验（`hitXpFor`）也走同一个加成 ——
 //    开局阶段「每次命中 +4」比击杀奖励占比更大（实测 L1 一场 58 经验里 44 来自命中），
 //    只提击杀那一侧等于没修。
 export const EARLY_XP_TOP_LEVEL = 20
@@ -117,7 +117,7 @@ export function earlyCombatXpMult(level) {
   if (!Number.isFinite(lv) || lv <= 0 || lv >= EARLY_XP_TOP_LEVEL) return 1
   return 1 + EARLY_XP_BOOST_A * Math.exp(-(lv - 1) / EARLY_XP_BOOST_TAU)
 }
-/** 每次**命中**给风格技能的经验（原写死 4）—— 唯一出口，与击杀经验同乘区 */
+/** 每次**命中**给风格技能的经验（原写死 4）—— 唯一出口，与击杀经验同加成 */
 export const HIT_XP_BASE = 4
 export function hitXpFor(playerLevel) {
   return Math.max(1, Math.round(HIT_XP_BASE * earlyCombatXpMult(playerLevel)))

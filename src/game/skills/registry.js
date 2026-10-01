@@ -41,7 +41,7 @@ const factories = {
   spiceMixing: (player) => new SpiceMixingSkill(player),
   craftsmithing: (player) => new CraftsmithingSkill(player),
   // §3.5 副业类（v2.9.0 木工；v2.10.0 陶艺/编织/刺绣/蜡烛）
-  // 不吃食灵经验加成、不入山海食经；每支只接一条经营侧乘区出口（见 data/sidelineWorks.js）
+  // 不吃食灵经验加成、不入山海食经；每支只接一条经营侧加成出口（见 data/sidelineWorks.js）
   woodworking: (player) => new WoodworkingSkill(player),
   pottery: (player) => new PotterySkill(player),
   weaving: (player) => new WeavingSkill(player),

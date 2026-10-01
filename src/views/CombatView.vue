@@ -182,7 +182,7 @@ function resistOf(b) {
 function heavyRisk(b) {
   return b ? heavyText(b.level, player.combatLevel, player.maxHp, takenPct()) : null
 }
-/** 受击减免（%）：与属性面板「受击减免」那一行同一个来源（奥义等的受伤乘区） */
+/** 受击减免（%）：与属性面板「受击减免」那一行同一个来源（奥义等的受伤加成） */
 function takenPct() {
   return Math.round(player.gastronomyEffects?.()?.defensePct ?? 0)
 }

@@ -110,7 +110,7 @@ import {
   CHAIN_FROM_SKILL, CHAIN_DISCOUNT, // T6/4-C：木工产物跨线投料（半价）
 } from '../game/data/sidelineWorks.js'
 /**
- * 增益剂的乘区轴表（v2.3.0）：一件消耗品可同时带多条。
+ * 增益剂的加成轴表（v2.3.0）：一件消耗品可同时带多条。
  * `better` 决定「重复使用取更强」的方向——采集间隔越小越快，其余越大越强。
  */
 const BUFF_AXES = [
@@ -389,7 +389,7 @@ const defaultState = () => ({
     // 只承载「兜底转存 / 结算回执 / 通知」，不改变任何既有奖励的发放路径（见 game/data/mail.js）
     mail: { list: [], nextId: 1 },
     // 厨友（2026-09-11 本地镜像 NPC）：{ [friendId]: { bond, lastVisitDay } } + orders/orderDay
-    // 委托每日刷新一次；奖励只放大本系统自身，不叠加到既有乘区（见 game/data/friends.js）
+    // 委托每日刷新一次；奖励只放大本系统自身，不叠加到既有加成（见 game/data/friends.js）
     friends: { data: {}, orders: {}, orderDay: null },
   })
 
@@ -422,7 +422,7 @@ export const usePlayerStore = defineStore('player', {
     totalLevels(s) {
       return Object.values(s.skills).reduce((a, sk) => a + (sk.level ?? 1), 0)
     },
-    /** 已装备属性合计（§5.1/§4.2 来源之一）+ 装备词条（玩家侧乘区，2026-09-06） */
+    /** 已装备属性合计（§5.1/§4.2 来源之一）+ 装备词条（玩家侧加成，2026-09-06） */
     equippedStats(s) {
       const sum = { attack: 0, accuracy: 0, defense: 0, evasion: 0, critChance: 0, hpBonus: 0, speedBonus: 0 }
       for (const itemId of Object.values(s.equipment)) {
@@ -525,7 +525,7 @@ export const usePlayerStore = defineStore('player', {
         for (const id of s.spirits?.active ?? []) {
           const sp = SPIRITS.find((x) => x.id === id)
           if (!sp?.effect) continue
-          // 羁绊乘区（2026-09-06）：每级 +4% 效果放大（不改 SPIRITS 契约/effect 数据，玩家侧乘法）
+          // 羁绊加成（2026-09-06）：每级 +4% 效果放大（不改 SPIRITS 契约/effect 数据，玩家侧乘法）
           const bond = bondLevelOf(s.spiritBonds?.[id] ?? 0)
           const bondMult = 1 + 0.04 * bond
           const e = sp.effect
@@ -590,7 +590,7 @@ export const usePlayerStore = defineStore('player', {
     usableOf: (s) => (itemId) => {
       const it = getItem(itemId)
       if (!it?.use) return null
-      // 双效（蜂蜜）与单效（增益剂）统一：分别列出实际会生效的每条乘区
+      // 双效（蜂蜜）与单效（增益剂）统一：分别列出实际会生效的每条加成
       if (BUFF_AXES.some(([k]) => it.use[k])) {
         const parts = []
         for (const [useKey, , label] of BUFF_AXES) {
@@ -625,7 +625,7 @@ export const usePlayerStore = defineStore('player', {
         const schoolMult = 1 + (this.schoolIncomePct?.(item.category) ?? 0) / 100 // 菜系研究（2026-09-10）
         total += (item.value + (item.heal ?? 0)) * 0.5 * schoolMult
       }
-      // 增益剂（菌灵露·Ⅶ+ / 鸡油 / 虾油）：餐厅收入乘区——挂在唯一的收入 getter 上，避免多处漏乘
+      // 增益剂（菌灵露·Ⅶ+ / 鸡油 / 虾油）：餐厅收入加成——挂在唯一的收入 getter 上，避免多处漏乘
       total *= this.getRestaurantMultiplier?.() ?? 1
       // 装饰加成：按每件装饰自身的收入%累加（各件 effect 随价格从 0.5% 到 3% 递增，无倒挂）
       let decorBonus = 0
@@ -633,7 +633,7 @@ export const usePlayerStore = defineStore('player', {
         const d = RESTAURANT_DECOR_BY_ID[id]
         if (d) decorBonus += (d.effect ?? 1) / 100
       }
-      // 副业·木工的量产阶梯（v2.11.0）：多余木器喂出来的「手艺」直接加装潢乘区
+      // 副业·木工的量产阶梯（v2.11.0）：多余木器喂出来的「手艺」直接加装潢加成
       // ⚠️ 2026-09-27：改读 `sidelineEffectTotal`（唯一派生出口）—— 原先读 `sidelineLadderTotal`，
       //    那样副业线奥义「木器之魂」的 +6% 加进来也**不会被这条消费链看到**（静默无效）。
       decorBonus += (this.sidelineEffectTotal?.('decorPct') ?? 0) / 100
@@ -1263,7 +1263,7 @@ export const usePlayerStore = defineStore('player', {
       return 'ok'
     },
 
-    // ── 副业作品（v2.10.0）：陶器 / 织物 / 绣品 / 蜡烛，各接**一条**经营侧乘区出口 ──
+    // ── 副业作品（v2.10.0）：陶器 / 织物 / 绣品 / 蜡烛，各接**一条**经营侧加成出口 ──
     // 定义与口径见 `data/sidelineWorks.js`；木工不走这里（它走 restaurant.decor，见 craftDecor）。
     /**
      * 把一件副业产物「做成作品」：消耗该物品 1 件、登记进 `sidelineWorks`（一件只能登记一次）。
@@ -1571,7 +1571,7 @@ export const usePlayerStore = defineStore('player', {
       let msg = ''
       // 条件也要用轴表：只带 buffGather / buffRestaurant 的物品（鲍汁、虾油等）否则会落到 else 报「无法使用」
       if (BUFF_AXES.some(([k]) => it.use[k])) {
-        // **多效**：一件物品可同时给多条乘区（蜂蜜=经验+产量；菌灵露=最多四条）。
+        // **多效**：一件物品可同时给多条加成（蜂蜜=经验+产量；菌灵露=最多四条）。
         // ⚠️ 原先写的是 if/else 只取一条，双键物品会静默丢掉后面的键（2026-09-14 修）。
         // 「更强」的判据按轴不同：采集间隔是**越小越强**，其余是越大越强。
         const parts = []
@@ -3237,7 +3237,7 @@ export const usePlayerStore = defineStore('player', {
     },
     /**
      * 效果总览（v2.6.0）：记录「此刻同时生效的效果项数」的历史最高值。
-     * 只由 EffectsView 打开时调用（纯只读统计口径，不影响任何乘区）；供成就与统计页使用。
+     * 只由 EffectsView 打开时调用（纯只读统计口径，不影响任何加成）；供成就与统计页使用。
      */
     noteEffectsSeen(n) {
       const v = Math.max(0, Math.floor(Number(n) || 0))
@@ -3720,7 +3720,7 @@ export const usePlayerStore = defineStore('player', {
     },
 
     // ══ 挂机产线 · 萃露炉（v2.3.0；并入「灵圃菌房」页）══════════════════════
-    // 把采集来的菌菇/灵植 + 肥料酿成 8 档「菌灵露」（采集拿不到的乘区物品）。
+    // 把采集来的菌菇/灵植 + 肥料酿成 8 档「菌灵露」（采集拿不到的加成物品）。
     essenceState() {
       if (!this.essence || !Array.isArray(this.essence.vats)) this.essence = { vats: [], expands: 0 }
       while (this.essence.vats.length < this.essenceVats()) this.essence.vats.push(null)
