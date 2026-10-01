@@ -96,10 +96,60 @@ const FLOWS = {
     title: '核心循环',
     note: '这个游戏的节奏就这四步：挑一个目标挂机 → 拿产出做东西 → 用做出来的东西打赢对决 → 解锁更好的目标。',
     nodes: [
-      { label: '① 选目标', to: 0 },
-      { label: '② 挂机产出', to: 3 },
-      { label: '③ 制作', to: 7 },
-      { label: '④ 打赢对决', to: 10 },
+      { label: '选目标', to: 0 },
+      { label: '挂机产出', to: 3 },
+      { label: '制作', to: 7 },
+      { label: '打赢对决', to: 10 },
+    ],
+  },
+  early: {
+    title: '自给自足',
+    note: '这一阶段的目标是「尽量不用买」：农耕供食材、调料调出味道、装备换到同档，再往前推三个区域。',
+    nodes: [
+      { label: '农耕自给', to: 0 },
+      { label: '调料与炼金', to: 2 },
+      { label: '换上铁装', to: 4 },
+      { label: '推进对决', to: 7 },
+    ],
+  },
+  mid: {
+    title: '把餐厅做起来',
+    note: '中期开始从「自己吃」转向「卖给别人」：餐厅时收、首领节奏、赛季与竞技场三线并行。',
+    nodes: [
+      { label: '换更高档装备', to: 0 },
+      { label: '餐厅经营', to: 6 },
+      { label: '首领节奏', to: 14 },
+      { label: '赛季与竞技场', to: 21 },
+    ],
+  },
+  late: {
+    title: '史诗装与转生',
+    note: '后期两条腿走路：装备敲到史诗段、同时开始转生循环（每层 +20% 经验，是长线的主要成长）。',
+    nodes: [
+      { label: '敲史诗装', to: 0 },
+      { label: '推到甜品女王', to: 1 },
+      { label: '转生循环', to: 3 },
+      { label: '探索与秘境', to: 6 },
+    ],
+  },
+  lategame: {
+    title: '四线并进',
+    note: '大后期是「挂机产线 + 转生层数 + 挑战塔」一起推：产线供料、转生拉经验、塔检验配置。',
+    nodes: [
+      { label: '传说毕业装', to: 0 },
+      { label: '产线全开', to: 5 },
+      { label: '转生多次', to: 3 },
+      { label: '无尽挑战塔', to: 20 },
+    ],
+  },
+  endgame: {
+    title: '收尾与极限',
+    note: '毕业阶段是收尾：终局首领、图鉴与成就全清、然后回挑战塔刷极限深度。',
+    nodes: [
+      { label: '终局首领', to: 0 },
+      { label: '图鉴与成就', to: 3 },
+      { label: '赛季与竞技收尾', to: 7 },
+      { label: '挑战塔主战场', to: 2 },
     ],
   },
 }
@@ -179,8 +229,11 @@ function stepIcon(i) {
         </div>
         <div class="gd-fnodes">
           <template v-for="(n, i) in flow.nodes" :key="i">
-            <span v-if="i" class="gd-farrow">→</span>
-            <button class="gd-fnode" @click="jumpToStep(n.to)">{{ n.label }}</button>
+            <span v-if="i" class="gd-fline" aria-hidden="true"></span>
+            <button class="gd-fnode" @click="jumpToStep(n.to)">
+              <span class="gd-fnum">{{ i + 1 }}</span>
+              <span class="gd-flabel">{{ n.label }}</span>
+            </button>
           </template>
         </div>
         <p class="dim gd-fnote">{{ flow.note }}</p>
@@ -356,23 +409,57 @@ function stepIcon(i) {
 .gd-sghead:first-child { margin-top: 6px; }
 
 /* 阶段流程图（2026-10-01；形态照 TunerPanel 的 `.tp-chain`：一排方框 + 箭头 + 脚注） */
-.gd-flow { padding: 14px 16px; }
+.gd-flow { padding: 16px 18px; background: rgba(var(--primary-tint-rgb), 0.07); }
 .gd-flow-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .gd-flow-head h4 { margin: 0; }
-.gd-fnodes { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+.gd-fnodes { display: flex; align-items: center; gap: 0; }
+/* 节点：圆形序号在上、名称在下；节点之间是**自动铺满**的连线（flex:1）——
+   这样整条流程会撑满卡片宽度，而不是几个小胶囊挤在左边、右边空一大块。 */
 .gd-fnode {
-  padding: 8px 14px;
-  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 4px 6px;
   font-family: inherit;
-  font-weight: 600;
-  color: var(--text);
-  background: rgba(var(--primary-tint-rgb), 0.14);
-  border: 1px solid var(--border);
-  border-radius: 9px;
+  background: none;
+  border: none;
   cursor: pointer;
 }
-.gd-fnode:hover { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.26); }
-.gd-farrow { align-self: center; color: var(--muted); font-size: 13px; }
+.gd-fnum {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--btn-primary-bg);
+  transition: transform 0.15s;
+}
+.gd-fnode:hover .gd-fnum { transform: scale(1.08); }
+.gd-flabel { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.gd-fline {
+  flex: 1 1 auto;
+  height: 2px;
+  align-self: center;
+  margin-bottom: 22px; /* 对齐圆心的水平线（下面还有名称那一行） */
+  background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.42), rgba(var(--primary-rgb), 0.16));
+  position: relative;
+}
+.gd-fline::after {
+  content: '›';
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  transform: translateY(-54%);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary-strong);
+}
 .gd-fnote { margin: 10px 0 0; line-height: 1.7; }
 /* 点流程图后目标卡片闪一下（告诉玩家「跳到的是这一条」） */
 .gd-step-flash { animation: gd-flash 1.2s ease; }

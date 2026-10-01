@@ -2636,13 +2636,20 @@ console.log('══ T. 攻略数据 ══')
       /:data-step="i"/.test(gv) && /function jumpToStep/.test(gv))
   // 🔴 流程图节点的 `to` 必须指向**真实存在**的行动卡：写错下标时点了没反应，而且**不报错**（静默失效）
   {
-    const flowTo = [...gv.matchAll(/\{\s*label:\s*'[^']*',\s*to:\s*(\d+)\s*\}/g)].map((m) => Number(m[1]))
-    const stageId = (gv.match(/^\s{2}(\w+):\s*\{\s*$/m) || [])[1] ?? 'beginner'
-    const st = G.GUIDE_STAGES.find((x) => x.id === stageId) ?? G.GUIDE_STAGES[0]
-    const n = st?.actions?.length ?? 0
-    check('攻略', '流程图的每一步都指向存在的行动卡（越界 = 点了没反应）',
-      flowTo.length >= 3 && n > 0 && flowTo.every((i) => i >= 0 && i < n),
-      `to=${flowTo.join(',')} / 该阶段行动 ${n} 条`)
+    // 2026-10-02：六个阶段各有自己的流程图 ⇒ 锚点必须**按阶段各查各的**
+    //（第一版把所有阶段的 to 汇总起来跟单个阶段的条数比 ⇒ 六条流程一上线它就误报）
+    const blocks = [...gv.matchAll(/\n  (\w+): \{[\s\S]*?\n  \},/g)]
+    const flows = blocks.map((b) => ({
+      id: b[1],
+      to: [...b[0].matchAll(/to:\s*(\d+)/g)].map((m) => Number(m[1])),
+    }))
+    const bad = flows.filter((f) => {
+      const st = G.GUIDE_STAGES.find((x) => x.id === f.id)
+      return !st || f.to.length < 3 || f.to.some((i) => i < 0 || i >= (st.actions?.length ?? 0))
+    })
+    check('攻略', '六个阶段各有一张流程图，且每一步都指向**本阶段**存在的行动卡（越界 = 点了没反应）',
+      flows.length >= 6 && bad.length === 0,
+      bad.length ? bad.map((f) => f.id + ':' + f.to.join('/')).join(' ') : `${flows.length} 个阶段`)
   }
   }
 }
