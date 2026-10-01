@@ -1029,21 +1029,20 @@ h2 {
 .feature-cat .fc-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .feature-cat .fc-caret { flex: 0 0 auto; color: var(--muted); }
 
-/* ══ 大类工作区：主内容区里的「左导航 + 右内容」两栏（2026-09-27 用户⑳ 第二轮）══
-   用户原话：「点击大类后，右边面板的**左边显示导航、右边显示详细内容**」，形态照开发者面板
-   （`DevPanel` 的 `.dp-body` + `.dp-nav` + `.dp-content`）。
-   做法：只给滚动区加一个 `display:flex` 修饰类，导航栏是它的**第一个子元素**，页面本体是第二个 —— 
-   页面分派链（App.vue 里 60+ 个 v-else-if）一个字没动，也就不会影响任何既有页面的布局。
-   导航栏自身的样式在 `components/FeatureRail.vue` 的 scoped 里（宽度用 `--rail-w` 单点定义）。 */
-.main-scroll--rail {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-/* 内容列：占满剩余宽度，且 `min-width: 0`（否则宽表会把两栏一起撑破 —— 项目里的老坑） */
-.main-scroll--rail > :not(.feature-rail) {
-  flex: 1 1 auto;
-  min-width: 0;
+/* ══ 本大类的页面清单：现在挂在**左栏下半**（2026-10-01 用户要求从主区右侧挪过来）══
+   原先是主内容区里的「左导航 + 右内容」两栏（`.main-scroll--rail` + 其中的 `.feature-rail`）；
+   用户看后要求「把右边红框的导航移到左边功能的下半」⇒ 挪进 `Sidebar.vue` 的 `.feature-nav` 里，
+   主内容区恢复整宽（那套两栏的规则已随之删除）。
+   ⚠️ 覆盖必须写成 `.sidebar-rail.feature-rail`（0,2,0）：子组件自己的 `.feature-rail` 是 0,1,0，
+   只写 `.sidebar-rail` 会**同权重比先后**、被 scoped 样式反压回去（宽度仍是 168px 而不是铺满）。 */
+.sidebar-rail.feature-rail {
+  width: 100%;
+  flex: 0 0 auto;
+  position: static;
+  max-height: none;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
 }
 
 /* 分组标题 = 可点击的折叠开关（2026-09-18 分组默认折叠：首屏只见 6 个分组入口） */

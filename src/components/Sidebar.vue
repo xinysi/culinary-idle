@@ -7,6 +7,7 @@ import { SKILL_CATEGORIES, SKILL_DEFS, skillCategoriesOfTab } from '../game/data
 import { xpProgress } from '../game/core/Experience.js'
 import { nameColorOf } from '../game/data/cosmetics.js'
 import ProgressBar from './ProgressBar.vue'
+import FeatureRail from './FeatureRail.vue'
 import { featureGroups } from '../game/data/featureGroups.js'
 
 const player = usePlayerStore()
@@ -258,6 +259,9 @@ function onAvatarPick(e) {
           <span class="fg-count dim">{{ catItems(g).length }}</span>
           <span class="fc-caret" aria-hidden="true">›</span>
         </button>
+        <!-- 本大类的页面清单（2026-10-01 用户要求：从主区右侧挪到**左栏下半**）。
+             `ui.railShown` 是显示真值（App.vue 唯一写入者：宽屏 + 已开大类 + 非整屏画布页）。 -->
+        <FeatureRail v-if="ui.railShown" class="sidebar-rail" />
       </template>
       <!-- 窄屏：保留原手风琴 + 磁贴 -->
       <template v-else>

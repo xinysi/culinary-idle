@@ -31,7 +31,6 @@ import { getSeason, activeSeasonId } from './game/data/seasons.js'
 import { guideEntryForView } from './game/data/guide.js'
 import { featureGroups, groupForView } from './game/data/featureGroups.js'
 import { sceneForView, bgImageFor, THEME_PREF_KEY } from './game/data/bgScenes.js'
-import FeatureRail from './components/FeatureRail.vue'
 import { getSkillDef } from './game/data/skills.js' // 技能页「指南」按钮的数据源（2026-09-26 用户⑪统一位置）
 import { DEV_PANEL_ENABLED, requestDevEntry } from './game/dev/devFlag.js'
 import { initTelemetry } from './game/dev/telemetry.js'
@@ -653,11 +652,10 @@ onMounted(() => {
         </nav>
 
         <!-- 内容滚动区（独立滚动，导航不跟随）；新手引导横幅位于滚动区顶部 -->
-        <!-- 2026-09-27 用户⑳ 第二轮：开了大类时，这里是「左导航 + 右内容」两栏
-             （`FeatureRail` = 导航栏，紧随其后的就是原有的页面分派链，内容区一个字没动） -->
+        <!-- 2026-09-27 用户⑳ 第二轮原本把「大类页面清单」放在这里的左侧两栏里；
+             2026-10-01 用户要求**挪到左栏下半**（见 Sidebar.vue 的 `.sidebar-rail`）⇒ 这里不再渲染它。 -->
         <div ref="mainScroll" @scroll="onMainScroll" class="main-scroll"
-             :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai', 'main-scroll--rail': catRailOn }">
-          <FeatureRail v-if="catRailOn" />
+             :class="{ 'main-scroll--bleed': ui.activeView === 'shanhai' }">
           <ShopView v-if="ui.activeView === 'shop'" />
           <ZhenXiuView v-else-if="ui.activeView === 'deluxe'" />
           <AlchemyView v-else-if="ui.activeView === 'alchemy'" />

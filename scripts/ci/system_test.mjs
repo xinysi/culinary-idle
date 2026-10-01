@@ -9665,11 +9665,13 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /class="feature-cat"/.test(side) && !/feature-flyout/.test(side) && !/\.ff-item/.test(side))
   check('主导航', '🔴 浮层那套已彻底移除（否则「浮层」与「主区导航」两套机制并存 = 同一件事两个入口）',
     !/feature-flyout/.test(css) && !/ff-catcher/.test(css) && !/Teleport to="body"/.test(side) && !/flyoutStyle/.test(side))
-  check('主导航', '主区是「左导航 + 右内容」两栏：`.main-scroll--rail` + `FeatureRail` 挂在分派链之前',
-    // ⚠️ 判据要**连绑定一起钉**：只查 `main-scroll--rail` 这个词的话，把键改名成 `main-scroll--rail-x`
-    //    照样命中（反例验证 ② 抓到的假绿 —— 子串匹配骗过了它），改造型就等于没人守
-    /'main-scroll--rail':\s*catRailOn/.test(app) && /<FeatureRail v-if="catRailOn"/.test(app) &&
-      app.indexOf('<FeatureRail') < app.indexOf("<ShopView v-if=\"ui.activeView === 'shop'\""))
+  check('主导航', '页面清单挂在**左栏下半**（FeatureRail 在 Sidebar 里，主区不再有两栏 —— 2026-10-01 用户要求挪位）',
+    // 判据要**连绑定一起钉**（子串匹配会假绿，见反例 ②）：这里是「在 Sidebar 里 + 绑定 ui.railShown」，
+    // 且 **App.vue 不许再渲染它**（两处都渲染 = 同一件事两个入口）。
+    /<FeatureRail v-if="ui\.railShown"/.test(side) && /FeatureRail/.test(side) &&
+      !/<FeatureRail/.test(app) && !/main-scroll--rail/.test(app))
+  check('主导航', '🔴 左栏 rail 的宽度覆盖写成 `.sidebar-rail.feature-rail`（0,2,0 —— 只写 .sidebar-rail 会被子组件 scoped 反压，宽度仍是 168px）',
+    /\.sidebar-rail\.feature-rail\s*\{[^}]*width:\s*100%/.test(css))
   check('主导航', '导航栏按**当前大类**过滤、点条目走 `ui.setView`（不是自己渲染内容 —— 内容仍归 App.vue 的分派链）',
     /ui\.featureCat/.test(rail) && /function pick\(it\)[\s\S]{0,120}ui\.setView\(it\.view\)/.test(rail) &&
       !/<ShopView|<InventoryView|v-else-if/.test(rail))
@@ -9696,8 +9698,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /ui\.featureCat === g\.id && ui\.railShown/.test(side) && /setRailShown/.test(app) && /railShown: false/.test(rdSrc('src/stores/ui.js')))
   check('主导航', '落地页要挑**挂得住导航**的页（否则在山海食经上点大类会「毫无变化」）',
     /landable/.test(side) && /RAIL_HIDDEN_VIEWS\.includes\(it\.view\)/.test(side))
-  check('主导航', '内容列 `min-width: 0`（否则宽表会把两栏一起撑破）',
-    /\.main-scroll--rail > :not\(\.feature-rail\)\s*\{[^}]*min-width:\s*0/.test(css))
+  check('主导航', '本类页面清单**铺满左栏宽度**（不是主区那套 168px 固定宽）',
+    /\.sidebar-rail\.feature-rail\s*\{[^}]*position:\s*static/.test(css))
   // 行为：store 上的开关语义（点第二次收起由 Sidebar 的 toggleCat 负责）
   {
     useUiStore()

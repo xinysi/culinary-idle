@@ -265,13 +265,13 @@ export const EFFECT_FORMULAS = {
   caps: { tag: '相加', f: '基础 + 商店扩容 + 山海奖励', note: '硬顶不小于两者之和' },
 
   // 🎛 系统与玩法规则（2026-10-01 补：这一组的数值跑在各平衡模块里，原先整组没登记）
-  difficulty: { tag: '相乘（分四桶）', f: '掉落 ÷5 · 制作 ÷2 · 探索物品 ÷4 · 附产 ÷2', note: '各桶另有下限，永不抬高' },
-  exploreChance: { tag: '分段', f: '初始 × 段位系数 + 精通 + 池，再夹 90%', note: '专属装备在上限外另加' },
-  exploreLoot: { tag: '相乘', f: '战利品概率 ×0.25', note: '金币走原值不缩' },
+  difficulty: { tag: '数值口径', f: '掉落 ÷5 · 制作 ÷2 · 探索物品 ÷4 · 附产 ÷2', note: '页面显示的就是调整后的值' },
+  exploreChance: { tag: '分段', f: '初始 × 段位系数 + 精通 + 池，再夹 90%', note: '卡片上写的就是实际成功率' },
+  exploreLoot: { tag: '数值口径', f: '掉落列表写的已经是实际概率', note: '金币不缩；不会写一个数按另一个算' },
   exploreGear: { tag: '定额', f: '两套各 +5%，四件合计上限 +10%', note: '每次动作 0.01% 掉落' },
   towerTier: { tag: '相乘', f: '对手属性与奖励同倍：1 · 1.5 · 2 · 2.5', note: '四档：标准 / 精英 / 极限 / 饕餮' },
   realmTier: { tag: '相乘', f: '13 档，强度 ×1.00 起、逐档 +0.25', note: '末三档需对决 105 / 110 / 115 级' },
-  enemyScale: { tag: '分段', f: '血量：低段 ×2 · 中段 ×1.8 / 1.5 · 高段 ×1', note: '经验按伤害给，跟着同倍' },
+  enemyScale: { tag: '数值口径', f: '敌人血量已按分档缩放', note: '面板上显示的就是缩放后的血量' },
 }
 
 /** 取某条效果的公式（`{ tag, f, note }`；没有登记时返回 null；守卫会断言「有行必有公式」）。
@@ -1387,10 +1387,10 @@ export const EFFECT_ROWS = [
 
   // ══ 系统与玩法规则（2026-10-01 补：这一组原先整组没登记，用户实测「看不到美食探索」）══════
   {
-    id: 'difficulty', group: 'system', icon: '🎚', name: '全局难度系数', kind: 'debuff', src: '平衡（在读取点乘，数据一个字节没改）', view: '',
+    id: 'difficulty', group: 'system', icon: '🎚', name: '全局难度系数（数值口径）', kind: 'rule', src: '平衡口径：页面上的概率已经是调整后的值', view: '',
     read: () => ({
       on: true,
-      text: `对决掉落 ÷${n1(1 / DIFFICULTY.drop)} · 制作成功率 ÷${n1(1 / DIFFICULTY.craft)} · 探索物品 ÷${n1(1 / DIFFICULTY.exploreLoot)} · 采集附产 ÷${n1(1 / DIFFICULTY.gatherExtra)}（各桶另有下限，永不抬高）`,
+      text: `对决掉落 ÷${n1(1 / DIFFICULTY.drop)} · 制作 ÷${n1(1 / DIFFICULTY.craft)} · 探索物品 ÷${n1(1 / DIFFICULTY.exploreLoot)} · 采集附产 ÷${n1(1 / DIFFICULTY.gatherExtra)}。卡片、掉落列表、成功率上看到的就是最终值 —— 不是「先给一个数再偷偷打折」`,
     }),
   },
   {
@@ -1409,8 +1409,8 @@ export const EFFECT_ROWS = [
     },
   },
   {
-    id: 'exploreLoot', group: 'system', icon: '📦', name: '美食探索·战利品概率', kind: 'debuff', src: '全局难度系数（探索物品桶）', view: 'skill:exploration',
-    read: () => ({ on: true, text: `目标写着的战利品概率一律 ×${n1(DIFFICULTY.exploreLoot)}（金币战利品走原值不缩）` }),
+    id: 'exploreLoot', group: 'system', icon: '📦', name: '美食探索·战利品概率（数值口径）', kind: 'rule', src: '页面上显示的就是实际概率', view: 'skill:exploration',
+    read: () => ({ on: true, text: `探索卡片的掉落列表写的已经是实际概率（对应目标数据 ×${n1(DIFFICULTY.exploreLoot)}；金币战利品不缩）。不会出现「写着 35%、实际按 8.75% 结算」` }),
   },
   {
     id: 'exploreGear', group: 'system', icon: '🎒', name: '美食探索·专属装备', kind: 'buff', src: '寻味行装 / 遗珍行装（共四件）', view: 'skill:exploration',
@@ -1435,8 +1435,8 @@ export const EFFECT_ROWS = [
     }),
   },
   {
-    id: 'enemyScale', group: 'system', icon: '🩸', name: '敌人血量分档', kind: 'rule', src: '平衡（读取点乘系数）', view: 'skill:knife',
-    read: () => ({ on: true, text: enemyScalingText() }),
+    id: 'enemyScale', group: 'system', icon: '🩸', name: '敌人血量分档（数值口径）', kind: 'rule', src: '敌人面板上显示的就是分档后的血量', view: 'skill:knife',
+    read: () => ({ on: true, text: `${enemyScalingText()}。敌人列表/战斗屏上的血量已经是分档后的值；经验按伤害给，跟着同倍` }),
   },
 ]
 
