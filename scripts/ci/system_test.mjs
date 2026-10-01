@@ -11291,27 +11291,43 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   check('探索改名', '三个消费方（技能/图鉴来源/腐坏曲线）都副作用导入了改名模块', missing.length === 0, missing.join(',') || 'OK')
 }
 
-// ═══ C92 效果总览的「数值公式栏」（2026-10-01 用户要求）═══
+// ═══ C92 效果总览的「数值公式栏」（2026-10-01 用户要求；同日按反馈改成短公式 + 规则标签）═══
 {
   const { EFFECT_ROWS, EFFECT_FORMULAS, formulaOf } = await import('../../src/game/data/activeEffects.js')
   const miss = EFFECT_ROWS.filter((r) => !formulaOf(r.id, null, {})).map((r) => r.id)
-  check('效果公式', `${EFFECT_ROWS.length} 条效果都有公式文案（少一条 = 页面上那行空着）`, miss.length === 0, miss.slice(0, 6).join(','))
+  check('效果公式', `${EFFECT_ROWS.length} 条效果都有公式（少一条 = 页面上那行空着）`, miss.length === 0, miss.slice(0, 6).join(','))
 
   const extra = Object.keys(EFFECT_FORMULAS).filter((k) => !EFFECT_ROWS.some((r) => r.id === k))
   check('效果公式', '没有「有公式却没对应效果行」的孤儿键（改名时漏删会静默留着）', extra.length === 0, extra.join(','))
 
-  // 公式里不许出现内部字段名 / 技能 id（与「面向玩家的文案」同一条纪律）
-  const bad = []
+  // 结构：每条必须是 { tag, f, note? } 且三段都非空（缺 tag = 页面少一个标签；缺 f = 整行空）
+  const badShape = EFFECT_ROWS.filter((r) => {
+    const f = formulaOf(r.id, null, {})
+    return !f || typeof f !== 'object' || !f.tag || !f.f
+  }).map((r) => r.id)
+  check('效果公式', '每条都是「规则标签 + 公式」两段俱全（note 可选）', badShape.length === 0, badShape.slice(0, 6).join(','))
+
+  // 🔴 公式里**不许出现任何英文字母**（用户反馈「还有英文混杂」）：
+  //    这条比「不许出现内部字段名」更严——`max(...)`、`hp`、反引号里的标识符全是它兜住的。
+  const latin = []
   for (const r of EFFECT_ROWS) {
     const f = formulaOf(r.id, null, {})
-    if (/(xpPct|yieldPct|craftPct|cultivatePct|maxHpBonus|gatherXpPct|craftXpPct|allXpPct|orderGoldPct|branchPct|seedChancePct|_PCT|_MULT\b)/.test(f)) bad.push(r.id)
+    if (!f) continue
+    if (/[A-Za-z]/.test(f.f) || /[A-Za-z]/.test(f.tag) || /[A-Za-z]/.test(f.note ?? '')) latin.push(`${r.id}:${f.f}`)
   }
-  check('效果公式', '公式文案里不出现内部字段名（一律中文口径）', bad.length === 0, bad.slice(0, 6).join(','))
+  check('效果公式', '公式/标签/注里都不含英文字母（只用数字与数学符号）', latin.length === 0, latin.slice(0, 5).join(' '))
+
+  // 简洁度：公式本体 ≤ 34 字、注 ≤ 24 字（用户反馈「文字太多、眼花缭乱」）
+  const long = EFFECT_ROWS.filter((r) => {
+    const f = formulaOf(r.id, null, {})
+    return f && ((f.f?.length ?? 0) > 34 || (f.note?.length ?? 0) > 24)
+  }).map((r) => `${r.id}:${(formulaOf(r.id, null, {}).f ?? '').length}`)
+  check('效果公式', '公式本体 ≤34 字、补充 ≤24 字（一眼能读完）', long.length === 0, long.slice(0, 6).join(','))
 
   // 页面上真的把这一栏渲染出来了（接线断了 = 静默没有这一栏）
   const fx = stripComments(fs.readFileSync(new URL('../../src/views/EffectsView.vue', import.meta.url), 'utf8'))
-  check('效果公式', '效果总览页真的渲染了这一栏（读 EFFECT_ROWS + formulaOf）',
-    /EFFECT_ROWS/.test(fx) && /formulaOf\(/.test(fx) && /fx-formula-row/.test(fx), 'EffectsView.vue')
+  check('效果公式', '效果总览页真的渲染了这一栏（读 EFFECT_ROWS + formulaOf + 标签样式）',
+    /EFFECT_ROWS/.test(fx) && /formulaOf\(/.test(fx) && /fx-formula-row/.test(fx) && /fx-formula-tag/.test(fx), 'EffectsView.vue')
 }
 
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)

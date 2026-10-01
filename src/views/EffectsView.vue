@@ -54,16 +54,16 @@ watchEffect(() => player.noteEffectsSeen(data.value.stats.on))
 
 const KIND_TAG = { buff: '增益', debuff: '减益', rule: '规则' }
 
-// ── 数值公式栏（2026-10-01 用户要求）────────────────────────────────
-// 「每条效果的数值到底怎么算出来的」——与上面的生效列表**同一份注册表**（`EFFECT_ROWS`），
-// 公式来自 `EFFECT_FORMULAS`（单一口径，守卫对账「有行必有公式」）。
-// 这里列的是**全部 105 条**（含此刻未生效的）：公式是「规则」，与生不生效无关。
+// ── 数值公式栏（2026-10-01 用户要求；同日按反馈改成「短公式 + 规则标签」）──────────
+// 「每条效果的数值到底怎么算出来的」——与上面的生效列表**同一份注册表**（`EFFECT_ROWS`）。
+// 用户反馈「文字太多、眼花缭乱、还有英文混杂」⇒ 每条只留三段：**规则标签**（一眼看出这类怎么合）、
+// **公式本体**（大字、只有数字与数学符号）、**一句注**（可省）。长说明一律砍掉。
 const formulaGroups = computed(() => {
   return EFFECT_GROUPS.map((g) => ({
     ...g,
     items: EFFECT_ROWS.filter((r) => r.group === g.id)
-      .map((r) => ({ ...r, formula: formulaOf(r.id, player, { skill: (id) => getSkillInstance(id) }) }))
-      .filter((r) => r.formula),
+      .map((r) => ({ ...r, fx: formulaOf(r.id, player, { skill: (id) => getSkillInstance(id) }) }))
+      .filter((r) => r.fx),
   })).filter((g) => g.items.length)
 })
 
@@ -172,15 +172,16 @@ function jumpLabel(view) {
       hint="每条效果的计算口径都写在这里；数字一律取自游戏里的真实常量（改平衡时这里会跟着变），不是手抄的说明"
     >
       <p class="dim fx-formula-note">
-        口径：<b>同类加成相加、跨类相乘</b>；经验类还要过一道「先相乘再统一阻尼 + 按等级夹上界」（见「成长阻尼」那条）。
-        当前生效的<b>数值</b>在页面上方的列表里逐条显示，这里只说<b>怎么算</b>。
+        一句话规则：<b>同类相加、跨类相乘</b>；经验类还要过一道「先相乘再统一阻尼」。
+        下表的<b>标签</b>就是这条效果属于哪一类，<b>公式</b>写的是它怎么算。
       </p>
       <div v-for="g in formulaGroups" :key="g.id" class="fx-formula-group">
-        <div class="dim fx-formula-head">{{ g.icon }} {{ g.name }}（{{ g.items.length }} 条）</div>
+        <div class="dim fx-formula-head">{{ g.icon }} {{ g.name }}（{{ g.items.length }}）</div>
         <div class="fx-formula-row" v-for="r in g.items" :key="r.id">
           <span class="fx-formula-name">{{ r.icon }} {{ r.name }}</span>
-          <span class="fx-formula-src dim">· {{ r.src }}</span>
-          <span class="fx-formula-text">{{ r.formula }}</span>
+          <span class="fx-formula-tag">{{ r.fx.tag }}</span>
+          <span class="fx-formula-text">{{ r.fx.f }}</span>
+          <span v-if="r.fx.note" class="fx-formula-note-inline dim">{{ r.fx.note }}</span>
         </div>
       </div>
     </FoldCard>
@@ -307,39 +308,62 @@ function jumpLabel(view) {
 .fx-note code {
   font-size: 11px;
 }
-/* ── 数值公式栏 ── */
+/* ── 数值公式栏（紧凑：名称 | 标签 | 公式 | 一句注）── */
 .fx-formula-note {
   font-size: 12px;
   line-height: 1.8;
   margin: 0 0 10px;
 }
 .fx-formula-group {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .fx-formula-head {
   font-size: 12px;
   margin: 8px 0 6px;
 }
 .fx-formula-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 190px) 92px minmax(0, 1fr) minmax(0, 240px);
+  align-items: baseline;
+  gap: 8px;
   font-size: 12.5px;
-  line-height: 1.75;
-  padding: 6px 10px;
+  line-height: 1.7;
+  padding: 5px 10px;
   border-radius: 6px;
   background: var(--bg-soft);
   border: 1px dashed var(--border);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .fx-formula-name {
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.fx-formula-src {
+/* 规则标签：一眼看出这类加成怎么合（相加 / 相乘 / 分段 / 定额…） */
+.fx-formula-tag {
   font-size: 11px;
-  margin-left: 6px;
+  text-align: center;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(var(--panel-soft-rgb), 0.72);
+  border: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
 }
-/* 公式单独起一行：它们都偏长，挤在名字右边会折断得很难读 */
 .fx-formula-text {
-  display: block;
-  margin-top: 2px;
+  color: var(--text);
+}
+.fx-formula-note-inline {
+  font-size: 11.5px;
+}
+@media (max-width: 900px) {
+  /* 窄屏：标签与公式同排，注另起一行 */
+  .fx-formula-row {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+  .fx-formula-text { grid-column: 1 / -1; }
+  .fx-formula-note-inline { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
   .fx-row {
