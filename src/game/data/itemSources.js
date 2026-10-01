@@ -16,6 +16,7 @@ import { PRESERVATION_RECIPES } from '../skills/PreservationSkill.js'
 import { raiseRecipeLevels, balanceRecipeLevels } from '../skills/recipeBalance.js'
 import { EXPLORATION_TARGETS_ALL } from './explorationTargets.js'
 import './lateExplore.js' // 副作用：把 Lv102-120 扩展目标并进上面那张表（顺序必须在读它之前）
+import './explorationNames.js' // 副作用：1-100 的卡片按掉落物改名（图鉴来源串写的就是目标名）
 import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from './explorationGear.js'
 import { GATHERING_EXT, PRODUCTION_EXT, SMITHING_EXT, PRESERVE_EXT } from './expansion1.js'
 import { GATHERING_EXT2, PRODUCTION_EXT2, SMITHING_EXT2, PRESERVE_EXT2 } from './expansion2.js'

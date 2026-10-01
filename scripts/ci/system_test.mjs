@@ -11248,6 +11248,49 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /:style="splashStyle"/.test(splashSrc) && /bgScenes\.js/.test(splashSrc), 'SplashScreen.vue')
 }
 
+// ═══ C90 美食探索卡片改名（2026-10-01 用户要求：1-100 按掉落物取名，对齐 101-120）═══
+{
+  const { EXPLORE_RENAME } = await import('../../src/game/data/explorationNames.js')
+  const { EXPLORATION_TARGETS_ALL } = await import('../../src/game/data/explorationTargets.js')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const base = EXPLORATION_TARGETS_ALL.filter((t) => /^explore_\d+$/.test(String(t.id)))
+  const late = EXPLORATION_TARGETS_ALL.filter((t) => String(t.id).startsWith('explore_late_'))
+
+  const noEntry = base.filter((t) => !EXPLORE_RENAME[t.id]).map((t) => t.id)
+  check('探索改名', `${base.length} 个 1-100 目标都有新名（缺一个就是那张卡片还叫旧名）`, noEntry.length === 0, noEntry.slice(0, 5).join(',') || 'OK')
+
+  // 🔴 每个新名必须含**招牌掉落物**（第一个物品战利品）中文名里的至少一个字：
+  //    这条是「名字真的根据掉落来」的判据——否则随手写个雅致名字也能过，等于没实现用户的要求。
+  const unrelated = []
+  for (const t of base) {
+    const first = (t.loot ?? []).find((l) => l.itemId)
+    const lootName = first ? (ITEMS[first.itemId]?.name ?? '') : ''
+    if (!lootName) continue
+    const nm = EXPLORE_RENAME[t.id] ?? ''
+    if (![...nm].some((ch) => lootName.includes(ch))) unrelated.push(`${t.id}:${nm}≠${lootName}`)
+  }
+  check('探索改名', '每个新名都含「招牌掉落物」的字（证明名字真按掉落取）', unrelated.length === 0, unrelated.slice(0, 6).join(' ') || 'OK')
+
+  const names = base.map((t) => t.name)
+  check('探索改名', '新名两两不同（卡片列表里不会出现两个同名摊位）', new Set(names).size === names.length,
+    `${names.length - new Set(names).size} 个重名`)
+
+  // 真的应用上了（模块被 import 过 ⇒ 表里的 name 已经是新名）。漏接线时这条会红，而不是「看着都改了」。
+  const notApplied = base.filter((t) => EXPLORE_RENAME[t.id] && t.name !== EXPLORE_RENAME[t.id]).map((t) => t.id)
+  check('探索改名', '改名已就地生效（消费方 import 了改名模块）', notApplied.length === 0, notApplied.slice(0, 5).join(',') || 'OK')
+
+  check('探索改名', `101-120 的 ${late.length} 个卡片名不被本模块碰（它们本来就按掉落取名）`,
+    late.every((t) => !EXPLORE_RENAME[t.id]), '')
+  // 玩法数值一个字节没动：名字之外，等级/间隔/经验/成功率/掉落件数逐条与「只改名」的预期一致
+  const badField = base.filter((t) => !(t.reqLevel > 0 && t.intervalSec > 0 && t.xp > 0 && t.baseSuccess > 0 && t.loot?.length >= 2))
+  check('探索改名', '只改了名字：等级/间隔/经验/成功率/掉落仍齐全（冻结层玩法数值未动）', badField.length === 0, badField.slice(0, 5).map((t) => t.id).join(',') || 'OK')
+
+  // 静态：三个消费方都要副作用导入（漏一个 = 那里显示旧名）
+  const files = ['skills/ExplorationSkill.js', 'data/itemSources.js', 'data/spoilBalance.js']
+  const missing = files.filter((f) => !fs.readFileSync(new URL('../../src/game/' + f, import.meta.url), 'utf8').includes('explorationNames.js'))
+  check('探索改名', '三个消费方（技能/图鉴来源/腐坏曲线）都副作用导入了改名模块', missing.length === 0, missing.join(',') || 'OK')
+}
+
 console.log(`\n══ 结果：通过 ${pass} / 失败 ${fail} ══`)
 console.log(`发现缺陷 ${bugs.length} 项（另有代码核查项在报告中）`)
 process.exit(fail === 0 ? 0 : 1)

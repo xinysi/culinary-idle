@@ -8,6 +8,7 @@ import { masteryLevelFromCount, masteryLevelProgress, masteryXpMultiplier, maste
 import { itemName } from '../data/items.js'
 import { EXPLORATION_TARGETS_ALL } from '../data/explorationTargets.js'
 import '../data/lateExplore.js' // 副作用：Lv102-120 扩展目标
+import '../data/explorationNames.js' // 副作用：按掉落物重命名 1-100 的卡片（显示层，玩法数值不动）
 import { exploreSuccessChance as exploreDifficultyMult, exploreLootChance } from '../data/difficulty.js' // 全局难度系数（唯一缩放出口）
 import { exploreSuccessChance as exploreChanceOf, exploreInitialChance, exploreBandOf } from '../data/explorationBalance.js'
 import { EXPLORE_GEAR_ITEMS, EXPLORE_GEAR_DROP_CHANCE } from '../data/explorationGear.js'
