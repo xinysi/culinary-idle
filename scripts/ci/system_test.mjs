@@ -9700,6 +9700,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     /landable/.test(side) && /RAIL_HIDDEN_VIEWS\.includes\(it\.view\)/.test(side))
   check('主导航', '本类页面清单**铺满左栏宽度**（不是主区那套 168px 固定宽）',
     /\.sidebar-rail\.feature-rail\s*\{[^}]*position:\s*static/.test(css))
+  check('主导航', '🔴 折叠成「仅图标」时宽度必须让回 token（(0,2,0) 的铺满规则会压过组件的 mini 规则）',
+    /\.sidebar-rail\.feature-rail--mini\s*\{[^}]*width:\s*var\(--rail-w-mini\)/.test(css))
   // 行为：store 上的开关语义（点第二次收起由 Sidebar 的 toggleCat 负责）
   {
     useUiStore()

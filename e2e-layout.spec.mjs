@@ -294,13 +294,13 @@ async function scanRail(page, viewport, cats) {
   for (const cat of cats) {
     await page.locator('.feature-cat', { hasText: cat }).first().click()
     await page.waitForTimeout(320)
-    const rail = page.locator('.main-scroll > .feature-rail')
+    const rail = page.locator('.app-sidebar .feature-rail')
     const names = (await rail.locator('.fr-item').allTextContents()).map((t) => t.replace(/[^一-龥]/g, ''))
     for (let i = 0; i < names.length; i++) {
       // 山海食经是**整屏画布页**，设计上就不挂导航栏（`--bleed` 下分掉 168px 会把画布挤变形）
       // ⇒ 它在本轮跳过；它自己的排版由主扫描（`setView('shanhai')`）覆盖。
       if (names[i].includes('山海食经')) continue
-      await page.locator('.main-scroll > .feature-rail .fr-item').nth(i).click()
+      await page.locator('.app-sidebar .feature-rail .fr-item').nth(i).click()
       await page.waitForTimeout(340)
       await page.evaluate(expandAll)
       await page.waitForTimeout(280)

@@ -105,13 +105,13 @@ test.describe('游戏全流程', () => {
       const cat = page.locator('.feature-cat', { hasText: catName })
       if (await cat.count()) {
         // 宽屏两栏工作区：已在同一类里就直接点导航条目，否则先点大类按钮（会把落地页切到本类第一页）
-        const rail = page.locator('.main-scroll > .feature-rail')
+        const rail = page.locator('.app-sidebar .feature-rail')
         const inRail = await rail.locator('.fr-item', { hasText: pageName }).count()
         if (!inRail) {
           await cat.first().click({ timeout: 3000 })
           await page.waitForTimeout(220)
         }
-        await page.locator('.main-scroll > .feature-rail .fr-item', { hasText: pageName }).first().click({ timeout: 3000 })
+        await page.locator('.app-sidebar .feature-rail .fr-item', { hasText: pageName }).first().click({ timeout: 3000 })
       } else {
         // 窄屏 / 回退布局：磁贴直达
         await page.locator('.feature-tile', { hasText: pageName }).first().click({ timeout: 3000 })
@@ -1913,9 +1913,9 @@ test.describe('游戏全流程', () => {
     await expect(page.locator('.app-layout')).toBeVisible()
   })
 
-  // 功能页「大类工作区」（2026-09-27 用户⑳ 第二轮）：「点大类 → 右面板左边是导航、右边是内容」。
+  // 功能页「大类工作区」：点大类 → **左栏下半**出本类页面清单（2026-10-01 用户要求从主区右侧挪过来）。
   // 这一条是**行为**断言：浮层那套已删，所以这里同时钉住「导航真的在主区（不是浮层）」与「它会自动收起」。
-  test('功能页：点大类 → 主区左侧出导航、右侧出内容；换到别的大类/技能页会自动收起', async ({ page }) => {
+  test('功能页：点大类 → 左栏下半出本类页面清单、主区整宽；换到别的大类/技能页会自动收起', async ({ page }) => {
     await page.locator('.splash-start-btn').click()
     await page.waitForTimeout(400)
     await page.locator('.start-slot-modal .slot-card').nth(0).locator('button').click()
@@ -1930,18 +1930,23 @@ test.describe('游戏全流程', () => {
     // ① 点一个大类：主区必须是「左导航 + 右内容」两栏，导航在**滚动区里**（不是 body 上的浮层）
     await page.locator('.feature-cat', { hasText: '采买与转化' }).first().click()
     await page.waitForTimeout(400)
-    const rail = page.locator('.main-scroll > .feature-rail')
+    const rail = page.locator('.app-sidebar .feature-rail')
     await expect(rail).toHaveCount(1)
     await expect(rail.locator('.fr-item', { hasText: '交易所' })).toHaveCount(1)
     await expect(page.locator('.feature-flyout')).toHaveCount(0) // 浮层那套已删
-    // 两栏是并排的：导航栏的整体在内容列的左侧（拿同一行里的 x 比，别只断言「存在」）
+    // 挪到**左栏下半**（2026-10-01 用户要求）：导航栏在左栏里，主内容区恢复整宽（不再两栏）
     const geo = await page.evaluate(() => {
-      const r = document.querySelector('.main-scroll > .feature-rail')?.getBoundingClientRect()
-      const c = document.querySelector('.main-scroll > .main-col-probe, .main-scroll > :not(.feature-rail)')?.getBoundingClientRect()
-      return r && c ? { railRight: Math.round(r.right), contentLeft: Math.round(c.left), railW: Math.round(r.width) } : null
+      const r = document.querySelector('.app-sidebar .feature-rail')?.getBoundingClientRect()
+      const s = document.querySelector('.app-sidebar')?.getBoundingClientRect()
+      const m = document.querySelector('.main-scroll')?.getBoundingClientRect()
+      return r && s && m ? {
+        inSidebar: r.left >= s.left - 1 && r.right <= s.right + 1,
+        railRight: Math.round(r.right), mainLeft: Math.round(m.left), railW: Math.round(r.width),
+      } : null
     })
-    expect(geo, '两栏的几何取不到').not.toBeNull()
-    expect(geo.contentLeft, `内容列没有落在导航栏右侧：${JSON.stringify(geo)}`).toBeGreaterThanOrEqual(geo.railRight - 1)
+    expect(geo, '左栏导航栏的几何取不到').not.toBeNull()
+    expect(geo.inSidebar, `导航栏没有落在左栏里：${JSON.stringify(geo)}`).toBe(true)
+    expect(geo.mainLeft, `主内容区应整宽、落在左栏右侧：${JSON.stringify(geo)}`).toBeGreaterThanOrEqual(geo.railRight - 1)
 
     // ② 点导航里的另一页：内容换掉，但导航**还在**（这就是与浮层的本质区别）
     await rail.locator('.fr-item', { hasText: '炼金' }).click()

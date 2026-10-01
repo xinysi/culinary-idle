@@ -1044,6 +1044,13 @@ h2 {
   padding-top: 6px;
   border-top: 1px dashed var(--border);
 }
+/* ⚠️ 折叠成「仅图标」时必须把宽度让回 token：上面那条 (0,2,0) 会压过组件自己的
+   `.feature-rail--mini { width: var(--rail-w-mini) }`（0,1,0）⇒ 折叠点了没反应
+   （e2e 实测「折叠前后宽度没变化 234 → 234」当场抓到）。这里用同权重把它顶回去。 */
+.sidebar-rail.feature-rail--mini {
+  width: var(--rail-w-mini);
+  flex: 0 0 var(--rail-w-mini);
+}
 
 /* 分组标题 = 可点击的折叠开关（2026-09-18 分组默认折叠：首屏只见 6 个分组入口） */
 .feature-group-label {
