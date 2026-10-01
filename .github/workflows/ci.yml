@@ -1,4 +1,4 @@
-﻿# 持续集成：push main / PR → 模拟套件 + 构建 + e2e（9 项）
+# 持续集成：push main / PR → 模拟套件 + 构建 + e2e（9 项）
 name: CI
 
 on:
@@ -23,7 +23,7 @@ jobs:
       - name: Simulation suites
         run: |
           node scripts/ci/xp_log_audit.mjs
-      node scripts/ci/system_test.mjs
+          node scripts/ci/system_test.mjs
           node scripts/ci/season_check.mjs
           node scripts/ci/system_test2.mjs
           node scripts/ci/buff_test.mjs
