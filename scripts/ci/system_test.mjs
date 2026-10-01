@@ -2626,6 +2626,21 @@ console.log('══ T. 攻略数据 ══')
       })())
     check('攻略', '行动清单是「标题 + 正文」卡片（用户：「太紧凑，玩家看的头疼」）',
       /gd-step-title/.test(gv) && /function stepParts/.test(gv) && /\.gd-step\s*\{[^}]*padding:\s*1[0-9]px/.test(gv))
+  // 阶段流程图（2026-10-01 用户：「参考运营调参员页面那种流程图来结合出最优方案」）：
+  // 形态照 TunerPanel 的 `.tp-chain`，但**可点**（点一步滚到对应行动卡）⇒ 三件事都要在。
+  check('攻略', '阶段流程图落地（`.gd-flow` + 可点的 `.gd-fnode`），行动卡带 `data-step` 供跳转',
+    /\bgd-flow\b/.test(gv) && /class="gd-fnode"/.test(gv) && /@click="jumpToStep\(n\.to\)"/.test(gv) &&
+      /:data-step="i"/.test(gv) && /function jumpToStep/.test(gv))
+  // 🔴 流程图节点的 `to` 必须指向**真实存在**的行动卡：写错下标时点了没反应，而且**不报错**（静默失效）
+  {
+    const flowTo = [...gv.matchAll(/\{\s*label:\s*'[^']*',\s*to:\s*(\d+)\s*\}/g)].map((m) => Number(m[1]))
+    const stageId = (gv.match(/^\s{2}(\w+):\s*\{\s*$/m) || [])[1] ?? 'beginner'
+    const st = G.GUIDE_STAGES.find((x) => x.id === stageId) ?? G.GUIDE_STAGES[0]
+    const n = st?.actions?.length ?? 0
+    check('攻略', '流程图的每一步都指向存在的行动卡（越界 = 点了没反应）',
+      flowTo.length >= 3 && n > 0 && flowTo.every((i) => i >= 0 && i < n),
+      `to=${flowTo.join(',')} / 该阶段行动 ${n} 条`)
+  }
   }
 }
 

@@ -46,6 +46,32 @@ function stepParts(s) {
   return { title, rest: rest || '' }
 }
 const steps = computed(() => (stage.value?.actions ?? []).map(stepParts))
+
+/** 阶段流程图（2026-10-01 用户要求「参考运营调参员页面那种流程图」）：
+ *  形态照 `TunerPanel.vue` 的 `.tp-chain`（一排方框 + `→` 箭头 + 一句脚注），但这里**可点** ——
+ *  点某一步会滚到下面那张行动卡并闪一下，把「先做什么」与「怎么做」连起来。
+ *  ⚠️ 先只在「新手」上落地（用户要求先看一个阶段的效果再铺开），没登记的阶段不渲染这块。 */
+const FLOWS = {
+  beginner: {
+    title: '核心循环',
+    note: '这个游戏的节奏就这四步：挑一个目标挂机 → 拿产出做东西 → 用做出来的东西打赢对决 → 解锁更好的目标。',
+    nodes: [
+      { label: '① 选目标', to: 0 },
+      { label: '② 挂机产出', to: 3 },
+      { label: '③ 制作', to: 7 },
+      { label: '④ 打赢对决', to: 10 },
+    ],
+  },
+}
+const flow = computed(() => FLOWS[stage.value?.id] ?? null)
+/** 点流程图某一步 ⇒ 滚到那张行动卡并闪一下（唯一出口，别在模板里各写一份） */
+function jumpToStep(i) {
+  const el = document.querySelector(`[data-step="${i}"]`)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el.classList.add('gd-step-flash')
+  setTimeout(() => el.classList.remove('gd-step-flash'), 1200)
+}
 function stepIcon(i) {
   return ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳'][i] ?? `${i + 1}.`
 }
@@ -104,10 +130,25 @@ function stepIcon(i) {
         </ul>
       </div>
 
+      <!-- 阶段流程图（借鉴运营调参页的 `.tp-chain`）：一眼看懂「先后」，点一步滚到对应行动卡 -->
+      <div v-if="flow" class="card gd-flow">
+        <div class="gd-flow-head">
+          <h4>🧭 {{ flow.title }}</h4>
+          <span class="dim">点任一步，跳到下面的对应做法</span>
+        </div>
+        <div class="gd-fnodes">
+          <template v-for="(n, i) in flow.nodes" :key="i">
+            <span v-if="i" class="gd-farrow">→</span>
+            <button class="gd-fnode" @click="jumpToStep(n.to)">{{ n.label }}</button>
+          </template>
+        </div>
+        <p class="dim gd-fnote">{{ flow.note }}</p>
+      </div>
+
       <h4 class="gd-sec">📋 行动清单 <span class="dim">按顺序做，遇到卡点再回头看</span></h4>
       <ol class="gd-steps">
         <!-- actions 里带 <b> 富文本 ⇒ 必须 v-html（{{ }} 会把标记当文本显示出来，项目里的老坑） -->
-        <li v-for="(a, i) in stage.actions" :key="i" class="gd-step">
+        <li v-for="(a, i) in stage.actions" :key="i" class="gd-step" :data-step="i">
           <span class="gd-step-no">{{ stepIcon(i) }}</span>
           <div class="gd-step-body">
             <div v-if="steps[i]?.title" class="gd-step-title">{{ steps[i].title }}</div>
@@ -204,6 +245,32 @@ function stepIcon(i) {
 .gd-summary { margin: 0 0 10px; color: var(--text-dim); line-height: 1.8; }
 .gd-goals { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; line-height: 1.75; }
 .gd-sec { margin: 4px 0 0; font-size: 15px; }
+
+/* 阶段流程图（2026-10-01；形态照 TunerPanel 的 `.tp-chain`：一排方框 + 箭头 + 脚注） */
+.gd-flow { padding: 14px 16px; }
+.gd-flow-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.gd-flow-head h4 { margin: 0; }
+.gd-fnodes { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+.gd-fnode {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(var(--primary-tint-rgb), 0.14);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.gd-fnode:hover { border-color: var(--primary); background: rgba(var(--primary-tint-rgb), 0.26); }
+.gd-farrow { align-self: center; color: var(--muted); font-size: 13px; }
+.gd-fnote { margin: 10px 0 0; line-height: 1.7; }
+/* 点流程图后目标卡片闪一下（告诉玩家「跳到的是这一条」） */
+.gd-step-flash { animation: gd-flash 1.2s ease; }
+@keyframes gd-flash {
+  0%, 100% { box-shadow: none; }
+  30% { box-shadow: 0 0 0 3px rgba(var(--primary-tint-rgb), 0.55); }
+}
 
 /* 行动清单排两栏（用户 2026-10-01 选定方案 A）：
    宽屏两列、窄屏回单列。grid 按行填充 ⇒ 阅读顺序是 ①② / ③④，与编号一致。
