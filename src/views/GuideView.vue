@@ -47,6 +47,46 @@ function stepParts(s) {
 }
 const steps = computed(() => (stage.value?.actions ?? []).map(stepParts))
 
+/** 把该阶段的行动**重新分组**（2026-10-01 用户：「攻略所有内容都要重新排版」）。
+ *  纯派生、不写死下标、数据一个字不改：文案里带页面路径的（`左侧栏 · 挂机产线` 这种）
+ *  归到「🧭 功能导览」并按大类再分小节，其余归「🚀 推进主线」—— 六个阶段同时受益。 */
+const sectioned = computed(() => {
+  const main = []
+  const tour = new Map()
+  const acts = stage.value?.actions ?? []
+  acts.forEach((raw, i) => {
+    const m = String(raw).match(/左侧栏\s*·\s*([^「」（）\s，、。；·]{2,6})/)
+    if (m) {
+      const g = m[1].trim()
+      if (!tour.has(g)) tour.set(g, [])
+      tour.get(g).push(i)
+    } else main.push(i)
+  })
+  return { main, tour: [...tour.entries()] }
+})
+
+/** 功能页分组（88 条不再是一长条）：按数据里本来就有的「建议阶段」字段切成小节。
+ *  ⚠️ 用「扁平行 + 行内小节标题」而不是嵌套容器 —— 不动物件嵌套，模板不可能被改坏。 */
+const STAGE_ORDER = ['全程', '新手起', '前期起', '中期起', '后期起', '大后期起', '毕业']
+function groupByStage(c) {
+  const rows = []
+  const seen = new Map()
+  for (const it of c.items) {
+    const key = it.stage ?? '全程'
+    if (!seen.has(key)) seen.set(key, [])
+    seen.get(key).push(it)
+  }
+  const keys = [...seen.keys()].sort((a, b) => {
+    const ia = STAGE_ORDER.indexOf(a), ib = STAGE_ORDER.indexOf(b)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
+  for (const k of keys) {
+    rows.push({ header: `${k}（${seen.get(k).length}）` })
+    for (const it of seen.get(k)) rows.push({ item: it })
+  }
+  return rows
+}
+
 /** 阶段流程图（2026-10-01 用户要求「参考运营调参员页面那种流程图」）：
  *  形态照 `TunerPanel.vue` 的 `.tp-chain`（一排方框 + `→` 箭头 + 一句脚注），但这里**可点** ——
  *  点某一步会滚到下面那张行动卡并闪一下，把「先做什么」与「怎么做」连起来。
@@ -145,17 +185,30 @@ function stepIcon(i) {
         <p class="dim gd-fnote">{{ flow.note }}</p>
       </div>
 
-      <h4 class="gd-sec">📋 行动清单 <span class="dim">按顺序做，遇到卡点再回头看</span></h4>
+      <h4 class="gd-sec">🚀 推进主线 <span class="dim">这一阶段先做这些，按顺序来</span></h4>
       <ol class="gd-steps">
-        <!-- actions 里带 <b> 富文本 ⇒ 必须 v-html（{{ }} 会把标记当文本显示出来，项目里的老坑） -->
-        <li v-for="(a, i) in stage.actions" :key="i" class="gd-step" :data-step="i">
+        <li v-for="i in sectioned.main" :key="i" class="gd-step" :data-step="i">
           <span class="gd-step-no">{{ stepIcon(i) }}</span>
           <div class="gd-step-body">
             <div v-if="steps[i]?.title" class="gd-step-title">{{ steps[i].title }}</div>
-            <div class="gd-step-text" v-html="steps[i]?.rest || a"></div>
+            <div class="gd-step-text" v-html="steps[i]?.rest || stage.actions[i]"></div>
           </div>
         </li>
       </ol>
+
+      <!-- 功能导览：按文案里写的页面大类自动分小节 -->
+      <template v-for="[g, idxs] in sectioned.tour" :key="g">
+        <h4 class="gd-sec">🧭 功能导览 · {{ g }} <span class="dim">{{ idxs.length }} 项</span></h4>
+        <ol class="gd-steps">
+          <li v-for="i in idxs" :key="i" class="gd-step" :data-step="i">
+            <span class="gd-step-no">{{ stepIcon(i) }}</span>
+            <div class="gd-step-body">
+              <div v-if="steps[i]?.title" class="gd-step-title">{{ steps[i].title }}</div>
+              <div class="gd-step-text" v-html="steps[i]?.rest || stage.actions[i]"></div>
+            </div>
+          </li>
+        </ol>
+      </template>
 
       <div class="gd-two">
         <div class="card gd-mini">
@@ -176,18 +229,21 @@ function stepIcon(i) {
     <!-- 单个功能大类 / 全部 -->
     <div v-else class="gd-cats">
       <div v-for="c in isAll ? GUIDE_OVERVIEW : [cat]" :key="c.id" class="card ov-card gd-cat">
-        <h3>{{ c.icon }} {{ c.name }} <span class="dim">（{{ c.items.length }} 项）</span></h3>
+        <h3>{{ c.icon }} {{ c.name }} <span class="dim">（{{ c.items.length }} 项 · 按建议阶段分组）</span></h3>
         <div class="gd-items">
-          <div v-for="it in c.items" :key="it.name" class="ov-item gd-item">
+          <template v-for="row in groupByStage(c)" :key="row.header ?? row.item.name">
+          <div v-if="row.header" class="gd-sghead">{{ row.header }}</div>
+          <div v-else class="ov-item gd-item">
             <div class="ov-head">
-              <span class="ov-icon">{{ it.icon }}</span>
-              <strong class="ov-name">{{ it.name }}</strong>
-              <span class="badge badge-on ov-stage">{{ it.stage }}</span>
-              <span class="dim ov-unlock">{{ it.unlock }}</span>
+              <span class="ov-icon">{{ row.item.icon }}</span>
+              <strong class="ov-name">{{ row.item.name }}</strong>
+              <span class="badge badge-on ov-stage">{{ row.item.stage }}</span>
+              <span class="dim ov-unlock">{{ row.item.unlock }}</span>
             </div>
             <!-- desc 是富文本（带 <b>），必须 v-html -->
-            <p class="dim ov-desc" v-html="it.desc"></p>
+            <p class="dim ov-desc" v-html="row.item.desc"></p>
           </div>
+          </template>
         </div>
       </div>
     </div>
@@ -244,7 +300,17 @@ function stepIcon(i) {
 .gd-hero h3 { margin-bottom: 8px; }
 .gd-summary { margin: 0 0 10px; color: var(--text-dim); line-height: 1.8; }
 .gd-goals { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; line-height: 1.75; }
-.gd-sec { margin: 4px 0 0; font-size: 15px; }
+.gd-sec { margin: 14px 0 0; font-size: 15px; }
+/* 功能页的阶段小节标题（行内版，不嵌套容器） */
+.gd-sghead {
+  margin: 14px 0 2px;
+  padding-bottom: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-strong);
+  border-bottom: 1px dashed var(--border);
+}
+.gd-sghead:first-child { margin-top: 6px; }
 
 /* 阶段流程图（2026-10-01；形态照 TunerPanel 的 `.tp-chain`：一排方框 + 箭头 + 脚注） */
 .gd-flow { padding: 14px 16px; }
