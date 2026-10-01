@@ -36,7 +36,7 @@ const ALL = readdirSync(CI_DIR)
 //   · SLOW：查 Electron 打包产物，**本地很慢**（实测 132.8s，比其它全部加起来还贵），
 //     只在需要时单独跑（`--slow`）
 const CORE = [
-  'system_test', 'season_check', 'system_test2', 'buff_test', 'continuity_test',
+  'xp_log_audit', 'system_test', 'season_check', 'system_test2', 'buff_test', 'continuity_test',
   'audit_sync', 'content_sync_audit', 'item_triple_audit', 'minigame_ui_audit',
   'difficulty_audit', 'image_path_audit', 'bgm_audit', 'gen_drift_audit',
   'template_binding_audit', 'action_sweep',

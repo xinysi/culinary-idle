@@ -261,8 +261,14 @@ export class GatheringSkill extends Skill {
     if (this.ammoItemId) this.player.spendItem(this.ammoItemId, this.ammoPerAction)
     const doubled = Math.random() < this.doubleChance(target)
     const qty = this.yieldQuantity(doubled ? 2 : 1)
-    this.award(target, qty, { doubled })
+    // ⚠️ `outcome` 必须带上：日志渲染是**按 outcome 分档写文案**的，缺了它就落到 default
+    //    （「采矿：获得 铜矿 ×2」——把「挖到」这个动作感丢了）。2026-10-01 日志覆盖审计发现
+    //    采矿/伐木这两支走基类 `performAction`、一直没传 outcome。
+    this.award(target, qty, { doubled, outcome: this.actionOutcome })
   }
+
+  /** 本支动作的日志档位（子类覆盖：采摘 gather / 采矿 mine / 伐木 chop…） */
+  get actionOutcome() { return 'gather' }
 
   /** 发放产出：物品 + 专精 + 经验 + 事件（子类复用） */
   award(target, qty, flags = {}) {

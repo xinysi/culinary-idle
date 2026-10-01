@@ -17,4 +17,7 @@ export class WoodcuttingSkill extends GatheringSkill {
   constructor(player) {
     super('woodcutting', player, WOODCUTTING_TARGETS)
   }
+
+  /** 日志档位：木是「砍到」（2026-10-01 覆盖审计） */
+  get actionOutcome() { return 'chop' }
 }

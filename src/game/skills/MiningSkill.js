@@ -18,4 +18,7 @@ export class MiningSkill extends GatheringSkill {
   constructor(player) {
     super('mining', player, MINING_TARGETS)
   }
+
+  /** 日志档位：矿是「挖到」而不是笼统的「获得」（2026-10-01 覆盖审计） */
+  get actionOutcome() { return 'mine' }
 }

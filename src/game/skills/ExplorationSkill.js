@@ -188,10 +188,12 @@ export class ExplorationSkill extends Skill {
       }
       // 卡片经验（2026-09-09 修复）：此前误用 addXp，少了 ×60 卡片系数与精通倍率 → 满级时长
       // 比同类采集慢约 12 倍（基准 64 天 vs 5 天）。改用 addCardXp，与采集/制作同口径。
-      this.addCardXp(target.xp, masteryXpMultiplier(this.masteryLevelOf(target)), target.reqLevel)
+      // 🔴 2026-10-01：**要把返回值带进事件**（`expGained`）——此前丢掉了，日志里探索没有「+N 经验」
+      //    （采集/制作都有），玩家只能看着经验条自己猜。这与「显示与结算同源」是同一条纪律。
+      const expGained = this.addCardXp(target.xp, masteryXpMultiplier(this.masteryLevelOf(target)), target.reqLevel)
       this.player.onExplorationSuccess()
       // 掉落清单用中文描述的字符串（extraGain）；itemId 仍是目标 id，仅用于计数，不再当物品名拼接日志
-      EventBus.emit('skill:action', { skillId: this.id, itemId: target.id, qty: 1, outcome: 'explore', timestamp: Date.now(), extraGain: gained.length ? gained.join('、') : null })
+      EventBus.emit('skill:action', { skillId: this.id, itemId: target.id, qty: 1, outcome: 'explore', expGained, timestamp: Date.now(), extraGain: gained.length ? gained.join('、') : null })
     } else {
       // 失败：被抓住 → 损失金币（不足则损失 生命值）
       let penalty = ''

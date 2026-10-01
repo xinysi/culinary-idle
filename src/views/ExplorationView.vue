@@ -9,7 +9,10 @@ import { useUiStore } from '../stores/ui.js'
 import { getItem } from '../game/data/items.js'
 import { getSkillDef } from '../game/data/skills.js'
 import { itemImage } from '../game/data/itemImage.js'
-import { LOW_TARGET_NOTE, LOW_TARGET_CHIP } from '../game/core/growthRate.js'
+import { LOW_TARGET_NOTE, LOW_TARGET_CHIP, LOW_TARGET_XP_MULT } from '../game/core/growthRate.js'
+// ⚠️ `CARD_XP_SCALE` 的出处是 **`skills/Skill.js`**（不是 `core/growthRate.js`）——
+//    导错模块构建会直接失败（本轮踩过）。
+import { CARD_XP_SCALE } from '../game/skills/Skill.js'
 import { levelEras } from '../game/data/levelEras.js'
 import { masteryXpMultiplier } from '../game/core/mastery.js'
 import { EXPLORE_SUCCESS_CAP, EXPLORE_CAP_TEXT, exploreBandFactor, exploreMasteryPP } from '../game/data/explorationBalance.js'
@@ -28,6 +31,17 @@ const skillClosed = computed(() => !!player.closedIdleTasks?.[props.instance.id]
 
 /** 这个目标是否吃「低目标经验减半」——判定走实例的唯一出口（`Skill.isLowTargetLevel`），视图不自己算 */
 const isLow = (t) => props.instance.isLowTargetLevel(t.reqLevel)
+
+/** 卡片上「经验/次」= **实际进经验条的数**（作者基数 × 全局卡片系数 CARD_XP_SCALE）。
+ *  🔴 2026-10-01 修：本页此前直接显示作者基数 `t.xp`（Lv50 的卡写 245），
+ *     而实际到账是 245×60=**14700** —— 与采集页（早已改成显示生效值）**两套口径**，
+ *     正是本项目最忌的「显示与结算不一致」。现在与采集页同一套写法。
+ *  低目标减半的判定问实例、系数读常量（视图不自己写 0.5）。 */
+function xpOf(t) {
+  const base = t.xp * CARD_XP_SCALE
+  return isLow(t) ? Math.round(base * LOW_TARGET_XP_MULT) : base
+}
+const XP_HINT = `一次探索动作实际获得的技能经验（已计入全局卡片经验系数 ×${CARD_XP_SCALE}，与经验条同一口径）`
 function isUnlocked(id) {
   const t = props.instance.targets.find((x) => x.id === id)
   return t ? props.instance.level >= t.reqLevel : false
@@ -173,9 +187,9 @@ function succTip(t) {
                  整栏一行那样被拉成「标签在最左、数值在最右」的两半） -->
             <div class="card-col">
               <div class="ex-stats">
-                <div class="gather-card-row" :title="isLow(t) ? LOW_TARGET_NOTE : ''">
+                <div class="gather-card-row" :title="XP_HINT + (isLow(t) ? '；' + LOW_TARGET_NOTE : '')">
                   <span>经验</span>
-                  <span class="mono">{{ t.xp }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryXpMult(t) }}</span><span v-if="isLow(t)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
+                  <span class="mono">{{ xpOf(t) }}<span v-if="masteryLevelOf(t) >= 5" class="mastery-hl">&nbsp;×{{ masteryXpMult(t) }}</span><span v-if="isLow(t)" class="xp-low-chip" :title="LOW_TARGET_NOTE">{{ LOW_TARGET_CHIP }}</span></span>
                 </div>
                 <div class="gather-card-row">
                   <span>间隔</span>

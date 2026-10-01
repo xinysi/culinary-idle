@@ -1,4 +1,4 @@
-// 游戏启动流程 — 需求文档 §10.2
+﻿// 游戏启动流程 — 需求文档 §10.2
 // 1. 读档（无档则新游戏）→ 2. 创建技能实例 → 3. 离线收益结算（§10.2.2）
 // → 4. 启动主循环（§10.2.1）→ 5. 切后台自动存档（§8.2）
 // 存档位操作（§8.2）：saveToSlot / loadSlot / deleteSlot / importSaveToSlot / exportSave
@@ -173,6 +173,22 @@ export function registerGameEvents() {
         break
       case 'dig':
         msg = `${skillName}：挖到 ${name} ×${qty}${doubled ? '（双倍！）' : ''}`
+        break
+      // 2026-10-01 日志覆盖审计补的四条：此前它们落到 default，文案分别是
+      // 「获得 X ×N」（采摘/采矿/伐木 —— 动作感丢了）与「获得 堆肥 ×N」（施肥 —— **语义反了**：
+      // 那是玩家**用掉**的肥料，不是获得的东西）。
+      case 'gather':
+        msg = `${skillName}：采到 ${name} ×${qty}${doubled ? '（双倍！）' : ''}`
+        break
+      case 'mine':
+        msg = `${skillName}：挖到 ${name} ×${qty}${doubled ? '（双倍！）' : ''}`
+        break
+      case 'chop':
+        msg = `${skillName}：砍到 ${name} ×${qty}${doubled ? '（双倍！）' : ''}`
+        break
+      case 'fertilize':
+        msg = `${skillName}：给地块施了 ${name}`
+        kind = 'info'
         break
       case 'plant':
         msg = `${skillName}：种下了 ${name}`
