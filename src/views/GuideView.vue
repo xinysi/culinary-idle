@@ -205,7 +205,18 @@ function stepIcon(i) {
 .gd-goals { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; line-height: 1.75; }
 .gd-sec { margin: 4px 0 0; font-size: 15px; }
 
-.gd-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+/* 行动清单排两栏（用户 2026-10-01 选定方案 A）：
+   宽屏两列、窄屏回单列。grid 按行填充 ⇒ 阅读顺序是 ①② / ③④，与编号一致。
+   `minmax(0, 1fr)` 不能省：直接写 `1fr` 时长内容会把列撑破（项目里的老坑）。 */
+.gd-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
 .gd-step {
   display: flex;
   gap: 12px;
@@ -229,6 +240,10 @@ function stepIcon(i) {
 .gd-item { padding: 9px 0; border-top: 1px dashed var(--border); }
 .gd-item:first-child { border-top: none; }
 .ov-desc { line-height: 1.8; }
+
+@media (max-width: 1100px) {
+  .gd-steps { grid-template-columns: 1fr; }  /* 窄一点就回单列，别把卡片挤成条 */
+}
 
 @media (max-width: 940px) {
   .gd-chips { position: static; }
