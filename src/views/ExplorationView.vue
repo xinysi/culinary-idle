@@ -233,7 +233,7 @@ function succTip(t) {
                     @error="$event.target.style.display = 'none'"
                     alt="" loading="lazy" decoding="async" />
                   <span class="mono loot-text">{{ lootName(l) }}</span>
-                  <span class="mono loot-pct" title="实际结算概率（已含难度倍率；金币不受系数影响）">{{ lootPct(l) }}</span>
+                  <span class="mono loot-pct" title="实际结算概率（已含难度倍率；金币不受影响）">{{ lootPct(l) }}</span>
                 </div>
               </div>
             </div>
