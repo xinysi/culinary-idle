@@ -9193,17 +9193,17 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 // 要重写约 15 处玩家可见承诺、且治不了「转生层数无上限」），而是**在 dampXpStack 之后按等级夹上界、超界部分只按尾巴计入**。
 {
   const { xpSpeedupCap, capXpSpeedup, XP_SPEEDUP_CAP_BANDS, XP_TAIL_RATE } = await import('../../src/game/core/growthRate.js')
-  check('叠区饱和', '上界分档 = 6 / 10 / 14（Lv1-40 / 41-70 / 71-99）',
-    xpSpeedupCap(1) === 6 && xpSpeedupCap(40) === 6 && xpSpeedupCap(41) === 10
-    && xpSpeedupCap(70) === 10 && xpSpeedupCap(71) === 14 && xpSpeedupCap(99) === 14,
+  check('叠区饱和', '上界分档 = 5 / 8 / 11（Lv1-40 / 41-70 / 71-99）',
+    xpSpeedupCap(1) === 5 && xpSpeedupCap(40) === 5 && xpSpeedupCap(41) === 8 && xpSpeedupCap(99) === 11
+    && xpSpeedupCap(70) === 8 && xpSpeedupCap(71) === 11 && xpSpeedupCap(99) === 11,
     [1, 40, 41, 70, 71, 99].map(xpSpeedupCap).join('/'))
   check('叠区饱和', '分档表单调不减（防止有人改成递减/删掉最后一档）',
     XP_SPEEDUP_CAP_BANDS.length === 3 && XP_SPEEDUP_CAP_BANDS.every((b, i, a) => i === 0 || b.cap >= a[i - 1].cap))
-  check('叠区饱和', '尾巴系数 = 0.1 且 > 0（为 0 就是硬夹，会让高阶档位与小档位拉平）',
-    XP_TAIL_RATE === 0.1 && XP_TAIL_RATE > 0)
+  check('叠区饱和', '尾巴系数 = 0.05 且 > 0（为 0 就是硬夹，会让高阶档位与小档位拉平）',
+    XP_TAIL_RATE === 0.05 && XP_TAIL_RATE > 0)
   // 不变量①：未达上界**原样通过**（无/单一/中配三档必须逐值不变 —— 只在病灶处咬）
   check('叠区饱和', '未达上界原样通过（×4.3 → ×4.3，低档不受影响）',
-    capXpSpeedup(99, 4.3) === 4.3 && capXpSpeedup(1, 5.9) === 5.9)
+    capXpSpeedup(99, 4.3) === 4.3 && capXpSpeedup(1, 4.6) === 4.6)
   // 不变量②：恒 ≥1、非法输入回退 1（与 dampXpStack 同一套口径）
   check('叠区饱和', '恒 ≥1 且非法输入回退 1（0 / 1 / NaN / 负数）',
     capXpSpeedup(99, 1) === 1 && capXpSpeedup(99, 0) === 1 && capXpSpeedup(99, NaN) === 1 && capXpSpeedup(99, -5) === 1)
@@ -9213,9 +9213,10 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     check('叠区饱和', '超界后**严格单调**（转生 8/9/10 层逐级递增，不是硬夹那种「拉平」）',
       ladder[0] < ladder[1] && ladder[1] < ladder[2], ladder.map((v) => v.toFixed(3)).join(' < '))
   }
-  // 不变量④：满配（叠区 76）在最高档只到 14 + (76−14)×0.1 = 20.2 ⇒ 压缩从 59× 收到 ≈20×
-  check('叠区饱和', '满配叠区（76）在满级档饱和到 ≈20.2×',
-    Math.abs(capXpSpeedup(99, 76) - 20.2) < 0.05, capXpSpeedup(99, 76).toFixed(3))
+  // 不变量④：满配（叠区 76）在最高档只到 11 + (76−11)×0.05 = 14.25 ⇒ 压缩从 59× 收到 ≈14×
+  //（2026-10-02：档位 14→11、尾巴 0.1→0.05，目的是**抬长满 buff 那一端**，无 buff 不受影响）
+  check('叠区饱和', '满配叠区（76）在满级档饱和到 ≈14.25×',
+    Math.abs(capXpSpeedup(99, 76) - 14.25) < 0.05, capXpSpeedup(99, 76).toFixed(3))
   // 静态接线：唯一消费点必须**同时**过阻尼与饱和；且必须登记进效果总览
   {
     const sk = stripComments(fs.readFileSync(new URL('../../src/game/skills/Skill.js', import.meta.url), 'utf8'))
@@ -9237,8 +9238,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     const inst = getSkillInstance('foraging')
     const got = inst.addCardXp(1000, 1, 99)
     const raw = 1000 * 60 // CARD_XP_SCALE
-    check('叠区饱和', '行为断言：满配满级时实际到账被夹在 ≈20× 以内（未夹会 ≈76×）',
-      got > 0 && got / raw < 21 && got / raw > 15, `实际 ${(got / raw).toFixed(2)}×`)
+    check('叠区饱和', '行为断言：满配满级时实际到账被夹在 ≈14.25× 以内（未夹会 ≈76×）',
+      got > 0 && got / raw < 15 && got / raw > 13, `实际 ${(got / raw).toFixed(2)}×`)
   }
 }
 

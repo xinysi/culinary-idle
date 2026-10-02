@@ -59,12 +59,15 @@ export function dampXpStack(stack) {
 
 /** 叠区上界：按等级分档（等级越高，允许的加速越大——因为高等级的单卡经验需求是指数的） */
 export const XP_SPEEDUP_CAP_BANDS = [
-  { upTo: 40, cap: 6 },
-  { upTo: 70, cap: 10 },
-  { upTo: Infinity, cap: 14 },
+  { upTo: 40, cap: 5 },
+  { upTo: 70, cap: 8 },
+  { upTo: Infinity, cap: 11 },
 ]
 /** 超过上界那部分仍按这个比例计入（→ 保住「家族内严格单调」） */
-export const XP_TAIL_RATE = 0.1
+// ⚠️ 方向容易记反：这是「超过档位之上**还能算进去多少**」⇒ **调大 = 更快、调小 = 更慢**。
+// 2026-10-02 由 0.1 收到 0.05：目标是「抬长满 buff 那一端」（并行 53h → 约 76h），
+// 无 buff 玩家够不到这个区 ⇒ 一分不变。
+export const XP_TAIL_RATE = 0.05
 
 /** 该等级允许的经验叠区上界 */
 export function xpSpeedupCap(level) {
