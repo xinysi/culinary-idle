@@ -38,6 +38,7 @@ const ALL = readdirSync(CI_DIR)
 const CORE = [
   'chain_reaction_test', 'xp_log_audit', 'system_test', 'season_check', 'system_test2', 'buff_test', 'continuity_test',
   'audit_sync', 'content_sync_audit', 'item_triple_audit', 'minigame_ui_audit',
+  'voice_audit',
   'difficulty_audit', 'image_path_audit', 'bgm_audit', 'gen_drift_audit',
   'template_binding_audit', 'action_sweep',
   // 2026-09-28 立：全量体检抓到的三类「不报错、也不生效」的接线缺陷，各配一条守卫
