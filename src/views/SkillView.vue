@@ -88,14 +88,17 @@ function doPrestige() {
         <ProgressBar :progress="progress.progress" />
         <!-- 等级台阶（2026-09-29）：大后期 82~120 段每 2 级一个称号，这里把它变成**看得见的下一档目标**。
              荒漠段（Lv101-120 没有任何新目标）原本只剩数值，这一行就是那段里唯一的「还有东西可拿」。 -->
-        <div v-if="nextPerk" class="dim skill-perk-hint">
-          🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」
-          （还差 {{ nextPerk.level - progress.level }} 级 · 任一技能达到即可，称号见「成就与称号」）
-        </div>
+        <!-- 2026-10-02 用户：「转生按钮和信息独占一行太浪费空间」——注意**单个子元素的 flex 行照样铺满**，
+             所以不是「包一层 flex」就够，必须并进**已有的一行**（台阶提示）。现在这条线同时承载：
+             下一档台阶 / 转生按钮 / 转生加成。 -->
         <!-- 2026-10-02 用户：「转生按钮和信息独占一行太浪费空间」。
-             原来两者是 v-if / v-else-if **互斥**的 ⇒ 满级时看不到加成、没满级时看不到按钮，各自白占一行。
-             现合并成一行（flex + wrap，窄屏自动折行），且两者**同时显示**。 -->
-        <div class="skill-prestige-row">
+             ⚠️ 教训：**单个子元素的 flex 行照样铺满整行** ⇒ 不是「包一层 flex」就够，
+             必须把三者并进**同一行**（台阶提示 / 转生按钮 / 转生加成），且它们互不依赖显示条件。 -->
+        <div class="skill-hint-row">
+          <div v-if="nextPerk" class="dim skill-perk-hint">
+            🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」
+            （还差 {{ nextPerk.level - progress.level }} 级 · 任一技能达到即可，称号见「成就与称号」）
+          </div>
           <button
             v-if="progress.level >= MAX_LEVEL && maxLevel === MAX_LEVEL"
             class="btn btn-primary btn-sm"

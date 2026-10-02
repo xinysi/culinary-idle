@@ -246,13 +246,14 @@ function selectEra(label) {
                  改法 = **不占行**的卡片角标（绝对定位到右上角）+ 百分比收进 tooltip。
                  ⚠️ 不能塞进「效率」那一行的值里：窄屏两列宽时会被挤成竖排（2026-09-19 踩过）。
                  颜色继续用 --good*（不随皮肤的功能语义色）—— 换 --primary 会让 14 套深色皮肤对比度不达标。 -->
-            <div
+            <!-- 2026-10-02 用户：「不一定要文字展现，样式或许也可以」+「还是需要调整」。
+                 现在「最优」由**卡片样式**承载（一圈语义色描边 + 极淡底，见 main.css 的 .is-best），
+                 角标只留一个 ⚡ 图标，完整说明（比当前快 N%）全部进 tooltip ⇒ 卡片上不再有那段文字。 -->
+            <span
               v-if="t.itemId === bestTargetId"
               class="best-flag"
               :title="gainVsCurrent(t) != null ? `当前最优：比正在采的目标快 ${(gainVsCurrent(t) * 100).toFixed(0)}%` : '当前最优（已解锁目标里效率最高）'"
-            >
-              ⚡ 最优<template v-if="gainVsCurrent(t) != null"><span class="best-flag-pct">+{{ (gainVsCurrent(t) * 100).toFixed(0) }}%</span></template>
-            </div>
+            >⚡</span>
             <div v-if="getItem(t.itemId)?.spoilMs" class="gather-card-row">
               <span>腐坏</span>
               <span class="mono spoil-ms">{{ Math.round(getItem(t.itemId).spoilMs / 3600000) }}h</span>
