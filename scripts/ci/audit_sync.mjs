@@ -1,5 +1,6 @@
 // 全游戏内容同步审计 — 检查跨系统引用一致性与攻略数值
 // 运行：node scripts/ci/audit_sync.mjs
+import { readFileSync, readdirSync } from 'node:fs'
 import fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -329,6 +330,25 @@ const check = (name, cond, detail = '') => {
   }
   check('CI 守卫自身：3 参 check 的第 2 个实参不得是字符串字面量（会恒真 = 假绿）',
     bad.length === 0, bad.length ? `疑似：${bad.slice(0, 8).join('、')}` : '')
+}
+
+// ── CI 清单必须覆盖 scripts/ci 下的全部守卫（2026-10-02 立）────────────────────
+// 起因：ci.yml 是**手写清单**，新加的 chain_reaction_test / save_migration_test 没被写进去
+// ⇒ 它们只在本地 run_all.mjs 里跑、GitHub CI 里根本不跑（新脚本绕过旧清单 —— 项目里记过同款坑）。
+// 判据从**目录**派生；确实不该进 CI 的显式豁免并写清理由（豁免表本身就是文档）。
+{
+  const CI_DIR = 'scripts/ci'
+  const yml = readFileSync('.github/workflows/ci.yml', 'utf8')
+  const EXEMPT = {
+    'run_all.mjs': 'CI 里逐个调用它，不需要 CI 再调它',
+    'exe_image_audit.mjs': '需要 Electron 运行时，CI 没有（发布流程里本地跑）',
+    'dev_panel_audit.mjs': '需要 dist 产物，排在构建之后单独一步',
+    'css_output_audit.mjs': '同上（排构建之后）',
+  }
+  const files = readdirSync(CI_DIR).filter((f) => f.endsWith('.mjs'))
+  const missing = files.filter((f) => !EXEMPT[f] && !yml.includes('scripts/ci/' + f))
+  check('CI 清单覆盖 scripts/ci 全部守卫（新脚本不许绕过手写清单）', missing.length === 0,
+    missing.join(', ') || (files.length - Object.keys(EXEMPT).length) + ' 个已在 CI')
 }
 
 console.log(fail === 0 ? '\nSYNC AUDIT PASS' : `\n${fail} FAILURES`)
