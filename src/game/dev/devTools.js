@@ -5,6 +5,7 @@
 //    开发者面板只能改「这台机器上的这份存档」，不能改数据层——否则会连环破坏守卫与既标定的经济。
 //    （守卫 `scripts/ci/dev_panel_audit.mjs` 会断言这些模块不 import/改写数据文件的导出。）
 import { ITEMS } from '../data/items.js'
+import { REALM_TIER_MAX } from '../data/mysticRealm.js'
 import { ALL_ACHIEVEMENTS } from '../data/achievements.js'
 import { SHANHAI_NODES } from '../data/shanhaiTree.js'
 import { INSIGHT_NODES } from '../data/insightTree.js'
@@ -193,4 +194,15 @@ export function clearIdlePlan(player) {
   if (!n) return 0
   player.planClear()
   return n
+}
+
+/**
+ * 秘境档位**拉满**（演示后期内容用）。
+ * ⚠️ 只改**存储值**：真正生效的档位由 `player.realmTier()` 按对决等级门槛（Lv105/110/115）夹取，
+ *    所以这一步只对"你等级够得到的档"生效 —— 面板的 hint 也照这个口径写。
+ */
+export function maxRealmTier(player) {
+  const before = player.realm?.tier ?? 1
+  player.realm.tier = REALM_TIER_MAX
+  return { before, effective: player.realmTier?.() ?? REALM_TIER_MAX }
 }

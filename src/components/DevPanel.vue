@@ -85,6 +85,7 @@ const actions = [
   { id: 'locks', label: '▶ 恢复挂机', hint: '清掉暂停与关闭的挂机任务', fn: () => T.clearLocks(player) },
   { id: 'queues', label: '🧹 清空制作/练习队列', hint: '演示前复位（含练习模式）', fn: () => T.clearCraftQueues(player) },
   { id: 'plan', label: '🗓 清空挂机计划', hint: '演示前复位（计划按顺序自动换目标）', fn: () => T.clearIdlePlan(player) },
+  { id: 'realm', label: '🌀 秘境档位拉满', hint: '存储值拉满；生效档仍按对决等级门槛（Lv105/110/115）夹取', fn: () => T.maxRealmTier(player) },
 
   { id: 'clear', label: '🗑 清空背包/仓库/冷库', hint: '测试「空背包」界面用', fn: () => T.clearInventory(player), danger: true },
 ]
