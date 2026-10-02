@@ -420,7 +420,7 @@ onMounted(() => {
     if (n) ui.pushLog(`📡 网络恢复：重试了 ${n} 张没加载出来的图片`, 'info')
   }
   window.addEventListener('online', retryBrokenImages)
-  // ── 内部入口（开发者 / 运营调参员；仅含开发者模式的构建）────────────────
+  // ── 内部入口（开发者 / 运营；仅含开发者模式的构建）────────────────
   if (DEV_PANEL_ENABLED) {
     initTelemetry(player) // 本地埋点：只写本机、不进存档、不联网
     // Ctrl + Shift + D：任意阶段都能唤出内部入口（按下去只开「登录挡板」，不直接开页面）

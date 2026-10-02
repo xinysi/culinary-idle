@@ -86,7 +86,7 @@ export const craftSuccessChance = (raw) => scaleChance(raw, tunerOver('diffCraft
 export const exploreSuccessChance = (raw) => scaleChance(raw, tunerOver('diffExplore', DIFFICULTY.explore, CHANCE_FLOOR.explore, DIFFICULTY.explore), CHANCE_FLOOR.explore)
 
 /** 美食探索·**物品**战利品概率（金币条目不要传进来）
- *  ⚠️ key 与 `TunerPanel.vue` 的 ROWS **必须逐字一致（含大小写）** —— `tunerOver` 按名字查表，查不到就
+ *  ⚠️ key 与 `OpsPanel.vue` 的 ROWS **必须逐字一致（含大小写）** —— `tunerOver` 按名字查表，查不到就
  *  静默返回基线（首版这里写成 `diffExploreloot`、面板写 `diffExploreLoot` ⇒ 该滑杆在游戏内空转）。
  *  C9b 有「面板每个 key 都有读取点 / 每个读取点都被面板暴露」双向断言兜底。 */
 export const exploreLootChance = (raw) => scaleChance(raw, tunerOver('diffExploreLoot', DIFFICULTY.exploreLoot, CHANCE_FLOOR.exploreLoot, DIFFICULTY.exploreLoot), CHANCE_FLOOR.exploreLoot)

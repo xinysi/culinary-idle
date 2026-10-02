@@ -9,7 +9,7 @@ import { stripComments } from './lib/comments.mjs'
 
 const DEV = /(按批次|副业线|门槛表|注册表|唯一出口|读取点|消费方|口径|实测|系数|乘区|独占品|量级|待接线|未接线|数据层)/
 // 内部工具：本来就是给运营与开发者看的，白名单放行
-const SKIP = /(TunerPanel|DevPanel)\.vue$/
+const SKIP = /(OpsPanel|DevPanel)\.vue$/
 // ⚠️ 刻意不收「扩展 N 批」：那是 aojisGates 里内部分批的标签（数据键、不展示），
 //    而它**该被拦的地方**（那段门槛说明文案）由 system_test 的专条断言钉住。
 

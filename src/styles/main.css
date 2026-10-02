@@ -3576,6 +3576,17 @@ html[data-theme='dark'] .era-name {
   color: var(--text-dim); /* 原为 var(--dim) —— 该 token 全项目未定义，声明静默失效、颜色一直是继承来的（2026-09-24 修）*/
 }
 
+/* 商店卡片的「说明」行（`.shop-desc`）是整行文案，不是「标签 + 数值」行：
+   它是该行唯一的子元素 ⇒ 命中 `.gather-card-row > span:last-child` 的 `white-space: nowrap; text-align: right`，
+   被钉成单行不换行。390px 下卡片只有 ~159px，而说明文字 ~168–220px ⇒ 卡片/网格横向溢出（主区 +31px）。
+   这里放开换行、左对齐、允许收缩（2026-10-02 修）。 */
+.gather-card.shop-card .gather-card-row > .shop-desc {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  flex: 1 1 auto;
+}
+
 .gather-card.shop-card .btn {
   margin-top: auto;
 }

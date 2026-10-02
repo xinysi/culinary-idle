@@ -503,7 +503,7 @@ console.log('══ X. 觅珍抽卡 ══')
   check('觅珍', '图鉴来源含觅珍（材料池）', src('apple').some((s) => s.includes('觅珍·材料池')))
 }
 
-// ── C9b. 运营调参层（2026-09-25 第四角色「运营调参员」）──
+// ── C9b. 运营调参层（2026-09-25 第四角色，2026-10-02 由「运营调参员」改名「运营 ops」）──
 // 红线：默认零影响（覆盖为空时与基线逐字节等价）；覆盖只在会话内存（CI 本进程用完必须复位）；
 // 难度类夹取上限 = 基线（「只能更难或复原」，保住 difficulty「永不抬高」叙事）。
 {
@@ -667,7 +667,7 @@ console.log('══ X. 觅珍抽卡 ══')
   //    两条静态断言把「面板 → 读取点」两个方向钉死，再加一条行为断言确认那两个旋钮真的接到了引擎。
   {
     const fs2 = await import('node:fs')
-    const panel = fs2.readFileSync(new URL('../../src/components/TunerPanel.vue', import.meta.url), 'utf8')
+    const panel = fs2.readFileSync(new URL('../../src/components/OpsPanel.vue', import.meta.url), 'utf8')
     const rowsBlock = panel.slice(panel.indexOf('const ROWS = ['), panel.indexOf('const GROUPS = ['))
     const rowKeys = [...rowsBlock.matchAll(/key: '([A-Za-z]+)'/g)].map((m) => m[1])
     const readKeys = new Set()
@@ -678,7 +678,7 @@ console.log('══ X. 觅珍抽卡 ══')
         if (e.isDirectory()) { walk(p); continue }
         // 🔴 排除面板自身：它在「影响链 / 零副作用校验」里也调 tunerOver 给自己的预览取数
         //    （见 `tunerOver('globalXp', 1, 0, 20)`）—— 算进来正好会让「面板自己变、引擎没动」假绿。
-        if (p === 'src/components/TunerPanel.vue') continue
+        if (p === 'src/components/OpsPanel.vue') continue
         if (!/\.(js|vue|mjs)$/.test(e.name)) continue
         // 剥注释：`tuner.js` 的用法注释里就写着 `tunerOver('key', …)`，不剥会扫出一个不存在的「隐藏旋钮 key」
         const code = stripComments(fs2.readFileSync(p, 'utf8'))
@@ -709,6 +709,92 @@ console.log('══ X. 觅珍抽卡 ══')
       lootTuned < lootBase && extraTuned < extraBase && D.exploreLootChance(0.4) === lootBase && D.gatherExtraChance(0.4) === extraBase,
       `探索战利品 ${lootBase}→${lootTuned} · 采集附产 ${extraBase}→${extraTuned}`)
   }
+}
+
+// ── C9c. 运营驾驶舱（2026-10-02 新角色 ops 的只读聚合层）──────────────────────────
+// 🔒 只读契约：聚合前后 player 序列化**逐字段一致**——驾驶舱不得改任何玩家状态。
+//    这是"零写操作"的可验证化（比对着代码看强）。用"有内容"的档跑，别只用空档（空档会跳过很多分支）。
+{
+  const OA = await import('../../src/game/dev/opsAnalytics.js')
+  const OB = await import('../../src/game/dev/opsBenchmarks.js')
+  const OR = await import('../../src/game/dev/opsReport.js')
+  const p = freshPlayer()
+  p.gold = 123456
+  if (!p.branches) p.branches = {}
+  p.branches.east = { manager: false, lastAt: Date.now() }
+  p.inventory.apple = 500
+  p.restaurant.menu = ['apple']
+  const before = JSON.stringify(p.serialize())
+  const dash = OA.collectDashboard(p, {
+    telemetry: { startedAt: Date.now() - 5000, firsts: { game_started: Date.now() - 5000 } },
+    marks: [{ id: 'game_started', label: '开始游戏' }],
+  })
+  const after = JSON.stringify(p.serialize())
+  check('运营', '只读契约：驾驶舱聚合前后存档逐字段一致（零写操作）', before === after)
+  check('运营', '概览：读到金币', dash.overview.gold === 123456, `gold=${dash.overview.gold}`)
+  check('运营',
+    '经济水位：餐厅与分店都进了行',
+    dash.economy.rows.some((r) => r.id === 'restaurant') && dash.economy.rows.some((r) => r.id === 'branch:east'),
+    `rows=${dash.economy.rows.map((r) => r.id).join(',') || '—'}`)
+  check('运营', '道具 TopN：苹果在榜首且数量正确', dash.topItems[0]?.id === 'apple' && dash.topItems[0]?.qty === 500)
+  check('运营', '漏斗：达成项带「开局后秒数」', dash.funnel[0]?.done === true && Number.isFinite(dash.funnel[0]?.seconds))
+  // 验收线判据（OPS_BANDS）：边界含端、越界为假
+  check('运营', '标定带：单场时长 [4,25] 含端、越界为假',
+    OB.inBand('ttk', 4) && OB.inBand('ttk', 25) && !OB.inBand('ttk', 3.9) && !OB.inBand('ttk', 25.1))
+  // 报表：含区块标题且无 undefined/NaN
+  const md = OR.buildMarkdown(dash)
+  check('运营', '报表：Markdown 含四个区块标题',
+    ['# 运营数据快照', '## 进度概览', '## 新手漏斗', '## 经济水位'].every((s) => md.includes(s)))
+  check('运营', '报表：无 undefined / NaN 残留', !/undefined|NaN/.test(md))
+  // 静态：面板区间来自 opsBenchmarks（不手抄 lo/hi）；默认分区 = 驾驶舱
+  const fs3 = await import('node:fs')
+  const panel = fs3.readFileSync(new URL('../../src/components/OpsPanel.vue', import.meta.url), 'utf8')
+  check('运营', '面板：验收线区间来自 opsBenchmarks（读 bandOf / bandRangeText）', /bandOf\(/.test(panel) && /bandRangeText\(/.test(panel))
+  check('运营', '面板：默认分区 = 驾驶舱 且三分区页签都在', /ref\('dash'\)/.test(panel) && /ops-tabs/.test(panel) && /tab === 'cal'/.test(panel))
+  // ── 🧪 平衡实验台引擎（balanceLab）：投影确定性 + A/B 不残留 ──
+  const BL = await import('../../src/game/dev/balanceLab.js')
+  const T2 = await import('../../src/game/data/tuner.js')
+  T2.tunerResetAll()
+  try {
+    const m1 = BL.projectMetrics()
+    const m2 = BL.projectMetrics()
+    check('运营', '实验台：无覆盖时投影确定（两次逐值相等）', JSON.stringify(m1) === JSON.stringify(m2))
+    check('运营', '实验台：无覆盖时 projectMetrics == baselineMetrics（基线自洽）',
+      JSON.stringify(m1) === JSON.stringify(BL.baselineMetrics()))
+    const { A, B } = BL.runComparison({}, { enemyHp: 4 })
+    check('运营', '实验台：A/B 血量 ×4 ⇒ 单场时长变长、经验/时下降',
+      B.ttk > A.ttk && B.xpRate < A.xpRate, `ttk ${A.ttk.toFixed(1)}→${B.ttk.toFixed(1)} · xp ${A.xpRate.toFixed(0)}→${B.xpRate.toFixed(0)}`)
+    check('运营', '实验台：A/B 跑完覆盖为空（不残留、不影响引擎）', T2.tunerActiveKeys().length === 0)
+    const restored = (() => {
+      T2.tunerSet('globalXp', 3)
+      BL.withOverrides({ globalXp: 7 }, () => {})
+      const ok = T2.tunerRawValue('globalXp') === 3
+      T2.tunerResetAll()
+      return ok
+    })()
+    check('运营', '实验台：withOverrides 施加后原样恢复（含调用前已有的覆盖）', restored)
+  } finally {
+    T2.tunerResetAll()
+  }
+  const ids = BL.LAB_SCENARIOS.map((s) => s.id)
+  check('运营', '实验台：情景 id 唯一', new Set(ids).size === ids.length)
+  // 静态：面板不再各算一份链路（链路 + A/B 都走 balanceLab 出口）
+  check('运营', '面板：四条链 / A/B 由 balanceLab 驱动（唯一真身）', /projectionGroups\(/.test(panel) && /runComparison\(/.test(panel))
+  // ── 📅 内容节奏（只读数据表聚合）──
+  const OC = await import('../../src/game/dev/opsCadence.js')
+  const cad = OC.contentByBand()
+  check('运营', '内容节奏：12 个 10 级段、合计 > 0', cad.length === 12 && cad.reduce((a, r) => a + r.total, 0) > 0, `段数=${cad.length}`)
+  check('运营', '内容节奏：末段比首段薄（内容密度下滑）', cad[cad.length - 1].total < cad[0].total, `${cad[0].total} → ${cad[cad.length - 1].total}`)
+  check('运营', '内容节奏：含 Lv101-120 的探索目标（lateExplore 副作用生效）', cad.some((r) => r.start >= 101 && r.explore > 0))
+  check('运营', '面板：内容节奏卡已接线', /ops-cad/.test(panel))
+  // ── 📅 运营日历（只读排期）──
+  const OCAL = await import('../../src/game/dev/opsCalendar.js')
+  const cal = OCAL.collectCalendar()
+  check('运营', '运营日历：周排班 7×24、格内是活动 id 数组', cal.grid.length === 7 && cal.grid.every((r) => r.length === 24 && r.every((c) => Array.isArray(c))))
+  check('运营', '运营日历：今日快照含 日期/星期/命中活动', typeof cal.today.date === 'string' && typeof cal.today.weekday === 'string' && Array.isArray(cal.today.market))
+  check('运营', '运营日历：本月节庆覆盖整月', cal.month.length >= 28 && cal.month.every((d) => Array.isArray(d.festivals)))
+  check('运营', '运营日历：排期表无 undefined / NaN', !/undefined|NaN/.test(OCAL.scheduleMarkdown()))
+  check('运营', '面板：运营日历两卡已接线', /ops-cal-grid/.test(panel) && /ops-cal-days/.test(panel))
 }
 
 // ── C10. 一键入包（2026-09-06）──

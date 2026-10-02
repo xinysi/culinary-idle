@@ -2630,7 +2630,7 @@ console.log('══ T. 攻略数据 ══')
       /\.gd-stage\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.55fr\)/.test(gv) &&
       /\.gd-main\s*\{/.test(gv) && /\.gd-two\s*\{[^}]*position:\s*sticky/.test(gv))
   // 阶段流程图（2026-10-01 用户：「参考运营调参员页面那种流程图来结合出最优方案」）：
-  // 形态照 TunerPanel 的 `.tp-chain`，但**可点**（点一步滚到对应行动卡）⇒ 三件事都要在。
+  // 形态照 OpsPanel 的 `.tp-chain`，但**可点**（点一步滚到对应行动卡）⇒ 三件事都要在。
   check('攻略', '阶段流程图落地（`.gd-flow` + 可点的 `.gd-fnode`），行动卡带 `data-step` 供跳转',
     /\bgd-flow\b/.test(gv) && /class="gd-fnode"/.test(gv) && /@click="jumpToStep\(n\.to\)"/.test(gv) &&
       /:data-step="i"/.test(gv) && /function jumpToStep/.test(gv))

@@ -73,7 +73,7 @@ export const useUiStore = defineStore('ui', {
     // 生产构建下 DevPanel 的 import 会被静态替换掉（见 App.vue 的 DEV_PANEL_ENABLED 分支）。
     devGate: false, // 登录挡板（启动页连点标题 / Ctrl+Shift+D / ?dev=1 都打开它）
     showDevPanel: false, // 面板本体
-    showTunerPanel: false, // 运营调参页（2026-09-25 第四角色「运营调参员」的页面）
+    showOpsPanel: false, // 运营工作台（2026-09-25 第四角色，2026-10-02 由「运营调参员」重构为「运营 ops」：驾驶舱 + 实验台）
   }),
 
   actions: {

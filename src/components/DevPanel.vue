@@ -28,13 +28,15 @@ const ui = useUiStore()
 const player = usePlayerStore()
 
 const SECTIONS = [
-  { id: 'ops', label: '⚙ 运行时 & 注入' },
-  { id: 'save', label: '💾 存档管理' },
-  { id: 'mark', label: '📊 埋点与漏斗' },
-  { id: 'check', label: '🩺 体检' },
-  { id: 'monitor', label: '📡 监控' },
+  { id: 'ops', icon: '⚙', text: '运行时 & 注入', sub: '一键配置 / 资源 / 物品 / 进度定位 / 系统重置 / 时间与队列' },
+  { id: 'save', icon: '💾', text: '存档管理', sub: '分槽导出导入 / 复制 / 快照回滚' },
+  { id: 'mark', icon: '📊', text: '埋点与漏斗', sub: '首次达成 · 新手漏斗 · 复制 CSV' },
+  { id: 'check', icon: '🩺', text: '体检', sub: '存档不变量 · 序列化往返' },
+  { id: 'monitor', icon: '📡', text: '监控', sub: 'FPS / JS 堆 / 长任务 / 存储' },
 ]
 const section = ref('ops')
+const railMin = ref(false)
+const cur = computed(() => SECTIONS.find((s) => s.id === section.value) ?? SECTIONS[0])
 const log = ref([])
 const inspectRows = ref([])
 const fileInput = ref(null)
@@ -256,31 +258,48 @@ onUnmounted(stopLive)
 </script>
 
 <template>
-  <!-- 整页接管：游戏内与启动页同一形态，铺满视口（2026-09-25 用户拍板「独立出来」） -->
-  <div class="devpage">
-    <!-- 头部控制条：标题 + 实时状态 chips + 全局动作 -->
-    <header class="dp-head">
-      <h3>🛠 开发者面板</h3>
-      <span class="dev-badge">仅存在于开发构建</span>
-      <span class="dp-chips mono">
-        <span class="dp-chip">FPS {{ live?.fps ?? '—' }}</span>
-        <span class="dp-chip">堆 {{ live?.heapMb == null ? '—' : live.heapMb + 'MB' }}</span>
-        <span class="dp-chip">tick/s {{ live?.tickPerSec ?? '—' }}</span>
-        <span class="dp-chip" :class="{ 'dp-chip-bad': live && !live.online }">{{ live == null ? '网络 —' : (live.online ? '在线' : '断网') }}</span>
-      </span>
-      <span class="dp-head-actions">
-        <button class="btn btn-sm" @click="goBack()">↩ 返回</button>
-        <button class="btn btn-sm" title="锁定（清除本次会话的登录）" @click="lockNow()">🔒 锁定</button>
-      </span>
-    </header>
-
-    <div class="dp-body">
-      <!-- 分区导航：桌面竖排，窄屏横向滚动 -->
-      <nav class="dp-nav">
-        <button v-for="s in SECTIONS" :key="s.id" class="dp-nav-btn" :class="{ on: section === s.id }" @click="section = s.id">{{ s.label }}</button>
+  <!-- 整页接管：与「运营工作台」同一套控制台骨架（左栏分区导航 + 顶部命令条 + 单滚动内容），
+       游戏内与启动页同一形态（2026-10-02 与运营页对齐排版）。 -->
+  <div class="devpage" :class="{ 'dp-min': railMin }">
+    <!-- 左栏：分区导航 -->
+    <aside class="dp-rail">
+      <div class="dp-brand">
+        <span class="dp-brand-ico">🛠</span>
+        <span class="dp-brand-txt"><b>开发者面板</b><em>仅开发构建</em></span>
+      </div>
+      <nav class="dp-navs">
+        <button v-for="s in SECTIONS" :key="s.id" class="dp-nav" :class="{ on: section === s.id }" @click="section = s.id">
+          <span class="dp-nav-ico">{{ s.icon }}</span><span class="dp-nav-txt">{{ s.text }}</span>
+        </button>
       </nav>
+      <div class="dp-rail-foot">
+        <span class="dp-chip" :class="{ 'dp-chip-bad': live && !live.online }">{{ live == null ? '—' : (live.online ? '在线' : '断网') }}</span>
+        <button class="dp-mini" :title="railMin ? '展开导航' : '折叠为图标'" @click="railMin = !railMin">{{ railMin ? '»' : '«' }}</button>
+      </div>
+    </aside>
 
-      <div class="dp-content">
+    <!-- 主区 -->
+    <div class="dp-main">
+      <!-- 顶部命令条：分区标题 + 实时状态 chips + 全局动作 -->
+      <header class="dp-topbar">
+        <div class="dp-title">
+          <h3>{{ cur.icon }} {{ cur.text }}</h3>
+          <span class="dim dp-sub">{{ cur.sub }}</span>
+        </div>
+        <div class="dp-actions">
+          <span class="dp-chips mono">
+            <span class="dp-chip">FPS {{ live?.fps ?? '—' }}</span>
+            <span class="dp-chip">堆 {{ live?.heapMb == null ? '—' : live.heapMb + 'MB' }}</span>
+            <span class="dp-chip">tick/s {{ live?.tickPerSec ?? '—' }}</span>
+            <span class="dp-chip" :class="{ 'dp-chip-bad': live && !live.online }">{{ live == null ? '网络 —' : (live.online ? '在线' : '断网') }}</span>
+          </span>
+          <i class="dp-sep" />
+          <button class="btn btn-sm" @click="goBack()">↩ 返回</button>
+          <button class="btn btn-sm" title="锁定（清除本次会话的登录）" @click="lockNow()">🔒 锁定</button>
+        </div>
+      </header>
+
+      <div class="dp-scroll">
         <!-- ⚙ 运行时 & 注入（合并） -->
         <template v-if="section === 'ops'">
           <p v-if="!inGame" class="dim dp-note">运行时工具需要先进入游戏（启动页阶段还没有玩家存档；「💾 存档管理」不受影响）。</p>
@@ -468,70 +487,93 @@ onUnmounted(stopLive)
           </table>
         </template>
       </div>
-    </div>
 
-    <!-- 页底操作日志 -->
-    <footer class="dp-foot">
-      <div class="dp-row dp-foot-head">
-        <b class="dim">操作日志</b>
-        <button class="btn btn-sm" @click="clearLog()">清空</button>
-      </div>
-      <div v-if="log.length" class="dev-log">
-        <div v-for="(l, i) in log" :key="i" :class="{ bad: !l.ok }"><span class="dim mono">{{ l.at }}</span> {{ l.text }}</div>
-      </div>
-      <p class="dim dp-note">口令只是挡板；真正的保护是「开发者页面不进生产构建」（要留给打包版请用 <span class="mono">VITE_DEV_PANEL=1 npm run build</span>）。{{ DEV_DEFAULT_PASSWORD_HINT }}</p>
-    </footer>
+      <!-- 页底操作日志（常驻状态条） -->
+      <footer class="dp-foot">
+        <div class="dp-row dp-foot-head">
+          <b class="dim">操作日志</b>
+          <button class="btn btn-sm" @click="clearLog()">清空</button>
+        </div>
+        <div v-if="log.length" class="dev-log">
+          <div v-for="(l, i) in log" :key="i" :class="{ bad: !l.ok }"><span class="dim mono">{{ l.at }}</span> {{ l.text }}</div>
+        </div>
+        <p class="dim dp-note">口令只是挡板；真正的保护是「开发者页面不进生产构建」（要留给打包版请用 <span class="mono">VITE_DEV_PANEL=1 npm run build</span>）。{{ DEV_DEFAULT_PASSWORD_HINT }}</p>
+      </footer>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 整页接管：铺满视口（覆盖在游戏/启动页之上），内容列居中 */
-.devpage { position: fixed; inset: 0; z-index: 999; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; color: var(--text); }
+/* 外壳：左栏导航 + 主区（与「运营工作台」同一套控制台骨架，2026-10-02 对齐）*/
+.devpage { position: fixed; inset: 0; z-index: 999; display: grid; grid-template-columns: 232px minmax(0, 1fr); background: var(--bg); color: var(--text); overflow: hidden; }
+.devpage.dp-min { grid-template-columns: 60px minmax(0, 1fr); }
 
-.dp-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px dashed var(--border); background: rgba(var(--panel-rgb), 0.9); }
-.dp-head h3 { margin: 0; font-size: 15px; }
-.dev-badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px dashed var(--warn); color: var(--warn); }
+.dp-rail { display: flex; flex-direction: column; min-height: 0; padding: 12px 10px; gap: 4px; border-inline-end: 1px solid var(--border); background: rgba(var(--panel-rgb), 0.55); }
+.dp-brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 12px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.dp-brand-ico { font-size: 20px; }
+.dp-brand-txt { display: flex; flex-direction: column; line-height: 1.25; }
+.dp-brand-txt b { font-size: 13.5px; }
+.dp-brand-txt em { font-size: 11px; color: var(--muted); font-style: normal; }
+.dp-navs { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; }
+.dp-nav { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 9px 10px; border: 0; border-radius: 9px; background: transparent; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.dp-nav:hover { background: rgba(var(--tint-rgb), 0.1); }
+.dp-nav.on { background: rgba(var(--primary-rgb), 0.14); color: var(--primary-strong); font-weight: 700; }
+.dp-nav-ico { width: 20px; text-align: center; flex: 0 0 auto; font-size: 16px; }
+.dp-rail-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.dp-mini { border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 7px; width: 26px; height: 26px; cursor: pointer; line-height: 1; }
+.dp-mini:hover { color: var(--text); }
+.devpage.dp-min .dp-brand-txt, .devpage.dp-min .dp-nav-txt, .devpage.dp-min .dp-rail-foot .dp-chip { display: none; }
+.devpage.dp-min .dp-brand, .devpage.dp-min .dp-rail-foot { justify-content: center; }
+.devpage.dp-min .dp-nav { justify-content: center; }
+
+.dp-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.dp-topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--border); background: rgba(var(--panel-rgb), 0.6); }
+.dp-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dp-title h3 { margin: 0; font-size: 16px; }
+.dp-sub { font-size: 11.5px; }
 .dp-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .dp-chip { font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border); background: rgba(var(--panel-rgb), 0.7); }
 .dp-chip-bad { color: var(--bad); border-color: rgba(var(--bad-rgb), 0.5); }
-.dp-head-actions { margin-left: auto; display: flex; gap: 6px; }
+.dp-actions { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dp-sep { width: 1px; height: 18px; background: var(--border); display: inline-block; }
 
-.dp-body { display: flex; gap: 14px; align-items: flex-start; flex: 1; padding: 12px 14px; min-height: 0; overflow-y: auto; }
-.dp-nav { display: flex; flex-direction: column; gap: 4px; width: 168px; flex-shrink: 0; position: sticky; top: 0; }
-.dp-nav-btn { text-align: left; padding: 8px 12px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: inherit; cursor: pointer; font-size: 13px; white-space: nowrap; }
-.dp-nav-btn:hover { background: rgba(var(--panel-rgb), 0.7); }
-.dp-nav-btn.on { background: rgba(var(--panel-rgb), 0.9); border-color: var(--border); font-weight: 700; }
-.dp-content { flex: 1; min-width: 0; }
+.dp-scroll { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 18px; }
 
-.dp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
-.dp-card { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: rgba(var(--panel-rgb), 0.6); }
-.dp-card h4 { margin: 0 0 8px; font-size: 13px; }
-.dp-card-note { margin: 8px 0 0; font-size: 11px; line-height: 1.5; }
+/* 分组：改用「表头 + 间距」，不套卡片（与运营页一致）*/
+.dp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; align-items: start; }
+.dp-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dp-card h4 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.dp-card-note { margin: 0; font-size: 11px; line-height: 1.5; }
 .dp-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-.dp-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0; font-size: 12px; }
-.dp-note { font-size: 12px; line-height: 1.6; }
-.dp-h4 { margin: 14px 0 6px; }
+.dp-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.dp-note { font-size: 12px; line-height: 1.6; margin: 0; }
+.dp-h4 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .dp-slot-head { margin: 0 0 2px; }
-.dev-slot { border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin-bottom: 8px; }
+.dev-slot { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
 .dev-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .dev-table th, .dev-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.dev-table th { color: var(--muted); font-weight: 600; }
 .dev-check { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed rgba(var(--tint-rgb), 0.18); }
 .dev-check.bad { color: var(--bad); }
 .dev-table .bad td { color: var(--muted); }
 
-.dp-foot { border-top: 1px dashed var(--border); padding: 8px 14px; }
+.dp-foot { border-top: 1px solid var(--border); padding: 8px 18px; max-height: 26vh; overflow-y: auto; }
 .dp-foot-head { margin: 0 0 4px; }
-.dev-log { font-size: 12px; max-height: 22vh; overflow-y: auto; margin-bottom: 4px; }
+.dev-log { font-size: 12px; margin-bottom: 4px; }
 .dev-log .bad { color: var(--bad); }
 .dp-foot .dp-note { margin: 0; font-size: 11px; }
 
 .dev-input { padding: 3px 7px; border: 1px solid var(--border); border-radius: 7px; background: rgba(var(--panel-rgb), 0.9); color: inherit; font-size: 12px; width: 150px; }
 .dev-select { padding: 3px 5px; border: 1px solid var(--border); border-radius: 7px; background: rgba(var(--panel-rgb), 0.9); color: inherit; font-size: 12px; }
 
-/* 窄屏：导航折成横向滚动条，卡片单列 */
+/* 响应式 */
 @media (max-width: 900px) {
-  .dp-body { flex-direction: column; }
-  .dp-nav { flex-direction: row; overflow-x: auto; width: 100%; position: static; padding-bottom: 4px; }
   .dp-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .devpage { grid-template-columns: 60px minmax(0, 1fr); }
+  .dp-brand-txt, .dp-nav-txt, .dp-rail-foot .dp-chip { display: none; }
+  .dp-nav, .dp-brand { justify-content: center; }
+  .dp-scroll, .dp-foot { padding-inline: 12px; }
 }
 </style>

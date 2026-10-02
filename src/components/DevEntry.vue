@@ -1,7 +1,7 @@
 <script setup>
-// 内部入口（2026-09-18 立，2026-09-25 改名）——**开发者 / 运营调参员共用**的登录挡板 + 页面挂载点。
+// 内部入口（2026-09-18 立，2026-09-25 改名）——**开发者 / 运营共用**的登录挡板 + 页面挂载点。
 // **只在含开发者模式的构建里存在。** 挡板上有角色选择（点一下自动填身份名），提交后按身份分流到
-// DevPanel（开发者）或 TunerPanel（运营调参员）——身份名相同但不是同一角色时由 devAuth 的 IDENTITIES 判定。
+// DevPanel（开发者）或 OpsPanel（运营）——身份名相同但不是同一角色时由 devAuth 的 IDENTITIES 判定。
 //
 // 三个入口都汇到 `ui.devGate`：
 //   · 启动页标题连点 5 下（SplashScreen）
@@ -13,7 +13,7 @@ import { useUiStore } from '../stores/ui.js'
 import { DEV_PANEL_ENABLED, devLogout } from '../game/dev/devFlag.js'
 import { DEV_DEFAULT_PASSWORD_HINT, devLogin, IDENTITIES } from '../game/dev/devAuth.js'
 import DevPanel from './DevPanel.vue'
-import TunerPanel from './TunerPanel.vue'
+import OpsPanel from './OpsPanel.vue'
 
 const ui = useUiStore()
 const devName = ref('')
@@ -24,7 +24,7 @@ const pwInput = ref(null)
 /** 两个内部角色：点一下自动填身份名（名字不是秘密，口令才是挡板；IDENTITIES 是判定唯一出口） */
 const ROLES = [
   { role: 'dev', label: '🛠 开发者', name: IDENTITIES.find((i) => i.role === 'dev')?.name ?? '', desc: '开发者页面：运行时/存档/埋点/体检/监控 全部权限' },
-  { role: 'tuner', label: '🎛 运营调参员', name: IDENTITIES.find((i) => i.role === 'tuner')?.name ?? '', desc: '只有「运营调参」页：改运行时系数，无任何存档与破坏性操作' },
+  { role: 'ops', label: '📊 运营', name: IDENTITIES.find((i) => i.role === 'ops')?.name ?? '', desc: '只有「运营工作台」：🧪 平衡实验台 + 📊 运营驾驶舱，都是只读 / 会话安全，无任何存档与破坏性操作' },
 ]
 const pickedRole = ref(null)
 const pickedDesc = computed(() => ROLES.find((r) => r.role === pickedRole.value)?.desc ?? '')
@@ -45,7 +45,7 @@ async function submit() {
     pw.value = ''
     ui.devGate = false
     // 页面是**整页接管**（游戏内与启动页同一形态，覆盖在游戏/启动页之上）；按登录角色分流
-    if (r.role === 'tuner') ui.showTunerPanel = true
+    if (r.role === 'ops') ui.showOpsPanel = true
     else ui.showDevPanel = true
   }
 }
@@ -57,9 +57,9 @@ function cancel() {
 function onKey(e) {
   // Esc 关掉挡板；页面开着时 Esc 也收起（不影响游戏内其它 Esc 逻辑：页面在最上层）
   if (e.key === 'Escape') {
-    if (ui.showDevPanel || ui.showTunerPanel) {
+    if (ui.showDevPanel || ui.showOpsPanel) {
       ui.showDevPanel = false
-      ui.showTunerPanel = false
+      ui.showOpsPanel = false
     } else if (ui.devGate) cancel()
   }
 }
@@ -72,6 +72,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 function lock() {
   devLogout()
   ui.showDevPanel = false
+  ui.showOpsPanel = false
   ui.devGate = false
 }
 defineExpose({ lock })
@@ -81,10 +82,10 @@ defineExpose({ lock })
   <template v-if="DEV_PANEL_ENABLED">
     <!-- 口令挡板 -->
     <Teleport to="body">
-      <div v-if="ui.devGate && !ui.showDevPanel" class="dev-backdrop" @click.self="cancel">
+      <div v-if="ui.devGate && !ui.showDevPanel && !ui.showOpsPanel" class="dev-backdrop" @click.self="cancel">
         <div class="dev-gate">
           <h3>🛠 内部入口</h3>
-          <p class="dim">开发者 / 运营调参员共用入口——按<b>身份名</b>自动分流到对应页面。口令只是挡板，真正的保护是本页不进生产构建。</p>
+          <p class="dim">开发者 / 运营共用入口——按<b>身份名</b>自动分流到对应页面。口令只是挡板，真正的保护是本页不进生产构建。</p>
           <div class="dev-role-tabs">
             <button v-for="r in ROLES" :key="r.role" class="btn btn-sm" :class="{ 'btn-primary': pickedRole === r.role }" @click="pickRole(r)">{{ r.label }}</button>
           </div>
@@ -118,7 +119,7 @@ defineExpose({ lock })
 
     <!-- 页面本体：整页接管（游戏内与启动页同一形态） -->
     <DevPanel v-if="ui.showDevPanel" />
-    <TunerPanel v-if="ui.showTunerPanel" />
+    <OpsPanel v-if="ui.showOpsPanel" />
   </template>
 </template>
 

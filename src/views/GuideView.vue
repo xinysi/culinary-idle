@@ -88,7 +88,7 @@ function groupByStage(c) {
 }
 
 /** 阶段流程图（2026-10-01 用户要求「参考运营调参员页面那种流程图」）：
- *  形态照 `TunerPanel.vue` 的 `.tp-chain`（一排方框 + `→` 箭头 + 一句脚注），但这里**可点** ——
+ *  形态照 `OpsPanel.vue` 的 `.tp-chain`（一排方框 + `→` 箭头 + 一句脚注），但这里**可点** ——
  *  点某一步会滚到下面那张行动卡并闪一下，把「先做什么」与「怎么做」连起来。
  *  ⚠️ 先只在「新手」上落地（用户要求先看一个阶段的效果再铺开），没登记的阶段不渲染这块。 */
 const FLOWS = {
@@ -408,7 +408,7 @@ function stepIcon(i) {
 }
 .gd-sghead:first-child { margin-top: 6px; }
 
-/* 阶段流程图（2026-10-01；形态照 TunerPanel 的 `.tp-chain`：一排方框 + 箭头 + 脚注） */
+/* 阶段流程图（2026-10-01；形态照 OpsPanel 的 `.tp-chain`：一排方框 + 箭头 + 脚注） */
 .gd-flow { padding: 16px 18px; background: rgba(var(--primary-tint-rgb), 0.07); }
 .gd-flow-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .gd-flow-head h4 { margin: 0; }

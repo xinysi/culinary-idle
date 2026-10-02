@@ -23,7 +23,7 @@ const check = (label, ok, detail = '') => {
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 /* ── 只在源码里出现、不该进产物的「标记串」（取自面板各文件的面向上方文案/常量） ── */
-const MARKERS = ['一键满配', '开发者面板', 'culinary-idle-dev-2026']
+const MARKERS = ['一键满配', '开发者面板', 'culinary-idle-dev-2026', '运营工作台']
 
 console.log('── A. 源码侧：面板确实存在（防「空断言」）──')
 const devFiles = [
@@ -34,11 +34,17 @@ const devFiles = [
   'src/game/dev/saveInspector.js',
   'src/game/dev/telemetry.js',
   'src/game/dev/hash.js',
+  'src/game/dev/opsAnalytics.js',
+  'src/game/dev/opsReport.js',
+  'src/game/dev/opsBenchmarks.js',
+  'src/game/dev/opsCadence.js',
+  'src/game/dev/opsCalendar.js',
+  'src/game/dev/balanceLab.js',
   'src/components/DevPanel.vue',
-  'src/components/TunerPanel.vue',
+  'src/components/OpsPanel.vue',
   'src/components/DevEntry.vue',
 ]
-check('A1. 开发者模块齐备（10 个文件）', devFiles.every((f) => fs.existsSync(path.join(ROOT, f))), devFiles.filter((f) => !fs.existsSync(path.join(ROOT, f))).join(','))
+check('A1. 开发者 + 运营模块齐备（16 个文件）', devFiles.every((f) => fs.existsSync(path.join(ROOT, f))), devFiles.filter((f) => !fs.existsSync(path.join(ROOT, f))).join(','))
 const allSrc = devFiles.map((f) => read(f)).join('\n') + read('src/App.vue') + read('src/components/SplashScreen.vue')
 for (const m of MARKERS) {
   check(`A2. 源码里含标记「${m}」`, allSrc.includes(m))
@@ -59,8 +65,8 @@ check('B6. App.vue 不得引用 DevPanel（页面代码只能经 DevEntry 进入
   !/DevPanel/.test(read('src/App.vue')), 'App.vue 出现 DevPanel 引用会让面板代码进主包/产物')
 check('B7. DevEntry 根级挂载页面本体（ui.showDevPanel 整页接管）',
   /<DevPanel v-if="ui\.showDevPanel" \/>/.test(read('src/components/DevEntry.vue')))
-check('B8. TunerPanel 只被 DevEntry 引用（运营调参页与面板同批剥离，App.vue 不得出现）',
-  /<TunerPanel v-if="ui\.showTunerPanel" \/>/.test(read('src/components/DevEntry.vue')) && !/TunerPanel/.test(read('src/App.vue')))
+check('B8. OpsPanel 只被 DevEntry 引用（运营页与面板同批剥离，App.vue 不得出现）',
+  /<OpsPanel v-if="ui\.showOpsPanel" \/>/.test(read('src/components/DevEntry.vue')) && !/OpsPanel/.test(read('src/App.vue')))
 check('B4. 启动页入口用连点标题（不放可见按钮）',
   /@click="tapTitle\(\)"/.test(read('src/components/SplashScreen.vue')) && !/dev-entry-btn/.test(allSrc))
 check('B5. 已登录不重复问口令（统一走 requestDevEntry）',
@@ -70,7 +76,7 @@ check('B5. 已登录不重复问口令（统一走 requestDevEntry）',
 console.log('\n── C. 冻结数据：面板只改存档，不改 src/game/data/* ──')
 // 「固定数据铁律」的那几层：面板只能读它们来填列表，**不能写**
 const DATA_WRITE = /^\s*(ITEMS|SEASONS|COMBAT_REGIONS|COMBAT_BOSSES|AOJIS|SPIRITS|SPIRIT_TIERS|EXPLORATION_TARGETS_ALL|SHANHAI_NODES|DAO_NODES|INSIGHT_NODES|ALL_ACHIEVEMENTS)\s*(\[[^\]]*\]\s*=|\.\s*(push|splice|sort|pop|shift|unshift)\()/m
-for (const f of ['src/game/dev/devTools.js', 'src/game/dev/devProbe.js', 'src/game/dev/saveInspector.js', 'src/game/dev/telemetry.js', 'src/components/DevPanel.vue', 'src/components/TunerPanel.vue']) {
+for (const f of ['src/game/dev/devTools.js', 'src/game/dev/devProbe.js', 'src/game/dev/saveInspector.js', 'src/game/dev/telemetry.js', 'src/game/dev/opsAnalytics.js', 'src/game/dev/opsReport.js', 'src/game/dev/opsCadence.js', 'src/game/dev/opsCalendar.js', 'src/game/dev/balanceLab.js', 'src/components/DevPanel.vue', 'src/components/OpsPanel.vue']) {
   const s = stripCommentsSafe(read(f))
   check(`C1. ${path.basename(f)} 不写冻结数据（无「对数据数组赋值/push」）`, !DATA_WRITE.test(s))
 }
@@ -85,7 +91,7 @@ if (!fs.existsSync(DIST)) {
   for (const m of MARKERS) {
     check(`D1. 产物里不含标记「${m}」`, !joined.includes(m))
   }
-  check('D2. 产物里没有 DevEntry/DevPanel 的 chunk', !jsFiles.some((f) => /DevEntry|DevPanel/.test(f)), jsFiles.filter((f) => /Dev/.test(f)).join(','))
+  check('D2. 产物里没有 DevEntry/DevPanel/OpsPanel 的 chunk', !jsFiles.some((f) => /DevEntry|DevPanel|OpsPanel/.test(f)), jsFiles.filter((f) => /Dev/.test(f)).join(','))
 }
 
 /* 剥注释：本项目约定用 scripts/ci/lib/comments.mjs（三态扫描，不会被行注释里的 /* 骗到） */

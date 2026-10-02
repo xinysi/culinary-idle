@@ -21,20 +21,20 @@ export const DEV_PASS_HASH = '15f7cafcdde427fc35fceb49ddc334da89c3e7e4c0eba73d35
 export const DEV_USER_NAME = 'ShiShen'
 
 /**
- * 身份表（2026-09-25 新增第四角色「运营调参员」）：同名 + 对口令 → 对应角色。
- *   dev   = 开发者（开发者页面全部 5 分区）
- *   tuner = 运营调参员（只进「🎛 运营调参」页：改运行时系数，无任何存档/破坏性操作）
- * 权限矩阵：试玩 < 玩家 < 运营调参员 < 开发者。改 dev 口令用 scripts/dev/set_dev_password.mjs。
+ * 身份表（2026-09-25 第四角色，2026-10-02 由「运营调参员」重构为「运营」）：同名 + 对口令 → 对应角色。
+ *   dev = 开发者（开发者页面全部 5 分区）
+ *   ops = 运营（只进「📊 运营工作台」：🧪 平衡实验台 + 📊 运营驾驶舱，都是只读/会话安全，无任何存档/破坏性操作）
+ * 权限矩阵：试玩 < 玩家 < 运营 < 开发者。改 dev 口令用 scripts/dev/set_dev_password.mjs。
  */
-export const TUNER_PASS_HASH = '8505bf4d9518d7a5b32757801ac3089c131a551684c4d2c33d0794aab9804f69'
-export const TUNER_NAME = 'YunYing'
+export const OPS_PASS_HASH = '8505bf4d9518d7a5b32757801ac3089c131a551684c4d2c33d0794aab9804f69'
+export const OPS_NAME = 'YunYing'
 export const IDENTITIES = [
   { name: DEV_USER_NAME, hash: DEV_PASS_HASH, role: 'dev' },
-  { name: TUNER_NAME, hash: TUNER_PASS_HASH, role: 'tuner' },
+  { name: OPS_NAME, hash: OPS_PASS_HASH, role: 'ops' },
 ]
 
 /** 兜底提示：方便本人/答辩时快速核对（可用性提示，不是安全机制） */
-export const DEV_DEFAULT_PASSWORD_HINT = 'ShiShen=开发者 · YunYing=运营调参（口令用 scripts/dev/set_dev_password.mjs 配置）'
+export const DEV_DEFAULT_PASSWORD_HINT = 'ShiShen=开发者 · YunYing=运营（口令用 scripts/dev/set_dev_password.mjs 配置）'
 
 export function hashPassword(password) {
   return sha256Hex(`${DEV_SALT}:${password ?? ''}`)
@@ -43,7 +43,7 @@ export function hashPassword(password) {
 /**
  * 登录 = 开发者名 + 口令 双校验（2026-09-25 用户要求加用户名）。
  * 名字比较大小写不敏感（挡板易用性优先）；真正的保护仍是构建期隔离。
- * @returns {{ok:boolean, role?:'dev'|'tuner', msg:string}}
+ * @returns {{ok:boolean, role?:'dev'|'ops', msg:string}}
  */
 export function devLogin(userName, password) {
   const name = String(userName ?? '').trim()
@@ -51,5 +51,5 @@ export function devLogin(userName, password) {
   if (!id) return { ok: false, msg: '开发者名不正确' }
   if (hashPassword(password) !== id.hash) return { ok: false, msg: '口令不正确' }
   markAuthed(id.role)
-  return { ok: true, role: id.role, msg: id.role === 'dev' ? '已进入开发者模式' : '已进入运营调参模式' }
+  return { ok: true, role: id.role, msg: id.role === 'dev' ? '已进入开发者模式' : '已进入运营模式' }
 }

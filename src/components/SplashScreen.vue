@@ -42,11 +42,11 @@ function startGuest() {
   ui.toggleStartSlotModal(false)
 }
 
-// ── 内部入口（隐蔽：开发者 / 运营调参员共用）───────────────────────────────────────────────
+// ── 内部入口（隐蔽：开发者 / 运营共用）───────────────────────────────────────────────
 // 标题连点 5 下（2 秒内）→ 打开开发者登录挡板。**只在含开发者模式的构建里生效**：
 // 生产构建下 `DEV_PANEL_ENABLED` 是静态 false，这段判断会被整块消掉、点了也没反应。
 // 工具提示同样只在开发构建里出现（用「不在构建里」而不是「藏起来」来实现不可见）。
-const devHint = DEV_PANEL_ENABLED ? '内部入口（开发者 / 运营调参）：连点 5 下（或 Ctrl+Shift+D）' : undefined
+const devHint = DEV_PANEL_ENABLED ? '内部入口（开发者 / 运营）：连点 5 下（或 Ctrl+Shift+D）' : undefined
 let taps = 0
 let lastTap = 0
 function tapTitle() {

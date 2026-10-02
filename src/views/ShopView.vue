@@ -222,7 +222,7 @@ const RELATED = [{ view: 'deluxe', label: '🍽️ 珍馐阁' }, { view: 'exchan
             <img v-if="entry.itemId && itemImage(entry.itemId)" :src="itemImage(entry.itemId)" class="item-img item-img-sm" @error="$event.target.style.display = 'none'" alt="" loading="lazy" decoding="async" />
             <strong>{{ shopItemName(entry.itemId) }}</strong>
           </div>
-          <div class="gather-card-row"><span class="dim">{{ entry.desc ?? CATEGORY_LABEL[getItem(entry.itemId)?.category] ?? getItem(entry.itemId)?.category }}</span></div>
+          <div class="gather-card-row"><span class="dim shop-desc">{{ entry.desc ?? CATEGORY_LABEL[getItem(entry.itemId)?.category] ?? getItem(entry.itemId)?.category }}</span></div>
           <div class="gather-card-row"><span>价格</span><span class="mono">{{ entry.price }} 金币</span></div>
           <div class="gather-card-row">
             <span>持有</span>
