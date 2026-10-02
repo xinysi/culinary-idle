@@ -245,13 +245,13 @@ if (player.skills?.spiceMixing) { player.skills.spiceMixing.level = 30; player.s
   const rid = (REGULARS ?? []).map((r) => r.id).find(Boolean)
   if (!rid || !player.favorGain) note('常客好感 → 单位真的涨', '拿不到 REGULARS 或 favorGain')
   else {
-    // 字段无关：整块状态快照对比（首版读 regulars[id].favor ⇒ 读错了字段，恒 0→0 假红）
-    const snap = () => JSON.stringify(player.regulars ?? {})
+    // ⚠️ 两版都读错了地方：favorGain 写的是 **restaurant.favor.xp**（见其实现），与 regulars 无关。
+    const snap = () => JSON.stringify(player.restaurant?.favor ?? {})
     const before = snap()
     player.favorGain(10)
     const after = snap()
-    if (after === before) note('常客好感 → 状态真的变', 'favorGain(10) 没有改动 regulars 快照 —— 需先弄清它写进哪个容器（待补前置）')
-    else ok.push('常客好感 → 状态真的变（favorGain 是唯一出口）')
+    const x0 = Number(JSON.parse(before).xp ?? 0), x1 = Number(JSON.parse(after).xp ?? 0)
+    check('常客好感 → 餐厅好感经验真的涨（favorGain 是唯一出口）', x1 > x0, `favorGain(10) 后 restaurant.favor.xp ${x0} → ${x1}`)
   }
 }
 
@@ -302,14 +302,17 @@ if (player.skills?.spiceMixing) { player.skills.spiceMixing.level = 30; player.s
     // ⚠️ 首版传了 undefined ⇒ 被"商路不存在"挡回。真实出口是 regions.js 的 REGIONS。
     const { REGIONS } = await import('../../src/game/data/regions.js').catch(() => ({}))
     const rid = (REGIONS ?? [])[0]?.id
+    // ⚠️ 前置是「先考察该产地」（regions[id] = true）—— 上一版只给了 regionId，被"需先考察"挡回。
+    if (rid && player.regions) player.regions[rid] = true
     const r0 = rid ? player.caravanStart(0, rid, { apple: 5 }) : { ok: false, msg: '拿不到 REGIONS' }
-    const st = player.caravan?.slots?.[0] ?? player.caravan?.[0] ?? null
-    if (st && typeof st === 'object') st.returnAt = Date.now() - 1000 // 拨到过去 ⇒ 可领
+    const st = player.caravanState?.().slots?.[0] ?? player.caravan?.slots?.[0] ?? null
+    if (st && typeof st === 'object') st.readyAt = Date.now() - 1000 // 拨到过去 ⇒ 可领（字段名是 readyAt）
     const g0 = player.gold ?? 0
     const r1 = player.caravanClaim(0)
     const g1 = player.gold ?? 0
-    if (typeof r0 === 'object' && r0?.ok && (g1 > g0 || (typeof r1 === 'object' && r1?.ok))) ok.push('商队归队 → 金币（出货成功且归队真的加钱）')
-    else note('商队归队 → 金币', '出货未成功：' + (r0?.msg ?? '') + '（caravanStart 需要一个真实 regionId，待补前置）')
+    check('商队归队 → 金币（出货成功且归队真的加钱）',
+      (typeof r0 === 'object' && r0?.ok) && g1 > g0,
+      `出货 ${r0?.msg ?? JSON.stringify(r0)?.slice(0, 30)} ⇒ 归队 ${r1?.msg ?? JSON.stringify(r1)?.slice(0, 40)} · 金币 ${g0}→${g1}`)
   }
 }
 
