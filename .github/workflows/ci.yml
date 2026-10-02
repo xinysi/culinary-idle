@@ -30,6 +30,8 @@ jobs:
           node scripts/ci/continuity_test.mjs
           node scripts/ci/audit_sync.mjs
           node scripts/ci/content_sync_audit.mjs
+      - name: voice audit
+        run: node scripts/ci/voice_audit.mjs
           node scripts/ci/item_triple_audit.mjs
           node scripts/ci/minigame_ui_audit.mjs
           # 难度系数审计（2026-09-21 立）：概率难度是**全局系数**（data/difficulty.js）而非改数据值——
