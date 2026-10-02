@@ -2654,6 +2654,21 @@ console.log('══ T. 攻略数据 ══')
   }
 }
 
+// ── 竞技场状态：必须**按存档位分键**（2026-10-02 补）────────────────────────
+// 风险本质：「有人把键写回全局」⇒ 换档后对手榜单 /「已挑战」/ 连胜**跨档污染**
+//（在 A 档打过的人到 B 档仍显示已挑战）。这是玩家能直接感觉到的坏，而此前只有一条注释在管它。
+{
+  const arena = rdSrc('src/views/ArenaView.vue')
+  const dev = rdSrc('src/game/dev/devTools.js')
+  check('竞技场', '状态必须按存档位分键（键名带 .<slot>，不许写回全局键）',
+    // 纯字符串判断（不用正则）：键的写入必须走 arenaKey、读取旧全局键只用于一次性迁移
+    arena.includes('arenaKey(') && !arena.includes('setItem(ARENA_KEY_BASE') && arena.includes('getItem(ARENA_KEY_BASE'),
+    '要么写入没走 arenaKey（会写回全局键 ⇒ 跨档污染），要么读不到旧全局键（迁移失效）')
+  check('竞技场', '旧全局键（迁移前）仍被处理：一次性迁移或清理时一并删掉',
+    /culinary-idle\.arena\.state'/.test(arena) || /culinary-idle\.arena\.state'/.test(dev),
+    '没有对旧全局键的处理（迁移或清理）')
+}
+
 // ── U. 图鉴数据完整性（物品来源/BOSS/赛季图鉴）──────
 console.log('══ U. 图鉴数据 ══')
 {
