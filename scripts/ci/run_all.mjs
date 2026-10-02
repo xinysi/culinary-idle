@@ -38,6 +38,7 @@ const ALL = readdirSync(CI_DIR)
 const CORE = [
   'chain_reaction_test', 'xp_log_audit', 'system_test', 'season_check', 'system_test2', 'buff_test', 'continuity_test',
   'audit_sync', 'content_sync_audit', 'item_triple_audit', 'minigame_ui_audit',
+  'mastery_tiers_test',
   'voice_audit',
   'difficulty_audit', 'image_path_audit', 'bgm_audit', 'gen_drift_audit',
   'template_binding_audit', 'action_sweep',
@@ -99,7 +100,7 @@ for (const b of bad) for (const l of b.fails) console.log(`  ${b.name}: ${l}`)
 // 为什么放这儿：run_all **不在 ci.yml 里**、只影响本地 ⇒ 风险最低；各守卫源码一行不改。
 // 基线 = 2026-10-02 实测值（略留余量）。加了新的、会报条数的守卫时，往这里补一行即可。
 const BASE = {
-  system_test: 1800,            // 实测 1866
+NaN,            // 拆分后（原 1866，90 条拆到 mastery_tiers_test）
   action_sweep: 2,
   template_binding_audit: 9,
   effect_binding_audit: 11,
