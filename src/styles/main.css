@@ -6353,3 +6353,29 @@ html[data-theme='dark'] .tooltip {
   display: flex;
   margin-bottom: 6px;
 }
+
+/* —— 目标/配方列表标题行的排版（2026-10-02 用户：「一行四段文字分散排布太不雅观」）—— 
+   改前 .target-head-row { justify-content: space-between } 把**四段**（标题 / 档位统计 /
+   低目标提示 / 右侧按钮组）摊到整行两头，中间全空 ⇒ 读起来是四块漂着的碎信息。
+   现改为**两组聚拢**：
+     左 = 标题 + 档位统计 + 低目标提示（紧挨着，是一句话的补充信息）；
+     右 = 操作区（弹药/保鲜/饼干 + 精通档位说明），整组靠右。
+   同时允许折行（窄屏不会挤成一行糊掉）。三页（采集/制作/探索）共用本行 ⇒ 一处改三页生效。 */
+.target-head-row {
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  line-height: 1.5;
+}
+.target-head-extra {
+  margin-left: auto;          /* 操作区整组靠右（两组之间自然留白） */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* 小屏折行后不再硬贴右边（否则会出现一段奇怪的右对齐空档） */
+@media (max-width: 720px) {
+  .target-head-extra { margin-left: 0; }
+}
