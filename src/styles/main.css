@@ -4461,8 +4461,18 @@ html[data-theme='dark'] .head-strips {
   opacity: 0.75;
 }
 /* 当前段概览行（目标数 / 精通进度 / 「当前」徽标） */
+/* 段头不再独占一行（2026-10-02 用户：「Lv 1-10 清汤面 26 个配方 精通 0/26 可制作 独占一行很碍眼」）。
+   做法 = **纯 CSS**：把标签页与段头都降为 inline-level ⇒ 自动同行、放不下自动折行。
+   ⚠️ 刻意不改模板：本轮用「按行拼接」的方式包过一层 .era-bar，把标签结构弄坏过一次（构建报缺结束标签）。
+   两者是兄弟节点（中间的 <template v-if> 不产生 DOM 节点）⇒ 不需要包装元素。 */
+.era-tabs {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-bottom: 0;
+}
 .era-head {
-  display: flex;
+  display: inline-flex;
+  vertical-align: middle;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
