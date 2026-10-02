@@ -93,8 +93,40 @@ for (const r of [...results].sort((a, b) => b.ms - a.ms)) {
 }
 const bad = results.filter((r) => r.code !== 0)
 for (const b of bad) for (const l of b.fails) console.log(`  ${b.name}: ${l}`)
+// ── 扫描条数基线（2026-10-02，体检建议第 3 项）────────────────────────────
+// 目的：防「守卫的扫描器坏了 ⇒ 扫 0 条 ⇒ 照样打 ok」。做法**不侵入任何脚本**——
+//   在本地跑器里解析每个脚本的汇总行（`通过 N` / `扫描 N`），与下表比对。
+// 为什么放这儿：run_all **不在 ci.yml 里**、只影响本地 ⇒ 风险最低；各守卫源码一行不改。
+// 基线 = 2026-10-02 实测值（略留余量）。加了新的、会报条数的守卫时，往这里补一行即可。
+const BASE = {
+  system_test: 1800,            // 实测 1866
+  action_sweep: 2,
+  template_binding_audit: 9,
+  effect_binding_audit: 11,
+  ui_tick_audit: 7,
+  difficulty_audit: 41,
+  xp_log_audit: 4,
+  timer_lifecycle_audit: 8,
+  event_wiring_audit: 12,
+}
+// ⚠️ 只收「条数确实出现在 run_all 的摘要串里」的脚本：run_all 不保留各脚本的完整 stdout，
+//    像 chain_reaction_test / voice_audit 那种条数只在自己输出里的，放进来就是误报（本轮踩过）。
+//    要给它们加基线，得先让 run_all 保留 stdout（那是另一件事）。
+const low = []
+for (const r of results) {
+  const need = BASE[r.name]
+  if (!need || r.code !== 0) continue
+  const m = /通过\s*(\d+)|扫描\s*(\d+)/.exec(r.result ?? '')
+  const got = m ? Number(m[1] ?? m[2]) : null
+  if (got === null || got < need) low.push(r.name + ': ' + (got === null ? '未报告条数' : got) + ' < 基线 ' + need)
+}
+if (low.length) {
+  console.log('\n❌ 扫描条数低于基线（扫描器可能失效 —— 会静默变绿的那种）:')
+  for (const l of low) console.log('   ' + l)
+}
 const wall = Math.max(...results.map((r) => r.ms)) / 1000
 const serial = results.reduce((a, r) => a + r.ms, 0) / 1000
 console.log(`\n${results.length} 个脚本 · 串行合计 ${serial.toFixed(1)}s · 并发 ${jobs} ⇒ 墙钟 ${wall.toFixed(1)}s+`)
-console.log(bad.length ? `❌ ${bad.length} 个失败：${bad.map((b) => b.name).join(', ')}` : '✅ 全部通过')
-process.exit(bad.length ? 1 : 0)
+const nBad = bad.length + low.length
+console.log(nBad ? `❌ ${bad.length} 个失败${low.length ? ' + ' + low.length + ' 个低于基线' : ''}：${[...bad.map((b) => b.name), ...low.map((l) => l.split(':')[0])].join(', ')}` : '✅ 全部通过（含扫描条数基线）')
+process.exit(nBad ? 1 : 0)
