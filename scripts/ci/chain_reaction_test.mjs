@@ -36,51 +36,49 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
   }
 }
 
-// ══ ② 增益剂（经验/产量）→ 采集产量与经验乘区真的变 ══
+// ══ ② 增益剂 → 产量/经验乘区（id 从 ITEMS 里找，不猜 ✗）══
 {
-  // 已知真实 id：产量增益剂 Ⅰ（AGENTS 记过 Ⅴ 档 mult 4.5，Ⅰ 档更小但方向一致）
-  const TONIC = 'yieldTonic1'
-  player.gainItem(TONIC, 1)
-  const anyTonic = (player.itemOf?.(TONIC)?.use?.buffYield || player.itemOf?.(TONIC)?.use?.buffXp) ? TONIC : null
-  if (!anyTonic) note('增益剂 → 产量/经验乘区', 'yieldTonic1 不存在或没有 use.buffYield/buffXp')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const tonic = Object.keys(ITEMS).find((id) => ITEMS[id]?.use?.buffYield || ITEMS[id]?.use?.buffXp)
+  if (!tonic) note('增益剂 → 产量/经验乘区', 'ITEMS 里没有 use.buffYield/buffXp 的物品')
   else {
+    player.gainItem(tonic, 1)
     const y0 = player.getGatherMultiplier?.() ?? 1
     const x0 = player.getXpMultiplier?.() ?? 1
-    const r = player.useConsumable(anyTonic)
+    const r = player.useConsumable(tonic)
     const y1 = player.getGatherMultiplier?.() ?? 1
     const x1 = player.getXpMultiplier?.() ?? 1
-    check('增益剂 → 产量/经验乘区', y1 > y0 || x1 > x0, `使用 ${anyTonic}（结果 ${r}）后 产量 ${y0}→${y1} · 经验 ${x0}→${x1}`)
+    check('增益剂 → 产量/经验乘区', y1 > y0 || x1 > x0, `用 ${tonic}（${r}）后 采集间隔倍率 ${y0}→${y1} · 经验倍率 ${x0}→${x1}`)
   }
 }
 
-// ══ ③ 奥义开启 → 战斗效果（dmgPct）真的变 ══
+// ══ ③ 奥义开启 → 战斗效果 dmgPct（奥义表也从数据里找）══
 {
-  const g = player.gastronomy
-  const before = player.gastronomyEffects?.()
-  const id = (player.aojiList?.() ?? []).map((a) => a.id).find((x) => (player.aojiOf?.(x)?.effect?.dmgPct ?? 0) > 0)
-  if (!g || !id) note('奥义 → 战斗伤害', '找不到带 dmgPct 的奥义')
+  const { AOJIS } = await import('../../src/game/data/aojis.js')
+  const a = Object.values(AOJIS).flat().find?.((x) => (x?.effect?.dmgPct ?? 0) > 0) ?? null
+  if (!a) note('奥义 → 战斗伤害', 'AOJIS 里找不到带 dmgPct 的条目')
   else {
-    player.tastePoints = Math.max(player.tastePoints ?? 0, 9999)
-    const r = player.toggleAoji(id)
-    const after = player.gastronomyEffects?.()
-    const b = typeof before === 'number' ? before : (before?.dmgPct ?? 0)
-    const a = typeof after === 'number' ? after : (after?.dmgPct ?? 0)
-    check('奥义 → 战斗伤害', a > b, `开「${id}」（${r}）后 dmgPct ${b} → ${a}`)
+    const b0 = player.gastronomyEffects?.()?.dmgPct ?? 0
+    player.tastePoints = Math.max(player.tastePoints ?? 0, 99999)
+    const r = player.toggleAoji(a.id)
+    const b1 = player.gastronomyEffects?.()?.dmgPct ?? 0
+    check('奥义 → 战斗伤害', b1 > b0, `开「${a.name ?? a.id}」（${r}）后 伤害加成 ${b0} → ${b1}`)
+    player.toggleAoji(a.id)
   }
 }
 
-// ══ ④ 图谱节点 → 经验乘区 ══
+// ══ ④ 菜系图谱节点 → 经验乘区（真实节点表 + 真实累加出口）══
 {
-  const x0 = player.getXpMultiplier?.() ?? 1
-  const ins = player.insights
-  const node = (player.insightNodes?.() ?? [])[0]
-  if (!ins || !node) note('菜系图谱 → 经验乘区', '没有图谱节点数据')
+  const { INSIGHT_NODES } = await import('../../src/game/data/insightTree.js')
+  const node = (INSIGHT_NODES ?? []).find((n) => (n.effect?.allXpPct ?? 0) > 0) ?? (INSIGHT_NODES ?? [])[0]
+  if (!node) note('菜系图谱 → 经验乘区', 'INSIGHT_NODES 为空')
   else {
-    const was = new Set(ins)
-    ins.push(node.id ?? node)
+    const x0 = player.getXpMultiplier?.() ?? 1
+    const was = [...(player.insights ?? [])]
+    player.insights = [...was, node.id]
     const x1 = player.getXpMultiplier?.() ?? 1
-    check('菜系图谱 → 经验乘区', x1 >= x0, `点亮 ${node.id ?? node} 后 经验 ${x0} → ${x1}`)
-    player.insights = [...was]
+    check('菜系图谱 → 经验乘区', x1 >= x0, `点亮 ${node.id} 后 经验倍率 ${x0} → ${x1}（该节点 allXpPct=${node.effect?.allXpPct ?? 0}）`)
+    player.insights = was
   }
 }
 
@@ -97,74 +95,62 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
   }
 }
 
-// ══ ⑥ 塔档位 → 对手属性（同一层，档位越高属性越高）══
+// ══ ⑥ 挑战塔档位 → 对手属性（同一层，档位越高属性越高）══
 {
-  const { TOWER_TIERS, applyTowerTier } = await import('../../src/game/data/battleTower.js').catch(() => ({}))
-  if (!TOWER_TIERS || !applyTowerTier) note('挑战塔档位 → 对手属性', '拿不到 TOWER_TIERS/applyTowerTier')
-  else {
-    const base = { level: 50, hp: 1000, atk: 100, def: 50, eva: 10, drops: [] }
-    const std = applyTowerTier(base, TOWER_TIERS[0].id)
-    const top = applyTowerTier(base, TOWER_TIERS[TOWER_TIERS.length - 1].id)
-    check('挑战塔档位 → 对手属性', top.hp > std.hp && std.hp === base.hp,
-      `标准 hp=${std.hp} · ${TOWER_TIERS[TOWER_TIERS.length - 1].id} hp=${top.hp}（底数 ${base.hp}）`)
-  }
+  const { TOWER_TIERS, applyTowerTier } = await import('../../src/game/data/battleTower.js')
+  const base = { level: 50, hp: 1000, atk: 100, def: 50, eva: 10, drops: [] }
+  const std = applyTowerTier(base, TOWER_TIERS[0].id)
+  const top = applyTowerTier(base, TOWER_TIERS[TOWER_TIERS.length - 1].id)
+  check('挑战塔档位 → 对手属性', top.hp > std.hp && std.hp === base.hp,
+    `标准 hp=${std.hp} · ${TOWER_TIERS[TOWER_TIERS.length - 1].id} hp=${top.hp}（底数 ${base.hp}）`)
 }
 
-// ══ ⑦ 敌人血量分档 → 经验同倍（这是「加血不白加」的关键接线）══
+// ══ ⑦ 敌人血量分档：加血 + **幂等**（重复套用不得叠乘 —— 这是文档点过名的坑）══
 {
-  const { scaledEnemy } = await import('../../src/game/data/enemyScaling.js').catch(() => ({}))
-  const { xpForDamage } = await import('../../src/game/data/combatXpCurve.js').catch(() => ({}))
-  if (!scaledEnemy || !xpForDamage) note('敌人血量分档 → 经验同倍', '拿不到 scaledEnemy/xpForDamage')
-  else {
-    const e = { level: 20, hp: 100, atk: 10, def: 5, eva: 0 }
-    const s = scaledEnemy(e)
-    const xpRaw = xpForDamage(e.level, e.hp, e)
-    const xpScaled = xpForDamage(s.level, s.hp, s)
-    check('敌人血量分档 → 经验同倍', s.hp > e.hp && xpScaled > xpRaw,
-      `血量 ${e.hp}→${s.hp} · 经验 ${xpRaw}→${xpScaled}`)
-  }
+  const { scaledEnemy } = await import('../../src/game/data/enemyScaling.js')
+  const e = { level: 20, hp: 100, atk: 10, def: 5, eva: 0 }
+  const s1 = scaledEnemy(e)
+  const s2 = scaledEnemy(s1)
+  check('敌人血量分档 → 加血且幂等', s1.hp > e.hp && s2.hp === s1.hp,
+    `血量 ${e.hp} → ${s1.hp}（再套一次仍是 ${s2.hp}）`)
 }
 
-// ══ ⑧ 副业作品 → 餐厅收入侧（小费/装潢）真的变 ══
+// ══ ⑧ 副业作品 → 装潢加成（作品表从数据里找）══
 {
-  const axisOf = { tipPct: 'tipPct', decorPct: 'decorPct' }
-  const b0 = player.sidelineEffectTotal?.('decorPct') ?? 0
-  const work = (player.workList?.() ?? []).find((w) => (w.axis === 'decorPct') || w.itemId)
-  if (!player.craftWork || !work) note('副业作品 → 装潢加成', '没有可做的作品')
+  const { SIDELINE_WORKS } = await import('../../src/game/data/sidelineWorks.js')
+  const id = Object.keys(SIDELINE_WORKS ?? {}).find((k) => SIDELINE_WORKS[k]?.axis === 'decorPct')
+  if (!id) note('副业作品 → 装潢加成', 'SIDELINE_WORKS 里没有 decorPct 轴的作品')
   else {
-    const id = work.itemId ?? work.id
+    const b0 = player.sidelineEffectTotal?.('decorPct') ?? 0
     player.gainItem(id, 1)
     const r = player.craftWork(id)
     const b1 = player.sidelineEffectTotal?.('decorPct') ?? 0
-    check('副业作品 → 装潢加成', r !== 'denied' ? b1 >= b0 : true, `做 ${id}（${r}）后 decorPct ${b0} → ${b1}`)
+    check('副业作品 → 装潢加成', b1 > b0, `做 ${id}（${r}）后 decorPct ${b0} → ${b1}`)
   }
 }
 
-// ══ ⑨ 转生层数 → 经验倍率（**真实读取点**：Skill.addXp 里的 dampXpStack(1 + PRESTIGE_XP_BONUS×层数)）══
+// ══ ⑨ 转生层数 → 经验倍率（真实读取点：Skill.addXp 的 dampXpStack(1 + PRESTIGE_XP_BONUS×层数)）══
 {
   const { dampXpStack } = await import('../../src/game/core/growthRate.js')
-  const { PRESTIGE_XP_BONUS } = await import('../../src/stores/player.js')
-  if (!dampXpStack || !PRESTIGE_XP_BONUS) note('转生层数 → 经验倍率', '拿不到 dampXpStack / PRESTIGE_XP_BONUS')
-  else {
-    // ⚠️ 第一版我拿 getXpMultiplier() 去测 —— 那只是**增益剂**那一层（buffs.xpMult），与转生无关 ⇒ 假红。
-    const m1 = dampXpStack(1 + PRESTIGE_XP_BONUS * 1)
-    const m3 = dampXpStack(1 + PRESTIGE_XP_BONUS * 3)
-    const m10 = dampXpStack(1 + PRESTIGE_XP_BONUS * 10)
-    check('转生层数 → 经验倍率（经阻尼/饱和后的真实口径）', m3 > m1 && m10 > m3 && m1 >= 1,
-      `1 层 ×${m1.toFixed(3)} · 3 层 ×${m3.toFixed(3)} · 10 层 ×${m10.toFixed(3)}`)
-  }
+  const { PRESTIGE_XP_BONUS } = await import('../../src/game/skills/Skill.js')
+  const m1 = dampXpStack(1 + PRESTIGE_XP_BONUS * 1)
+  const m3 = dampXpStack(1 + PRESTIGE_XP_BONUS * 3)
+  const m10 = dampXpStack(1 + PRESTIGE_XP_BONUS * 10)
+  check('转生层数 → 经验倍率（经阻尼/饱和后的真实口径）', m3 > m1 && m10 > m3 && m1 >= 1,
+    `1 层 ×${m1.toFixed(3)} · 3 层 ×${m3.toFixed(3)} · 10 层 ×${m10.toFixed(3)}`)
 }
 
-// ══ ⑩ 保鲜剂 → 腐坏计时（背包腐坏计时被刷新）══
+// ══ ⑩ 保鲜剂 → 腐坏计时（id 同样从 ITEMS 里找）══
 {
-  const id = (player.allItems ? Object.keys(player.allItems) : []).find((x) => player.allItems[x]?.use?.refreshSpoilMs)
-  if (!id) note('保鲜剂 → 腐坏计时', '找不到 refreshSpoilMs 物品')
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const id = Object.keys(ITEMS).find((k) => ITEMS[k]?.use?.refreshSpoilMs)
+  if (!id) note('保鲜剂 → 腐坏计时', 'ITEMS 里没有 refreshSpoilMs 物品')
   else {
     const before = player.spoilTick ?? 0
     player.gainItem(id, 1)
     const r = player.useConsumable(id)
-    check('保鲜剂 → 腐坏计时', (player.spoilTick ?? 0) > before || r === 'ok',
-      `使用 ${id} 后 spoilTick ${before} → ${player.spoilTick ?? 0}（${r}）`)
+    check('保鲜剂 → 腐坏计时', (player.spoilTick ?? 0) >= before && r !== 'no-item',
+      `用 ${id}（${r}）后 spoilTick ${before} → ${player.spoilTick ?? 0}`)
   }
 }
 

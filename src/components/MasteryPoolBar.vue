@@ -92,7 +92,7 @@ function doSpend() {
           :key="t.name"
           class="mp-tier"
           :class="{ on: t.reached }"
-          :title="`池达到 ${t.pctText} 起（且保持不低于该值）时生效：双倍产出 +${t.doublePP}pp${t.successPP ? ` · 制作成功率 +${t.successPP}pp` : ''}${t.xpPct ? ` · 经验 +${t.xpPct}%` : ''}`"
+          :title="`池达到 ${t.pctText} 起（且保持不低于该值）时生效：双倍产出 +${t.doublePP} 个百分点${t.successPP ? ` · 制作成功率 +${t.successPP} 个百分点` : ''}${t.xpPct ? ` · 经验 +${t.xpPct}%` : ''}`"
         >{{ t.pctText }} {{ t.name }}</span>
       </div>
       <div class="dim mp-note">

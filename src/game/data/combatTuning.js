@@ -23,7 +23,7 @@ export const COMBAT_DEPTH_V1 = true
 // 🔴 **必须有上限**：装备命中是**加法属性**，而词条+宝石+强化把它堆到几百是常态
 //    （实测：专堆命中时 `equippedStats.accuracy` 可达 ~450，而等级项只有 130）。
 //    首版没有上限 ⇒ 堆满命中把命中率推到 **90%**（而旧加法形态同配置是 76%）—— 杠杆过头了。
-//    封顶后：随手配装 ≈52% · 专堆命中 ≈74%（+22pp，有感但不失控）。
+//    封顶后：随手配装 ≈52% · 专堆命中 ≈74%（+22 个百分点，有感但不失控）。
 export const ACC_GEAR_DIV = 40
 export const EVA_GEAR_DIV = 40
 export const ACC_GEAR_CAP = 120

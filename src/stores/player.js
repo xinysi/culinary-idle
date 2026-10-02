@@ -457,7 +457,7 @@ export const usePlayerStore = defineStore('player', {
         if (gemMul !== 1) for (const k of Object.keys(gb)) gb[k] = gb[k] * gemMul
         for (const [k, v] of Object.entries(gb)) sum[k] = (sum[k] ?? 0) + v
       }
-      // 两套探索装备混搭可达到原始 +12.5pp，玩家看到的汇总必须与探索的 +10pp 上限一致。
+      // 两套探索装备混搭可达到原始 +12.5 个百分点，玩家看到的汇总必须与探索的 +10 个百分点 上限一致。
       sum.exploreSuccessPP = Math.min(10, Math.max(0, sum.exploreSuccessPP ?? 0))
       return sum
     },

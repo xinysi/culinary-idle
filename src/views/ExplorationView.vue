@@ -112,10 +112,10 @@ const masteryXpMult = (t) => masteryXpMultiplier(masteryLevelOf(t))
 function succTip(t) {
   const parts = [
     `初始 ${(initialPct(t) * 100).toFixed(1)}%（基础值 × 段位系数 ${bandFactor(t).toFixed(2)}，越往后越低、末段 0%）`,
-    `精通 ${(masteryPP(t) * 100).toFixed(0)}pp`,
+    `精通 ${(masteryPP(t) * 100).toFixed(0)} 个百分点`,
   ]
-  if (poolPP.value > 0) parts.push(`精通池 ${(poolPP.value * 100).toFixed(0)}pp`)
-  if (gearPP.value > 0) parts.push(`专属装备 ${(gearPP.value * 100).toFixed(1)}pp（在上限之外相加）`)
+  if (poolPP.value > 0) parts.push(`精通池 ${(poolPP.value * 100).toFixed(0)} 个百分点`)
+  if (gearPP.value > 0) parts.push(`专属装备 ${(gearPP.value * 100).toFixed(1)} 个百分点（在上限之外相加）`)
   const cap = `上限 ${EXPLORE_CAP_TEXT}（不含装备）；满精通可达 ${(capPct(t) * 100).toFixed(0)}%`
   return `${parts.join(' + ')} ⇒ ${cap}`
 }

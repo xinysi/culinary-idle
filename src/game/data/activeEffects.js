@@ -530,8 +530,8 @@ export const EFFECT_ROWS = [
       const text = rows
         .map(({ sid, st }) => {
           const b = p.masteryPoolBonus(sid)
-          const parts = ['双倍产出 +' + b.doublePP + 'pp']
-          if (b.successPP) parts.push('成功率 +' + b.successPP + 'pp')
+          const parts = ['双倍产出 +' + b.doublePP + ' 个百分点']
+          if (b.successPP) parts.push('成功率 +' + b.successPP + ' 个百分点')
           if (b.xpPct) parts.push('经验 +' + b.xpPct + '%')
           const label = SKILL_CN[sid] ?? sid
           return label + '「' + st.tier.name + '」：池 ' + pct(st.pct * 100) + '（' + parts.join('、') + '）'
@@ -836,8 +836,8 @@ export const EFFECT_ROWS = [
     id: 'papermakingApprentice', group: 'idle', icon: '📜', name: '造纸·徒弟离线效率', kind: 'buff', src: '副业·造纸', view: 'skill:papermaking',
     read: (p) => {
       const v = p.sidelineEffectTotal?.('apprenticePP') ?? 0
-      if (!v) return off('还没把文房做成作品、也没投入量产阶梯——每件 +0.8pp、每档 +0.5pp')
-      return { on: true, text: `徒弟离线效率额外 ${pct(v)}pp（基础封顶 +20%，本项把它顶到 ${Math.round(p.apprenticeOfflineBonus?.() * 100 ?? 0)}%）` }
+      if (!v) return off('还没把文房做成作品、也没投入量产阶梯——每件 +0.8 个百分点、每档 +0.5 个百分点')
+      return { on: true, text: `徒弟离线效率额外 ${pct(v)} 个百分点（基础封顶 +20%，本项把它顶到 ${Math.round(p.apprenticeOfflineBonus?.() * 100 ?? 0)}%）` }
     },
   },
   {

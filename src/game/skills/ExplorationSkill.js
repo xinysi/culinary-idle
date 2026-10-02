@@ -46,7 +46,7 @@ export class ExplorationSkill extends Skill {
     return masteryLevelProgress(this.mastery?.[target?.id] ?? 0)
   }
 
-  /** 与装备面板共用汇总口径：强化不放大专属属性，混搭也只计最多 +10pp。 */
+  /** 与装备面板共用汇总口径：强化不放大专属属性，混搭也只计最多 +10 个百分点。 */
   gearSuccessPP() {
     return (this.player.equippedStats?.exploreSuccessPP ?? 0) / 100
   }

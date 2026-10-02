@@ -83,7 +83,7 @@ export const SIDELINE_AXES = {
   miningExtraPP: { label: '采矿附产率', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 2 },
   // ── v2.14.0：四支「既有系统接线」副业 ──
   /** **徒弟离线效率上限**（百分点）：加在 `player.apprenticeOfflineBonus()` 上，基础封顶 +20% */
-  apprenticePP: { label: '徒弟离线效率', amountLabel: (v) => `+${fmtAxisNum(v)}pp`, perItem: 0.8 },
+  apprenticePP: { label: '徒弟离线效率', amountLabel: (v) => `+${fmtAxisNum(v)} 个百分点`, perItem: 0.8 },
   /** **常客好感增速**（%）：乘在唯一的 `player.favorGain()` 上（5 处好感来源统一走它） */
   favorGainPct: { label: '常客好感增速', amountLabel: (v) => `+${fmtAxisNum(v)}%`, perItem: 1.5 },
   /** **订单赏金**（%）：乘在 `makeOrder` 的赏金上（只放大单笔，不改到访间隔——那是香道的轴） */
@@ -180,7 +180,7 @@ export const SIDELINE_LADDERS = [
   { skill: 'goodsTag', name: '货签', catLabel: '货签', axis: 'tagSellPct', perTier: 1.5, unit: (v) => `交易所卖出价 +${fmtAxisNum(v)}%` },
   { skill: 'miningGear', name: '采掘器具', catLabel: '器具', axis: 'miningExtraPP', perTier: 1.5, unit: (v) => `采矿附产 +${fmtAxisNum(v)}%` },
   // ── v2.14.0 ──
-  { skill: 'papermaking', name: '造纸', catLabel: '文房', axis: 'apprenticePP', perTier: 0.5, unit: (v) => `徒弟离线效率 +${fmtAxisNum(v)}pp` },
+  { skill: 'papermaking', name: '造纸', catLabel: '文房', axis: 'apprenticePP', perTier: 0.5, unit: (v) => `徒弟离线效率 +${fmtAxisNum(v)} 个百分点` },
   { skill: 'instrument', name: '乐器', catLabel: '乐器', axis: 'favorGainPct', perTier: 1, unit: (v) => `好感增速 +${fmtAxisNum(v)}%` },
   { skill: 'soapmaking', name: '制皂', catLabel: '皂品', axis: 'orderGoldPct', perTier: 0.8, unit: (v) => `订单赏金 +${fmtAxisNum(v)}%` },
   { skill: 'exchequer', name: '钱庄', catLabel: '账具', axis: 'goldGainPct', perTier: 0.6, unit: (v) => `金币获取 +${fmtAxisNum(v)}%` },
