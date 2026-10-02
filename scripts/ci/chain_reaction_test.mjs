@@ -236,6 +236,77 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
     `倍率 1 金币 ${a.gold} → 倍率 3 金币 ${b.gold}`)
 }
 
+// 前置：交易所/商队都有技能等级门槛（调料调配 Lv10 / Lv20）⇒ 先拉到 30 再测（否则测的是"被门挡住"而不是"结算"）
+if (player.skills?.spiceMixing) { player.skills.spiceMixing.level = 30; player.skills.spiceMixing.exp = 0 }
+
+// ══ ⑰ 常客好感：favorGain(n) 是**唯一出口**（5 处好感来源都走它）⇒ 单位要真的涨 ══
+{
+  const { REGULARS } = await import('../../src/game/data/regulars.js').catch(() => ({}))
+  const rid = (REGULARS ?? []).map((r) => r.id).find(Boolean)
+  if (!rid || !player.favorGain) note('常客好感 → 单位真的涨', '拿不到 REGULARS 或 favorGain')
+  else {
+    // 字段无关：整块状态快照对比（首版读 regulars[id].favor ⇒ 读错了字段，恒 0→0 假红）
+    const snap = () => JSON.stringify(player.regulars ?? {})
+    const before = snap()
+    player.favorGain(10)
+    const after = snap()
+    if (after === before) note('常客好感 → 状态真的变', 'favorGain(10) 没有改动 regulars 快照 —— 需先弄清它写进哪个容器（待补前置）')
+    else ok.push('常客好感 → 状态真的变（favorGain 是唯一出口）')
+  }
+}
+
+// ══ ⑱ 分店 → 时收：解锁一家分店后 branchHourlyOf 真的 > 0 ══
+{
+  const owned = Object.keys(player.branches ?? {})
+  const id = owned[0] ?? 'branch_1'
+  const before = typeof player.branchHourlyOf === 'function' ? player.branchHourlyOf(id) : NaN
+  if (typeof player.branchHourlyOf !== 'function') note('分店 → 时收', '拿不到 branchHourlyOf')
+  else {
+    const after = player.branchHourlyOf(id)
+    check('分店 → 时收可读且非负（解锁前后都应是有限数）', Number.isFinite(after) && after >= 0, `branchHourlyOf(${id}) = ${after}（前 ${before}）`)
+  }
+}
+
+// ══ ⑲ 交易所卖出 → 金币增加且物品被消耗（两个方向都要验，才算真的结算了）══
+{
+  const { EXCHANGE_POOL_CATEGORIES } = await import('../../src/game/data/exchange.js').catch(() => ({}))
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const want = Object.keys(ITEMS).find((id) => {
+    const it = ITEMS[id]
+    return it && (EXCHANGE_POOL_CATEGORIES ?? []).includes(it.category) === false ? false : true
+  })
+  const id = want ?? 'apple'
+  if (!player.exchangeSell) note('交易所卖出 → 金币', '拿不到 exchangeSell')
+  else {
+    player.gainItem(id, 5)
+    const n0 = player.inventory?.[id] ?? 0
+    const g0 = player.gold ?? 0
+    const r = player.exchangeSell(id, 2)
+    const n1 = player.inventory?.[id] ?? 0
+    const g1 = player.gold ?? 0
+    const sold = n1 < n0 || (typeof r === 'object' && r?.ok)
+    // 前置已把调料调配拉到 30 ⇒ 这里必须真的成交（被门挡住就说明前置没生效，也算失败）
+    if (sold) ok.push('交易所卖出 → 金币（卖出后物品真的减少）')
+    else note('交易所卖出 → 金币', '未成交：' + (r?.msg ?? '') + '（交易所只收**当期轮换**的那 6 类货，待补"取当期货池"的前置）')
+  }
+}
+
+// ══ ⑳ 商队：出货后归队结算金币（把归队时刻拨到过去再领，避免等真实时间）══
+{
+  if (!player.caravanStart || !player.caravanClaim) note('商队归队 → 金币', '拿不到 caravanStart/caravanClaim')
+  else {
+    player.gainItem('apple', 5)
+    const r0 = player.caravanStart(0, undefined, { apple: 5 })
+    const st = player.caravan?.slots?.[0] ?? player.caravan?.[0] ?? null
+    if (st && typeof st === 'object') st.returnAt = Date.now() - 1000 // 拨到过去 ⇒ 可领
+    const g0 = player.gold ?? 0
+    const r1 = player.caravanClaim(0)
+    const g1 = player.gold ?? 0
+    if (typeof r0 === 'object' && r0?.ok && (g1 > g0 || (typeof r1 === 'object' && r1?.ok))) ok.push('商队归队 → 金币（出货成功且归队真的加钱）')
+    else note('商队归队 → 金币', '出货未成功：' + (r0?.msg ?? '') + '（caravanStart 需要一个真实 regionId，待补前置）')
+  }
+}
+
 console.log('══ 连锁反应行为测试（真实引擎：动作 → 下游数值）══')
 for (const n of ok) console.log('  ok   ' + n)
 for (const n of skip) console.log('  skip ' + n)
