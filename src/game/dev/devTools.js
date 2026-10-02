@@ -179,3 +179,18 @@ export function addSeasonPoints(player, n = 1120) {
 }
 
 export { STOCK, MAX_LEVEL }
+
+/** 清空**全部**制作/练习队列（演示前复位用；练习是 2026-09-29 加的新模式，此前无法一键清） */
+export function clearCraftQueues(player) {
+  const n = Object.keys(player.craftQueues ?? {}).length
+  player.craftQueues = {}
+  return n
+}
+
+/** 清空挂机计划（走 store 的 planClear —— 计划没有裸字段，全是访问器） */
+export function clearIdlePlan(player) {
+  const n = player.planState?.().steps?.length ?? 0
+  if (!n) return 0
+  player.planClear()
+  return n
+}

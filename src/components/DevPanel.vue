@@ -83,6 +83,9 @@ const actions = [
   { id: 'skills', label: '🎓 技能满级', hint: '全部技能设为等级上限', fn: () => T.setAllSkillLevels(player) },
   { id: 'unlock', label: '🔓 解锁全部', hint: '成就/图鉴/山海/图谱/道途/产地/常客', fn: () => T.unlockEverything(player) },
   { id: 'locks', label: '▶ 恢复挂机', hint: '清掉暂停与关闭的挂机任务', fn: () => T.clearLocks(player) },
+  { id: 'queues', label: '🧹 清空制作/练习队列', hint: '演示前复位（含练习模式）', fn: () => T.clearCraftQueues(player) },
+  { id: 'plan', label: '🗓 清空挂机计划', hint: '演示前复位（计划按顺序自动换目标）', fn: () => T.clearIdlePlan(player) },
+
   { id: 'clear', label: '🗑 清空背包/仓库/冷库', hint: '测试「空背包」界面用', fn: () => T.clearInventory(player), danger: true },
 ]
 
