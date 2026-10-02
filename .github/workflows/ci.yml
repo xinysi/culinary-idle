@@ -32,6 +32,12 @@ jobs:
           node scripts/ci/content_sync_audit.mjs
       - name: voice audit
         run: node scripts/ci/voice_audit.mjs
+      - name: mail_test
+        run: node scripts/ci/mail_test.mjs
+      - name: mijian_test
+        run: node scripts/ci/mijian_test.mjs
+      - name: sideline_facility_test
+        run: node scripts/ci/sideline_facility_test.mjs
       - name: mastery_tiers_test
         run: node scripts/ci/mastery_tiers_test.mjs
           node scripts/ci/item_triple_audit.mjs

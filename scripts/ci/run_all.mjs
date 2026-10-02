@@ -38,6 +38,9 @@ const ALL = readdirSync(CI_DIR)
 const CORE = [
   'chain_reaction_test', 'xp_log_audit', 'system_test', 'season_check', 'system_test2', 'buff_test', 'continuity_test',
   'audit_sync', 'content_sync_audit', 'item_triple_audit', 'minigame_ui_audit',
+  'mail_test',
+  'mijian_test',
+  'sideline_facility_test',
   'mastery_tiers_test',
   'voice_audit',
   'difficulty_audit', 'image_path_audit', 'bgm_audit', 'gen_drift_audit',
