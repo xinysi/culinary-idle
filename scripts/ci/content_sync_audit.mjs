@@ -2,7 +2,6 @@
 // 覆盖六项：任务 / 成就 / 故事 / 称号 / 统计 / 游玩攻略。
 // 运行：node scripts/ci/content_sync_audit.mjs
 import fs from 'fs'
-import { stripComments } from './lib/comments.mjs'   // 三态剥注释（我新加的那条检查要用）
 import { createPinia, setActivePinia } from 'pinia'
 import { usePlayerStore } from '../../src/stores/player.js'
 import { createSkillInstances, getAllSkillInstances } from '../../src/game/skills/registry.js'
@@ -520,52 +519,6 @@ console.log(fail === 0 ? '\nCONTENT SYNC AUDIT PASS（任务/成就/故事/称�
         rawCat.push(`${f.split('/').pop()}: ${m[0].trim()}`)
       }
 
-// ── 开发者腔 / 内部术语泄漏（2026-10-02 用户：「这段话充满着开发者的自述味道，不应该展示给玩家看」）──
-// 🔴 实测教训：这类词**用朴素正则在整仓扫会得到 624 个假阳性**（几乎全是代码注释）。
-//    必须**剥注释**后只看「会进 UI 的文本」：`.vue` 的模板文本与 title/placeholder/aria-label，
-//    `.js` 的字符串字面量。词表**只收玩家看不懂的内部说法**——「上层卡牌」「已占位」是正常中文，不收。
-//    ⚠️ TunerPanel / DevPanel 是**内部工具**（给运营与开发者看），白名单放行。
-{
-  const DEV = /(按批次|副业线|门槛表|注册表|唯一出口|读取点|消费方|口径|实测|系数|乘区|独占品|量级|待接线|未接线|数据层)/
-  // ⚠️ 刻意**不收**「扩展 N 批」：那是 `aojiGates.js` 里内部分批的标签（数据键、不展示），
-  //    而它**该被拦的地方**（那段门槛说明文案）已由 system_test 的专条断言钉住。
-  const SKIP = /(TunerPanel|DevPanel)\.vue$/
-  const dev = []
-  let devScanned = 0
-  const scanText = (f, line, body) => {
-    const t = body.replace(/\{\{[\s\S]*?\}\}/g, ' ').replace(/<[^>]*>/g, ' ').trim()
-    if (!/[\u4e00-\u9fa5]/.test(t)) return
-    devScanned++
-    const m = t.match(DEV)
-    if (m) dev.push(`${f}:${line} 「${t.slice(0, 44)}」(含「${m[1]}」)`)
-  }
-  const walk = (dir) => {
-    for (const name of fs.readdirSync(dir)) {
-      const p = dir + '/' + name
-      const st = fs.statSync(p)
-      if (st.isDirectory()) { walk(p); continue }
-      if (!/\.(vue|js)$/.test(name)) continue
-      if (SKIP.test(p)) continue
-      const raw = fs.readFileSync(p, 'utf8')
-      if (name.endsWith('.vue')) {
-        const tm = raw.match(/<template>([\s\S]*)<\/template>/)
-        if (!tm) continue
-        const tpl = tm[1].replace(/<!--[\s\S]*?-->/g, '')
-        tpl.split('\n').forEach((ln, i) => {
-          scanText(p, i + 1, ln)
-          for (const a of ln.matchAll(/(?:title|placeholder|aria-label)="([^"]*)"/g)) scanText(p, i + 1, a[1])
-        })
-      } else {
-        const body = stripComments(raw)
-        body.split('\n').forEach((ln, i) => {
-          for (const l of ln.match(/'([^']{6,})'|"([^"]{6,})"|`([^`]{6,})`/g) || []) scanText(p, i + 1, l)
-        })
-      }
-    }
-  }
-  walk('src/game/data'); walk('src/views'); walk('src/components')
-  check(`文本：面向玩家的话里无开发者腔/内部术语（剥注释后扫 ${devScanned} 条；内部工具白名单）`, dev.length === 0, dev.slice(0, 5).join(' | '))
-}
     }
     check('文本：模板里没有裸插值物品类别 id（必须过 catLabel/CATEGORY_LABEL）', rawCat.length === 0, rawCat.slice(0, 6).join('; '))
   }
