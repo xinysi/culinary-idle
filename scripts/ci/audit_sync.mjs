@@ -349,6 +349,12 @@ const check = (name, cond, detail = '') => {
   const missing = files.filter((f) => !EXEMPT[f] && !yml.includes('scripts/ci/' + f))
   check('CI 清单覆盖 scripts/ci 全部守卫（新脚本不许绕过手写清单）', missing.length === 0,
     missing.join(', ') || (files.length - Object.keys(EXEMPT).length) + ' 个已在 CI')
+  // 同一类漏网的第二处：e2e 套件清单也是**手写**的（ci.yml 里逐个 `npx playwright test e2e-x.spec.mjs`）
+  // ⇒ 新加的 spec 不会自动跑。判据同样从**目录**派生。
+  const specs = readdirSync('.').filter((f) => f.endsWith('.spec.mjs'))
+  const missSpec = specs.filter((f) => !yml.includes(f))
+  check('CI 清单覆盖全部 e2e 套件（新 spec 不许绕过手写清单）', missSpec.length === 0,
+    missSpec.join(', ') || specs.length + ' 套已在 CI')
 }
 
 console.log(fail === 0 ? '\nSYNC AUDIT PASS' : `\n${fail} FAILURES`)

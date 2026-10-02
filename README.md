@@ -369,7 +369,7 @@ scripts/                  # 按角色分四类（2026-09-10 归类，此前 27 �
 - `e2e-dark`（1 项）：**深色模式配色体检**——逐页扫描对比度 / 硬编码亮底 / 白边 / 金光过亮（当前扫 13 万+ 元素），并**逐套皮肤 × 浅+深两轮**跑一遍（15 套）；
 - `e2e-text`（1 项）：**前端标记裸露扫描**（60 个页面 + 6 个弹窗 + 页内页签），查 HTML 标签残留 / 未渲染的 `{{ }}` / `[object Object]` / 裸 `undefined`·`NaN` / **英文标识符裸露**；
 - `e2e-audio-skin`（4 项）：音效与 BGM 真起停（`stop` / `play:night` 成对）、皮肤切换落到 `<html>` 行内变量、设置面板页签与音量滑杆可用。
-**新增功能页必须同时把 view key 加进 `e2e-dark.spec.mjs` 的 `VIEWS`**，否则该页不会被深色守卫覆盖；**带 `<b>` 等标记的富文本字段必须用 `v-html` 渲染**（用 `{{ }}` 插值会把标签原样显示，`e2e-text.spec.mjs` 会抓出来）。 ⚠️ 目前 `e2e-text` / `e2e-audio-skin` 是**常驻本地验收**（未进 CI workflow，CI 只跑 `e2e-test` + `e2e-dark`）。
+**新增功能页必须同时把 view key 加进 `e2e-dark.spec.mjs` 的 `VIEWS`**，否则该页不会被深色守卫覆盖；**带 `<b>` 等标记的富文本字段必须用 `v-html` 渲染**（用 `{{ }}` 插值会把标签原样显示，`e2e-text.spec.mjs` 会抓出来）。 ⚠️ 9 套 e2e（test / dark / text / audio-skin / layout / interact / minigame / controls / roles）**全部在 CI 里逐套跑**（ci.yml 的 E2E job）；本地迭代期用 `node scripts/dev/e2e_run.mjs --changed` 只跑受影响的套件。
 
 **改动后标准流程**：`content_sync_audit.mjs` → `item_triple_audit.mjs` → 其余 CI 套件 → `vite build` → e2e（含深色守卫）。小游戏改动额外跑 `minigame_ui_audit.mjs`；**动了生成器或生成器产物，额外跑 `gen_drift_audit.mjs`**。
 
