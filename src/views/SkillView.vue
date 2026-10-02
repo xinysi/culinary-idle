@@ -95,9 +95,14 @@ function doPrestige() {
              ⚠️ 教训：**单个子元素的 flex 行照样铺满整行** ⇒ 不是「包一层 flex」就够，
              必须把三者并进**同一行**（台阶提示 / 转生按钮 / 转生加成），且它们互不依赖显示条件。 -->
         <div class="skill-hint-row">
-          <div v-if="nextPerk" class="dim skill-perk-hint">
-            🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」
-            （还差 {{ nextPerk.level - progress.level }} 级 · 任一技能达到即可，称号见「成就与称号」）
+          <!-- 2026-10-02 用户截图：这句提示太长（45+ 字）⇒ ① 把转生按钮挤到第二行；
+               ② 把右栏撑宽、经验条跟着被拉长。现改成**短句**，完整说明进 tooltip。 -->
+          <div
+            v-if="nextPerk"
+            class="dim skill-perk-hint"
+            title="任一技能达到该等级即可获得对应称号；全部称号见「成就与称号」页。"
+          >
+            🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」（还差 {{ nextPerk.level - progress.level }} 级）
           </div>
           <button
             v-if="progress.level >= MAX_LEVEL && maxLevel === MAX_LEVEL"

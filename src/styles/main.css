@@ -4482,8 +4482,11 @@ html[data-theme='dark'] .head-strips {
   flex-wrap: wrap;
   gap: 8px 10px;
   margin-top: 4px;
+  /* ⚠️ min-width:0 必须留着：否则这条长行会把父级（.skill-head-right）撑宽 ⇒ 经验条被一起拉长
+     （2026-10-02 用户截图报「这么长的信息直接把经验条拉的很长」）。 */
+  min-width: 0;
 }
-.skill-hint-row .skill-perk-hint { margin: 0; }
+.skill-hint-row .skill-perk-hint { margin: 0; min-width: 0; flex: 1 1 auto; }
 .skill-hint-row .skill-prestige-row { margin: 0; }
 .skill-prestige-row {
   display: flex;
