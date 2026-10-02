@@ -108,7 +108,9 @@ export function combatXpPerSkill(level, damage, oppMaxHp, win, playerLevel = lev
 //    只提击杀那一侧等于没修。
 export const EARLY_XP_TOP_LEVEL = 20
 /** L1 处的额外倍率（总倍率 = 1 + A） */
-export const EARLY_XP_BOOST_A = 40
+// ⚠️ 2026-10-02 连锁修正：经验曲线摊平后 EXP_SCALE ×104 ⇒ L1→L2 的需求从 1.7 万涨到 178 万，
+//    原先按旧曲线标定的 40 不够了（守卫实测 L1→L2 = 1691 场 ✗）⇒ 按同倍率抬到 2800。
+export const EARLY_XP_BOOST_A = 2800
 /** 衰减尺度（级）：越大则爬坡拖得越长 */
 export const EARLY_XP_BOOST_TAU = 5
 /** 开局经验倍率：≥20 级恒为 1（非法/缺失输入按 1 处理，不惩罚） */

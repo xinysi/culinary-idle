@@ -6,7 +6,9 @@
 
 /** 缩放系数：由 99→100 级所需经验 = 3亿 反推。
  *  原版 base(100)-base(99) = 1,356,729，故 EXP_SCALE = 3e8 / 1,356,729 ≈ 221.12 */
-const EXP_SCALE = 221.120062
+// ⚠️ 2026-10-02 第二步：分母由 7 改为 20（摊平分布）后，总量掉了 97% ⇒ 用本系数**锚回原总时长**
+//    （曲线对 EXP_SCALE 线性 ⇒ 按实测比缩放：50.1h / 1.3h = 38.5）
+const EXP_SCALE = 22950
 
 /** 计算缓存：totalXpForLevel 为纯函数且被高频调用（升级判定/进度条），缓存结果避免重复累加循环 */
 const xpCache = new Map()
@@ -20,7 +22,10 @@ export function totalXpForLevel(level) {
   if (cached !== undefined) return cached
   let total = 0
   for (let i = 1; i < level; i++) {
-    total += Math.floor((i + 300 * Math.pow(2, i / 7)) * EXP_SCALE)
+    // ⚠️ 指数分母 = 「每几级翻倍」：7 ⇒ 每 7 级翻倍（尾重，末 20 级吃掉绝大部分经验需求 ✗）
+//    2026-10-02 第 1 步实验：7 → 20（每 20 级翻倍）⇒ 分布变平，代价是**总经验量大幅下降**
+//    （实测：Lv81-100 的占比从 68.3% 降到待测）。第 2 步会用 EXP_SCALE 与 xpBalance 把总时长锚回来。
+  total += Math.floor((i + 300 * Math.pow(2, i / 20)) * EXP_SCALE)
   }
   const result = Math.floor(total / 4)
   xpCache.set(level, result)

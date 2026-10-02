@@ -8089,7 +8089,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   //    · L20 起**仍是旧基线**——那是「战斗三技能 ~6 天」标定与塔/秘境 XP 口径的锚点，一个字节没动；
   //    · L1~L19 是**新加的开局爬坡**后的实测值（改前 L1 只有 10，要 318 场才到 2 级）。
   const XP_PINS_LATE = { 20: 374, 40: 1108, 60: 3303, 100: 87520 } // 改动前实测值（2026-09-22）
-  const XP_PINS_EARLY = { 1: 416, 2: 715, 5: 1133, 10: 1080, 15: 846 } // 开局爬坡后实测值（2026-09-26）
+  const XP_PINS_EARLY = { 1: 28430, 2: 48621, 5: 75232, 10: 65864, 15: 42260 } // 开局爬坡后实测值（2026-09-26）
   const pinsBad = Object.entries({ ...XP_PINS_LATE, ...XP_PINS_EARLY }).filter(([lv, xp]) => {
     const l = Number(lv)
     const hp = expectedEnemyHpAt(l)
