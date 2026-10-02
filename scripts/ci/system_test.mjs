@@ -9681,12 +9681,17 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // 规则说明也走单一出口 + 攻略同步（否则玩家只看到一排灰掉的卡片，不知道门槛是什么）
   const { AOJI_GATE_NOTE } = await import('../../src/game/data/aojiGates.js')
   check('奥义门槛', '规则说明是常数出口 `AOJI_GATE_NOTE`（数字从门槛表派生，不手抄）',
-    typeof AOJI_GATE_NOTE === 'string' && /Lv8~44/.test(AOJI_GATE_NOTE) && /副业线/.test(AOJI_GATE_NOTE))
+      typeof AOJI_GATE_NOTE === 'string' && /Lv\d+/.test(AOJI_GATE_NOTE) && /美食知识/.test(AOJI_GATE_NOTE))
+    // 2026-10-02 用户：「这段话充满着开发者的自述味道，不应该展示给玩家看」。
+    // 原断言逐字钉住「Lv8~44」「副业线」——那正是开发者腔（按开发批次叙述），等于在维护它。
+    // 现钉两件事：数字确实来自门槛表（有 Lv 数字）＋ 面向玩家的话里不许出现内部记账说法。
+    check('奥义门槛', '规则说明是玩家视角（不含「按批次 / 副业线 / 共 N 条有门槛」这类内部说法）',
+      !/(按批次|副业线|共 \d+ 条有门槛|扩展 [12] 批|门槛表)/.test(AOJI_GATE_NOTE), AOJI_GATE_NOTE)
   check('奥义门槛', '美食知识页常驻一行规则（否则玩家看到灰卡片却不知道原因）',
     /AOJI_GATE_NOTE/.test(gast))
   const guideSrc = rdSrc('src/game/data/guide.js')
   check('奥义门槛', '攻略写明门槛规则（玩家能事先看到，不用撞上才发现）',
-    /按批次设解锁门槛/.test(guideSrc) && /副业线 Lv8~44/.test(guideSrc))
+      /美食知识/.test(guideSrc) && /最高 Lv\d+/.test(guideSrc))
 }
 
 // ══════════ C63：挂机计划搬进底栏（2026-09-27 用户⑩）+ 计划收工按步骤停（用户⑨）══════════

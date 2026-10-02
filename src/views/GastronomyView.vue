@@ -95,7 +95,9 @@ function unlockNode(id) {
     <div class="card status-line">
       <span class="badge badge-on">品鉴点数 <span class="mono">{{ Math.floor(player.tastePoints) }}</span></span>
       <span v-if="player.gastronomy.active.length" class="dim">奥义消耗 {{ totalDrain().toFixed(1) }} 点/秒（耗尽自动关闭）</span>
-      <span v-else class="dim">品鉴点数通过对决胜利获得；激活奥义持续消耗（前 10 秒宽限免费）</span>
+      <!-- 2026-10-02 用户：这条说明「独占一行要优化」⇒ 长句改短句（同一行的徽章已经点明是「品鉴点数」，
+           不必再重复主语）。 -->
+      <span v-else class="dim">对决胜利获得 · 开启奥义后每秒消耗（前 10 秒免费）</span>
     </div>
 
     <div class="card">
