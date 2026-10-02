@@ -135,6 +135,15 @@ function succTip(t) {
     <div class="card">
       <h3 class="target-head-row">
         <span>探索目标</span>
+        <!-- 2026-10-02：段头统一到这里 —— 「标题文字之后、低目标经验之前」，与采集/制作/探索三页一致。
+             ⚠️ 定位一律用**结构锚点**（target-head-row 之后的第一个 </span>）。
+             上一版用文字匹配「目标列表（」结果命中了**上一行的注释**，段头被插到标题前面（用户截图抓出）。 -->
+        <span v-if="activeSec" class="era-head">
+          <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级目标：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
+          <span class="dim">{{ activeSec.list.length }} 个目标</span>
+          <span class="dim">段位系数 ×{{ bandFactor(activeSec.list[0]).toFixed(2) }}</span>
+          <span v-if="activeSec.list.some((t) => isSelected(t.id) && !skillClosed)" class="badge badge-on">当前</span>
+        </span>
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×0.5</span>
         <span class="target-head-extra">
           <span class="dim">初始成功率随等级段递减（末段趋 0%），靠精通与专属装备补回</span>
@@ -156,12 +165,6 @@ function succTip(t) {
           {{ sec.label }}
           <span v-if="eraName(sec)" class="era-tab-name">{{ eraName(sec) }}</span>
         </button>
-      </div>
-      <div v-if="activeSec" class="era-head">
-        <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级目标：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
-        <span class="dim">{{ activeSec.list.length }} 个目标</span>
-        <span class="dim">段位系数 ×{{ bandFactor(activeSec.list[0]).toFixed(2) }}</span>
-        <span v-if="activeSec.list.some((t) => isSelected(t.id) && !skillClosed)" class="badge badge-on">当前</span>
       </div>
 
       <!-- 宽卡网格（2026-09-28 用户：「为什么不能一个卡片改成两个卡片大小呢？现在这样太挤了太小了」）：

@@ -175,16 +175,19 @@ function selectEra(label) {
          第一次只改 CSS（把 .era-tabs / .era-head 降为 inline-flex）**不行**：13 个标签页自己就占满一行，
          段头挤不进去只能折行 ⇒ 正解是**把这三项统计搬进标题行**（这一行中间本来就有大片空白），
          独立的那一行随之消失。类名 .era-head 保留（断言与样式都按它找）。 -->
-    <span v-if="activeSec" class="era-head">
-      <!-- 时代名 = 该档最高级产出：一眼看出「这一档能拿到什么新东西」 -->
-      <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级产出：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
-      <span class="dim">{{ activeSec.list.length }} 个目标</span>
-      <span class="dim" :title="`该档已精通满 100 的卡片数 / 该档卡片数`">精通 {{ eraDone(activeSec) }}/{{ activeSec.list.length }}</span>
-      <span v-if="activeSec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
-    </span>
     <div class="card">
       <h3 class="target-head-row">
         <span>目标列表（按等级分段，点击段标题折叠）</span>
+        <!-- 2026-10-02：段头统一到这里 —— 「标题文字之后、低目标经验之前」，与采集/制作/探索三页一致。
+             ⚠️ 定位一律用**结构锚点**（target-head-row 之后的第一个 </span>）。
+             上一版用文字匹配「目标列表（」结果命中了**上一行的注释**，段头被插到标题前面（用户截图抓出）。 -->
+        <span v-if="activeSec" class="era-head">
+          <!-- 时代名 = 该档最高级产出：一眼看出「这一档能拿到什么新东西」 -->
+          <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级产出：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
+          <span class="dim">{{ activeSec.list.length }} 个目标</span>
+          <span class="dim" :title="`该档已精通满 100 的卡片数 / 该档卡片数`">精通 {{ eraDone(activeSec) }}/{{ activeSec.list.length }}</span>
+          <span v-if="activeSec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
+        </span>
         <!-- 规则常驻（2026-09-22）：低目标经验减半，玩家必须**事先**看得到，别等发现经验变少 -->
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
         <span class="target-head-extra">

@@ -583,8 +583,9 @@ const recipeNoun = '配方'
     <div class="card">
       <h3 class="target-head-row">
         <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点上面的段切换' }}）</span>
-        <!-- 2026-10-02：段头（档名/配方数/精通/可制作）搬进本行 —— 原先它独占一行很碍眼（用户报）。
-             第一次只改 CSS 不行：13 个标签页自己占满一行，段头挤不进去只能折行。 -->
+        <!-- 2026-10-02：段头统一到这里 —— 「标题文字之后、低目标经验之前」，与采集/制作/探索三页一致。
+             ⚠️ 定位一律用**结构锚点**（target-head-row 之后的第一个 </span>）。
+             上一版用文字匹配「目标列表（」结果命中了**上一行的注释**，段头被插到标题前面（用户截图抓出）。 -->
         <span v-if="activeSec && !flatMode" class="era-head">
           <strong>{{ activeSec.label }}</strong>
           <!-- 时代名 = 该档最高级配方的产出名：一眼看出「这一档能做什么新东西」 -->
@@ -593,6 +594,8 @@ const recipeNoun = '配方'
           <span class="dim" title="该档已精通满 100 的配方数 / 该档配方数">精通 {{ eraProgress(activeSec.list, (r) => masteryOf(r).level).done }}/{{ activeSec.list.length }}</span>
           <span v-if="activeSec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
         </span>
+        <!-- 2026-10-02：段头（档名/配方数/精通/可制作）搬进本行 —— 原先它独占一行很碍眼（用户报）。
+             第一次只改 CSS 不行：13 个标签页自己占满一行，段头挤不进去只能折行。 -->
         <!-- 规则常驻（2026-09-22）：低目标经验减半 -->
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
         <span class="target-head-extra">
