@@ -118,7 +118,7 @@ function claim() {
       </div>
       <p class="dim" style="margin: 8px 0 0; font-size: 12px; line-height: 1.6">
         同行<b>每月轮换上场</b>（{{ RIVAL_BOARD_SIZE - 1 }} 家 + 你 = 榜上 {{ RIVAL_BOARD_SIZE }} 位），
-        所以这个月的强敌下个月可能换人；<b>基础实力</b>是它第一次登场的量级，之后每月 ×{{ (1 + RIVAL_MONTH_GROWTH).toFixed(2) }} 并带 ±12% 确定性抖动。
+        所以这个月的强敌下个月可能换人；<b>基础实力</b>是它第一次登场时的水平，之后每月 ×{{ (1 + RIVAL_MONTH_GROWTH).toFixed(2) }} 并带 ±12% 确定性抖动。
         想冲名次就盯「本月上场」那几家比分数——你比第 {{ RIVAL_BOARD_SIZE }} 名高就出榜。
       </p>
     </FoldCard>

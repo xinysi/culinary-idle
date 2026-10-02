@@ -26,7 +26,7 @@ const menuStock = computed(() =>
     .map((id) => ({ id, it: getItem(id), qty: player.inventory[id] ?? 0, price: player.takeoutPriceOf(id) }))
 )
 
-// 等级阶梯（2026-09-10 补）：每一级的并发 / 单价系数 / 升级花费 / 累计单量门槛
+// 等级阶梯（2026-09-10 补）：每一级的并发 / 单价倍率 / 升级花费 / 累计单量门槛
 const ladder = computed(() =>
   Array.from({ length: TAKEOUT_MAX_LEVEL }, (_, i) => {
     const lv = i + 1
@@ -90,7 +90,7 @@ const RELATED = [{ view: 'restaurant', label: '🏮 餐厅' }, { view: 'setMeals
           <tr>
             <th>等级</th>
             <th>每小时并发</th>
-            <th>单价系数</th>
+            <th>单价倍率</th>
             <th>累计单量门槛</th>
             <th>升级花费</th>
           </tr>

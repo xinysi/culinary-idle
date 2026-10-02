@@ -193,7 +193,7 @@ function jumpLabel(view) {
 
         <!-- ④ 全部规则与公式（这个系统怎么算） -->
         <div class="card">
-          <h3>🧮 规则与公式（{{ mine.length }}）<span class="dim fx-hint">每条的计算口径；数字取自游戏里的真实常量</span></h3>
+          <h3>🧮 规则与公式（{{ mine.length }}）<span class="dim fx-hint">每条怎么算；数字取自游戏里的真实常量</span></h3>
           <div class="fx-formula-row" v-for="r in mine" :key="'f' + r.id" :class="{ 'fx-formula-off': !r.on }">
             <span class="fx-formula-name">{{ r.icon }} {{ r.name }}</span>
             <span class="fx-formula-tag">{{ r.fx?.tag }}</span>

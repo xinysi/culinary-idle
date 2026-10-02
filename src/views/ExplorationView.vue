@@ -64,7 +64,7 @@ function lootName(l) {
   return l.type === 'gold' ? `金币 ${l.min}-${l.max}` : `${getItem(l.itemId)?.name} ×${l.min}-${l.max}`
 }
 function lootPct(l) {
-  // 概率必须走技能实例的 lootChance（= 难度系数后的实际值；金币原样）——直接读 l.chance 会
+  // 概率必须走技能实例的 lootChance（= 难度倍率后的实际值；金币原样）——直接读 l.chance 会
   // 显示成 28% 而实际按 7% 结算（2026-09-27 物品系数改为 ÷4 后差距更大）
   return `${(props.instance.lootChance(l) * 100).toFixed(2).replace(/\.?0+$/, '')}%`
 }
@@ -111,7 +111,7 @@ const masteryXpMult = (t) => masteryXpMultiplier(masteryLevelOf(t))
  *  （原先那行「明细 初始 X% + 精通 Ypp + …」占 18px 且把卡片撑满；信息没丢，只是不再常驻）。 */
 function succTip(t) {
   const parts = [
-    `初始 ${(initialPct(t) * 100).toFixed(1)}%（基础值 × 段位系数 ${bandFactor(t).toFixed(2)}，越往后越低、末段 0%）`,
+    `初始 ${(initialPct(t) * 100).toFixed(1)}%（基础值 × 段位倍率 ${bandFactor(t).toFixed(2)}，越往后越低、末段 0%）`,
     `精通 ${(masteryPP(t) * 100).toFixed(0)} 个百分点`,
   ]
   if (poolPP.value > 0) parts.push(`精通池 ${(poolPP.value * 100).toFixed(0)} 个百分点`)
@@ -141,7 +141,7 @@ function succTip(t) {
         <span v-if="activeSec" class="era-head">
           <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级目标：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
           <span class="dim">{{ activeSec.list.length }} 个目标</span>
-          <span class="dim">段位系数 ×{{ bandFactor(activeSec.list[0]).toFixed(2) }}</span>
+          <span class="dim">段位倍率 ×{{ bandFactor(activeSec.list[0]).toFixed(2) }}</span>
           <span v-if="activeSec.list.some((t) => isSelected(t.id) && !skillClosed)" class="badge badge-on">当前</span>
         </span>
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×0.5</span>
@@ -233,7 +233,7 @@ function succTip(t) {
                     @error="$event.target.style.display = 'none'"
                     alt="" loading="lazy" decoding="async" />
                   <span class="mono loot-text">{{ lootName(l) }}</span>
-                  <span class="mono loot-pct" title="实际结算概率（已含难度系数；金币不受系数影响）">{{ lootPct(l) }}</span>
+                  <span class="mono loot-pct" title="实际结算概率（已含难度倍率；金币不受系数影响）">{{ lootPct(l) }}</span>
                 </div>
               </div>
             </div>

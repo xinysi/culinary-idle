@@ -244,7 +244,7 @@ onMounted(() => pickOpponent(COMBAT_REGIONS[selectedRegion.value]?.opponents?.[0
                  「铜刀」后同一场是 **86~100%**、10 回合。也就是说「第一场必败」的唯一原因是没武器 ——
                  这种事必须在**开打前**告诉玩家，否则就是「点进去、输 30 秒、不知道为什么」。 -->
             <p v-if="!player.equipment?.weapon" class="dim pick-note unarmed-warn">
-              ⚠️ <b>你还没装备武器</b>：空手 + 没带够料理打对决必败（实测「灶台学徒」胜率 1%、一场 32 秒；
+              ⚠️ <b>你还没装备武器</b>：空手 + 没带够料理打对决必败（「灶台学徒」胜率约 1%、一场要打 30 秒以上；
               带 2 份烤土豆也才 45%）。先弄一把刀再来 ——
               <button class="btn btn-sm" @click="goCraftKnife()">🔨 去锻造铜刀</button>
               （松木×4 + 铜矿×4；也可以完成新手目标 ③，会直接送一把）—— 穿上它同一场 100%、单场只要 25 秒

@@ -22,7 +22,7 @@ import { OFFLINE_CAP, DERIVED_MAX } from './caps.js'
 import { RANCH_ANIMALS, POND_FISH } from './ranch.js'
 import { MUSHROOM_MEDIA } from './mushroomHouse.js'
 import { SPIRIT_PLANTS } from './spiritField.js'
-import { SIDELINE_AXES } from './sidelineWorks.js' // 副业线奥义的轴标签（2026-09-27）
+import { SIDELINE_AXES } from './sidelineWorks.js' // 副业奥义的轴标签（2026-09-27）
 import { HIVE_MEDIA, greenhouseHoneyChance } from './greenhouse.js'
 import { SUPPLIER_PRICE_MULT } from './suppliers.js'
 import { CARAVAN_LOSS_FLOOR } from './caravan.js'
@@ -100,7 +100,7 @@ function joinParts(map, labels) {
 }
 /**
  * 副业轴的「三段来源」串：`作品 12% + 阶梯 9% + 奥义 6%`（零段自动省略）。
- * 🔴 为什么不能像原先那样用「合计 − 阶梯」倒推作品：副业线奥义（2026-09-27）接进同一条轴之后，
+ * 🔴 为什么不能像原先那样用「合计 − 阶梯」倒推作品：副业奥义（2026-09-27）接进同一条轴之后，
  *   那份差额里混着奥义，页面会把奥义说成「作品」。段拆分只在 `player.sidelineEffectParts(axis)` 一处算。
  */
 function sidelineSegs(p, axis, fmt) {
@@ -217,7 +217,7 @@ export const EFFECT_FORMULAS = {
   goldGain: { tag: '相加', f: '装备词条 + 厨神之路', note: '夹 15%，只放大获得' },
   supplier: { tag: '分段', f: '按合约档位给', note: '售价最高 ×2.4' },
   takeout: { tag: '相乘', f: '单价 ×1.3，并发单数另算' },
-  taskGold: { tag: '分段', f: '基准 × 对决等级系数', note: '与金币加成无关' },
+  taskGold: { tag: '分段', f: '基准 × 对决等级倍率', note: '与金币加成无关' },
 
   // 🌱 农田与产线
   farmWeather: { tag: '相乘', f: '农田产量 × 当日天气', note: '温室不受影响' },
@@ -227,7 +227,7 @@ export const EFFECT_FORMULAS = {
   farmPrime: { tag: '概率', f: '62 级以上作物 4%~12%', note: '加料可再催化' },
   essencePrime: { tag: '概率', f: '基础概率 × 催化倍率', note: '消耗一份催化物' },
   wither: { tag: '概率', f: '基础值 ×（1 − 肥料减益）', note: '施沃肥后为 0' },
-  spoilage: { tag: '分段', f: '基础时长 × 保鲜等级系数', note: '等级越高越慢' },
+  spoilage: { tag: '分段', f: '基础时长 × 保鲜等级倍率', note: '等级越高越慢' },
   stallRanch: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
   stallPond: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
   stallMushroom: { tag: '停机', f: '缺料 ⇒ 这一轮不产、进度归零' },
@@ -266,7 +266,7 @@ export const EFFECT_FORMULAS = {
 
   // 🎛 系统与玩法规则（2026-10-01 补：这一组的数值跑在各平衡模块里，原先整组没登记）
   difficulty: { tag: '已体现在界面', f: '掉落 ÷5 · 制作 ÷2 · 探索物品 ÷4 · 附产 ÷2', note: '页面显示的就是调整后的值' },
-  exploreChance: { tag: '分段', f: '初始 × 段位系数 + 精通 + 池，再夹 90%', note: '卡片上写的就是实际成功率' },
+  exploreChance: { tag: '分段', f: '初始 × 段位倍率 + 精通 + 池，再夹 90%', note: '卡片上写的就是实际成功率' },
   exploreLoot: { tag: '已体现在界面', f: '掉落列表写的已经是实际概率', note: '金币不缩；不会写一个数按另一个算' },
   exploreGear: { tag: '定额', f: '两套各 +5%，四件合计上限 +10%', note: '每次动作 0.01% 掉落' },
   towerTier: { tag: '相乘', f: '对手属性与奖励同倍：1 · 1.5 · 2 · 2.5', note: '四档：标准 / 精英 / 极限 / 饕餮' },
@@ -598,9 +598,9 @@ export const EFFECT_ROWS = [
     },
   },
   {
-    // 副业线奥义（2026-09-27 用户⑧）：效果落在**副业作品/量产阶梯同一条轴**上（出口 `player.sidelineEffectTotal`），
+    // 副业奥义（2026-09-27 用户⑧）：效果落在**副业作品/量产阶梯同一条轴**上（出口 `player.sidelineEffectTotal`），
     // 所以这一行必须显示 —— 否则玩家为它付了品鉴点却在「效果总览」里看不到任何东西。
-    id: 'aojiSideline', group: 'craft', icon: '🧰', name: '美食奥义·副业线', kind: 'buff', src: '美食知识（已激活的奥义）', view: 'skill:gastronomy',
+    id: 'aojiSideline', group: 'craft', icon: '🧰', name: '美食奥义·副业', kind: 'buff', src: '美食知识（已激活的奥义）', view: 'skill:gastronomy',
     read: (p) => {
       const s = p.gastronomyEffects?.().sideline ?? {}
       const parts = []
@@ -608,7 +608,7 @@ export const EFFECT_ROWS = [
         const ax = SIDELINE_AXES[axis]
         parts.push(`${ax?.label ?? axis} ${ax?.amountLabel ? ax.amountLabel(v) : `+${v}`}`)
       }
-      if (!parts.length) return off('没有激活副业线奥义（木器之魂 / 窑火长明 …）')
+      if (!parts.length) return off('没有激活副业奥义（木器之魂 / 窑火长明 …）')
       return { on: true, text: parts.join(' · ') }
     },
   },
@@ -770,7 +770,7 @@ export const EFFECT_ROWS = [
     id: 'woodworkingDecor', group: 'income', icon: '🪚', name: '木工·手工装潢手艺', kind: 'buff', src: '副业·木工（量产阶梯）', view: 'skill:woodworking',
     read: (p) => {
       const v = p.sidelineEffectTotal?.('decorPct') ?? 0
-      if (!v) return off('还没把多余木器投入量产阶梯、也没开启副业线奥义——每档装潢加成 +2%')
+      if (!v) return off('还没把多余木器投入量产阶梯、也没开启副业奥义——每档装潢加成 +2%')
       return { on: true, text: `装潢加成 ${pct(v)}（${sidelineSegs(p, 'decorPct', pct)}；加在商店+手工装潢的合计上）` }
     },
   },

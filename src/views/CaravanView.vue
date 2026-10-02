@@ -184,7 +184,7 @@ function expand() {
             <select v-model="d(s.index).regionId" class="cv-select">
               <option :value="null">选择商路…</option>
               <option v-for="r in routes" :key="r.regionId" :value="r.regionId" :disabled="!player.regions?.[r.regionId]">
-                {{ r.icon }} {{ r.name }}（{{ r.hours }}h · 系数 ×{{ r.coeff }}{{ r.inSeason ? ' · 当季' : '' }}）{{ player.regions?.[r.regionId] ? '' : ' 🔒未考察' }}
+                {{ r.icon }} {{ r.name }}（{{ r.hours }}h · 倍率 ×{{ r.coeff }}{{ r.inSeason ? ' · 当季' : '' }}）{{ player.regions?.[r.regionId] ? '' : ' 🔒未考察' }}
               </option>
             </select>
             <div class="dim cv-sub">
@@ -221,7 +221,7 @@ function expand() {
         <table class="target-table">
           <tbody>
             <tr>
-              <th class="dim">商路</th><th class="dim">耗时</th><th class="dim">系数</th><th class="dim">当季</th><th class="dim">特产池</th><th class="dim">状态</th>
+              <th class="dim">商路</th><th class="dim">耗时</th><th class="dim">倍率</th><th class="dim">当季</th><th class="dim">特产池</th><th class="dim">状态</th>
             </tr>
             <tr v-for="r in routes" :key="r.regionId">
               <td>{{ r.icon }} {{ r.name }}</td>
