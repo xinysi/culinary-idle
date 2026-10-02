@@ -38,8 +38,9 @@ jobs:
         run: node scripts/ci/mijian_test.mjs
       - name: sideline_facility_test
         run: node scripts/ci/sideline_facility_test.mjs
-      - name: mastery_tiers_test
-        run: node scripts/ci/mastery_tiers_test.mjs
+      - name: Simulation suites（续）
+        run: |
+          node scripts/ci/mastery_tiers_test.mjs
           node scripts/ci/item_triple_audit.mjs
           node scripts/ci/minigame_ui_audit.mjs
           # 难度系数审计（2026-09-21 立）：概率难度是**全局系数**（data/difficulty.js）而非改数据值——
