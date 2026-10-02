@@ -6345,3 +6345,11 @@ html[data-theme='dark'] .tooltip {
   vertical-align: middle;
 }
 .era-head > strong { font-weight: 600; }
+
+/* 标签页还原成块级（2026-10-02）：上一版曾把它降为 inline-flex 想让段头同行——
+   实测不行（13 个标签页自己占满一行），段头改为搬进标题行 ⇒ 这里必须还原，
+   否则标签页会「收缩宽度」，与原本的观感不同。 */
+.era-tabs {
+  display: flex;
+  margin-bottom: 6px;
+}
