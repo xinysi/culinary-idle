@@ -9,6 +9,7 @@
 //    堆叠上限来自 stackRules.js 的 effectiveStackCap（100 亿 / 有词条装备 1）。
 //    上一版把这三处写成旧常量 ⇒ 转生档、扩容档会被体检**假红**。
 import { ITEMS, getItem } from '../data/items.js'
+import { countForMasteryLevel, MASTERY_LEVEL_CAP } from '../core/mastery.js'
 import { SEASONS } from '../data/seasons.js'
 import { ALL_ACHIEVEMENTS } from '../data/achievements.js'
 import { SKILL_DEFS } from '../data/skills.js'
@@ -92,6 +93,37 @@ export function inspectSave(player) {
   try { sizeKb = Math.round(JSON.stringify(player.serialize()).length / 1024) } catch { sizeKb = -1 }
   push(sizeKb >= 0 && sizeKb < 4096, '存档体积 < 4MB', sizeKb >= 0 ? `${sizeKb} KB（年鉴 ${(player.chronicle ?? []).length} 条 · 轶事进度 ${Object.keys(player.storyProgress ?? {}).length} 键）` : '序列化失败')
 
+  // ── 2026-10-02 补三条口径（审计发现：这三处脏值原先体检抓不到 ⇒ 会假绿）───────
+  // ② 离线上限：整体替换后的值必须有限且在引擎允许区间（调参面板上限即 72h）
+  {
+    const h = player.offlineMaxHours?.()
+    push(Number.isFinite(h) && h >= 0.25 && h <= 72, '离线上限在合理区间（0.25~72 小时）', '= ' + String(h))
+  }
+  // ③ 制作/练习队列：条目结构合法 —— 练习是 2026-09-29 加的新模式，此前不在体检范围
+  {
+    const qs = player.craftQueues ?? {}
+    const bad = []
+    for (const [sid, arr] of Object.entries(qs)) {
+      if (!Array.isArray(arr)) { bad.push(sid + ' 不是数组'); continue }
+      for (const e of arr) {
+        if (!e || typeof e.recipeId !== 'string' || e.recipeId === '') bad.push(sid + ' 条目缺 recipeId')
+        else if (!(Number.isFinite(e.qty) && e.qty > 0)) bad.push(sid + '/' + e.recipeId + ' qty 非法')
+        else if (e.practice !== undefined && typeof e.practice !== 'boolean') bad.push(sid + '/' + e.recipeId + ' practice 非布尔')
+      }
+    }
+    push(bad.length === 0, '制作/练习队列条目合法（含 practice 模式）', bad.slice(0, 3).join('; '))
+  }
+  // ④ 精通次数：必须是 0 ~ 练满该卡所需次数 之间的整数（负数/越界会让档位与池加成算错）
+  {
+    const cap = countForMasteryLevel(MASTERY_LEVEL_CAP)
+    const bad = []
+    for (const [sid, inst] of Object.entries(player.skills ?? {})) {
+      for (const [cardId, v] of Object.entries(inst?.mastery ?? {})) {
+        if (!Number.isInteger(v) || v < 0 || v > cap) bad.push(sid + '/' + cardId + '=' + String(v))
+      }
+    }
+    push(bad.length === 0, '精通次数都是 0~' + cap + ' 的整数', bad.slice(0, 3).join('; '))
+  }
   return out
 }
 
