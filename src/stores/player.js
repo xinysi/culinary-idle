@@ -314,7 +314,9 @@ const defaultState = () => ({
     // 锻造套装集齐奖励（2026-09-06）：已发奖套名列表
     setBonuses: [],
     // 觅珍抽卡（2026-09-06）：pity=厨具池距上次「稀有及以上」的累计抽数（保底 10 抽）；history=最近 10 次结果标志
-    mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
+    // ⚠️ pity 有三代形态（数字 / {gear,limited} / {mix,gear,limited}）：默认值必须与读档后的形态**同形**，
+    //    否则「新档 serialize → applySave → serialize」会因 0 → 对象 的转换出现差异（实测踩过：7 条往返守卫全红）。
+    mijian: { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: migratePity(0), history: [] },
     // 制作队列（2026-09-06）：{ skillId: [{recipeId, qty, paused}] }，3 秒自动制作 1 次
     craftQueues: {},
     // 装备词条（2026-09-06；2026-09-18 起**按装备 id 存**）：{ [itemId]: { mods: [{stat,label,value}], at } }
@@ -706,7 +708,21 @@ export const usePlayerStore = defineStore('player', {
       _breadthLevelSum.clear() // 读档：精通的广度缓存必须重算（见模块级声明处）
       const skills = defaultSkills()
       for (const [id, s] of Object.entries(saved.skills ?? {})) {
-        if (skills[id]) skills[id] = { ...skills[id], ...s, mastery: s.mastery ?? {}, prestiges: s.prestiges ?? 0 }
+        if (skills[id]) {
+          // 脏值夹取（对合法存档是**恒等操作**，不破坏往返）：等级夹到该档上限、经验非负有限、精通次数取整
+          const prestiges = Number.isFinite(Number(s.prestiges)) ? Math.max(0, Math.floor(Number(s.prestiges))) : 0
+          const cap = prestiges > 0 ? PRESTIGE_MAX_LEVEL : MAX_LEVEL
+          const lv = Number(s.level)
+          const ex = Number(s.exp)
+          skills[id] = {
+            ...skills[id],
+            ...s,
+            level: Number.isFinite(lv) ? Math.min(cap, Math.max(1, Math.floor(lv))) : 1,
+            exp: Number.isFinite(ex) && ex >= 0 ? ex : 0,
+            mastery: s.mastery ?? {},
+            prestiges,
+          }
+        }
       }
       // ── 修小数：精通次数必须是整数（幂等）──────────────────────────────
       // 2026-09-19 引入「精通广度倍率」时，倍率直接乘进了次数 ⇒ 卡片上出现 `7.000246478873233 / 8 次`。
@@ -781,7 +797,9 @@ export const usePlayerStore = defineStore('player', {
         title: saved.title ?? null,
         avatarFrame: saved.avatarFrame ?? null,
         avatar: saved.avatar ?? null,
-        gold: saved.gold ?? 0,
+        // ⚠️ 不能写 saved.gold ?? 0：NaN ?? 0 仍等于 NaN（?? 只挡 null/undefined）⇒ 手改档里的 NaN
+        //    会污染之后所有金币计算。档值一律经过「有限 → 非负 → 取整」。
+        gold: Number.isFinite(Number(saved.gold)) ? Math.max(0, Math.floor(Number(saved.gold))) : 0,
         gameCoins: saved.gameCoins ?? 0,
         shopOwned: saved.shopOwned ?? {},
         nameColor: saved.nameColor ?? null,
@@ -886,7 +904,15 @@ export const usePlayerStore = defineStore('player', {
           trace: Array.isArray(saved.guide?.trace) ? saved.guide.trace.filter((x) => x && typeof x.id === 'string').slice(-NEWBIE_TOTAL) : [],
         },
         setBonuses: saved.setBonuses ?? [],
-        mijian: saved.mijian ?? { stats: { pulls: 0, spent: 0, gearRare: 0 }, pity: 0, history: [] },
+        // 与隔壁的 migrateGearMods 同款：**读档即迁移**（migratePity 幂等 ⇒ 对三代结构是恒等操作，不破坏往返）。
+        mijian: (() => {
+          const m = saved.mijian ?? {}
+          return {
+            stats: { pulls: 0, spent: 0, gearRare: 0, ...(m.stats ?? {}) },
+            pity: migratePity(m.pity),
+            history: m.history ?? [],
+          }
+        })(),
         craftQueues: saved.craftQueues ?? {}, // 制作队列：{ skillId: [{recipeId, qty, paused}] }
         gearMods: migrateGearMods(saved.gearMods), // 装备词条：新档 { itemId: { mods, at } }；旧档（按槽位）在此迁移
         gemSockets: saved.gemSockets ?? {}, // 宝石镶嵌：{ slot: { itemId, gems } }
