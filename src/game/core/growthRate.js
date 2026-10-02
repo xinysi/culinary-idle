@@ -176,4 +176,4 @@ export const LOW_TARGET_NOTE =
   `正在做的目标/配方比技能等级低时，卡片经验按差距递减：低 1 级 ×0.9、低 ${LOW_TARGET_GAP} 级 ×${LOW_TARGET_XP_MULT}、` +
   `低 10 级以上 ×${LOW_TARGET_MIN_MULT}（挑本档最高级的目标才满经验）。参照的是「你这个技能能做到的最高档」，` +
   `所以顶档目标永远不会被罚。`
-export const LOW_TARGET_CHIP = `最多 −${Math.round((1 - LOW_TARGET_MIN_MULT) * 100)}%`
+export const LOW_TARGET_CHIP = `−${Math.round((1 - LOW_TARGET_MIN_MULT) * 100)}%`

@@ -2340,11 +2340,22 @@ html[data-theme='dark'] .era-name {
   color: var(--text-dim); /* 原为 var(--dim) —— 该 token 全项目未定义，声明静默失效、颜色一直是继承来的（2026-09-24 修）*/
 }
 
-/* 行内文字允许收缩/换行，避免长值把卡片撑宽导致被主区域 overflow 裁剪 */
+/* 2026-10-02 用户报「每行内容太多 + 数字位数变多就挤到第二行」：
+   原先是 overflow-wrap:anywhere + word-break:break-word ⇒ 长数字被**从中间劈开**，
+   视觉上就是「挤到第二行」。现改为：
+     · 数值整块不拆（nowrap）——数字必须完整可读；
+     · 放不下时**整格换到下一行**并右对齐（flex-wrap ⇒ 有意的第二行，而不是被劈开）；
+     · 标签格仍可收缩，避免长值把卡片撑宽被主区域裁掉。 */
+.gather-card-row {
+  flex-wrap: wrap;
+}
 .gather-card-row > span {
   min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.gather-card-row > span:last-child {
+  white-space: nowrap;
 }
 
 .gather-card-row > span:last-child {
