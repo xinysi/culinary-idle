@@ -8200,14 +8200,14 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
 
   // ① 公式：经验 × 精通倍率 × CARD_XP_SCALE × 3600 ÷ 实际间隔（独立重算对照）
   // 低目标经验减半（2026-09-22）：grape reqLevel 30 而技能 40 级 ⇒ 低目标，两侧都要带系数
-  const lowR = inst.isLowTargetLevel(t.reqLevel) ? LOW_TARGET_XP_MULT : 1
+  const lowR = targetLevelXpMult(inst.level, t.reqLevel, inst.topTargetLevel) // 走真实出口（别写死规则的结果）
   const recompute = () =>
     (t.xpPerAction * lowR * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
   check('目标效率', '效率 == 卡片经验×精通倍率×3600÷实际间隔', Math.abs(inst.xpPerHour(t) - recompute()) < 1e-6,
     `${inst.xpPerHour(t)} vs ${recompute()}`)
   // 与经验条同口径：必须乘 CARD_XP_SCALE，否则页面数字与玩家在经验条上看到的对不上（又是一个「页面骗人」）
   // 两边都要带低目标系数（grape reqLevel 30 而技能 40 级 ⇒ 低目标），否则比值里混进 0.5（2026-09-22）
-  const lowT = inst.isLowTargetLevel(t.reqLevel) ? LOW_TARGET_XP_MULT : 1
+  const lowT = targetLevelXpMult(inst.level, t.reqLevel, inst.topTargetLevel) // 同上
   const withoutScale = (t.xpPerAction * lowT * masteryXpMultiplier(inst.masteryLevel(t))) / (inst.intervalMs(t) / 1000) * 3600
   check('目标效率', '效率按 CARD_XP_SCALE 与技能经验条同口径',
     Math.abs(inst.xpPerHour(t) / withoutScale - CARD_XP_SCALE) < 1e-6, `倍数 ${inst.xpPerHour(t) / withoutScale}`)
