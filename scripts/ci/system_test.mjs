@@ -40,7 +40,7 @@ import { scaledEnemy } from '../../src/game/data/enemyScaling.js' // C59：与�
 import { Combat, setCombatInstance } from '../../src/game/combat/Combat.js'
 import { ForagingSkill } from '../../src/game/skills/ForagingSkill.js'
 import { countForMasteryLevel, masteryXpMultiplier, masteryXpMultiplierRaw, MASTERY_XP_BONUS_SCALE, MASTERY_TIERS, MASTERY_TIER_LEVELS, masteryIntervalText, masteryToNextTier, masteryFixedInterval, masteryDoubleChance, masteryYieldBonus, masteryIntervalFactor } from '../../src/game/core/mastery.js'
-import { XP_STACK_DAMPING, dampXpStack, LOW_TARGET_GAP, LOW_TARGET_XP_MULT, lowTargetRefLevel, targetLevelXpMult } from '../../src/game/core/growthRate.js'
+import { XP_STACK_DAMPING, dampXpStack, LOW_TARGET_GAP, LOW_TARGET_XP_MULT, lowTargetRefLevel, targetLevelXpMult, LOW_TARGET_MIN_MULT } from '../../src/game/core/growthRate.js'
 import { PRESTIGE_XP_BONUS } from '../../src/game/skills/Skill.js'
 import { MATERIAL_COST_MULT, materialQty, effIngredients, materialTotal } from '../../src/game/data/materialCost.js'
 import { EXPEDITIONS } from '../../src/game/data/expeditions.js'
@@ -3550,7 +3550,7 @@ console.log('══ X. 觅珍抽卡 ══')
       D.dropChance(0.1) === D.scaleChance(0.1, 0.2, 0.01) &&
       MC.materialQty(3) === Math.max(1, Math.round(3 * 2)) &&
       GR.dampXpStack(5) === 1 + (5 - 1) * 0.75 &&
-      GR.targetLevelXpMult(30, 20, 40) === 0.5)
+      Math.abs(GR.targetLevelXpMult(30, 20, 40) - Math.max(GR.LOW_TARGET_MIN_MULT, 1 - 10 * ((1 - GR.LOW_TARGET_XP_MULT) / GR.LOW_TARGET_GAP))) < 1e-9)  // 差 10 级 ⇒ 公式 0 ⇒ 夹到下限 0.15
     // ② 覆盖生效：把对决掉落从 0.2 调到 0.1（更难）
     T.tunerSet('diffDrop', 0.1)
     check('调参', '覆盖生效：diffDrop=0.1 时 dropChance 随之减半',
@@ -3625,8 +3625,8 @@ console.log('══ X. 觅珍抽卡 ══')
     T.tunerResetAll()
     try {
       // 低目标判定差：Lv30 做 Lv26 —— 默认差 5 ⇒ 不算低目标；调到 2 ⇒ 算
-      check('调参', 'lowTargetGap：默认 5 级时 Lv26 不算低目标，覆盖为 2 后算',
-        GR2.isLowTarget(30, 26, 40) === false && (T.tunerSet('lowTargetGap', 2), GR2.isLowTarget(30, 26, 40) === true))
+      check('调参', 'lowTargetGap：差 4 级恒算低目标；滑杆 5→2 后公式给 0、被下限夹到 0.15',
+        GR2.isLowTarget(30, 26, 40) === true && (T.tunerSet('lowTargetGap', 2), Math.abs(GR2.targetLevelXpMult(30, 26, 40) - 0.15) < 1e-9))
       T.tunerResetKey('lowTargetGap')
       // 攻速地板：L100 原始 0.8s —— 默认地板 1.2 抬回 1.2；地板 0.5 时放行到 0.8
       check('调参', 'speedFloor：L100 默认被 1.2s 地板钉住，地板改 0.5 后放行到 0.8s',
@@ -8282,7 +8282,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   const succ = inst.successChance(r)
   const expXp = r.xp * (succ + (1 - succ) * 0.5)
   // 低目标经验减半（2026-09-22）：烤土豆 reqLevel 1 而技能 99 级 ⇒ 是低目标，效率也减半（显示与结算同源）
-  const lowMult = inst.isLowTargetLevel(r.reqLevel) ? LOW_TARGET_XP_MULT : 1
+  const lowMult = targetLevelXpMult(inst.level, r.reqLevel, inst.topTargetLevel)
   const recompute = () => (expXp * lowMult * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   check('配方效率', '效率 == 期望经验×精通倍率×3600÷队列节奏', Math.abs(inst.xpPerHour(r) - recompute()) < 1e-6,
     `${inst.xpPerHour(r)} vs ${recompute()}`)
@@ -8345,7 +8345,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   //      （本守卫第一版就是这么错的）。
   p.setSkillState('cooking', { level: 99, exp: 0 })
   const s2 = inst.successChance(r)
-  const fresh = (r.xp * (s2 + (1 - s2) * 0.5) * (inst.isLowTargetLevel(r.reqLevel) ? LOW_TARGET_XP_MULT : 1) * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
+  const fresh = (r.xp * (s2 + (1 - s2) * 0.5) * (targetLevelXpMult(inst.level, r.reqLevel, inst.topTargetLevel)) * CARD_XP_SCALE * masteryXpMultiplier(inst.masteryLevel(r))) / (CRAFT_QUEUE_INTERVAL_MS / 1000) * 3600
   check('配方效率', '等级变化后效率跟着变（读的是当前成功率，不是缓存值）；队列节奏走唯一常量',
     Math.abs(inst.xpPerHour(r) - fresh) < 1e-6 && CRAFT_QUEUE_INTERVAL_MS === 3000,
     `实得 ${Math.round(inst.xpPerHour(r))} vs 重算 ${Math.round(fresh)}，常量 ${CRAFT_QUEUE_INTERVAL_MS}ms`)
@@ -9253,8 +9253,8 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
   // ── A. 常数与纯函数（growthRate.js）──
   check('低目标衰减', '常数：低 5 级起减半（LOW_TARGET_GAP=5 / LOW_TARGET_XP_MULT=0.5）',
     LOW_TARGET_GAP === 5 && LOW_TARGET_XP_MULT === 0.5, `${LOW_TARGET_GAP} / ${LOW_TARGET_XP_MULT}`)
-  check('低目标衰减', '边界：低 4 级不减 / 低 5 级减半 / 低 6 级也减半（「5 级及以上」）',
-    targetLevelXpMult(50, 46, 99) === 1 && targetLevelXpMult(50, 45, 99) === 0.5 && targetLevelXpMult(50, 44, 99) === 0.5,
+  check('低目标衰减', '边界：按差距平滑递减（低 4 级 ×0.6 / 低 5 级 ×0.5 / 低 6 级 ×0.4）',
+    Math.abs(targetLevelXpMult(50, 46, 99) - 0.6) < 1e-9 && Math.abs(targetLevelXpMult(50, 45, 99) - 0.5) < 1e-9 && Math.abs(targetLevelXpMult(50, 44, 99) - 0.4) < 1e-9,
     `${targetLevelXpMult(50, 46, 99)} / ${targetLevelXpMult(50, 45, 99)} / ${targetLevelXpMult(50, 44, 99)}`)
   check('低目标衰减', '参照等级 = min(技能等级, 该技能顶档)：技能 120 而顶档 91 ⇒ 参照 91（顶档不被罚）',
     lowTargetRefLevel(120, 91) === 91 && lowTargetRefLevel(50, 99) === 50 && lowTargetRefLevel(50, null) === 50,
@@ -9263,19 +9263,20 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     [null, undefined, '', NaN, 0, -3, 'abc'].every((v) => targetLevelXpMult(50, v, 99) === 1),
     // 踩过的真缺陷：`Number(null) === 0` ⇒ 0 ≤ 参照−5 恒真 ⇒ 离线拿不到目标时反而把经验砍半
     JSON.stringify([null, undefined, '', NaN, 0, -3].map((v) => targetLevelXpMult(50, v, 99))))
-  check('低目标衰减', '永不抬高：枚举 1~130 级 × 1~130 级目标，结果只可能是 1 或 0.5',
+  // 2026-10-02：从「只可能是 1 或 0.5」放宽为「∈[0.15, 1]」（梯度化）—— 判据本意「永不抬高」不变
+  check('低目标衰减', '永不抬高：枚举 1~130 级 × 1~130 级目标，结果恒在 [0.15, 1] 且不超过 1',
     (() => {
       const bad = []
       for (let s = 1; s <= 130; s++) for (let t = 1; t <= 130; t++) {
         for (const top of [null, 85, 99, 120]) {
           const v = targetLevelXpMult(s, t, top)
-          if (v !== 1 && v !== LOW_TARGET_XP_MULT) bad.push(`${s}/${t}/${top}=${v}`)
+          if (!(v >= LOW_TARGET_MIN_MULT - 1e-9 && v <= 1 + 1e-9)) bad.push(`${s}/${t}/${top}=${v}`)
         }
       }
       return bad.length === 0
     })())
   check('低目标衰减', '等级可能是字符串（数据里 reqLevel 有字符串形态）⇒ 与数字等价',
-    targetLevelXpMult(50, '45', 99) === 0.5 && targetLevelXpMult('50', '46', 99) === 1)
+    Math.abs(targetLevelXpMult(50, '45', 99) - 0.5) < 1e-9 && Math.abs(targetLevelXpMult('50', '46', 99) - 0.6) < 1e-9)
 
   // ── B. 实例层：参照系是真实顶档，且真实引擎恰好按 0.5 结算 ──
   {
@@ -9303,7 +9304,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
     check('低目标衰减', '行为：低目标恰好 0.5×（真实 addCardXp）',
       gain(1000, 45) === Math.round(hi * 0.5) || Math.abs(gain(1000, 45) / hi - 0.5) < 0.005,
       `${gain(1000, 45)} vs ${hi}`)
-    check('低目标衰减', '行为：低 4 级仍是 1×（边界没写宽）', gain(1000, 46) === hi, `${gain(1000, 46)} vs ${hi}`)
+    check('低目标衰减', '行为：低 4 级按梯度 ×0.6', Math.abs(gain(1000, 46) / hi - 0.6) < 0.005, `${gain(1000, 46)} vs ${hi}`)
     check('低目标衰减', '行为：拿不到等级（null）⇒ 1×（离线缺目标时不会误砍）', gain(1000, null) === hi, `${gain(1000, null)} vs ${hi}`)
     // 副业的参照系必须夹住：技能 120 时「能用的最高档」配方仍满经验
     const po = getSkillInstance('pottery')
@@ -9374,7 +9375,7 @@ console.log('══ C41. 功能页分级 + 大反馈演出 ══')
         const rL = list.reduce((a, b) => ((b.reqLevel ?? 0) < (a.reqLevel ?? 0) ? b : a))
         const rate = (r) => inst.xpPerHour(r) / inst.xpPerCraft(r)
         const ratio = rate(rU) / rate(rL)
-        if (!(Math.abs(ratio - 2) < 0.02)) bad.push(`${id}: 效率显示的「最高档 ÷ 最低档」= ${ratio.toFixed(3)} ≠ 2`)
+        if (!(Math.abs(ratio - 1 / LOW_TARGET_MIN_MULT) < 0.01 / LOW_TARGET_MIN_MULT)) bad.push(`${id}: 效率显示的「最高档 ÷ 最低档」= ${ratio.toFixed(3)} ≠ 1 / LOW_TARGET_MIN_MULT`)
       }
       check('低目标衰减', '🔴 行为：内容铺到 99 级以上时（保鲜 85 / 副业 91），「能用的最高档」在 Lv99 仍拿满经验 —— **结算与显示**都必须同源',
         bad.length === 0, bad.slice(0, 4).join('; '))

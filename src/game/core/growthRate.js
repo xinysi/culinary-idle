@@ -117,6 +117,8 @@ export function capXpSpeedup(level, damped) {
 export const LOW_TARGET_GAP = 5
 /** 低目标的经验系数（0.5 = 减半） */
 export const LOW_TARGET_XP_MULT = 0.5
+/** 低目标系数的**下限**（差距再大也不低于它；防 0 让卡片变死）。走常数、不进 tuner（面板已有两个键够用） */
+export const LOW_TARGET_MIN_MULT = 0.15
 
 /** 把「可能是空值」的等级读成数字：null / undefined / '' / NaN / ≤0 一律返回 NaN（= 拿不到等级） */
 function toLevel(v) {
@@ -145,20 +147,33 @@ export function isLowTarget(skillLevel, targetLevel, topTargetLevel = null) {
   if (!Number.isFinite(lv)) return false
   const ref = lowTargetRefLevel(skillLevel, topTargetLevel)
   if (!Number.isFinite(ref)) return false
-  return lv <= ref - tunerOver('lowTargetGap', LOW_TARGET_GAP, 1, 20)
+  // 2026-10-02：系数改成平滑递减后**任何差距都受罚**（差 1 级 ×0.9）⇒ 判据从「差 ≥5」改成「有差距」
+  // （否则 ×0.9 的卡不显示徽章，玩家经验少了却找不到原因）。lowTargetGap 仍被 targetLevelXpMult 读取。
+  return lv < ref
 }
 
 /** 低目标衰减系数：`isLowTarget` ? `LOW_TARGET_XP_MULT` : 1 */
 export function targetLevelXpMult(skillLevel, targetLevel, topTargetLevel = null) {
-  return isLowTarget(skillLevel, targetLevel, topTargetLevel) ? tunerOver('lowTargetMult', LOW_TARGET_XP_MULT, 0, 1) : 1
+  // 🔴 2026-10-02 用户要求「玩家只有蹲当前最高级的卡片才能升级最快，旧卡要受限」。
+  //    旧实现**一刀切**（差 ≥5 → ×0.5，否则 ×1）⇒ 差 1~4 级的旧卡完全不受限 ✗，而刷满精通的旧卡
+  //    有三重优势（间隔减半 × 双倍产出 × 精通经验倍数）⇒ 会反超刚解锁的最高档卡 ✗。
+  //    现改为**按差距平滑递减**，并**保住 gap=5 处的 ×0.5**（旧口径在这点不变 ⇒ 既有文档/守卫仍成立）：
+  //      差 1→×0.9 · 2→×0.8 · 5→×0.5 · ≥10→下限 0.15（慢 6.7 倍 ⇒ 盖过精通那三重优势 ⇒ 最高档严格最优）
+  //    选平滑而非「把门槛从 5 缩到 2」：后者会重新造出「突然慢一半」的悬崖（开局爬坡上踩过同款）。
+  //    ⚠️ 等级一律走 toLevel() 而不是 Number()：null/''/0/-3 必须当成**拿不到等级**（返回 1）——
+  //       直接 Number() 会把它们读成 0 级 ⇒ 系数被压到下限（守卫「空值不误罚」会当场抓到）。
+  const lv = toLevel(targetLevel)
+  const ref = lowTargetRefLevel(skillLevel, topTargetLevel)
+  if (!Number.isFinite(lv) || !Number.isFinite(ref)) return 1
+  const gap = ref - lv
+  if (gap <= 0) return 1
+  const g0 = tunerOver('lowTargetGap', LOW_TARGET_GAP, 1, 20)
+  const m0 = tunerOver('lowTargetMult', LOW_TARGET_XP_MULT, 0, 1)
+  return Math.max(LOW_TARGET_MIN_MULT, 1 - gap * ((1 - m0) / g0))
 }
 
-/** 规则说明（**唯一文案出口**：界面与指南都读它，别再手写「低 5 级」「减半」） */
-export const LOW_TARGET_NOTE = `正在做的目标/配方比技能等级低 ${LOW_TARGET_GAP} 级及以上时，卡片经验 ×${LOW_TARGET_XP_MULT}（挑本档最高级的目标才满经验）。参照的是「你这个技能能做到的最高档」，所以顶档目标永远不会被罚。`
-
-/** 卡片上的紧凑标签（**从系数派生**，改 `LOW_TARGET_XP_MULT` 时它自己跟着变）
- *  ⚠️ 用它、不要在页面里写死 `−50%`；它挂在「经验」那一行的数值旁，**不进卡片头部** ——
- *  徽章塞进头部（名字那一格）时，窄卡上会整枚换行、把各卡行高顶得参差不齐（2026-09-23 用户截图报的排版乱）。 */
-export const LOW_TARGET_CHIP = `−${Math.round((1 - LOW_TARGET_XP_MULT) * 100)}%`
-
-
+export const LOW_TARGET_NOTE =
+  `正在做的目标/配方比技能等级低时，卡片经验按差距递减：低 1 级 ×0.9、低 ${LOW_TARGET_GAP} 级 ×${LOW_TARGET_XP_MULT}、` +
+  `低 10 级以上 ×${LOW_TARGET_MIN_MULT}（挑本档最高级的目标才满经验）。参照的是「你这个技能能做到的最高档」，` +
+  `所以顶档目标永远不会被罚。`
+export const LOW_TARGET_CHIP = `最多 −${Math.round((1 - LOW_TARGET_MIN_MULT) * 100)}%`
