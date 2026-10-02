@@ -6327,3 +6327,21 @@ html[data-theme='dark'] .tooltip {
   box-shadow: 0 6px 20px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(201, 150, 47, .14);
   color: var(--text);
 }
+
+
+/* ── 段头并进标题行（2026-10-02）────────────────────────────────────────────
+   用户：「Lv 1-10 清汤面 26 个配方 精通 0/26 可制作 独占一行很碍眼」+「不行」。
+   第一次只改 CSS（把 .era-tabs / .era-head 降为 inline-flex）**不行**：13 个标签页自己就占满一行，
+   段头挤不进去只能折行 ⇒ 正解是把这三项统计**搬进标题行**（那一行中间本来就有大片空白），
+   独立的那一行随之消失（模板里已移动，类名 .era-head 保留）。
+   ⚠️ 这段必须**追加在文件末尾**：中途替换曾两次把 main.css 弄成「Unclosed block」而构建失败。 */
+.era-head {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 0 0 10px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+.era-head > strong { font-weight: 600; }

@@ -171,6 +171,17 @@ function selectEra(label) {
     />
 
     <!-- 目标列表（卡片式：按等级分段，可折叠）-->
+    <!-- 2026-10-02 用户：「Lv 1-10 清汤面 26 个配方 精通 0/26 可制作 独占一行很碍眼」+「不行」。
+         第一次只改 CSS（把 .era-tabs / .era-head 降为 inline-flex）**不行**：13 个标签页自己就占满一行，
+         段头挤不进去只能折行 ⇒ 正解是**把这三项统计搬进标题行**（这一行中间本来就有大片空白），
+         独立的那一行随之消失。类名 .era-head 保留（断言与样式都按它找）。 -->
+    <span v-if="activeSec" class="era-head">
+      <!-- 时代名 = 该档最高级产出：一眼看出「这一档能拿到什么新东西」 -->
+      <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级产出：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
+      <span class="dim">{{ activeSec.list.length }} 个目标</span>
+      <span class="dim" :title="`该档已精通满 100 的卡片数 / 该档卡片数`">精通 {{ eraDone(activeSec) }}/{{ activeSec.list.length }}</span>
+      <span v-if="activeSec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
+    </span>
     <div class="card">
       <h3 class="target-head-row">
         <span>目标列表（按等级分段，点击段标题折叠）</span>
@@ -201,13 +212,6 @@ function selectEra(label) {
           {{ sec.label }}
           <span v-if="eraName(sec)" class="era-tab-name">{{ eraName(sec) }}</span>
         </button>
-      </div>
-      <div v-if="activeSec" class="era-head">
-        <!-- 时代名 = 该档最高级产出：一眼看出「这一档能拿到什么新东西」 -->
-        <span v-if="eraName(activeSec)" class="era-name" :title="`本档最高级产出：${eraName(activeSec)}`">{{ eraName(activeSec) }}</span>
-        <span class="dim">{{ activeSec.list.length }} 个目标</span>
-        <span class="dim" :title="`该档已精通满 100 的卡片数 / 该档卡片数`">精通 {{ eraDone(activeSec) }}/{{ activeSec.list.length }}</span>
-        <span v-if="activeSec.list.some((t) => isSelected(t.itemId) && !skillClosed)" class="badge badge-on">当前</span>
       </div>
       <div v-if="activeSec" class="gather-grid">
           <div

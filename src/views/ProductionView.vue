@@ -582,6 +582,16 @@ const recipeNoun = '配方'
 
     <div class="card">
       <h3 class="target-head-row">
+      <!-- 2026-10-02：段头（档名/配方数/精通/可制作）搬进本行 —— 原先它独占一行很碍眼（用户报）。
+           第一次只改 CSS 不行：13 个标签页自己占满一行，段头挤不进去只能折行。 -->
+      <span v-if="activeSec && !flatMode" class="era-head">
+        <strong>{{ activeSec.label }}</strong>
+        <!-- 时代名 = 该档最高级配方的产出名：一眼看出「这一档能做什么新东西」 -->
+        <span v-if="activeSec.era" class="era-name" :title="`本档最高级配方：${activeSec.era}`">{{ activeSec.era }}</span>
+        <span class="dim">{{ activeSec.list.length }} 个{{ recipeNoun }}</span>
+        <span class="dim" title="该档已精通满 100 的配方数 / 该档配方数">精通 {{ eraProgress(activeSec.list, (r) => masteryOf(r).level).done }}/{{ activeSec.list.length }}</span>
+        <span v-if="activeSec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
+      </span>
         <span>{{ headTitle }}（{{ flatMode ? '全部平铺' : '按等级分段，点上面的段切换' }}）</span>
         <!-- 规则常驻（2026-09-22）：低目标经验减半 -->
         <span class="dim low-target-hint" :title="LOW_TARGET_NOTE">低目标经验 ×{{ LOW_TARGET_XP_MULT }}</span>
@@ -647,14 +657,6 @@ const recipeNoun = '配方'
         </div>
       </div>
       <template v-if="activeSec">
-        <div v-if="!flatMode" class="era-head">
-          <strong>{{ activeSec.label }}</strong>
-          <!-- 时代名 = 该档最高级配方的产出名：一眼看出「这一档能做什么新东西」 -->
-          <span v-if="activeSec.era" class="era-name" :title="`本档最高级配方：${activeSec.era}`">{{ activeSec.era }}</span>
-          <span class="dim">{{ activeSec.list.length }} 个{{ recipeNoun }}</span>
-          <span class="dim" title="该档已精通满 100 的配方数 / 该档配方数">精通 {{ eraProgress(activeSec.list, (r) => masteryOf(r).level).done }}/{{ activeSec.list.length }}</span>
-          <span v-if="activeSec.list.some((r) => maxCraft(r) > 0 && canAfford(r))" class="badge badge-on">可制作</span>
-        </div>
         <div class="gather-grid recipe-grid gather-grid--wide">
           <div
             v-for="r in activeSec.list"
