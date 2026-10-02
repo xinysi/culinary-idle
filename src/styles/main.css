@@ -2346,6 +2346,9 @@ html[data-theme='dark'] .era-name {
      · 数值整块不拆（nowrap）——数字必须完整可读；
      · 放不下时**整格换到下一行**并右对齐（flex-wrap ⇒ 有意的第二行，而不是被劈开）；
      · 标签格仍可收缩，避免长值把卡片撑宽被主区域裁掉。 */
+.gather-card:has(.best-flag) {
+  position: relative;
+}
 .gather-card-row {
   flex-wrap: wrap;
 }
@@ -4471,9 +4474,27 @@ html[data-theme='dark'] .head-strips {
    深色皮肤的深色主色是为「按钮底/强调文字」标定的，落在深色卡片上当 11px 小字只有 3.3~3.9 对比度
    （e2e-dark 逐皮肤抓到 14 套全 FAIL）。这是**之前就有的缺陷**——以前各等级段默认折叠，
    这张卡根本不渲染，所以从没被扫到；2026-09-19 改成「默认展开当前段」后它才浮出来。 */
+/* 2026-10-02：从「独占一行」改成**卡片右上角角标**（用户：「夹在效率和精通之间太割裂」）。
+   绝对定位 ⇒ 不占卡片高度、也不再打断「效率 → 精通」的阅读顺序；百分比收进 tooltip。 */
+.skill-prestige-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.skill-prestige-bonus { white-space: nowrap; }
+.best-flag-pct {
+  margin-left: 3px;
+  opacity: 0.85;
+}
 .best-flag {
-  margin-top: 2px;
-  align-self: flex-end;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  margin: 0;
+  align-self: auto;
   text-align: right;
   font-size: 11px;
   font-weight: 600;

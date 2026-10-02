@@ -242,8 +242,16 @@ function selectEra(label) {
               <span class="mono">{{ fmtRate(instance.xpPerHour(t)) }}</span>
             </div>
             <!-- 「当前最优」独占一行：塞进右侧值里会被挤成竖排（窄屏卡片只有两列宽） -->
-            <div v-if="t.itemId === bestTargetId" class="best-flag">
-              ⚡ 最优<template v-if="gainVsCurrent(t) != null"> · 比当前快 {{ (gainVsCurrent(t) * 100).toFixed(0) }}%</template>
+            <!-- 2026-10-02 用户：「⚡ 最优 · 比当前快 852%」夹在效率与精通之间太割裂。
+                 改法 = **不占行**的卡片角标（绝对定位到右上角）+ 百分比收进 tooltip。
+                 ⚠️ 不能塞进「效率」那一行的值里：窄屏两列宽时会被挤成竖排（2026-09-19 踩过）。
+                 颜色继续用 --good*（不随皮肤的功能语义色）—— 换 --primary 会让 14 套深色皮肤对比度不达标。 -->
+            <div
+              v-if="t.itemId === bestTargetId"
+              class="best-flag"
+              :title="gainVsCurrent(t) != null ? `当前最优：比正在采的目标快 ${(gainVsCurrent(t) * 100).toFixed(0)}%` : '当前最优（已解锁目标里效率最高）'"
+            >
+              ⚡ 最优<template v-if="gainVsCurrent(t) != null"><span class="best-flag-pct">+{{ (gainVsCurrent(t) * 100).toFixed(0) }}%</span></template>
             </div>
             <div v-if="getItem(t.itemId)?.spoilMs" class="gather-card-row">
               <span>腐坏</span>

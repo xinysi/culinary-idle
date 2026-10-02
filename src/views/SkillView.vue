@@ -92,15 +92,19 @@ function doPrestige() {
           🎖 下一档台阶：<b>Lv{{ nextPerk.level }}</b>「{{ nextPerk.title }}」
           （还差 {{ nextPerk.level - progress.level }} 级 · 任一技能达到即可，称号见「成就与称号」）
         </div>
-        <button
-          v-if="progress.level >= MAX_LEVEL && maxLevel === MAX_LEVEL"
-          class="btn btn-primary btn-sm"
-          style="margin-top: 8px"
-          @click="doPrestige"
-        >
-          ✨ 转生（突破 120 级）
-        </button>
-        <p v-else-if="prestiges > 0" class="dim" style="margin-top: 4px">转生加成：+{{ prestiges * 20 }}% 经验</p>
+        <!-- 2026-10-02 用户：「转生按钮和信息独占一行太浪费空间」。
+             原来两者是 v-if / v-else-if **互斥**的 ⇒ 满级时看不到加成、没满级时看不到按钮，各自白占一行。
+             现合并成一行（flex + wrap，窄屏自动折行），且两者**同时显示**。 -->
+        <div class="skill-prestige-row">
+          <button
+            v-if="progress.level >= MAX_LEVEL && maxLevel === MAX_LEVEL"
+            class="btn btn-primary btn-sm"
+            @click="doPrestige"
+          >
+            ✨ 转生（突破 120 级）
+          </button>
+          <span v-if="prestiges > 0" class="dim skill-prestige-bonus">转生加成：+{{ prestiges * 20 }}% 经验</span>
+        </div>
       </div>
     </header>
 
