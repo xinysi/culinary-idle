@@ -267,27 +267,30 @@ if (player.skills?.spiceMixing) { player.skills.spiceMixing.level = 30; player.s
   }
 }
 
-// ══ ⑲ 交易所卖出 → 金币增加且物品被消耗（两个方向都要验，才算真的结算了）══
+// ══ ⑲ 交易所卖出 → 金币增加且物品真的减少 ══
+// ⚠️ 首版拿 apple 去卖 ⇒ 被「本期交易所不收这件货」挡回（交易所只收**当期轮换**的那 6 类）。
+//    正确前置：用真实出口 pickGoods() 取**当期**在收的货，再卖 —— 这才是「能成交」的输入。
 {
-  const { EXCHANGE_POOL_CATEGORIES } = await import('../../src/game/data/exchange.js').catch(() => ({}))
+  const { pickGoods, EXCHANGE_POOL_CATEGORIES } = await import('../../src/game/data/exchange.js')
   const { ITEMS } = await import('../../src/game/data/items.js')
-  const want = Object.keys(ITEMS).find((id) => {
-    const it = ITEMS[id]
-    return it && (EXCHANGE_POOL_CATEGORIES ?? []).includes(it.category) === false ? false : true
-  })
-  const id = want ?? 'apple'
-  if (!player.exchangeSell) note('交易所卖出 → 金币', '拿不到 exchangeSell')
+  if (!player.exchangeSell || !pickGoods) note('交易所卖出 → 金币', '拿不到 exchangeSell/pickGoods')
   else {
-    player.gainItem(id, 5)
-    const n0 = player.inventory?.[id] ?? 0
-    const g0 = player.gold ?? 0
-    const r = player.exchangeSell(id, 2)
-    const n1 = player.inventory?.[id] ?? 0
-    const g1 = player.gold ?? 0
-    const sold = n1 < n0 || (typeof r === 'object' && r?.ok)
-    // 前置已把调料调配拉到 30 ⇒ 这里必须真的成交（被门挡住就说明前置没生效，也算失败）
-    if (sold) ok.push('交易所卖出 → 金币（卖出后物品真的减少）')
-    else note('交易所卖出 → 金币', '未成交：' + (r?.msg ?? '') + '（交易所只收**当期轮换**的那 6 类货，待补"取当期货池"的前置）')
+    const goods = pickGoods(ITEMS) // 当期在收的货（真实出口）
+    const id = (Array.isArray(goods) ? goods.map((g) => g?.id ?? g) : Object.keys(goods ?? {}))[0]
+    if (!id) note('交易所卖出 → 金币', '当期货池为空')
+    else {
+      player.gainItem(id, 5)
+      const n0 = player.inventory?.[id] ?? 0
+      const g0 = player.gold ?? 0
+      const r = player.exchangeSell(id, 2)
+      const n1 = player.inventory?.[id] ?? 0
+      const g1 = player.gold ?? 0
+      if (typeof r === 'object' && r?.ok && n1 < n0 && g1 > g0) {
+        ok.push(`交易所卖出 → 金币（当期货 ${id}：持有 ${n0}→${n1} · 金币 ${g0}→${g1}）`)
+      } else {
+        note('交易所卖出 → 金币', '仍未成交：' + (r?.msg ?? JSON.stringify(r)) + `（当期货 ${id}；池类目 ${(EXCHANGE_POOL_CATEGORIES ?? []).length} 类）`)
+      }
+    }
   }
 }
 
@@ -296,7 +299,10 @@ if (player.skills?.spiceMixing) { player.skills.spiceMixing.level = 30; player.s
   if (!player.caravanStart || !player.caravanClaim) note('商队归队 → 金币', '拿不到 caravanStart/caravanClaim')
   else {
     player.gainItem('apple', 5)
-    const r0 = player.caravanStart(0, undefined, { apple: 5 })
+    // ⚠️ 首版传了 undefined ⇒ 被"商路不存在"挡回。真实出口是 regions.js 的 REGIONS。
+    const { REGIONS } = await import('../../src/game/data/regions.js').catch(() => ({}))
+    const rid = (REGIONS ?? [])[0]?.id
+    const r0 = rid ? player.caravanStart(0, rid, { apple: 5 }) : { ok: false, msg: '拿不到 REGIONS' }
     const st = player.caravan?.slots?.[0] ?? player.caravan?.[0] ?? null
     if (st && typeof st === 'object') st.returnAt = Date.now() - 1000 // 拨到过去 ⇒ 可领
     const g0 = player.gold ?? 0
