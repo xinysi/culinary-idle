@@ -77,9 +77,30 @@ check(
 )
 
 /* ── B. 静态引用的资源文件必须存在 ── */
+// ⚠️ 2026-10-02：**休眠的样式表不参与「静态引用」检查**。
+//    起因：用户删了 public/images/ui-food-pixel/（212 张像素皮肤边框图），因为它只被
+//    src/styles/pixel-skin.css 引用，而那个文件**任何地方都没 import**（它头注释自己写着
+//    「启用：在 main.css 末尾加一行 @import './pixel-skin.css';」）⇒ 游戏运行时不加载它，
+//    那批图确实用不到。旧判据把「休眠样式表里的引用」也算成缺图 ⇒ 会逼着仓库留一堆没人用的素材。
+//    判据是**派生**的（不写死文件名）：一个 .css 算「活」当且仅当它的文件名出现在某个非-css 源文件里；
+//    main.css 是入口 ⇒ 恒活。
+const LIVE_CSS = (() => {
+  const cssNames = files.filter((f) => f.endsWith('.css')).map((f) => f.split(/[\\/]/).pop())
+  const live = new Set(['main.css'])
+  for (const f of files) {
+    if (f.endsWith('.css')) continue
+    let txt = ''
+    try { txt = fs.readFileSync(f, 'utf8') } catch { continue }
+    for (const nm of cssNames) if (txt.includes(nm)) live.add(nm)
+  }
+  return live
+})()
+const isDeadCss = (f) => f.endsWith('.css') && !LIVE_CSS.has(f.split(/[\\/]/).pop())
+
 const refs = new Set()
 const prefixes = new Set()
 for (const f of files) {
+  if (isDeadCss(f)) continue   // 休眠样式表：跳过（见上）
   const s = stripForScan(fs.readFileSync(f, 'utf8'), f.endsWith('.html'))
   for (const m of s.matchAll(/['"`](\/?images\/[^'"`\n]*?\.(?:png|jpe?g|gif|webp|svg))['"`]/gi)) refs.add(m[1])
   for (const m of s.matchAll(/['"`](\/?images\/[^'"`\n]*?\/)['"`]/gi)) prefixes.add(m[1])
@@ -107,6 +128,12 @@ for (const r of refs) {
   }
   if (!fs.existsSync(resolveAsset(r))) missing.push(r)
 }
+  // ⚠️ 2026-10-02：**只检查「被 import 的」样式表**里的静态引用。
+  //    起因：用户删了 `public/images/ui-food-pixel/`（212 张像素皮肤边框图），因为它只被
+  //    `src/styles/pixel-skin.css` 引用，而那个文件**任何地方都没 import**（它自己头注释写着
+  //    "启用：在 main.css 末尾加一行 @import"）⇒ 游戏运行时根本不加载它 ⇒ 这批图确实用不到。
+  //    旧判据会把「休眠样式表里的引用」也算成"缺图"，从而**逼着仓库留一堆没人用的素材**。
+
 check('B. 静态引用的图片文件都存在（public/ 下）', missing.length === 0, missing.length ? `\n      缺: ${missing.slice(0, 12).join(', ')}` : '')
 console.log(`  （静态引用 ${refs.size - dynamic.length} 条；模板插值 ${dynamic.length} 条由运行期拼接，另由 exe 图片审计覆盖：${dynamic.slice(0, 3).join(' ')}${dynamic.length > 3 ? ' …' : ''}）`)
 
