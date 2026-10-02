@@ -124,6 +124,38 @@ function invariants(tag) {
   } catch (e) { note('迁移·脏值夹取', '抛错：' + String(e).slice(0, 80)) }
 }
 
+// ══ ⑥ 存档体积与配额（2026-10-02 立）══
+// 为什么放进 CI：存档无限膨胀会撞 localStorage 配额（约 5MB/域）⇒ **玩家存不上档**，
+// 而这属于「不报错、悄悄地坏」——此前只有开发者面板的体检在看它（不进 CI）。
+// 口径：新档要小、满配档要有上限余量；同时快照里不得出现 undefined / 函数（序列化漏字段的信号）。
+{
+  const p2 = usePlayerStore(pinia)
+  p2.newGame()
+  const fresh = JSON.stringify(p2.serialize())
+  const freshKB = fresh.length / 1024
+
+  // 造一份「很重」的档：满技能 + 大量物品种类 + 满精通
+  const { ITEMS } = await import('../../src/game/data/items.js')
+  const ids = Object.keys(ITEMS)
+  for (let i = 0; i < Math.min(1200, ids.length); i++) p2.gainItem(ids[i], 3)
+  for (const s of Object.values(p2.skills ?? {})) { s.level = 99; s.exp = 1234567; s.prestiges = 5 }
+  const heavy = JSON.stringify(p2.serialize())
+  const heavyKB = heavy.length / 1024
+
+  check('存档体积：新档 < 200KB', freshKB < 200, freshKB.toFixed(1) + ' KB')
+  // 4MB 是 saveInspector 的口径（localStorage 约 5MB/域）⇒ 留出余量
+  check('存档体积：满配档 < 4MB（否则会撞 localStorage 配额、存不上档）', heavyKB < 4096, heavyKB.toFixed(1) + ' KB')
+  check('存档不含 undefined / 函数（序列化漏字段的信号）',
+    !/undefined/.test(heavy) && !/"[^"]*":function/.test(heavy),
+    (heavy.match(/undefined/g) || []).length + ' 处 undefined')
+  // 往返：重档也必须能读回来（体量与迁移两件事一起成立）
+  try {
+    p2.applySave(JSON.parse(heavy))
+    const inv2 = invariants('重档往返')
+    check('存档体积：重档读回后不变量仍成立', inv2.ok, inv2.bad.join(','))
+  } catch (e) { note('重档往返', '抛错：' + String(e).slice(0, 80)) }
+}
+
 console.log('══ 存档结构迁移矩阵 ══')
 // 这两条是**有证据的已知问题**：打印出来、不隐藏，也不阻塞（等修法落地再转成硬断言）
 if (KNOWN.length) { console.log('  ⚠️ 已知问题（未修，不阻塞）：'); for (const k of KNOWN) console.log('     · ' + k) }
