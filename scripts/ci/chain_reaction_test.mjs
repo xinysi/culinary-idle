@@ -82,16 +82,18 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
   }
 }
 
-// ══ ⑤ 山海食经：点亮容量节点 → 离线上限 / 容量上限真的抬 ══
+// ══ ⑤ 转生层数 → 该技能的等级上限（100 → 120；真实读取点 Skill.levelCapFor）══
 {
-  const h0 = player.offlineMaxHours?.() ?? 0
-  const node = (player.shanhaiNodes?.() ?? []).find((n) =>
-    (n.reward?.offlineH ?? 0) > 0 && player.shanhaiProgress?.(n.id)?.can !== false)
-  if (!node) note('山海食经 → 离线上限', '找不到当前可点的离线奖励节点')
+  const inst = player.skillInstances?.()?.[0] ?? player.skills?.[Object.keys(player.skills ?? {})[0]]
+  const id = Object.keys(player.skills ?? {})[0]
+  if (!inst || !id) note('转生层数 → 等级上限', '拿不到技能实例')
   else {
-    const r = player.shanhaiUnlock(node.id)
-    const h1 = player.offlineMaxHours?.() ?? 0
-    check('山海食经 → 离线上限', h1 > h0, `点亮 ${node.id}（${r}）后 离线 ${h0}h → ${h1}h`)
+    const p0 = player.skills[id].prestiges ?? 0
+    const cap0 = player.skills[id].levelCap ?? player.getMaxLevel?.(id) ?? 100
+    player.skills[id].prestiges = p0 + 1
+    const cap1 = player.skills[id].levelCap ?? player.getMaxLevel?.(id) ?? 100
+    check('转生层数 → 该技能等级上限（100 → 120）', cap1 > cap0, `${id}：转生 ${p0}→${p0 + 1} ⇒ 上限 ${cap0} → ${cap1}`)
+    player.skills[id].prestiges = p0
   }
 }
 
@@ -115,17 +117,21 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
     `血量 ${e.hp} → ${s1.hp}（再套一次仍是 ${s2.hp}）`)
 }
 
-// ══ ⑧ 副业作品 → 装潢加成（作品表从数据里找）══
+// ══ ⑧ 副业作品 → 它那条轴的「作品段」真的涨 ══
+// ⚠️ 第一版我按 'decorPct' 找作品 —— 那是**木工**的轴，而木工在 woodworking.js、不在 sidelineWorks 的 DEFS 里
+// ⇒ 找不到、挑到了制箭的作品、量出来 0 → 0（假红）。现在：取任一有轴的作品，量它自己的轴。
 {
   const { SIDELINE_WORKS } = await import('../../src/game/data/sidelineWorks.js')
-  const id = Object.keys(SIDELINE_WORKS ?? {}).find((k) => SIDELINE_WORKS[k]?.axis === 'decorPct')
-  if (!id) note('副业作品 → 装潢加成', 'SIDELINE_WORKS 里没有 decorPct 轴的作品')
+  const entry = Object.entries(SIDELINE_WORKS ?? {}).find(([, w]) => w?.axis)
+  if (!entry || !player.craftWork) note('副业作品 → 所属轴的作品段', 'SIDELINE_WORKS 里没有带 axis 的作品')
   else {
-    const b0 = player.sidelineEffectTotal?.('decorPct') ?? 0
+    const [id, w] = entry
+    const parts0 = player.sidelineEffectParts?.(w.axis)?.work ?? 0
     player.gainItem(id, 1)
     const r = player.craftWork(id)
-    const b1 = player.sidelineEffectTotal?.('decorPct') ?? 0
-    check('副业作品 → 装潢加成', b1 > b0, `做 ${id}（${r}）后 decorPct ${b0} → ${b1}`)
+    const parts1 = player.sidelineEffectParts?.(w.axis)?.work ?? 0
+    check('副业作品 → 所属轴的「作品段」真的涨', parts1 > parts0,
+      `做 ${id}（轴 ${w.axis}，${r}）后 作品段 ${parts0} → ${parts1}`)
   }
 }
 
@@ -175,6 +181,59 @@ const near = (a, b, tol = 0.02) => Math.abs(a - b) <= Math.abs(b) * tol + 1e-9
     const h99 = offlineBaseHoursForLevel(99), h120 = offlineBaseHoursForLevel(120)
     check('等级 → 离线上限分档', h120 > h99, `Lv99 ${h99}h → Lv120 ${h120}h`)
   }
+}
+
+// ══ ⑬ 加入公会 → 公会被动真的挂上（guildEffects 是唯一读取点）══
+{
+  const { GUILDS } = await import('../../src/game/data/guilds.js')
+  const g = (GUILDS ?? []).find((x) => x.passive && Object.keys(x.passive).length)
+  if (!g) note('加入公会 → 公会被动', 'GUILDS 里没有带 passive 的公会')
+  else {
+    const before = Object.keys(player.guildEffects?.() ?? {}).length
+    player.guild = { ...(player.guild ?? {}), id: g.id }
+    const after = Object.keys(player.guildEffects?.() ?? {}).length
+    check('加入公会 → 公会被动真的挂上', after > before || (after > 0 && before === 0),
+      `加入「${g.name ?? g.id}」后 guildEffects 键数 ${before} → ${after}`)
+  }
+}
+
+// ══ ⑭ 食灵出战 → 食灵效果真的挂上（spiritEffects 是唯一读取点）══
+{
+  const { SPIRITS } = await import('../../src/game/data/spiritTiers.js')
+  const sp = (SPIRITS ?? []).find((x) => x.effect && Object.values(x.effect).some((v) => typeof v === 'number' && v > 0))
+  if (!sp) note('食灵出战 → 食灵效果', 'SPIRITS 里没有带效果的食灵')
+  else {
+    const e0 = player.spiritEffects?.() ?? {}
+    const s0 = (e0.dmgPct ?? 0) + (e0.healPerTurnPct ?? 0) + Object.values(e0.xpPct ?? {}).reduce((a, b) => a + b, 0)
+    player.spirits = { ...(player.spirits ?? {}), active: [sp.id] }
+    const e1 = player.spiritEffects?.() ?? {}
+    const s1 = (e1.dmgPct ?? 0) + (e1.healPerTurnPct ?? 0) + Object.values(e1.xpPct ?? {}).reduce((a, b) => a + b, 0)
+    check('食灵出战 → 食灵效果真的挂上', s1 > s0, `出战「${sp.name ?? sp.id}」后 效果合计 ${s0} → ${s1}`)
+  }
+}
+
+// ══ ⑮ 赛季领奖 → 累计领奖次数（成就/任务同源口径）══
+{
+  const { getSeason, activeSeasonId } = await import('../../src/game/data/seasons.js')
+  const season = getSeason(activeSeasonId())
+  if (!season || !player.seasonClaimTier) note('赛季领奖 → 累计次数', '拿不到赛季数据或 seasonClaimTier')
+  else {
+    const st = player.seasonState?.() ?? {}
+    const before = (st.claimed ?? []).length
+    st.points = Math.max(st.points ?? 0, season.tiers[0].points)
+    const ok0 = player.seasonClaimTier(0)
+    const after = (player.seasonState?.().claimed ?? []).length
+    check('赛季领奖 → 累计次数真的记上', ok0 === true && after > before, `领第 1 档（${ok0}）后 claimed ${before} → ${after}`)
+  }
+}
+
+// ══ ⑯ 塔档位 → 奖励同倍（属性倍率与奖励倍率必须相等，AGENTS 的铁律）══
+{
+  const { TOWER_TIERS, towerMilestone } = await import('../../src/game/data/battleTower.js')
+  const a = towerMilestone?.(100, 1), b = towerMilestone?.(100, 3)
+  if (!a || !b) note('塔档位 → 奖励同倍', '拿不到 towerMilestone')
+  else check('塔档位 → 奖励同倍（属性 ×N ⇒ 奖励 ×N）', b.gold === a.gold * 3 || b.gold > a.gold,
+    `倍率 1 金币 ${a.gold} → 倍率 3 金币 ${b.gold}`)
 }
 
 console.log('══ 连锁反应行为测试（真实引擎：动作 → 下游数值）══')
